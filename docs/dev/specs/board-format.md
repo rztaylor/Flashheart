@@ -124,10 +124,16 @@ A ticket is **blocked** when any of these holds (the kanban-tracker rules):
 2. a `depends-on-workstreams` workstream has a ticket not in `ready-to-review/`
    or `done/`;
 3. it belongs to a workstream and an earlier ticket in that workstream's
-   `tickets:` list is not in `ready-to-review/` or `done/`.
+   `tickets:` list is not in `ready-to-review/` or `done/`;
+4. a workstream that lists it has a `depends-on-workstreams` workstream with a
+   ticket not in `ready-to-review/` or `done/`.
 
-A reference to a missing ticket or workstream is shown as a warning and counts
-as blocking. Archived tickets count as done for blocking.
+A workstream's `tickets:` list defines membership and order; a ticket whose
+`workstream:` field disagrees with the lists gets a warning. A reference to a
+missing ticket or workstream (including a missing `workstream:`) is shown as a
+warning and counts as blocking. Archived tickets count as done for blocking.
+A ticket that exists in several columns counts as done only when every copy
+does. Only tickets in `todo/` and `in-progress/` are shown as blocked.
 
 ## Workstream
 
@@ -154,7 +160,8 @@ tags: []
 ```
 
 The UI derives status (`completed` when every ticket is in review or done,
-`blocked` per the rules above) and does not rewrite the `status` field unless
+`blocked` when its own `depends-on-workstreams` are incomplete or its next
+ticket in order is blocked, otherwise `active`) and does not rewrite the `status` field unless
 the user edits it.
 
 ## Review

@@ -54,6 +54,22 @@ func TestOpenMissingRoot(t *testing.T) {
 	}
 }
 
+func TestNewWaitsForTheRootToExist(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "later")
+	store := New(root)
+	defer store.Close()
+	if _, _, err := store.ReadBoard(); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("ReadBoard before the root exists = %v, want ErrNotExist", err)
+	}
+	write(t, filepath.Join(root, "late", "todo", "feat--x.md"), "# X\n")
+	b, _, err := store.ReadBoard()
+	if err != nil || len(b.Projects) != 1 || b.Projects[0].Name != "late" {
+		t.Errorf("ReadBoard after creation = %+v, %v", b.Projects, err)
+	}
+}
+
 func TestProjectDiscovery(t *testing.T) {
 	t.Parallel()
 

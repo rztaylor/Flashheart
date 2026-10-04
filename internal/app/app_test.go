@@ -35,6 +35,7 @@ func startRuntime(t *testing.T, options Options, extra http.Handler) (*runtime, 
 	if err != nil {
 		t.Fatalf("newRuntime(): %v", err)
 	}
+	t.Cleanup(func() { runtime.files.Close() })
 	launch, err := runtime.server.Start(ctx)
 	if err != nil {
 		t.Fatalf("Start(): %v", err)
@@ -111,6 +112,21 @@ func TestServerComposesAuthenticatedApplication(t *testing.T) {
 	}
 	if info.Name != "Flashheart" || info.Version != "test" || info.Commit != "c0ffee" || info.ProtocolVersion != 1 || info.Root != root || info.Theme != "system" {
 		t.Errorf("info = %+v", info)
+	}
+
+	projects, err := launch.Client().Get(launch.BaseURL() + "api/projects")
+	if err != nil {
+		t.Fatalf("GET /api/projects: %v", err)
+	}
+	var listing struct {
+		Projects []struct{ Name string } `json:"projects"`
+	}
+	if err := json.NewDecoder(projects.Body).Decode(&listing); err != nil {
+		t.Fatalf("decode projects: %v", err)
+	}
+	projects.Body.Close()
+	if len(listing.Projects) != 2 {
+		t.Errorf("projects = %+v, want the sample board's alpha and beta", listing.Projects)
 	}
 
 	index, err := launch.Client().Get(launch.BaseURL())

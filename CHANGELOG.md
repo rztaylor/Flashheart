@@ -20,6 +20,11 @@ All notable changes to this project are documented here. The project follows
 - Browser shell with quiet backend status and health check, guarded Quit that
   explains a refusal, and stopped and connection-lost screens that explain how
   to close the tab. Light and dark themes follow the system setting.
+- Read-only board API over the root: projects with counts, project and
+  all-projects boards with blocked-by explanations, ticket detail with
+  review, handoff and attachments, workstreams with derived status, and
+  allow-listed attachment files. Unparseable, oversized or escaping files are
+  reported as needing repair instead of being hidden.
 - Validation: strict `scripts/check.sh`, `scripts/build.sh`, and
   `scripts/e2e.sh` for the Playwright lifecycle, accessibility and screenshot
   suite.

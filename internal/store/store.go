@@ -41,22 +41,52 @@ var safeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$`)
 // Store reads a board root. Every access goes through an os.Root, so paths
 // and symlinks cannot escape the root (SEC-2).
 type Store struct {
+	path string
+	mu   sync.Mutex
 	root *os.Root
-	fsys fs.FS
 }
 
-// Open opens the board root at path. A missing root returns an error that
-// wraps os.ErrNotExist.
+// New returns a store that opens the root on first use and keeps trying
+// until it exists, so a root created after startup is picked up.
+func New(path string) *Store {
+	return &Store{path: path}
+}
+
+// Open opens the board root at path now. A missing root returns an error
+// that wraps os.ErrNotExist.
 func Open(path string) (*Store, error) {
-	root, err := os.OpenRoot(path)
-	if err != nil {
-		return nil, fmt.Errorf("open board root: %w", err)
+	s := New(path)
+	if _, _, err := s.handle(); err != nil {
+		return nil, err
 	}
-	return &Store{root: root, fsys: root.FS()}, nil
+	return s, nil
+}
+
+// handle returns the open root, opening it if needed.
+func (s *Store) handle() (*os.Root, fs.FS, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.root == nil {
+		root, err := os.OpenRoot(s.path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("open board root: %w", err)
+		}
+		s.root = root
+	}
+	return s.root, s.root.FS(), nil
 }
 
 // Close releases the root.
-func (s *Store) Close() error { return s.root.Close() }
+func (s *Store) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.root == nil {
+		return nil
+	}
+	err := s.root.Close()
+	s.root = nil
+	return err
+}
 
 // validProject reports whether name can be a project directory name.
 func validProject(name string) bool {
@@ -72,7 +102,15 @@ func validSlug(name string) bool {
 
 // Projects lists project directory names in sorted order (PRJ-1).
 func (s *Store) Projects() ([]string, error) {
-	entries, err := fs.ReadDir(s.fsys, ".")
+	_, fsys, err := s.handle()
+	if err != nil {
+		return nil, err
+	}
+	return projects(fsys)
+}
+
+func projects(fsys fs.FS) ([]string, error) {
+	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return nil, fmt.Errorf("list board root: %w", err)
 	}
@@ -82,23 +120,23 @@ func (s *Store) Projects() ([]string, error) {
 		if !validProject(name) {
 			continue
 		}
-		if s.isProject(name) {
+		if isProject(fsys, name) {
 			names = append(names, name)
 		}
 	}
 	return names, nil
 }
 
-func (s *Store) isProject(name string) bool {
-	info, err := fs.Stat(s.fsys, name)
+func isProject(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
 	if err != nil || !info.IsDir() {
 		return false
 	}
-	if info, err := fs.Stat(s.fsys, path.Join(name, "project.yaml")); err == nil && info.Mode().IsRegular() {
+	if info, err := fs.Stat(fsys, path.Join(name, "project.yaml")); err == nil && info.Mode().IsRegular() {
 		return true
 	}
 	for _, column := range board.Columns {
-		if info, err := fs.Stat(s.fsys, path.Join(name, string(column))); err == nil && info.IsDir() {
+		if info, err := fs.Stat(fsys, path.Join(name, string(column))); err == nil && info.IsDir() {
 			return true
 		}
 	}
@@ -108,14 +146,22 @@ func (s *Store) isProject(name string) bool {
 // ReadProject reads one project's tickets, workstreams, reviews, attachment
 // indexes and archived slugs.
 func (s *Store) ReadProject(name string) (board.Project, error) {
-	project, _, err := s.readProject(name)
+	root, fsys, err := s.handle()
+	if err != nil {
+		return board.Project{}, err
+	}
+	project, _, err := readProject(root, fsys, name)
 	return project, err
 }
 
 // ReadBoard reads every project and returns a fingerprint of the files read
 // (paths, sizes and modification times) that changes when any of them does.
 func (s *Store) ReadBoard() (board.Board, string, error) {
-	names, err := s.Projects()
+	root, fsys, err := s.handle()
+	if err != nil {
+		return board.Board{}, "", err
+	}
+	names, err := projects(fsys)
 	if err != nil {
 		return board.Board{}, "", err
 	}
@@ -131,7 +177,7 @@ func (s *Store) ReadBoard() (board.Board, string, error) {
 		wait.Go(func() {
 			limit <- struct{}{}
 			defer func() { <-limit }()
-			project, parts, err := s.readProject(name)
+			project, parts, err := readProject(root, fsys, name)
 			results[index] = result{project, parts, err}
 		})
 	}
@@ -156,7 +202,8 @@ func (s *Store) ReadBoard() (board.Board, string, error) {
 
 // reader accumulates one project's fingerprint parts and modification time.
 type reader struct {
-	store    *Store
+	root     *os.Root
+	fsys     fs.FS
 	parts    []string
 	modified time.Time
 }
@@ -171,7 +218,7 @@ func (r *reader) note(name string, info fs.FileInfo) {
 // markdownFiles lists the .md entries of dir, skipping hidden files and
 // subdirectories. A missing directory yields nothing.
 func (r *reader) markdownFiles(dir string) []string {
-	entries, err := fs.ReadDir(r.store.fsys, dir)
+	entries, err := fs.ReadDir(r.fsys, dir)
 	if err != nil {
 		return nil
 	}
@@ -185,7 +232,7 @@ func (r *reader) markdownFiles(dir string) []string {
 			continue
 		}
 		if entry.Type()&fs.ModeSymlink != 0 {
-			if info, err := fs.Stat(r.store.fsys, path.Join(dir, name)); err == nil && info.IsDir() {
+			if info, err := fs.Stat(r.fsys, path.Join(dir, name)); err == nil && info.IsDir() {
 				continue
 			}
 		}
@@ -196,9 +243,9 @@ func (r *reader) markdownFiles(dir string) []string {
 
 // read returns a file's contents up to MaxFileBytes, or a repair reason.
 func (r *reader) read(name string) ([]byte, fs.FileInfo, string) {
-	file, err := r.store.root.Open(name)
+	file, err := r.root.Open(name)
 	if err != nil {
-		if info, lerr := r.store.root.Lstat(name); lerr == nil && info.Mode()&fs.ModeSymlink != 0 {
+		if info, lerr := r.root.Lstat(name); lerr == nil && info.Mode()&fs.ModeSymlink != 0 {
 			return nil, nil, "this file is a symlink that points outside the board root or to a missing file"
 		}
 		return nil, nil, "could not read the file: " + err.Error()
@@ -222,14 +269,14 @@ func (r *reader) read(name string) ([]byte, fs.FileInfo, string) {
 	return data, info, ""
 }
 
-func (s *Store) readProject(name string) (board.Project, []string, error) {
+func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []string, error) {
 	if !validProject(name) {
 		return board.Project{}, nil, fmt.Errorf("project %q: %w", name, ErrInvalidName)
 	}
-	if !s.isProject(name) {
+	if !isProject(fsys, name) {
 		return board.Project{}, nil, fmt.Errorf("project %q: %w", name, ErrNotFound)
 	}
-	r := &reader{store: s}
+	r := &reader{root: root, fsys: fsys}
 	project := board.Project{
 		Name: name, DisplayName: name,
 		Reviews: map[string]bool{}, Attachments: map[string][]board.Attachment{},
@@ -270,7 +317,7 @@ func (s *Store) readProject(name string) (board.Project, []string, error) {
 
 	reviews := path.Join(name, "reviews")
 	for _, file := range r.markdownFiles(reviews) {
-		if info, err := fs.Stat(s.fsys, path.Join(reviews, file)); err == nil {
+		if info, err := fs.Stat(fsys, path.Join(reviews, file)); err == nil {
 			r.note(path.Join(reviews, file), info)
 			project.Reviews[strings.TrimSuffix(file, ".md")] = true
 		}
@@ -298,7 +345,7 @@ type projectFile struct {
 
 func (r *reader) readProjectFile(project *board.Project) {
 	name := path.Join(project.Name, "project.yaml")
-	if _, err := r.store.root.Lstat(name); errors.Is(err, fs.ErrNotExist) {
+	if _, err := r.root.Lstat(name); errors.Is(err, fs.ErrNotExist) {
 		return
 	}
 	data, _, problem := r.read(name)
@@ -327,7 +374,7 @@ type attachmentEntry struct {
 
 func (r *reader) readAttachmentIndexes(project *board.Project) {
 	dir := path.Join(project.Name, "attachments")
-	entries, err := fs.ReadDir(r.store.fsys, dir)
+	entries, err := fs.ReadDir(r.fsys, dir)
 	if err != nil {
 		return
 	}
@@ -337,7 +384,7 @@ func (r *reader) readAttachmentIndexes(project *board.Project) {
 			continue
 		}
 		name := path.Join(dir, ticket, "index.yaml")
-		if _, err := r.store.root.Lstat(name); err != nil {
+		if _, err := r.root.Lstat(name); err != nil {
 			continue
 		}
 		data, _, problem := r.read(name)
@@ -366,11 +413,15 @@ func (s *Store) ReadReview(project, slug string) (string, bool, error) {
 	if !validProject(project) || !validSlug(slug) {
 		return "", false, fmt.Errorf("review %s/%s: %w", project, slug, ErrInvalidName)
 	}
+	root, fsys, err := s.handle()
+	if err != nil {
+		return "", false, err
+	}
 	name := path.Join(project, "reviews", slug+".md")
-	if _, err := s.root.Lstat(name); errors.Is(err, fs.ErrNotExist) {
+	if _, err := root.Lstat(name); errors.Is(err, fs.ErrNotExist) {
 		return "", false, nil
 	}
-	r := &reader{store: s}
+	r := &reader{root: root, fsys: fsys}
 	data, _, problem := r.read(name)
 	if problem != "" {
 		return "", false, fmt.Errorf("review %s/%s: %s", project, slug, problem)
@@ -388,7 +439,11 @@ func (s *Store) OpenAttachment(project, ticket, file string) (*os.File, string, 
 	if !ok {
 		return nil, "", fmt.Errorf("attachment %s: %w", file, ErrTypeNotAllowed)
 	}
-	handle, err := s.root.Open(path.Join(project, "attachments", ticket, file))
+	root, _, err := s.handle()
+	if err != nil {
+		return nil, "", err
+	}
+	handle, err := root.Open(path.Join(project, "attachments", ticket, file))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, "", fmt.Errorf("attachment %s: %w", file, ErrNotFound)
 	}

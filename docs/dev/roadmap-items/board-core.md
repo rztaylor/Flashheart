@@ -1,6 +1,13 @@
 # board-core
 
-Status: **Pending**. Its dependency, `foundation`, is complete.
+Status: **Partial**. Its dependency, `foundation`, is complete.
+
+Done: `mdfile`, `board` (blocking with reasons, workstream status), `store`
+read side on `os.Root`, `index` (revisioned, rebuilt when older than 2 s;
+5,000 tickets in about 160 ms), and the read API, plus a read-only
+attachment endpoint so review screenshots render (SEC-4). Remaining: the
+design gate and all UI scope below. Event-log reading stays with
+`agent-runs`.
 
 ## Goal
 

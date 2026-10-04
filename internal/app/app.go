@@ -12,7 +12,9 @@ import (
 	"github.com/rztaylor/flashheart/internal/api"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/config"
+	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/store"
 	"github.com/rztaylor/flashheart/internal/webui"
 	"github.com/rztaylor/singleserve"
 )
@@ -40,6 +42,7 @@ type Launched struct {
 type runtime struct {
 	server   *singleserve.Server
 	requests *requestTracker
+	files    *store.Store
 }
 
 // Run serves Flashheart and blocks until the server has drained.
@@ -57,6 +60,7 @@ func Run(ctx context.Context, options Options) error {
 	if err != nil {
 		return err
 	}
+	defer runtime.files.Close()
 	launch, err := runtime.server.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("start local server: %w", err)
@@ -103,16 +107,22 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 	if err != nil {
 		return nil, err
 	}
+	files := store.New(options.Root)
 	apiHandler := apiOverride
 	if apiHandler == nil {
-		apiHandler = api.New(api.Options{Info: api.Info{
-			Version:         options.Build.Version,
-			Commit:          options.Build.Commit,
-			BuildDate:       options.Build.BuildDate,
-			ProtocolVersion: protocol.Version,
-			Root:            options.Root,
-			Theme:           settings.UI.Theme,
-		}})
+		apiHandler = api.New(api.Options{
+			Info: api.Info{
+				Version:         options.Build.Version,
+				Commit:          options.Build.Commit,
+				BuildDate:       options.Build.BuildDate,
+				ProtocolVersion: protocol.Version,
+				Root:            options.Root,
+				Theme:           settings.UI.Theme,
+			},
+			Board:     index.New(files, index.Options{}),
+			Files:     files,
+			DoneLimit: settings.DoneColumnLimit,
+		})
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/api/", apiHandler)
@@ -134,9 +144,10 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 	}
 	server, err := singleserve.New(serverOptions)
 	if err != nil {
+		files.Close()
 		return nil, fmt.Errorf("configure local server: %w", err)
 	}
-	return &runtime{server: server, requests: requests}, nil
+	return &runtime{server: server, requests: requests, files: files}, nil
 }
 
 // requestTracker counts in-flight application requests; requests with unsafe

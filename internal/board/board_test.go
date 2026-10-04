@@ -321,3 +321,28 @@ func TestAttachmentTypeAllowList(t *testing.T) {
 		}
 	}
 }
+
+func TestReasonDescriptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		reason Reason
+		want   string
+	}{
+		{Reason{Kind: TicketDependency, Ticket: Ref{"alpha", "feat--a"}, Column: Todo}, "Depends on feat--a, which is in To do"},
+		{Reason{Kind: TicketDependency, Ticket: Ref{"beta", "feat--b"}, Column: InProgress}, "Depends on beta/feat--b, which is In progress"},
+		{Reason{Kind: TicketDependency, Ticket: Ref{"alpha", "feat--x"}, Missing: true}, "Depends on feat--x, which does not exist"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 1}, "Depends on workstream core, which has 1 ticket not yet in review or done"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 3, Via: "ui"}, "Its workstream ui depends on workstream core, which has 3 tickets not yet in review or done"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true}, "Depends on workstream ghost, which does not exist"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true, Via: "ghost"}, "Belongs to workstream ghost, which does not exist"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true, Via: "ui"}, "Its workstream ui depends on workstream ghost, which does not exist"},
+		{Reason{Kind: WorkstreamOrder, Workstream: "ui", Ticket: Ref{"alpha", "feat--a"}, Column: InProgress}, "Comes after feat--a in workstream ui, which is In progress"},
+		{Reason{Kind: WorkstreamOrder, Workstream: "ui", Ticket: Ref{"alpha", "feat--z"}, Missing: true}, "Comes after feat--z in workstream ui, which does not exist"},
+	}
+	for _, test := range tests {
+		if got := test.reason.Describe("alpha"); got != test.want {
+			t.Errorf("Describe(%+v) =\n  %q\nwant\n  %q", test.reason, got, test.want)
+		}
+	}
+}

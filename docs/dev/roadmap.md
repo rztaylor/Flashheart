@@ -10,7 +10,8 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 
 ## Execution order
 
-1. [`board-core`](roadmap-items/board-core.md) — **Pending**. Store (read
+1. [`board-core`](roadmap-items/board-core.md) — **Partial**: read side and
+   API done; UI waits on the design gate. Store (read
    side), index, blocking, multi-project board, Table and Workstreams views,
    card panel with markdown. UI design gate (impeccable) first.
 2. [`board-editing`](roadmap-items/board-editing.md) — **Pending**. Locked

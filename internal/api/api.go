@@ -16,9 +16,15 @@ type Info struct {
 	Theme           string `json:"theme"`
 }
 
-// Options configures the API handler.
+// Options configures the API handler. Board endpoints are served when Board
+// is set.
 type Options struct {
-	Info Info
+	Info  Info
+	Board BoardSource
+	Files FileSource
+	// DoneLimit is how many done tickets a board shows by default (VIEW-1);
+	// zero shows all.
+	DoneLimit int
 }
 
 // New returns the handler for every /api/ route.
@@ -34,6 +40,9 @@ func New(options Options) http.Handler {
 		}
 		writeJSON(w, http.StatusOK, info)
 	})
+	if options.Board != nil {
+		boardAPI{board: options.Board, files: options.Files, root: info.Root, doneLimit: options.DoneLimit}.register(mux)
+	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "No such API endpoint")
 	})

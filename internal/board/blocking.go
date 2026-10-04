@@ -269,3 +269,61 @@ func (a analyzer) workstreamState(project string, workstream Workstream, blocked
 	}
 	return state
 }
+
+// Title returns the column's display name.
+func (c Column) Title() string {
+	switch c {
+	case Todo:
+		return "To do"
+	case InProgress:
+		return "In progress"
+	case ReadyToReview:
+		return "Ready to review"
+	case Done:
+		return "Done"
+	}
+	return string(c)
+}
+
+// Describe explains the reason in one sentence, naming tickets in other
+// projects as project/slug relative to the project being viewed.
+func (r Reason) Describe(viewing string) string {
+	ticket := r.Ticket.Slug
+	if r.Ticket.Project != viewing {
+		ticket = r.Ticket.Project + "/" + r.Ticket.Slug
+	}
+	state := func() string {
+		switch {
+		case r.Missing:
+			return "does not exist"
+		case r.Column == Todo:
+			return "is in To do"
+		default:
+			return "is " + r.Column.Title()
+		}
+	}
+	switch r.Kind {
+	case TicketDependency:
+		return fmt.Sprintf("Depends on %s, which %s", ticket, state())
+	case WorkstreamOrder:
+		return fmt.Sprintf("Comes after %s in workstream %s, which %s", ticket, r.Workstream, state())
+	case WorkstreamDependency:
+		pending := "does not exist"
+		if !r.Missing {
+			noun := "tickets"
+			if r.Pending == 1 {
+				noun = "ticket"
+			}
+			pending = fmt.Sprintf("has %d %s not yet in review or done", r.Pending, noun)
+		}
+		switch {
+		case r.Via == "":
+			return fmt.Sprintf("Depends on workstream %s, which %s", r.Workstream, pending)
+		case r.Via == r.Workstream && r.Missing:
+			return fmt.Sprintf("Belongs to workstream %s, which does not exist", r.Workstream)
+		default:
+			return fmt.Sprintf("Its workstream %s depends on workstream %s, which %s", r.Via, r.Workstream, pending)
+		}
+	}
+	return string(r.Kind)
+}
