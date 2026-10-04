@@ -1,0 +1,1023 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T21:33:37+00:00",
+  "title": "Design System: Flashheart",
+  "extensions": {
+    "colorMeta": {
+      "map-white": {
+        "role": "neutral",
+        "displayName": "Map White",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "purpose": "Page ground and card surface, light theme.",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "platform-grey": {
+        "role": "neutral",
+        "displayName": "Platform Grey",
+        "canonical": "#f2f3f5",
+        "oklch": "oklch(96.4% 0.003 264.5)",
+        "purpose": "Project rail, handoff well, skeletons, code.",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7c7d7f",
+          "#9d9ea0",
+          "#c3c4c6",
+          "#edeef0"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d7dadf",
+        "oklch": "oklch(88.8% 0.008 260.7)",
+        "purpose": "Borders, dividers, row rules.",
+        "tonalRamp": [
+          "#090b0e",
+          "#222428",
+          "#3d4044",
+          "#5b5e62",
+          "#7b7d82",
+          "#9c9ea3",
+          "#c1c4c9",
+          "#eceff4"
+        ]
+      },
+      "signal-ink": {
+        "role": "primary",
+        "displayName": "Signal Ink",
+        "canonical": "#111111",
+        "oklch": "oklch(17.8% 0.000 89.9)",
+        "purpose": "Text, strong rules, state marks, focus, primary button.",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#565c66",
+        "oklch": "oklch(47.3% 0.018 260.7)",
+        "purpose": "Metadata, counts, done titles.",
+        "tonalRamp": [
+          "#070b13",
+          "#1f242d",
+          "#3a4049",
+          "#585e68",
+          "#777e88",
+          "#989faa",
+          "#bec5d0",
+          "#e8effb"
+        ]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Ink Faint",
+        "canonical": "#6a6f78",
+        "oklch": "oklch(54.0% 0.015 262.3)",
+        "purpose": "Running times, quiet waits, slugs.",
+        "tonalRamp": [
+          "#080b12",
+          "#20242c",
+          "#3b4048",
+          "#595e67",
+          "#787d87",
+          "#999fa8",
+          "#bfc4ce",
+          "#e9eff9"
+        ]
+      },
+      "signage-black": {
+        "role": "neutral",
+        "displayName": "Signage Black",
+        "canonical": "#111111",
+        "oklch": "oklch(17.8% 0.000 89.9)",
+        "purpose": "The signage band, light theme.",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "on-band": {
+        "role": "neutral",
+        "displayName": "On Band",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "purpose": "Text and active tab rule on the band.",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "on-band-muted": {
+        "role": "neutral",
+        "displayName": "On Band Muted",
+        "canonical": "#a9aeb6",
+        "oklch": "oklch(74.9% 0.013 259.8)",
+        "purpose": "Inactive tabs and secondary text on the band.",
+        "tonalRamp": [
+          "#080b11",
+          "#20242a",
+          "#3c4047",
+          "#595e65",
+          "#797e85",
+          "#9a9fa7",
+          "#bfc4cd",
+          "#eaeff7"
+        ]
+      },
+      "band-field": {
+        "role": "neutral",
+        "displayName": "Band Field",
+        "canonical": "#26282c",
+        "oklch": "oklch(27.6% 0.008 264.4)",
+        "purpose": "Search well and hover fill inside the band.",
+        "tonalRamp": [
+          "#090b0f",
+          "#222428",
+          "#3e4044",
+          "#5b5e62",
+          "#7b7d82",
+          "#9c9ea3",
+          "#c1c4c9",
+          "#eceef4"
+        ]
+      },
+      "alarm-red": {
+        "role": "tertiary",
+        "displayName": "Alarm Red",
+        "canonical": "#b3261e",
+        "oklch": "oklch(50.1% 0.178 28.7)",
+        "purpose": "App error alerts only.",
+        "tonalRamp": [
+          "#210000",
+          "#4b0101",
+          "#7a0907",
+          "#ac1d17",
+          "#d2463a",
+          "#f96a5b",
+          "#fcada1",
+          "#fee9e5"
+        ]
+      },
+      "alarm-surface": {
+        "role": "tertiary",
+        "displayName": "Alarm Surface",
+        "canonical": "#fdf0ef",
+        "oklch": "oklch(96.5% 0.014 22.8)",
+        "purpose": "Background of the app error strip.",
+        "tonalRamp": [
+          "#110908",
+          "#2b2121",
+          "#473d3c",
+          "#655b5a",
+          "#867a79",
+          "#a79b9a",
+          "#cdc1c0",
+          "#f8ebea"
+        ]
+      },
+      "selection-yellow": {
+        "role": "tertiary",
+        "displayName": "Selection Yellow",
+        "canonical": "#fcd96a",
+        "oklch": "oklch(89.4% 0.135 92.0)",
+        "purpose": "Text selection only.",
+        "tonalRamp": [
+          "#120a00",
+          "#2d2301",
+          "#4d3e06",
+          "#725b00",
+          "#957b1f",
+          "#bd9b1f",
+          "#e4c150",
+          "#feeebe"
+        ]
+      },
+      "night-ground": {
+        "role": "neutral",
+        "displayName": "Night Ground",
+        "canonical": "#121315",
+        "oklch": "oklch(18.6% 0.004 264.5)",
+        "purpose": "Dark-theme counterpart of ground.",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232426",
+          "#3e4042",
+          "#5c5e60",
+          "#7c7d80",
+          "#9d9ea1",
+          "#c3c4c7",
+          "#edeef1"
+        ]
+      },
+      "night-well": {
+        "role": "neutral",
+        "displayName": "Night Well",
+        "canonical": "#1b1c1f",
+        "oklch": "oklch(22.7% 0.006 271.1)",
+        "purpose": "Dark-theme counterpart of well.",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#232427",
+          "#3e4043",
+          "#5c5d61",
+          "#7c7d81",
+          "#9d9ea2",
+          "#c2c4c8",
+          "#edeef3"
+        ]
+      },
+      "night-card": {
+        "role": "neutral",
+        "displayName": "Night Card",
+        "canonical": "#202226",
+        "oklch": "oklch(25.2% 0.008 264.4)",
+        "purpose": "Dark-theme counterpart of card.",
+        "tonalRamp": [
+          "#090b0f",
+          "#222428",
+          "#3e4044",
+          "#5b5e62",
+          "#7b7d82",
+          "#9c9ea4",
+          "#c1c4c9",
+          "#eceef4"
+        ]
+      },
+      "night-hairline": {
+        "role": "neutral",
+        "displayName": "Night Hairline",
+        "canonical": "#33363c",
+        "oklch": "oklch(33.2% 0.011 264.4)",
+        "purpose": "Dark-theme counterpart of hairline.",
+        "tonalRamp": [
+          "#090b10",
+          "#21242a",
+          "#3d4046",
+          "#5a5e64",
+          "#7a7d84",
+          "#9b9ea6",
+          "#c0c4cc",
+          "#ebeff6"
+        ]
+      },
+      "night-ink": {
+        "role": "primary",
+        "displayName": "Night Ink",
+        "canonical": "#f1f2f4",
+        "oklch": "oklch(96.1% 0.003 264.5)",
+        "purpose": "Dark-theme counterpart of ink.",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7c7d7f",
+          "#9d9ea0",
+          "#c3c4c6",
+          "#edeef0"
+        ]
+      },
+      "night-ink-muted": {
+        "role": "neutral",
+        "displayName": "Night Ink Muted",
+        "canonical": "#a3a8b1",
+        "oklch": "oklch(73.0% 0.014 262.4)",
+        "purpose": "Dark-theme counterpart of ink-muted.",
+        "tonalRamp": [
+          "#080b11",
+          "#20242b",
+          "#3c4047",
+          "#595e66",
+          "#797d86",
+          "#9a9fa8",
+          "#bfc4ce",
+          "#e9eff8"
+        ]
+      },
+      "night-ink-faint": {
+        "role": "neutral",
+        "displayName": "Night Ink Faint",
+        "canonical": "#8f949d",
+        "oklch": "oklch(66.5% 0.014 262.4)",
+        "purpose": "Dark-theme counterpart of ink-faint.",
+        "tonalRamp": [
+          "#080b11",
+          "#20242b",
+          "#3c4048",
+          "#595e66",
+          "#797d86",
+          "#9a9fa8",
+          "#bfc4ce",
+          "#e9eff9"
+        ]
+      },
+      "night-band": {
+        "role": "neutral",
+        "displayName": "Night Band",
+        "canonical": "#000000",
+        "oklch": "oklch(0.0% 0.000 0.0)",
+        "purpose": "Dark-theme counterpart of band.",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "night-on-band-muted": {
+        "role": "neutral",
+        "displayName": "Night On Band Muted",
+        "canonical": "#9ea3ab",
+        "oklch": "oklch(71.4% 0.013 259.8)",
+        "purpose": "Dark-theme counterpart of on-band-muted.",
+        "tonalRamp": [
+          "#080b11",
+          "#20242a",
+          "#3c4047",
+          "#595e65",
+          "#797e85",
+          "#9a9fa7",
+          "#bfc4cd",
+          "#e9eff7"
+        ]
+      },
+      "night-band-field": {
+        "role": "neutral",
+        "displayName": "Night Band Field",
+        "canonical": "#1d1f23",
+        "oklch": "oklch(23.9% 0.008 264.4)",
+        "purpose": "Dark-theme counterpart of band-field.",
+        "tonalRamp": [
+          "#090b0f",
+          "#222428",
+          "#3d4044",
+          "#5b5e62",
+          "#7b7d82",
+          "#9c9ea4",
+          "#c1c4ca",
+          "#eceef4"
+        ]
+      },
+      "night-alarm": {
+        "role": "tertiary",
+        "displayName": "Night Alarm",
+        "canonical": "#ff8a80",
+        "oklch": "oklch(75.9% 0.144 26.1)",
+        "purpose": "Dark-theme counterpart of alarm.",
+        "tonalRamp": [
+          "#210000",
+          "#4b0105",
+          "#7a0910",
+          "#9f332f",
+          "#c4554e",
+          "#ea776e",
+          "#fbada4",
+          "#fee9e6"
+        ]
+      },
+      "night-alarm-surface": {
+        "role": "tertiary",
+        "displayName": "Night Alarm Surface",
+        "canonical": "#2a1517",
+        "oklch": "oklch(22.6% 0.034 14.0)",
+        "purpose": "Dark-theme counterpart of alarm-surface.",
+        "tonalRamp": [
+          "#170507",
+          "#331d1f",
+          "#50383a",
+          "#705658",
+          "#917577",
+          "#b39698",
+          "#dabcbd",
+          "#ffe8e9"
+        ]
+      },
+      "night-selection": {
+        "role": "tertiary",
+        "displayName": "Night Selection",
+        "canonical": "#6b5a12",
+        "oklch": "oklch(47.1% 0.089 94.8)",
+        "purpose": "Dark-theme counterpart of selection.",
+        "tonalRamp": [
+          "#110a00",
+          "#2c2301",
+          "#4c3f06",
+          "#6e5d16",
+          "#8e7d3a",
+          "#b09e5c",
+          "#d6c480",
+          "#feefb8"
+        ]
+      },
+      "line-red": {
+        "role": "secondary",
+        "displayName": "Red Line",
+        "canonical": "#d52b1e",
+        "oklch": "oklch(56.7% 0.207 29.5)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#220000",
+          "#4c0000",
+          "#7c0200",
+          "#ae150b",
+          "#dd3527",
+          "#fd6755",
+          "#feac9f",
+          "#ffe9e5"
+        ]
+      },
+      "line-blue": {
+        "role": "secondary",
+        "displayName": "Blue Line",
+        "canonical": "#0039a6",
+        "oklch": "oklch(39.6% 0.183 262.0)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#000037",
+          "#001963",
+          "#033594",
+          "#1c54c2",
+          "#3c76e8",
+          "#6a9cfa",
+          "#a5c5fd",
+          "#e6effe"
+        ]
+      },
+      "line-yellow": {
+        "role": "secondary",
+        "displayName": "Yellow Line",
+        "canonical": "#fccc0a",
+        "oklch": "oklch(86.2% 0.175 91.4)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#120a00",
+          "#2e2300",
+          "#4e3e00",
+          "#715b0d",
+          "#967a14",
+          "#bf9a07",
+          "#eabf2b",
+          "#fdeec0"
+        ]
+      },
+      "line-green": {
+        "role": "secondary",
+        "displayName": "Green Line",
+        "canonical": "#00843d",
+        "oklch": "oklch(53.6% 0.146 150.6)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#001102",
+          "#012d11",
+          "#084d23",
+          "#007133",
+          "#24954d",
+          "#4eb76d",
+          "#77df92",
+          "#cafed4"
+        ]
+      },
+      "line-purple": {
+        "role": "secondary",
+        "displayName": "Purple Line",
+        "canonical": "#a93aa0",
+        "oklch": "oklch(54.4% 0.187 331.2)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#1c001a",
+          "#42003e",
+          "#6d0067",
+          "#94248c",
+          "#b849af",
+          "#de6cd2",
+          "#fc9ef1",
+          "#ffe6fb"
+        ]
+      },
+      "line-orange": {
+        "role": "secondary",
+        "displayName": "Orange Line",
+        "canonical": "#ff6319",
+        "oklch": "oklch(69.3% 0.204 40.9)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#210000",
+          "#421200",
+          "#6d2605",
+          "#9f3600",
+          "#cb521e",
+          "#f96e35",
+          "#fbaf93",
+          "#fee9e2"
+        ]
+      },
+      "line-lime": {
+        "role": "secondary",
+        "displayName": "Lime Line",
+        "canonical": "#6cbe45",
+        "oklch": "oklch(72.4% 0.176 137.1)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#001000",
+          "#0c2c00",
+          "#224b09",
+          "#306f06",
+          "#429309",
+          "#65b63d",
+          "#8ade65",
+          "#d1fec0"
+        ]
+      },
+      "line-brown": {
+        "role": "secondary",
+        "displayName": "Brown Line",
+        "canonical": "#8a5a2b",
+        "oklch": "oklch(51.1% 0.089 62.8)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#1a0500",
+          "#371d01",
+          "#5d3506",
+          "#815122",
+          "#a37142",
+          "#c69263",
+          "#eeb888",
+          "#feebda"
+        ]
+      },
+      "line-grey": {
+        "role": "secondary",
+        "displayName": "Grey Line",
+        "canonical": "#8d8f92",
+        "oklch": "oklch(64.9% 0.005 258.3)",
+        "purpose": "Workstream line colour, light theme. Workstreams only.",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#222426",
+          "#3e4042",
+          "#5c5e60",
+          "#7b7d80",
+          "#9c9ea2",
+          "#c2c4c7",
+          "#eceff2"
+        ]
+      },
+      "night-line-red": {
+        "role": "secondary",
+        "displayName": "Night Red Line",
+        "canonical": "#ee4b3f",
+        "oklch": "oklch(64.1% 0.201 28.3)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#210000",
+          "#4b0001",
+          "#7b0607",
+          "#ad1916",
+          "#db382f",
+          "#fb695a",
+          "#fcaca1",
+          "#ffe9e5"
+        ]
+      },
+      "night-line-blue": {
+        "role": "secondary",
+        "displayName": "Night Blue Line",
+        "canonical": "#4a86f0",
+        "oklch": "oklch(63.3% 0.171 260.9)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#000039",
+          "#001e59",
+          "#03378f",
+          "#1c56bc",
+          "#3d78e1",
+          "#659dfd",
+          "#a6c5fa",
+          "#e6efff"
+        ]
+      },
+      "night-line-yellow": {
+        "role": "secondary",
+        "displayName": "Night Yellow Line",
+        "canonical": "#fccc0a",
+        "oklch": "oklch(86.2% 0.175 91.4)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#120a00",
+          "#2e2300",
+          "#4e3e00",
+          "#715b0d",
+          "#967a14",
+          "#bf9a07",
+          "#eabf2b",
+          "#fdeec0"
+        ]
+      },
+      "night-line-green": {
+        "role": "secondary",
+        "displayName": "Night Green Line",
+        "canonical": "#22a65a",
+        "oklch": "oklch(63.9% 0.157 152.2)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#001102",
+          "#012d13",
+          "#074d26",
+          "#007137",
+          "#239451",
+          "#3db96c",
+          "#6ae191",
+          "#cafed6"
+        ]
+      },
+      "night-line-purple": {
+        "role": "secondary",
+        "displayName": "Night Purple Line",
+        "canonical": "#cc5fc2",
+        "oklch": "oklch(65.3% 0.182 331.0)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#1b001a",
+          "#41003d",
+          "#6c0466",
+          "#93278b",
+          "#b74bae",
+          "#dc6ed2",
+          "#fa9ff0",
+          "#fee6fa"
+        ]
+      },
+      "night-line-orange": {
+        "role": "secondary",
+        "displayName": "Night Orange Line",
+        "canonical": "#ff7a3d",
+        "oklch": "oklch(72.6% 0.178 43.2)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#200000",
+          "#411400",
+          "#6b2804",
+          "#973f13",
+          "#c8551c",
+          "#f67234",
+          "#feae8d",
+          "#fdeae2"
+        ]
+      },
+      "night-line-lime": {
+        "role": "secondary",
+        "displayName": "Night Lime Line",
+        "canonical": "#7acb52",
+        "oklch": "oklch(76.4% 0.176 136.7)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#001000",
+          "#0d2c00",
+          "#224b09",
+          "#326e04",
+          "#449306",
+          "#66b63c",
+          "#8bdd65",
+          "#d2fec0"
+        ]
+      },
+      "night-line-brown": {
+        "role": "secondary",
+        "displayName": "Night Brown Line",
+        "canonical": "#b8854f",
+        "oklch": "oklch(65.6% 0.095 66.5)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#180600",
+          "#381d00",
+          "#5a3608",
+          "#815118",
+          "#a3713b",
+          "#c6935c",
+          "#eeb881",
+          "#feebd8"
+        ]
+      },
+      "night-line-grey": {
+        "role": "secondary",
+        "displayName": "Night Grey Line",
+        "canonical": "#a2a4a8",
+        "oklch": "oklch(71.8% 0.006 264.5)",
+        "purpose": "Workstream line colour, dark theme.",
+        "tonalRamp": [
+          "#0a0b0e",
+          "#222427",
+          "#3e4043",
+          "#5c5e61",
+          "#7b7d81",
+          "#9c9ea2",
+          "#c2c4c8",
+          "#eceef3"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "The Flashheart name in the band only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Ticket title at the top of the card panel."
+      },
+      "station-sign": {
+        "displayName": "Station Sign",
+        "purpose": "Board column heads, empty-state titles, workstream names (project names at 1.125rem)."
+      },
+      "station-sign-small": {
+        "displayName": "Station Sign Small",
+        "purpose": "Panel section heads, tabs, table heads, markdown headings, band project sign."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Ticket card titles and station names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base reading size: panel and rendered markdown."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Controls, filters, counts, card state notes."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Running times, criteria and attachment counts."
+      },
+      "slug": {
+        "displayName": "Slug",
+        "purpose": "Ticket slugs, paths and branch names."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel",
+        "value": "-12px 0 32px -8px rgb(0 0 0 / 0.22), -1px 0 0 rgb(0 0 0 / 0.06)",
+        "purpose": "Left edge of the slide-over card panel; the only cast shadow."
+      },
+      {
+        "name": "selection-ring",
+        "value": "0 0 0 1px var(--fh-rule-strong)",
+        "purpose": "Selected ticket card."
+      },
+      {
+        "name": "rail-active",
+        "value": "inset 0 0 0 1px var(--fh-rule)",
+        "purpose": "Active project tile in the rail."
+      },
+      {
+        "name": "station-halo",
+        "value": "0 0 0 3px var(--fh-ground)",
+        "purpose": "Clears the track around the next-stop ring."
+      },
+      {
+        "name": "casing",
+        "value": "inset 0 0 0 1px var(--fh-casing)",
+        "purpose": "Edge ring on line bullets and served stations so pale lines hold on the ground."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-default",
+        "value": "160ms",
+        "purpose": "Colour, border and opacity transitions; collapses to 0ms under reduced motion."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Card panel entrance."
+      },
+      {
+        "name": "panel-in",
+        "value": "220ms ease-out-expo, from translateX(24px) opacity 0.6",
+        "purpose": "Card panel slides in from the right; disabled under reduced motion."
+      },
+      {
+        "name": "focus-dim",
+        "value": "opacity 0.35 cards, 0.3 bullets, 0.5 chips",
+        "purpose": "Out-of-focus lines dim instead of disappearing."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "40rem"
+      },
+      {
+        "name": "md",
+        "value": "48rem",
+        "purpose": "Rail appears; board shows four columns instead of one picked column."
+      }
+    ],
+    "hatching": [
+      {
+        "name": "hatched-strong",
+        "value": "repeating-linear-gradient(-45deg, var(--fh-ink) 0 3px, transparent 3px 7px); opacity 0.55",
+        "purpose": "Needs-repair top band; in-progress stretch of a route bar."
+      },
+      {
+        "name": "hatched",
+        "value": "repeating-linear-gradient(-45deg, var(--fh-hatch) 0 6px, transparent 6px 12px)",
+        "purpose": "Faint monochrome hatch utility."
+      }
+    ],
+    "themes": {
+      "switch": "html[data-theme=\"dark\"]",
+      "note": "Frontmatter night-* keys are the dark-theme values of the same CSS custom properties (--fh-*)."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink-filled action for the one main command in a context.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Check again</button>",
+      "css": ".ds-btn{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;border-radius:4px;padding:6px 12px;font-size:0.8125rem;line-height:1.2rem;font-weight:500;border:1px solid transparent;cursor:pointer;transition:background-color 160ms,border-color 160ms,color 160ms;} .ds-btn:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;} .ds-btn:disabled{opacity:.5;cursor:not-allowed;} .ds-btn-primary{background:var(--fh-ink,#111);color:var(--fh-ground,#fff);} .ds-btn-primary:hover:enabled{background:color-mix(in srgb,var(--fh-ink,#111) 85%,transparent);}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default button: card surface, hairline border.",
+      "html": "<button class=\"ds-btn ds-btn-secondary\">Show more done</button>",
+      "css": ".ds-btn{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;border-radius:4px;padding:6px 12px;font-size:0.8125rem;line-height:1.2rem;font-weight:500;border:1px solid transparent;cursor:pointer;transition:background-color 160ms,border-color 160ms,color 160ms;} .ds-btn:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;} .ds-btn:disabled{opacity:.5;cursor:not-allowed;} .ds-btn-secondary{background:var(--fh-card,#fff);color:var(--fh-ink,#111);border-color:var(--fh-rule,#d7dadf);} .ds-btn-secondary:hover:enabled{border-color:var(--fh-ink-muted,#565c66);}"
+    },
+    {
+      "name": "Band Button",
+      "kind": "button",
+      "refersTo": "button-band",
+      "description": "Control inside the black signage band (Quit).",
+      "html": "<div class=\"ds-band-demo\"><button class=\"ds-btn ds-btn-band\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v8M7 6.3a8 8 0 1 0 10 0\"/></svg>Quit</button></div>",
+      "css": ".ds-btn{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;border-radius:4px;padding:6px 12px;font-size:0.8125rem;line-height:1.2rem;font-weight:500;border:1px solid transparent;cursor:pointer;transition:background-color 160ms,border-color 160ms,color 160ms;} .ds-btn:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;} .ds-btn:disabled{opacity:.5;cursor:not-allowed;} .ds-band-demo{background:var(--fh-band,#111);padding:8px;display:inline-block;} .ds-btn-band{height:32px;padding:0 12px;background:transparent;color:var(--fh-on-band,#fff);border-color:color-mix(in srgb,var(--fh-on-band-muted,#a9aeb6) 40%,transparent);} .ds-btn-band:hover:enabled{border-color:var(--fh-on-band,#fff);background:var(--fh-band-field,#26282c);} .ds-btn-band:focus-visible{outline-color:var(--fh-on-band,#fff);}"
+    },
+    {
+      "name": "Signage Band",
+      "kind": "nav",
+      "refersTo": "signage-band",
+      "description": "The 48px black band: wordmark, project station sign, view tabs, search.",
+      "html": "<header class=\"ds-band\"><span class=\"ds-wordmark\">Flashheart</span><span class=\"ds-band-div\"></span><span class=\"ds-band-sign\">flashheart</span><nav class=\"ds-band-tabs\"><a href=\"#\" class=\"ds-band-tab is-active\">Board</a><a href=\"#\" class=\"ds-band-tab\">Workstreams</a><a href=\"#\" class=\"ds-band-tab\">Table</a></nav><label class=\"ds-band-search\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Zm5.3-2.2L21 21\"/></svg><input type=\"search\" placeholder=\"Search title, slug, text, tags\"></label></header>",
+      "css": ".ds-band{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:16px;height:48px;padding:0 16px;background:var(--fh-band,#111);color:var(--fh-on-band,#fff);} .ds-wordmark{font-size:1rem;font-weight:800;font-stretch:112.5%;letter-spacing:-0.01em;} .ds-band-div{width:1px;height:20px;background:color-mix(in srgb,var(--fh-on-band-muted,#a9aeb6) 40%,transparent);} .ds-band-sign{border-top:2px solid var(--fh-on-band,#fff);padding-top:2px;font-size:0.8125rem;line-height:1.25;font-weight:650;font-stretch:87.5%;} .ds-band-tabs{display:flex;align-self:stretch;margin-left:8px;} .ds-band-tab{display:flex;align-items:center;padding:3px 12px 0;font-size:0.8125rem;color:var(--fh-on-band-muted,#a9aeb6);text-decoration:none;border-bottom:3px solid transparent;transition:color 160ms;} .ds-band-tab:hover{color:var(--fh-on-band,#fff);} .ds-band-tab.is-active{color:var(--fh-on-band,#fff);border-bottom-color:var(--fh-on-band,#fff);} .ds-band-tab:focus-visible{outline:2px solid var(--fh-on-band,#fff);outline-offset:-2px;} .ds-band-search{position:relative;display:flex;align-items:center;margin-left:auto;color:var(--fh-on-band-muted,#a9aeb6);} .ds-band-search svg{position:absolute;left:10px;} .ds-band-search input{width:256px;height:32px;padding:0 8px 0 32px;border-radius:4px;border:1px solid transparent;background:var(--fh-band-field,#26282c);color:var(--fh-on-band,#fff);font:inherit;font-size:0.8125rem;} .ds-band-search input:focus-visible{border-color:var(--fh-on-band-muted,#a9aeb6);outline:2px solid var(--fh-on-band,#fff);outline-offset:2px;}"
+    },
+    {
+      "name": "Select Field",
+      "kind": "input",
+      "refersTo": "select-field",
+      "description": "Labelled filter select; an applied value takes an ink border.",
+      "html": "<label class=\"ds-select\"><span>Priority</span><select><option>Any</option><option>High</option></select></label>",
+      "css": ".ds-select{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--fh-ink-muted,#565c66);} .ds-select select{height:28px;padding:0 28px 0 8px;border-radius:4px;border:1px solid var(--fh-rule,#d7dadf);background:var(--fh-card,#fff);color:var(--fh-ink,#111);font:inherit;font-size:0.75rem;transition:border-color 160ms;} .ds-select select:hover{border-color:var(--fh-ink-muted,#565c66);} .ds-select select:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;}"
+    },
+    {
+      "name": "Line Legend Chip",
+      "kind": "chip",
+      "refersTo": "line-bullet",
+      "description": "Pill chip naming a workstream with its bullet; pressing it focuses the line.",
+      "html": "<button class=\"ds-chip is-active\" aria-pressed=\"true\"><span class=\"ds-bullet\" style=\"background:var(--fh-line-1,#0039a6);color:var(--fh-line-ink-1,#fff)\">BC</span><b>board-core</b><span class=\"ds-chip-count\">3/7</span></button> <button class=\"ds-chip\" aria-pressed=\"false\"><span class=\"ds-bullet\" style=\"background:var(--fh-line-2,#fccc0a);color:var(--fh-line-ink-2,#111)\">AP</span><b>agent-protocol</b><span class=\"ds-chip-count\">1/4</span></button>",
+      "css": ".ds-chip{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;padding:2px 12px 2px 2px;border-radius:9999px;border:1px solid var(--fh-rule,#d7dadf);background:var(--fh-card,#fff);color:var(--fh-ink-muted,#565c66);font-size:0.75rem;cursor:pointer;transition:border-color 160ms,color 160ms;} .ds-chip b{font-weight:500;} .ds-chip:hover{border-color:var(--fh-ink-muted,#565c66);color:var(--fh-ink,#111);} .ds-chip.is-active{border-color:var(--fh-rule-strong,#111);color:var(--fh-ink,#111);} .ds-chip:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;} .ds-chip-count{color:var(--fh-ink-faint,#6a6f78);} .ds-bullet{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:9999px;font-size:0.75rem;font-weight:700;font-stretch:87.5%;line-height:1;box-shadow:inset 0 0 0 1px var(--fh-casing,rgb(17 17 17 / .22));}"
+    },
+    {
+      "name": "Ticket Card",
+      "kind": "card",
+      "refersTo": "ticket-card",
+      "description": "A ticket on the board: bullet, title, running time, slug, priority, blocker proof.",
+      "html": "<button class=\"ds-card\"><span class=\"ds-card-row\"><span class=\"ds-bullet\" style=\"background:var(--fh-line-0,#d52b1e);color:var(--fh-line-ink-0,#fff)\">BC</span><span class=\"ds-card-title\">Render the board columns</span><span class=\"ds-card-age\">2h</span></span><span class=\"ds-card-meta\"><code>board-columns</code><b>High</b></span><span class=\"ds-note\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3.5 20.5 12 12 20.5 3.5 12Z\"/></svg><span>Depends on api-read-index</span></span></button>",
+      "css": ".ds-card{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:6px;width:280px;padding:10px 12px;border-radius:2px;border:1px solid var(--fh-rule,#d7dadf);background:var(--fh-card,#fff);color:var(--fh-ink,#111);text-align:left;cursor:pointer;transition:border-color 150ms;} .ds-card:hover{border-color:var(--fh-ink-muted,#565c66);} .ds-card:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;} .ds-card-row{display:flex;align-items:flex-start;gap:8px;} .ds-card-title{flex:1;font-size:0.8125rem;line-height:1.375;font-weight:500;} .ds-card-age{font-size:0.6875rem;color:var(--fh-ink-faint,#6a6f78);} .ds-card-meta{display:flex;gap:8px;font-size:0.6875rem;color:var(--fh-ink-muted,#565c66);} .ds-card-meta code{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;} .ds-card-meta b{font-weight:600;color:var(--fh-ink,#111);} .ds-note{display:flex;align-items:flex-start;gap:6px;font-size:0.75rem;} .ds-note svg{margin-top:.2em;flex-shrink:0;} .ds-bullet{display:inline-grid;place-items:center;flex-shrink:0;width:20px;height:20px;border-radius:9999px;font-size:0.6875rem;font-weight:700;font-stretch:87.5%;line-height:1;box-shadow:inset 0 0 0 1px var(--fh-casing,rgb(17 17 17 / .22));}"
+    },
+    {
+      "name": "Needs-Repair Card",
+      "kind": "card",
+      "refersTo": "ticket-card",
+      "description": "Ticket the parser could not read cleanly: dashed border, hatched top band, reason in words.",
+      "html": "<div class=\"ds-repair\"><span class=\"ds-hatch\"></span><span class=\"ds-repair-title\">Untitled ticket</span><span class=\"ds-repair-note\">Front matter is not valid YAML</span></div>",
+      "css": ".ds-repair{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:280px;padding:14px 12px 10px;border-radius:2px;border:1px dashed var(--fh-ink-muted,#565c66);background:var(--fh-card,#fff);color:var(--fh-ink,#111);} .ds-hatch{position:absolute;left:0;right:0;top:0;height:6px;background-image:repeating-linear-gradient(-45deg,var(--fh-ink,#111) 0 3px,transparent 3px 7px);opacity:.55;} .ds-repair-title{font-size:0.8125rem;font-weight:500;} .ds-repair-note{font-size:0.75rem;}"
+    },
+    {
+      "name": "Station Sign Column Head",
+      "kind": "custom",
+      "refersTo": "station-sign",
+      "description": "Board column head: 5px ink rule over a condensed semibold label and a right-aligned count.",
+      "html": "<h2 class=\"ds-sign\"><span>In progress</span><span class=\"ds-sign-count\">4</span></h2>",
+      "css": ".ds-sign{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;justify-content:space-between;width:280px;margin:0;border-top:5px solid var(--fh-rule-strong,#111);padding:8px 0 12px;font-size:1rem;line-height:1.45rem;font-weight:650;font-stretch:87.5%;color:var(--fh-ink,#111);} .ds-sign-count{font-size:0.75rem;font-weight:400;font-stretch:100%;color:var(--fh-ink-muted,#565c66);}"
+    },
+    {
+      "name": "Transit Line",
+      "kind": "custom",
+      "refersTo": "transit-line",
+      "description": "Signature: a workstream as a line; served stations filled, next stop an interchange ring, route ahead pale solid, suspended service dashed.",
+      "html": "<ol class=\"ds-line\" style=\"--c:var(--fh-line-3,#00843d)\"><li><span class=\"ds-tr ds-r ds-served\"></span><span class=\"ds-st ds-st-served\"><i></i></span><span class=\"ds-nm\">Parse tickets</span></li><li><span class=\"ds-tr ds-l ds-served\"></span><span class=\"ds-tr ds-r ds-ahead\"></span><span class=\"ds-st ds-st-next\"></span><span class=\"ds-nm\">Board index</span></li><li><span class=\"ds-tr ds-l ds-ahead\"></span><span class=\"ds-tr ds-r ds-susp\"></span><span class=\"ds-st ds-st-pending\"></span><span class=\"ds-nm\">Read API</span></li><li><span class=\"ds-tr ds-l ds-susp\"></span><span class=\"ds-st ds-st-pending\"></span><span class=\"ds-nm\">Write API</span></li></ol>",
+      "css": ".ds-line{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;list-style:none;margin:0;padding:28px 0 8px;} .ds-line li{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;width:140px;} .ds-tr{position:absolute;top:11px;height:6px;width:50%;} .ds-l{left:0;} .ds-r{right:0;} .ds-served{background:var(--c);} .ds-ahead{background:var(--c);opacity:.35;} .ds-susp{background-image:repeating-linear-gradient(90deg,var(--c) 0 8px,transparent 8px 14px);} .ds-st{position:relative;z-index:1;box-sizing:border-box;width:28px;height:28px;border-radius:9999px;background:var(--fh-ground,#fff);} .ds-st-served{display:grid;place-items:center;background:var(--c);box-shadow:inset 0 0 0 1px var(--fh-casing,rgb(17 17 17 / .22));} .ds-st-served i{width:10px;height:10px;border-radius:9999px;background:var(--fh-ground,#fff);} .ds-st-next{border:3.5px solid var(--fh-rule-strong,#111);box-shadow:0 0 0 3px var(--fh-ground,#fff);} .ds-st-pending{border:4px solid var(--c);} .ds-nm{font-size:0.75rem;font-weight:500;color:var(--fh-ink,#111);text-align:center;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Transit Line Map",
+    "overview": "Flashheart is drawn as a transit system in the Vignelli 1972 diagram and Unimark signage tradition. Each workstream is a coloured line, its tickets are stations, and the shell is a black signage band over a white map ground (a near-black night map in dark mode). Order, progress and blockage read as a route map: a station served, the next stop, a stretch of suspended service.\n\nThe world is dense and calm, built to be glanced at on a second monitor all day and read closely in review sessions. One grotesk in tight sentence case, every number set as tabular data, almost no hue outside the line palette. Colour is quarantined to one job (naming workstreams); everything else is ink, rule weight, shape and words. Focus dims the rest of the board instead of filtering it away. The system refuses the grey SaaS lane-and-badge kanban: no coloured status pills, no badge rainbow, no drop-shadowed card stacks.",
+    "keyCharacteristics": [
+      "A black signage band (48px) carries the shell in both themes.",
+      "Line colours mean workstreams and nothing else; ticket state is monochrome.",
+      "Section heads are station signs: a heavy top rule over a condensed semibold label.",
+      "Flat map surfaces with hairline rules; only the slide-over panel casts a shadow.",
+      "Near-square corners (2px) on cards and panels; round only for bullets and stations.",
+      "Archivo Variable, self-hosted, with tabular numerals everywhere."
+    ],
+    "rules": [
+      {
+        "name": "The Lines Are Workstreams Rule",
+        "body": "A line colour appears only where a workstream is named or drawn: bullet, track, station, legend chip. Never use a line colour for status, priority, emphasis, project identity or decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink, Shape and Words Rule",
+        "body": "Ticket state is monochrome. A real blocker is a diamond plus its reason in ink; a wait on an earlier station of the same line is muted text with no mark; needs repair is a dashed border with a hatched top band plus the reason. Every state is paired with its proof in words.",
+        "section": "colors"
+      },
+      {
+        "name": "The Alarm Is for the App Rule",
+        "body": "Alarm red is reserved for application error alerts. If it appears on a ticket, it is a bug.",
+        "section": "colors"
+      },
+      {
+        "name": "The Black Band Rule",
+        "body": "The signage band is black in both themes (true black in dark mode). The map changes with the theme; the signage does not.",
+        "section": "colors"
+      },
+      {
+        "name": "The Station Sign Rule",
+        "body": "A section head is a condensed semibold label standing under a strong ink rule. Rule weight follows rank: 5px over board columns, 3px under table heads and active tabs, 2px over panel sections, markdown H2s and the band's project sign.",
+        "section": "typography"
+      },
+      {
+        "name": "The Numbers Are Data Rule",
+        "body": "Tabular numerals are on globally. Counts sit right-aligned against their label; running times sit right-aligned on the card's title row.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Map Rule",
+        "body": "Nothing on the map casts a shadow. Only the layer that slides over the map does.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Suspended Service Rule",
+        "body": "Dashed track means suspended service and nothing else. The route ahead is never dashed.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** draw every workstream reference with its line bullet or line colour, assigned per project by the stable line assignment.",
+      "**Do** pair every ticket state with its proof in words: diamond plus reason for blockers, muted words for in-line waits, dashed border plus hatched band plus reason for needs repair.",
+      "**Do** head sections with the station sign: condensed semibold label under a strong ink rule, weight by rank (5px, 3px, 2px).",
+      "**Do** keep the signage band black in both themes, with on-band text and band-field wells.",
+      "**Do** dim out-of-focus items (35% cards, 30% bullets, 50% chips) instead of removing them.",
+      "**Do** keep corners at 2px for cards and panels and 4px for controls."
+    ],
+    "donts": [
+      "**Don't** use a line colour for status, priority, project identity or decoration.",
+      "**Don't** colour ticket states: no red blocked badges, no green done pills, no amber warnings. Alarm red is for app error alerts only.",
+      "**Don't** add drop shadows to cards or anything else on the map; only the slide-over panel casts one.",
+      "**Don't** dash the route ahead; dashes mean suspended service, a missing station, or needs repair.",
+      "**Don't** set labels in uppercase or tracked-out caps; signage here is sentence case in the condensed cut.",
+      "**Don't** use proportional numerals for counts or times."
+    ]
+  }
+}

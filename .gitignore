@@ -9,3 +9,8 @@ coverage.out
 
 .DS_Store
 *.log
+
+# Impeccable per-machine overrides and review captures
+.impeccable/config.local.json
+.impeccable/review/
+.impeccable/questions/
