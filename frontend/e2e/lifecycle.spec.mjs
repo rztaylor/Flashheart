@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
@@ -111,6 +112,10 @@ test("detached launch returns the terminal; reload, new tab and last-tab close f
     await second.close({ runBeforeUnload: true });
     expect(await waitUntilNotListening(port, 30_000)).toBe(true);
     expect(foreign).toEqual([]);
+    // A clean run logs nothing, so serve.log is never created.
+    expect(existsSync(join(sandbox.root, ".flashheart", "serve.log"))).toBe(
+      false,
+    );
   } finally {
     await stopIfRunning(child);
     await killDetached(port);

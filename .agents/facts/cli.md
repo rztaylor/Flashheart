@@ -9,7 +9,8 @@
 - `serve` detaches by default (`LIFE-4`, D13): it re-executes itself in a new
   session, waits for the startup handshake, then returns the terminal.
   `--foreground` keeps it attached; the internal `--background-child` flag is
-  never documented in help.
+  never documented in help. The detached child logs diagnostics to
+  `<root>/.flashheart/serve.log` (lazy, rotated at 1 MB).
 - Normal `serve` startup is quiet. Browser-open failure prints the short-lived
   manual URL once to stderr. `--debug` adds the listener address (and, in the
   foreground, the stop reason) and never prints credentials.

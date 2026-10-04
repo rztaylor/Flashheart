@@ -8,6 +8,8 @@ Intended layout (packages are created when they get real content):
 - `internal/background`: re-executing `serve` as a detached child and its
   startup handshake (D13).
 - `internal/buildinfo`: version, commit and build date set by linker flags.
+- `internal/logfile`: lazily created, size-rotated diagnostic logs under
+  `<root>/.flashheart/` (`serve.log`; later `hook-errors.log`).
 - `internal/config`: global `config.yaml` and per-project `project.yaml`
   defaults, validation and atomic persistence.
 - `internal/mdfile`: pure markdown-with-frontmatter parsing and round-trip

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -38,6 +39,8 @@ type Dependencies struct {
 	RunApp          func(context.Context, app.Options) error
 	StartBackground func(context.Context, background.Options) (background.Report, error)
 	OpenHandshake   func() (Handshake, error)
+	// OpenServeLog returns the background child's diagnostic log for a root.
+	OpenServeLog func(root string) io.Writer
 }
 
 type usageError struct{ message string }
@@ -271,8 +274,15 @@ func serveBackgroundChild(ctx context.Context, env *environment, options app.Opt
 	if err != nil {
 		return fmt.Errorf("open background handshake: %w", err)
 	}
+	// The child's standard streams are discarded; diagnostics, including the
+	// standard logger used by net/http, go to <root>/.flashheart/serve.log.
+	diagnostics := io.Discard
+	if env.deps.OpenServeLog != nil {
+		diagnostics = env.deps.OpenServeLog(options.Root)
+		log.SetOutput(diagnostics)
+	}
 	reported := false
-	options.Stdout, options.Stderr = env.stdout, env.stderr
+	options.Stdout, options.Stderr = diagnostics, diagnostics
 	options.Launched = func(launched app.Launched) {
 		reported = true
 		_ = handshake.Ready(background.Report{
@@ -282,8 +292,12 @@ func serveBackgroundChild(ctx context.Context, env *environment, options app.Opt
 		})
 	}
 	err = env.deps.RunApp(ctx, options)
-	if err != nil && !reported {
+	switch {
+	case err == nil:
+	case !reported:
 		_ = handshake.Fail(err)
+	default:
+		fmt.Fprintf(diagnostics, "flashheart: %v\n", err)
 	}
 	return err
 }

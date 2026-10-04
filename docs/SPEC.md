@@ -338,8 +338,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   it waits until the server is listening and the browser launch has been
   attempted, prints the manual URL once to stderr if the browser could not be
   opened, and returns the terminal with exit 0. The server then lives until
-  Quit or its last tab closes (`LIFE-1`). `--foreground` keeps it attached
-  until it stops.
+  Quit or its last tab closes (`LIFE-1`). Its later diagnostics go to
+  `<root>/.flashheart/serve.log`, created only when something is logged.
+  `--foreground` keeps it attached until it stops.
 
 ### 6.13 CLI (`CLI`)
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,6 +11,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/cli"
+	"github.com/rztaylor/flashheart/internal/logfile"
 )
 
 func main() {
@@ -23,6 +25,7 @@ func main() {
 		Executable:      os.Executable,
 		RunApp:          app.Run,
 		StartBackground: background.Start,
+		OpenServeLog:    func(root string) io.Writer { return logfile.ServeLog(root) },
 		OpenHandshake: func() (cli.Handshake, error) {
 			return background.OpenHandshake()
 		},

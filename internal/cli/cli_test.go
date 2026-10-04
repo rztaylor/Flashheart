@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -24,6 +25,8 @@ type harness struct {
 	bgReport    background.Report
 	bgErr       error
 	handshake   *fakeHandshake
+	serveLog    *bytes.Buffer
+	logRoots    []string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -48,6 +51,13 @@ func (h *harness) deps() Dependencies {
 			return h.bgReport, h.bgErr
 		},
 		Executable: func() (string, error) { return "/opt/bin/flashheart", nil },
+		OpenServeLog: func(root string) io.Writer {
+			h.logRoots = append(h.logRoots, root)
+			if h.serveLog == nil {
+				h.serveLog = &bytes.Buffer{}
+			}
+			return h.serveLog
+		},
 		OpenHandshake: func() (Handshake, error) {
 			if h.handshake == nil {
 				return nil, errors.New("no handshake descriptor")
@@ -384,5 +394,52 @@ func TestServeHelpDoesNotAdvertiseInternalFlag(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "--foreground") {
 		t.Errorf("serve help does not document --foreground:\n%s", stdout)
+	}
+}
+
+func TestBackgroundChildLogsLaterFailuresToServeLog(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.handshake = &fakeHandshake{}
+	h.appLaunched = &app.Launched{Address: "127.0.0.1:9"}
+	h.appErr = errors.New("local server shutdown: boom")
+	code, _, _ := h.run("serve", "--background-child", "--root", "/srv/board")
+	if code != 1 {
+		t.Errorf("code = %d, want 1", code)
+	}
+	if len(h.handshake.failed) != 0 {
+		t.Errorf("a failure after ready reached the handshake: %q", h.handshake.failed)
+	}
+	if len(h.logRoots) != 1 || h.logRoots[0] != "/srv/board" {
+		t.Errorf("serve log roots = %q", h.logRoots)
+	}
+	if got := h.serveLog.String(); got != "flashheart: local server shutdown: boom\n" {
+		t.Errorf("serve log = %q", got)
+	}
+}
+
+func TestBackgroundChildSendsAppOutputToServeLog(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.handshake = &fakeHandshake{}
+	if code, _, stderr := h.run("serve", "--background-child", "--debug"); code != 0 {
+		t.Fatalf("code=%d stderr=%q", code, stderr)
+	}
+	options := h.appCalls[0]
+	if options.Stderr != io.Writer(h.serveLog) || options.Stdout != io.Writer(h.serveLog) {
+		t.Error("background child app output is not routed to serve.log")
+	}
+}
+
+func TestOnlyTheBackgroundChildOpensServeLog(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.run()
+	h.run("--foreground")
+	if len(h.logRoots) != 0 {
+		t.Errorf("serve log opened outside the background child: %q", h.logRoots)
 	}
 }

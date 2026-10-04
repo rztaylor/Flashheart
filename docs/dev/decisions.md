@@ -125,6 +125,8 @@ attempted. The launcher prints the manual URL if the browser could not be
 opened, then exits 0. The child keeps the browser-bound lifetime, so Quit or
 closing the last tab stops it. `--foreground` keeps the old blocking shape for
 debugging and tests. Singleserve leaves detached startup to the consumer's CLI
-boundary, so it lives in `internal/background` and `internal/cli`. Errors
-after the handshake are not reported anywhere yet; use `--foreground` to see
-them.
+boundary, so it lives in `internal/background` and `internal/cli`. After the
+handshake the child writes diagnostics (later errors, the standard logger used
+by `net/http`, `--debug` summaries) to `<root>/.flashheart/serve.log`, created
+on first write and rotated at 1 MB; a crash that bypasses Go's logger is still
+lost, and `--foreground` shows everything.

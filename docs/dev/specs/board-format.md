@@ -11,7 +11,8 @@ format with a few additive extensions, so existing boards work unchanged
 ├── .flashheart/
 │   ├── config.yaml                      global settings and UI preferences (CFG-1, CFG-2)
 │   ├── cache/cwd.json                   cwd → project/branch cache (agent-protocol §2)
-│   └── hook-errors.log                  hook failures (HOOK-1), rotated at 1 MB
+│   ├── hook-errors.log                  hook failures (HOOK-1), rotated at 1 MB
+│   └── serve.log                        background serve diagnostics (LIFE-4), rotated at 1 MB
 ├── .archive/                            archived projects (PRJ-5)
 ├── _scratch/                            agent activity outside any git repository (PRJ-4)
 └── <project>/                           e.g. ngplus
