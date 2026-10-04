@@ -1,15 +1,18 @@
 # Testing facts
 
-- Full local validation: `scripts/check.sh`. Until `foundation` lands it skips
-  the Go or frontend half when `go.mod` or `frontend/package.json` is absent;
-  `foundation` makes it strict.
+- Full local validation: `scripts/check.sh` (strict: frontend `npm ci`, lint,
+  unit tests and build, then gofmt, vet, Go tests, `-race`, binary build). Go
+  tests need the compiled frontend, so the frontend build runs first.
 - Backend: `GOCACHE=$PWD/.cache/go-build go test ./...`, the same with
   `-race`, `go vet ./...`, and `gofmt -l cmd internal` must be empty.
 - Frontend: `npm --prefix frontend run lint`, `npm --prefix frontend test`,
   `npm --prefix frontend run build`.
-- Browser: `PLAYWRIGHT_BROWSERS_PATH=$PWD/.cache/ms-playwright npm --prefix
-  frontend run test:e2e` for lifecycle, screenshots (1280/1920, light/dark)
-  and axe-core; required for visible UI changes.
+- Browser: `scripts/e2e.sh` builds the binary and runs Playwright with
+  `PLAYWRIGHT_BROWSERS_PATH=$PWD/.cache/ms-playwright` (pinned Chromium is
+  downloaded once) for lifecycle, screenshots (1280/1920, light/dark, in
+  `.cache/playwright-screenshots/`) and axe-core; required for visible UI
+  changes. It drives the real binary with `PATH=/nonexistent` so the
+  manual-URL path opens the page, against a copy of `testdata/boards/sample`.
 - Tests never touch the real board root or real agent configuration: use
   temporary directories, `testdata/boards/` copies, and fixture config files.
 - Hook adapters are tested against recorded, scrubbed payloads in

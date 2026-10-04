@@ -1,6 +1,6 @@
 # Engineering facts
 
-- Pre-implementation: the spec and roadmap exist; code starts at `foundation`.
+- Early implementation: `foundation` is built; follow `docs/dev/roadmap.md`.
 - Prefer small, focused standard-library Go packages and explicit TypeScript
   models; use mature libraries for commodity problems (YAML round-tripping,
   MCP, file watching, drag and drop, markdown).

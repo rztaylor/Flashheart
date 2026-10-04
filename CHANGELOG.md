@@ -8,5 +8,19 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- `flashheart` binary: `serve` (default) opens a private, authenticated board
+  shell in the browser and returns the terminal, running the server in the
+  background until Quit or the last tab closes; `--foreground` keeps it
+  attached. `version` prints the build and agent protocol version; `mcp`,
+  `hook`, `setup` and `doctor` report that they are not yet available.
+- Board root resolution from `--root`, `FLASHHEART_ROOT` or
+  `~/reports/Kanban`, and read-only loading of `.flashheart/config.yaml` with
+  documented defaults and validation.
+- Browser shell with quiet backend status and health check, guarded Quit that
+  explains a refusal, and stopped and connection-lost screens that explain how
+  to close the tab. Light and dark themes follow the system setting.
+- Validation: strict `scripts/check.sh`, `scripts/build.sh`, and
+  `scripts/e2e.sh` for the Playwright lifecycle, accessibility and screenshot
+  suite.
 - Product specification, board format and agent protocol (v1), roadmap,
   decisions, contributor facts and the implementation kickoff prompt.

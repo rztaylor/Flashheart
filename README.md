@@ -16,8 +16,9 @@ told where the work stood and carries on. Meanwhile you can see, for every
 project at once, which agents are working, which have gone quiet, and which
 are waiting for you.
 
-**Status: pre-implementation.** The specification and plan are written;
-code starts with the `foundation` roadmap item. Nothing below works yet.
+**Status: early development.** `flashheart` starts and opens an empty board
+shell in your browser; board views, hooks and MCP are not built yet. See the
+[roadmap](docs/dev/roadmap.md).
 
 ## How it works
 
@@ -43,10 +44,21 @@ Browser ◀── loopback, authenticated ──▶ flashheart serve (watches th
   telemetry, no accounts. Hooks never store your prompts, commands, or tool
   inputs and outputs.
 
-## Planned usage
+## Usage
 
 ```sh
-flashheart                          # open the board (serve is the default)
+flashheart                          # open the board and return the terminal
+flashheart --foreground             # keep the server attached to this terminal
+flashheart version
+```
+
+The server stops when you choose **Quit** in the board or close its last tab.
+If no browser can be opened, Flashheart prints a one-time link that works for
+two minutes.
+
+Planned:
+
+```sh
 flashheart setup claude             # show the hook, MCP and skill changes
 flashheart setup claude --write     # apply them, with backups
 flashheart setup codex --write
@@ -67,10 +79,12 @@ The board root defaults to `~/reports/Kanban`; override with `--root` or
 
 ## Development
 
-Requires Go 1.26.5+ and Node.js 22+ (build time only). Run all checks with:
+Requires Go 1.26.6+ and Node.js 22+ (build time only).
 
 ```sh
-scripts/check.sh
+scripts/build.sh                    # frontend + binary into build/flashheart
+scripts/check.sh                    # lint, unit tests, builds, vet, race tests
+scripts/e2e.sh                      # Playwright lifecycle, axe and screenshots
 ```
 
 ## Licence

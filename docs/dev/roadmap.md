@@ -10,9 +10,8 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 
 ## Execution order
 
-1. [`foundation`](roadmap-items/foundation.md) — **Pending**. Go module, CLI
-   skeleton, Singleserve shell, frontend toolchain, `scripts/check.sh`, sample
-   board fixtures.
+1. [`foundation`](roadmap-items/foundation.md) — **Done**, awaiting review;
+   remove this entry and its brief once approved.
 2. [`board-core`](roadmap-items/board-core.md) — **Pending**. Store (read
    side), index, blocking, multi-project board, Table and Workstreams views,
    card panel with markdown. Depends on `foundation`. UI concept gate first.

@@ -1,6 +1,15 @@
 # foundation
 
-Status: **Pending**.
+Status: **Done**, awaiting review (2026-10-04). Outcomes are in `docs/SPEC.md`
+(`LIFE-4`), `docs/dev/decisions.md` (D10, D13), `CHANGELOG.md` and the tests;
+delete this brief once the review is approved.
+
+Delivered differences from the scope below: `serve` detaches from the terminal
+by default (`--foreground` keeps it attached), which added
+`internal/background`; Go 1.26.6 (required by Singleserve v0.2.2) instead of
+1.26.5; the Playwright quit-denial step injects the denial response because
+nothing can hold a write open yet, while `internal/app` tests drive the real
+guard. Browser checks run with `scripts/e2e.sh`, not `scripts/check.sh`.
 
 ## Goal
 
