@@ -1,0 +1,9 @@
+version: 1
+auto_create_projects: true
+quiet_minutes: 10
+event_retention_days: 90
+done_column_limit: 20
+ui:
+  theme: system
+  density: normal
+  virtual_columns: [needs-you]

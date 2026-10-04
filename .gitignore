@@ -1,0 +1,11 @@
+.cache/
+build/
+dist/
+frontend/node_modules/
+frontend/test-results/
+frontend/playwright-report/
+internal/webui/assets/generated/
+coverage.out
+
+.DS_Store
+*.log

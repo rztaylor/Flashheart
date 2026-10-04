@@ -1,0 +1,5 @@
+name: Alpha
+repos:
+  - /Users/example/src/alpha
+settings:
+  enforce_handoff: false
