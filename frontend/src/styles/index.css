@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-text antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+
+  /* Token-driven transitions collapse when the user asks for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --default-transition-duration: 0ms;
+    }
+  }
+}
