@@ -23,8 +23,8 @@
   alternative. Markdown: `react-markdown` + `remark-gfm`.
 - Desktop first (1280 px and up); narrow widths show one column with a column
   picker. Healthy connection state is visually quiet.
-- Current tokens are provisional neutrals. Visual direction: not yet chosen. Run `ui-concept-design` before
-  `board-core` UI work and record the approved direction here and in
-  `DESIGN.md`.
+- Current tokens are provisional neutrals. Visual direction: not yet chosen.
+  Design with the `impeccable` skill before `board-core` UI work and record
+  the approved direction here and in `DESIGN.md`.
 - Validation: Vitest for view-models and components; Playwright screenshots
   at 1280 and 1920 in light and dark with axe-core for visible changes.

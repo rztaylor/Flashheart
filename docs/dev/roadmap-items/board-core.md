@@ -1,6 +1,6 @@
 # board-core
 
-Status: **Pending**. Depends on `foundation`.
+Status: **Pending**. Its dependency, `foundation`, is complete.
 
 ## Goal
 
@@ -10,10 +10,10 @@ and Table views, and a card panel that renders the ticket.
 
 ## Gate before UI code
 
-Run `ui-concept-design` for the shell, Board, card, card panel and
-Workstreams view (Editorial, Calm and Precision concepts, then a synthesis),
-and get approval. Record the approved direction in
-`.agents/facts/frontend-ui.md` and `DESIGN.md`.
+Design the shell, Board, card, card panel and Workstreams view with the
+`impeccable` skill (the user's choice, 2026-10-04, replacing
+`ui-concept-design`) and get approval before any board UI code. Record the
+approved direction in `.agents/facts/frontend-ui.md` and `DESIGN.md`.
 
 ## Scope
 

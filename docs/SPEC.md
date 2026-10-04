@@ -383,7 +383,7 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 ## 7. UX outline
 
 Desktop-first, information-dense, calm when nothing needs attention. Final
-visual direction is set by `ui-concept-design` before `board-core` UI work.
+visual direction is set with the `impeccable` skill before `board-core` UI work.
 
 - **Shell**: left rail of projects (with Needs you badges) and **All
   projects**; top bar with view switcher (Board · Agents · Workstreams ·

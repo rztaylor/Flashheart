@@ -20,8 +20,9 @@ foundation documents.
 3. docs/dev/specs/board-format.md and docs/dev/specs/agent-protocol.md
 4. .agents/facts/*.md (architecture, frontend-ui, testing, go, node, cli, git)
 5. docs/dev/decisions.md
-6. docs/dev/roadmap.md, then docs/dev/roadmap-items/foundation.md and
-   docs/dev/roadmap-items/board-core.md
+6. docs/dev/roadmap.md, then docs/dev/roadmap-items/board-core.md
+   (foundation is complete; its brief was removed and its outcomes live in
+   the spec, decisions and changelog)
 7. testdata/boards/sample/README.md
 8. The Singleserve consumer guide:
    ~/src/singleserve/docs/dev/guides/building-consumer-apps.md and its
@@ -92,11 +93,10 @@ criteria pass and scripts/check.sh is green:
    internal/index, and the read API. Test against copies of
    testdata/boards/sample, including the broken-frontmatter ticket, the
    missing dependency and the malformed event line.
-2. Before any board UI code, run the ui-concept-design skill (if unavailable,
-   produce three distinct written concepts — Editorial, Calm, Precision — with
-   static HTML mockups) for the shell, Board, card, card panel and
-   Workstreams view, then STOP for my approval. Record the approved direction
-   in .agents/facts/frontend-ui.md and DESIGN.md.
+2. Before any board UI code, design the shell, Board, card, card panel and
+   Workstreams view with the impeccable skill, then STOP for my approval.
+   Record the approved direction in .agents/facts/frontend-ui.md and
+   DESIGN.md.
 3. Implement the approved UI per the board-core brief using the frontend-ui
    skill if available: tokens in src/styles/tokens.css via Tailwind @theme,
    shared components before features, light and dark themes, keyboard
