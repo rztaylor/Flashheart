@@ -15,14 +15,17 @@ export function StoppedScreen({ phase, failures, detail }: StoppedScreenProps) {
     <main className="grid min-h-full place-items-center p-6">
       <section
         aria-labelledby="stopped-heading"
-        className="w-full max-w-lg rounded-panel border border-border bg-surface p-8"
+        className="w-full max-w-lg rounded-panel border border-rule bg-card p-8"
       >
-        <h1 id="stopped-heading" className="text-xl font-semibold">
+        <h1
+          id="stopped-heading"
+          className="border-t-3 border-rule-strong pt-2 text-xl station-sign"
+        >
           {copy.heading}
         </h1>
-        <p className="mt-3 text-text-muted">{copy.body}</p>
+        <p className="mt-3 text-ink-muted">{copy.body}</p>
         {copy.restart ? (
-          <p className="mt-3 text-text-muted">
+          <p className="mt-3 text-ink-muted">
             To start it again, run <code>flashheart</code> in a terminal.
           </p>
         ) : null}
@@ -30,7 +33,7 @@ export function StoppedScreen({ phase, failures, detail }: StoppedScreenProps) {
           <Button variant="primary" onClick={() => window.close()}>
             Close tab
           </Button>
-          <span className="text-sm text-text-muted">
+          <span className="text-sm text-ink-muted">
             If the tab stays open, close it yourself (⌘W or Ctrl+W).
           </span>
         </div>

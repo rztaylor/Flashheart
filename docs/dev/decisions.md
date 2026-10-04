@@ -130,3 +130,21 @@ handshake the child writes diagnostics (later errors, the standard logger used
 by `net/http`, `--debug` summaries) to `<root>/.flashheart/serve.log`, created
 on first write and rotated at 1 MB; a crash that bypasses Go's logger is still
 lost, and `--foreground` shows everything.
+
+## 2026-10-04 — D14: Board visual direction: Transit Line Map
+
+Options (impeccable decision page, code-led because no image generation is
+available locally): Transit Line Map (assigned by the concept roll), Flight
+Progress Strips, Terminal Yellow Wayfinding, the category-standard kanban,
+and five declined challengers.
+
+Decision: Transit Line Map, chosen by the user. The structure stays a
+standard kanban (the user pinned "standard kanban, but with style"); the
+world supplies type, palette, density and one signature move: workstreams as
+transit lines with tickets as stations. Line colours are reserved for
+workstreams so they always mean the same thing; ticket state uses ink,
+shape and words, which also keeps colour off the critical path for
+accessibility. Waits on an earlier station are shown quietly so the blocked
+diamond answers "what is stuck". Frontend additions under D10: self-hosted
+`@fontsource-variable/archivo` (OFL) for the signage grotesk under the
+strict CSP, and an authored icon set instead of an icon library.

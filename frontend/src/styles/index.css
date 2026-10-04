@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
 @import "./tokens.css";
 
 @layer base {
@@ -9,11 +10,27 @@
   }
 
   body {
-    @apply bg-canvas font-sans text-text antialiased;
+    @apply bg-ground font-sans text-base text-ink antialiased;
+    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--fh-selection);
+    color: var(--fh-ink);
   }
 
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-focus;
+  }
+
+  * {
+    scrollbar-color: var(--fh-rule) transparent;
+    scrollbar-width: thin;
+  }
+
+  a {
+    text-underline-offset: 0.2em;
   }
 
   /* Token-driven transitions collapse when the user asks for less motion. */
@@ -21,5 +38,136 @@
     :root {
       --default-transition-duration: 0ms;
     }
+  }
+}
+
+/* Station-sign label: the condensed signage cut used for column and section heads. */
+@utility station-sign {
+  font-stretch: 87.5%;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+@utility wordmark {
+  font-stretch: 112.5%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Hatching: monochrome, never a line colour. hatched-strong marks the
+   needs-repair edge band and the in-progress stretch of a route bar. */
+@utility hatched-strong {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--fh-ink) 0 3px,
+    transparent 3px 7px
+  );
+  opacity: 0.55;
+}
+
+@utility hatched {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--fh-hatch) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+@layer components {
+  /* Rendered ticket and review markdown, set in the board's own type scale. */
+  .markdown {
+    @apply text-base text-ink;
+    overflow-wrap: anywhere;
+  }
+  .markdown > * + * {
+    @apply mt-3;
+  }
+  /* A document's own H1 sits below the panel title in the hierarchy. */
+  .markdown h1 {
+    @apply text-md station-sign;
+  }
+  .markdown h2 {
+    @apply mt-6 border-t-2 border-rule-strong pt-2 text-sm station-sign;
+  }
+  .markdown h3,
+  .markdown h4 {
+    @apply mt-4 text-sm station-sign;
+  }
+  .markdown ul,
+  .markdown ol {
+    @apply space-y-1 pl-5;
+  }
+  .markdown ul {
+    list-style: square;
+  }
+  .markdown ol {
+    list-style: decimal;
+  }
+  .markdown li::marker {
+    color: var(--fh-ink-faint);
+  }
+  .markdown ul.contains-task-list {
+    @apply list-none pl-0;
+  }
+  .markdown input[type="checkbox"] {
+    @apply mr-2 size-3.5 align-[-0.15em];
+    accent-color: var(--fh-ink);
+  }
+  .markdown code {
+    @apply rounded-[3px] bg-well px-1 py-px font-mono text-[0.8125em];
+  }
+  .markdown pre {
+    @apply overflow-x-auto rounded-card border border-rule bg-well p-3 text-sm;
+  }
+  .markdown pre code {
+    @apply bg-transparent p-0;
+  }
+  .markdown blockquote {
+    @apply border-l border-rule-strong pl-3 text-ink-muted;
+  }
+  .markdown table {
+    @apply block w-full overflow-x-auto text-sm;
+    border-collapse: collapse;
+  }
+  .markdown th,
+  .markdown td {
+    @apply border-b border-rule px-2 py-1 text-left;
+  }
+  .markdown th {
+    @apply station-sign;
+  }
+  .markdown hr {
+    @apply border-rule;
+  }
+
+  .panel-enter {
+    animation: panel-in 220ms var(--ease-out-expo);
+  }
+  @keyframes panel-in {
+    from {
+      transform: translateX(24px);
+      opacity: 0.6;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .panel-enter {
+      animation: none;
+    }
+  }
+}
+
+/* Narrow widths: the board shows one column, chosen with the column picker. */
+@media (width < 48rem) {
+  [data-narrow-column] .board-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-narrow-column] section[data-column] {
+    display: none;
+  }
+  [data-narrow-column="todo"] section[data-column="todo"],
+  [data-narrow-column="in-progress"] section[data-column="in-progress"],
+  [data-narrow-column="ready-to-review"] section[data-column="ready-to-review"],
+  [data-narrow-column="done"] section[data-column="done"] {
+    display: flex;
   }
 }

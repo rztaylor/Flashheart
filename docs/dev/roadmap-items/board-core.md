@@ -4,10 +4,14 @@ Status: **Partial**. Its dependency, `foundation`, is complete.
 
 Done: `mdfile`, `board` (blocking with reasons, workstream status), `store`
 read side on `os.Root`, `index` (revisioned, rebuilt when older than 2 s;
-5,000 tickets in about 160 ms), and the read API, plus a read-only
-attachment endpoint so review screenshots render (SEC-4). Remaining: the
-design gate and all UI scope below. Event-log reading stays with
-`agent-runs`.
+5,000 tickets in about 160 ms), the read API with a read-only attachment
+endpoint (SEC-4), the approved design (D14), and the UI: project rail,
+Board in three densities, card panel (Ticket and Review), Workstreams,
+Table, filters and search, light and dark, keyboard movement, axe-clean.
+Remaining: the impeccable finish review verdict, `DESIGN.md`, and user
+review. Event-log reading stays with `agent-runs`; saved preferences
+(density, filters) arrive with backend writes (CFG-2); views refresh every
+10 s until long-poll live updates (board-editing).
 
 ## Goal
 

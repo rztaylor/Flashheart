@@ -20,6 +20,11 @@ All notable changes to this project are documented here. The project follows
 - Browser shell with quiet backend status and health check, guarded Quit that
   explains a refusal, and stopped and connection-lost screens that explain how
   to close the tab. Light and dark themes follow the system setting.
+- Board UI in the Transit Line Map style: every project in a rail with
+  route bars, a Board in three densities, a card panel with the ticket,
+  blocked-by explanations, handoff, criteria and review, Workstreams drawn as
+  transit lines, a sortable Table, filters and search, light and dark themes
+  and full keyboard movement.
 - Read-only board API over the root: projects with counts, project and
   all-projects boards with blocked-by explanations, ticket detail with
   review, handoff and attachments, workstreams with derived status, and

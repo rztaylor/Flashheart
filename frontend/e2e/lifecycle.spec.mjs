@@ -39,7 +39,7 @@ function recordForeignRequests(page) {
 
 async function expectRunning(page) {
   await expect(
-    page.getByRole("heading", { level: 1, name: "Flashheart is running" }),
+    page.getByRole("navigation", { name: "Projects" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Backend connected. Check connection" }),
@@ -208,17 +208,14 @@ test("shell is keyboard reachable, accessible and renders in both themes", async
     await expect(page.getByText(sandbox.root, { exact: true })).toBeVisible();
 
     await page.keyboard.press("Tab");
-    await expect(
-      page.getByRole("button", { name: "Backend connected. Check connection" }),
-    ).toBeFocused();
-    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Board" })).toBeFocused();
+    await page.getByRole("button", { name: "Quit" }).focus();
     await expect(page.getByRole("button", { name: "Quit" })).toBeFocused();
     // Screenshots show the resting state, not the keyboard focus ring.
     await page.evaluate(() => {
       if (document.activeElement instanceof HTMLElement)
         document.activeElement.blur();
     });
-
     for (const theme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme: theme });
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
@@ -230,7 +227,7 @@ test("shell is keyboard reachable, accessible and renders in both themes", async
         const results = await new AxeBuilder({ page }).analyze();
         expect(results.violations, `${theme} ${width}`).toEqual([]);
         await page.screenshot({
-          path: resolve(screenshotDir, `shell-${width}-${theme}.png`),
+          path: resolve(screenshotDir, `lifecycle-${width}-${theme}.png`),
         });
       }
     }

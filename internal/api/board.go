@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -30,16 +31,31 @@ type FileSource interface {
 	OpenAttachment(project, ticket, file string) (*os.File, string, error)
 }
 
+// WorkstreamBrief is a workstream as listed with its project: enough to draw
+// its line and progress.
+type WorkstreamBrief struct {
+	Slug    string `json:"slug"`
+	Title   string `json:"title"`
+	Created string `json:"created"`
+	Status  string `json:"status"`
+	Done    int    `json:"done"`
+	Total   int    `json:"total"`
+}
+
 // ProjectSummary describes one project in the rail (PRJ-6).
 type ProjectSummary struct {
-	Name         string         `json:"name"`
-	DisplayName  string         `json:"displayName"`
-	Repos        []string       `json:"repos"`
-	Counts       map[string]int `json:"counts"`
-	NeedsRepair  int            `json:"needsRepair"`
-	Blocked      int            `json:"blocked"`
-	Warnings     []string       `json:"warnings"`
-	LastModified string         `json:"lastModified"`
+	Name        string         `json:"name"`
+	DisplayName string         `json:"displayName"`
+	Repos       []string       `json:"repos"`
+	Counts      map[string]int `json:"counts"`
+	NeedsRepair int            `json:"needsRepair"`
+	Blocked     int            `json:"blocked"`
+	// Stuck counts blocked tickets held by more than the order of a line:
+	// a dependency, a depended-on workstream, or a missing reference.
+	Stuck        int               `json:"stuck"`
+	Warnings     []string          `json:"warnings"`
+	LastModified string            `json:"lastModified"`
+	Workstreams  []WorkstreamBrief `json:"workstreams"`
 }
 
 // ProjectsResponse is GET /api/projects.
@@ -160,14 +176,20 @@ type WorkstreamTicket struct {
 	Title   string `json:"title"`
 	Column  string `json:"column"`
 	Blocked bool   `json:"blocked"`
-	Missing bool   `json:"missing"`
+	// Held means blocked by something other than this line's own order or
+	// its workstream-level dependencies.
+	Held    bool `json:"held"`
+	Missing bool `json:"missing"`
 }
 
 // WorkstreamJSON is one workstream with derived status (VIEW-4).
 type WorkstreamJSON struct {
-	Slug                 string             `json:"slug"`
-	Title                string             `json:"title"`
-	Status               string             `json:"status"`
+	Slug   string `json:"slug"`
+	Title  string `json:"title"`
+	Status string `json:"status"`
+	// Suspended means the workstream's own depends-on-workstreams are not
+	// complete, so the whole line waits.
+	Suspended            bool               `json:"suspended"`
 	DeclaredStatus       string             `json:"declaredStatus"`
 	Priority             string             `json:"priority"`
 	Created              string             `json:"created"`
@@ -338,6 +360,7 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, Slug: workstream.Slug}]
 		item := WorkstreamJSON{
 			Slug: workstream.Slug, Title: workstream.Title, Status: state.Status,
+			Suspended:      suspended(snapshot, project.Name, workstream.DependsOnWorkstreams),
 			DeclaredStatus: workstream.Status, Priority: workstream.Priority, Created: workstream.Created,
 			Done: state.Done, Total: state.Total, Next: state.Next,
 			BlockedBy:            reasons(project.Name, state.Reasons),
@@ -351,7 +374,11 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 			entry := WorkstreamTicket{Slug: slug, Title: slug, Missing: true}
 			if ticket, ok := snapshot.Ticket(project.Name, slug); ok {
 				ref := board.Ref{Project: project.Name, Slug: slug}
-				entry = WorkstreamTicket{Slug: slug, Title: ticket.Title, Column: string(ticket.Column), Blocked: len(snapshot.Analysis.Blocked[ref]) > 0}
+				reasons := snapshot.Analysis.Blocked[ref]
+				entry = WorkstreamTicket{
+					Slug: slug, Title: ticket.Title, Column: string(ticket.Column),
+					Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream.Slug),
+				}
 			} else if slices.Contains(project.Archived, slug) {
 				entry = WorkstreamTicket{Slug: slug, Title: slug, Column: "archived"}
 			}
@@ -459,7 +486,7 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 		Excerpt: ticket.Excerpt, Attachments: len(project.Attachments[ticket.Slug]), HasReview: project.Reviews[ticket.Slug],
 		Blocked: len(blockedBy) > 0, BlockedBy: blockedBy,
 		NeedsRepair: nonNil(ticket.Repair),
-		Warnings:    slices.Concat([]string{}, ticket.Warnings, snapshot.Analysis.Warnings[ref]),
+		Warnings:    nonNil(slices.Concat(ticket.Warnings, snapshot.Analysis.Warnings[ref])),
 	}
 	for _, criterion := range ticket.Criteria {
 		result.Criteria.Total++
@@ -519,6 +546,14 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 	result := ProjectSummary{
 		Name: project.Name, DisplayName: project.DisplayName, Repos: nonNil(project.Repos),
 		Counts: map[string]int{}, Warnings: nonNil(project.Warnings), LastModified: timestamp(project.LastModified),
+		Workstreams: []WorkstreamBrief{},
+	}
+	for _, workstream := range project.Workstreams {
+		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, Slug: workstream.Slug}]
+		result.Workstreams = append(result.Workstreams, WorkstreamBrief{
+			Slug: workstream.Slug, Title: workstream.Title, Created: workstream.Created,
+			Status: state.Status, Done: state.Done, Total: state.Total,
+		})
 	}
 	for _, column := range board.Columns {
 		result.Counts[string(column)] = 0
@@ -528,8 +563,12 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 		if ticket.NeedsRepair() {
 			result.NeedsRepair++
 		}
-		if len(snapshot.Analysis.Blocked[board.Ref{Project: project.Name, Slug: ticket.Slug}]) > 0 {
+		reasons := snapshot.Analysis.Blocked[board.Ref{Project: project.Name, Slug: ticket.Slug}]
+		if len(reasons) > 0 {
 			result.Blocked++
+		}
+		if slices.ContainsFunc(reasons, func(reason board.Reason) bool { return reason.Kind != board.WorkstreamOrder }) {
+			result.Stuck++
 		}
 	}
 	return result
@@ -547,4 +586,34 @@ func nonNil[T any](items []T) []T {
 		return []T{}
 	}
 	return items
+}
+
+// heldOutsideLine reports whether any reason comes from outside the given
+// workstream's own order and workstream-level dependencies.
+func heldOutsideLine(reasons []board.Reason, workstream string) bool {
+	return slices.ContainsFunc(reasons, func(reason board.Reason) bool {
+		switch {
+		case reason.Kind == board.WorkstreamOrder && reason.Workstream == workstream:
+			return false
+		case reason.Kind == board.WorkstreamDependency && reason.Via == workstream && reason.Workstream != workstream:
+			return false
+		}
+		return true
+	})
+}
+
+// suspended reports whether any depended-on workstream is missing or has
+// tickets not yet in review or done.
+func suspended(snapshot *index.Snapshot, project string, dependencies []string) bool {
+	for _, name := range dependencies {
+		ref := board.Ref{Project: project, Slug: name}
+		if other, slug, found := strings.Cut(name, "/"); found {
+			ref = board.Ref{Project: other, Slug: slug}
+		}
+		state, ok := snapshot.Analysis.Workstreams[ref]
+		if !ok || state.Done < state.Total {
+			return true
+		}
+	}
+	return false
 }

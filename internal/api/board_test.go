@@ -78,8 +78,16 @@ func TestProjectsListsCountsAndActivity(t *testing.T) {
 		t.Fatalf("projects not sorted by activity: %+v", body.Projects)
 	}
 	alpha := body.Projects[1]
-	if alpha.DisplayName != "Alpha" || alpha.NeedsRepair != 1 || alpha.Blocked != 3 {
+	// Stuck excludes waits on an earlier station of the ticket's own line:
+	// drag-and-drop only waits for card-panel on board-ui.
+	if alpha.DisplayName != "Alpha" || alpha.NeedsRepair != 1 || alpha.Blocked != 3 || alpha.Stuck != 2 {
 		t.Errorf("alpha = %+v", alpha)
+	}
+	if len(alpha.Workstreams) != 1 || alpha.Workstreams[0] != (WorkstreamBrief{Slug: "board-ui", Title: "Board UI", Created: "2026-10-01", Status: "active", Done: 1, Total: 3}) {
+		t.Errorf("alpha workstreams = %+v", alpha.Workstreams)
+	}
+	if beta := body.Projects[0]; beta.Workstreams == nil || len(beta.Workstreams) != 0 {
+		t.Errorf("beta workstreams = %#v, want an empty list", beta.Workstreams)
 	}
 	want := map[string]int{"todo": 4, "in-progress": 1, "ready-to-review": 1, "done": 1}
 	for column, count := range want {
@@ -227,6 +235,10 @@ func TestWorkstreams(t *testing.T) {
 	if !ws.Tickets[2].Blocked || ws.Tickets[1].Blocked {
 		t.Errorf("blocked flags = %+v", ws.Tickets)
 	}
+	// drag-and-drop waits only on its own line's order, so it is not held.
+	if ws.Tickets[2].Held {
+		t.Errorf("order-only wait reported as held: %+v", ws.Tickets[2])
+	}
 }
 
 func TestAllProjectsBoard(t *testing.T) {
@@ -283,5 +295,72 @@ func TestMissingRootAndUnknownProject(t *testing.T) {
 	sample.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/projects", nil))
 	if recorder.Code != http.StatusMethodNotAllowed || !strings.Contains(recorder.Body.String(), "method_not_allowed") {
 		t.Errorf("POST /api/projects = %d %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+// TestListsAreNeverNull keeps the JSON contract: every list is an array, so
+// the frontend never has to treat null as empty. Only the optional handoff
+// and review objects may be null.
+func TestListsAreNeverNull(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := sampleAPI(t, nil)
+	for _, path := range []string{
+		"/api/projects",
+		"/api/projects/alpha/board",
+		"/api/all/board",
+		"/api/projects/alpha/tickets/docs--broken-frontmatter",
+		"/api/projects/beta/tickets/feat--hello",
+		"/api/projects/alpha/workstreams",
+	} {
+		body := getJSON(t, handler, path, http.StatusOK, nil).Body.String()
+		body = strings.NewReplacer(`"handoff":null`, "", `"review":null`, "").Replace(body)
+		if strings.Contains(body, ":null") {
+			t.Errorf("GET %s has a null field:\n%s", path, body)
+		}
+	}
+}
+
+func TestHeldStationsAreBlockedFromOutsideTheirLine(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := sampleAPI(t, func(root string) {
+		path := filepath.Join(root, "alpha", "todo", "feat--drag-and-drop.md")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		held := strings.Replace(string(data), "depends-on: []", "depends-on: [spike--offline-mode]", 1)
+		if err := os.WriteFile(path, []byte(held), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	})
+	var body WorkstreamsResponse
+	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
+	if drag := body.Workstreams[0].Tickets[2]; !drag.Held || !drag.Blocked {
+		t.Errorf("drag-and-drop = %+v, want held by its ticket dependency", drag)
+	}
+}
+
+func TestSuspendedLinesWaitOnTheirOwnWorkstreamDependencies(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := sampleAPI(t, func(root string) {
+		write := func(name, content string) {
+			if err := os.WriteFile(filepath.Join(root, "alpha", "workstreams", name), []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		write("later.md", "---\ntickets: [spike--offline-mode]\ndepends-on-workstreams: [board-ui]\n---\n# Later\n")
+		write("free.md", "---\ntickets: [bug--column-overflow]\n---\n# Free\n")
+	})
+	var body WorkstreamsResponse
+	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
+	suspended := map[string]bool{}
+	for _, workstream := range body.Workstreams {
+		suspended[workstream.Slug] = workstream.Suspended
+	}
+	if !suspended["later"] || suspended["free"] || suspended["board-ui"] {
+		t.Errorf("suspended = %v, want only later", suspended)
 	}
 }

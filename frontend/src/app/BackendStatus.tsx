@@ -1,4 +1,3 @@
-import { Button } from "../components/Button";
 import type { LifecycleState } from "../lifecycle/state";
 
 interface BackendStatusProps {
@@ -7,7 +6,8 @@ interface BackendStatusProps {
   onCheck(): void;
 }
 
-// BackendStatus is quiet while healthy: a dot with an accessible name.
+// BackendStatus sits on the signage band and is quiet while healthy: a small
+// dot with an accessible name. Trouble shows as words.
 export function BackendStatus({
   state,
   checking,
@@ -15,23 +15,24 @@ export function BackendStatus({
 }: BackendStatusProps) {
   const view = describe(state);
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <span aria-live="polite" className="text-text-muted">
+    <div className="flex items-center gap-2 text-xs text-on-band-muted">
+      <span aria-live="polite">
         {checking ? "Checking…" : healthMessage(state)}
       </span>
-      <Button
-        variant="quiet"
+      <button
+        type="button"
         aria-label={view.label}
         title={view.label}
         onClick={onCheck}
         disabled={checking || !view.checkable}
+        className="flex h-8 items-center gap-2 rounded-control px-2 transition-colors hover:enabled:bg-band-field focus-visible:outline-on-band disabled:cursor-default"
       >
         <span
           aria-hidden="true"
-          className={`size-2.5 rounded-full ${view.dot}`}
+          className={`size-2 rounded-full ${view.dot}`}
         />
-        {view.text ? <span>{view.text}</span> : null}
-      </Button>
+        {view.text ? <span className="text-on-band">{view.text}</span> : null}
+      </button>
     </div>
   );
 }
@@ -41,7 +42,7 @@ function describe(state: LifecycleState) {
     case "connected":
       return {
         label: "Backend connected. Check connection",
-        dot: "bg-success",
+        dot: "bg-on-band-muted",
         text: "",
         checkable: true,
       };
@@ -49,7 +50,7 @@ function describe(state: LifecycleState) {
       const noun = state.failures === 1 ? "heartbeat" : "heartbeats";
       return {
         label: "Backend not responding. Check connection",
-        dot: "bg-warning",
+        dot: "bg-on-band ring-2 ring-on-band/40",
         text: `Reconnecting · ${state.failures} missed ${noun}`,
         checkable: true,
       };
@@ -57,14 +58,14 @@ function describe(state: LifecycleState) {
     case "stopping":
       return {
         label: "Flashheart is stopping",
-        dot: "bg-text-muted",
+        dot: "bg-on-band-muted/50",
         text: "Stopping…",
         checkable: false,
       };
     default:
       return {
         label: "Connecting to the backend",
-        dot: "bg-text-muted",
+        dot: "bg-on-band-muted/50",
         text: "Connecting…",
         checkable: false,
       };
