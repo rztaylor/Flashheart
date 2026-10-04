@@ -2,7 +2,7 @@
 
 - Module: `github.com/rztaylor/flashheart`. Decision needed: GitHub repository
   name and visibility (`rztaylor/Flashheart` assumed).
-- Minimum toolchain: Go 1.26.5, matching the Singleserve v0.2 line.
+- Minimum toolchain: Go 1.26.6, required by Singleserve v0.2.2.
 - Entrypoint: `cmd/flashheart`. Implementation under `internal/`; no public
   `pkg/` API is intended.
 - Every hand-written package has a concise `doc.go` ownership contract.

@@ -87,10 +87,9 @@ user's agent configuration silently is not acceptable.
 ## 2026-10-04 — D10: Libraries
 
 Go: `github.com/rztaylor/singleserve` v0.2.x; `github.com/modelcontextprotocol/go-sdk`
-(official, v1.7+); `github.com/fsnotify/fsnotify`; a maintained YAML v3
-implementation with node-level round-tripping (`go.yaml.in/yaml/v3`, the
-maintained successor of `gopkg.in/yaml.v3`; confirm at `foundation`); a small
-cross-platform file-lock library or `golang.org/x/sys`. Frontend: React,
+(official, v1.7+); `github.com/fsnotify/fsnotify`; `go.yaml.in/yaml/v3` for
+YAML with node-level round-tripping; a small cross-platform file-lock library
+or `golang.org/x/sys`. Frontend: React,
 strict TypeScript, Vite, Tailwind CSS v4, `@dnd-kit` (accessible drag and
 drop), `react-markdown` + `remark-gfm` without raw HTML; Biome, Vitest,
 Playwright. Commodity parsing, drag and drop and markdown are not
@@ -108,3 +107,24 @@ Default root `~/reports/Kanban`, one subdirectory per project, so the board is
 the user's own and is not committed into the repositories it tracks.
 Overridable with `--root` or `FLASHHEART_ROOT`. Whether the root is itself a
 git repository is left to the user for now.
+
+Confirmed at `foundation` (2026-10-04): `go.yaml.in/yaml/v3` (v3.0.5, maintained
+by the YAML organisation) rather than `gopkg.in/yaml.v3`, whose last release
+was v3.0.1 in May 2022 and whose repository is archived. The API is the same.
+Singleserve is pinned at v0.2.2, which requires Go 1.26.6.
+
+## 2026-10-04 — D13: `serve` detaches from the terminal
+
+Options: block the terminal until the server stops (Singleserve's example
+shape); detach after launching the browser; a separate long-lived daemon.
+
+Decision: detach. `flashheart` re-executes itself as a child in a new session
+with discarded standard streams and waits on a one-line startup handshake (an
+inherited pipe) until the server is listening and the browser launch was
+attempted. The launcher prints the manual URL if the browser could not be
+opened, then exits 0. The child keeps the browser-bound lifetime, so Quit or
+closing the last tab stops it. `--foreground` keeps the old blocking shape for
+debugging and tests. Singleserve leaves detached startup to the consumer's CLI
+boundary, so it lives in `internal/background` and `internal/cli`. Errors
+after the handshake are not reported anywhere yet; use `--foreground` to see
+them.

@@ -334,13 +334,20 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `LIFE-2` A shutdown guard denies quit while a save is in flight.
 - `LIFE-3` Live updates use authenticated long-polling on a monotonically
   increasing revision; the store does not depend on the transport.
+- `LIFE-4` `flashheart` (`serve`) runs the server detached from the terminal:
+  it waits until the server is listening and the browser launch has been
+  attempted, prints the manual URL once to stderr if the browser could not be
+  opened, and returns the terminal with exit 0. The server then lives until
+  Quit or its last tab closes (`LIFE-1`). `--foreground` keeps it attached
+  until it stops.
 
 ### 6.13 CLI (`CLI`)
 
 - `CLI-1` Commands: `serve` (default), `mcp`, `hook`, `setup`, `doctor`,
   `version`. Global `--root`. `--help` on every command.
 - `CLI-2` Normal startup prints nothing but errors; `--debug` adds the
-  listener address and lifecycle summaries, never credentials.
+  listener address and (with `--foreground`) lifecycle summaries, never
+  credentials.
 - `CLI-3` `hook` and `mcp` write nothing to stdout except their protocol
   output.
 

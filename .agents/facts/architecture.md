@@ -4,7 +4,10 @@ Intended layout (packages are created when they get real content):
 
 - `cmd/flashheart`: signals and dependency wiring only.
 - `internal/cli`: subcommands (`serve`, `mcp`, `hook`, `setup`, `doctor`,
-  `version`), flags, root resolution, exit codes.
+  `version`), flags, root resolution, exit codes, launch presentation.
+- `internal/background`: re-executing `serve` as a detached child and its
+  startup handshake (D13).
+- `internal/buildinfo`: version, commit and build date set by linker flags.
 - `internal/config`: global `config.yaml` and per-project `project.yaml`
   defaults, validation and atomic persistence.
 - `internal/mdfile`: pure markdown-with-frontmatter parsing and round-trip
@@ -37,7 +40,7 @@ Intended layout (packages are created when they get real content):
 - `internal/webui`: embedded compiled frontend assets.
 - `frontend/`: React UI; ownership in `.agents/facts/frontend-ui.md`.
 
-Dependency direction: `cli` → (`app` | `mcpserver` | `hooks` | `setup`) →
+Dependency direction: `cli` → (`app` | `background` | `mcpserver` | `hooks` | `setup`) →
 (`index`, `runs`, `protocol`) → (`store`, `events`) → (`board`, `mdfile`,
 `gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `runs`,
 `scrub`) import no I/O packages. Nothing below `app` imports HTTP or
@@ -55,6 +58,6 @@ Singleserve.
 - Generated frontend output: `internal/webui/assets/generated/` (untracked).
 - Shared fixtures: `testdata/boards/` (sample roots) and
   `testdata/hooks/<agent>/<event>/` (recorded, scrubbed hook payloads).
-- External integrations: `github.com/rztaylor/singleserve` v0.2.x;
+- External integrations: `github.com/rztaylor/singleserve` v0.2.x (v0.2.2);
   `github.com/modelcontextprotocol/go-sdk` v1.7+; Claude Code and Codex hook
   and MCP configuration (`docs/dev/specs/agent-protocol.md`).

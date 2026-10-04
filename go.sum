@@ -1,0 +1,4 @@
+github.com/rztaylor/singleserve v0.2.2 h1:J6JQlA9GLN0JQ4xrWhTgf9WBuIGScpRVTC7v/nkK6bQ=
+github.com/rztaylor/singleserve v0.2.2/go.mod h1:itfCCKBALzSn3wM+KWYycLld+t/w8XUj0CQXyBp6+hE=
+go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
+go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
