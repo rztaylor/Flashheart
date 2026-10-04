@@ -1,17 +1,22 @@
 # board-core
 
-Status: **Partial**. Its dependency, `foundation`, is complete.
+Status: **Done**, awaiting review (2026-10-04). Its dependency, `foundation`,
+is complete. Delete this brief once approved; outcomes live in the spec,
+board-format (blocking rules), decisions D14, `DESIGN.md`, the changelog and
+the tests.
 
-Done: `mdfile`, `board` (blocking with reasons, workstream status), `store`
-read side on `os.Root`, `index` (revisioned, rebuilt when older than 2 s;
-5,000 tickets in about 160 ms), the read API with a read-only attachment
-endpoint (SEC-4), the approved design (D14), and the UI: project rail,
-Board in three densities, card panel (Ticket and Review), Workstreams,
-Table, filters and search, light and dark, keyboard movement, axe-clean.
-Remaining: the impeccable finish review verdict, `DESIGN.md`, and user
-review. Event-log reading stays with `agent-runs`; saved preferences
-(density, filters) arrive with backend writes (CFG-2); views refresh every
-10 s until long-poll live updates (board-editing).
+Acceptance evidence: the sample board renders every ticket in its column
+with blocked reasons and the broken ticket as needs repair, ticket links
+open tickets, and external links open in a new tab with `rel="noopener
+noreferrer"` (`frontend/e2e/board.spec.mjs`); 5,000 tickets across 10
+projects index in about 160 ms (`internal/index`); a generated 50-ticket
+project renders at 1280 and 1920 in both themes; axe-core passes on Board,
+Workstreams, Table, the open panel and the Review tab in both themes.
+
+Deferred, with owners: remembering filters and density per project needs
+backend preference writes (CFG-2, with board-editing); views refresh every
+10 s until long-poll live updates (board-editing); event-log reading and the
+inverted "Needs you" card arrive with `agent-runs`.
 
 ## Goal
 
