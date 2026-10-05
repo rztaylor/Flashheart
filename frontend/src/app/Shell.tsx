@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type Card,
   COLUMNS,
-  type Column,
   fetchAllBoard,
   fetchProjectBoard,
   fetchProjects,
@@ -16,8 +15,14 @@ import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
+import { RunStateMark } from "../components/RunState";
 import { Toast } from "../components/Toast";
-import { BoardView, NoTickets } from "../features/board/BoardView";
+import { AgentsView } from "../features/agents/AgentsView";
+import {
+  BoardView,
+  NoTickets,
+  VIRTUAL_COLUMNS,
+} from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
@@ -54,6 +59,7 @@ interface ShellProps {
 
 const views: { id: View; label: string; icon: IconName }[] = [
   { id: "board", label: "Board", icon: "board" },
+  { id: "agents", label: "Agents", icon: "agents" },
   { id: "workstreams", label: "Workstreams", icon: "lines" },
   { id: "table", label: "Table", icon: "table" },
 ];
@@ -73,7 +79,7 @@ export function Shell({
   const { density, colourBy: paint } = preferences;
   const [newTicket, setNewTicket] = useState(false);
   const [doneAll, setDoneAll] = useState(false);
-  const [narrowColumn, setNarrowColumn] = useState<Column>("in-progress");
+  const [narrowColumn, setNarrowColumn] = useState<string>("in-progress");
   const opener = useRef<HTMLElement | null>(null);
   const stopping = state.phase === "stopping";
 
@@ -101,7 +107,9 @@ export function Shell({
     [fetcher, scopeProject, doneAll],
   );
   const board = useResource(
-    ready && route.view !== "workstreams" ? loadBoard : undefined,
+    ready && route.view !== "workstreams" && route.view !== "agents"
+      ? loadBoard
+      : undefined,
     `${scopeKey}:${doneAll}`,
     revision,
   );
@@ -156,6 +164,10 @@ export function Shell({
   const current = summaries.find((project) => project.name === scopeProject);
   const v1Projects =
     projects.status === "ready" ? projects.data.v1Projects : [];
+  // Needs you is visible from every view and project (SPEC §7).
+  const needsYou =
+    projects.status === "ready" ? projects.data.runs.needsYou : 0;
+  const shownVirtual = preferences.virtualColumns;
   const projectNames = useMemo(
     () =>
       route.scope.kind === "all"
@@ -278,7 +290,29 @@ export function Shell({
           })}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
-          {route.view !== "workstreams" ? (
+          {needsYou > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                go({
+                  scope: { kind: "all" },
+                  view: "agents",
+                  ticket: undefined,
+                });
+              }}
+              className="flex h-7 items-center gap-1.5 rounded-[3px] bg-on-band px-2 text-xs font-semibold whitespace-nowrap text-band transition-opacity hover:opacity-90 focus-visible:outline-on-band"
+            >
+              <RunStateMark state="needs-you" size={10} />
+              {needsYou}
+              <span className="max-sm:sr-only">
+                {needsYou === 1 ? " needs you" : " need you"}
+              </span>
+              <span className="sm:sr-only">
+                {needsYou === 1 ? " agent needs you" : " agents need you"}
+              </span>
+            </button>
+          ) : null}
+          {route.view !== "workstreams" && route.view !== "agents" ? (
             <div className="hidden md:flex">
               <SearchField
                 label="Search tickets"
@@ -363,7 +397,7 @@ export function Shell({
           aria-label={`${scopeName} ${route.view}`}
         >
           <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
-            {route.view !== "workstreams" ? (
+            {route.view !== "workstreams" && route.view !== "agents" ? (
               <div className="flex w-full">
                 <SearchField
                   tone="plain"
@@ -394,8 +428,15 @@ export function Shell({
               <SelectField
                 label="Column"
                 value={narrowColumn}
-                onChange={(value) => setNarrowColumn(value as Column)}
+                onChange={setNarrowColumn}
               >
+                {VIRTUAL_COLUMNS.filter((column) =>
+                  shownVirtual.includes(column.id),
+                ).map((column) => (
+                  <option key={column.id} value={column.id}>
+                    {column.title}
+                  </option>
+                ))}
                 {COLUMNS.map((column) => (
                   <option key={column.id} value={column.id}>
                     {column.title}
@@ -426,6 +467,18 @@ export function Shell({
               project folder there with a{" "}
               <code className="font-mono">tickets/</code> directory inside.
             </EmptyState>
+          ) : route.view === "agents" ? (
+            projects.status === "ready" ? (
+              <AgentsView
+                fetcher={fetcher}
+                project={scopeProject}
+                projects={summaries}
+                revision={revision}
+                onOpen={openTicket}
+              />
+            ) : (
+              <BoardSkeleton />
+            )
           ) : route.view === "workstreams" ? (
             projects.status === "ready" ? (
               <WorkstreamsView
@@ -454,6 +507,18 @@ export function Shell({
                         updatePreferences((current) => ({
                           ...current,
                           density: value,
+                        }))
+                    : undefined
+                }
+                virtualColumns={
+                  route.view === "board" ? shownVirtual : undefined
+                }
+                onVirtualColumns={
+                  route.view === "board"
+                    ? (virtualColumns) =>
+                        updatePreferences((current) => ({
+                          ...current,
+                          virtualColumns,
                         }))
                     : undefined
                 }
@@ -508,6 +573,7 @@ export function Shell({
                     projectNames={projectNames}
                     density={density}
                     paint={paint}
+                    virtualColumns={shownVirtual}
                     selected={route.ticket}
                     doneTotal={board.data.doneTotal}
                     doneShown={board.data.doneShown}

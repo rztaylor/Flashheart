@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 
-import { COLUMNS, type ProjectSummary } from "../../api/board";
+import { COLUMNS, type ProjectSummary, summedRuns } from "../../api/board";
+import type { RunCounts } from "../../api/runs";
 import type { Scope } from "../../app/route";
 import { Icon } from "../../components/Icon";
 import { RouteBar } from "../../components/RouteBar";
+import { RunStateMark } from "../../components/RunState";
 
 interface ProjectRailProps {
   projects: ProjectSummary[];
@@ -29,6 +31,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
     counts,
     blocked: projects.reduce((sum, project) => sum + project.stuck, 0),
     repair: projects.reduce((sum, project) => sum + project.needsRepair, 0),
+    runs: summedRuns(projects),
   };
   return (
     <nav
@@ -45,6 +48,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
             counts={all.counts}
             blocked={all.blocked}
             repair={all.repair}
+            runs={all.runs}
             onClick={() => onSelect({ kind: "all" })}
           />
         </li>
@@ -66,6 +70,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
               counts={project.counts}
               blocked={project.stuck}
               repair={project.needsRepair}
+              runs={project.runs}
               onClick={() =>
                 onSelect({ kind: "project", project: project.name })
               }
@@ -86,6 +91,7 @@ interface RailItemProps {
   counts: ProjectSummary["counts"];
   blocked: number;
   repair: number;
+  runs: RunCounts;
   onClick(): void;
 }
 
@@ -97,6 +103,7 @@ function RailItem({
   counts,
   blocked,
   repair,
+  runs,
   onClick,
 }: RailItemProps) {
   const tickets = total(counts);
@@ -104,7 +111,7 @@ function RailItem({
     <button
       type="button"
       onClick={onClick}
-      title={subtitle ? `${title} (${subtitle})` : title}
+      title={`${subtitle ? `${title} (${subtitle})` : title}${runs.needsYou > 0 ? ` — ${runs.needsYou} need${runs.needsYou === 1 ? "s" : ""} you` : ""}`}
       aria-current={active ? "page" : undefined}
       className={`flex w-full items-start gap-2.5 rounded-control px-2 py-2.5 text-left transition-colors focus-visible:outline-on-band max-[90rem]:group-data-[panel=open]/work:justify-center max-[90rem]:group-data-[panel=open]/work:px-0 ${
         active ? "bg-band-field" : "hover:bg-band-field/60"
@@ -112,13 +119,23 @@ function RailItem({
     >
       <span
         aria-hidden="true"
-        className={`grid h-6 min-w-8 shrink-0 place-items-center rounded-[3px] px-1 text-xs leading-none font-bold station-sign ${
+        data-needs-you={runs.needsYou > 0 ? "" : undefined}
+        className={`relative grid h-6 min-w-8 shrink-0 place-items-center rounded-[3px] px-1 text-xs leading-none font-bold station-sign ${
           active
             ? "bg-on-band text-band"
             : "text-on-band shadow-[inset_0_0_0_1.5px_var(--fh-on-band-muted)]"
         }`}
       >
         {code}
+        {runs.needsYou > 0 ? (
+          <span className="absolute -top-1 -right-1 grid size-3 place-items-center rounded-full bg-band">
+            <RunStateMark
+              state="needs-you"
+              size={10}
+              className="text-on-band"
+            />
+          </span>
+        ) : null}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1.5 max-[90rem]:group-data-[panel=open]/work:sr-only">
         <span className="flex items-baseline justify-between gap-2">
@@ -131,6 +148,25 @@ function RailItem({
         </span>
         <RouteBar counts={counts} label={title} />
         <span className="flex items-center gap-3 text-2xs whitespace-nowrap text-on-band-muted">
+          {runs.needsYou > 0 ? (
+            <span className="flex items-center gap-1 rounded-[3px] bg-on-band px-1 font-semibold text-band">
+              <RunStateMark state="needs-you" size={8} />
+              {runs.needsYou}
+              <span className="sr-only">
+                {runs.needsYou === 1 ? " agent needs" : " agents need"} you
+              </span>
+            </span>
+          ) : null}
+          {runs.live > runs.needsYou ? (
+            <span
+              className="flex items-center gap-1"
+              title="Agent runs in progress"
+            >
+              <RunStateMark state="working" size={9} still />
+              {runs.live - runs.needsYou}
+              <span className="sr-only"> agents running</span>
+            </span>
+          ) : null}
           <span>{counts["in-progress"]} in progress</span>
           {blocked > 0 ? (
             <span

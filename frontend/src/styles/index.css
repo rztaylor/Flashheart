@@ -186,9 +186,27 @@
       opacity: 0;
     }
   }
+  /* A working run's dot beats slowly: the board's one sign of motion. */
+  .run-beat {
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: run-beat 1.8s var(--ease-out-expo) infinite;
+  }
+  @keyframes run-beat {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(0.55);
+      opacity: 0.55;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .panel-enter,
-    .toast-enter {
+    .toast-enter,
+    .run-beat {
       animation: none;
     }
   }
@@ -206,7 +224,9 @@
   [data-narrow-column="up-next"] section[data-column="up-next"],
   [data-narrow-column="in-progress"] section[data-column="in-progress"],
   [data-narrow-column="review"] section[data-column="review"],
-  [data-narrow-column="done"] section[data-column="done"] {
+  [data-narrow-column="done"] section[data-column="done"],
+  [data-narrow-column="needs-you"] section[data-column="needs-you"],
+  [data-narrow-column="agent-working"] section[data-column="agent-working"] {
     display: flex;
   }
 }

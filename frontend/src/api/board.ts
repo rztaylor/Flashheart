@@ -1,4 +1,13 @@
 import { type AuthenticatedFetch, getJSON, isRecord } from "./client";
+import {
+  isLive,
+  isRun,
+  isRunCounts,
+  type Live,
+  noRuns,
+  type Run,
+  type RunCounts,
+} from "./runs";
 
 export type Column = "backlog" | "up-next" | "in-progress" | "review" | "done";
 
@@ -53,6 +62,11 @@ export interface Card {
   needsRepair: string[];
   warnings: string[];
   searchText?: string;
+  // live is the linked run that most needs attention (VIEW-8); needsYou and
+  // agentWorking place the card in the virtual columns (VIEW-2).
+  live?: Live;
+  needsYou: boolean;
+  agentWorking: boolean;
 }
 
 export interface WorkstreamBrief {
@@ -77,6 +91,7 @@ export interface ProjectSummary {
   warnings: string[];
   lastModified: string;
   workstreams: WorkstreamBrief[];
+  runs: RunCounts;
 }
 
 export interface ProjectsResponse {
@@ -86,6 +101,7 @@ export interface ProjectsResponse {
   v1Projects: string[];
   migrateCommand: string;
   projects: ProjectSummary[];
+  runs: RunCounts;
 }
 
 export interface BoardResponse {
@@ -127,6 +143,8 @@ export interface TicketDetail extends Card {
   // raw editor. Both are empty on a read-only server.
   hash: string;
   raw: string;
+  // runs are the runs linked to the ticket, most recent first (CARD-1).
+  runs: Run[];
 }
 
 export interface WorkstreamTicket {
@@ -196,7 +214,10 @@ export function isCard(value: unknown): value is Card {
     Array.isArray(value.blockedBy) &&
     value.blockedBy.every(isReason) &&
     isStringArray(value.needsRepair) &&
-    isStringArray(value.warnings)
+    isStringArray(value.warnings) &&
+    (value.live === undefined || isLive(value.live)) &&
+    typeof value.needsYou === "boolean" &&
+    typeof value.agentWorking === "boolean"
   );
 }
 
@@ -215,7 +236,8 @@ function isSummary(value: unknown): value is ProjectSummary {
     typeof value.needsRepair === "number" &&
     typeof value.blocked === "number" &&
     isString(value.lastModified) &&
-    Array.isArray(value.workstreams)
+    Array.isArray(value.workstreams) &&
+    isRunCounts(value.runs)
   );
 }
 
@@ -227,7 +249,8 @@ const isProjects = (value: unknown): value is ProjectsResponse =>
   isStringArray(value.v1Projects) &&
   isString(value.migrateCommand) &&
   Array.isArray(value.projects) &&
-  value.projects.every(isSummary);
+  value.projects.every(isSummary) &&
+  isRunCounts(value.runs);
 
 const isBoard = (value: unknown): value is BoardResponse =>
   isRecord(value) &&
@@ -254,7 +277,9 @@ const isTicket = (
   isCard(value.ticket) &&
   isString(value.ticket.body) &&
   Array.isArray(value.ticket.criteriaItems) &&
-  Array.isArray(value.ticket.attachmentFiles);
+  Array.isArray(value.ticket.attachmentFiles) &&
+  Array.isArray(value.ticket.runs) &&
+  value.ticket.runs.every(isRun);
 
 const isWorkstreams = (
   value: unknown,
@@ -356,4 +381,19 @@ export function splitReasons(reasons: Reason[]): {
     blockers: reasons.filter((reason) => reason.kind !== "order"),
     waits: reasons.filter((reason) => reason.kind === "order"),
   };
+}
+
+// summedRuns adds up projects' run counts.
+export function summedRuns(projects: ProjectSummary[]): RunCounts {
+  return projects.reduce(
+    (sum, project) => ({
+      working: sum.working + project.runs.working,
+      needsYou: sum.needsYou + project.runs.needsYou,
+      waiting: sum.waiting + project.runs.waiting,
+      quiet: sum.quiet + project.runs.quiet,
+      ended: sum.ended + project.runs.ended,
+      live: sum.live + project.runs.live,
+    }),
+    noRuns,
+  );
 }

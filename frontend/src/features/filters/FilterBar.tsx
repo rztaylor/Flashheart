@@ -11,7 +11,7 @@ import { PAINT_MODES, type PaintMode } from "../../model/paint";
 
 export type { Density } from "../../api/preferences";
 
-import type { Density } from "../../api/preferences";
+import type { Density, VirtualColumn } from "../../api/preferences";
 import { Icon } from "../../components/Icon";
 
 interface FilterBarProps {
@@ -24,12 +24,16 @@ interface FilterBarProps {
   onDensity?(density: Density): void;
   paint?: PaintMode;
   onPaint?(paint: PaintMode): void;
+  // virtualColumns are the virtual columns shown on the board (VIEW-2).
+  virtualColumns?: VirtualColumn[];
+  onVirtualColumns?(columns: VirtualColumn[]): void;
   // onNewTicket opens the New ticket dialog (EDIT-5); absent when read-only.
   onNewTicket?(): void;
 }
 
-// FilterBar holds the board and table filters (VIEW-7), card density and
-// what card colour shows (VIEW-6). Search lives in the header.
+// FilterBar holds the board and table filters (VIEW-7), the virtual
+// columns shown (VIEW-2), card density and what card colour shows (VIEW-6).
+// Search lives in the header.
 export function FilterBar({
   filters,
   options,
@@ -40,6 +44,8 @@ export function FilterBar({
   onDensity,
   paint,
   onPaint,
+  virtualColumns,
+  onVirtualColumns,
   onNewTicket,
 }: FilterBarProps) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
@@ -133,6 +139,37 @@ export function FilterBar({
       </span>
       {(paint && onPaint) || (density && onDensity) ? (
         <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+          {virtualColumns && onVirtualColumns ? (
+            <fieldset className="flex items-center gap-3">
+              <legend className="sr-only">Show virtual columns</legend>
+              <span aria-hidden="true" className="text-xs text-ink-muted">
+                Show
+              </span>
+              {(
+                [
+                  ["needs-you", "Needs you"],
+                  ["agent-working", "Agent working"],
+                ] as const
+              ).map(([id, label]) => (
+                <CheckboxField
+                  key={id}
+                  label={label}
+                  title={`Show a ${label} column that mirrors tickets from their real columns`}
+                  checked={virtualColumns.includes(id)}
+                  onChange={(checked) =>
+                    onVirtualColumns(
+                      checked
+                        ? (["needs-you", "agent-working"] as const).filter(
+                            (column) =>
+                              column === id || virtualColumns.includes(column),
+                          )
+                        : virtualColumns.filter((column) => column !== id),
+                    )
+                  }
+                />
+              ))}
+            </fieldset>
+          ) : null}
           {paint && onPaint ? (
             <SelectField
               label="Colour by"

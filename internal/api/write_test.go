@@ -223,15 +223,17 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	handler, root := writableAPI(t)
 	var prefs Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
-	if prefs.Theme != "system" || prefs.ColourBy != "type" || prefs.Scopes == nil {
+	if prefs.Theme != "system" || prefs.ColourBy != "type" || prefs.Scopes == nil || !slices.Equal(prefs.VirtualColumns, []string{"needs-you"}) {
 		t.Errorf("defaults = %+v", prefs)
 	}
 	prefs.Theme, prefs.Density, prefs.ColourBy = "dark", "compact", "priority"
+	prefs.VirtualColumns = []string{"needs-you", "agent-working"}
 	prefs.Scopes["alpha"] = config.Scope{View: "table", State: "blocked"}
+	prefs.Scopes["beta"] = config.Scope{View: "agents"}
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
-	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" {
+	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || again.Scopes["beta"].View != "agents" || len(again.VirtualColumns) != 2 {
 		t.Errorf("saved = %+v", again)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
@@ -240,6 +242,15 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	}
 	prefs.ColourBy = "rainbow"
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+	prefs.ColourBy, prefs.VirtualColumns = "type", []string{"mystery"}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+	// An absent list means none shown, not the default.
+	prefs.VirtualColumns = nil
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
+	if again.VirtualColumns == nil || len(again.VirtualColumns) != 0 {
+		t.Errorf("cleared virtual columns = %#v", again.VirtualColumns)
+	}
 }
 
 func TestReadOnlyServerRefusesWrites(t *testing.T) {

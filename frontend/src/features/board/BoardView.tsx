@@ -27,8 +27,10 @@ import {
   type TicketRef,
   type WorkstreamBrief,
 } from "../../api/board";
+import type { VirtualColumn } from "../../api/preferences";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
+import { RunStateMark } from "../../components/RunState";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
 import { type PaintMode, paintFor, paintKey } from "../../model/paint";
@@ -45,6 +47,9 @@ interface BoardViewProps {
   projectNames?: Map<string, string>;
   density: Density;
   paint: PaintMode;
+  // virtualColumns are shown before Backlog, mirroring tickets whose runs
+  // need you or are working (VIEW-2).
+  virtualColumns?: VirtualColumn[];
   selected?: TicketRef;
   doneTotal: number;
   doneShown: number;
@@ -64,8 +69,30 @@ const keyMoves: Record<string, GridMove> = {
   End: "end",
 };
 
+export const VIRTUAL_COLUMNS: {
+  id: VirtualColumn;
+  title: string;
+  empty: string;
+  holds(card: Card): boolean;
+}[] = [
+  {
+    id: "needs-you",
+    title: "Needs you",
+    empty: "Nothing needs you",
+    holds: (card) => card.needsYou,
+  },
+  {
+    id: "agent-working",
+    title: "Agent working",
+    empty: "No agent at work",
+    holds: (card) => card.agentWorking,
+  },
+];
+
 const columnTitle = (id: string) =>
-  COLUMNS.find((column) => column.id === id)?.title ?? id;
+  COLUMNS.find((column) => column.id === id)?.title ??
+  VIRTUAL_COLUMNS.find((column) => column.id === id)?.title ??
+  id;
 
 const instructions =
   "Press Shift with the left or right arrow to move this ticket to the next column, or drag it with the pointer. Enter opens it.";
@@ -84,6 +111,7 @@ export function BoardView(props: BoardViewProps) {
     projectNames,
     density,
     paint,
+    virtualColumns = [],
     selected,
     doneTotal,
     doneShown,
@@ -107,11 +135,27 @@ export function BoardView(props: BoardViewProps) {
       COLUMNS.map((column) => [column.id, []]),
     );
     for (const card of cards) grouped.get(card.column)?.push(card);
-    return COLUMNS.map((column) => ({
-      ...column,
-      cards: grouped.get(column.id) ?? [],
+    const mirrors = VIRTUAL_COLUMNS.filter((column) =>
+      virtualColumns.includes(column.id),
+    ).map((column) => ({
+      id: column.id as Column | VirtualColumn,
+      title: column.title,
+      empty: column.empty,
+      virtual: true,
+      cards: cards.filter(column.holds),
     }));
-  }, [cards]);
+    return [
+      ...mirrors,
+      ...COLUMNS.map((column) => ({
+        id: column.id as Column | VirtualColumn,
+        title: column.title,
+        empty:
+          column.id === "in-progress" ? "Nothing in progress" : "No tickets",
+        virtual: false,
+        cards: grouped.get(column.id) ?? [],
+      })),
+    ];
+  }, [cards, virtualColumns]);
   const sizes = columns.map((column) => column.cards.length);
   const firstNonEmpty = Math.max(
     0,
@@ -127,7 +171,10 @@ export function BoardView(props: BoardViewProps) {
     [cards, paint],
   );
   const findCard = (id: string) =>
-    [...refs.current.values()].find((element) => element.dataset.ticket === id);
+    [...refs.current.values()].find(
+      (element) =>
+        element.dataset.ticket === id && element.dataset.mirrored === undefined,
+    );
 
   // Keep the selected card (and so its column) in view as the panel opens
   // beside the board, without moving focus.
@@ -152,28 +199,31 @@ export function BoardView(props: BoardViewProps) {
     }
   }, [cards]);
 
-  const onKey = (card: Card) => (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (
-      event.shiftKey &&
-      onMove &&
-      (event.key === "ArrowLeft" || event.key === "ArrowRight")
-    ) {
-      event.preventDefault();
-      const index = COLUMNS.findIndex((column) => column.id === card.column);
-      const target = COLUMNS[index + (event.key === "ArrowLeft" ? -1 : 1)];
-      if (target) {
-        refocus.current = card.id;
-        onMove(card, target.id);
+  const onKey =
+    (card: Card, mirrored = false) =>
+    (event: KeyboardEvent<HTMLButtonElement>) => {
+      if (mirrored && event.shiftKey) return;
+      if (
+        event.shiftKey &&
+        onMove &&
+        (event.key === "ArrowLeft" || event.key === "ArrowRight")
+      ) {
+        event.preventDefault();
+        const index = COLUMNS.findIndex((column) => column.id === card.column);
+        const target = COLUMNS[index + (event.key === "ArrowLeft" ? -1 : 1)];
+        if (target) {
+          refocus.current = card.id;
+          onMove(card, target.id);
+        }
+        return;
       }
-      return;
-    }
-    const move = keyMoves[event.key];
-    if (!move) return;
-    event.preventDefault();
-    const next = moveInGrid(sizes, active, move);
-    setCursor(next);
-    refs.current.get(keyOf(next.column, next.row))?.focus();
-  };
+      const move = keyMoves[event.key];
+      if (!move) return;
+      event.preventDefault();
+      const next = moveInGrid(sizes, active, move);
+      setCursor(next);
+      refs.current.get(keyOf(next.column, next.row))?.focus();
+    };
 
   const workstreamTitle = (card: Card) =>
     workstreams
@@ -238,14 +288,35 @@ export function BoardView(props: BoardViewProps) {
             <ColourKey mode={paint} paints={paints} />
           </div>
         ) : null}
-        <div className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(5,minmax(15rem,1fr))] gap-x-5 overflow-x-auto px-4 pt-4">
+        <div
+          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 gap-x-5 overflow-x-auto px-4 pt-4"
+          style={{
+            gridTemplateColumns: `repeat(${columns.length}, minmax(15rem, 1fr))`,
+          }}
+        >
           {columns.map((column, columnIndex) => (
-            <DropColumn key={column.id} id={column.id} enabled={!!onMove}>
+            <DropColumn
+              key={column.id}
+              id={column.id}
+              enabled={!!onMove && !column.virtual}
+              virtual={column.virtual}
+            >
               <h2
                 id={`column-${column.id}`}
                 className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-3 text-md station-sign"
               >
-                <span>{column.title}</span>
+                <span className="flex items-center gap-2">
+                  {column.virtual ? (
+                    <RunStateMark
+                      state={
+                        column.id === "needs-you" ? "needs-you" : "working"
+                      }
+                      size={12}
+                      className="translate-y-[1px]"
+                    />
+                  ) : null}
+                  {column.title}
+                </span>
                 <span className="text-sm font-semibold text-ink">
                   {column.id === "done" && doneTotal > column.cards.length
                     ? `${column.cards.length} of ${doneTotal}`
@@ -255,9 +326,7 @@ export function BoardView(props: BoardViewProps) {
               <div className="-mx-2 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2 pt-0.5 pb-6">
                 {column.cards.length === 0 ? (
                   <p className="px-2 py-6 text-center text-xs text-ink-muted">
-                    {column.id === "in-progress"
-                      ? "Nothing in progress"
-                      : "No tickets"}
+                    {column.empty}
                   </p>
                 ) : null}
                 {column.cards.map((card, rowIndex) => {
@@ -268,15 +337,36 @@ export function BoardView(props: BoardViewProps) {
                     active.column === columnIndex
                       ? active.row === rowIndex
                       : rowIndex === 0;
+                  const ref = (node: HTMLButtonElement | null) => {
+                    if (node)
+                      refs.current.set(keyOf(columnIndex, rowIndex), node);
+                    else refs.current.delete(keyOf(columnIndex, rowIndex));
+                  };
+                  if (column.virtual) {
+                    return (
+                      <TicketCard
+                        key={`${card.project}/${card.id}`}
+                        ref={ref}
+                        {...cardProps(card)}
+                        mirrored
+                        dimmed={
+                          focusedLine !== "" && card.workstream !== focusedLine
+                        }
+                        selected={selected?.id === card.id}
+                        tabIndex={isActive ? 0 : -1}
+                        onOpen={() => onOpen({ id: card.id })}
+                        onKeyDown={onKey(card, true)}
+                        onFocus={() =>
+                          setCursor({ column: columnIndex, row: rowIndex })
+                        }
+                      />
+                    );
+                  }
                   return (
                     <DragCard
                       key={`${card.project}/${card.id}`}
                       enabled={!!onMove}
-                      cardRef={(node) => {
-                        if (node)
-                          refs.current.set(keyOf(columnIndex, rowIndex), node);
-                        else refs.current.delete(keyOf(columnIndex, rowIndex));
-                      }}
+                      cardRef={ref}
                       {...cardProps(card)}
                       dimmed={
                         focusedLine !== "" && card.workstream !== focusedLine
@@ -326,10 +416,12 @@ export function BoardView(props: BoardViewProps) {
 function DropColumn({
   id,
   enabled,
+  virtual,
   children,
 }: {
-  id: Column;
+  id: Column | VirtualColumn;
   enabled: boolean;
+  virtual: boolean;
   children: ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled: !enabled });
@@ -337,6 +429,7 @@ function DropColumn({
     <section
       ref={setNodeRef}
       data-column={id}
+      data-virtual={virtual ? "" : undefined}
       aria-labelledby={`column-${id}`}
       className={`-mx-2 flex min-h-0 snap-start flex-col rounded-card px-2 transition-[background-color,box-shadow] ${
         isOver
