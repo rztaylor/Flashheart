@@ -11,8 +11,9 @@ import {
 function card(overrides: Partial<Card>): Card {
   return {
     project: "alpha",
-    slug: "feat--x",
-    column: "todo",
+    id: "AL-99",
+    slug: "x",
+    column: "backlog",
     title: "X",
     type: "feature",
     priority: "medium",
@@ -38,13 +39,15 @@ function card(overrides: Partial<Card>): Card {
 
 const cards = [
   card({
-    slug: "feat--card-panel",
+    id: "AL-3",
+    slug: "card-panel",
     title: "Card panel",
     workstream: "board-ui",
     tags: ["ui"],
   }),
   card({
-    slug: "bug--overflow",
+    id: "AL-5",
+    slug: "column-overflow",
     title: "Column overflow",
     type: "bug",
     priority: "high",
@@ -52,14 +55,16 @@ const cards = [
     searchText: "A 200-character title widens the column",
   }),
   card({
-    slug: "spike--offline",
+    id: "AL-6",
+    slug: "offline-mode",
     title: "Offline mode",
     type: "spike",
     priority: "low",
     tags: ["later-possibility"],
   }),
   card({
-    slug: "docs--broken",
+    id: "AL-7",
+    slug: "broken",
     title: "Broken",
     type: "docs",
     priority: "",
@@ -67,20 +72,23 @@ const cards = [
   }),
 ];
 
+const ids = (list: Card[]) => list.map((c) => c.id);
+
 describe("applyFilters", () => {
   it("returns everything with empty filters", () => {
     expect(applyFilters(cards, emptyFilters)).toHaveLength(4);
     expect(isFiltered(emptyFilters)).toBe(false);
   });
 
-  it("searches title, slug, tags and body text, case-insensitively", () => {
-    const slugs = (query: string) =>
-      applyFilters(cards, { ...emptyFilters, query }).map((c) => c.slug);
-    expect(slugs("CARD")).toEqual(["feat--card-panel"]);
-    expect(slugs("bug--")).toEqual(["bug--overflow"]);
-    expect(slugs("widens")).toEqual(["bug--overflow"]);
-    expect(slugs("ui")).toContain("feat--card-panel");
-    expect(slugs("panel offline")).toEqual([]);
+  it("searches id, title, slug, tags and body text, case-insensitively", () => {
+    const search = (query: string) =>
+      ids(applyFilters(cards, { ...emptyFilters, query }));
+    expect(search("al-5")).toEqual(["AL-5"]);
+    expect(search("CARD")).toEqual(["AL-3"]);
+    expect(search("offline-mode")).toEqual(["AL-6"]);
+    expect(search("widens")).toEqual(["AL-5"]);
+    expect(search("ui")).toContain("AL-3");
+    expect(search("panel offline")).toEqual([]);
   });
 
   it("filters by type, priority, workstream and state", () => {
@@ -88,32 +96,29 @@ describe("applyFilters", () => {
       1,
     );
     expect(
-      applyFilters(cards, { ...emptyFilters, priority: "low" })[0]?.slug,
-    ).toBe("spike--offline");
+      ids(applyFilters(cards, { ...emptyFilters, priority: "low" })),
+    ).toEqual(["AL-6"]);
     expect(
-      applyFilters(cards, { ...emptyFilters, workstream: "board-ui" })[0]?.slug,
-    ).toBe("feat--card-panel");
+      ids(applyFilters(cards, { ...emptyFilters, workstream: "board-ui" })),
+    ).toEqual(["AL-3"]);
     expect(
       applyFilters(cards, { ...emptyFilters, workstream: "(none)" }),
     ).toHaveLength(3);
     expect(
-      applyFilters(cards, { ...emptyFilters, state: "blocked" }).map(
-        (c) => c.slug,
-      ),
-    ).toEqual(["bug--overflow"]);
+      ids(applyFilters(cards, { ...emptyFilters, state: "blocked" })),
+    ).toEqual(["AL-5"]);
     expect(
       applyFilters(cards, { ...emptyFilters, state: "unblocked" }),
     ).toHaveLength(3);
     expect(
-      applyFilters(cards, { ...emptyFilters, state: "repair" }).map(
-        (c) => c.slug,
-      ),
-    ).toEqual(["docs--broken"]);
+      ids(applyFilters(cards, { ...emptyFilters, state: "repair" })),
+    ).toEqual(["AL-7"]);
   });
 
   it("hides later possibilities on request", () => {
-    const visible = applyFilters(cards, { ...emptyFilters, hideLater: true });
-    expect(visible.map((c) => c.slug)).not.toContain("spike--offline");
+    expect(
+      ids(applyFilters(cards, { ...emptyFilters, hideLater: true })),
+    ).not.toContain("AL-6");
     expect(isFiltered({ ...emptyFilters, hideLater: true })).toBe(true);
   });
 });

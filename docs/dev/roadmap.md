@@ -10,7 +10,8 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 
 ## Execution order
 
-1. [`board-format-v2`](roadmap-items/board-format-v2.md) — **Pending**.
+1. [`board-format-v2`](roadmap-items/board-format-v2.md) — **Done**,
+   awaiting review; remove this entry and its brief once approved.
    Folder-per-ticket storage with status in frontmatter, ticket ids
    (`FH-42`), the Up next column, and `flashheart migrate` (D15, D16).
 2. [`board-refresh`](roadmap-items/board-refresh.md) — **Pending**. Card

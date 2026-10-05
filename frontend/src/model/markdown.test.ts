@@ -1,52 +1,100 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveLink, ticketBody } from "./markdown";
+import { linkTicketIds, resolveLink, ticketBody } from "./markdown";
+
+const context = { project: "alpha", ticket: "AL-2" };
 
 describe("resolveLink", () => {
-  const from = { project: "alpha", base: "tickets" as const };
-
-  it("opens other tickets for relative markdown links", () => {
-    expect(resolveLink("../todo/feat--x.md", from)).toEqual({
+  it("opens tickets for links into ticket folders", () => {
+    expect(resolveLink("../AL-4-drag-and-drop/ticket.md", context)).toEqual({
       kind: "ticket",
-      project: "alpha",
-      slug: "feat--x",
+      id: "AL-4",
     });
-    expect(resolveLink("feat--y.md", from)).toEqual({
+    expect(resolveLink("ticket.md", context)).toEqual({
       kind: "ticket",
-      project: "alpha",
-      slug: "feat--y",
+      id: "AL-2",
     });
-    expect(
-      resolveLink("../ready-to-review/feat--board-columns.md#notes", from),
-    ).toEqual({
+    expect(resolveLink("../BE-1-hello/ticket.md#notes", context)).toEqual({
       kind: "ticket",
-      project: "alpha",
-      slug: "feat--board-columns",
+      id: "BE-1",
+    });
+    expect(resolveLink("#ticket-AL-9", context)).toEqual({
+      kind: "ticket",
+      id: "AL-9",
     });
   });
 
   it("opens web links externally and refuses other schemes", () => {
-    expect(resolveLink("https://example.com/a", from)).toEqual({
+    expect(resolveLink("https://example.com/a", context)).toEqual({
       kind: "external",
       href: "https://example.com/a",
     });
-    expect(resolveLink("javascript:alert(1)", from)).toEqual({ kind: "none" });
-    expect(resolveLink("file:///etc/passwd", from)).toEqual({ kind: "none" });
-    expect(resolveLink("#section", from)).toEqual({ kind: "none" });
+    expect(resolveLink("javascript:alert(1)", context)).toEqual({
+      kind: "none",
+    });
+    expect(resolveLink("file:///etc/passwd", context)).toEqual({
+      kind: "none",
+    });
+    expect(resolveLink("#section", context)).toEqual({ kind: "none" });
+    expect(resolveLink("/etc/passwd", context)).toEqual({ kind: "none" });
   });
 
-  it("maps attachment images to the attachment endpoint", () => {
-    expect(
-      resolveLink("../attachments/feat--a/shot one.png", {
-        project: "alpha",
-        base: "reviews",
-      }),
-    ).toEqual({
+  it("maps files to the ticket files endpoint", () => {
+    expect(resolveLink("files/shot one.png", context)).toEqual({
       kind: "attachment",
-      href: "/api/projects/alpha/attachments/feat--a/shot%20one.png",
+      href: "/api/projects/alpha/tickets/AL-2/files/shot%20one.png",
     });
-    expect(resolveLink("../attachments/../todo/x.png", from)).toEqual({
-      kind: "none",
+    expect(resolveLink("../AL-4-x/files/b.png", context)).toEqual({
+      kind: "attachment",
+      href: "/api/projects/alpha/tickets/AL-4/files/b.png",
+    });
+    expect(resolveLink("files/../../x.png", context)).toEqual({ kind: "none" });
+  });
+});
+
+describe("linkTicketIds", () => {
+  it("links known ticket ids in text, outside code and existing links", () => {
+    const tree = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            { type: "text", value: "See AL-4 and BE-1, not XX-1 or AL-4x." },
+            { type: "inlineCode", value: "AL-4" },
+            {
+              type: "link",
+              url: "x",
+              children: [{ type: "text", value: "AL-5" }],
+            },
+          ],
+        },
+      ],
+    };
+    linkTicketIds(new Set(["AL", "BE"]))(tree);
+    const paragraph = tree.children[0] as {
+      children: { type: string; value?: string; url?: string }[];
+    };
+    expect(paragraph.children.map((node) => node.type)).toEqual([
+      "text",
+      "link",
+      "text",
+      "link",
+      "text",
+      "inlineCode",
+      "link",
+    ]);
+    expect(paragraph.children[1]).toMatchObject({
+      type: "link",
+      url: "#ticket-AL-4",
+    });
+    expect(paragraph.children[3]).toMatchObject({
+      type: "link",
+      url: "#ticket-BE-1",
+    });
+    expect(paragraph.children[4]).toMatchObject({
+      type: "text",
+      value: ", not XX-1 or AL-4x.",
     });
   });
 });

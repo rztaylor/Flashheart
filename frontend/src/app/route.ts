@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { TicketRef } from "../api/board";
+import { TICKET_ID, type TicketRef } from "../api/board";
 
 export type View = "board" | "workstreams" | "table";
 export type Scope = { kind: "all" } | { kind: "project"; project: string };
@@ -13,7 +13,7 @@ export interface Route {
 
 const views: View[] = ["board", "workstreams", "table"];
 
-// Routes live in the URL hash (#/all/board, #/p/<project>/<view>?t=<project>/<slug>)
+// Routes live in the URL hash (#/all/board, #/p/<project>/<view>?t=<ticket id>)
 // so reloads and new tabs keep their place without any browser storage.
 export function parseRoute(hash: string): Route {
   const [path = "", query = ""] = hash.replace(/^#/, "").split("?");
@@ -29,13 +29,7 @@ export function parseRoute(hash: string): Route {
   const view = views.includes(viewPart as View) ? (viewPart as View) : "board";
   const route: Route = { scope, view };
   const ticket = new URLSearchParams(query).get("t");
-  if (ticket?.includes("/")) {
-    const index = ticket.indexOf("/");
-    route.ticket = {
-      project: ticket.slice(0, index),
-      slug: ticket.slice(index + 1),
-    };
-  }
+  if (ticket && TICKET_ID.test(ticket)) route.ticket = { id: ticket };
   return route;
 }
 
@@ -45,7 +39,7 @@ export function formatRoute(route: Route): string {
       ? "#/all"
       : `#/p/${encodeURIComponent(route.scope.project)}`;
   const ticket = route.ticket
-    ? `?t=${encodeURIComponent(`${route.ticket.project}/${route.ticket.slug}`)}`
+    ? `?t=${encodeURIComponent(route.ticket.id)}`
     : "";
   return `${base}/${route.view}${ticket}`;
 }

@@ -79,7 +79,9 @@ export function TableView({
   });
   const rows = useMemo(() => {
     const sorted = [...cards].sort(
-      (a, b) => compare(a, b, sort.key) || a.slug.localeCompare(b.slug),
+      (a, b) =>
+        compare(a, b, sort.key) ||
+        a.id.localeCompare(b.id, undefined, { numeric: true }),
     );
     return sort.descending ? sorted.reverse() : sorted;
   }, [cards, sort]);
@@ -141,8 +143,7 @@ export function TableView({
         </thead>
         <tbody>
           {rows.map((card) => {
-            const isSelected =
-              selected?.project === card.project && selected.slug === card.slug;
+            const isSelected = selected?.id === card.id;
             const title =
               workstreams
                 .get(card.project)
@@ -150,22 +151,20 @@ export function TableView({
               card.workstream;
             return (
               <tr
-                key={`${card.project}/${card.slug}/${card.column}`}
+                key={`${card.project}/${card.id}/${card.column}`}
                 className={`border-b border-rule ${isSelected ? "bg-well" : "hover:bg-well/60"}`}
               >
                 <td className="max-w-[28rem] px-2 py-1.5">
                   <button
                     type="button"
-                    onClick={() =>
-                      onOpen({ project: card.project, slug: card.slug })
-                    }
+                    onClick={() => onOpen({ id: card.id })}
                     className="flex flex-col text-left"
                   >
                     <span className="font-medium text-ink hover:underline">
                       {card.title}
                     </span>
                     <span className="font-mono text-2xs text-ink-faint">
-                      {card.slug}
+                      {card.id}
                     </span>
                   </button>
                 </td>

@@ -30,8 +30,18 @@ All notable changes to this project are documented here. The project follows
   review, handoff and attachments, workstreams with derived status, and
   allow-listed attachment files. Unparseable, oversized or escaping files are
   reported as needing repair instead of being hidden.
+- Board format v2: a folder per ticket (`tickets/FH-42-slug/ticket.md` with
+  `review.md` and `files/`), status in frontmatter, and five columns:
+  Backlog, Up next, In progress, Ready to review and Done.
+- Ticket ids like `FH-42` from a per-project key, shown on cards, the panel,
+  the table and in URLs; search by id; a bare id in ticket or review text
+  links to that ticket.
+- `flashheart migrate [--write] [--key project=KEY]` converts a v1 board:
+  numbers tickets oldest first, rewrites references to ids and moves the v1
+  files into `.flashheart/backup/`, deleting nothing. A board with v1
+  projects shows the command to run.
 - Validation: strict `scripts/check.sh`, `scripts/build.sh`, and
   `scripts/e2e.sh` for the Playwright lifecycle, accessibility and screenshot
   suite.
-- Product specification, board format and agent protocol (v1), roadmap,
+- Product specification, board format (v2) and agent protocol (v1), roadmap,
   decisions, contributor facts and the implementation kickoff prompt.

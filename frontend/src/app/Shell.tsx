@@ -96,7 +96,13 @@ export function Shell({ lifecycle, info }: ShellProps) {
       new Map(summaries.map((project) => [project.name, project.workstreams])),
     [summaries],
   );
+  const keys = useMemo(
+    () => new Set(summaries.map((project) => project.key)),
+    [summaries],
+  );
   const current = summaries.find((project) => project.name === scopeProject);
+  const v1Projects =
+    projects.status === "ready" ? projects.data.v1Projects : [];
   const projectNames = useMemo(
     () =>
       route.scope.kind === "all"
@@ -193,7 +199,7 @@ export function Shell({ lifecycle, info }: ShellProps) {
             <div className="hidden md:flex">
               <SearchField
                 label="Search tickets"
-                placeholder="Search title, slug, text, tags"
+                placeholder="Search id, title, text, tags"
                 value={filters.query}
                 onChange={(query) => setFilters({ ...filters, query })}
               />
@@ -310,13 +316,20 @@ export function Shell({ lifecycle, info }: ShellProps) {
             </p>
           ) : null}
 
+          {v1Projects.length > 0 && projects.status === "ready" ? (
+            <V1Notice
+              projects={v1Projects}
+              command={projects.data.migrateCommand}
+            />
+          ) : null}
+
           {rootMissing ? (
             <EmptyState title="No board here yet">
               Flashheart reads tickets from{" "}
               <code className="font-mono text-ink">{root}</code>, which does not
               exist yet. Agents create it when they first record work, or make a
-              folder there with a <code className="font-mono">todo/</code>{" "}
-              directory inside.
+              project folder there with a{" "}
+              <code className="font-mono">tickets/</code> directory inside.
             </EmptyState>
           ) : route.view === "workstreams" ? (
             projects.status === "ready" ? (
@@ -406,16 +419,46 @@ export function Shell({ lifecycle, info }: ShellProps) {
 
       {route.ticket ? (
         <CardPanel
-          key={`${route.ticket.project}/${route.ticket.slug}`}
+          key={route.ticket.id}
           ticket={route.ticket}
           fetcher={fetcher}
           lines={lines}
           workstreamTitle={workstreamTitle}
+          keys={keys}
           onOpen={openTicket}
           onClose={closeTicket}
         />
       ) : null}
     </div>
+  );
+}
+
+// Board format v1 projects are not shown until they are migrated (MIG-1).
+function V1Notice({
+  projects,
+  command,
+}: {
+  projects: string[];
+  command: string;
+}) {
+  const names = projects.join(", ");
+  return (
+    <section
+      aria-label="Older board format"
+      className="mx-4 mt-3 rounded-sm border border-rule bg-well px-4 py-3 text-sm text-ink-muted"
+    >
+      <p>
+        {projects.length === 1 ? "The project " : "The projects "}
+        <span className="text-ink">{names}</span>{" "}
+        {projects.length === 1 ? "uses" : "use"} the older board format and{" "}
+        {projects.length === 1 ? "is" : "are"} hidden until migrated. Preview
+        the change, then add <code className="font-mono">--write</code> to apply
+        it:
+      </p>
+      <pre className="mt-2 overflow-x-auto font-mono text-xs text-ink">
+        {command}
+      </pre>
+    </section>
   );
 }
 

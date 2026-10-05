@@ -1,23 +1,26 @@
 import { type AuthenticatedFetch, getJSON, isRecord } from "./client";
 
-export type Column = "todo" | "in-progress" | "ready-to-review" | "done";
+export type Column = "backlog" | "up-next" | "in-progress" | "review" | "done";
 
 export const COLUMNS: { id: Column; title: string }[] = [
-  { id: "todo", title: "To do" },
+  { id: "backlog", title: "Backlog" },
+  { id: "up-next", title: "Up next" },
   { id: "in-progress", title: "In progress" },
-  { id: "ready-to-review", title: "Ready to review" },
+  { id: "review", title: "Ready to review" },
   { id: "done", title: "Done" },
 ];
 
+// TicketRef names a ticket by id (FH-42); ids are unique across the root.
 export interface TicketRef {
-  project: string;
-  slug: string;
+  id: string;
 }
+
+export const TICKET_ID = /^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]*$/;
 
 export interface Reason {
   kind: "ticket" | "workstream" | "order";
   text: string;
-  ticket?: TicketRef;
+  ticket?: { project: string; id: string };
   workstream?: string;
   column?: string;
   pending?: number;
@@ -27,6 +30,7 @@ export interface Reason {
 
 export interface Card {
   project: string;
+  id: string;
   slug: string;
   column: Column;
   title: string;
@@ -63,6 +67,8 @@ export interface WorkstreamBrief {
 export interface ProjectSummary {
   name: string;
   displayName: string;
+  key: string;
+  keyDerived: boolean;
   repos: string[];
   counts: Record<Column, number>;
   needsRepair: number;
@@ -77,6 +83,8 @@ export interface ProjectsResponse {
   revision: number;
   root: string;
   rootMissing: boolean;
+  v1Projects: string[];
+  migrateCommand: string;
   projects: ProjectSummary[];
 }
 
@@ -118,7 +126,7 @@ export interface TicketDetail extends Card {
 }
 
 export interface WorkstreamTicket {
-  slug: string;
+  id: string;
   title: string;
   column: Column | "archived" | "";
   blocked: boolean;
@@ -166,6 +174,7 @@ export function isCard(value: unknown): value is Card {
   return (
     isRecord(value) &&
     isString(value.project) &&
+    isString(value.id) &&
     isString(value.slug) &&
     isColumn(value.column) &&
     isString(value.title) &&
@@ -192,6 +201,7 @@ function isSummary(value: unknown): value is ProjectSummary {
     isRecord(value) &&
     isString(value.name) &&
     isString(value.displayName) &&
+    isString(value.key) &&
     isRecord(value.counts) &&
     COLUMNS.every(
       (column) =>
@@ -210,6 +220,8 @@ const isProjects = (value: unknown): value is ProjectsResponse =>
   typeof value.revision === "number" &&
   isString(value.root) &&
   typeof value.rootMissing === "boolean" &&
+  isStringArray(value.v1Projects) &&
+  isString(value.migrateCommand) &&
   Array.isArray(value.projects) &&
   value.projects.every(isSummary);
 
@@ -301,13 +313,12 @@ export function fetchAllBoard(
 
 export async function fetchTicket(
   fetcher: AuthenticatedFetch,
-  project: string,
-  slug: string,
+  id: string,
   signal?: AbortSignal,
 ): Promise<TicketDetail> {
   const response = await getJSON(
     fetcher,
-    `/api/projects/${segment(project)}/tickets/${segment(slug)}`,
+    `/api/tickets/${segment(id)}`,
     isTicket,
     "Ticket response was invalid",
     signal,

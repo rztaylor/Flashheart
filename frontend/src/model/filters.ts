@@ -35,6 +35,7 @@ export function isFiltered(filters: Filters): boolean {
 
 function haystack(card: Card): string {
   return [
+    card.id,
     card.title,
     card.slug,
     card.tags.join(" "),

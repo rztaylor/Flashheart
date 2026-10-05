@@ -67,7 +67,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
         onKeyDown={onKeyDown}
         onFocus={onFocus}
         aria-current={selected ? "true" : undefined}
-        aria-label={`${card.title}, ${card.slug}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}`}
+        aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}`}
         className={`group relative flex w-full shrink-0 flex-col gap-1.5 overflow-hidden rounded-card border bg-card px-3 py-2.5 text-left transition-[border-color,opacity,box-shadow] duration-150 hover:border-ink-muted ${
           selected
             ? "border-rule-strong shadow-[0_0_0_1px_var(--fh-rule-strong)]"
@@ -103,7 +103,9 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           {showProject ? (
             <span className="font-medium text-ink">{showProject}</span>
           ) : null}
-          <span className="truncate font-mono">{card.slug}</span>
+          <span className="shrink-0 font-mono font-semibold text-ink">
+            {card.id}
+          </span>
           {card.priority ? (
             <span
               className={

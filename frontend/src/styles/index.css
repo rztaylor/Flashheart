@@ -164,9 +164,10 @@
   [data-narrow-column] section[data-column] {
     display: none;
   }
-  [data-narrow-column="todo"] section[data-column="todo"],
+  [data-narrow-column="backlog"] section[data-column="backlog"],
+  [data-narrow-column="up-next"] section[data-column="up-next"],
   [data-narrow-column="in-progress"] section[data-column="in-progress"],
-  [data-narrow-column="ready-to-review"] section[data-column="ready-to-review"],
+  [data-narrow-column="review"] section[data-column="review"],
   [data-narrow-column="done"] section[data-column="done"] {
     display: flex;
   }

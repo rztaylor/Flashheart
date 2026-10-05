@@ -19,6 +19,10 @@
   `src/api/` owns typed requests via `session.fetch` only. `src/state/` owns
   loading and freshness (`useResource`: last good value kept, 10 s refresh
   while visible, replaced by long-poll with board-editing).
+- Tickets are named by id (`FH-42`) everywhere: cards, panel, table,
+  search and the `?t=<id>` route parameter. Bare ids of known project keys in
+  markdown link to the ticket (`model/markdown.ts`, KEY-3). A board with v1
+  projects shows the migrate command instead of guessing.
 - Prohibited: raw `fetch` to the backend, credentials in JavaScript, Web
   Storage for anything, permissive CORS, routes under `/_singleserve/`, raw
   HTML in markdown.

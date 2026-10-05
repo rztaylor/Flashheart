@@ -1,6 +1,7 @@
 # board-format-v2
 
-Status: **Pending**. Decisions: D15 (storage), D16 (ticket ids).
+Status: **Done**, awaiting review; remove this brief and its roadmap entry
+once approved. Decisions: D15 (storage), D16 (ticket ids).
 
 ## Goal
 
@@ -44,3 +45,17 @@ Up next, and a one-time migration of existing v1 boards.
 Creating tickets and assigning new ids from the UI or MCP (board-editing,
 mcp-protocol); copying referenced files (REV-5, mcp-protocol and
 review-and-orchestration).
+
+## Evidence
+
+- Sample in v2 with ids, cross-project dependency (BE-1 on AL-3) and AL-7 as
+  needs repair: `internal/board`, `internal/store`, `internal/api` tests and
+  `e2e/board.spec.mjs`.
+- Migration of the v1 sample, dry run, idempotent second run, backup and
+  rewritten references: `internal/migrate` and `internal/cli` tests; the v2
+  sample fixture was produced by the CLI.
+- v1 root: the API reports `v1Projects` and `migrateCommand`
+  (`internal/api`), and the UI shows them (`e2e/lifecycle.spec.mjs`).
+- Lookup by id: `/api/tickets/{id}` tests; `?t=AL-4` routes; a bare `FH-26`
+  in review text opens that ticket (`e2e/board.spec.mjs`).
+- 5,000 v2 tickets index in about 330 ms (`internal/index` benchmark).

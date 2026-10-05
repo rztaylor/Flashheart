@@ -106,7 +106,7 @@ export function BoardView(props: BoardViewProps) {
           onFocus={setFocusedLine}
         />
       ) : null}
-      <div className="board-grid grid min-h-0 flex-1 grid-cols-[repeat(4,minmax(15rem,1fr))] overflow-x-auto px-4 pt-4">
+      <div className="board-grid grid min-h-0 flex-1 grid-cols-[repeat(5,minmax(15rem,1fr))] overflow-x-auto px-4 pt-4">
         {columns.map((column, columnIndex) => (
           <section
             key={column.id}
@@ -143,7 +143,7 @@ export function BoardView(props: BoardViewProps) {
                     : rowIndex === 0;
                 return (
                   <TicketCard
-                    key={`${card.project}/${card.slug}/${card.column}`}
+                    key={`${card.project}/${card.id}/${card.column}`}
                     ref={(node) => {
                       if (node)
                         refs.current.set(keyOf(columnIndex, rowIndex), node);
@@ -159,15 +159,10 @@ export function BoardView(props: BoardViewProps) {
                       focusedLine !== "" && card.workstream !== focusedLine
                     }
                     showProject={projectNames?.get(card.project)}
-                    selected={
-                      selected?.project === card.project &&
-                      selected.slug === card.slug
-                    }
+                    selected={selected?.id === card.id}
                     tabIndex={isActive ? 0 : -1}
                     now={now}
-                    onOpen={() =>
-                      onOpen({ project: card.project, slug: card.slug })
-                    }
+                    onOpen={() => onOpen({ id: card.id })}
                     onKeyDown={onKey}
                     onFocus={() =>
                       setCursor({ column: columnIndex, row: rowIndex })

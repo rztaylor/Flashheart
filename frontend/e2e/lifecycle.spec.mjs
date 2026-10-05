@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { cp } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -9,6 +10,7 @@ import {
   listening,
   makeSandbox,
   manualURLs,
+  projectRoot,
   screenshotDir,
   stopIfRunning,
   waitForExit,
@@ -166,6 +168,33 @@ test("quit is refused while the guard denies it, then stops the server", async (
     await page.screenshot({
       path: resolve(screenshotDir, "stopped-1280-light.png"),
     });
+  } finally {
+    await stopIfRunning(child);
+    await sandbox.cleanup();
+  }
+});
+
+test("a project in board format v1 shows the migrate command", async ({
+  page,
+}) => {
+  const sandbox = await makeSandbox();
+  await cp(
+    join(projectRoot, "testdata/boards/sample-v1/alpha"),
+    join(sandbox.root, "legacy"),
+    { recursive: true },
+  );
+  const { child, output } = launch(sandbox, ["serve", "--foreground"]);
+  try {
+    const url = await waitForManualURL(child, output);
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    await expectRunning(page);
+    const notice = page.getByRole("region", { name: "Older board format" });
+    await expect(notice).toContainText("legacy");
+    await expect(notice).toContainText(
+      `flashheart migrate --root ${sandbox.root}`,
+    );
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations).toEqual([]);
   } finally {
     await stopIfRunning(child);
     await sandbox.cleanup();

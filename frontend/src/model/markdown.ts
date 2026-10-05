@@ -1,21 +1,33 @@
-// Markdown helpers for ticket and review files: link resolution (CARD-2)
-// and trimming sections the card panel shows elsewhere.
+// Markdown helpers for ticket and review files: link resolution (CARD-2),
+// linking bare ticket ids (KEY-3), and trimming sections the card panel
+// shows elsewhere.
 
 export type LinkTarget =
-  | { kind: "ticket"; project: string; slug: string }
+  | { kind: "ticket"; id: string }
   | { kind: "external"; href: string }
   | { kind: "attachment"; href: string }
   | { kind: "none" };
 
+// LinkContext is where the markdown lives: a ticket's folder, which holds
+// ticket.md, review.md and files/.
 export interface LinkContext {
   project: string;
-  base: "tickets" | "reviews";
+  ticket: string;
 }
 
+const ticketID = /^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]*$/;
+const ticketFolder = /^([A-Z][A-Z0-9]{1,9}-[1-9][0-9]*)(?:-.*)?$/;
 const safeSegment = /^[A-Za-z0-9][A-Za-z0-9._ -]*$/;
+
+// ticketLinkPrefix marks links made by linkTicketIds.
+export const ticketLinkPrefix = "#ticket-";
 
 export function resolveLink(href: string, context: LinkContext): LinkTarget {
   const trimmed = href.trim();
+  if (trimmed.startsWith(ticketLinkPrefix)) {
+    const id = trimmed.slice(ticketLinkPrefix.length);
+    return ticketID.test(id) ? { kind: "ticket", id } : { kind: "none" };
+  }
   if (/^https?:\/\//i.test(trimmed)) return { kind: "external", href: trimmed };
   if (
     /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ||
@@ -24,44 +36,33 @@ export function resolveLink(href: string, context: LinkContext): LinkTarget {
   ) {
     return { kind: "none" };
   }
-  const path = decodeSafely(trimmed.split(/[?#]/)[0] ?? "");
-  const parts = path.split("/").filter((part) => part !== "" && part !== ".");
+  const parts = decodeSafely(trimmed.split(/[?#]/)[0] ?? "")
+    .split("/")
+    .filter((part) => part !== "" && part !== ".");
 
-  const attachment = parts.indexOf("attachments");
-  if (attachment >= 0) {
-    const [ticket, file, ...rest] = parts.slice(attachment + 1);
-    if (
-      ticket &&
-      file &&
-      rest.length === 0 &&
-      safeSegment.test(ticket) &&
-      safeSegment.test(file)
-    ) {
-      return {
-        kind: "attachment",
-        href: `/api/projects/${encodeURIComponent(context.project)}/attachments/${encodeURIComponent(ticket)}/${encodeURIComponent(file)}`,
-      };
-    }
-    return { kind: "none" };
+  // Resolve the folder the path points into: this ticket, or ../<other>/.
+  let id = context.ticket;
+  let rest = parts;
+  if (parts[0] === "..") {
+    const match = ticketFolder.exec(parts[1] ?? "");
+    if (!match?.[1]) return { kind: "none" };
+    id = match[1];
+    rest = parts.slice(2);
   }
-
-  const last = parts[parts.length - 1];
-  if (last?.endsWith(".md")) {
-    const slug = last.slice(0, -3);
-    if (
-      safeSegment.test(slug) &&
-      !parts.slice(0, -1).some((part) => part !== ".." && !isColumnDir(part))
-    ) {
-      return { kind: "ticket", project: context.project, slug };
-    }
+  if (rest.length === 1 && rest[0] === "ticket.md")
+    return { kind: "ticket", id };
+  if (
+    rest.length === 2 &&
+    rest[0] === "files" &&
+    rest[1] &&
+    safeSegment.test(rest[1])
+  ) {
+    return {
+      kind: "attachment",
+      href: `/api/projects/${encodeURIComponent(context.project)}/tickets/${encodeURIComponent(id)}/files/${encodeURIComponent(rest[1])}`,
+    };
   }
   return { kind: "none" };
-}
-
-function isColumnDir(part: string): boolean {
-  return ["todo", "in-progress", "ready-to-review", "done", "reviews"].includes(
-    part,
-  );
 }
 
 function decodeSafely(value: string): string {
@@ -70,6 +71,52 @@ function decodeSafely(value: string): string {
   } catch {
     return value;
   }
+}
+
+interface MdNode {
+  type: string;
+  value?: string;
+  url?: string;
+  children?: MdNode[];
+}
+
+const idInText = /\b([A-Z][A-Z0-9]{1,9})-([1-9][0-9]*)\b(?![A-Za-z0-9-])/g;
+
+// linkTicketIds is a remark plugin that turns ticket ids with a known project
+// key in text ("see AL-4") into links, leaving code and existing links alone.
+export function linkTicketIds(keys: Set<string>) {
+  const visit = (node: MdNode) => {
+    if (!node.children || node.type === "link" || node.type === "linkReference")
+      return;
+    const next: MdNode[] = [];
+    for (const child of node.children) {
+      if (child.type !== "text" || !child.value) {
+        visit(child);
+        next.push(child);
+        continue;
+      }
+      let last = 0;
+      for (const match of child.value.matchAll(idInText)) {
+        if (!keys.has(match[1] ?? "") || match.index === undefined) continue;
+        if (match.index > last)
+          next.push({
+            type: "text",
+            value: child.value.slice(last, match.index),
+          });
+        next.push({
+          type: "link",
+          url: ticketLinkPrefix + match[0],
+          children: [{ type: "text", value: match[0] }],
+        });
+        last = match.index + match[0].length;
+      }
+      if (last === 0) next.push(child);
+      else if (last < child.value.length)
+        next.push({ type: "text", value: child.value.slice(last) });
+    }
+    node.children = next;
+  };
+  return (tree: MdNode) => visit(tree);
 }
 
 const fence = /^ {0,3}(```|~~~)/;

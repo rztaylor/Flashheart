@@ -1,4 +1,4 @@
-import type { ProjectSummary } from "../../api/board";
+import { COLUMNS, type ProjectSummary } from "../../api/board";
 import type { Scope } from "../../app/route";
 import { Icon } from "../../components/Icon";
 import { RouteBar } from "../../components/RouteBar";
@@ -10,36 +10,23 @@ interface ProjectRailProps {
 }
 
 function total(counts: ProjectSummary["counts"]) {
-  return (
-    counts.todo +
-    counts["in-progress"] +
-    counts["ready-to-review"] +
-    counts.done
-  );
+  return COLUMNS.reduce((sum, column) => sum + counts[column.id], 0);
 }
 
 // ProjectRail lists every project with its route bar and trouble counts,
 // most recently active first (PRJ-6).
 export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
-  const all = projects.reduce(
-    (sum, project) => ({
-      todo: sum.todo + project.counts.todo,
-      "in-progress": sum["in-progress"] + project.counts["in-progress"],
-      "ready-to-review":
-        sum["ready-to-review"] + project.counts["ready-to-review"],
-      done: sum.done + project.counts.done,
-      blocked: sum.blocked + project.stuck,
-      repair: sum.repair + project.needsRepair,
-    }),
-    {
-      todo: 0,
-      "in-progress": 0,
-      "ready-to-review": 0,
-      done: 0,
-      blocked: 0,
-      repair: 0,
-    },
-  );
+  const counts = Object.fromEntries(
+    COLUMNS.map((column) => [
+      column.id,
+      projects.reduce((sum, project) => sum + project.counts[column.id], 0),
+    ]),
+  ) as ProjectSummary["counts"];
+  const all = {
+    counts,
+    blocked: projects.reduce((sum, project) => sum + project.stuck, 0),
+    repair: projects.reduce((sum, project) => sum + project.needsRepair, 0),
+  };
   return (
     <nav
       aria-label="Projects"
@@ -51,7 +38,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
             active={scope.kind === "all"}
             title="All projects"
             subtitle={`${projects.length} ${projects.length === 1 ? "project" : "projects"}`}
-            counts={all}
+            counts={all.counts}
             blocked={all.blocked}
             repair={all.repair}
             onClick={() => onSelect({ kind: "all" })}

@@ -86,12 +86,12 @@ test("sample tickets land in the right columns with blocked reasons and repairs"
   ).toBeVisible();
 
   const placement = {
-    "To do": [
-      "Drag and drop",
+    Backlog: [
       "Long titles overflow the column",
       "Offline mode",
       "Broken frontmatter",
     ],
+    "Up next": ["Drag and drop"],
     "In progress": ["Card panel"],
     "Ready to review": ["Board columns"],
     Done: ["Project skeleton"],
@@ -106,10 +106,10 @@ test("sample tickets land in the right columns with blocked reasons and repairs"
     }
   }
   await expect(card(page, "Drag and drop")).toContainText(
-    "Comes after feat--card-panel in workstream board-ui, which is In progress",
+    "Comes after AL-3 in workstream board-ui, which is In progress",
   );
   await expect(card(page, "Long titles overflow the column")).toContainText(
-    "Depends on feat--drag-and-drop, which is in To do",
+    "Depends on AL-4, which is Up next",
   );
   await expect(card(page, "Offline mode")).toContainText(
     "Depends on feat--does-not-exist, which does not exist",
@@ -128,7 +128,7 @@ test("the card panel explains, links and renders without raw HTML", async () => 
   await open(page, "#/p/alpha/board");
   await card(page, "Long titles overflow the column").click();
   const panel = page.getByRole("complementary", {
-    name: "Ticket bug--column-overflow",
+    name: "Ticket AL-5",
   });
   await expect(
     panel.getByRole("heading", {
@@ -141,14 +141,14 @@ test("the card panel explains, links and renders without raw HTML", async () => 
   ).toBeVisible();
   await panel.getByRole("button", { name: "Open" }).click();
   await expect(
-    page.getByRole("complementary", { name: "Ticket feat--drag-and-drop" }),
+    page.getByRole("complementary", { name: "Ticket AL-4" }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/t=alpha%2Ffeat--drag-and-drop/);
+  await expect(page).toHaveURL(/t=AL-4/);
 
   // Handoff shown prominently for the in-progress ticket.
   await card(page, "Card panel").click();
   const cardPanel = page.getByRole("complementary", {
-    name: "Ticket feat--card-panel",
+    name: "Ticket AL-3",
   });
   await expect(
     cardPanel.getByRole("heading", { name: "Handoff" }),
@@ -163,20 +163,20 @@ test("the card panel explains, links and renders without raw HTML", async () => 
   // Review tab with a markdown ticket link and an attachment.
   await card(page, "Board columns").click();
   const review = page.getByRole("complementary", {
-    name: "Ticket feat--board-columns",
+    name: "Ticket AL-2",
   });
   await review.getByRole("tab", { name: "Review" }).click();
   await expect(
     review.getByRole("img", { name: "Board at desktop" }),
   ).toBeVisible();
-  await review.getByRole("link", { name: "feat--board-columns" }).click();
-  await expect(page).toHaveURL(/t=alpha%2Ffeat--board-columns/);
+  await review.getByRole("link", { name: "AL-2", exact: true }).click();
+  await expect(page).toHaveURL(/t=AL-2/);
   await page.keyboard.press("Escape");
 
   // External links open in a new tab without opener or referrer; raw HTML never renders.
-  await open(page, "#/p/flashheart/board?t=flashheart%2Ffeat--store-read");
+  await open(page, "#/p/flashheart/board?t=FH-8");
   const storePanel = page.getByRole("complementary", {
-    name: "Ticket feat--store-read",
+    name: "Ticket FH-8",
   });
   await storePanel.getByRole("tab", { name: "Review" }).click();
   await expect(
@@ -192,18 +192,27 @@ test("the card panel explains, links and renders without raw HTML", async () => 
     0,
   );
   expect(context.pages()).toHaveLength(1);
+
+  // A bare ticket id in markdown links to that ticket (KEY-3).
+  await storePanel.getByRole("link", { name: "FH-26", exact: true }).click();
+  await expect(page).toHaveURL(/t=FH-26/);
+  await expect(
+    page.getByRole("complementary", { name: "Ticket FH-26" }),
+  ).toBeVisible();
 });
 
 test("arrow keys move between cards and filters narrow the board", async () => {
   const page = shared;
   await open(page, "#/p/flashheart/board");
-  const first = column(page, "To do").getByRole("button").first();
+  const first = column(page, "Backlog").getByRole("button").first();
   await first.focus();
   await page.keyboard.press("ArrowDown");
-  await expect(column(page, "To do").getByRole("button").nth(1)).toBeFocused();
+  await expect(
+    column(page, "Backlog").getByRole("button").nth(1),
+  ).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(
-    column(page, "In progress").getByRole("button").nth(1),
+    column(page, "Up next").getByRole("button").nth(1),
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("complementary")).toBeVisible();
@@ -214,7 +223,9 @@ test("arrow keys move between cards and filters narrow the board", async () => {
   await expect(card(page, "Opt-in handoff enforcement at Stop")).toBeVisible();
   await page.getByRole("searchbox", { name: "Search tickets" }).fill("");
   await page.getByRole("combobox", { name: "State" }).selectOption("blocked");
-  for (const button of await column(page, "To do").getByRole("button").all()) {
+  for (const button of await column(page, "Backlog")
+    .getByRole("button")
+    .all()) {
     await expect(button).toHaveAccessibleName(/blocked/);
   }
   await page.getByRole("button", { name: "Clear filters" }).click();
@@ -243,7 +254,7 @@ test("workstreams draw as lines with stations", async () => {
   );
   await boardCore.getByRole("button", { name: /Transit map board UI/ }).click();
   await expect(
-    page.getByRole("complementary", { name: "Ticket feat--transit-ui" }),
+    page.getByRole("complementary", { name: "Ticket FH-11" }),
   ).toBeVisible();
 });
 
@@ -259,7 +270,7 @@ test("table sorts and opens tickets", async () => {
     .getByRole("button", { name: "Locked atomic ticket writes" })
     .click();
   await expect(
-    page.getByRole("complementary", { name: "Ticket feat--locked-writes" }),
+    page.getByRole("complementary", { name: "Ticket FH-14" }),
   ).toBeVisible();
 });
 
@@ -279,20 +290,12 @@ for (const theme of ["light", "dark"]) {
       await open(page, "#/all/board", size);
       await shot(page, `all-${width}-${theme}`);
 
-      await open(
-        page,
-        "#/p/flashheart/board?t=flashheart%2Ffeat--transit-ui",
-        size,
-      );
+      await open(page, "#/p/flashheart/board?t=FH-11", size);
       await expect(page.getByRole("complementary")).toBeVisible();
       await expectNoAxeViolations(page, `panel ${theme} ${width}`);
       await shot(page, `panel-${width}-${theme}`);
 
-      await open(
-        page,
-        "#/p/flashheart/board?t=flashheart%2Ffeat--store-read",
-        size,
-      );
+      await open(page, "#/p/flashheart/board?t=FH-8", size);
       await page.getByRole("tab", { name: "Review" }).click();
       await expect(
         page.getByRole("img", { name: "Store tests passing" }).first(),
@@ -300,11 +303,7 @@ for (const theme of ["light", "dark"]) {
       await expectNoAxeViolations(page, `review ${theme} ${width}`);
       await shot(page, `review-${width}-${theme}`);
 
-      await open(
-        page,
-        "#/p/alpha/board?t=alpha%2Fdocs--broken-frontmatter",
-        size,
-      );
+      await open(page, "#/p/alpha/board?t=AL-7", size);
       await expect(
         page.getByRole("heading", { name: "Needs repair" }),
       ).toBeVisible();
@@ -335,7 +334,9 @@ for (const theme of ["light", "dark"]) {
       height: 844,
       theme,
     });
-    await page.getByRole("combobox", { name: "Column" }).selectOption("todo");
+    await page
+      .getByRole("combobox", { name: "Column" })
+      .selectOption("up-next");
     await shot(page, `board-narrow-${theme}`);
   });
 }
@@ -347,7 +348,7 @@ test("no request leaves the loopback origin", async () => {
     if (!/^http:\/\/ss-[0-9a-f]+\.localhost:\d+\//.test(request.url()))
       foreign.push(request.url());
   });
-  await open(page, "#/p/flashheart/board?t=flashheart%2Ffeat--store-read");
+  await open(page, "#/p/flashheart/board?t=FH-8");
   await page.getByRole("tab", { name: "Review" }).click();
   await open(page, "#/p/flashheart/workstreams");
   expect(foreign).toEqual([]);

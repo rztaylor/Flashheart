@@ -34,6 +34,9 @@ Intended layout (packages are created when they get real content):
 - `internal/mcpserver`: MCP tools over store, events and runs.
 - `internal/setup`: agent configuration diff, write with backup, uninstall,
   skill/AGENTS.md rendering.
+- `internal/migrate`: one-time conversion of a v1 root to board format v2
+  (`flashheart migrate`, MIG-1): plan, number, rewrite references, move v1
+  files to `.flashheart/backup/`. Writes only through `store` primitives.
 - `internal/index`: in-memory, revisioned index of the root for `serve`;
   fsnotify watching.
 - `internal/api`: HTTP JSON handlers and request validation; no filesystem
@@ -42,7 +45,7 @@ Intended layout (packages are created when they get real content):
 - `internal/webui`: embedded compiled frontend assets.
 - `frontend/`: React UI; ownership in `.agents/facts/frontend-ui.md`.
 
-Dependency direction: `cli` → (`app` | `background` | `mcpserver` | `hooks` | `setup`) →
+Dependency direction: `cli` → (`app` | `background` | `migrate` | `mcpserver` | `hooks` | `setup`) →
 (`index`, `runs`, `protocol`) → (`store`, `events`) → (`board`, `mdfile`,
 `gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `runs`,
 `scrub`) import no I/O packages. Nothing below `app` imports HTTP or

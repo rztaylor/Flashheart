@@ -1,10 +1,7 @@
+import type { Column } from "../api/board";
+
 interface RouteBarProps {
-  counts: {
-    todo: number;
-    "in-progress": number;
-    "ready-to-review": number;
-    done: number;
-  };
+  counts: Record<Column, number>;
   label: string;
 }
 
@@ -13,9 +10,9 @@ interface RouteBarProps {
 // worked hatched, the rest faint. Monochrome so it never competes with line
 // colours.
 export function RouteBar({ counts, label }: RouteBarProps) {
-  const served = counts["ready-to-review"] + counts.done;
+  const served = counts.review + counts.done;
   const working = counts["in-progress"];
-  const total = served + working + counts.todo;
+  const total = served + working + counts.backlog + counts["up-next"];
   const percent = (value: number) => (total === 0 ? 0 : (value / total) * 100);
   return (
     <div

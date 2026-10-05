@@ -26,6 +26,8 @@ interface CardPanelProps {
   fetcher: AuthenticatedFetch;
   lines: Map<string, Map<string, Line>>;
   workstreamTitle(project: string, slug: string): string;
+  // Project keys, so ticket ids in markdown become links (KEY-3).
+  keys: Set<string>;
   onOpen(ticket: TicketRef): void;
   onClose(): void;
 }
@@ -38,22 +40,22 @@ export function CardPanel({
   fetcher,
   lines,
   workstreamTitle,
+  keys,
   onOpen,
   onClose,
 }: CardPanelProps) {
   const load = useCallback(
-    (signal: AbortSignal) =>
-      fetchTicket(fetcher, ticket.project, ticket.slug, signal),
-    [fetcher, ticket.project, ticket.slug],
+    (signal: AbortSignal) => fetchTicket(fetcher, ticket.id, signal),
+    [fetcher, ticket.id],
   );
-  const resource = useResource(load, `${ticket.project}/${ticket.slug}`);
+  const resource = useResource(load, ticket.id);
   const [tab, setTab] = useState<"ticket" | "review">("ticket");
   const tabsId = useId();
   const detail = resource.status === "ready" ? resource.data : undefined;
   const activeTab = tab === "review" && detail?.review ? "review" : "ticket";
 
   return (
-    <SidePanel label={`Ticket ${ticket.slug}`} onClose={onClose}>
+    <SidePanel label={`Ticket ${ticket.id}`} onClose={onClose}>
       {resource.status === "loading" ? <PanelSkeleton /> : null}
       {resource.status === "error" ? (
         <div className="p-6">
@@ -93,14 +95,14 @@ export function CardPanel({
               className={panelBodyClass}
             >
               {activeTab === "review" ? (
-                <ReviewTab detail={detail} onOpen={onOpen} />
+                <ReviewTab detail={detail} keys={keys} onOpen={onOpen} />
               ) : (
-                <TicketTab detail={detail} onOpen={onOpen} />
+                <TicketTab detail={detail} keys={keys} onOpen={onOpen} />
               )}
             </div>
           ) : (
             <div className={panelBodyClass}>
-              <TicketTab detail={detail} onOpen={onOpen} />
+              <TicketTab detail={detail} keys={keys} onOpen={onOpen} />
             </div>
           )}
         </>
@@ -145,7 +147,7 @@ function PanelHeader({
         {detail.title}
       </h2>
       <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
-        <span className="font-mono text-ink">{detail.slug}</span>
+        <span className="font-mono font-semibold text-ink">{detail.id}</span>
         {facts.map((fact) => (
           <span key={fact}>{fact}</span>
         ))}
@@ -199,8 +201,10 @@ function ReasonList({
             {reason.ticket && !reason.missing ? (
               <button
                 type="button"
-                onClick={() => reason.ticket && onOpen(reason.ticket)}
-                aria-label={`Open ${reason.ticket.slug}`}
+                onClick={() =>
+                  reason.ticket && onOpen({ id: reason.ticket.id })
+                }
+                aria-label={`Open ${reason.ticket.id}`}
                 className="shrink-0 text-xs text-ink-muted underline decoration-ink-faint hover:text-ink"
               >
                 Open
@@ -215,9 +219,11 @@ function ReasonList({
 
 function TicketTab({
   detail,
+  keys,
   onOpen,
 }: {
   detail: TicketDetail;
+  keys: Set<string>;
   onOpen(ticket: TicketRef): void;
 }) {
   const done = detail.criteriaItems.filter((item) => item.done).length;
@@ -302,7 +308,8 @@ function TicketTab({
             </summary>
             <div className="mt-2">
               <Markdown
-                context={{ project: detail.project, base: "tickets" }}
+                context={{ project: detail.project, ticket: detail.id }}
+                keys={keys}
                 onOpenTicket={onOpen}
               >
                 {detail.handoff.markdown}
@@ -356,7 +363,8 @@ function TicketTab({
 
       <section aria-label="Ticket text">
         <Markdown
-          context={{ project: detail.project, base: "tickets" }}
+          context={{ project: detail.project, ticket: detail.id }}
+          keys={keys}
           onOpenTicket={onOpen}
         >
           {ticketBody(detail.body)}
@@ -368,9 +376,11 @@ function TicketTab({
 
 function ReviewTab({
   detail,
+  keys,
   onOpen,
 }: {
   detail: TicketDetail;
+  keys: Set<string>;
   onOpen(ticket: TicketRef): void;
 }) {
   return (
@@ -419,7 +429,8 @@ function ReviewTab({
       ) : null}
       {detail.review ? (
         <Markdown
-          context={{ project: detail.project, base: "reviews" }}
+          context={{ project: detail.project, ticket: detail.id }}
+          keys={keys}
           onOpenTicket={onOpen}
         >
           {detail.review.markdown}

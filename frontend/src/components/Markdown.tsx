@@ -3,18 +3,29 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { TicketRef } from "../api/board";
-import { type LinkContext, resolveLink } from "../model/markdown";
+import {
+  type LinkContext,
+  linkTicketIds,
+  resolveLink,
+} from "../model/markdown";
 
 interface MarkdownProps {
   children: string;
   context: LinkContext;
+  // Project keys whose ticket ids in text become links (KEY-3).
+  keys: Set<string>;
   onOpenTicket(ticket: TicketRef): void;
 }
 
 // Markdown renders GitHub-flavoured markdown without raw HTML (CARD-2,
 // SEC-4). Ticket links open the ticket, web links open in a new tab, images
 // load only from the attachment endpoint, and anything else renders as text.
-export function Markdown({ children, context, onOpenTicket }: MarkdownProps) {
+export function Markdown({
+  children,
+  context,
+  keys,
+  onOpenTicket,
+}: MarkdownProps) {
   const components: Components = {
     a({ href = "", children: label }) {
       const target = resolveLink(href, context);
@@ -22,10 +33,10 @@ export function Markdown({ children, context, onOpenTicket }: MarkdownProps) {
         case "ticket":
           return (
             <a
-              href={`#ticket-${target.slug}`}
+              href={`#ticket-${target.id}`}
               onClick={(event) => {
                 event.preventDefault();
-                onOpenTicket({ project: target.project, slug: target.slug });
+                onOpenTicket({ id: target.id });
               }}
               className="font-medium text-ink underline decoration-rule-strong/40 hover:decoration-rule-strong"
             >
@@ -90,7 +101,7 @@ export function Markdown({ children, context, onOpenTicket }: MarkdownProps) {
   return (
     <div className="markdown">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, () => linkTicketIds(keys)]}
         skipHtml
         components={components}
       >

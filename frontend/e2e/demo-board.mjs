@@ -2,20 +2,10 @@
 // 50-ticket project with four workstreams, a smaller project, and the sample
 // board's edge cases. All content is invented for testing.
 import { cp, mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { deflateSync } from "node:zlib";
 
 const sample = resolve(import.meta.dirname, "../../testdata/boards/sample");
-
-const prefix = {
-  feature: "feat",
-  bug: "bug",
-  infra: "infra",
-  docs: "docs",
-  refactor: "refactor",
-  test: "test",
-  spike: "spike",
-};
 
 // syntheticScreenshot draws a plain test-report image (header band, passing
 // rows) so the Review tab has a realistic attachment. It is labelled synthetic.
@@ -75,7 +65,8 @@ function syntheticScreenshot(width = 1200, height = 700) {
   ]);
 }
 
-// [slug suffix, title, type, priority, column, workstream, depends-on]
+// [slug suffix, title, type, priority, status, workstream, depends-on,
+// depends-on-workstreams, tags]. Ids follow row order.
 const flashheart = [
   [
     "go-module",
@@ -138,7 +129,7 @@ const flashheart = [
     "Store read side on os.Root",
     "feature",
     "high",
-    "ready-to-review",
+    "review",
     "board-core",
   ],
   [
@@ -146,7 +137,7 @@ const flashheart = [
     "Revisioned board index",
     "feature",
     "high",
-    "ready-to-review",
+    "review",
     "board-core",
   ],
   [
@@ -170,7 +161,7 @@ const flashheart = [
     "Workstreams as transit lines",
     "feature",
     "medium",
-    "todo",
+    "up-next",
     "board-core",
   ],
   [
@@ -178,7 +169,7 @@ const flashheart = [
     "Sortable table view",
     "feature",
     "medium",
-    "todo",
+    "up-next",
     "board-core",
   ],
   [
@@ -186,16 +177,16 @@ const flashheart = [
     "Locked atomic ticket writes",
     "feature",
     "high",
-    "todo",
+    "up-next",
     "board-editing",
-    ["feat--store-read"],
+    ["store-read"],
   ],
   [
     "drag-and-drop",
     "Drag cards between columns",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "board-editing",
   ],
   [
@@ -203,7 +194,7 @@ const flashheart = [
     "Show save conflicts side by side",
     "feature",
     "medium",
-    "todo",
+    "backlog",
     "board-editing",
   ],
   [
@@ -211,7 +202,7 @@ const flashheart = [
     "New ticket from the board",
     "feature",
     "medium",
-    "todo",
+    "backlog",
     "board-editing",
   ],
   [
@@ -219,7 +210,7 @@ const flashheart = [
     "Live updates by long-polling",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "board-editing",
   ],
   [
@@ -227,7 +218,7 @@ const flashheart = [
     "Append-only event log with rotation",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "agent-runs",
     [],
     ["board-editing"],
@@ -237,7 +228,7 @@ const flashheart = [
     "Run state derivation table",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "agent-runs",
   ],
   [
@@ -245,7 +236,7 @@ const flashheart = [
     "Claude Code hook adapter",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "agent-runs",
   ],
   [
@@ -253,7 +244,7 @@ const flashheart = [
     "Agents view with run lanes",
     "feature",
     "medium",
-    "todo",
+    "backlog",
     "agent-runs",
   ],
   [
@@ -261,7 +252,7 @@ const flashheart = [
     "Recovery note on session start",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "agent-runs",
   ],
   [
@@ -269,9 +260,9 @@ const flashheart = [
     "Long titles push the column wider than its track",
     "bug",
     "medium",
-    "todo",
+    "up-next",
     "",
-    ["feat--transit-ui"],
+    ["transit-ui"],
   ],
   [
     "focus-ring-dark",
@@ -286,7 +277,7 @@ const flashheart = [
     "Index rebuild slow on network home folders",
     "bug",
     "low",
-    "todo",
+    "backlog",
     "",
   ],
   [
@@ -302,7 +293,7 @@ const flashheart = [
     "Measure hook latency on a warm cache",
     "test",
     "medium",
-    "todo",
+    "backlog",
     "",
   ],
   [
@@ -326,19 +317,19 @@ const flashheart = [
     "axe-core checks in both themes",
     "test",
     "medium",
-    "ready-to-review",
+    "review",
     "",
   ],
-  ["release-notes", "Release notes template", "docs", "low", "todo", ""],
-  ["user-guide", "First-run user guide", "docs", "medium", "todo", ""],
+  ["release-notes", "Release notes template", "docs", "low", "backlog", ""],
+  ["user-guide", "First-run user guide", "docs", "medium", "backlog", ""],
   [
     "protocol-skill",
     "Protocol skill text",
     "docs",
     "high",
-    "todo",
+    "backlog",
     "",
-    ["feat--recovery-note"],
+    ["recovery-note"],
   ],
   [
     "board-format-doc",
@@ -353,7 +344,7 @@ const flashheart = [
     "Split API handlers by resource",
     "refactor",
     "low",
-    "todo",
+    "backlog",
     "",
   ],
   [
@@ -369,7 +360,7 @@ const flashheart = [
     "Decide on Windows support",
     "spike",
     "low",
-    "todo",
+    "backlog",
     "",
     [],
     [],
@@ -380,7 +371,7 @@ const flashheart = [
     "Passive session-log reading",
     "spike",
     "low",
-    "todo",
+    "backlog",
     "",
     [],
     [],
@@ -391,28 +382,20 @@ const flashheart = [
     "Board history from git",
     "spike",
     "low",
-    "todo",
+    "backlog",
     "",
     [],
     [],
     ["later-possibility"],
   ],
-  ["notarise", "Notarise macOS builds", "infra", "medium", "todo", ""],
-  [
-    "homebrew-tap",
-    "Homebrew tap",
-    "infra",
-    "low",
-    "todo",
-    "",
-    ["infra--notarise"],
-  ],
+  ["notarise", "Notarise macOS builds", "infra", "medium", "backlog", ""],
+  ["homebrew-tap", "Homebrew tap", "infra", "low", "backlog", "", ["notarise"]],
   [
     "ci-workflow",
     "CI workflow once the remote exists",
     "infra",
     "medium",
-    "todo",
+    "backlog",
     "",
   ],
   [
@@ -420,52 +403,52 @@ const flashheart = [
     "Dependabot for Go and npm",
     "infra",
     "low",
-    "todo",
+    "backlog",
     "",
-    ["infra--ci-workflow"],
+    ["ci-workflow"],
   ],
   [
     "mcp-server",
     "MCP server with board_context",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "",
-    ["feat--run-state"],
+    ["run-state"],
   ],
   [
     "claims",
     "Claims with leases",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "",
-    ["feat--mcp-server"],
+    ["mcp-server"],
   ],
   [
     "checkpoint-tool",
     "Checkpoint tool rewrites the handoff",
     "feature",
     "high",
-    "todo",
+    "backlog",
     "",
-    ["feat--claims"],
+    ["claims"],
   ],
   [
     "ask-human",
     "ask_human questions and answers",
     "feature",
     "medium",
-    "todo",
+    "backlog",
     "",
-    ["feat--mcp-server"],
+    ["mcp-server"],
   ],
   [
     "setup-claude",
     "setup claude shows a diff",
     "feature",
     "medium",
-    "todo",
+    "backlog",
     "",
   ],
   [
@@ -473,9 +456,9 @@ const flashheart = [
     "Opt-in handoff enforcement at Stop",
     "feature",
     "low",
-    "todo",
+    "backlog",
     "",
-    ["feat--checkpoint-tool"],
+    ["checkpoint-tool"],
   ],
 ];
 
@@ -506,7 +489,7 @@ const ngplus = [
     "Ofqual assessment objectives",
     "feature",
     "high",
-    "todo",
+    "up-next",
     "ofqual-layer",
   ],
   [
@@ -514,7 +497,7 @@ const ngplus = [
     "Grade boundaries per series",
     "feature",
     "medium",
-    "todo",
+    "backlog",
     "ofqual-layer",
   ],
   [
@@ -522,7 +505,7 @@ const ngplus = [
     "Study page layout",
     "feature",
     "medium",
-    "ready-to-review",
+    "review",
     "study-ui",
   ],
   [
@@ -530,7 +513,7 @@ const ngplus = [
     "Flashcards from past papers",
     "feature",
     "medium",
-    "todo",
+    "backlog",
     "study-ui",
   ],
   ["timer", "Exam timer", "feature", "low", "done", "study-ui"],
@@ -540,20 +523,25 @@ const ngplus = [
     "Link answers to specification points",
     "feature",
     "low",
-    "todo",
+    "backlog",
     "",
-    ["feat--assessment-objectives"],
+    ["assessment-objectives"],
   ],
 ];
 
+const keys = { flashheart: "FH", ngplus: "NG" };
+
+// ticket renders one row as a format v2 ticket. Dependencies name row
+// suffixes and resolve to ids.
 function ticket(
   project,
+  ids,
   [
     suffix,
     title,
     type,
     priority,
-    column,
+    status,
     workstream,
     deps = [],
     depWs = [],
@@ -561,19 +549,21 @@ function ticket(
   ],
   index,
 ) {
-  const slug = `${prefix[type]}--${suffix}`;
-  const created = `2026-09-${String(10 + (index % 20)).padStart(2, "0")}`;
+  const id = ids.get(suffix);
+  const created = `2026-09-${String(10 + Math.floor(index / 3)).padStart(2, "0")}`;
   const lines = [
     "---",
+    `id: ${id}`,
+    `status: ${status}`,
     `type: ${type}`,
     `project: ${project}`,
     `created: ${created}`,
     `priority: ${priority}`,
     "session: demo",
     "git-ref: 0000000",
-    `branch: ${column === "in-progress" ? `feature/${suffix}` : ""}`,
+    `branch: ${status === "in-progress" ? `feature/${suffix}` : ""}`,
     `workstream: ${workstream}`,
-    `depends-on: [${deps.join(", ")}]`,
+    `depends-on: [${deps.map((dep) => ids.get(dep)).join(", ")}]`,
     `depends-on-workstreams: [${depWs.join(", ")}]`,
     `tags: [${tags.join(", ")}]`,
     "---",
@@ -587,15 +577,15 @@ function ticket(
     "## Acceptance Criteria",
     "",
     "- [x] Failing test written first",
-    `- [${column === "done" || column === "ready-to-review" ? "x" : " "}] Behaviour implemented`,
-    `- [${column === "done" ? "x" : " "}] Docs and changelog updated`,
+    `- [${status === "done" || status === "review" ? "x" : " "}] Behaviour implemented`,
+    `- [${status === "done" ? "x" : " "}] Docs and changelog updated`,
     "",
     "## Notes",
     "",
     "None.",
     "",
   ];
-  if (column === "in-progress") {
+  if (status === "in-progress") {
     lines.push(
       "## Handoff",
       "",
@@ -613,24 +603,33 @@ function ticket(
       "",
     );
   }
-  return { slug, column, workstream, created, content: lines.join("\n") };
+  return {
+    id,
+    folder: `${id}-${suffix}`,
+    workstream,
+    content: lines.join("\n"),
+  };
 }
 
 async function writeProject(root, project, display, rows) {
-  const tickets = rows.map((row, index) => ticket(project, row, index));
+  const key = keys[project];
+  const ids = new Map(
+    rows.map(([suffix], index) => [suffix, `${key}-${index + 1}`]),
+  );
+  const tickets = rows.map((row, index) => ticket(project, ids, row, index));
   for (const item of tickets) {
-    const path = join(root, project, item.column, `${item.slug}.md`);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, item.content);
+    const dir = join(root, project, "tickets", item.folder);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "ticket.md"), item.content);
   }
   await writeFile(
     join(root, project, "project.yaml"),
-    `name: ${display}\nrepos:\n  - /Users/example/src/${project}\n`,
+    `key: ${key}\nnext_id: ${rows.length + 1}\nname: ${display}\nrepos:\n  - /Users/example/src/${project}\n`,
   );
   for (const [slug, title, created, deps = []] of workstreams[project] ?? []) {
     const members = tickets
       .filter((item) => item.workstream === slug)
-      .map((item) => item.slug);
+      .map((item) => item.id);
     const body = [
       "---",
       `slug: ${slug}`,
@@ -653,39 +652,35 @@ async function writeProject(root, project, display, rows) {
     await mkdir(join(root, project, "workstreams"), { recursive: true });
     await writeFile(join(root, project, "workstreams", `${slug}.md`), body);
   }
-  return tickets;
+  return new Map(tickets.map((item) => [item.id, item.folder]));
 }
 
 export async function writeDemoBoard(root) {
   await cp(sample, root, { recursive: true });
-  await writeProject(root, "flashheart", "Flashheart", flashheart);
+  const folders = await writeProject(
+    root,
+    "flashheart",
+    "Flashheart",
+    flashheart,
+  );
   await writeProject(root, "ngplus", "NG+", ngplus);
   // A review with a screenshot for the Review tab.
-  const reviewTicket = "feat--store-read";
-  await mkdir(join(root, "flashheart", "attachments", reviewTicket), {
-    recursive: true,
-  });
+  const reviewDir = join(root, "flashheart", "tickets", folders.get("FH-8"));
+  await mkdir(join(reviewDir, "files"), { recursive: true });
   await writeFile(
-    join(
-      root,
-      "flashheart",
-      "attachments",
-      reviewTicket,
-      "20261004T1412-store-tests.png",
-    ),
+    join(reviewDir, "files", "20261004T1412-store-tests.png"),
     syntheticScreenshot(),
   );
   await writeFile(
-    join(root, "flashheart", "attachments", reviewTicket, "index.yaml"),
+    join(reviewDir, "files", "index.yaml"),
     "- file: 20261004T1412-store-tests.png\n  caption: Store tests passing (synthetic)\n  kind: screenshot\n  run: claude:3f2a9c1e\n  added: 2026-10-04T14:12:09Z\n",
   );
-  await mkdir(join(root, "flashheart", "reviews"), { recursive: true });
   await writeFile(
-    join(root, "flashheart", "reviews", `${reviewTicket}.md`),
+    join(reviewDir, "review.md"),
     [
       "# Review: Store read side on os.Root",
       "",
-      `**Work Item:** [${reviewTicket}](../ready-to-review/${reviewTicket}.md)`,
+      "**Work Item:** [FH-8](ticket.md)",
       "",
       "## Summary",
       "",
@@ -696,11 +691,11 @@ export async function writeDemoBoard(root) {
       "1. Run `scripts/check.sh`.",
       "2. Symlink a ticket to a file outside the root and open the board: it shows as needs repair.",
       "",
-      "![Store tests passing](../attachments/feat--store-read/20261004T1412-store-tests.png)",
+      "![Store tests passing](files/20261004T1412-store-tests.png)",
       "",
       "## Risks / Things to Watch",
       "",
-      "- Network home folders are slower to index ([bug--slow-index-nfs](../todo/bug--slow-index-nfs.md)).",
+      "- Network home folders are slower to index (FH-26).",
       "",
     ].join("\n"),
   );

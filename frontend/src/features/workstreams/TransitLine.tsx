@@ -10,21 +10,20 @@ import { Icon } from "../../components/Icon";
 import type { Line } from "../../model/lines";
 
 interface TransitLineProps {
-  project: string;
   workstream: Workstream;
   line?: Line;
   onOpen(ticket: TicketRef): void;
 }
 
 const served = (ticket: WorkstreamTicket) =>
-  ticket.column === "ready-to-review" ||
+  ticket.column === "review" ||
   ticket.column === "done" ||
   ticket.column === "archived";
 
 function stationState(ticket: WorkstreamTicket, next: string) {
   if (ticket.missing) return "missing";
   if (served(ticket)) return "served";
-  if (ticket.slug === next) return "next";
+  if (ticket.id === next) return "next";
   return "pending";
 }
 
@@ -40,12 +39,7 @@ type Track = "served" | "ahead" | "suspended";
 // ahead is lighter; only suspended service is dashed: the whole line when
 // its own workstream dependencies are unmet, or the track into a station
 // held by something outside the line. The next stop is an interchange ring.
-export function TransitLine({
-  project,
-  workstream,
-  line,
-  onOpen,
-}: TransitLineProps) {
+export function TransitLine({ workstream, line, onOpen }: TransitLineProps) {
   const colour = line ? `var(--fh-line-${line.colour})` : "var(--fh-ink-faint)";
   const scroller = useRef<HTMLOListElement>(null);
   const [more, setMore] = useState(false);
@@ -108,8 +102,8 @@ export function TransitLine({
           const last = index === workstream.tickets.length - 1;
           return (
             <li
-              // biome-ignore lint/suspicious/noArrayIndexKey: a hand-edited tickets list may repeat a slug; position is the identity.
-              key={`${ticket.slug}-${index}`}
+              // biome-ignore lint/suspicious/noArrayIndexKey: a hand-edited tickets list may repeat an id; position is the identity.
+              key={`${ticket.id}-${index}`}
               className="relative flex w-44 shrink-0 flex-col items-center px-2"
             >
               <span
@@ -135,7 +129,7 @@ export function TransitLine({
               <button
                 type="button"
                 disabled={ticket.missing}
-                onClick={() => onOpen({ project, slug: ticket.slug })}
+                onClick={() => onOpen({ id: ticket.id })}
                 aria-label={`${ticket.title}, ${columnTitle(ticket.column)}${ticket.blocked ? ", blocked" : ""}${state === "next" ? ", next stop" : ""}`}
                 className="group relative z-10 flex flex-col items-center gap-2 rounded-control px-1 pb-1 text-center disabled:cursor-default"
               >
@@ -146,7 +140,7 @@ export function TransitLine({
                   {ticket.title}
                 </span>
                 <span className="max-w-full truncate font-mono text-2xs text-ink-faint">
-                  {ticket.slug}
+                  {ticket.id}
                 </span>
                 <span className="text-2xs text-ink-muted">
                   {state === "missing"

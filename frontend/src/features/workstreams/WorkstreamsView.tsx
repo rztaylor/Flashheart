@@ -177,12 +177,7 @@ function WorkstreamLine({
           ))}
         </div>
       ) : null}
-      <TransitLine
-        project={project}
-        workstream={workstream}
-        line={line}
-        onOpen={onOpen}
-      />
+      <TransitLine workstream={workstream} line={line} onOpen={onOpen} />
     </article>
   );
 }
