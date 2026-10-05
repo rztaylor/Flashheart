@@ -1,6 +1,6 @@
 # board-refresh
 
-Status: **Pending**. Depends on `board-format-v2`.
+Status: **Pending**.
 
 ## Goal
 
