@@ -87,6 +87,9 @@ scripts/check.sh                    # lint, unit tests, builds, vet, race tests
 scripts/e2e.sh                      # Playwright lifecycle, axe and screenshots
 ```
 
+Changes land through pull requests; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Report security issues as described in [`SECURITY.md`](SECURITY.md).
+
 ## Licence
 
 MIT. See [`LICENSE`](LICENSE).

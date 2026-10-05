@@ -47,6 +47,9 @@ All notable changes to this project are documented here. The project follows
   numbers tickets oldest first, rewrites references to ids and moves the v1
   files into `.flashheart/backup/`, deleting nothing. A board with v1
   projects shows the command to run.
+- GitHub foundation: CI runs `scripts/check.sh` on Linux and macOS and the
+  Playwright suite on Linux for every pull request; Dependabot, a pull
+  request template, `CONTRIBUTING.md` and `SECURITY.md`.
 - Validation: strict `scripts/check.sh`, `scripts/build.sh`, and
   `scripts/e2e.sh` for the Playwright lifecycle, accessibility and screenshot
   suite.
