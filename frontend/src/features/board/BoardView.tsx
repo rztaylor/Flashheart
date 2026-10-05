@@ -132,6 +132,8 @@ export function BoardView(props: BoardViewProps) {
   const [dragging, setDragging] = useState<Card | null>(null);
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const refocus = useRef("");
+  const grid = useRef<HTMLDivElement>(null);
+  const atStart = useRef(true);
   const now = new Date();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -194,6 +196,15 @@ export function BoardView(props: BoardViewProps) {
       inline: "nearest",
     });
   }, [selectedID]);
+
+  // A virtual column appearing before Backlog would otherwise open off-screen
+  // to the left, because scroll snapping keeps the current column in place.
+  // A board that was at its start stays at its start, so Needs you shows.
+  const mirrorCount = columns.filter((column) => column.virtual).length;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the number of virtual columns changes.
+  useLayoutEffect(() => {
+    if (grid.current && atStart.current) grid.current.scrollLeft = 0;
+  }, [mirrorCount]);
 
   // A ticket moved with the keyboard keeps focus in its new column.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs after each change of cards.
@@ -296,6 +307,10 @@ export function BoardView(props: BoardViewProps) {
           </div>
         ) : null}
         <div
+          ref={grid}
+          onScroll={(event) => {
+            atStart.current = event.currentTarget.scrollLeft < 8;
+          }}
           className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 gap-x-5 overflow-x-auto px-4 pt-4"
           style={{
             gridTemplateColumns: `repeat(${columns.length}, minmax(15rem, 1fr))`,

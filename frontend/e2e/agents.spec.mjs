@@ -145,8 +145,16 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   await expect(needsColumn).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Needs you" }).check();
   await expect(mirror).toBeVisible();
+  // Turning it back on keeps it in view rather than off to the left.
+  await expect(needsColumn.getByRole("heading")).toBeInViewport();
   await expectNoAxeViolations("board with runs");
-  await shot("board-runs-1440-light");
+  for (const theme of ["light", "dark"]) {
+    await page.reload();
+    await open("#/p/alpha/board", { theme });
+    await expect(needsColumn.getByRole("heading")).toBeInViewport();
+    await expect(mirror).toBeInViewport();
+    await shot(`board-runs-1440-${theme}`);
+  }
 
   // The Runs tab shows the ticket's runs and the handoff warning.
   await real.click();
