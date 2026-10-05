@@ -10,18 +10,15 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 
 ## Execution order
 
-1. [`board-editing`](roadmap-items/board-editing.md) — **Pending**. Locked
-   atomic writes, drag and drop, editing, new ticket, conflicts, live updates.
-2. [`agent-runs`](roadmap-items/agent-runs.md) — **Pending**. Event log, run
+1. [`agent-runs`](roadmap-items/agent-runs.md) — **Pending**. Event log, run
    state, `hook claude`, Agents view, virtual columns, recovery notes.
-   Depends on `board-editing` (store writes).
-3. [`mcp-protocol`](roadmap-items/mcp-protocol.md) — **Pending**. MCP server,
+2. [`mcp-protocol`](roadmap-items/mcp-protocol.md) — **Pending**. MCP server,
    claims, checkpoints, questions, `setup claude`, protocol skill,
    handoff enforcement. Depends on `agent-runs`.
-4. [`codex-support`](roadmap-items/codex-support.md) — **Pending**. Codex
+3. [`codex-support`](roadmap-items/codex-support.md) — **Pending**. Codex
    hook adapter, `setup codex`, AGENTS.md protocol text. Depends on
    `mcp-protocol`.
-5. [`review-and-orchestration`](roadmap-items/review-and-orchestration.md) —
+4. [`review-and-orchestration`](roadmap-items/review-and-orchestration.md) —
    **Pending**. Attachments, review panel, subagent tree, `doctor`. Depends on
    `mcp-protocol`; can run in parallel with `codex-support`.
 

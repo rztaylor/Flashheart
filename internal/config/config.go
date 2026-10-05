@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -40,6 +41,10 @@ var (
 	themes         = []string{ThemeSystem, ThemeLight, ThemeDark}
 	densities      = []string{DensityCompact, DensityNormal, DensityDetailed}
 	virtualColumns = []string{"needs-you", "agent-working"}
+	colourBys      = []string{"type", "priority", "age", "none"}
+	views          = []string{"", "board", "workstreams", "table"}
+	states         = []string{"", "all", "blocked", "unblocked", "repair"}
+	scopeName      = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )
 
 // Config is the global configuration (CFG-1, CFG-2).
@@ -58,11 +63,25 @@ type Attachments struct {
 	MaxBytes int64 `yaml:"max_bytes"`
 }
 
-// UI holds interface preferences saved through the backend.
+// UI holds interface preferences saved through the backend (CFG-2).
 type UI struct {
 	Theme          string   `yaml:"theme"`
 	Density        string   `yaml:"density"`
+	ColourBy       string   `yaml:"colour_by"`
 	VirtualColumns []string `yaml:"virtual_columns"`
+	// Scopes remembers the view and filters per project name, or "all" for
+	// All projects (VIEW-7).
+	Scopes map[string]Scope `yaml:"scopes,omitempty"`
+}
+
+// Scope is the remembered view and filters of one project or All projects.
+type Scope struct {
+	View       string `yaml:"view,omitempty" json:"view"`
+	Type       string `yaml:"type,omitempty" json:"type"`
+	Priority   string `yaml:"priority,omitempty" json:"priority"`
+	Workstream string `yaml:"workstream,omitempty" json:"workstream"`
+	State      string `yaml:"state,omitempty" json:"state"`
+	HideLater  bool   `yaml:"hide_later,omitempty" json:"hideLater"`
 }
 
 // Defaults returns the documented defaults.
@@ -74,7 +93,7 @@ func Defaults() Config {
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
-		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, VirtualColumns: []string{"needs-you"}},
+		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", VirtualColumns: []string{"needs-you"}},
 	}
 }
 
@@ -145,18 +164,38 @@ func (c Config) validate() error {
 	atLeastOne("event_retention_days", int64(c.EventRetentionDays))
 	atLeastOne("done_column_limit", int64(c.DoneColumnLimit))
 	atLeastOne("attachments.max_bytes", c.Attachments.MaxBytes)
-	oneOf := func(name, value string, allowed []string) {
-		if !slices.Contains(allowed, value) {
-			problems = append(problems, fmt.Sprintf("%s %q must be one of %s", name, value, strings.Join(allowed, ", ")))
-		}
-	}
-	oneOf("ui.theme", c.UI.Theme, themes)
-	oneOf("ui.density", c.UI.Density, densities)
-	for _, column := range c.UI.VirtualColumns {
-		oneOf("ui.virtual_columns", column, virtualColumns)
-	}
+	problems = append(problems, c.UI.problems()...)
 	if len(problems) > 0 {
 		return errors.New("invalid config.yaml: " + strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+func (u UI) problems() []string {
+	var problems []string
+	oneOf := func(name, value string, allowed []string) {
+		if !slices.Contains(allowed, value) {
+			problems = append(problems, fmt.Sprintf("%s %q must be one of %s", name, value, strings.Join(slices.DeleteFunc(slices.Clone(allowed), func(v string) bool { return v == "" }), ", ")))
+		}
+	}
+	oneOf("ui.theme", u.Theme, themes)
+	oneOf("ui.density", u.Density, densities)
+	oneOf("ui.colour_by", u.ColourBy, colourBys)
+	for _, column := range u.VirtualColumns {
+		oneOf("ui.virtual_columns", column, virtualColumns)
+	}
+	for name, scope := range u.Scopes {
+		if !scopeName.MatchString(name) || strings.Contains(name, "..") {
+			problems = append(problems, fmt.Sprintf("ui.scopes %q is not a project name", name))
+			continue
+		}
+		oneOf("ui.scopes."+name+".view", scope.View, views)
+		oneOf("ui.scopes."+name+".state", scope.State, states)
+		for _, value := range []string{scope.Type, scope.Priority, scope.Workstream} {
+			if len(value) > 200 {
+				problems = append(problems, "ui.scopes."+name+" has a filter longer than 200 characters")
+			}
+		}
+	}
+	return problems
 }

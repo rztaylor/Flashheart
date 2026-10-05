@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   fetchWorkstreams,
   type ProjectSummary,
@@ -6,18 +6,24 @@ import {
   type Workstream,
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
+import { reorderWorkstream } from "../../api/edit";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
 import { useResource } from "../../state/useResource";
+import type { Editing } from "../editing/useEditing";
 import { TransitLine } from "./TransitLine";
 
 interface WorkstreamsViewProps {
   projects: ProjectSummary[];
   fetcher: AuthenticatedFetch;
   lines: Map<string, Map<string, Line>>;
+  // revision reloads the lines when the board changes (LIFE-3).
+  revision: number;
+  // editing enables reordering stations (EDIT-4); absent when read-only.
+  editing?: Editing;
   onOpen(ticket: TicketRef): void;
 }
 
@@ -27,6 +33,8 @@ export function WorkstreamsView({
   projects,
   fetcher,
   lines,
+  revision,
+  editing,
   onOpen,
 }: WorkstreamsViewProps) {
   const withLines = projects.filter(
@@ -51,6 +59,8 @@ export function WorkstreamsView({
           showName={projects.length > 1}
           fetcher={fetcher}
           lines={lines.get(project.name) ?? new Map()}
+          revision={revision}
+          editing={editing}
           onOpen={onOpen}
         />
       ))}
@@ -63,19 +73,59 @@ function ProjectLines({
   showName,
   fetcher,
   lines,
+  revision,
+  editing,
   onOpen,
 }: {
   project: ProjectSummary;
   showName: boolean;
   fetcher: AuthenticatedFetch;
   lines: Map<string, Line>;
+  revision: number;
+  editing?: Editing;
   onOpen(ticket: TicketRef): void;
 }) {
   const load = useCallback(
     (signal: AbortSignal) => fetchWorkstreams(fetcher, project.name, signal),
     [fetcher, project.name],
   );
-  const resource = useResource(load, project.name);
+  const resource = useResource(load, project.name, revision);
+  // A new order shows at once and settles when the lines reload.
+  const [orders, setOrders] = useState<Record<string, string[]>>({});
+  const data = resource.status === "ready" ? resource.data : undefined;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: clear once fresh lines arrive.
+  useEffect(() => setOrders({}), [data]);
+  const reorder = editing
+    ? (workstream: Workstream) => (ids: string[]) => {
+        setOrders((current) => ({ ...current, [workstream.slug]: ids }));
+        reorderWorkstream(fetcher, project.name, workstream.slug, ids)
+          .then(() => {
+            editing.notify({ text: `Reordered ${workstream.title}.` });
+            resource.reload();
+          })
+          .catch((error: unknown) => {
+            setOrders({});
+            resource.reload();
+            editing.notify({
+              text: `${workstream.title} was not reordered: ${error instanceof Error ? error.message : "unknown error"}`,
+            });
+          });
+      }
+    : undefined;
+  const ordered = (workstream: Workstream): Workstream => {
+    const ids = orders[workstream.slug];
+    if (!ids) return workstream;
+    const byId = new Map(
+      workstream.tickets.map((ticket) => [ticket.id, ticket]),
+    );
+    return {
+      ...workstream,
+      tickets: ids.flatMap((id) => {
+        const ticket = byId.get(id);
+        return ticket ? [ticket] : [];
+      }),
+    };
+  };
   return (
     <section
       aria-label={`${project.displayName} workstreams`}
@@ -101,9 +151,10 @@ function ProjectLines({
               key={workstream.slug}
               headingLevel={showName ? 3 : 2}
               project={project.name}
-              workstream={workstream}
+              workstream={ordered(workstream)}
               line={lines.get(workstream.slug)}
               onOpen={onOpen}
+              onReorder={reorder?.(workstream)}
             />
           ))
         : null}
@@ -123,12 +174,14 @@ function WorkstreamLine({
   line,
   headingLevel,
   onOpen,
+  onReorder,
 }: {
   headingLevel: 2 | 3;
   project: string;
   workstream: Workstream;
   line?: Line;
   onOpen(ticket: TicketRef): void;
+  onReorder?(ids: string[]): void;
 }) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
@@ -177,7 +230,12 @@ function WorkstreamLine({
           ))}
         </div>
       ) : null}
-      <TransitLine workstream={workstream} line={line} onOpen={onOpen} />
+      <TransitLine
+        workstream={workstream}
+        line={line}
+        onOpen={onOpen}
+        onReorder={onReorder}
+      />
     </article>
   );
 }

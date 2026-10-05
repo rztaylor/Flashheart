@@ -44,9 +44,10 @@ var safeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$`)
 // Store reads a board root. Every access goes through an os.Root, so paths
 // and symlinks cannot escape the root (SEC-2).
 type Store struct {
-	path string
-	mu   sync.Mutex
-	root *os.Root
+	path  string
+	mu    sync.Mutex
+	root  *os.Root
+	clock func() time.Time
 }
 
 // New returns a store that opens the root on first use and keeps trying
@@ -330,7 +331,9 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 	if !isProject(fsys, name) {
 		return board.Project{}, nil, fmt.Errorf("project %q: %w", name, ErrNotFound)
 	}
-	r := &reader{root: root, fsys: fsys}
+	// The project itself is part of the fingerprint, so an empty new
+	// project is a change.
+	r := &reader{root: root, fsys: fsys, parts: []string{"project " + name + "\n"}}
 	project := board.Project{
 		Name: name, DisplayName: name, NextID: 1,
 		Reviews: map[string]bool{}, Attachments: map[string][]board.Attachment{},

@@ -2,12 +2,14 @@ package api
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,9 +22,11 @@ import (
 // client-side search (VIEW-7).
 const searchTextRunes = 1000
 
-// BoardSource supplies the current board snapshot.
+// BoardSource supplies the current board snapshot and waits for changes.
 type BoardSource interface {
 	Current() (*index.Snapshot, error)
+	Rebuild() (*index.Snapshot, error)
+	Wait(ctx context.Context, since uint64) uint64
 }
 
 // FileSource reads files that are not kept in the snapshot.
@@ -169,6 +173,10 @@ type TicketDetail struct {
 	Handoff              *HandoffJSON      `json:"handoff"`
 	Review               *ReviewJSON       `json:"review"`
 	AttachmentFiles      []AttachmentJSON  `json:"attachmentFiles"`
+	// Hash is the file's content hash, sent back with every edit; Raw is the
+	// whole file for the raw editor (EDIT-6). Both are empty when read-only.
+	Hash string `json:"hash"`
+	Raw  string `json:"raw"`
 }
 
 // TicketResponse is GET /api/tickets/{id} and
@@ -223,6 +231,9 @@ type boardAPI struct {
 	files     FileSource
 	root      string
 	doneLimit int
+	stopping  <-chan struct{}
+	longPoll  time.Duration
+	write     Writer
 }
 
 func (b boardAPI) register(mux *http.ServeMux) {
@@ -233,6 +244,37 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/projects/{project}/workstreams", getOnly(b.workstreams))
 	mux.Handle("/api/projects/{project}/tickets/{id}/files/{file}", getOnly(b.attachment))
 	mux.Handle("/api/all/board", getOnly(b.allBoard))
+	mux.Handle("/api/changes", getOnly(b.changes))
+	b.registerWrites(mux)
+}
+
+// ChangesResponse is GET /api/changes?since=N: the revision once it is newer
+// than since, or the unchanged revision when the wait ends (LIFE-3).
+type ChangesResponse struct {
+	Revision uint64 `json:"revision"`
+}
+
+func (b boardAPI) changes(w http.ResponseWriter, r *http.Request) {
+	since, err := strconv.ParseUint(r.URL.Query().Get("since"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "since must be a revision number")
+		return
+	}
+	if b.snapshot(w) == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), b.longPoll)
+	defer cancel()
+	if b.stopping != nil {
+		go func() {
+			select {
+			case <-b.stopping:
+				cancel()
+			case <-ctx.Done():
+			}
+		}()
+	}
+	writeJSON(w, http.StatusOK, ChangesResponse{Revision: b.board.Wait(ctx, since)})
 }
 
 func getOnly(handler http.HandlerFunc) http.Handler {
@@ -347,6 +389,22 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// With the write side, show the ticket parsed from the same bytes as the
+	// hash an edit will send, so an edit never applies to content the user
+	// did not see (STO-3).
+	var hash, raw string
+	if b.write != nil {
+		if data, current, err := b.write.ReadTicket(project.Name, ticket.ID); err == nil {
+			fresh := board.ParseTicket(ticket.Folder, data)
+			fresh.Modified = ticket.Modified
+			for _, warning := range ticket.Warnings {
+				if !slices.Contains(fresh.Warnings, warning) {
+					fresh.Warnings = append(fresh.Warnings, warning)
+				}
+			}
+			ticket, hash, raw = fresh, current, string(data)
+		}
+	}
 	detail := TicketDetail{
 		Card:                 card(snapshot, project, ticket, true),
 		Body:                 ticket.Body,
@@ -373,6 +431,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 			URL: filesURL(project.Name, ticket.ID) + url.PathEscape(attachment.File),
 		})
 	}
+	detail.Hash, detail.Raw = hash, raw
 	writeJSON(w, http.StatusOK, TicketResponse{Revision: snapshot.Revision, Ticket: detail})
 }
 

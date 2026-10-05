@@ -1,4 +1,9 @@
-import { type CSSProperties, forwardRef, type KeyboardEvent } from "react";
+import {
+  type CSSProperties,
+  forwardRef,
+  type HTMLAttributes,
+  type KeyboardEvent,
+} from "react";
 
 import { type Card, splitReasons } from "../../api/board";
 import { Icon } from "../../components/Icon";
@@ -21,8 +26,13 @@ interface TicketCardProps {
   tabIndex: number;
   now: Date;
   onOpen(): void;
-  onKeyDown(event: KeyboardEvent<HTMLButtonElement>): void;
-  onFocus(): void;
+  onKeyDown?(event: KeyboardEvent<HTMLButtonElement>): void;
+  onFocus?(): void;
+  // dragProps carries the drag source's pointer listeners and description.
+  dragProps?: HTMLAttributes<HTMLButtonElement>;
+  // lifted draws the card being dragged; ghost the place it left.
+  lifted?: boolean;
+  ghost?: boolean;
 }
 
 const priorityLabel: Record<string, string> = {
@@ -53,6 +63,9 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
       onOpen,
       onKeyDown,
       onFocus,
+      dragProps,
+      lifted,
+      ghost,
     },
     ref,
   ) {
@@ -70,6 +83,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
       : "";
     return (
       <button
+        {...dragProps}
         ref={ref}
         type="button"
         tabIndex={tabIndex}
@@ -87,7 +101,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             : repair
               ? "border-dashed border-ink-muted shadow-card"
               : "border-rule/70 shadow-card hover:shadow-card-hover"
-        } ${dimmed ? "opacity-35" : ""}`}
+        } ${dimmed ? "opacity-35" : ""} ${ghost ? "opacity-30" : ""} ${lifted ? "rotate-[1.2deg] cursor-grabbing shadow-card-hover" : ""}`}
       >
         {line ? (
           <span

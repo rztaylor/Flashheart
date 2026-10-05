@@ -1,6 +1,6 @@
 # agent-runs
 
-Status: **Pending**. Depends on `board-editing`.
+Status: **Pending**.
 
 ## Goal
 

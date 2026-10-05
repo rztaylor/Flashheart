@@ -1,4 +1,10 @@
-import type { ChangeEvent, ReactNode } from "react";
+import {
+  type ChangeEvent,
+  cloneElement,
+  type ReactElement,
+  type ReactNode,
+  useId,
+} from "react";
 
 import { Icon } from "./Icon";
 
@@ -113,5 +119,124 @@ export function CheckboxField({
       />
       {label}
     </label>
+  );
+}
+
+const formControl =
+  "w-full rounded-control border border-rule bg-card px-2.5 text-sm text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted";
+
+// FormField is a stacked label and control for dialog and edit forms. The
+// hint below the control is linked to it with aria-describedby, so it never
+// becomes part of the control's name.
+export function FormField({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactElement<{ id?: string; "aria-describedby"?: string }>;
+}) {
+  const id = useId();
+  const control = cloneElement(children, {
+    id,
+    "aria-describedby": hint ? `${id}-hint` : undefined,
+  });
+  return (
+    <div className="flex flex-col gap-1 text-xs text-ink-muted">
+      <label htmlFor={id} className="font-medium text-ink">
+        {label}
+      </label>
+      {control}
+      {hint ? <span id={`${id}-hint`}>{hint}</span> : null}
+    </div>
+  );
+}
+
+export function TextInput({
+  value,
+  onChange,
+  ...props
+}: {
+  value: string;
+  onChange(value: string): void;
+  id?: string;
+  "aria-describedby"?: string;
+  type?: "text" | "date";
+  required?: boolean;
+  placeholder?: string;
+  maxLength?: number;
+  autoFocus?: boolean;
+  spellCheck?: boolean;
+  className?: string;
+}) {
+  return (
+    <input
+      {...props}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={`h-8 ${formControl} ${props.className ?? ""}`}
+    />
+  );
+}
+
+export function TextArea({
+  value,
+  onChange,
+  rows = 4,
+  mono,
+  ...props
+}: {
+  value: string;
+  onChange(value: string): void;
+  rows?: number;
+  mono?: boolean;
+  autoFocus?: boolean;
+  placeholder?: string;
+  spellCheck?: boolean;
+  "aria-label"?: string;
+  id?: string;
+  "aria-describedby"?: string;
+}) {
+  return (
+    <textarea
+      {...props}
+      rows={rows}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={`py-1.5 leading-snug ${formControl} ${mono ? "font-mono text-xs" : ""}`}
+    />
+  );
+}
+
+export function Select({
+  value,
+  onChange,
+  children,
+  ...props
+}: {
+  value: string;
+  onChange(value: string): void;
+  children: ReactNode;
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-label"?: string;
+}) {
+  return (
+    <span className="relative flex items-center">
+      <select
+        {...props}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`h-8 appearance-none pr-8 ${formControl}`}
+      >
+        {children}
+      </select>
+      <Icon
+        name="chevronDown"
+        size={12}
+        className="pointer-events-none absolute right-2.5 text-ink-muted"
+      />
+    </span>
   );
 }
