@@ -382,8 +382,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 
 ## 7. UX outline
 
-Desktop-first, information-dense, calm when nothing needs attention. Final
-visual direction is set with the `impeccable` skill before `board-core` UI work.
+Desktop-first, information-dense, calm when nothing needs attention. The
+visual direction is the Transit Line Map (decision D14); `DESIGN.md` records
+the system.
 
 - **Shell**: left rail of projects (with Needs you badges) and **All
   projects**; top bar with view switcher (Board · Agents · Workstreams ·

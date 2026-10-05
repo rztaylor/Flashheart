@@ -1,6 +1,6 @@
 # board-editing
 
-Status: **Pending**. Depends on `board-core`.
+Status: **Pending**. Its dependency, `board-core`, is complete.
 
 ## Goal
 

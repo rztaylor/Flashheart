@@ -1,9 +1,12 @@
 # Kickoff prompt
 
+Both stages below are complete (foundation and board-core, 2026-10-04); the
+prompt is kept as the record of how implementation started. Later items get
+their own prompts, written from their briefs when they start.
+
 Paste the block below into a new Claude Code or Codex session opened at
 `~/src/Flashheart`. It covers the first two roadmap items with a stop for
-review after each. Later items get their own prompts, written from their
-briefs when they start.
+review after each.
 
 ---
 
@@ -20,7 +23,7 @@ foundation documents.
 3. docs/dev/specs/board-format.md and docs/dev/specs/agent-protocol.md
 4. .agents/facts/*.md (architecture, frontend-ui, testing, go, node, cli, git)
 5. docs/dev/decisions.md
-6. docs/dev/roadmap.md, then docs/dev/roadmap-items/board-core.md
+6. docs/dev/roadmap.md, then the brief of the item in progress
    (foundation is complete; its brief was removed and its outcomes live in
    the spec, decisions and changelog)
 7. testdata/boards/sample/README.md
