@@ -281,8 +281,12 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
     live.total > 0
       ? `${live.done}/${live.total}${live.step ? ` · ${live.step}` : ""}`
       : "";
-  const reason =
-    live.state === "needs-you" ? permissionReason(live.permission) : "";
+  const needsYou = live.state === "needs-you";
+  const agent = (
+    <span className="shrink-0 text-ink-muted">{agentName(live.agent)}</span>
+  );
+  // Line 1 is the state and, when it needs you, what it needs in words;
+  // line 2 is the agent and its plan step.
   return (
     <span
       className="flex min-w-0 flex-col gap-0.5 text-2xs"
@@ -290,10 +294,13 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
     >
       <span className="flex min-w-0 items-center gap-2">
         <RunStateLabel state={live.state} />
-        <span className="shrink-0 text-ink-muted">{agentName(live.agent)}</span>
-        {reason ? (
-          <span className="truncate font-semibold text-ink">{reason}</span>
-        ) : null}
+        {needsYou ? (
+          <span className="font-semibold text-ink">
+            {permissionReason(live.permission)}
+          </span>
+        ) : (
+          agent
+        )}
         <span
           className="ml-auto shrink-0 text-ink-muted"
           title={`Last activity ${live.lastActivity}`}
@@ -301,10 +308,15 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
           {runningTime(live.lastActivity, now)}
         </span>
       </span>
-      {step ? (
-        <span className="truncate text-ink" title={live.step}>
-          <span className="sr-only">Plan: </span>
-          {step}
+      {needsYou || step ? (
+        <span className="flex min-w-0 items-center gap-2">
+          {needsYou ? agent : null}
+          {step ? (
+            <span className="truncate text-ink" title={live.step}>
+              <span className="sr-only">Plan: </span>
+              {step}
+            </span>
+          ) : null}
         </span>
       ) : null}
     </span>

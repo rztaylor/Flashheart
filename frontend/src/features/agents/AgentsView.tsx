@@ -38,7 +38,7 @@ const emptyLane: Record<RunState, string> = {
 
 // Row columns: state, run, ticket, plan, branch, last activity.
 const rowGrid =
-  "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 lg:grid-cols-[8.5rem_9rem_minmax(12rem,26rem)_minmax(12rem,1fr)_11rem_3rem] lg:items-center";
+  "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 lg:grid-cols-[8.5rem_9rem_minmax(10rem,26rem)_minmax(12rem,22rem)_11rem_minmax(3rem,1fr)] lg:items-center";
 
 // AgentsView is the departure board of agent runs (VIEW-3): lanes by state,
 // Needs you first, each run one dense row with its ticket, plan and last
