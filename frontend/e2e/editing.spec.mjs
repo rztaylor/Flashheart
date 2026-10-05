@@ -325,6 +325,24 @@ test("preferences are saved through the backend and survive a reload", async () 
   await page.getByRole("button", { name: "Clear filters" }).click();
 });
 
+test("the theme choice is saved", async () => {
+  await open("#/p/flashheart/board");
+  const theme = page.getByRole("group", { name: "Theme" });
+  await theme.getByText("Dark", { exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect
+    .poll(() =>
+      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
+    )
+    .toContain("theme: dark");
+  await theme.getByText("System", { exact: true }).click();
+  await expect
+    .poll(() =>
+      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
+    )
+    .toContain("theme: system");
+});
+
 test("the Edit tab and dialogs are accessible in dark", async () => {
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
   await open("#/p/flashheart/board?t=FH-36");

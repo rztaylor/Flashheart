@@ -10,6 +10,7 @@ import {
   type TicketRef,
 } from "../api/board";
 import type { Created } from "../api/edit";
+import type { ThemePreference } from "../api/info";
 import type { Preferences } from "../api/preferences";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
@@ -341,7 +342,14 @@ export function Shell({
               onSelect={selectScope}
             />
           </div>
-          <RailFooter root={root} info={info} />
+          <RailFooter
+            root={root}
+            info={info}
+            theme={preferences.theme}
+            onTheme={(theme) =>
+              updatePreferences((current) => ({ ...current, theme }))
+            }
+          />
         </div>
 
         <main
@@ -609,12 +617,56 @@ function V1Notice({
   );
 }
 
-function RailFooter({ root, info }: { root: string; info: ServerInfoState }) {
+const themes: { value: ThemePreference; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
+
+// RailFooter shows the board root and version, and the theme choice, saved
+// with the other preferences (CFG-2).
+function RailFooter({
+  root,
+  info,
+  theme,
+  onTheme,
+}: {
+  root: string;
+  info: ServerInfoState;
+  theme: ThemePreference;
+  onTheme(theme: ThemePreference): void;
+}) {
   return (
     <section
       aria-label="Board root"
       className="border-t border-band-track px-4 py-3 text-2xs text-on-band-muted max-[90rem]:group-data-[panel=open]/work:hidden"
     >
+      <fieldset className="mb-2.5 flex items-center gap-2">
+        <legend className="sr-only">Theme</legend>
+        <span aria-hidden="true">Theme</span>
+        <span className="flex rounded-control border border-band-track p-0.5">
+          {themes.map((option) => (
+            <label
+              key={option.value}
+              className={`cursor-pointer rounded-[3px] px-1.5 py-px transition-colors has-focus-visible:outline-2 has-focus-visible:outline-on-band ${
+                theme === option.value
+                  ? "bg-on-band text-band"
+                  : "text-on-band-muted hover:text-on-band"
+              }`}
+            >
+              <input
+                type="radio"
+                name="theme"
+                value={option.value}
+                checked={theme === option.value}
+                onChange={() => onTheme(option.value)}
+                className="sr-only"
+              />
+              {option.label}
+            </label>
+          ))}
+        </span>
+      </fieldset>
       <dl>
         <dt className="sr-only">Board root</dt>
         {/* Truncated from the start so the meaningful tail stays visible. */}

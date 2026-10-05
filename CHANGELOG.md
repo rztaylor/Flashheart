@@ -32,7 +32,20 @@ All notable changes to this project are documented here. The project follows
   card headers and names the value, with a colour key; features stay
   neutral grey so colour picks out the other types. Below 1440px an open
   panel shrinks the rail to its key badges, keeping three whole columns.
-- Read-only board API over the root: projects with counts, project and
+- Board editing: move tickets by drag, Shift with an arrow, or the panel's
+  Move to menu, with Undo; a reason is required to start a blocked ticket
+  and is recorded in Notes; moving into review warns about a missing review
+  or unticked criteria. The panel ticks acceptance criteria, archives with
+  Undo, and has an Edit tab with typed fields and the raw file. New ticket
+  creates the next id. Workstream stations reorder along their line.
+- Safe concurrent writes: per-project and root locks, content-hash
+  preconditions, atomic replace, and a side-by-side conflict dialog when a
+  save loses a race.
+- Live updates: file watching turns external edits into board changes
+  within a second, delivered to the browser by long-polling.
+- Preferences (theme, density, colour by, and each project's view and
+  filters) are saved in `config.yaml`.
+- Board API over the root (read and write): projects with counts, project and
   all-projects boards with blocked-by explanations, ticket detail with
   review, handoff and attachments, workstreams with derived status, and
   allow-listed attachment files. Unparseable, oversized or escaping files are

@@ -131,8 +131,10 @@ The title is the first `#` heading. Unknown keys are preserved in place
 | `review` | Ready to review | Implemented; waiting for human review. |
 | `done` | Done | Accepted. |
 
-A move is a frontmatter edit of `status` under the lock with a content-hash
-precondition (`STO-3`); the folder never moves except to `.archive/`.
+A move is a frontmatter edit of `status` under the lock, applied to the file
+as it is then (`STO-3`); other edits from the UI and agents carry the content
+hash they read. Every write by Flashheart stamps `updated`. The folder never
+moves except to `.archive/`.
 
 ### References in text
 
@@ -266,8 +268,14 @@ attachments:
 ui:
   theme: system           # system | light | dark
   density: normal         # compact | normal | detailed
+  colour_by: type         # type | priority | age | none
   virtual_columns: [needs-you]
+  scopes:                 # remembered view and filters, per project or "all"
+    flashheart: {view: board, type: bug, state: blocked, hide_later: true}
 ```
+
+Flashheart rewrites only the `ui` keys when preferences change, keeping the
+other settings, unknown keys and comments.
 
 A root without `config.yaml` is version 2 unless a project in it still has v1
 column folders (`todo/`, `in-progress/`, `ready-to-review/`, `done/`).

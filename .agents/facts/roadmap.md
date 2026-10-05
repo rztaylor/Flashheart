@@ -2,7 +2,7 @@
 
 - Index: `docs/dev/roadmap.md`. Briefs: `docs/dev/roadmap-items/<id>.md`.
 - IDs are short kebab-case text. Statuses: `Pending`, `Partial`, `Blocked`.
-- Order: `board-editing` → `agent-runs` → `mcp-protocol` →
+- Order: `agent-runs` → `mcp-protocol` →
   (`codex-support` ∥ `review-and-orchestration`).
 - Visible UI changes follow `DESIGN.md`; new surfaces or a changed visual
   world go through the `impeccable` skill first.
