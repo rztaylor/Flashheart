@@ -53,8 +53,8 @@ colors:
   night-line-lime: "#7acb52"
   night-line-brown: "#b8854f"
   night-line-grey: "#a2a4a8"
-  paint-type-feature: "#3f5f8a"
-  paint-type-feature-tint: "#e7ecf3"
+  paint-type-feature: "#5b6170"
+  paint-type-feature-tint: "#f1f2f4"
   paint-type-bug: "#a2453a"
   paint-type-bug-tint: "#f6e6e3"
   paint-type-infra: "#2f6b68"
@@ -81,8 +81,8 @@ colors:
   paint-age-week-tint: "#f2ecdb"
   paint-age-older: "#8c4a3c"
   paint-age-older-tint: "#f3e6e2"
-  night-paint-type-feature: "#8fa9cf"
-  night-paint-type-feature-tint: "#222a38"
+  night-paint-type-feature: "#a9aeb8"
+  night-paint-type-feature-tint: "#2a2c31"
   night-paint-type-bug: "#dc8f84"
   night-paint-type-bug-tint: "#33211f"
   night-paint-type-infra: "#83bdb8"
@@ -191,7 +191,7 @@ spacing:
   panel-gutter: "24px"
   band-height: "48px"
   rail-width: "248px"
-  panel-width: "clamp(26rem, 36vw, 35rem)"
+  panel-width: "clamp(26rem, 32vw, 35rem)"
 components:
   button-primary:
     backgroundColor: "{colors.signal-ink}"
@@ -304,7 +304,7 @@ A monochrome map in two themes, a nine-colour line palette borrowed from the MTA
 
 ### Secondary
 - **The Line Palette** (`line-red`, `line-blue`, `line-yellow`, `line-green`, `line-purple`, `line-orange`, `line-lime`, `line-brown`, `line-grey`, with lifted `night-line-*` values for dark mode; CSS `--fh-line-0` to `--fh-line-8`): ordered so neighbouring indices are far apart in hue. Each workstream in a project is assigned one line, stably, in creation order (a newer workstream never recolours an older one). Used as line bullet fills, the card's left stripe, transit track and station rings. Bullet initials take a paired ink per line (`--fh-line-ink-*`: white on red, blue, green, purple and brown in light mode; near-black on yellow, orange, lime and grey; near-black on every line in dark mode). Bullets and stations carry a faint casing ring (`--fh-casing`) so yellow and lime hold their edge on white.
-- **The Paint Palette** (`--fh-paint-<token>` strong shade, `-tint` header wash, `-ink` text on the strong shade; tokens `type-feature`, `type-bug`, `type-infra`, `type-test`, `type-refactor`, `type-docs`, `type-spike`, `type-other`, `priority-high`, `priority-medium`, `priority-low`, `age-today`, `age-week`, `age-older`): desaturated mid-tones, deliberately not the line colours. Ink is white on every strong shade in light mode and `#111111` in dark mode, where the strong shades lift and the tints sink below the card. Age shares hues with type and priority (today = test green, this week = medium ochre).
+- **The Paint Palette** (`--fh-paint-<token>` strong shade, `-tint` header wash, `-ink` text on the strong shade; tokens `type-feature`, `type-bug`, `type-infra`, `type-test`, `type-refactor`, `type-docs`, `type-spike`, `type-other`, `priority-high`, `priority-medium`, `priority-low`, `age-today`, `age-week`, `age-older`): desaturated mid-tones, deliberately not the line colours. Ink is white on every strong shade in light mode and `#111111` in dark mode, where the strong shades lift and the tints sink below the card. Age shares hues with type and priority (today = test green, this week = medium ochre). `type-feature` is neutral grey (the strong shade of `type-other` with a lighter tint): features are the usual case, so colour picks out the exceptions.
 
 ### Tertiary
 - **Flash Yellow** (`flash-yellow`, `--fh-flash`, the same in both themes): the bolt before the wordmark. Nowhere else.
@@ -356,11 +356,11 @@ A monochrome map in two themes, a nine-colour line palette borrowed from the MTA
 
 ## Layout
 
-A fixed three-row app grid: the 48px signage band, an optional alert strip, then the work area. At 48rem and up the work area is the 248px black project rail beside the main view and, when a ticket is open, the card panel; below that the rail hides and a compact control row takes its place. The rail ends in a footer with the board root path in monospace, truncated from the start so the tail stays visible, and the version line.
+A fixed three-row app grid: the 48px signage band, an optional alert strip, then the work area. At 48rem and up the work area is the 248px black project rail beside the main view and, when a ticket is open, the card panel; below that the rail hides and a compact control row takes its place. Below 90rem (1440px), while a ticket is open, the rail shrinks to a 3.5rem column of key badges (names stay for screen readers and in tooltips; the footer hides) so the board keeps three whole columns beside the panel. The rail ends in a footer with the board root path in monospace, truncated from the start so the tail stays visible, and the version line.
 
 The main view starts with the filter bar on the ground (filters, ticket count, then Colour by and Density right-aligned), above the platform. On the platform a strip holds the line legend left and the colour key right. The Board is five columns (Backlog, Up next, In progress, Ready to review, Done), each minimum 15rem, separated by 20px gaps on the platform with no dividers, scroll-snapped horizontally with 16px page padding. Cards stack with a 10px gap. Choosing a line dims other cards to 35% rather than hiding them. Under 48rem the board shows a single column chosen with a column picker.
 
-The card panel sits beside the board in flow at clamp(26rem, 36vw, 35rem), narrowing the board, which scrolls the open card's column back into view; on phones it covers the view below the band. Workstreams stacks projects (40px apart) and their lines (separated by hairline rules), each line a horizontal scroller of stations with an edge fade and "more" hint when the route runs off-screen. Table is a full-width sortable table with a sticky head.
+The card panel sits beside the board in flow at clamp(26rem, 32vw, 35rem), narrowing the board, which scrolls the open card's column back into view; on phones it covers the view below the band. Workstreams stacks projects (40px apart) and their lines (separated by hairline rules), each line a horizontal scroller of stations with an edge fade and "more" hint when the route runs off-screen. Table is a full-width sortable table with a sticky head.
 
 Spacing runs on a 4px unit: 8px tight gaps, 10px card gaps and vertical padding, 12px card right padding (16px left, inside the stripe), 16px page edges, 20px column gaps, 24px panel gutters.
 
@@ -414,7 +414,7 @@ Plain signage hardware, small and square-shouldered.
 - **Panel tabs (Ticket, Review):** small station-sign labels over a hairline, the active tab underlined 3px in ink.
 
 ### Card Panel
-Beside the board in flow (clamp(26rem, 36vw, 35rem)), hairline left border, panel shadow, entering with a 260ms clip-path reveal from the right (ease-out-expo; none under reduced motion). Header: headline title, then a label-size meta row: ticket id, column in semibold ink, workstream with its bullet, type, priority, created date, branch (monospace with icon), and the changed time. Escape or the close button dismisses it.
+Beside the board in flow (clamp(26rem, 32vw, 35rem)), hairline left border, panel shadow, entering with a 260ms clip-path reveal from the right (ease-out-expo; none under reduced motion). Header: headline title, then a label-size meta row: ticket id, column in semibold ink, workstream with its bullet, type, priority, created date, branch (monospace with icon), and the changed time. Escape or the close button dismisses it.
 
 ### Line Bullet
 The round transit bullet: line colour fill, paired ink initials (one or two letters) in a bold condensed cut, a faint casing ring. Sizes 20, 24 and 32px. Dims to 30% when its line is out of focus.

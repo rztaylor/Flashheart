@@ -263,7 +263,12 @@ export function Shell({ lifecycle, info }: ShellProps) {
         ) : null}
       </div>
 
-      <div className="grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto]">
+      {/* Below 1440px an open panel shrinks the rail to its key badges so the
+          board keeps three whole columns. */}
+      <div
+        data-panel={route.ticket ? "open" : undefined}
+        className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[3.5rem_minmax(0,1fr)_auto]"
+      >
         <div className="hidden min-h-0 flex-col bg-band md:flex">
           <div className="min-h-0 flex-1">
             <ProjectRail
@@ -496,7 +501,7 @@ function RailFooter({ root, info }: { root: string; info: ServerInfoState }) {
   return (
     <section
       aria-label="Board root"
-      className="border-t border-band-track px-4 py-3 text-2xs text-on-band-muted"
+      className="border-t border-band-track px-4 py-3 text-2xs text-on-band-muted max-[90rem]:group-data-[panel=open]/work:hidden"
     >
       <dl>
         <dt className="sr-only">Board root</dt>

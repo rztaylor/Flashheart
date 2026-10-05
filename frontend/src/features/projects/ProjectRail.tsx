@@ -104,9 +104,9 @@ function RailItem({
     <button
       type="button"
       onClick={onClick}
-      title={subtitle}
+      title={subtitle ? `${title} (${subtitle})` : title}
       aria-current={active ? "page" : undefined}
-      className={`flex w-full items-start gap-2.5 rounded-control px-2 py-2.5 text-left transition-colors focus-visible:outline-on-band ${
+      className={`flex w-full items-start gap-2.5 rounded-control px-2 py-2.5 text-left transition-colors focus-visible:outline-on-band max-[90rem]:group-data-[panel=open]/work:justify-center max-[90rem]:group-data-[panel=open]/work:px-0 ${
         active ? "bg-band-field" : "hover:bg-band-field/60"
       }`}
     >
@@ -120,7 +120,7 @@ function RailItem({
       >
         {code}
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5 max-[90rem]:group-data-[panel=open]/work:sr-only">
         <span className="flex items-baseline justify-between gap-2">
           <span
             className={`truncate text-sm ${active ? "font-semibold" : "font-medium"}`}

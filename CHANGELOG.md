@@ -29,7 +29,9 @@ All notable changes to this project are documented here. The project follows
   keeps the card's column in view; a black project rail with project-key
   badges; cards lift off a dotted platform with the workstream's line down
   their left edge; **Colour by** type (default), priority, age or none tints
-  card headers and names the value, with a colour key.
+  card headers and names the value, with a colour key; features stay
+  neutral grey so colour picks out the other types. Below 1440px an open
+  panel shrinks the rail to its key badges, keeping three whole columns.
 - Read-only board API over the root: projects with counts, project and
   all-projects boards with blocked-by explanations, ticket detail with
   review, handoff and attachments, workstreams with derived status, and

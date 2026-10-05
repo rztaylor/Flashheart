@@ -29,7 +29,7 @@ export function SidePanel({ label, onClose, children }: SidePanelProps) {
       ref={ref}
       tabIndex={-1}
       aria-label={label}
-      className="panel-enter relative flex min-h-0 flex-col border-l border-rule bg-card shadow-panel outline-none max-md:fixed max-md:inset-x-0 max-md:top-12 max-md:bottom-0 max-md:z-30 md:w-[clamp(26rem,36vw,35rem)]"
+      className="panel-enter relative flex min-h-0 flex-col border-l border-rule bg-card shadow-panel outline-none max-md:fixed max-md:inset-x-0 max-md:top-12 max-md:bottom-0 max-md:z-30 md:w-[clamp(26rem,32vw,35rem)]"
     >
       <button
         type="button"

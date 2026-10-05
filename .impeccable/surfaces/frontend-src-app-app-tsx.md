@@ -41,13 +41,14 @@ panel beside the board, which narrows and keeps the card's column in view.
 
 FIRST VIEWPORT: 48px black band: bolt and wordmark, the current project's key
 and name as a station sign, view tabs (Board, Workstreams, Table), search,
-quiet status dot and Quit right. 248px black rail: All projects, then
+quiet status dot and Quit right. 248px black rail (key badges only, 3.5rem,
+while a ticket is open below 1440px): All projects, then
 projects with key badge, route bar and counts. Main: filter bar with Colour by
 and density, a strip with the line legend and colour key, then five columns
 on the platform headed by a rule and station-sign label with a right-aligned
 count. Cards: workstream stripe, tinted header with line bullet, title and
 running time; id, colour tag, type and priority; blocked reason line. The card
-panel sits beside the board (clamp(26rem, 36vw, 35rem)); on phones it covers
+panel sits beside the board (clamp(26rem, 32vw, 35rem)); on phones it covers
 the view.
 
 FORM: Transit line map (Vignelli 1972 diagram and Unimark signage); position

@@ -5,9 +5,11 @@
  * (red, blue, yellow, green, purple, orange, lime, brown, grey).
  * Line colours mean workstreams and nothing else; ticket state is ink, shape
  * and words. Paint colours (--fh-paint-*) show the board's "Colour by"
- * attribute (type, priority or age), always beside its name; each has a strong
- * shade for tags, a tint for card headers and an ink for text on the strong
- * shade. Themes switch on <html data-theme>.
+ * attribute (type, priority or age), always beside its name. They are muted
+ * so full saturation always means a workstream, and features (the usual
+ * case) are neutral grey so colour picks out the exceptions. Each has a
+ * strong shade for tags, a tint for card headers and an ink for text on the
+ * strong shade. Themes switch on <html data-theme>.
  */
 :root {
   --fh-ground: #ffffff;
@@ -59,8 +61,8 @@
   --fh-band-track: #3a3d43;
   --fh-flash: #ffd23f;
 
-  --fh-paint-type-feature: #3f5f8a;
-  --fh-paint-type-feature-tint: #e7ecf3;
+  --fh-paint-type-feature: #5b6170;
+  --fh-paint-type-feature-tint: #f1f2f4;
   --fh-paint-type-feature-ink: #ffffff;
   --fh-paint-type-bug: #a2453a;
   --fh-paint-type-bug-tint: #f6e6e3;
@@ -153,8 +155,8 @@
   --fh-band-track: #34373d;
   --fh-flash: #ffd23f;
 
-  --fh-paint-type-feature: #8fa9cf;
-  --fh-paint-type-feature-tint: #222a38;
+  --fh-paint-type-feature: #a9aeb8;
+  --fh-paint-type-feature-tint: #2a2c31;
   --fh-paint-type-feature-ink: #111111;
   --fh-paint-type-bug: #dc8f84;
   --fh-paint-type-bug-tint: #33211f;

@@ -874,14 +874,14 @@
       "paint-type-feature": {
         "role": "secondary",
         "displayName": "Paint Type Feature",
-        "canonical": "#3f5f8a",
+        "canonical": "#5b6170",
         "oklch": "oklch(48.0% 0.079 256.1)",
         "purpose": "Paint tag and key swatch for \"Colour by\" value type-feature.",
         "tonalRamp": [
           "#000a21",
           "#052349",
           "#224069",
-          "#3f5f8a",
+          "#5b6170",
           "#5e7fac",
           "#7ea1d0",
           "#a3c7f8",
@@ -891,7 +891,7 @@
       "paint-type-feature-tint": {
         "role": "secondary",
         "displayName": "Paint Type Feature Tint",
-        "canonical": "#e7ecf3",
+        "canonical": "#f1f2f4",
         "oklch": "oklch(94.1% 0.011 256.7)",
         "purpose": "Card header wash for \"Colour by\" value type-feature.",
         "tonalRamp": [
@@ -1350,7 +1350,7 @@
       "night-paint-type-feature": {
         "role": "secondary",
         "displayName": "Night Paint Type Feature",
-        "canonical": "#8fa9cf",
+        "canonical": "#a9aeb8",
         "oklch": "oklch(72.9% 0.063 257.8)",
         "purpose": "Paint tag and key swatch for \"Colour by\" value type-feature (dark theme).",
         "tonalRamp": [
@@ -1367,7 +1367,7 @@
       "night-paint-type-feature-tint": {
         "role": "secondary",
         "displayName": "Night Paint Type Feature Tint",
-        "canonical": "#222a38",
+        "canonical": "#2a2c31",
         "oklch": "oklch(28.4% 0.028 261.5)",
         "purpose": "Card header wash for \"Colour by\" value type-feature (dark theme).",
         "tonalRamp": [
@@ -2024,7 +2024,7 @@
       "kind": "card",
       "refersTo": "ticket-card",
       "description": "A ticket on the platform: line stripe, paint-tinted header with bullet, title and running time; id, paint tag, priority; blocker proof.",
-      "html": "<div class=\"ds-plat\"><button class=\"ds-card\" style=\"--paint:var(--fh-paint-type-feature,#3f5f8a);--paint-tint:var(--fh-paint-type-feature-tint,#e7ecf3);--paint-ink:var(--fh-paint-type-feature-ink,#fff)\"><span class=\"ds-stripe\" style=\"background:var(--fh-line-3,#00843d)\"></span><span class=\"ds-card-head\"><span class=\"ds-bullet\" style=\"background:var(--fh-line-3,#00843d);color:var(--fh-line-ink-3,#fff)\">BC</span><span class=\"ds-card-title\">Read API for projects, boards and tickets</span><span class=\"ds-card-age\">now</span></span><span class=\"ds-card-body\"><span class=\"ds-card-meta\"><b class=\"ds-id\">FH-10</b><span class=\"ds-tag\">feature</span><b>High</b></span><span class=\"ds-note\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3.5 20.5 12 12 20.5 3.5 12Z\"/></svg><span>Depends on FH-4 in workstream foundation</span></span></span></button></div>",
+      "html": "<div class=\"ds-plat\"><button class=\"ds-card\" style=\"--paint:var(--fh-paint-type-feature,#5b6170);--paint-tint:var(--fh-paint-type-feature-tint,#f1f2f4);--paint-ink:var(--fh-paint-type-feature-ink,#fff)\"><span class=\"ds-stripe\" style=\"background:var(--fh-line-3,#00843d)\"></span><span class=\"ds-card-head\"><span class=\"ds-bullet\" style=\"background:var(--fh-line-3,#00843d);color:var(--fh-line-ink-3,#fff)\">BC</span><span class=\"ds-card-title\">Read API for projects, boards and tickets</span><span class=\"ds-card-age\">now</span></span><span class=\"ds-card-body\"><span class=\"ds-card-meta\"><b class=\"ds-id\">FH-10</b><span class=\"ds-tag\">feature</span><b>High</b></span><span class=\"ds-note\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3.5 20.5 12 12 20.5 3.5 12Z\"/></svg><span>Depends on FH-4 in workstream foundation</span></span></span></button></div>",
       "css": ".ds-plat{padding:16px;background-color:var(--fh-platform,#eceef1);background-image:radial-gradient(circle,var(--fh-platform-dot,rgb(17 17 17 / .09)) 1px,transparent 1.25px);background-size:16px 16px;background-position:8px 8px;} .ds-card{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;position:relative;overflow:hidden;display:flex;flex-direction:column;width:280px;padding:0;border-radius:2px;border:1px solid color-mix(in srgb,var(--fh-rule,#d7dadf) 70%,transparent);background:var(--fh-card,#fff);color:var(--fh-ink,#111);text-align:left;cursor:pointer;box-shadow:var(--fh-shadow-card,0 1px 1px rgb(17 24 39 / .06),0 2px 6px -1px rgb(17 24 39 / .1));transition:box-shadow 200ms cubic-bezier(.16,1,.3,1),translate 200ms cubic-bezier(.16,1,.3,1);} .ds-card:hover{translate:0 -1px;box-shadow:var(--fh-shadow-card-hover,0 2px 3px rgb(17 24 39 / .07),0 10px 22px -6px rgb(17 24 39 / .22));} .ds-card:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;} .ds-stripe{position:absolute;top:0;bottom:0;left:0;width:4px;} .ds-card-head{display:flex;align-items:flex-start;gap:8px;padding:10px 12px 8px 16px;background:var(--paint-tint);} .ds-card-body{display:flex;flex-direction:column;gap:6px;padding:8px 12px 10px 16px;} .ds-card-title{flex:1;font-size:0.8125rem;line-height:1.375;font-weight:500;} .ds-card-age{font-size:0.6875rem;color:var(--fh-ink-muted,#565c66);} .ds-card-meta{display:flex;align-items:center;gap:8px;font-size:0.6875rem;color:var(--fh-ink-muted,#565c66);} .ds-card-meta b{font-weight:600;color:var(--fh-ink,#111);} .ds-id{letter-spacing:0.02em;} .ds-tag{border-radius:3px;background:var(--paint);color:var(--paint-ink);padding:0 6px;line-height:1rem;font-weight:600;} .ds-note{display:flex;align-items:flex-start;gap:6px;font-size:0.75rem;} .ds-note svg{margin-top:.2em;flex-shrink:0;} .ds-bullet{display:inline-grid;place-items:center;flex-shrink:0;width:20px;height:20px;border-radius:9999px;font-size:0.6875rem;font-weight:700;font-stretch:87.5%;line-height:1;box-shadow:inset 0 0 0 1px var(--fh-casing,rgb(17 17 17 / .22));}"
     },
     {
@@ -2064,7 +2064,7 @@
       "kind": "custom",
       "refersTo": "paint-tag",
       "description": "Names each paint on the board for the current \"Colour by\" mode: swatch (strong over tint) plus the value in words.",
-      "html": "<ul class=\"ds-key-list\" aria-label=\"Card colours by type\"><li><i style=\"--p:var(--fh-paint-type-feature,#3f5f8a);--t:var(--fh-paint-type-feature-tint,#e7ecf3)\"></i>feature</li><li><i style=\"--p:var(--fh-paint-type-bug,#a2453a);--t:var(--fh-paint-type-bug-tint,#f6e6e3)\"></i>bug</li><li><i style=\"--p:var(--fh-paint-type-test,#4a7050);--t:var(--fh-paint-type-test-tint,#e5eee6)\"></i>test</li><li><i style=\"--p:var(--fh-paint-type-docs,#6b6628);--t:var(--fh-paint-type-docs-tint,#efeedd)\"></i>docs</li></ul>",
+      "html": "<ul class=\"ds-key-list\" aria-label=\"Card colours by type\"><li><i style=\"--p:var(--fh-paint-type-feature,#5b6170);--t:var(--fh-paint-type-feature-tint,#f1f2f4)\"></i>feature</li><li><i style=\"--p:var(--fh-paint-type-bug,#a2453a);--t:var(--fh-paint-type-bug-tint,#f6e6e3)\"></i>bug</li><li><i style=\"--p:var(--fh-paint-type-test,#4a7050);--t:var(--fh-paint-type-test-tint,#e5eee6)\"></i>test</li><li><i style=\"--p:var(--fh-paint-type-docs,#6b6628);--t:var(--fh-paint-type-docs-tint,#efeedd)\"></i>docs</li></ul>",
       "css": ".ds-key-list{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:12px;margin:0;padding:0;list-style:none;font-size:0.75rem;color:var(--fh-ink-muted,#565c66);white-space:nowrap;} .ds-key-list li{display:flex;align-items:center;gap:6px;} .ds-key-list i{width:14px;height:10px;border-radius:2px;background:linear-gradient(var(--p) 0 40%,var(--t) 40%);box-shadow:inset 0 0 0 1px var(--fh-casing,rgb(17 17 17 / .22));}"
     }
   ],

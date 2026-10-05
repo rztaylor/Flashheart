@@ -228,6 +228,31 @@ test("the panel sits beside the board and keeps the card's column in view", asyn
       boardBox.x + boardBox.width + 1,
     );
   }).toPass();
+  // Below 1440px the rail shrinks to its key badges, leaving three whole
+  // columns beside the panel.
+  const rail = page.getByRole("navigation", { name: "Projects" });
+  expect((await rail.boundingBox()).width).toBeLessThan(80);
+  await expect(rail.getByRole("button", { name: /Flashheart/ })).toBeVisible();
+  await expect(async () => {
+    const boardBox = await board.boundingBox();
+    let whole = 0;
+    for (const name of [
+      "Backlog",
+      "Up next",
+      "In progress",
+      "Ready to review",
+      "Done",
+    ]) {
+      const box = await column(page, name).boundingBox();
+      if (
+        box.x >= boardBox.x - 1 &&
+        box.x + box.width <= boardBox.x + boardBox.width + 1
+      )
+        whole++;
+    }
+    expect(whole).toBeGreaterThanOrEqual(3);
+  }).toPass();
+
   // Every other column is reachable by scrolling the board.
   await board.evaluate((element) => {
     element.scrollLeft = 0;
