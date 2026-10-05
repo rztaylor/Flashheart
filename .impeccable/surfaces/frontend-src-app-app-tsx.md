@@ -5,10 +5,11 @@ primary_target: "frontend/src/app/App.tsx"
 related_targets: ["frontend/src/features"]
 ---
 
-# Board shell, Board, card panel and Workstreams
+# Board shell, Board, Agents, card panel and Workstreams
 
 Scope: the app shell (project rail, signage header), Board with three card
-densities, card panel (Ticket and Review tabs), Workstreams and Table views.
+densities and virtual columns, Agents view, card panel (Ticket, Edit, Runs
+and Review tabs), Workstreams and Table views.
 Visitor mode: Operate. Used ambiently on a second monitor and in focused
 review sessions; must answer at a glance who needs the user, what is moving,
 what is stuck and where each project stands. Pinned by the user: a standard
@@ -40,8 +41,9 @@ reason inline, and opens a card to read its handoff, criteria and review in a
 panel beside the board, which narrows and keeps the card's column in view.
 
 FIRST VIEWPORT: 48px black band: bolt and wordmark, the current project's key
-and name as a station sign, view tabs (Board, Workstreams, Table), search,
-quiet status dot and Quit right. 248px black rail (key badges only, 3.5rem,
+and name as a station sign, view tabs (Board, Agents, Workstreams, Table),
+a "N need you" plate while any run needs you, search, quiet status dot and
+Quit right. 248px black rail (key badges only, 3.5rem,
 while a ticket is open below 1440px): All projects, then
 projects with key badge, route bar and counts. Main: filter bar with Colour by
 and density, a strip with the line legend and colour key, then five columns
@@ -58,6 +60,14 @@ jobs (lexicon); every status paired with its proof (monochrome product); focus
 dims instead of filtering (streaming wall). Signature move: workstreams drawn
 as transit lines with tickets as stations, done stations filled, the next
 station an interchange ring, blocked segments dashed as suspended service.
+
+PROVENANCE (agent-runs, 2026-10-05): the Agents view, live badges, virtual
+columns, Runs tab and Needs you badges extend this established surface in
+its committed world, code-led with no comp round. Decisions came from the
+user's answers: Agents view as a "Departure board (Recommended)", lane order
+"Needs you first (Recommended)", virtual columns "Before Backlog
+(Recommended)". Showing a virtual column only while it holds tickets was a
+build decision after inspection.
 
 PROVENANCE: The 2026-10-05 board refresh was code-led on this machine (no image
 generation; `config.local.json` buildPath code). Its changes came from the

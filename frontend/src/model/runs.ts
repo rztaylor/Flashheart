@@ -16,6 +16,13 @@ export const STATE_LABEL: Record<RunState, string> = {
   ended: "Ended",
 };
 
+// permissionReason says what a run waiting on permission needs, in words.
+export function permissionReason(tool: string): string {
+  return tool && tool !== "?"
+    ? `Permission for ${tool}`
+    : "Waiting for permission";
+}
+
 export function agentName(agent: string): string {
   if (agent === "claude") return "Claude";
   if (agent === "codex") return "Codex";

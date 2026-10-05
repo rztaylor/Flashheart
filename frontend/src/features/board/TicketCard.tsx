@@ -13,7 +13,7 @@ import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
 import { type Paint, paintVars } from "../../model/paint";
-import { agentName, STATE_LABEL } from "../../model/runs";
+import { agentName, permissionReason, STATE_LABEL } from "../../model/runs";
 import { runningTime } from "../../model/time";
 import type { Density } from "../filters/FilterBar";
 
@@ -281,30 +281,32 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
     live.total > 0
       ? `${live.done}/${live.total}${live.step ? ` · ${live.step}` : ""}`
       : "";
+  const reason =
+    live.state === "needs-you" ? permissionReason(live.permission) : "";
   return (
     <span
-      className="flex min-w-0 items-center gap-2 text-2xs"
+      className="flex min-w-0 flex-col gap-0.5 text-2xs"
       data-live={live.state}
     >
-      <RunStateLabel state={live.state} />
-      <span className="shrink-0 text-ink-muted">{agentName(live.agent)}</span>
-      {live.state === "needs-you" &&
-      live.permission &&
-      live.permission !== "?" ? (
-        <span className="truncate font-semibold text-ink">
-          {live.permission}
+      <span className="flex min-w-0 items-center gap-2">
+        <RunStateLabel state={live.state} />
+        <span className="shrink-0 text-ink-muted">{agentName(live.agent)}</span>
+        {reason ? (
+          <span className="truncate font-semibold text-ink">{reason}</span>
+        ) : null}
+        <span
+          className="ml-auto shrink-0 text-ink-muted"
+          title={`Last activity ${live.lastActivity}`}
+        >
+          {runningTime(live.lastActivity, now)}
         </span>
-      ) : step ? (
+      </span>
+      {step ? (
         <span className="truncate text-ink" title={live.step}>
+          <span className="sr-only">Plan: </span>
           {step}
         </span>
       ) : null}
-      <span
-        className="ml-auto shrink-0 text-ink-muted"
-        title={`Last activity ${live.lastActivity}`}
-      >
-        {runningTime(live.lastActivity, now)}
-      </span>
     </span>
   );
 }

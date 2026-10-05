@@ -136,6 +136,9 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
     .getByRole("region", { name: /^In progress/ })
     .getByRole("button", { name: /^Card panel, AL-3, Claude needs you/ });
   await expect(real).toBeVisible();
+  // The live badge says what the run needs and keeps its plan step.
+  await expect(real.getByText("Permission for Bash")).toBeVisible();
+  await expect(real.getByText("2/5 · Runs tab timeline")).toBeVisible();
 
   // Virtual columns appear only while they hold tickets, and can be hidden.
   await expect(
@@ -157,6 +160,7 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   }
 
   // The Runs tab shows the ticket's runs and the handoff warning.
+  await open("#/p/alpha/board");
   await real.click();
   await page.getByRole("tab", { name: /^Runs/ }).click();
   const panel = page.getByRole("complementary", { name: "Ticket AL-3" });

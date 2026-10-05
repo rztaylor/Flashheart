@@ -6,6 +6,7 @@ import {
   compactTimeline,
   describeEntry,
   laneRuns,
+  permissionReason,
   planStations,
 } from "./runs";
 
@@ -190,4 +191,10 @@ it("names agents", () => {
   expect(agentName("claude")).toBe("Claude");
   expect(agentName("codex")).toBe("Codex");
   expect(agentName("other")).toBe("other");
+});
+
+it("says what a run waiting on permission needs", () => {
+  expect(permissionReason("Bash")).toBe("Permission for Bash");
+  expect(permissionReason("?")).toBe("Waiting for permission");
+  expect(permissionReason("")).toBe("Waiting for permission");
 });

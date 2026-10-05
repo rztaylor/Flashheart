@@ -12,6 +12,7 @@ import {
   agentName,
   type LaneRun,
   laneRuns,
+  permissionReason,
   STATE_LABEL,
 } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
@@ -37,7 +38,7 @@ const emptyLane: Record<RunState, string> = {
 
 // Row columns: state, run, ticket, plan, branch, last activity.
 const rowGrid =
-  "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 lg:grid-cols-[8.5rem_9.5rem_minmax(0,1.7fr)_minmax(9rem,1fr)_minmax(0,0.8fr)_3rem] lg:items-center";
+  "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 lg:grid-cols-[8.5rem_9rem_minmax(12rem,26rem)_minmax(12rem,1fr)_11rem_3rem] lg:items-center";
 
 // AgentsView is the departure board of agent runs (VIEW-3): lanes by state,
 // Needs you first, each run one dense row with its ticket, plan and last
@@ -261,9 +262,7 @@ function RunRow({
     : agentName(run.agent);
   const note =
     run.state === "needs-you"
-      ? run.permission && run.permission !== "?"
-        ? `Permission for ${run.permission}`
-        : "Waiting for permission"
+      ? permissionReason(run.permission)
       : run.noHandoff
         ? "No handoff since its edits"
         : "";
@@ -363,7 +362,7 @@ function RunRow({
             <span className="text-ink-faint">No plan</span>
           ) : null}
         </div>
-        <div className="min-w-0 max-lg:hidden">
+        <div className="min-w-0 max-lg:col-span-2">
           {subagent ? null : <BranchLabel branch={run.branch} />}
         </div>
         <time

@@ -2,7 +2,7 @@ import type { TicketDetail } from "../../api/board";
 import type { Run } from "../../api/runs";
 import { RunStateLabel } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
-import { agentName } from "../../model/runs";
+import { agentName, permissionReason } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 import { BranchLabel, RunDetail } from "../agents/RunDetail";
 
@@ -61,6 +61,11 @@ function RunCard({
     >
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t-2 border-rule-strong pt-2 text-xs">
         <RunStateLabel state={run.state} />
+        {run.state === "needs-you" ? (
+          <span className="font-semibold text-ink">
+            {permissionReason(run.permission)}
+          </span>
+        ) : null}
         <span className="font-medium text-ink">{agentName(run.agent)}</span>
         <span className="text-ink-muted" title={run.id}>
           {run.short}

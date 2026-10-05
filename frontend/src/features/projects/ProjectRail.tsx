@@ -119,23 +119,13 @@ function RailItem({
     >
       <span
         aria-hidden="true"
-        data-needs-you={runs.needsYou > 0 ? "" : undefined}
-        className={`relative grid h-6 min-w-8 shrink-0 place-items-center rounded-[3px] px-1 text-xs leading-none font-bold station-sign ${
+        className={`grid h-6 min-w-8 shrink-0 place-items-center rounded-[3px] px-1 text-xs leading-none font-bold station-sign ${
           active
             ? "bg-on-band text-band"
             : "text-on-band shadow-[inset_0_0_0_1.5px_var(--fh-on-band-muted)]"
         }`}
       >
         {code}
-        {runs.needsYou > 0 ? (
-          <span className="absolute -top-1 -right-1 grid size-3 place-items-center rounded-full bg-band">
-            <RunStateMark
-              state="needs-you"
-              size={10}
-              className="text-on-band"
-            />
-          </span>
-        ) : null}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1.5 max-[90rem]:group-data-[panel=open]/work:sr-only">
         <span className="flex items-baseline justify-between gap-2">
