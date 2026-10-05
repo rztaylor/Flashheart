@@ -74,7 +74,8 @@ func SetScalar(data []byte, key, value string) ([]byte, error) {
 	return setField(data, doc, key, line+"\n")
 }
 
-// SetList sets a top-level frontmatter field to a flow list ([a, b]).
+// SetList sets a top-level frontmatter field to a list: a flow list ([a, b])
+// unless the field is already a block list, whose style is kept.
 func SetList(data []byte, key string, items []string) ([]byte, error) {
 	doc := Parse(data)
 	// A scalar holding the same single item (tags: ui) already reads the same.
@@ -84,6 +85,17 @@ func SetList(data []byte, key string, items []string) ([]byte, error) {
 	quoted := make([]string, len(items))
 	for index, item := range items {
 		quoted[index] = scalar(item)
+	}
+	// A list already written in block style keeps that style and indent.
+	if node, ok := doc.field(key); ok && node.Kind == yaml.SequenceNode && node.Style&yaml.FlowStyle == 0 &&
+		len(node.Content) > 0 && len(items) > 0 {
+		indent := strings.Repeat(" ", max(node.Content[0].Column-3, 0))
+		var block strings.Builder
+		block.WriteString(key + ":\n")
+		for _, item := range quoted {
+			block.WriteString(indent + "- " + item + "\n")
+		}
+		return setField(data, doc, key, block.String())
 	}
 	return setField(data, doc, key, key+": ["+strings.Join(quoted, ", ")+"]\n")
 }

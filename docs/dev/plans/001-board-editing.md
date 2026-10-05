@@ -31,7 +31,7 @@ Brief: `docs/dev/roadmap-items/board-editing.md`. Branch:
 ## Progress
 
 - [x] 1 mdfile edits
-- [ ] 2 store writes
+- [x] 2 store writes
 - [ ] 3 watching and long-poll
 - [ ] 4 config and preferences
 - [ ] 5 write API and guard

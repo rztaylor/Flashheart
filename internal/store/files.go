@@ -14,7 +14,7 @@ import (
 // The functions below are confined file primitives for whole-board
 // operations such as migration. Paths are slash-separated and relative to the
 // root; an os.Root keeps every access inside it (SEC-2). Ticket-level writes
-// with locks and hash preconditions arrive with board-editing.
+// with locks and hash preconditions are in write.go.
 
 // ReadFile reads a file of at most MaxFileBytes.
 func (s *Store) ReadFile(name string) ([]byte, error) {

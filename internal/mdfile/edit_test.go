@@ -80,7 +80,7 @@ func TestSetScalarAppendsMissingFieldAndReplacesBlockValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "---\ntype: bug\ntags: [x, \"needs, comma\"]\n# trailing comment\n---\n# T\n"; string(got) != want {
+	if want := "---\ntype: bug\ntags:\n  - x\n  - \"needs, comma\"\n# trailing comment\n---\n# T\n"; string(got) != want {
 		t.Errorf("SetList =\n%q\nwant\n%q", got, want)
 	}
 }
@@ -220,5 +220,34 @@ func TestNoOpEditsAreByteIdenticalForEveryFixture(t *testing.T) {
 	}
 	if count < 50 {
 		t.Errorf("only %d fields checked", count)
+	}
+}
+
+func TestSetListKeepsBlockStyle(t *testing.T) {
+	t.Parallel()
+
+	data := "---\nslug: ui\ntickets:\n  - AL-2\n  - AL-3\ntags: []\n---\n# UI\n"
+	got, err := SetList([]byte(data), "tickets", []string{"AL-3", "AL-2", "AL-9"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "---\nslug: ui\ntickets:\n  - AL-3\n  - AL-2\n  - AL-9\ntags: []\n---\n# UI\n"; string(got) != want {
+		t.Errorf("SetList(block) =\n%q\nwant\n%q", got, want)
+	}
+}
+
+func TestSetListWritesFlowLists(t *testing.T) {
+	t.Parallel()
+
+	got, err := SetList([]byte(ticket), "depends-on", []string{"AL-4", "needs, comma"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "\ndepends-on: [AL-4, \"needs, comma\"]\ntags: ui\n") {
+		t.Errorf("SetList(flow) =\n%s", got)
+	}
+	got, err = SetList([]byte(ticket), "depends-on", nil)
+	if err != nil || !strings.Contains(string(got), "\ndepends-on: []\n") {
+		t.Errorf("SetList(empty) = %v\n%s", err, got)
 	}
 }

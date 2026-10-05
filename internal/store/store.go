@@ -44,9 +44,10 @@ var safeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$`)
 // Store reads a board root. Every access goes through an os.Root, so paths
 // and symlinks cannot escape the root (SEC-2).
 type Store struct {
-	path string
-	mu   sync.Mutex
-	root *os.Root
+	path  string
+	mu    sync.Mutex
+	root  *os.Root
+	clock func() time.Time
 }
 
 // New returns a store that opens the root on first use and keeps trying
