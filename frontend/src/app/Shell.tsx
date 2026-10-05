@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type Card,
@@ -9,13 +9,19 @@ import {
   fetchProjects,
   type TicketRef,
 } from "../api/board";
+import type { Created } from "../api/edit";
+import type { Preferences } from "../api/preferences";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
+import { Toast } from "../components/Toast";
 import { BoardView, NoTickets } from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
-import { type Density, FilterBar } from "../features/filters/FilterBar";
+import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
+import { NewTicketDialog } from "../features/editing/NewTicketDialog";
+import { useEditing } from "../features/editing/useEditing";
+import { FilterBar } from "../features/filters/FilterBar";
 import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
@@ -28,8 +34,9 @@ import {
   isFiltered,
 } from "../model/filters";
 import { linesByProject } from "../model/lines";
-import type { PaintMode } from "../model/paint";
+import { filtersFor, rememberScope, sameScope } from "../model/scopes";
 import { useResource } from "../state/useResource";
+import { useRevision } from "../state/useRevision";
 import { BackendStatus } from "./BackendStatus";
 import { type Route, type Scope, useRoute, type View } from "./route";
 import type { ServerInfoState } from "./useServerInfo";
@@ -39,6 +46,9 @@ type BoardData = { cards: Card[]; doneTotal: number; doneShown: number };
 interface ShellProps {
   lifecycle: SingleserveLifecycle;
   info: ServerInfoState;
+  preferences: Preferences;
+  preferencesLoaded: boolean;
+  updatePreferences(change: (current: Preferences) => Preferences): void;
 }
 
 const views: { id: View; label: string; icon: IconName }[] = [
@@ -49,12 +59,18 @@ const views: { id: View; label: string; icon: IconName }[] = [
 
 // Shell composes the signage band, the project rail, the filter bar, the
 // routed view and the card panel.
-export function Shell({ lifecycle, info }: ShellProps) {
+export function Shell({
+  lifecycle,
+  info,
+  preferences,
+  preferencesLoaded,
+  updatePreferences,
+}: ShellProps) {
   const { state, fetch: fetcher, ready } = lifecycle;
   const [route, navigate] = useRoute();
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [density, setDensity] = useState<Density>("normal");
-  const [paint, setPaint] = useState<PaintMode>("type");
+  const [filters, setFiltersState] = useState<Filters>(emptyFilters);
+  const { density, colourBy: paint } = preferences;
+  const [newTicket, setNewTicket] = useState(false);
   const [doneAll, setDoneAll] = useState(false);
   const [narrowColumn, setNarrowColumn] = useState<Column>("in-progress");
   const opener = useRef<HTMLElement | null>(null);
@@ -64,7 +80,13 @@ export function Shell({ lifecycle, info }: ShellProps) {
     (signal: AbortSignal) => fetchProjects(fetcher, signal),
     [fetcher],
   );
-  const projects = useResource(ready ? loadProjects : undefined, "projects");
+  // Live updates: every view reloads when the board revision moves (LIFE-3).
+  const revision = useRevision(fetcher, ready);
+  const projects = useResource(
+    ready ? loadProjects : undefined,
+    "projects",
+    revision,
+  );
 
   const scopeKey =
     route.scope.kind === "all" ? "all" : `p:${route.scope.project}`;
@@ -80,7 +102,35 @@ export function Shell({ lifecycle, info }: ShellProps) {
   const board = useResource(
     ready && route.view !== "workstreams" ? loadBoard : undefined,
     `${scopeKey}:${doneAll}`,
+    revision,
   );
+  const reloadAll = useCallback(() => {
+    projects.reload();
+    board.reload();
+  }, [projects.reload, board.reload]);
+  const editing = useEditing(fetcher, reloadAll);
+  const { reconcile } = editing;
+
+  // The view and filters are remembered per project (VIEW-7, CFG-2).
+  const scopeKeyName = route.scope.kind === "all" ? "all" : route.scope.project;
+  const saved = preferences.scopes[scopeKeyName];
+  // biome-ignore lint/correctness/useExhaustiveDependencies: restore only when the scope changes or preferences first load.
+  useEffect(() => {
+    if (preferencesLoaded)
+      setFiltersState((current) => filtersFor(saved, current.query));
+  }, [scopeKeyName, preferencesLoaded]);
+  const remember = (nextFilters: Filters, view: View) => {
+    const entry = rememberScope(nextFilters, view);
+    updatePreferences((current) =>
+      sameScope(current.scopes[scopeKeyName], entry)
+        ? current
+        : { ...current, scopes: { ...current.scopes, [scopeKeyName]: entry } },
+    );
+  };
+  const setFilters = (next: Filters) => {
+    setFiltersState(next);
+    remember(next, route.view);
+  };
 
   const summaries = projects.status === "ready" ? projects.data.projects : [];
   const lines = useMemo(
@@ -115,7 +165,19 @@ export function Shell({ lifecycle, info }: ShellProps) {
     [route.scope.kind, summaries],
   );
 
-  const allCards: Card[] = board.status === "ready" ? board.data.cards : [];
+  const loadedCards = board.status === "ready" ? board.data.cards : undefined;
+  useEffect(() => {
+    if (loadedCards) reconcile(loadedCards);
+  }, [loadedCards, reconcile]);
+  // Moves show in their new column at once, before the save returns.
+  const allCards: Card[] = useMemo(
+    () =>
+      (loadedCards ?? []).map((card) => {
+        const column = editing.pending[card.id];
+        return column ? { ...card, column } : card;
+      }),
+    [loadedCards, editing.pending],
+  );
   const visible = useMemo(
     () => applyFilters(allCards, filters),
     [allCards, filters],
@@ -125,8 +187,9 @@ export function Shell({ lifecycle, info }: ShellProps) {
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
   const selectScope = (scope: Scope) => {
     setDoneAll(false);
-    setFilters((previous) => ({ ...previous, workstream: "" }));
-    go({ scope, ticket: undefined });
+    const name = scope.kind === "all" ? "all" : scope.project;
+    const view = preferences.scopes[name]?.view || route.view;
+    go({ scope, view, ticket: undefined });
   };
   const openTicket = (ticket: TicketRef) => {
     // Remember what opened the panel (a card, row or station) so Escape can
@@ -193,6 +256,7 @@ export function Shell({ lifecycle, info }: ShellProps) {
                 onClick={(event) => {
                   event.preventDefault();
                   go({ view: view.id });
+                  remember(filters, view.id);
                 }}
                 className={`flex items-center gap-1.5 border-b-3 px-3 pt-[3px] text-sm transition-colors focus-visible:-outline-offset-2 focus-visible:outline-on-band ${
                   active
@@ -354,6 +418,8 @@ export function Shell({ lifecycle, info }: ShellProps) {
                 projects={current ? [current] : summaries}
                 fetcher={fetcher}
                 lines={lines}
+                revision={revision}
+                editing={editing}
                 onOpen={openTicket}
               />
             ) : (
@@ -368,9 +434,28 @@ export function Shell({ lifecycle, info }: ShellProps) {
                 shown={visible.length}
                 total={allCards.length}
                 density={route.view === "board" ? density : undefined}
-                onDensity={route.view === "board" ? setDensity : undefined}
+                onDensity={
+                  route.view === "board"
+                    ? (value) =>
+                        updatePreferences((current) => ({
+                          ...current,
+                          density: value,
+                        }))
+                    : undefined
+                }
                 paint={route.view === "board" ? paint : undefined}
-                onPaint={route.view === "board" ? setPaint : undefined}
+                onPaint={
+                  route.view === "board"
+                    ? (value) =>
+                        updatePreferences((current) => ({
+                          ...current,
+                          colourBy: value,
+                        }))
+                    : undefined
+                }
+                onNewTicket={
+                  summaries.length > 0 ? () => setNewTicket(true) : undefined
+                }
               />
               {board.status === "loading" ? <BoardSkeleton /> : null}
               {board.status === "error" ? (
@@ -415,6 +500,7 @@ export function Shell({ lifecycle, info }: ShellProps) {
                     doneAll={doneAll}
                     onDoneAll={setDoneAll}
                     onOpen={openTicket}
+                    onMove={(card, to) => void editing.move(card, to)}
                   />
                 </div>
               ) : null}
@@ -446,9 +532,35 @@ export function Shell({ lifecycle, info }: ShellProps) {
             keys={keys}
             onOpen={openTicket}
             onClose={closeTicket}
+            revision={revision}
+            editing={editing}
+            workstreamsOf={(project) => workstreams.get(project) ?? []}
           />
         ) : null}
       </div>
+
+      {editing.blocked ? (
+        <BlockedMoveDialog
+          move={editing.blocked}
+          onConfirm={editing.confirmBlocked}
+          onCancel={editing.cancelBlocked}
+        />
+      ) : null}
+      {newTicket ? (
+        <NewTicketDialog
+          fetcher={fetcher}
+          projects={summaries}
+          project={scopeProject}
+          onClose={() => setNewTicket(false)}
+          onCreated={(created: Created) => {
+            setNewTicket(false);
+            reloadAll();
+            editing.notify({ text: `Created ${created.id}.` });
+            openTicket({ id: created.id });
+          }}
+        />
+      ) : null}
+      <Toast message={editing.toast} onDismiss={editing.dismiss} />
     </div>
   );
 }

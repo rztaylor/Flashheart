@@ -123,6 +123,10 @@ export interface TicketDetail extends Card {
   handoff: { markdown: string; next: string[] } | null;
   review: { markdown: string } | null;
   attachmentFiles: Attachment[];
+  // hash is sent back with every edit (STO-3); raw is the whole file for the
+  // raw editor. Both are empty on a read-only server.
+  hash: string;
+  raw: string;
 }
 
 export interface WorkstreamTicket {
@@ -265,7 +269,7 @@ const isWorkstreams = (
       Array.isArray(item.tickets),
   );
 
-const segment = encodeURIComponent;
+export const segment = encodeURIComponent;
 
 export function fetchProjects(
   fetcher: AuthenticatedFetch,

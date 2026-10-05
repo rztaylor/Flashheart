@@ -1,13 +1,18 @@
-import { useCallback, useId, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import {
   COLUMNS,
+  type Column,
   fetchTicket,
   type Reason,
   splitReasons,
   type TicketDetail,
   type TicketRef,
+  type WorkstreamBrief,
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
+import { conflictOf, type Saved, setCriterion } from "../../api/edit";
+import { Button } from "../../components/Button";
+import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Markdown } from "../../components/Markdown";
@@ -18,6 +23,8 @@ import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
+import type { Editing } from "../editing/useEditing";
+import { EditTab } from "./EditTab";
 
 const panelBodyClass = "min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10";
 
@@ -30,11 +37,20 @@ interface CardPanelProps {
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
   onClose(): void;
+  // revision reloads the ticket when the board changes (LIFE-3).
+  revision: number;
+  // editing enables moves, archiving and the Edit tab; absent when the
+  // server is read-only.
+  editing?: Editing;
+  workstreamsOf(project: string): WorkstreamBrief[];
 }
 
+type PanelTab = "ticket" | "edit" | "review";
+
 // CardPanel shows one ticket beside the board (CARD-1): the Ticket tab with
-// blocked-by (CARD-4), handoff, criteria and the rendered markdown, and a
-// Review tab when a review file exists (REV-3, read-only here).
+// blocked-by (CARD-4), handoff, tickable criteria (CARD-3) and the rendered
+// markdown; the Edit tab (EDIT-6); and a Review tab when a review file
+// exists (REV-3). Its header moves and archives the ticket (EDIT-1, EDIT-8).
 export function CardPanel({
   ticket,
   fetcher,
@@ -43,16 +59,72 @@ export function CardPanel({
   keys,
   onOpen,
   onClose,
+  revision,
+  editing,
+  workstreamsOf,
 }: CardPanelProps) {
   const load = useCallback(
     (signal: AbortSignal) => fetchTicket(fetcher, ticket.id, signal),
     [fetcher, ticket.id],
   );
-  const resource = useResource(load, ticket.id);
-  const [tab, setTab] = useState<"ticket" | "review">("ticket");
+  const resource = useResource(load, ticket.id, revision);
+  const [tab, setTab] = useState<PanelTab>("ticket");
   const tabsId = useId();
   const detail = resource.status === "ready" ? resource.data : undefined;
-  const activeTab = tab === "review" && detail?.review ? "review" : "ticket";
+  const editable = !!editing && !!detail?.hash;
+  const items: { id: PanelTab; label: string }[] = [
+    { id: "ticket", label: "Ticket" },
+    ...(editable ? [{ id: "edit" as const, label: "Edit" }] : []),
+    ...(detail?.review ? [{ id: "review" as const, label: "Review" }] : []),
+  ];
+  const activeTab = items.some((item) => item.id === tab) ? tab : "ticket";
+
+  const saved = (result: Saved | undefined, what: string) => {
+    resource.reload();
+    if (result && editing)
+      editing.notify({
+        text: `${what} ${ticket.id}.`,
+        details: result.warnings,
+      });
+  };
+  const toggle =
+    editable && detail && editing
+      ? (index: number, checked: boolean) =>
+          void setCriterion(fetcher, detail.id, detail.hash, index, checked)
+            .then(() => resource.reload())
+            .catch((error: unknown) => {
+              resource.reload();
+              editing.notify({
+                text: conflictOf(error)
+                  ? `${detail.id} changed on disk; showing the current criteria.`
+                  : `Not saved: ${error instanceof Error ? error.message : "unknown error"}`,
+              });
+            })
+      : undefined;
+  const body = (current: TicketDetail) => {
+    switch (activeTab) {
+      case "review":
+        return <ReviewTab detail={current} keys={keys} onOpen={onOpen} />;
+      case "edit":
+        return (
+          <EditTab
+            detail={current}
+            fetcher={fetcher}
+            workstreams={workstreamsOf(current.project)}
+            onSaved={saved}
+          />
+        );
+      default:
+        return (
+          <TicketTab
+            detail={current}
+            keys={keys}
+            onOpen={onOpen}
+            onToggle={toggle}
+          />
+        );
+    }
+  };
 
   return (
     <SidePanel label={`Ticket ${ticket.id}`} onClose={onClose}>
@@ -70,40 +142,43 @@ export function CardPanel({
             detail={detail}
             line={lines.get(detail.project)?.get(detail.workstream)}
             workstreamTitle={workstreamTitle(detail.project, detail.workstream)}
+            actions={
+              editing && editable ? (
+                <PanelActions
+                  detail={detail}
+                  onMove={(to) => void editing.move(detail, to)}
+                  onArchive={() => {
+                    void editing.archive(detail);
+                    onClose();
+                  }}
+                />
+              ) : null
+            }
           />
-          {detail.review ? (
+          {items.length > 1 ? (
             <div className="px-6">
               <Tabs
                 idPrefix={tabsId}
                 label="Ticket views"
                 selected={activeTab}
-                onSelect={(id) => setTab(id as "ticket" | "review")}
-                items={[
-                  { id: "ticket", label: "Ticket" },
-                  { id: "review", label: "Review" },
-                ]}
+                onSelect={(id) => setTab(id as PanelTab)}
+                items={items}
               />
             </div>
           ) : (
             <div aria-hidden="true" className="mx-6 border-b border-rule" />
           )}
-          {detail.review ? (
+          {items.length > 1 ? (
             <div
               role="tabpanel"
               id={panelId(tabsId, activeTab)}
               aria-labelledby={tabId(tabsId, activeTab)}
               className={panelBodyClass}
             >
-              {activeTab === "review" ? (
-                <ReviewTab detail={detail} keys={keys} onOpen={onOpen} />
-              ) : (
-                <TicketTab detail={detail} keys={keys} onOpen={onOpen} />
-              )}
+              {body(detail)}
             </div>
           ) : (
-            <div className={panelBodyClass}>
-              <TicketTab detail={detail} keys={keys} onOpen={onOpen} />
-            </div>
+            <div className={panelBodyClass}>{body(detail)}</div>
           )}
         </>
       ) : null}
@@ -111,14 +186,51 @@ export function CardPanel({
   );
 }
 
+// PanelActions moves the ticket to any column (the menu alternative to
+// dragging, EDIT-1) or archives it (EDIT-8).
+function PanelActions({
+  detail,
+  onMove,
+  onArchive,
+}: {
+  detail: TicketDetail;
+  onMove(to: Column): void;
+  onArchive(): void;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {/* biome-ignore lint/a11y/noLabelWithoutControl: the Select inside is the control. */}
+      <label className="flex items-center gap-2 text-xs text-ink-muted">
+        Move to
+        <Select
+          value={detail.column}
+          onChange={(value) => onMove(value as Column)}
+        >
+          {COLUMNS.map((column) => (
+            <option key={column.id} value={column.id}>
+              {column.title}
+            </option>
+          ))}
+        </Select>
+      </label>
+      <Button className="h-8 py-0 text-xs" onClick={onArchive}>
+        <Icon name="archive" size={14} />
+        Archive
+      </Button>
+    </div>
+  );
+}
+
 function PanelHeader({
   detail,
   line,
   workstreamTitle,
+  actions,
 }: {
   detail: TicketDetail;
   line?: Line;
   workstreamTitle: string;
+  actions?: ReactNode;
 }) {
   const column =
     COLUMNS.find((item) => item.id === detail.column)?.title ?? detail.column;
@@ -156,6 +268,7 @@ function PanelHeader({
           {changedLabel(detail.modified)}
         </span>
       </p>
+      {actions}
     </header>
   );
 }
@@ -215,16 +328,55 @@ function ReasonList({
   );
 }
 
+// Criterion is a tickable acceptance criterion (CARD-3). It shows the new
+// state at once and follows the file when it reloads.
+function Criterion({
+  text,
+  done,
+  onToggle,
+}: {
+  text: string;
+  done: boolean;
+  onToggle(checked: boolean): void;
+}) {
+  const [checked, setChecked] = useState(done);
+  useEffect(() => setChecked(done), [done]);
+  return (
+    <label className="flex cursor-pointer items-start gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => {
+          setChecked(event.target.checked);
+          onToggle(event.target.checked);
+        }}
+        className="mt-[0.2em] size-3.5 shrink-0 accent-[var(--fh-ink)]"
+      />
+      <span className={checked ? "text-ink-muted" : "text-ink"}>{text}</span>
+    </label>
+  );
+}
+
 function TicketTab({
   detail,
   keys,
   onOpen,
+  onToggle,
 }: {
   detail: TicketDetail;
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
+  // onToggle ticks or unticks a criterion (CARD-3); absent when read-only.
+  onToggle?(index: number, checked: boolean): void;
 }) {
   const done = detail.criteriaItems.filter((item) => item.done).length;
+  // Criteria are addressed by position in the file, and their text may
+  // repeat, so the key is position and text.
+  const criteria = detail.criteriaItems.map((item, index) => ({
+    ...item,
+    index,
+    key: `${index}:${item.text}`,
+  }));
   const { blockers, waits } = splitReasons(detail.blockedBy);
   return (
     <div className="flex flex-col gap-6">
@@ -329,22 +481,32 @@ function TicketTab({
             </span>
           </h3>
           <ul className="flex flex-col gap-1">
-            {detail.criteriaItems.map((item) => (
-              <li key={item.text} className="flex items-start gap-2 text-sm">
-                <span
-                  aria-hidden="true"
-                  className={`mt-[0.2em] grid size-3.5 shrink-0 place-items-center rounded-[2px] border ${item.done ? "border-ink bg-ink text-ground" : "border-ink-muted"}`}
-                >
-                  {item.done ? <Icon name="criteria" size={10} /> : null}
-                </span>
-                <span className={item.done ? "text-ink-muted" : "text-ink"}>
-                  <span className="sr-only">
-                    {item.done ? "Done: " : "Not done: "}
+            {criteria.map((item) =>
+              onToggle ? (
+                <li key={item.key}>
+                  <Criterion
+                    text={item.text}
+                    done={item.done}
+                    onToggle={(checked) => onToggle(item.index, checked)}
+                  />
+                </li>
+              ) : (
+                <li key={item.key} className="flex items-start gap-2 text-sm">
+                  <span
+                    aria-hidden="true"
+                    className={`mt-[0.2em] grid size-3.5 shrink-0 place-items-center rounded-[2px] border ${item.done ? "border-ink bg-ink text-ground" : "border-ink-muted"}`}
+                  >
+                    {item.done ? <Icon name="criteria" size={10} /> : null}
                   </span>
-                  {item.text}
-                </span>
-              </li>
-            ))}
+                  <span className={item.done ? "text-ink-muted" : "text-ink"}>
+                    <span className="sr-only">
+                      {item.done ? "Done: " : "Not done: "}
+                    </span>
+                    {item.text}
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         </section>
       ) : null}

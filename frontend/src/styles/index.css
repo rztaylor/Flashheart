@@ -171,8 +171,24 @@
       opacity: 0.4;
     }
   }
+  /* ::backdrop does not reliably read theme tokens, so its shade is fixed;
+     it reads as a dimmed board in both themes. */
+  dialog::backdrop {
+    background: rgb(10 11 13 / 0.45);
+  }
+
+  .toast-enter {
+    animation: toast-in 220ms var(--ease-out-expo);
+  }
+  @keyframes toast-in {
+    from {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .panel-enter {
+    .panel-enter,
+    .toast-enter {
       animation: none;
     }
   }
