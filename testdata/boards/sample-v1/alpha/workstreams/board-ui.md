@@ -4,9 +4,9 @@ status: active
 priority: high
 created: 2026-10-01
 tickets:
-  - AL-2
-  - AL-3
-  - AL-4
+  - feat--board-columns
+  - feat--card-panel
+  - feat--drag-and-drop
 depends-on-workstreams: []
 tags: [ui]
 ---

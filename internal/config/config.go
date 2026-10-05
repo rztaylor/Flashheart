@@ -12,8 +12,9 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// FormatVersion is the newest board format version this build understands.
-const FormatVersion = 1
+// FormatVersion is the board format version this build writes; version 1
+// roots are read only to migrate them (MIG-1).
+const FormatVersion = 2
 
 // maxConfigBytes bounds config.yaml reads.
 const maxConfigBytes = 1 << 20
@@ -132,8 +133,8 @@ func (c Config) validate() error {
 	if c.Version > FormatVersion {
 		return fmt.Errorf("%w: board root uses format version %d; this flashheart understands version %d", ErrNewerVersion, c.Version, FormatVersion)
 	}
-	if c.Version != FormatVersion {
-		problems = append(problems, fmt.Sprintf("version must be %d", FormatVersion))
+	if c.Version < 1 {
+		problems = append(problems, fmt.Sprintf("version must be 1 or %d", FormatVersion))
 	}
 	atLeastOne := func(name string, value int64) {
 		if value < 1 {

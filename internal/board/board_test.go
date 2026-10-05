@@ -13,19 +13,45 @@ func ticketMD(front, body string) []byte {
 	return []byte("---\n" + front + "---\n" + body)
 }
 
-const fullFront = "type: feature\nproject: alpha\ncreated: 2026-10-02\npriority: high\n"
+const fullFront = "id: FH-42\nstatus: in-progress\ntype: feature\npriority: high\ncreated: 2026-10-02\n"
+
+func TestParseIDAndKeys(t *testing.T) {
+	t.Parallel()
+
+	if key, number, ok := ParseID("FH-42"); !ok || key != "FH" || number != 42 {
+		t.Errorf("ParseID(FH-42) = %q %d %v", key, number, ok)
+	}
+	for _, bad := range []string{"fh-42", "F-1", "FH-0", "FH-01", "FH42", "FH-4a", "ABCDEFGHIJK-1", ""} {
+		if _, _, ok := ParseID(bad); ok {
+			t.Errorf("ParseID(%q) accepted", bad)
+		}
+	}
+	for key, want := range map[string]bool{"FH": true, "OPS2": true, "A": false, "2FH": false, "fh": false, "ABCDEFGHIJK": false} {
+		if ValidKey(key) != want {
+			t.Errorf("ValidKey(%q) = %v", key, !want)
+		}
+	}
+	for name, want := range map[string]string{"flashheart": "FLA", "board-ui": "BU", "my_cool app": "MCA", "a": "AX", "9lives": "P9L", "ng": "NG"} {
+		if got := DeriveKey(name); got != want || !ValidKey(got) {
+			t.Errorf("DeriveKey(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
 
 func TestParseTicketReadsFieldsAndBody(t *testing.T) {
 	t.Parallel()
 
-	data := ticketMD(fullFront+"branch: feature/x\nworkstream: board-ui\ndepends-on: [feat--a, beta/feat--b]\ndepends-on-workstreams: ws\ntags: [ui]\nupdated: 2026-10-04T14:12:09Z\n",
+	data := ticketMD(fullFront+"branch: feature/x\nworkstream: board-ui\ndepends-on: [FH-12, NG-3]\ndepends-on-workstreams: ws\ntags: [ui]\nupdated: 2026-10-04T14:12:09Z\n",
 		"\n# Card panel\n\n## Description\n\nFirst paragraph of the\ndescription.\n\nSecond paragraph.\n\n## Acceptance Criteria\n\n- [x] One\n- [ ] Two\n\n## Handoff\n\n_Updated by run._\n\n**Done**\n- Thing\n**Next**\n- Review tab\n- Then tests\n**Files**\n- a.go\n")
-	ticket := ParseTicket("feat--card-panel", InProgress, data)
+	ticket := ParseTicket("FH-42-card-panel", data)
 
+	if ticket.ID != "FH-42" || ticket.Slug != "card-panel" || ticket.Folder != "FH-42-card-panel" || ticket.Column != InProgress {
+		t.Errorf("identity = %q %q %q %q", ticket.ID, ticket.Slug, ticket.Folder, ticket.Column)
+	}
 	if ticket.Title != "Card panel" || ticket.Type != "feature" || ticket.Priority != "high" || ticket.Branch != "feature/x" {
 		t.Errorf("ticket = %+v", ticket)
 	}
-	if !reflect.DeepEqual(ticket.DependsOn, []string{"feat--a", "beta/feat--b"}) || !reflect.DeepEqual(ticket.DependsOnWorkstreams, []string{"ws"}) {
+	if !reflect.DeepEqual(ticket.DependsOn, []string{"FH-12", "NG-3"}) || !reflect.DeepEqual(ticket.DependsOnWorkstreams, []string{"ws"}) {
 		t.Errorf("dependencies = %q %q", ticket.DependsOn, ticket.DependsOnWorkstreams)
 	}
 	if ticket.Excerpt != "First paragraph of the description." {
@@ -42,31 +68,44 @@ func TestParseTicketReadsFieldsAndBody(t *testing.T) {
 	}
 }
 
-func TestParseTicketWarnings(t *testing.T) {
+func TestParseTicketWarningsAndRepairs(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name  string
-		slug  string
-		front string
-		want  string
+		name   string
+		folder string
+		front  string
+		warn   string
+		repair string
+		id     string
+		column Column
 	}{
-		{"missing required", "feat--x", "type: feature\n", "missing project, created, priority"},
-		{"bad priority", "feat--x", strings.Replace(fullFront, "high", "urgent", 1), `priority "urgent" should be high, medium or low`},
-		{"type mismatch", "bug--x", fullFront, `type "feature" does not match the bug-- prefix`},
-		{"unknown type", "feat--x", strings.Replace(fullFront, "feature", "chore", 1), `type "chore" is not a known ticket type`},
-		{"bad date", "feat--x", strings.Replace(fullFront, "2026-10-02", "Oct 2", 1), `created "Oct 2" should be YYYY-MM-DD`},
-		{"bad filename", "notes", fullFront, "filename should be <type>--<slug>.md"},
+		{"missing required", "FH-42-x", "id: FH-42\nstatus: backlog\n", "missing type, priority, created", "", "FH-42", Backlog},
+		{"bad priority", "FH-42-x", strings.Replace(fullFront, "high", "urgent", 1), `priority "urgent" should be high, medium or low`, "", "FH-42", InProgress},
+		{"unknown type", "FH-42-x", strings.Replace(fullFront, "feature", "chore", 1), `type "chore" is not a known ticket type`, "", "FH-42", InProgress},
+		{"bad date", "FH-42-x", strings.Replace(fullFront, "2026-10-02", "Oct 2", 1), `created "Oct 2" should be YYYY-MM-DD`, "", "FH-42", InProgress},
+		{"missing status", "FH-42-x", strings.Replace(fullFront, "status: in-progress\n", "", 1), "missing status; shown in Backlog", "", "FH-42", Backlog},
+		{"unknown status", "FH-42-x", strings.Replace(fullFront, "in-progress", "doing", 1), "", `status "doing" is not one of backlog, up-next, in-progress, review, done`, "FH-42", Backlog},
+		{"id from folder", "FH-42-x", strings.Replace(fullFront, "id: FH-42\n", "", 1), "missing id; using FH-42 from the folder name", "", "FH-42", InProgress},
+		{"id mismatch", "FH-43-x", fullFront, "id FH-42 does not match the folder name FH-43-x", "", "FH-42", InProgress},
+		{"invalid id", "notes", strings.Replace(fullFront, "FH-42", "fh42", 1), "", `id "fh42" is not a ticket id like FH-42`, "", InProgress},
+		{"no id at all", "notes", strings.Replace(fullFront, "id: FH-42\n", "", 1), "", "no ticket id: add id: <KEY>-<number> to the frontmatter", "", InProgress},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			ticket := ParseTicket(test.slug, Todo, ticketMD(test.front, "# T\n"))
-			if !slices.ContainsFunc(ticket.Warnings, func(w string) bool { return strings.Contains(w, test.want) }) {
-				t.Errorf("warnings = %q, want %q", ticket.Warnings, test.want)
+			ticket := ParseTicket(test.folder, ticketMD(test.front, "# T\n"))
+			if test.warn != "" && !slices.ContainsFunc(ticket.Warnings, func(w string) bool { return strings.Contains(w, test.warn) }) {
+				t.Errorf("warnings = %q, want %q", ticket.Warnings, test.warn)
 			}
-			if ticket.NeedsRepair() {
-				t.Errorf("warnings must not mark a ticket as needing repair: %q", ticket.Repair)
+			if test.repair == "" && ticket.NeedsRepair() {
+				t.Errorf("unexpected repair %q", ticket.Repair)
+			}
+			if test.repair != "" && !slices.ContainsFunc(ticket.Repair, func(r string) bool { return strings.Contains(r, test.repair) }) {
+				t.Errorf("repair = %q, want %q", ticket.Repair, test.repair)
+			}
+			if ticket.ID != test.id || ticket.Column != test.column {
+				t.Errorf("id=%q column=%q, want %q %q", ticket.ID, ticket.Column, test.id, test.column)
 			}
 		})
 	}
@@ -75,19 +114,19 @@ func TestParseTicketWarnings(t *testing.T) {
 func TestBrokenFrontmatterNeedsRepairButStillShows(t *testing.T) {
 	t.Parallel()
 
-	ticket := ParseTicket("docs--broken", Todo, []byte("---\ntype: docs\npriority: [unclosed\n---\n\n# Broken frontmatter\n\nBody.\n"))
+	ticket := ParseTicket("FH-9-broken", []byte("---\nid: FH-9\npriority: [unclosed\n---\n\n# Broken frontmatter\n\nBody.\n"))
 	if !ticket.NeedsRepair() || !strings.Contains(ticket.Repair[0], "frontmatter does not parse") {
 		t.Fatalf("Repair = %q", ticket.Repair)
 	}
-	if ticket.Title != "Broken frontmatter" || ticket.Type != "docs" || !strings.Contains(ticket.Body, "Body.") {
-		t.Errorf("broken ticket lost its title, type or body: %+v", ticket)
+	if ticket.ID != "FH-9" || ticket.Column != Backlog || ticket.Title != "Broken frontmatter" || !strings.Contains(ticket.Body, "Body.") {
+		t.Errorf("broken ticket = %+v", ticket)
 	}
 }
 
-func TestTitleFallsBackToSlug(t *testing.T) {
+func TestTitleFallsBackToID(t *testing.T) {
 	t.Parallel()
 
-	if got := ParseTicket("feat--untitled", Todo, ticketMD(fullFront, "no heading\n")).Title; got != "feat--untitled" {
+	if got := ParseTicket("FH-42-x", ticketMD(fullFront, "no heading\n")).Title; got != "FH-42" {
 		t.Errorf("Title = %q", got)
 	}
 }
@@ -96,7 +135,7 @@ func TestExcerptIsBoundedPlainText(t *testing.T) {
 	t.Parallel()
 
 	long := strings.Repeat("word ", 100)
-	ticket := ParseTicket("feat--x", Todo, ticketMD(fullFront, "# T\n\n## Description\n\n**Bold** "+long+"\n"))
+	ticket := ParseTicket("FH-42-x", ticketMD(fullFront, "# T\n\n## Description\n\n**Bold** "+long+"\n"))
 	if n := len([]rune(ticket.Excerpt)); n > ExcerptRunes+1 {
 		t.Errorf("Excerpt has %d runes", n)
 	}
@@ -108,8 +147,8 @@ func TestExcerptIsBoundedPlainText(t *testing.T) {
 func TestParseWorkstream(t *testing.T) {
 	t.Parallel()
 
-	ws := ParseWorkstream("board-ui", []byte("---\nslug: board-ui\nstatus: active\npriority: high\ncreated: 2026-10-01\ntickets:\n  - feat--a\n  - feat--b\ndepends-on-workstreams: [base]\ntags: [ui]\n---\n\n# Board UI\n\n## Goal\n\nRender.\n"))
-	if ws.Title != "Board UI" || ws.Status != "active" || !reflect.DeepEqual(ws.Tickets, []string{"feat--a", "feat--b"}) || !reflect.DeepEqual(ws.DependsOnWorkstreams, []string{"base"}) {
+	ws := ParseWorkstream("board-ui", []byte("---\nslug: board-ui\nstatus: active\npriority: high\ncreated: 2026-10-01\ntickets:\n  - FH-1\n  - FH-2\ndepends-on-workstreams: [base]\ntags: [ui]\n---\n\n# Board UI\n\n## Goal\n\nRender.\n"))
+	if ws.Title != "Board UI" || ws.Status != "active" || !reflect.DeepEqual(ws.Tickets, []string{"FH-1", "FH-2"}) || !reflect.DeepEqual(ws.DependsOnWorkstreams, []string{"base"}) {
 		t.Errorf("workstream = %+v", ws)
 	}
 	broken := ParseWorkstream("bad", []byte("---\ntickets: [oops\n---\n# Bad\n"))
@@ -121,26 +160,45 @@ func TestParseWorkstream(t *testing.T) {
 	}
 }
 
-func TestMarkDuplicates(t *testing.T) {
+func TestCheckProjectMarksDuplicatesAndForeignKeys(t *testing.T) {
 	t.Parallel()
 
-	project := Project{Name: "p", Tickets: []Ticket{
-		ParseTicket("feat--a", Todo, ticketMD(fullFront, "# A\n")),
-		ParseTicket("feat--a", Done, ticketMD(fullFront, "# A again\n")),
-		ParseTicket("feat--b", Todo, ticketMD(fullFront, "# B\n")),
+	project := Project{Name: "p", Key: "FH", Tickets: []Ticket{
+		ParseTicket("FH-1-a", ticketMD("id: FH-1\nstatus: backlog\n", "# A\n")),
+		ParseTicket("FH-1-a-copy", ticketMD("id: FH-1\nstatus: done\n", "# A again\n")),
+		ParseTicket("FH-2-b", ticketMD("id: FH-2\nstatus: backlog\n", "# B\n")),
+		ParseTicket("NG-3-c", ticketMD("id: NG-3\nstatus: backlog\n", "# C\n")),
 	}}
-	MarkDuplicates(&project)
+	CheckProject(&project)
 	if !project.Tickets[0].NeedsRepair() || !project.Tickets[1].NeedsRepair() || project.Tickets[2].NeedsRepair() {
 		t.Fatalf("repairs = %q / %q / %q", project.Tickets[0].Repair, project.Tickets[1].Repair, project.Tickets[2].Repair)
 	}
-	if !strings.Contains(project.Tickets[0].Repair[0], "also in done") || !strings.Contains(project.Tickets[1].Repair[0], "also in todo") {
-		t.Errorf("repairs = %q / %q", project.Tickets[0].Repair, project.Tickets[1].Repair)
+	if !strings.Contains(project.Tickets[0].Repair[0], "FH-1-a-copy") {
+		t.Errorf("duplicate repair does not name the other folder: %q", project.Tickets[0].Repair)
+	}
+	if !slices.ContainsFunc(project.Tickets[3].Warnings, func(w string) bool { return strings.Contains(w, "uses key NG but this project's key is FH") }) {
+		t.Errorf("foreign key warnings = %q", project.Tickets[3].Warnings)
 	}
 }
 
-// t builds a ticket for blocking tables.
-func tk(slug string, column Column, extra string) Ticket {
-	return ParseTicket(slug, column, ticketMD(fullFront+extra, "# "+slug+"\n"))
+func TestCheckKeysWarnsOnDuplicateKeys(t *testing.T) {
+	t.Parallel()
+
+	b := Board{Projects: []Project{{Name: "a", Key: "FH"}, {Name: "b", Key: "FH"}, {Name: "c", Key: "NG"}}}
+	CheckKeys(&b)
+	for _, index := range []int{0, 1} {
+		if len(b.Projects[index].Warnings) != 1 || !strings.Contains(b.Projects[index].Warnings[0], "key FH is also used by") {
+			t.Errorf("project %s warnings = %q", b.Projects[index].Name, b.Projects[index].Warnings)
+		}
+	}
+	if len(b.Projects[2].Warnings) != 0 {
+		t.Errorf("project c warnings = %q", b.Projects[2].Warnings)
+	}
+}
+
+// tk builds a ticket for blocking tables.
+func tk(id string, column Column, extra string) Ticket {
+	return ParseTicket(id+"-x", ticketMD("id: "+id+"\nstatus: "+string(column)+"\ntype: feature\npriority: high\ncreated: 2026-10-02\n"+extra, "# "+id+"\n"))
 }
 
 func ws(slug string, tickets []string, deps ...string) Workstream {
@@ -151,67 +209,67 @@ func ws(slug string, tickets []string, deps ...string) Workstream {
 	return ParseWorkstream(slug, []byte("---\n"+front+"---\n# "+slug+"\n"))
 }
 
-func reasonsOf(analysis Analysis, project, slug string) []Reason {
-	return analysis.Blocked[Ref{Project: project, Slug: slug}]
+func reasonsOf(analysis Analysis, project, id string) []Reason {
+	return analysis.Blocked[Ref{Project: project, ID: id}]
 }
 
 func TestBlockingRules(t *testing.T) {
 	t.Parallel()
 
 	alpha := Project{
-		Name: "alpha",
+		Name: "alpha", Key: "AL",
 		Tickets: []Ticket{
-			tk("feat--done", Done, ""),
-			tk("feat--review", ReadyToReview, ""),
-			tk("feat--wip", InProgress, ""),
-			tk("feat--free", Todo, "depends-on: [feat--done, feat--review, feat--archived]\n"),
-			tk("feat--dep", Todo, "depends-on: [feat--wip]\n"),
-			tk("feat--missing", Todo, "depends-on: [feat--nope]\n"),
-			tk("feat--cross", Todo, "depends-on: [beta/feat--b-wip, beta/feat--b-done, gamma/feat--x]\n"),
-			tk("feat--w1", Done, "workstream: one\n"),
-			tk("feat--w2", InProgress, "workstream: one\n"),
-			tk("feat--w3", Todo, "workstream: one\n"),
-			tk("feat--wsdep", Todo, "depends-on-workstreams: [one, ghost, two]\n"),
-			tk("feat--viaws", Todo, "workstream: three\n"),
-			tk("feat--lost", Todo, "workstream: nowhere\n"),
-			tk("feat--doneblocked", Done, "depends-on: [feat--wip]\n"),
+			tk("AL-1", Done, ""),
+			tk("AL-2", Review, ""),
+			tk("AL-3", InProgress, ""),
+			tk("AL-4", Backlog, "depends-on: [AL-1, AL-2, AL-99]\n"),
+			tk("AL-5", UpNext, "depends-on: [AL-3]\n"),
+			tk("AL-6", Backlog, "depends-on: [AL-404]\n"),
+			tk("AL-7", Backlog, "depends-on: [BE-1, BE-2, GA-1]\n"),
+			tk("AL-8", Done, "workstream: one\n"),
+			tk("AL-9", InProgress, "workstream: one\n"),
+			tk("AL-10", UpNext, "workstream: one\n"),
+			tk("AL-11", Backlog, "depends-on-workstreams: [one, ghost, two]\n"),
+			tk("AL-12", Backlog, "workstream: three\n"),
+			tk("AL-13", Backlog, "workstream: nowhere\n"),
+			tk("AL-14", Done, "depends-on: [AL-3]\n"),
 		},
 		Workstreams: []Workstream{
-			ws("one", []string{"feat--w1", "feat--w2", "feat--w3"}),
-			ws("two", []string{"feat--done", "feat--review"}),
-			ws("three", []string{"feat--viaws"}, "one"),
+			ws("one", []string{"AL-8", "AL-9", "AL-10"}),
+			ws("two", []string{"AL-1", "AL-2"}),
+			ws("three", []string{"AL-12"}, "one"),
 		},
-		Archived: []string{"feat--archived"},
+		Archived: []string{"AL-99"},
 	}
-	beta := Project{Name: "beta", Tickets: []Ticket{tk("feat--b-wip", InProgress, ""), tk("feat--b-done", Done, "")}}
+	beta := Project{Name: "beta", Key: "BE", Tickets: []Ticket{tk("BE-1", InProgress, ""), tk("BE-2", Done, "")}}
 	analysis := Analyze(Board{Projects: []Project{alpha, beta}})
 
-	for _, free := range []string{"feat--free", "feat--w2", "feat--done", "feat--doneblocked"} {
+	for _, free := range []string{"AL-4", "AL-9", "AL-1", "AL-14"} {
 		if reasons := reasonsOf(analysis, "alpha", free); len(reasons) != 0 {
 			t.Errorf("%s reasons = %+v, want none", free, reasons)
 		}
 	}
 	tests := []struct {
-		slug string
+		id   string
 		want []Reason
 	}{
-		{"feat--dep", []Reason{{Kind: TicketDependency, Ticket: Ref{"alpha", "feat--wip"}, Column: InProgress}}},
-		{"feat--missing", []Reason{{Kind: TicketDependency, Ticket: Ref{"alpha", "feat--nope"}, Missing: true}}},
-		{"feat--cross", []Reason{
-			{Kind: TicketDependency, Ticket: Ref{"beta", "feat--b-wip"}, Column: InProgress},
-			{Kind: TicketDependency, Ticket: Ref{"gamma", "feat--x"}, Missing: true},
+		{"AL-5", []Reason{{Kind: TicketDependency, Ticket: Ref{"alpha", "AL-3"}, Column: InProgress}}},
+		{"AL-6", []Reason{{Kind: TicketDependency, Ticket: Ref{"", "AL-404"}, Missing: true}}},
+		{"AL-7", []Reason{
+			{Kind: TicketDependency, Ticket: Ref{"beta", "BE-1"}, Column: InProgress},
+			{Kind: TicketDependency, Ticket: Ref{"", "GA-1"}, Missing: true},
 		}},
-		{"feat--w3", []Reason{{Kind: WorkstreamOrder, Workstream: "one", Ticket: Ref{"alpha", "feat--w2"}, Column: InProgress}}},
-		{"feat--wsdep", []Reason{
+		{"AL-10", []Reason{{Kind: WorkstreamOrder, Workstream: "one", Ticket: Ref{"alpha", "AL-9"}, Column: InProgress}}},
+		{"AL-11", []Reason{
 			{Kind: WorkstreamDependency, Workstream: "one", Pending: 2},
 			{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true},
 		}},
-		{"feat--viaws", []Reason{{Kind: WorkstreamDependency, Workstream: "one", Pending: 2, Via: "three"}}},
-		{"feat--lost", []Reason{{Kind: WorkstreamDependency, Workstream: "nowhere", Missing: true, Via: "nowhere"}}},
+		{"AL-12", []Reason{{Kind: WorkstreamDependency, Workstream: "one", Pending: 2, Via: "three"}}},
+		{"AL-13", []Reason{{Kind: WorkstreamDependency, Workstream: "nowhere", Missing: true, Via: "nowhere"}}},
 	}
 	for _, test := range tests {
-		if got := reasonsOf(analysis, "alpha", test.slug); !reflect.DeepEqual(got, test.want) {
-			t.Errorf("%s reasons =\n  %+v\nwant\n  %+v", test.slug, got, test.want)
+		if got := reasonsOf(analysis, "alpha", test.id); !reflect.DeepEqual(got, test.want) {
+			t.Errorf("%s reasons =\n  %+v\nwant\n  %+v", test.id, got, test.want)
 		}
 	}
 }
@@ -219,14 +277,14 @@ func TestBlockingRules(t *testing.T) {
 func TestDuplicatedDependencyIsSatisfiedOnlyWhenEveryCopyIs(t *testing.T) {
 	t.Parallel()
 
-	project := Project{Name: "p", Tickets: []Ticket{
-		tk("feat--twice", Done, ""),
-		tk("feat--twice", Todo, ""),
-		tk("feat--waits", Todo, "depends-on: [feat--twice]\n"),
+	project := Project{Name: "p", Key: "PP", Tickets: []Ticket{
+		tk("PP-1", Done, ""),
+		tk("PP-1", Backlog, ""),
+		tk("PP-2", Backlog, "depends-on: [PP-1]\n"),
 	}}
-	MarkDuplicates(&project)
+	CheckProject(&project)
 	analysis := Analyze(Board{Projects: []Project{project}})
-	if reasons := reasonsOf(analysis, "p", "feat--waits"); len(reasons) != 1 || reasons[0].Column != Todo {
+	if reasons := reasonsOf(analysis, "p", "PP-2"); len(reasons) != 1 || reasons[0].Column != Backlog {
 		t.Errorf("reasons = %+v", reasons)
 	}
 }
@@ -235,32 +293,32 @@ func TestWorkstreamStatus(t *testing.T) {
 	t.Parallel()
 
 	project := Project{
-		Name: "p",
+		Name: "p", Key: "PP",
 		Tickets: []Ticket{
-			tk("feat--a", Done, ""), tk("feat--b", ReadyToReview, ""),
-			tk("feat--c", InProgress, ""), tk("feat--d", Todo, "depends-on: [feat--c]\n"),
-			tk("feat--e", Todo, ""),
+			tk("PP-1", Done, ""), tk("PP-2", Review, ""),
+			tk("PP-3", InProgress, ""), tk("PP-4", UpNext, "depends-on: [PP-3]\n"),
+			tk("PP-5", Backlog, ""),
 		},
 		Workstreams: []Workstream{
-			ws("complete", []string{"feat--a", "feat--b"}),
-			ws("moving", []string{"feat--a", "feat--c", "feat--e"}),
-			ws("stuck", []string{"feat--d", "feat--e"}),
-			ws("waiting", []string{"feat--e"}, "moving"),
+			ws("complete", []string{"PP-1", "PP-2"}),
+			ws("moving", []string{"PP-1", "PP-3", "PP-5"}),
+			ws("stuck", []string{"PP-4", "PP-5"}),
+			ws("waiting", []string{"PP-5"}, "moving"),
 			ws("empty", nil),
-			ws("broken-ref", []string{"feat--ghost"}),
+			ws("broken-ref", []string{"PP-404"}),
 		},
 	}
 	analysis := Analyze(Board{Projects: []Project{project}})
 	tests := map[string]WorkstreamState{
 		"complete":   {Status: StatusCompleted, Done: 2, Total: 2},
-		"moving":     {Status: StatusActive, Done: 1, Total: 3, Next: "feat--c"},
-		"stuck":      {Status: StatusBlocked, Done: 0, Total: 2, Next: "feat--d", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "feat--c"}, Column: InProgress}}},
-		"waiting":    {Status: StatusBlocked, Done: 0, Total: 1, Next: "feat--e", Reasons: []Reason{{Kind: WorkstreamDependency, Workstream: "moving", Pending: 2}}},
+		"moving":     {Status: StatusActive, Done: 1, Total: 3, Next: "PP-3"},
+		"stuck":      {Status: StatusBlocked, Done: 0, Total: 2, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
+		"waiting":    {Status: StatusBlocked, Done: 0, Total: 1, Next: "PP-5", Reasons: []Reason{{Kind: WorkstreamDependency, Workstream: "moving", Pending: 2}}},
 		"empty":      {Status: StatusActive},
-		"broken-ref": {Status: StatusBlocked, Done: 0, Total: 1, Next: "feat--ghost", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "feat--ghost"}, Missing: true}}},
+		"broken-ref": {Status: StatusBlocked, Done: 0, Total: 1, Next: "PP-404", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"", "PP-404"}, Missing: true}}},
 	}
 	for slug, want := range tests {
-		if got := analysis.Workstreams[Ref{Project: "p", Slug: slug}]; !reflect.DeepEqual(got, want) {
+		if got := analysis.Workstreams[Ref{Project: "p", ID: slug}]; !reflect.DeepEqual(got, want) {
 			t.Errorf("%s = %+v, want %+v", slug, got, want)
 		}
 	}
@@ -270,40 +328,40 @@ func TestMembershipMismatchWarns(t *testing.T) {
 	t.Parallel()
 
 	project := Project{
-		Name:        "p",
-		Tickets:     []Ticket{tk("feat--claims", Todo, "workstream: one\n"), tk("feat--listed", Todo, "")},
-		Workstreams: []Workstream{ws("one", []string{"feat--listed"})},
+		Name: "p", Key: "PP",
+		Tickets:     []Ticket{tk("PP-1", Backlog, "workstream: one\n"), tk("PP-2", Backlog, "")},
+		Workstreams: []Workstream{ws("one", []string{"PP-2"})},
 	}
 	analysis := Analyze(Board{Projects: []Project{project}})
-	if got := analysis.Warnings[Ref{"p", "feat--claims"}]; len(got) != 1 || !strings.Contains(got[0], "not listed in workstream one") {
+	if got := analysis.Warnings[Ref{"p", "PP-1"}]; len(got) != 1 || !strings.Contains(got[0], "not listed in workstream one") {
 		t.Errorf("claims warnings = %q", got)
 	}
-	if got := analysis.Warnings[Ref{"p", "feat--listed"}]; len(got) != 1 || !strings.Contains(got[0], `workstream one lists this ticket`) {
+	if got := analysis.Warnings[Ref{"p", "PP-2"}]; len(got) != 1 || !strings.Contains(got[0], `workstream one lists this ticket`) {
 		t.Errorf("listed warnings = %q", got)
 	}
 }
 
-func TestSampleFixtureTickets(t *testing.T) {
+func TestReasonDescriptions(t *testing.T) {
 	t.Parallel()
 
-	dir := filepath.Join("..", "..", "testdata", "boards", "sample", "alpha")
-	read := func(column Column, slug string) Ticket {
-		data, err := os.ReadFile(filepath.Join(dir, string(column), slug+".md"))
-		if err != nil {
-			t.Fatal(err)
+	tests := []struct {
+		reason Reason
+		want   string
+	}{
+		{Reason{Kind: TicketDependency, Ticket: Ref{"alpha", "AL-1"}, Column: Backlog}, "Depends on AL-1, which is in Backlog"},
+		{Reason{Kind: TicketDependency, Ticket: Ref{"beta", "BE-2"}, Column: UpNext}, "Depends on BE-2, which is Up next"},
+		{Reason{Kind: TicketDependency, Ticket: Ref{"beta", "BE-3"}, Column: InProgress}, "Depends on BE-3, which is In progress"},
+		{Reason{Kind: TicketDependency, Ticket: Ref{"", "AL-9"}, Missing: true}, "Depends on AL-9, which does not exist"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 1}, "Depends on workstream core, which has 1 ticket not yet in review or done"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 3, Via: "ui"}, "Its workstream ui depends on workstream core, which has 3 tickets not yet in review or done"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true}, "Depends on workstream ghost, which does not exist"},
+		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true, Via: "ghost"}, "Belongs to workstream ghost, which does not exist"},
+		{Reason{Kind: WorkstreamOrder, Workstream: "ui", Ticket: Ref{"alpha", "AL-1"}, Column: InProgress}, "Comes after AL-1 in workstream ui, which is In progress"},
+	}
+	for _, test := range tests {
+		if got := test.reason.Describe(); got != test.want {
+			t.Errorf("Describe(%+v) =\n  %q\nwant\n  %q", test.reason, got, test.want)
 		}
-		return ParseTicket(slug, column, data)
-	}
-	broken := read(Todo, "docs--broken-frontmatter")
-	if !broken.NeedsRepair() || broken.Title != "Broken frontmatter" {
-		t.Errorf("broken fixture = %+v", broken)
-	}
-	panel := read(InProgress, "feat--card-panel")
-	if panel.Handoff == nil || !reflect.DeepEqual(panel.Handoff.Next, []string{"Review tab"}) || panel.Workstream != "board-ui" {
-		t.Errorf("card panel fixture = %+v", panel)
-	}
-	if overflow := read(Todo, "bug--column-overflow"); len(overflow.Warnings) != 0 || overflow.Branch != "" {
-		t.Errorf("column overflow fixture warnings = %q branch = %q", overflow.Warnings, overflow.Branch)
 	}
 }
 
@@ -322,27 +380,23 @@ func TestAttachmentTypeAllowList(t *testing.T) {
 	}
 }
 
-func TestReasonDescriptions(t *testing.T) {
+func TestSampleFixtureTickets(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		reason Reason
-		want   string
-	}{
-		{Reason{Kind: TicketDependency, Ticket: Ref{"alpha", "feat--a"}, Column: Todo}, "Depends on feat--a, which is in To do"},
-		{Reason{Kind: TicketDependency, Ticket: Ref{"beta", "feat--b"}, Column: InProgress}, "Depends on beta/feat--b, which is In progress"},
-		{Reason{Kind: TicketDependency, Ticket: Ref{"alpha", "feat--x"}, Missing: true}, "Depends on feat--x, which does not exist"},
-		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 1}, "Depends on workstream core, which has 1 ticket not yet in review or done"},
-		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 3, Via: "ui"}, "Its workstream ui depends on workstream core, which has 3 tickets not yet in review or done"},
-		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true}, "Depends on workstream ghost, which does not exist"},
-		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true, Via: "ghost"}, "Belongs to workstream ghost, which does not exist"},
-		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true, Via: "ui"}, "Its workstream ui depends on workstream ghost, which does not exist"},
-		{Reason{Kind: WorkstreamOrder, Workstream: "ui", Ticket: Ref{"alpha", "feat--a"}, Column: InProgress}, "Comes after feat--a in workstream ui, which is In progress"},
-		{Reason{Kind: WorkstreamOrder, Workstream: "ui", Ticket: Ref{"alpha", "feat--z"}, Missing: true}, "Comes after feat--z in workstream ui, which does not exist"},
-	}
-	for _, test := range tests {
-		if got := test.reason.Describe("alpha"); got != test.want {
-			t.Errorf("Describe(%+v) =\n  %q\nwant\n  %q", test.reason, got, test.want)
+	dir := filepath.Join("..", "..", "testdata", "boards", "sample", "alpha", "tickets")
+	read := func(folder string) Ticket {
+		data, err := os.ReadFile(filepath.Join(dir, folder, "ticket.md"))
+		if err != nil {
+			t.Fatal(err)
 		}
+		return ParseTicket(folder, data)
+	}
+	broken := read("AL-7-broken-frontmatter")
+	if !broken.NeedsRepair() || broken.Title != "Broken frontmatter" || broken.ID != "AL-7" {
+		t.Errorf("broken fixture = %+v", broken)
+	}
+	panel := read("AL-3-card-panel")
+	if panel.Handoff == nil || !reflect.DeepEqual(panel.Handoff.Next, []string{"Review tab"}) || panel.Workstream != "board-ui" || panel.Column != InProgress {
+		t.Errorf("card panel fixture = %+v", panel)
 	}
 }

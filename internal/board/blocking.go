@@ -3,7 +3,6 @@ package board
 import (
 	"fmt"
 	"slices"
-	"strings"
 )
 
 // Board is every project under a root.
@@ -11,10 +10,11 @@ type Board struct {
 	Projects []Project
 }
 
-// Ref names a ticket or workstream in a project.
+// Ref names a ticket (ID is its id) or a workstream (ID is its slug) in a
+// project. A missing ticket has no project.
 type Ref struct {
 	Project string `json:"project"`
-	Slug    string `json:"slug"`
+	ID      string `json:"id"`
 }
 
 // ReasonKind classifies why a ticket is blocked (CARD-4).
@@ -53,12 +53,13 @@ const (
 type WorkstreamState struct {
 	Status      string
 	Done, Total int
-	// Next is the first ticket in order that is not yet in review or done.
+	// Next is the first ticket id in order not yet in review or done.
 	Next    string
 	Reasons []Reason
 }
 
-// Analysis is the derived blocking state of a board.
+// Analysis is the derived blocking state of a board. Tickets and workstreams
+// are keyed by Ref.
 type Analysis struct {
 	Blocked     map[Ref][]Reason
 	Workstreams map[Ref]WorkstreamState
@@ -66,33 +67,40 @@ type Analysis struct {
 }
 
 type analyzer struct {
-	columns     map[Ref][]Column
-	archived    map[Ref]bool
+	project     map[string]string   // ticket id → project
+	columns     map[string][]Column // ticket id → columns of every copy
+	archived    map[string]bool
 	workstreams map[Ref]Workstream
-	members     map[Ref][]string // ticket → workstreams listing it, in file order
+	members     map[string][]Ref // ticket id → workstreams listing it, in file order
 }
 
-// Analyze computes blocking reasons for every todo and in-progress ticket,
-// derived workstream states, and membership warnings.
+// Analyze computes blocking reasons for every open ticket, derived workstream
+// states, and membership warnings. Ticket ids are global across projects.
 func Analyze(b Board) Analysis {
 	a := analyzer{
-		columns: map[Ref][]Column{}, archived: map[Ref]bool{},
-		workstreams: map[Ref]Workstream{}, members: map[Ref][]string{},
+		project: map[string]string{}, columns: map[string][]Column{}, archived: map[string]bool{},
+		workstreams: map[Ref]Workstream{}, members: map[string][]Ref{},
 	}
 	for _, project := range b.Projects {
 		for _, ticket := range project.Tickets {
-			ref := Ref{project.Name, ticket.Slug}
-			a.columns[ref] = append(a.columns[ref], ticket.Column)
+			if ticket.ID == "" {
+				continue
+			}
+			a.project[ticket.ID] = project.Name
+			a.columns[ticket.ID] = append(a.columns[ticket.ID], ticket.Column)
 		}
-		for _, slug := range project.Archived {
-			a.archived[Ref{project.Name, slug}] = true
+		for _, id := range project.Archived {
+			a.archived[id] = true
+			if _, known := a.project[id]; !known {
+				a.project[id] = project.Name
+			}
 		}
 		for _, workstream := range project.Workstreams {
-			a.workstreams[Ref{project.Name, workstream.Slug}] = workstream
-			for _, slug := range workstream.Tickets {
-				ref := a.resolve(project.Name, slug)
-				if !slices.Contains(a.members[ref], workstream.Slug) {
-					a.members[ref] = append(a.members[ref], workstream.Slug)
+			ref := Ref{project.Name, workstream.Slug}
+			a.workstreams[ref] = workstream
+			for _, id := range workstream.Tickets {
+				if !slices.Contains(a.members[id], ref) {
+					a.members[id] = append(a.members[id], ref)
 				}
 			}
 		}
@@ -101,11 +109,14 @@ func Analyze(b Board) Analysis {
 	result := Analysis{Blocked: map[Ref][]Reason{}, Workstreams: map[Ref]WorkstreamState{}, Warnings: map[Ref][]string{}}
 	for _, project := range b.Projects {
 		for _, ticket := range project.Tickets {
-			ref := Ref{project.Name, ticket.Slug}
+			if ticket.ID == "" {
+				continue
+			}
+			ref := Ref{project.Name, ticket.ID}
 			if warnings := a.membershipWarnings(project.Name, ticket); len(warnings) > 0 {
 				result.Warnings[ref] = append(result.Warnings[ref], warnings...)
 			}
-			if ticket.Column != Todo && ticket.Column != InProgress {
+			if !ticket.Column.Open() {
 				continue
 			}
 			if reasons := a.reasons(project.Name, ticket); len(reasons) > 0 {
@@ -121,21 +132,15 @@ func Analyze(b Board) Analysis {
 	return result
 }
 
-// resolve turns "slug" or "project/slug" into a Ref.
-func (a analyzer) resolve(project, name string) Ref {
-	if other, slug, found := strings.Cut(name, "/"); found {
-		return Ref{other, slug}
-	}
-	return Ref{project, name}
-}
+func (a analyzer) ref(id string) Ref { return Ref{a.project[id], id} }
 
-// ticketColumn returns the column that keeps ref from being satisfied (the
-// first unsatisfied copy), whether ref is satisfied, and whether it exists.
-func (a analyzer) ticketColumn(ref Ref) (Column, bool, bool) {
-	if a.archived[ref] {
+// ticketColumn returns the column that keeps id from being satisfied (the
+// first unsatisfied copy), whether it is satisfied, and whether it exists.
+func (a analyzer) ticketColumn(id string) (Column, bool, bool) {
+	if a.archived[id] {
 		return "", true, true
 	}
-	columns := a.columns[ref]
+	columns := a.columns[id]
 	if len(columns) == 0 {
 		return "", false, false
 	}
@@ -147,24 +152,23 @@ func (a analyzer) ticketColumn(ref Ref) (Column, bool, bool) {
 	return columns[0], true, true
 }
 
-func (a analyzer) ticketReason(kind ReasonKind, ref Ref, workstream string) (Reason, bool) {
-	column, satisfied, exists := a.ticketColumn(ref)
+func (a analyzer) ticketReason(kind ReasonKind, id, workstream string) (Reason, bool) {
+	column, satisfied, exists := a.ticketColumn(id)
 	if satisfied {
 		return Reason{}, false
 	}
-	return Reason{Kind: kind, Ticket: ref, Workstream: workstream, Column: column, Missing: !exists}, true
+	return Reason{Kind: kind, Ticket: a.ref(id), Workstream: workstream, Column: column, Missing: !exists}, true
 }
 
 // workstreamReason reports an incomplete or missing depended-on workstream.
 func (a analyzer) workstreamReason(project, name, via string) (Reason, bool) {
-	ref := a.resolve(project, name)
-	workstream, ok := a.workstreams[ref]
+	workstream, ok := a.workstreams[Ref{project, name}]
 	if !ok {
 		return Reason{Kind: WorkstreamDependency, Workstream: name, Missing: true, Via: via}, true
 	}
 	pending := 0
-	for _, slug := range workstream.Tickets {
-		if _, satisfied, _ := a.ticketColumn(a.resolve(ref.Project, slug)); !satisfied {
+	for _, id := range workstream.Tickets {
+		if _, satisfied, _ := a.ticketColumn(id); !satisfied {
 			pending++
 		}
 	}
@@ -176,9 +180,8 @@ func (a analyzer) workstreamReason(project, name, via string) (Reason, bool) {
 
 func (a analyzer) reasons(project string, ticket Ticket) []Reason {
 	var reasons []Reason
-	self := Ref{project, ticket.Slug}
-	for _, name := range ticket.DependsOn {
-		if reason, blocked := a.ticketReason(TicketDependency, a.resolve(project, name), ""); blocked {
+	for _, id := range ticket.DependsOn {
+		if reason, blocked := a.ticketReason(TicketDependency, id, ""); blocked {
 			reasons = append(reasons, reason)
 		}
 	}
@@ -192,19 +195,18 @@ func (a analyzer) reasons(project string, ticket Ticket) []Reason {
 			reasons = append(reasons, Reason{Kind: WorkstreamDependency, Workstream: ticket.Workstream, Missing: true, Via: ticket.Workstream})
 		}
 	}
-	for _, name := range a.members[self] {
-		workstream := a.workstreams[Ref{project, name}]
+	for _, ref := range a.members[ticket.ID] {
+		workstream := a.workstreams[ref]
 		for _, dependency := range workstream.DependsOnWorkstreams {
-			if reason, blocked := a.workstreamReason(project, dependency, name); blocked {
+			if reason, blocked := a.workstreamReason(ref.Project, dependency, ref.ID); blocked {
 				reasons = append(reasons, reason)
 			}
 		}
 		for _, earlier := range workstream.Tickets {
-			ref := a.resolve(project, earlier)
-			if ref == self {
+			if earlier == ticket.ID {
 				break
 			}
-			if reason, blocked := a.ticketReason(WorkstreamOrder, ref, name); blocked {
+			if reason, blocked := a.ticketReason(WorkstreamOrder, earlier, ref.ID); blocked {
 				reasons = append(reasons, reason)
 			}
 		}
@@ -214,7 +216,12 @@ func (a analyzer) reasons(project string, ticket Ticket) []Reason {
 
 func (a analyzer) membershipWarnings(project string, ticket Ticket) []string {
 	var warnings []string
-	listedBy := a.members[Ref{project, ticket.Slug}]
+	var listedBy []string
+	for _, ref := range a.members[ticket.ID] {
+		if ref.Project == project {
+			listedBy = append(listedBy, ref.ID)
+		}
+	}
 	if ticket.Workstream != "" {
 		if _, exists := a.workstreams[Ref{project, ticket.Workstream}]; exists && !slices.Contains(listedBy, ticket.Workstream) {
 			warnings = append(warnings, fmt.Sprintf("not listed in workstream %s's tickets, so its order does not apply", ticket.Workstream))
@@ -234,17 +241,16 @@ func (a analyzer) membershipWarnings(project string, ticket Ticket) []string {
 
 func (a analyzer) workstreamState(project string, workstream Workstream, blocked map[Ref][]Reason) WorkstreamState {
 	state := WorkstreamState{Status: StatusActive, Total: len(workstream.Tickets)}
-	for _, slug := range workstream.Tickets {
-		ref := a.resolve(project, slug)
-		_, satisfied, exists := a.ticketColumn(ref)
+	for _, id := range workstream.Tickets {
+		_, satisfied, exists := a.ticketColumn(id)
 		if satisfied {
 			state.Done++
 			continue
 		}
 		if state.Next == "" {
-			state.Next = slug
+			state.Next = id
 			if !exists {
-				state.Reasons = []Reason{{Kind: TicketDependency, Ticket: ref, Missing: true}}
+				state.Reasons = []Reason{{Kind: TicketDependency, Ticket: a.ref(id), Missing: true}}
 			}
 		}
 	}
@@ -262,7 +268,7 @@ func (a analyzer) workstreamState(project string, workstream Workstream, blocked
 	case len(own) > 0:
 		state.Reasons = own
 	case state.Reasons == nil && state.Next != "":
-		state.Reasons = blocked[a.resolve(project, state.Next)]
+		state.Reasons = blocked[a.ref(state.Next)]
 	}
 	if len(state.Reasons) > 0 {
 		state.Status = StatusBlocked
@@ -273,11 +279,13 @@ func (a analyzer) workstreamState(project string, workstream Workstream, blocked
 // Title returns the column's display name.
 func (c Column) Title() string {
 	switch c {
-	case Todo:
-		return "To do"
+	case Backlog:
+		return "Backlog"
+	case UpNext:
+		return "Up next"
 	case InProgress:
 		return "In progress"
-	case ReadyToReview:
+	case Review:
 		return "Ready to review"
 	case Done:
 		return "Done"
@@ -285,28 +293,24 @@ func (c Column) Title() string {
 	return string(c)
 }
 
-// Describe explains the reason in one sentence, naming tickets in other
-// projects as project/slug relative to the project being viewed.
-func (r Reason) Describe(viewing string) string {
-	ticket := r.Ticket.Slug
-	if r.Ticket.Project != viewing {
-		ticket = r.Ticket.Project + "/" + r.Ticket.Slug
-	}
+// Describe explains the reason in one sentence. Ticket ids are global, so
+// they need no project prefix.
+func (r Reason) Describe() string {
 	state := func() string {
 		switch {
 		case r.Missing:
 			return "does not exist"
-		case r.Column == Todo:
-			return "is in To do"
+		case r.Column == Backlog:
+			return "is in Backlog"
 		default:
 			return "is " + r.Column.Title()
 		}
 	}
 	switch r.Kind {
 	case TicketDependency:
-		return fmt.Sprintf("Depends on %s, which %s", ticket, state())
+		return fmt.Sprintf("Depends on %s, which %s", r.Ticket.ID, state())
 	case WorkstreamOrder:
-		return fmt.Sprintf("Comes after %s in workstream %s, which %s", ticket, r.Workstream, state())
+		return fmt.Sprintf("Comes after %s in workstream %s, which %s", r.Ticket.ID, r.Workstream, state())
 	case WorkstreamDependency:
 		pending := "does not exist"
 		if !r.Missing {

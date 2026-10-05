@@ -27,8 +27,8 @@ type BoardSource interface {
 
 // FileSource reads files that are not kept in the snapshot.
 type FileSource interface {
-	ReadReview(project, slug string) (string, bool, error)
-	OpenAttachment(project, ticket, file string) (*os.File, string, error)
+	ReadReview(project, folder string) (string, bool, error)
+	OpenAttachment(project, folder, file string) (*os.File, string, error)
 }
 
 // WorkstreamBrief is a workstream as listed with its project: enough to draw
@@ -46,6 +46,8 @@ type WorkstreamBrief struct {
 type ProjectSummary struct {
 	Name        string         `json:"name"`
 	DisplayName string         `json:"displayName"`
+	Key         string         `json:"key"`
+	KeyDerived  bool           `json:"keyDerived"`
 	Repos       []string       `json:"repos"`
 	Counts      map[string]int `json:"counts"`
 	NeedsRepair int            `json:"needsRepair"`
@@ -60,10 +62,14 @@ type ProjectSummary struct {
 
 // ProjectsResponse is GET /api/projects.
 type ProjectsResponse struct {
-	Revision    uint64           `json:"revision"`
-	Root        string           `json:"root"`
-	RootMissing bool             `json:"rootMissing"`
-	Projects    []ProjectSummary `json:"projects"`
+	Revision    uint64 `json:"revision"`
+	Root        string `json:"root"`
+	RootMissing bool   `json:"rootMissing"`
+	// V1Projects lists projects still in format v1; MigrateCommand converts
+	// them (MIG-1).
+	V1Projects     []string         `json:"v1Projects"`
+	MigrateCommand string           `json:"migrateCommand"`
+	Projects       []ProjectSummary `json:"projects"`
 }
 
 // Progress counts acceptance criteria.
@@ -87,6 +93,7 @@ type ReasonJSON struct {
 // Card is a ticket as shown on a board (VIEW-6).
 type Card struct {
 	Project     string       `json:"project"`
+	ID          string       `json:"id"`
 	Slug        string       `json:"slug"`
 	Column      string       `json:"column"`
 	Title       string       `json:"title"`
@@ -164,7 +171,8 @@ type TicketDetail struct {
 	AttachmentFiles      []AttachmentJSON  `json:"attachmentFiles"`
 }
 
-// TicketResponse is GET /api/projects/{project}/tickets/{slug}.
+// TicketResponse is GET /api/tickets/{id} and
+// GET /api/projects/{project}/tickets/{id}.
 type TicketResponse struct {
 	Revision uint64       `json:"revision"`
 	Ticket   TicketDetail `json:"ticket"`
@@ -172,7 +180,7 @@ type TicketResponse struct {
 
 // WorkstreamTicket is one ticket in a workstream swimlane, in order.
 type WorkstreamTicket struct {
-	Slug    string `json:"slug"`
+	ID      string `json:"id"`
 	Title   string `json:"title"`
 	Column  string `json:"column"`
 	Blocked bool   `json:"blocked"`
@@ -220,9 +228,10 @@ type boardAPI struct {
 func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/projects", getOnly(b.projects))
 	mux.Handle("/api/projects/{project}/board", getOnly(b.projectBoard))
-	mux.Handle("/api/projects/{project}/tickets/{slug}", getOnly(b.ticket))
+	mux.Handle("/api/projects/{project}/tickets/{id}", getOnly(b.ticket))
+	mux.Handle("/api/tickets/{id}", getOnly(b.ticket))
 	mux.Handle("/api/projects/{project}/workstreams", getOnly(b.workstreams))
-	mux.Handle("/api/projects/{project}/attachments/{ticket}/{file}", getOnly(b.attachment))
+	mux.Handle("/api/projects/{project}/tickets/{id}/files/{file}", getOnly(b.attachment))
 	mux.Handle("/api/all/board", getOnly(b.allBoard))
 }
 
@@ -271,12 +280,17 @@ func (b boardAPI) projects(w http.ResponseWriter, _ *http.Request) {
 	if snapshot == nil {
 		return
 	}
-	writeJSON(w, http.StatusOK, ProjectsResponse{
+	response := ProjectsResponse{
 		Revision:    snapshot.Revision,
 		Root:        b.root,
 		RootMissing: snapshot.RootMissing,
+		V1Projects:  nonNil(snapshot.V1Projects),
 		Projects:    summaries(snapshot),
-	})
+	}
+	if len(snapshot.V1Projects) > 0 {
+		response.MigrateCommand = "flashheart migrate --root " + shellQuote(b.root)
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (b boardAPI) projectBoard(w http.ResponseWriter, r *http.Request) {
@@ -310,15 +324,27 @@ func (b boardAPI) allBoard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
-func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
-	snapshot, project := b.project(w, r)
-	if project == nil {
-		return
+// findTicket resolves {id}, within {project} when the route names one.
+func (b boardAPI) findTicket(w http.ResponseWriter, r *http.Request) (*index.Snapshot, *board.Project, board.Ticket, bool) {
+	snapshot := b.snapshot(w)
+	if snapshot == nil {
+		return nil, nil, board.Ticket{}, false
 	}
-	slug := r.PathValue("slug")
-	ticket, ok := snapshot.Ticket(project.Name, slug)
+	id := r.PathValue("id")
+	project, ticket, ok := snapshot.FindTicket(id)
+	if name := r.PathValue("project"); ok && name != "" && project.Name != name {
+		ok = false
+	}
 	if !ok {
-		writeError(w, http.StatusNotFound, "not_found", fmt.Sprintf("No ticket %q in project %s", slug, project.Name))
+		writeError(w, http.StatusNotFound, "not_found", fmt.Sprintf("No ticket %s", id))
+		return nil, nil, board.Ticket{}, false
+	}
+	return snapshot, project, ticket, true
+}
+
+func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
+	snapshot, project, ticket, ok := b.findTicket(w, r)
+	if !ok {
 		return
 	}
 	detail := TicketDetail{
@@ -334,17 +360,17 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 	if ticket.Handoff != nil {
 		detail.Handoff = &HandoffJSON{Markdown: ticket.Handoff.Markdown, Next: nonNil(ticket.Handoff.Next)}
 	}
-	if project.Reviews[ticket.Slug] && b.files != nil {
-		review, found, err := b.files.ReadReview(project.Name, ticket.Slug)
+	if project.Reviews[ticket.ID] && b.files != nil {
+		review, found, err := b.files.ReadReview(project.Name, ticket.Folder)
 		if err == nil && found {
 			detail.Review = &ReviewJSON{Markdown: review}
 		}
 	}
-	for _, attachment := range project.Attachments[ticket.Slug] {
+	for _, attachment := range project.Attachments[ticket.ID] {
 		detail.AttachmentFiles = append(detail.AttachmentFiles, AttachmentJSON{
 			File: attachment.File, Caption: attachment.Caption, Kind: attachment.Kind,
 			Run: attachment.Run, Added: attachment.Added,
-			URL: "/api/projects/" + url.PathEscape(project.Name) + "/attachments/" + url.PathEscape(ticket.Slug) + "/" + url.PathEscape(attachment.File),
+			URL: filesURL(project.Name, ticket.ID) + url.PathEscape(attachment.File),
 		})
 	}
 	writeJSON(w, http.StatusOK, TicketResponse{Revision: snapshot.Revision, Ticket: detail})
@@ -357,7 +383,7 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 	}
 	response := WorkstreamsResponse{Revision: snapshot.Revision, Workstreams: []WorkstreamJSON{}}
 	for _, workstream := range project.Workstreams {
-		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, Slug: workstream.Slug}]
+		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, ID: workstream.Slug}]
 		item := WorkstreamJSON{
 			Slug: workstream.Slug, Title: workstream.Title, Status: state.Status,
 			Suspended:      suspended(snapshot, project.Name, workstream.DependsOnWorkstreams),
@@ -370,17 +396,17 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 			Warnings:             nonNil(workstream.Warnings),
 			Tickets:              []WorkstreamTicket{},
 		}
-		for _, slug := range workstream.Tickets {
-			entry := WorkstreamTicket{Slug: slug, Title: slug, Missing: true}
-			if ticket, ok := snapshot.Ticket(project.Name, slug); ok {
-				ref := board.Ref{Project: project.Name, Slug: slug}
+		for _, id := range workstream.Tickets {
+			entry := WorkstreamTicket{ID: id, Title: id, Missing: true}
+			if owner, ticket, ok := snapshot.FindTicket(id); ok {
+				ref := board.Ref{Project: owner.Name, ID: id}
 				reasons := snapshot.Analysis.Blocked[ref]
 				entry = WorkstreamTicket{
-					Slug: slug, Title: ticket.Title, Column: string(ticket.Column),
+					ID: id, Title: ticket.Title, Column: string(ticket.Column),
 					Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream.Slug),
 				}
-			} else if slices.Contains(project.Archived, slug) {
-				entry = WorkstreamTicket{Slug: slug, Title: slug, Column: "archived"}
+			} else if snapshot.Archived(id) {
+				entry = WorkstreamTicket{ID: id, Title: id, Column: "archived"}
 			}
 			item.Tickets = append(item.Tickets, entry)
 		}
@@ -394,7 +420,11 @@ func (b boardAPI) attachment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "Attachments are unavailable")
 		return
 	}
-	file, contentType, err := b.files.OpenAttachment(r.PathValue("project"), r.PathValue("ticket"), r.PathValue("file"))
+	_, _, ticket, ok := b.findTicket(w, r)
+	if !ok {
+		return
+	}
+	file, contentType, err := b.files.OpenAttachment(r.PathValue("project"), ticket.Folder, r.PathValue("file"))
 	switch {
 	case errors.Is(err, store.ErrInvalidName):
 		writeError(w, http.StatusBadRequest, "invalid_input", "That attachment name is not valid")
@@ -458,7 +488,7 @@ func compareTickets(a, b board.Ticket) int {
 		if c := b.Modified.Compare(a.Modified); c != 0 {
 			return c
 		}
-		return cmp.Compare(a.Slug, b.Slug)
+		return compareIDs(a.ID, b.ID)
 	}
 	rank := func(t board.Ticket) int {
 		if r, ok := priorityRank[t.Priority]; ok {
@@ -472,18 +502,32 @@ func compareTickets(a, b board.Ticket) int {
 	if c := cmp.Compare(a.Created, b.Created); c != 0 {
 		return c
 	}
-	return cmp.Compare(a.Slug, b.Slug)
+	return compareIDs(a.ID, b.ID)
+}
+
+// compareIDs orders ids by key, then number.
+func compareIDs(a, b string) int {
+	ak, an, _ := board.ParseID(a)
+	bk, bn, _ := board.ParseID(b)
+	if c := cmp.Compare(ak, bk); c != 0 {
+		return c
+	}
+	return cmp.Compare(an, bn)
+}
+
+func filesURL(project, id string) string {
+	return "/api/projects/" + url.PathEscape(project) + "/tickets/" + url.PathEscape(id) + "/files/"
 }
 
 func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket, withSearch bool) Card {
-	ref := board.Ref{Project: project.Name, Slug: ticket.Slug}
+	ref := board.Ref{Project: project.Name, ID: ticket.ID}
 	blockedBy := reasons(project.Name, snapshot.Analysis.Blocked[ref])
 	result := Card{
-		Project: project.Name, Slug: ticket.Slug, Column: string(ticket.Column),
+		Project: project.Name, ID: ticket.ID, Slug: ticket.Slug, Column: string(ticket.Column),
 		Title: ticket.Title, Type: ticket.Type, Priority: ticket.Priority, Workstream: ticket.Workstream,
 		Tags: nonNil(ticket.Tags), Created: ticket.Created, Updated: ticket.Updated,
 		Modified: timestamp(ticket.Modified), Branch: ticket.Branch, DependsOn: nonNil(ticket.DependsOn),
-		Excerpt: ticket.Excerpt, Attachments: len(project.Attachments[ticket.Slug]), HasReview: project.Reviews[ticket.Slug],
+		Excerpt: ticket.Excerpt, Attachments: len(project.Attachments[ticket.ID]), HasReview: project.Reviews[ticket.ID],
 		Blocked: len(blockedBy) > 0, BlockedBy: blockedBy,
 		NeedsRepair: nonNil(ticket.Repair),
 		Warnings:    nonNil(slices.Concat(ticket.Warnings, snapshot.Analysis.Warnings[ref])),
@@ -511,10 +555,10 @@ func reasons(viewing string, list []board.Reason) []ReasonJSON {
 	out := make([]ReasonJSON, 0, len(list))
 	for _, reason := range list {
 		item := ReasonJSON{
-			Kind: string(reason.Kind), Text: reason.Describe(viewing), Workstream: reason.Workstream,
+			Kind: string(reason.Kind), Text: reason.Describe(), Workstream: reason.Workstream,
 			Column: string(reason.Column), Pending: reason.Pending, Missing: reason.Missing, Via: reason.Via,
 		}
-		if reason.Ticket.Slug != "" {
+		if reason.Ticket.ID != "" {
 			ticket := reason.Ticket
 			item.Ticket = &ticket
 		}
@@ -544,12 +588,13 @@ func summaries(snapshot *index.Snapshot) []ProjectSummary {
 
 func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 	result := ProjectSummary{
-		Name: project.Name, DisplayName: project.DisplayName, Repos: nonNil(project.Repos),
+		Name: project.Name, DisplayName: project.DisplayName, Key: project.Key, KeyDerived: project.KeyDerived,
+		Repos:  nonNil(project.Repos),
 		Counts: map[string]int{}, Warnings: nonNil(project.Warnings), LastModified: timestamp(project.LastModified),
 		Workstreams: []WorkstreamBrief{},
 	}
 	for _, workstream := range project.Workstreams {
-		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, Slug: workstream.Slug}]
+		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, ID: workstream.Slug}]
 		result.Workstreams = append(result.Workstreams, WorkstreamBrief{
 			Slug: workstream.Slug, Title: workstream.Title, Created: workstream.Created,
 			Status: state.Status, Done: state.Done, Total: state.Total,
@@ -563,7 +608,7 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 		if ticket.NeedsRepair() {
 			result.NeedsRepair++
 		}
-		reasons := snapshot.Analysis.Blocked[board.Ref{Project: project.Name, Slug: ticket.Slug}]
+		reasons := snapshot.Analysis.Blocked[board.Ref{Project: project.Name, ID: ticket.ID}]
 		if len(reasons) > 0 {
 			result.Blocked++
 		}
@@ -606,14 +651,22 @@ func heldOutsideLine(reasons []board.Reason, workstream string) bool {
 // tickets not yet in review or done.
 func suspended(snapshot *index.Snapshot, project string, dependencies []string) bool {
 	for _, name := range dependencies {
-		ref := board.Ref{Project: project, Slug: name}
-		if other, slug, found := strings.Cut(name, "/"); found {
-			ref = board.Ref{Project: other, Slug: slug}
-		}
+		ref := board.Ref{Project: project, ID: name}
 		state, ok := snapshot.Analysis.Workstreams[ref]
 		if !ok || state.Done < state.Total {
 			return true
 		}
 	}
 	return false
+}
+
+// shellQuote quotes a path for a copyable shell command when it needs it.
+func shellQuote(value string) string {
+	plain := strings.IndexFunc(value, func(r rune) bool {
+		return !(r == '/' || r == '.' || r == '-' || r == '_' || r == '~' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
+	}) < 0
+	if plain {
+		return value
+	}
+	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 }

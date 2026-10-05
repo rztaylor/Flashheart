@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"path/filepath"
 	"strings"
@@ -14,7 +15,9 @@ import (
 	"github.com/rztaylor/flashheart/internal/app"
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
+	"github.com/rztaylor/flashheart/internal/migrate"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/store"
 )
 
 // RootEnv names the environment variable that overrides the default root.
@@ -65,11 +68,31 @@ type environment struct {
 	stdout, stderr io.Writer
 	deps           Dependencies
 	serve          *serveFlags
+	migrate        *migrateFlags
 }
 
 type serveFlags struct {
 	foreground      bool
 	backgroundChild bool
+}
+
+type migrateFlags struct {
+	write bool
+	keys  keyFlags
+}
+
+// keyFlags collects repeated --key project=KEY arguments.
+type keyFlags map[string]string
+
+func (k keyFlags) String() string { return "" }
+
+func (k keyFlags) Set(value string) error {
+	project, key, found := strings.Cut(value, "=")
+	if !found || project == "" || key == "" {
+		return fmt.Errorf("--key expects project=KEY, got %q", value)
+	}
+	k[project] = key
+	return nil
 }
 
 var errNotYetAvailable = errors.New("not yet available")
@@ -89,6 +112,15 @@ func commands() []command {
 		{name: "hook", summary: "handle an agent hook event (not yet available)", usage: "hook <agent> <event> [--root DIR]", detail: "Record an agent hook event read from stdin.", run: notYet},
 		{name: "setup", summary: "show or apply agent configuration (not yet available)", usage: "setup <agent> [--write | --uninstall]", detail: "Show the hook, MCP and protocol changes for an agent; write them with --write.", run: notYet},
 		{name: "doctor", summary: "check the board root and agent configuration (not yet available)", usage: "doctor [--root DIR]", detail: "Check the board root, permissions, agent configuration and recent hook errors.", run: notYet},
+		{
+			name:    "migrate",
+			summary: "convert a board from format v1 to v2",
+			usage:   "migrate [--root DIR] [--key PROJECT=KEY]... [--write]",
+			detail: "Show how a v1 board (column folders) becomes format v2: ticket ids in\n" +
+				"creation order, a folder per ticket, references rewritten. Nothing is\n" +
+				"written without --write; replaced files move into .flashheart/backup/.",
+			run: runMigrate,
+		},
 		{name: "version", summary: "print version information", usage: "version", detail: "Print the Flashheart version, commit and agent protocol version.", run: runVersion},
 	}
 }
@@ -104,7 +136,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	if stderr == nil {
 		stderr = io.Discard
 	}
-	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}}
+	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}, migrate: &migrateFlags{keys: keyFlags{}}}
 
 	name, flagArgs := splitCommand(args)
 	if name == "" && wantsHelp(flagArgs) {
@@ -127,9 +159,13 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 
 	globals := &globalFlags{}
 	flags := newFlagSet(name, globals)
-	if name == "serve" {
+	switch name {
+	case "serve":
 		flags.BoolVar(&env.serve.foreground, "foreground", false, "")
 		flags.BoolVar(&env.serve.backgroundChild, "background-child", false, "")
+	case "migrate":
+		flags.BoolVar(&env.migrate.write, "write", false, "")
+		flags.Var(env.migrate.keys, "key", "")
 	}
 	if err := flags.Parse(flagArgs); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -302,6 +338,41 @@ func serveBackgroundChild(ctx context.Context, env *environment, options app.Opt
 	return err
 }
 
+func runMigrate(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
+	if flags.NArg() > 0 {
+		return usageError{"migrate takes no arguments"}
+	}
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		return err
+	}
+	s, err := store.Open(root)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("board root %s does not exist", root)
+		}
+		return err
+	}
+	defer s.Close()
+	plan, err := migrate.Prepare(s, migrate.Options{Keys: env.migrate.keys})
+	if err != nil {
+		return err
+	}
+	if !env.migrate.write || len(plan.Projects) == 0 {
+		plan.Write(env.stdout)
+		return nil
+	}
+	if err := migrate.Apply(s, plan); err != nil {
+		return fmt.Errorf("migration stopped part way: %w (files already converted are in place; the v1 files moved so far are in %s)", err, plan.Backup)
+	}
+	tickets := 0
+	for _, project := range plan.Projects {
+		tickets += len(project.Tickets)
+	}
+	fmt.Fprintf(env.stdout, "Migrated %s to board format v2: %d projects, %d tickets.\nThe v1 files are in %s.\n", root, len(plan.Projects), tickets, plan.Backup)
+	return nil
+}
+
 func writeManualURL(output io.Writer, browserError, manualURL string) {
 	if manualURL == "" {
 		return
@@ -363,9 +434,16 @@ func writeUsage(output io.Writer) {
 
 func writeCommandUsage(output io.Writer, command command) {
 	fmt.Fprintf(output, "Usage: flashheart %s\n\n%s\n\n", command.usage, command.detail)
-	if command.name == "serve" {
+	switch command.name {
+	case "serve":
 		fmt.Fprintln(output, "Options:")
 		fmt.Fprintln(output, "  --foreground  keep the server attached to this terminal until it stops")
+		writeGlobalOptionLines(output)
+		return
+	case "migrate":
+		fmt.Fprintln(output, "Options:")
+		fmt.Fprintln(output, "  --write       apply the plan (otherwise only show it)")
+		fmt.Fprintln(output, "  --key P=KEY   use KEY as project P's ticket key (repeatable)")
 		writeGlobalOptionLines(output)
 		return
 	}

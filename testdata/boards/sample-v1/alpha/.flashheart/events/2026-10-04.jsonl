@@ -1,11 +1,11 @@
 {"v":1,"ts":"2026-10-04T13:00:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"session","cwd":"/Users/example/src/alpha","branch":"feature/card-panel","worktree":"/Users/example/src/alpha","source":"startup"}}
 {"v":1,"ts":"2026-10-04T13:00:05.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"turn.start","project":"alpha","data":{}}
-{"v":1,"ts":"2026-10-04T13:00:20.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"claim","project":"alpha","data":{"ticket":"AL-3","force":false}}
+{"v":1,"ts":"2026-10-04T13:00:20.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"claim","project":"alpha","data":{"ticket":"feat--card-panel","force":false}}
 {"v":1,"ts":"2026-10-04T13:01:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"plan.updated","project":"alpha","data":{"items":[{"text":"Ticket tab","status":"completed"},{"text":"Review tab","status":"in_progress"},{"text":"Runs tab","status":"pending"}]}}
 {"v":1,"ts":"2026-10-04T13:05:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"tool.used","project":"alpha","data":{"tool":"Edit","ok":true,"path":"frontend/src/features/card/CardPanel.tsx"}}
 {"v":1,"ts":"2026-10-04T13:06:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000/a1","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"subagent","parent":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent_type":"Explore"}}
 {"v":1,"ts":"2026-10-04T13:08:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000/a1","agent":"claude","kind":"run.end","project":"alpha","data":{"reason":"completed"}}
-{"v":1,"ts":"2026-10-04T13:20:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"checkpoint","project":"alpha","data":{"ticket":"AL-3","done":1,"next":1,"files":1,"questions":0}}
+{"v":1,"ts":"2026-10-04T13:20:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"checkpoint","project":"alpha","data":{"ticket":"feat--card-panel","done":1,"next":1,"files":1,"questions":0}}
 {"v":1,"ts":"2026-10-04T13:25:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"tool.used","project":"alpha","data":{"tool":"Write","ok":true,"path":"frontend/src/features/card/ReviewTab.tsx"}}
 {"v":1,"ts":"2026-10-04T13:26:00.000Z","run":"claude:3f2a9c1e-0000-0000-0000-000000000000","agent":"claude","kind":"permission.requested","project":"alpha","data":{"tool":"Bash"}}
 this line is malformed and must be skipped

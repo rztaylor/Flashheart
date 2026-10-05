@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -20,6 +21,13 @@ type fakeSource struct {
 	fingerprint string
 	err         error
 	reads       int
+	v1          []string
+}
+
+func (f *fakeSource) V1Projects() ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.v1, nil
 }
 
 func (f *fakeSource) ReadBoard() (board.Board, string, error) {
@@ -124,10 +132,10 @@ func TestReadFailureKeepsThePreviousSnapshot(t *testing.T) {
 func TestSnapshotLookups(t *testing.T) {
 	t.Parallel()
 
-	alpha := board.Project{Name: "alpha", Tickets: []board.Ticket{
-		board.ParseTicket("feat--a", board.Todo, []byte("---\ndepends-on: [feat--b]\n---\n# A\n")),
-		board.ParseTicket("feat--b", board.InProgress, []byte("# B\n")),
-	}}
+	alpha := board.Project{Name: "alpha", Key: "AL", Tickets: []board.Ticket{
+		board.ParseTicket("AL-1-a", []byte("---\nid: AL-1\nstatus: backlog\ndepends-on: [AL-2]\n---\n# A\n")),
+		board.ParseTicket("AL-2-b", []byte("---\nid: AL-2\nstatus: in-progress\n---\n# B\n")),
+	}, Archived: []string{"AL-0"}}
 	index, _ := newIndex(&fakeSource{board: board.Board{Projects: []board.Project{alpha}}, fingerprint: "x"})
 	snapshot, _ := index.Current()
 	if project, ok := snapshot.Project("alpha"); !ok || project.Name != "alpha" {
@@ -136,11 +144,36 @@ func TestSnapshotLookups(t *testing.T) {
 	if _, ok := snapshot.Project("beta"); ok {
 		t.Error("Project(beta) found")
 	}
-	if ticket, ok := snapshot.Ticket("alpha", "feat--a"); !ok || ticket.Title != "A" {
-		t.Errorf("Ticket(alpha, feat--a) = %+v, %v", ticket, ok)
+	if project, ticket, ok := snapshot.FindTicket("AL-1"); !ok || ticket.Title != "A" || project.Name != "alpha" {
+		t.Errorf("FindTicket(AL-1) = %+v, %v", ticket, ok)
 	}
-	if reasons := snapshot.Analysis.Blocked[board.Ref{Project: "alpha", Slug: "feat--a"}]; len(reasons) != 1 {
+	if _, _, ok := snapshot.FindTicket("AL-9"); ok {
+		t.Error("FindTicket(AL-9) found")
+	}
+	if !snapshot.Archived("AL-0") || snapshot.Archived("AL-1") {
+		t.Error("Archived lookups wrong")
+	}
+	if reasons := snapshot.Analysis.Blocked[board.Ref{Project: "alpha", ID: "AL-1"}]; len(reasons) != 1 {
 		t.Errorf("analysis not computed: %+v", reasons)
+	}
+}
+
+func TestV1ProjectsAreReported(t *testing.T) {
+	t.Parallel()
+
+	source := &fakeSource{fingerprint: "a", v1: []string{"legacy"}}
+	index, clock := newIndex(source)
+	snapshot, err := index.Current()
+	if err != nil || !slices.Equal(snapshot.V1Projects, []string{"legacy"}) {
+		t.Fatalf("snapshot = %+v, %v", snapshot.V1Projects, err)
+	}
+	source.mu.Lock()
+	source.v1 = nil
+	source.mu.Unlock()
+	clock.now = clock.now.Add(time.Minute)
+	after, _ := index.Current()
+	if len(after.V1Projects) != 0 || after.Revision != 2 {
+		t.Errorf("after migrating: v1=%q revision=%d", after.V1Projects, after.Revision)
 	}
 }
 
@@ -151,23 +184,24 @@ func TestIndexesFiveThousandTicketsQuickly(t *testing.T) {
 		t.Skip("generates 5,000 files")
 	}
 	root := t.TempDir()
-	columns := []board.Column{board.Todo, board.InProgress, board.ReadyToReview, board.Done}
+	columns := board.Columns
 	for p := range 10 {
 		project := fmt.Sprintf("project-%02d", p)
+		key := fmt.Sprintf("P%02d", p)
 		var workstream strings.Builder
 		workstream.WriteString("---\ntickets:\n")
 		for n := range 500 {
-			slug := fmt.Sprintf("feat--ticket-%03d", n)
+			id := fmt.Sprintf("%s-%d", key, n+1)
 			column := columns[n%len(columns)]
 			deps := ""
 			if n > 0 {
-				deps = fmt.Sprintf("depends-on: [feat--ticket-%03d]\n", n-1)
+				deps = fmt.Sprintf("depends-on: [%s-%d]\n", key, n)
 			}
 			if n < 20 {
-				fmt.Fprintf(&workstream, "  - %s\n", slug)
+				fmt.Fprintf(&workstream, "  - %s\n", id)
 			}
-			content := fmt.Sprintf("---\ntype: feature\nproject: %s\ncreated: 2026-10-04\npriority: medium\n%sworkstream: main\ntags: [generated]\n---\n\n# Ticket %d\n\n## Description\n\nGenerated ticket %d for the index benchmark.\n\n## Acceptance Criteria\n\n- [x] One\n- [ ] Two\n\n## Notes\n\nNone.\n", project, deps, n, n)
-			path := filepath.Join(root, project, string(column), slug+".md")
+			content := fmt.Sprintf("---\nid: %s\nstatus: %s\ntype: feature\ncreated: 2026-10-04\npriority: medium\n%sworkstream: main\ntags: [generated]\n---\n\n# Ticket %d\n\n## Description\n\nGenerated ticket %d for the index benchmark.\n\n## Acceptance Criteria\n\n- [x] One\n- [ ] Two\n\n## Notes\n\nNone.\n", id, column, deps, n, n)
+			path := filepath.Join(root, project, "tickets", fmt.Sprintf("%s-ticket-%d", id, n), "ticket.md")
 			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 				t.Fatal(err)
 			}

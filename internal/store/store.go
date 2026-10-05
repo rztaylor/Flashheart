@@ -26,6 +26,9 @@ const MaxFileBytes = 1 << 20
 // ScratchProject is the reserved project for activity outside git (PRJ-4).
 const ScratchProject = "_scratch"
 
+// V1Columns are the column folders of board format v1, read only to migrate.
+var V1Columns = []string{"todo", "in-progress", "ready-to-review", "done"}
+
 var (
 	// ErrInvalidName reports a project, ticket or file name that is unsafe or
 	// malformed; it is never resolved against the filesystem.
@@ -62,6 +65,9 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
+// Path returns the root path the store was created with.
+func (s *Store) Path() string { return s.path }
+
 // handle returns the open root, opening it if needed.
 func (s *Store) handle() (*os.Root, fs.FS, error) {
 	s.mu.Lock()
@@ -88,19 +94,21 @@ func (s *Store) Close() error {
 	return err
 }
 
-// validProject reports whether name can be a project directory name.
-func validProject(name string) bool {
+// ValidProject reports whether name can be a project directory name.
+func ValidProject(name string) bool {
 	if !safeName.MatchString(name) && name != ScratchProject {
 		return false
 	}
 	return !strings.Contains(name, "..")
 }
 
-func validSlug(name string) bool {
+// ValidName reports whether name is a safe single path segment (a ticket
+// folder or a file name).
+func ValidName(name string) bool {
 	return safeName.MatchString(name) && !strings.Contains(name, "..")
 }
 
-// Projects lists project directory names in sorted order (PRJ-1).
+// Projects lists v2 project directory names in sorted order (PRJ-1).
 func (s *Store) Projects() ([]string, error) {
 	_, fsys, err := s.handle()
 	if err != nil {
@@ -117,40 +125,62 @@ func projects(fsys fs.FS) ([]string, error) {
 	var names []string
 	for _, entry := range entries {
 		name := entry.Name()
-		if !validProject(name) {
-			continue
-		}
-		if isProject(fsys, name) {
+		if ValidProject(name) && isProject(fsys, name) {
 			names = append(names, name)
 		}
 	}
 	return names, nil
 }
 
-func isProject(fsys fs.FS, name string) bool {
+func isDir(fsys fs.FS, name string) bool {
 	info, err := fs.Stat(fsys, name)
-	if err != nil || !info.IsDir() {
-		return false
-	}
-	if info, err := fs.Stat(fsys, path.Join(name, "project.yaml")); err == nil && info.Mode().IsRegular() {
-		return true
-	}
-	for _, column := range board.Columns {
-		if info, err := fs.Stat(fsys, path.Join(name, string(column))); err == nil && info.IsDir() {
-			return true
-		}
-	}
-	return false
+	return err == nil && info.IsDir()
 }
 
-// ReadProject reads one project's tickets, workstreams, reviews, attachment
-// indexes and archived slugs.
+func isFile(fsys fs.FS, name string) bool {
+	info, err := fs.Stat(fsys, name)
+	return err == nil && info.Mode().IsRegular()
+}
+
+func isProject(fsys fs.FS, name string) bool {
+	return isDir(fsys, name) && (isDir(fsys, path.Join(name, "tickets")) || isFile(fsys, path.Join(name, "project.yaml")))
+}
+
+// V1Projects lists directories that still use the v1 column-folder layout and
+// have no v2 tickets folder: the board needs `flashheart migrate` (MIG-1).
+func (s *Store) V1Projects() ([]string, error) {
+	_, fsys, err := s.handle()
+	if err != nil {
+		return nil, err
+	}
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		return nil, fmt.Errorf("list board root: %w", err)
+	}
+	var names []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if !ValidProject(name) || !isDir(fsys, name) || isDir(fsys, path.Join(name, "tickets")) {
+			continue
+		}
+		if slices.ContainsFunc(V1Columns, func(column string) bool { return isDir(fsys, path.Join(name, column)) }) {
+			names = append(names, name)
+		}
+	}
+	return names, nil
+}
+
+// ReadProject reads one project's tickets, workstreams, reviews, files
+// indexes and archived ids.
 func (s *Store) ReadProject(name string) (board.Project, error) {
 	root, fsys, err := s.handle()
 	if err != nil {
 		return board.Project{}, err
 	}
 	project, _, err := readProject(root, fsys, name)
+	if err == nil {
+		board.CheckProject(&project)
+	}
 	return project, err
 }
 
@@ -192,11 +222,14 @@ func (s *Store) ReadBoard() (board.Board, string, error) {
 			}
 			return board.Board{}, "", result.err
 		}
-		b.Projects = append(b.Projects, result.project)
+		project := result.project
+		board.CheckProject(&project)
+		b.Projects = append(b.Projects, project)
 		for _, part := range result.parts {
 			io.WriteString(hash, part)
 		}
 	}
+	board.CheckKeys(&b)
 	return b, hex.EncodeToString(hash.Sum(nil)), nil
 }
 
@@ -215,6 +248,26 @@ func (r *reader) note(name string, info fs.FileInfo) {
 	}
 }
 
+// dirs lists the visible subdirectories of dir. A missing directory yields
+// nothing.
+func (r *reader) dirs(dir string) []string {
+	entries, err := fs.ReadDir(r.fsys, dir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") || !ValidName(name) {
+			continue
+		}
+		if entry.IsDir() || (entry.Type()&fs.ModeSymlink != 0 && isDir(r.fsys, path.Join(dir, name))) {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 // markdownFiles lists the .md entries of dir, skipping hidden files and
 // subdirectories. A missing directory yields nothing.
 func (r *reader) markdownFiles(dir string) []string {
@@ -225,20 +278,21 @@ func (r *reader) markdownFiles(dir string) []string {
 	var names []string
 	for _, entry := range entries {
 		name := entry.Name()
-		if strings.HasPrefix(name, ".") || !strings.HasSuffix(name, ".md") {
+		if strings.HasPrefix(name, ".") || !strings.HasSuffix(name, ".md") || entry.IsDir() {
 			continue
 		}
-		if entry.IsDir() {
+		if entry.Type()&fs.ModeSymlink != 0 && isDir(r.fsys, path.Join(dir, name)) {
 			continue
-		}
-		if entry.Type()&fs.ModeSymlink != 0 {
-			if info, err := fs.Stat(r.fsys, path.Join(dir, name)); err == nil && info.IsDir() {
-				continue
-			}
 		}
 		names = append(names, name)
 	}
 	return names
+}
+
+// exists reports whether name exists without following it out of the root.
+func (r *reader) exists(name string) bool {
+	_, err := r.root.Lstat(name)
+	return err == nil
 }
 
 // read returns a file's contents up to MaxFileBytes, or a repair reason.
@@ -270,7 +324,7 @@ func (r *reader) read(name string) ([]byte, fs.FileInfo, string) {
 }
 
 func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []string, error) {
-	if !validProject(name) {
+	if !ValidProject(name) {
 		return board.Project{}, nil, fmt.Errorf("project %q: %w", name, ErrInvalidName)
 	}
 	if !isProject(fsys, name) {
@@ -278,31 +332,63 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 	}
 	r := &reader{root: root, fsys: fsys}
 	project := board.Project{
-		Name: name, DisplayName: name,
+		Name: name, DisplayName: name, NextID: 1,
 		Reviews: map[string]bool{}, Attachments: map[string][]board.Attachment{},
 	}
 	r.readProjectFile(&project)
 
-	for _, column := range board.Columns {
-		dir := path.Join(name, string(column))
-		for _, file := range r.markdownFiles(dir) {
-			slug := strings.TrimSuffix(file, ".md")
-			data, info, problem := r.read(path.Join(dir, file))
-			var ticket board.Ticket
-			if problem != "" {
-				ticket = board.ParseTicket(slug, column, nil)
-				ticket.Body, ticket.Warnings = "", nil
-				ticket.Repair = []string{problem}
-			} else {
-				ticket = board.ParseTicket(slug, column, data)
+	tickets := path.Join(name, "tickets")
+	for _, folder := range r.dirs(tickets) {
+		// One listing per ticket folder tells us which parts exist.
+		entries, err := fs.ReadDir(fsys, path.Join(tickets, folder))
+		if err != nil {
+			continue
+		}
+		present := map[string]fs.DirEntry{}
+		for _, entry := range entries {
+			present[entry.Name()] = entry
+		}
+		if present["ticket.md"] == nil {
+			continue
+		}
+		file := path.Join(tickets, folder, "ticket.md")
+		data, info, problem := r.read(file)
+		var ticket board.Ticket
+		if problem != "" {
+			ticket = board.ParseTicket(folder, nil)
+			ticket.Body, ticket.Warnings = "", nil
+			ticket.Repair = []string{problem}
+		} else {
+			ticket = board.ParseTicket(folder, data)
+		}
+		if info != nil {
+			ticket.Modified = info.ModTime()
+		}
+		project.Tickets = append(project.Tickets, ticket)
+		if ticket.ID == "" {
+			continue
+		}
+		if entry := present["review.md"]; entry != nil {
+			if info, err := entry.Info(); err == nil {
+				r.note(path.Join(tickets, folder, "review.md"), info)
+				project.Reviews[ticket.ID] = true
 			}
-			if info != nil {
-				ticket.Modified = info.ModTime()
-			}
-			project.Tickets = append(project.Tickets, ticket)
+		}
+		if present["files"] != nil {
+			r.readFilesIndex(&project, ticket.ID, path.Join(tickets, folder, "files", "index.yaml"))
 		}
 	}
-	board.MarkDuplicates(&project)
+	slices.SortStableFunc(project.Tickets, func(a, b board.Ticket) int {
+		if c := slices.Index(board.Columns, a.Column) - slices.Index(board.Columns, b.Column); c != 0 {
+			return c
+		}
+		_, an, _ := board.ParseID(a.ID)
+		_, bn, _ := board.ParseID(b.ID)
+		if an != bn {
+			return an - bn
+		}
+		return strings.Compare(a.Folder, b.Folder)
+	})
 
 	workstreams := path.Join(name, "workstreams")
 	for _, file := range r.markdownFiles(workstreams) {
@@ -315,37 +401,49 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 		project.Workstreams = append(project.Workstreams, workstream)
 	}
 
-	reviews := path.Join(name, "reviews")
-	for _, file := range r.markdownFiles(reviews) {
-		if info, err := fs.Stat(fsys, path.Join(reviews, file)); err == nil {
-			r.note(path.Join(reviews, file), info)
-			project.Reviews[strings.TrimSuffix(file, ".md")] = true
-		}
-	}
-
-	r.readAttachmentIndexes(&project)
-
-	for _, column := range board.Columns {
-		dir := path.Join(name, ".archive", string(column))
-		for _, file := range r.markdownFiles(dir) {
-			r.parts = append(r.parts, path.Join(dir, file)+"\n")
-			project.Archived = append(project.Archived, strings.TrimSuffix(file, ".md"))
+	archive := path.Join(name, ".archive", "tickets")
+	for _, folder := range r.dirs(archive) {
+		r.parts = append(r.parts, path.Join(archive, folder)+"\n")
+		if id, _, ok := board.ParseFolder(folder); ok {
+			project.Archived = append(project.Archived, id)
 		}
 	}
 	slices.Sort(project.Archived)
 	project.Archived = slices.Compact(project.Archived)
+
+	highest := 0
+	for _, id := range append(slices.Clone(project.Archived), ticketIDs(project.Tickets)...) {
+		if key, number, ok := board.ParseID(id); ok && key == project.Key && number > highest {
+			highest = number
+		}
+	}
+	if project.NextID <= highest {
+		project.NextID = highest + 1
+	}
 	project.LastModified = r.modified
 	return project, r.parts, nil
 }
 
+func ticketIDs(tickets []board.Ticket) []string {
+	ids := make([]string, 0, len(tickets))
+	for _, ticket := range tickets {
+		ids = append(ids, ticket.ID)
+	}
+	return ids
+}
+
 type projectFile struct {
-	Name  string   `yaml:"name"`
-	Repos []string `yaml:"repos"`
+	Name   string   `yaml:"name"`
+	Key    string   `yaml:"key"`
+	NextID int      `yaml:"next_id"`
+	Repos  []string `yaml:"repos"`
 }
 
 func (r *reader) readProjectFile(project *board.Project) {
+	project.Key, project.KeyDerived = board.DeriveKey(project.Name), true
 	name := path.Join(project.Name, "project.yaml")
-	if _, err := r.root.Lstat(name); errors.Is(err, fs.ErrNotExist) {
+	if !r.exists(name) {
+		project.Warnings = append(project.Warnings, fmt.Sprintf("no key in project.yaml; using %s until one is set", project.Key))
 		return
 	}
 	data, _, problem := r.read(name)
@@ -362,97 +460,98 @@ func (r *reader) readProjectFile(project *board.Project) {
 		project.DisplayName = display
 	}
 	project.Repos = parsed.Repos
+	switch key := strings.TrimSpace(parsed.Key); {
+	case key == "":
+		project.Warnings = append(project.Warnings, fmt.Sprintf("no key in project.yaml; using %s until one is set", project.Key))
+	case board.ValidKey(key):
+		project.Key, project.KeyDerived = key, false
+	default:
+		project.Warnings = append(project.Warnings, fmt.Sprintf("key %q in project.yaml is not 2–10 uppercase letters or digits starting with a letter; using %s", key, project.Key))
+	}
+	if parsed.NextID > 0 {
+		project.NextID = parsed.NextID
+	}
 }
 
 type attachmentEntry struct {
 	File    string `yaml:"file"`
 	Caption string `yaml:"caption"`
 	Kind    string `yaml:"kind"`
+	Source  string `yaml:"source"`
 	Run     string `yaml:"run"`
 	Added   string `yaml:"added"`
 }
 
-func (r *reader) readAttachmentIndexes(project *board.Project) {
-	dir := path.Join(project.Name, "attachments")
-	entries, err := fs.ReadDir(r.fsys, dir)
-	if err != nil {
+func (r *reader) readFilesIndex(project *board.Project, id, name string) {
+	if !r.exists(name) {
 		return
 	}
-	for _, entry := range entries {
-		ticket := entry.Name()
-		if !entry.IsDir() || !validSlug(ticket) {
+	data, _, problem := r.read(name)
+	if problem != "" {
+		project.Warnings = append(project.Warnings, fmt.Sprintf("%s files index: %s", id, problem))
+		return
+	}
+	var items []attachmentEntry
+	if err := yaml.Unmarshal(data, &items); err != nil {
+		project.Warnings = append(project.Warnings, fmt.Sprintf("%s files index is not a list of files", id))
+		return
+	}
+	for _, item := range items {
+		if !ValidName(item.File) {
 			continue
 		}
-		name := path.Join(dir, ticket, "index.yaml")
-		if _, err := r.root.Lstat(name); err != nil {
-			continue
-		}
-		data, _, problem := r.read(name)
-		if problem != "" {
-			project.Warnings = append(project.Warnings, fmt.Sprintf("attachments/%s/index.yaml: %s", ticket, problem))
-			continue
-		}
-		var items []attachmentEntry
-		if err := yaml.Unmarshal(data, &items); err != nil {
-			project.Warnings = append(project.Warnings, fmt.Sprintf("attachments/%s/index.yaml is not a list of attachments", ticket))
-			continue
-		}
-		for _, item := range items {
-			if !validSlug(item.File) {
-				continue
-			}
-			project.Attachments[ticket] = append(project.Attachments[ticket], board.Attachment{
-				File: item.File, Caption: item.Caption, Kind: item.Kind, Run: item.Run, Added: item.Added,
-			})
-		}
+		project.Attachments[id] = append(project.Attachments[id], board.Attachment{
+			File: item.File, Caption: item.Caption, Kind: item.Kind, Source: item.Source, Run: item.Run, Added: item.Added,
+		})
 	}
 }
 
-// ReadReview returns reviews/<slug>.md, or found=false when there is none.
-func (s *Store) ReadReview(project, slug string) (string, bool, error) {
-	if !validProject(project) || !validSlug(slug) {
-		return "", false, fmt.Errorf("review %s/%s: %w", project, slug, ErrInvalidName)
+// ReadReview returns tickets/<folder>/review.md, or found=false when there is
+// none.
+func (s *Store) ReadReview(project, folder string) (string, bool, error) {
+	if !ValidProject(project) || !ValidName(folder) {
+		return "", false, fmt.Errorf("review %s/%s: %w", project, folder, ErrInvalidName)
 	}
 	root, fsys, err := s.handle()
 	if err != nil {
 		return "", false, err
 	}
-	name := path.Join(project, "reviews", slug+".md")
+	name := path.Join(project, "tickets", folder, "review.md")
 	if _, err := root.Lstat(name); errors.Is(err, fs.ErrNotExist) {
 		return "", false, nil
 	}
 	r := &reader{root: root, fsys: fsys}
 	data, _, problem := r.read(name)
 	if problem != "" {
-		return "", false, fmt.Errorf("review %s/%s: %s", project, slug, problem)
+		return "", false, fmt.Errorf("review %s/%s: %s", project, folder, problem)
 	}
 	return string(data), true, nil
 }
 
-// OpenAttachment opens attachments/<ticket>/<file> if its type is allowed
+// OpenAttachment opens tickets/<folder>/files/<file> if its type is allowed
 // (REV-2) and returns the content type to serve it with.
-func (s *Store) OpenAttachment(project, ticket, file string) (*os.File, string, error) {
-	if !validProject(project) || !validSlug(ticket) || !validSlug(file) {
-		return nil, "", fmt.Errorf("attachment %s/%s/%s: %w", project, ticket, file, ErrInvalidName)
+func (s *Store) OpenAttachment(project, folder, file string) (*os.File, string, error) {
+	if !ValidProject(project) || !ValidName(folder) || !ValidName(file) {
+		return nil, "", fmt.Errorf("file %s/%s/%s: %w", project, folder, file, ErrInvalidName)
 	}
 	contentType, ok := board.AttachmentType(file)
 	if !ok {
-		return nil, "", fmt.Errorf("attachment %s: %w", file, ErrTypeNotAllowed)
+		return nil, "", fmt.Errorf("file %s: %w", file, ErrTypeNotAllowed)
 	}
 	root, _, err := s.handle()
 	if err != nil {
 		return nil, "", err
 	}
-	handle, err := root.Open(path.Join(project, "attachments", ticket, file))
+	handle, err := root.Open(path.Join(project, "tickets", folder, "files", file))
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, "", fmt.Errorf("attachment %s: %w", file, ErrNotFound)
+		return nil, "", fmt.Errorf("file %s: %w", file, ErrNotFound)
 	}
 	if err != nil {
-		return nil, "", fmt.Errorf("attachment %s: %w", file, err)
+		return nil, "", fmt.Errorf("file %s: %w", file, err)
 	}
 	if info, err := handle.Stat(); err != nil || !info.Mode().IsRegular() {
 		handle.Close()
-		return nil, "", fmt.Errorf("attachment %s: %w", file, ErrNotFound)
+		return nil, "", fmt.Errorf("file %s: %w", file, ErrNotFound)
 	}
 	return handle, contentType, nil
 }

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,15 +16,17 @@ import (
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
-func sampleAPI(t *testing.T, mutate func(root string)) (http.Handler, string) {
+func copyBoard(t *testing.T, fixture string) string {
 	t.Helper()
 	root := filepath.Join(t.TempDir(), "board")
-	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "boards", "sample"))); err != nil {
+	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "boards", fixture))); err != nil {
 		t.Fatal(err)
 	}
-	if mutate != nil {
-		mutate(root)
-	}
+	return root
+}
+
+func handlerFor(t *testing.T, root string) http.Handler {
+	t.Helper()
 	files := store.New(root)
 	t.Cleanup(func() { files.Close() })
 	return New(Options{
@@ -31,7 +34,26 @@ func sampleAPI(t *testing.T, mutate func(root string)) (http.Handler, string) {
 		Board:     index.New(files, index.Options{}),
 		Files:     files,
 		DoneLimit: 20,
-	}), root
+	})
+}
+
+func sampleAPI(t *testing.T, mutate func(root string)) (http.Handler, string) {
+	t.Helper()
+	root := copyBoard(t, "sample")
+	if mutate != nil {
+		mutate(root)
+	}
+	return handlerFor(t, root), root
+}
+
+func writeFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func getJSON(t *testing.T, handler http.Handler, path string, status int, into any) *httptest.ResponseRecorder {
@@ -49,51 +71,51 @@ func getJSON(t *testing.T, handler http.Handler, path string, status int, into a
 	return recorder
 }
 
-func cardBySlug(t *testing.T, cards []Card, slug string) Card {
+func cardByID(t *testing.T, cards []Card, id string) Card {
 	t.Helper()
 	for _, card := range cards {
-		if card.Slug == slug {
+		if card.ID == id {
 			return card
 		}
 	}
-	t.Fatalf("no card %s", slug)
+	t.Fatalf("no card %s", id)
 	return Card{}
 }
 
-func TestProjectsListsCountsAndActivity(t *testing.T) {
+func TestProjectsListsKeysCountsAndActivity(t *testing.T) {
 	t.Parallel()
 
 	handler, root := sampleAPI(t, nil)
-	beta := filepath.Join(root, "beta", "todo", "feat--hello.md")
 	newer := time.Now().Add(time.Hour)
-	if err := os.Chtimes(beta, newer, newer); err != nil {
+	if err := os.Chtimes(filepath.Join(root, "beta", "tickets", "BE-1-hello", "ticket.md"), newer, newer); err != nil {
 		t.Fatal(err)
 	}
 	var body ProjectsResponse
 	getJSON(t, handler, "/api/projects", http.StatusOK, &body)
-	if body.Revision != 1 || body.RootMissing || body.Root != root {
+	if body.Revision != 1 || body.RootMissing || body.Root != root || len(body.V1Projects) != 0 || body.MigrateCommand != "" {
 		t.Errorf("response = %+v", body)
 	}
 	if len(body.Projects) != 2 || body.Projects[0].Name != "beta" || body.Projects[1].Name != "alpha" {
 		t.Fatalf("projects not sorted by activity: %+v", body.Projects)
 	}
-	alpha := body.Projects[1]
-	// Stuck excludes waits on an earlier station of the ticket's own line:
-	// drag-and-drop only waits for card-panel on board-ui.
-	if alpha.DisplayName != "Alpha" || alpha.NeedsRepair != 1 || alpha.Blocked != 3 || alpha.Stuck != 2 {
+	alpha, beta := body.Projects[1], body.Projects[0]
+	if alpha.DisplayName != "Alpha" || alpha.Key != "AL" || alpha.KeyDerived || alpha.NeedsRepair != 1 || alpha.Blocked != 3 || alpha.Stuck != 2 {
 		t.Errorf("alpha = %+v", alpha)
 	}
-	if len(alpha.Workstreams) != 1 || alpha.Workstreams[0] != (WorkstreamBrief{Slug: "board-ui", Title: "Board UI", Created: "2026-10-01", Status: "active", Done: 1, Total: 3}) {
-		t.Errorf("alpha workstreams = %+v", alpha.Workstreams)
+	if beta.Key != "BE" || beta.Blocked != 1 || beta.Stuck != 1 {
+		t.Errorf("beta = %+v", beta)
 	}
-	if beta := body.Projects[0]; beta.Workstreams == nil || len(beta.Workstreams) != 0 {
-		t.Errorf("beta workstreams = %#v, want an empty list", beta.Workstreams)
-	}
-	want := map[string]int{"todo": 4, "in-progress": 1, "ready-to-review": 1, "done": 1}
+	want := map[string]int{"backlog": 3, "up-next": 1, "in-progress": 1, "review": 1, "done": 1}
 	for column, count := range want {
 		if alpha.Counts[column] != count {
 			t.Errorf("alpha %s count = %d, want %d", column, alpha.Counts[column], count)
 		}
+	}
+	if len(alpha.Workstreams) != 1 || alpha.Workstreams[0] != (WorkstreamBrief{Slug: "board-ui", Title: "Board UI", Created: "2026-10-01", Status: "active", Done: 1, Total: 3}) {
+		t.Errorf("alpha workstreams = %+v", alpha.Workstreams)
+	}
+	if beta.Workstreams == nil || len(beta.Workstreams) != 0 {
+		t.Errorf("beta workstreams = %#v, want an empty list", beta.Workstreams)
 	}
 }
 
@@ -108,40 +130,42 @@ func TestProjectBoardPlacesAndExplainsEveryTicket(t *testing.T) {
 	}
 	var order []string
 	for _, card := range body.Cards {
-		order = append(order, card.Column+"/"+card.Slug)
+		order = append(order, card.Column+"/"+card.ID)
 	}
-	// Columns in workflow order; within a column by priority, then creation.
-	want := []string{
-		"todo/feat--drag-and-drop", "todo/bug--column-overflow", "todo/spike--offline-mode", "todo/docs--broken-frontmatter",
-		"in-progress/feat--card-panel", "ready-to-review/feat--board-columns", "done/infra--project-skeleton",
-	}
+	want := []string{"backlog/AL-5", "backlog/AL-6", "backlog/AL-7", "up-next/AL-4", "in-progress/AL-3", "review/AL-2", "done/AL-1"}
 	if !slices.Equal(order, want) {
 		t.Errorf("order =\n  %q\nwant\n  %q", order, want)
 	}
 
-	drag := cardBySlug(t, body.Cards, "feat--drag-and-drop")
-	if !drag.Blocked || len(drag.BlockedBy) != 1 || drag.BlockedBy[0].Text != "Comes after feat--card-panel in workstream board-ui, which is In progress" {
-		t.Errorf("drag-and-drop blocked by %+v", drag.BlockedBy)
+	drag := cardByID(t, body.Cards, "AL-4")
+	if !drag.Blocked || len(drag.BlockedBy) != 1 || drag.BlockedBy[0].Text != "Comes after AL-3 in workstream board-ui, which is In progress" || drag.Slug != "drag-and-drop" {
+		t.Errorf("AL-4 = %+v", drag)
 	}
-	overflow := cardBySlug(t, body.Cards, "bug--column-overflow")
-	if len(overflow.BlockedBy) != 1 || overflow.BlockedBy[0].Text != "Depends on feat--drag-and-drop, which is in To do" || overflow.BlockedBy[0].Ticket == nil {
-		t.Errorf("column-overflow blocked by %+v", overflow.BlockedBy)
+	overflow := cardByID(t, body.Cards, "AL-5")
+	if len(overflow.BlockedBy) != 1 || overflow.BlockedBy[0].Text != "Depends on AL-4, which is Up next" || overflow.BlockedBy[0].Ticket == nil {
+		t.Errorf("AL-5 blocked by %+v", overflow.BlockedBy)
 	}
-	offline := cardBySlug(t, body.Cards, "spike--offline-mode")
+	offline := cardByID(t, body.Cards, "AL-6")
 	if len(offline.BlockedBy) != 1 || !offline.BlockedBy[0].Missing || !strings.Contains(offline.BlockedBy[0].Text, "does not exist") {
-		t.Errorf("offline-mode blocked by %+v", offline.BlockedBy)
+		t.Errorf("AL-6 blocked by %+v", offline.BlockedBy)
 	}
-	broken := cardBySlug(t, body.Cards, "docs--broken-frontmatter")
+	broken := cardByID(t, body.Cards, "AL-7")
 	if len(broken.NeedsRepair) != 1 || broken.Title != "Broken frontmatter" || broken.Blocked {
-		t.Errorf("broken = %+v", broken)
+		t.Errorf("AL-7 = %+v", broken)
 	}
-	panel := cardBySlug(t, body.Cards, "feat--card-panel")
+	panel := cardByID(t, body.Cards, "AL-3")
 	if panel.Blocked || panel.HandoffNext != "Review tab" || panel.Criteria != (Progress{Done: 1, Total: 2}) || panel.Workstream != "board-ui" || panel.SearchText == "" {
-		t.Errorf("card panel = %+v", panel)
+		t.Errorf("AL-3 = %+v", panel)
 	}
-	columns := cardBySlug(t, body.Cards, "feat--board-columns")
+	columns := cardByID(t, body.Cards, "AL-2")
 	if !columns.HasReview || columns.Attachments != 1 {
-		t.Errorf("board columns review=%v attachments=%d", columns.HasReview, columns.Attachments)
+		t.Errorf("AL-2 review=%v attachments=%d", columns.HasReview, columns.Attachments)
+	}
+
+	var beta BoardResponse
+	getJSON(t, handler, "/api/projects/beta/board", http.StatusOK, &beta)
+	if hello := cardByID(t, beta.Cards, "BE-1"); len(hello.BlockedBy) != 1 || hello.BlockedBy[0].Text != "Depends on AL-3, which is In progress" || hello.BlockedBy[0].Ticket.Project != "alpha" {
+		t.Errorf("cross-project block = %+v", hello.BlockedBy)
 	}
 }
 
@@ -150,13 +174,9 @@ func TestDoneColumnIsLimitedUnlessAllIsRequested(t *testing.T) {
 
 	handler, _ := sampleAPI(t, func(root string) {
 		for n := range 25 {
-			name := filepath.Join(root, "beta", "done", "feat--done-"+string(rune('a'+n))+".md")
-			if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(name, []byte("# Done\n"), 0o644); err != nil {
-				t.Fatal(err)
-			}
+			id := fmt.Sprintf("BE-%d", n+10)
+			name := filepath.Join(root, "beta", "tickets", id+"-done", "ticket.md")
+			writeFile(t, name, "---\nid: "+id+"\nstatus: done\n---\n# Done\n")
 			at := time.Now().Add(time.Duration(n) * time.Minute)
 			_ = os.Chtimes(name, at, at)
 		}
@@ -175,8 +195,8 @@ func TestDoneColumnIsLimitedUnlessAllIsRequested(t *testing.T) {
 	if countDone(limited.Cards) != 20 || limited.DoneTotal != 25 {
 		t.Errorf("limited done = %d of %d", countDone(limited.Cards), limited.DoneTotal)
 	}
-	if first := limited.Cards[1]; first.Slug != "feat--done-y" {
-		t.Errorf("done column not newest first: %s", first.Slug)
+	if first := limited.Cards[1]; first.ID != "BE-34" {
+		t.Errorf("done column not newest first: %s", first.ID)
 	}
 	var all BoardResponse
 	getJSON(t, handler, "/api/projects/beta/board?done=all", http.StatusOK, &all)
@@ -185,31 +205,34 @@ func TestDoneColumnIsLimitedUnlessAllIsRequested(t *testing.T) {
 	}
 }
 
-func TestTicketDetail(t *testing.T) {
+func TestTicketDetailByID(t *testing.T) {
 	t.Parallel()
 
 	handler, _ := sampleAPI(t, nil)
-	var columns TicketResponse
-	getJSON(t, handler, "/api/projects/alpha/tickets/feat--board-columns", http.StatusOK, &columns)
-	ticket := columns.Ticket
-	if ticket.Review == nil || !strings.HasPrefix(ticket.Review.Markdown, "# Review: Board columns") {
-		t.Errorf("review = %+v", ticket.Review)
-	}
-	if len(ticket.AttachmentFiles) != 1 || ticket.AttachmentFiles[0].URL != "/api/projects/alpha/attachments/feat--board-columns/20261003T1000-board-desktop.png" {
-		t.Errorf("attachments = %+v", ticket.AttachmentFiles)
-	}
-	if !strings.Contains(ticket.Body, "## Acceptance Criteria") || !strings.Contains(ticket.Frontmatter, "type: feature") || len(ticket.CriteriaItems) != 2 {
-		t.Errorf("ticket = %+v", ticket)
+	for _, path := range []string{"/api/tickets/AL-2", "/api/projects/alpha/tickets/AL-2"} {
+		var body TicketResponse
+		getJSON(t, handler, path, http.StatusOK, &body)
+		ticket := body.Ticket
+		if ticket.ID != "AL-2" || ticket.Review == nil || !strings.HasPrefix(ticket.Review.Markdown, "# Review: Board columns") {
+			t.Errorf("%s review = %+v", path, ticket.Review)
+		}
+		if len(ticket.AttachmentFiles) != 1 || ticket.AttachmentFiles[0].URL != "/api/projects/alpha/tickets/AL-2/files/20261003T1000-board-desktop.png" {
+			t.Errorf("%s files = %+v", path, ticket.AttachmentFiles)
+		}
+		if !strings.Contains(ticket.Body, "## Acceptance Criteria") || !strings.Contains(ticket.Frontmatter, "id: AL-2") || len(ticket.CriteriaItems) != 2 {
+			t.Errorf("%s ticket = %+v", path, ticket)
+		}
 	}
 
 	var panel TicketResponse
-	getJSON(t, handler, "/api/projects/alpha/tickets/feat--card-panel", http.StatusOK, &panel)
+	getJSON(t, handler, "/api/tickets/AL-3", http.StatusOK, &panel)
 	if panel.Ticket.Handoff == nil || panel.Ticket.Handoff.Next[0] != "Review tab" || panel.Ticket.Review != nil {
-		t.Errorf("card panel handoff=%+v review=%+v", panel.Ticket.Handoff, panel.Ticket.Review)
+		t.Errorf("AL-3 handoff=%+v review=%+v", panel.Ticket.Handoff, panel.Ticket.Review)
 	}
 
-	getJSON(t, handler, "/api/projects/alpha/tickets/feat--nope", http.StatusNotFound, nil)
-	getJSON(t, handler, "/api/projects/nope/tickets/feat--x", http.StatusNotFound, nil)
+	getJSON(t, handler, "/api/tickets/AL-99", http.StatusNotFound, nil)
+	getJSON(t, handler, "/api/projects/beta/tickets/AL-2", http.StatusNotFound, nil)
+	getJSON(t, handler, "/api/projects/nope/tickets/AL-2", http.StatusNotFound, nil)
 }
 
 func TestWorkstreams(t *testing.T) {
@@ -222,22 +245,54 @@ func TestWorkstreams(t *testing.T) {
 		t.Fatalf("workstreams = %+v", body.Workstreams)
 	}
 	ws := body.Workstreams[0]
-	if ws.Slug != "board-ui" || ws.Title != "Board UI" || ws.Status != "active" || ws.Done != 1 || ws.Total != 3 || ws.Next != "feat--card-panel" {
+	if ws.Slug != "board-ui" || ws.Title != "Board UI" || ws.Status != "active" || ws.Done != 1 || ws.Total != 3 || ws.Next != "AL-3" || ws.Suspended {
 		t.Errorf("workstream = %+v", ws)
 	}
 	var tickets []string
 	for _, ticket := range ws.Tickets {
-		tickets = append(tickets, ticket.Slug+":"+ticket.Column)
+		tickets = append(tickets, ticket.ID+":"+ticket.Column)
 	}
-	if want := []string{"feat--board-columns:ready-to-review", "feat--card-panel:in-progress", "feat--drag-and-drop:todo"}; !slices.Equal(tickets, want) {
+	if want := []string{"AL-2:review", "AL-3:in-progress", "AL-4:up-next"}; !slices.Equal(tickets, want) {
 		t.Errorf("tickets = %q", tickets)
 	}
-	if !ws.Tickets[2].Blocked || ws.Tickets[1].Blocked {
+	if !ws.Tickets[2].Blocked || ws.Tickets[1].Blocked || ws.Tickets[2].Held {
 		t.Errorf("blocked flags = %+v", ws.Tickets)
 	}
-	// drag-and-drop waits only on its own line's order, so it is not held.
-	if ws.Tickets[2].Held {
-		t.Errorf("order-only wait reported as held: %+v", ws.Tickets[2])
+}
+
+func TestHeldStationsAreBlockedFromOutsideTheirLine(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := sampleAPI(t, func(root string) {
+		path := filepath.Join(root, "alpha", "tickets", "AL-4-drag-and-drop", "ticket.md")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		writeFile(t, path, strings.Replace(string(data), "depends-on: []", "depends-on: [AL-6]", 1))
+	})
+	var body WorkstreamsResponse
+	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
+	if drag := body.Workstreams[0].Tickets[2]; !drag.Held || !drag.Blocked {
+		t.Errorf("AL-4 = %+v, want held by its ticket dependency", drag)
+	}
+}
+
+func TestSuspendedLinesWaitOnTheirOwnWorkstreamDependencies(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := sampleAPI(t, func(root string) {
+		writeFile(t, filepath.Join(root, "alpha", "workstreams", "later.md"), "---\ntickets: [AL-6]\ndepends-on-workstreams: [board-ui]\n---\n# Later\n")
+		writeFile(t, filepath.Join(root, "alpha", "workstreams", "free.md"), "---\ntickets: [AL-5]\n---\n# Free\n")
+	})
+	var body WorkstreamsResponse
+	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
+	suspended := map[string]bool{}
+	for _, workstream := range body.Workstreams {
+		suspended[workstream.Slug] = workstream.Suspended
+	}
+	if !suspended["later"] || suspended["free"] || suspended["board-ui"] {
+		t.Errorf("suspended = %v, want only later", suspended)
 	}
 }
 
@@ -250,18 +305,18 @@ func TestAllProjectsBoard(t *testing.T) {
 	if len(body.Projects) != 2 || len(body.Cards) != 8 {
 		t.Fatalf("all board = %d projects, %d cards", len(body.Projects), len(body.Cards))
 	}
-	if hello := cardBySlug(t, body.Cards, "feat--hello"); hello.Project != "beta" || hello.SearchText != "" {
-		t.Errorf("hello = %+v (all-projects cards omit body text)", hello)
+	if hello := cardByID(t, body.Cards, "BE-1"); hello.Project != "beta" || hello.SearchText != "" {
+		t.Errorf("BE-1 = %+v (all-projects cards omit body text)", hello)
 	}
 }
 
-func TestAttachmentsAreServedSafely(t *testing.T) {
+func TestFilesAreServedSafely(t *testing.T) {
 	t.Parallel()
 
 	handler, _ := sampleAPI(t, func(root string) {
-		_ = os.WriteFile(filepath.Join(root, "alpha", "attachments", "feat--board-columns", "x.svg"), []byte("<svg/>"), 0o644)
+		writeFile(t, filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "files", "x.svg"), "<svg/>")
 	})
-	recorder := getJSON(t, handler, "/api/projects/alpha/attachments/feat--board-columns/20261003T1000-board-desktop.png", http.StatusOK, nil)
+	recorder := getJSON(t, handler, "/api/projects/alpha/tickets/AL-2/files/20261003T1000-board-desktop.png", http.StatusOK, nil)
 	if got := recorder.Header().Get("Content-Type"); got != "image/png" {
 		t.Errorf("Content-Type = %q", got)
 	}
@@ -271,30 +326,46 @@ func TestAttachmentsAreServedSafely(t *testing.T) {
 	if got := recorder.Header().Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Errorf("X-Content-Type-Options = %q", got)
 	}
-	getJSON(t, handler, "/api/projects/alpha/attachments/feat--board-columns/x.svg", http.StatusUnsupportedMediaType, nil)
-	getJSON(t, handler, "/api/projects/alpha/attachments/feat--board-columns/absent.png", http.StatusNotFound, nil)
-	getJSON(t, handler, "/api/projects/alpha/attachments/feat--board-columns/..%2F..%2Ftodo%2Fx.png", http.StatusBadRequest, nil)
+	getJSON(t, handler, "/api/projects/alpha/tickets/AL-2/files/x.svg", http.StatusUnsupportedMediaType, nil)
+	getJSON(t, handler, "/api/projects/alpha/tickets/AL-2/files/absent.png", http.StatusNotFound, nil)
+	getJSON(t, handler, "/api/projects/alpha/tickets/AL-2/files/..%2F..%2Fx.png", http.StatusBadRequest, nil)
+	getJSON(t, handler, "/api/projects/alpha/tickets/AL-99/files/x.png", http.StatusNotFound, nil)
 }
 
-func TestMissingRootAndUnknownProject(t *testing.T) {
+func TestMissingRootV1RootAndUnknownProject(t *testing.T) {
 	t.Parallel()
 
 	missing := filepath.Join(t.TempDir(), "absent")
-	files := store.New(missing)
-	defer files.Close()
-	handler := New(Options{Info: Info{Root: missing}, Board: index.New(files, index.Options{}), Files: files, DoneLimit: 20})
 	var body ProjectsResponse
-	getJSON(t, handler, "/api/projects", http.StatusOK, &body)
+	getJSON(t, handlerFor(t, missing), "/api/projects", http.StatusOK, &body)
 	if !body.RootMissing || len(body.Projects) != 0 {
 		t.Errorf("missing root = %+v", body)
 	}
-	getJSON(t, handler, "/api/projects/alpha/board", http.StatusNotFound, nil)
+	getJSON(t, handlerFor(t, missing), "/api/projects/alpha/board", http.StatusNotFound, nil)
+
+	v1 := copyBoard(t, "sample-v1")
+	var legacy ProjectsResponse
+	getJSON(t, handlerFor(t, v1), "/api/projects", http.StatusOK, &legacy)
+	if !slices.Equal(legacy.V1Projects, []string{"alpha", "beta"}) || legacy.MigrateCommand != "flashheart migrate --root "+v1 {
+		t.Errorf("v1 root = %+v", legacy)
+	}
 
 	sample, _ := sampleAPI(t, nil)
 	recorder := httptest.NewRecorder()
 	sample.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/projects", nil))
 	if recorder.Code != http.StatusMethodNotAllowed || !strings.Contains(recorder.Body.String(), "method_not_allowed") {
 		t.Errorf("POST /api/projects = %d %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestShellQuote(t *testing.T) {
+	t.Parallel()
+
+	if got := shellQuote("/Users/me/reports/Kanban"); got != "/Users/me/reports/Kanban" {
+		t.Errorf("plain = %q", got)
+	}
+	if got := shellQuote("/Users/me/My Board's"); got != `'/Users/me/My Board'\''s'` {
+		t.Errorf("quoted = %q", got)
 	}
 }
 
@@ -309,8 +380,8 @@ func TestListsAreNeverNull(t *testing.T) {
 		"/api/projects",
 		"/api/projects/alpha/board",
 		"/api/all/board",
-		"/api/projects/alpha/tickets/docs--broken-frontmatter",
-		"/api/projects/beta/tickets/feat--hello",
+		"/api/tickets/AL-7",
+		"/api/tickets/BE-1",
 		"/api/projects/alpha/workstreams",
 	} {
 		body := getJSON(t, handler, path, http.StatusOK, nil).Body.String()
@@ -318,49 +389,5 @@ func TestListsAreNeverNull(t *testing.T) {
 		if strings.Contains(body, ":null") {
 			t.Errorf("GET %s has a null field:\n%s", path, body)
 		}
-	}
-}
-
-func TestHeldStationsAreBlockedFromOutsideTheirLine(t *testing.T) {
-	t.Parallel()
-
-	handler, _ := sampleAPI(t, func(root string) {
-		path := filepath.Join(root, "alpha", "todo", "feat--drag-and-drop.md")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		held := strings.Replace(string(data), "depends-on: []", "depends-on: [spike--offline-mode]", 1)
-		if err := os.WriteFile(path, []byte(held), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	})
-	var body WorkstreamsResponse
-	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
-	if drag := body.Workstreams[0].Tickets[2]; !drag.Held || !drag.Blocked {
-		t.Errorf("drag-and-drop = %+v, want held by its ticket dependency", drag)
-	}
-}
-
-func TestSuspendedLinesWaitOnTheirOwnWorkstreamDependencies(t *testing.T) {
-	t.Parallel()
-
-	handler, _ := sampleAPI(t, func(root string) {
-		write := func(name, content string) {
-			if err := os.WriteFile(filepath.Join(root, "alpha", "workstreams", name), []byte(content), 0o644); err != nil {
-				t.Fatal(err)
-			}
-		}
-		write("later.md", "---\ntickets: [spike--offline-mode]\ndepends-on-workstreams: [board-ui]\n---\n# Later\n")
-		write("free.md", "---\ntickets: [bug--column-overflow]\n---\n# Free\n")
-	})
-	var body WorkstreamsResponse
-	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
-	suspended := map[string]bool{}
-	for _, workstream := range body.Workstreams {
-		suspended[workstream.Slug] = workstream.Suspended
-	}
-	if !suspended["later"] || suspended["free"] || suspended["board-ui"] {
-		t.Errorf("suspended = %v, want only later", suspended)
 	}
 }

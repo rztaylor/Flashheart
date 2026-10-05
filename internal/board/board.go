@@ -4,36 +4,114 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/rztaylor/flashheart/internal/mdfile"
 )
 
-// Column is a ticket status directory.
+// Column is a ticket's status (board-format v2).
 type Column string
 
 // Columns in workflow order.
 const (
-	Todo          Column = "todo"
-	InProgress    Column = "in-progress"
-	ReadyToReview Column = "ready-to-review"
-	Done          Column = "done"
+	Backlog    Column = "backlog"
+	UpNext     Column = "up-next"
+	InProgress Column = "in-progress"
+	Review     Column = "review"
+	Done       Column = "done"
 )
 
-// Columns lists every real column in workflow order.
-var Columns = []Column{Todo, InProgress, ReadyToReview, Done}
+// Columns lists every column in workflow order.
+var Columns = []Column{Backlog, UpNext, InProgress, Review, Done}
 
 // Satisfies reports whether a ticket in this column no longer blocks others.
-func (c Column) Satisfies() bool { return c == ReadyToReview || c == Done }
+func (c Column) Satisfies() bool { return c == Review || c == Done }
 
-// typeByPrefix maps filename prefixes to frontmatter types.
-var typeByPrefix = map[string]string{
-	"feat": "feature", "test": "test", "bug": "bug", "refactor": "refactor",
-	"infra": "infra", "docs": "docs", "spike": "spike",
+// Open reports whether tickets in this column can be blocked or picked up.
+func (c Column) Open() bool { return c == Backlog || c == UpNext || c == InProgress }
+
+// ParseColumn returns the column named by a status value.
+func ParseColumn(value string) (Column, bool) {
+	column := Column(value)
+	return column, slices.Contains(Columns, column)
 }
 
+var ticketTypes = []string{"feature", "test", "bug", "refactor", "infra", "docs", "spike"}
+
 var priorities = []string{"high", "medium", "low"}
+
+var (
+	keyPattern    = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,9}$`)
+	idPattern     = regexp.MustCompile(`^([A-Z][A-Z0-9]{1,9})-([1-9][0-9]*)$`)
+	folderPattern = regexp.MustCompile(`^([A-Z][A-Z0-9]{1,9}-[1-9][0-9]*)(?:-(.+))?$`)
+)
+
+// ValidKey reports whether key is a project key (KEY-1).
+func ValidKey(key string) bool { return keyPattern.MatchString(key) }
+
+// ParseID splits a ticket id such as FH-42 into its key and number.
+func ParseID(id string) (string, int, bool) {
+	match := idPattern.FindStringSubmatch(id)
+	if match == nil {
+		return "", 0, false
+	}
+	number, err := strconv.Atoi(match[2])
+	if err != nil {
+		return "", 0, false
+	}
+	return match[1], number, true
+}
+
+// ParseFolder splits a ticket folder name "<id>-<slug>" into id and slug.
+func ParseFolder(folder string) (string, string, bool) {
+	match := folderPattern.FindStringSubmatch(folder)
+	if match == nil {
+		return "", "", false
+	}
+	return match[1], match[2], true
+}
+
+// DeriveKey proposes a project key from a directory name: the initials of a
+// multi-word name, otherwise its first three letters, uppercased.
+func DeriveKey(name string) string {
+	words := strings.FieldsFunc(name, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
+	var key strings.Builder
+	if len(words) > 1 {
+		for _, word := range words {
+			key.WriteRune(unicode.ToUpper([]rune(word)[0]))
+			if key.Len() == 10 {
+				break
+			}
+		}
+	} else if len(words) == 1 {
+		for _, r := range words[0] {
+			if r > unicode.MaxASCII {
+				continue
+			}
+			key.WriteRune(unicode.ToUpper(r))
+			if key.Len() == 3 {
+				break
+			}
+		}
+	}
+	result := key.String()
+	if result == "" || !unicode.IsLetter(rune(result[0])) {
+		result = "P" + result
+		if len(words) == 1 && len(result) > 3 {
+			result = result[:3]
+		}
+	}
+	if len(result) < 2 {
+		result += "X"
+	}
+	if len(result) > 10 {
+		result = result[:10]
+	}
+	return result
+}
 
 // ExcerptRunes bounds Ticket.Excerpt.
 const ExcerptRunes = 200
@@ -50,15 +128,17 @@ type Handoff struct {
 	Next     []string
 }
 
-// Ticket is one parsed ticket file.
+// Ticket is one parsed ticket.
 type Ticket struct {
-	Slug   string
-	Column Column
+	// ID is the ticket id (FH-42); Folder the ticket folder name; Slug the
+	// folder's readable part.
+	ID, Folder, Slug string
+	Column           Column
 
-	Title, Type, Project, Created, Priority string
-	Session, GitRef, Branch, Workstream     string
-	Updated                                 string
-	DependsOn, DependsOnWorkstreams, Tags   []string
+	Title, Type, Created, Priority        string
+	Session, GitRef, Branch, Workstream   string
+	Updated                               string
+	DependsOn, DependsOnWorkstreams, Tags []string
 
 	Criteria []Criterion
 	Handoff  *Handoff
@@ -79,31 +159,17 @@ type Ticket struct {
 // NeedsRepair reports whether the ticket must be shown as needing repair.
 func (t Ticket) NeedsRepair() bool { return len(t.Repair) > 0 }
 
-// Prefix returns the filename type prefix ("feat" for feat--x), or "".
-func (t Ticket) Prefix() string {
-	prefix, _, found := strings.Cut(t.Slug, "--")
-	if !found {
-		return ""
-	}
-	return prefix
-}
-
 var datePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
-// ParseTicket parses a ticket file. It never fails: unparseable frontmatter
-// becomes a repair reason and format problems become warnings.
-func ParseTicket(slug string, column Column, data []byte) Ticket {
+// ParseTicket parses tickets/<folder>/ticket.md. It never fails: problems that
+// stop the ticket being understood become repair reasons, the rest warnings.
+func ParseTicket(folder string, data []byte) (ticket Ticket) {
 	doc := mdfile.Parse(data)
-	ticket := Ticket{Slug: slug, Column: column, Body: doc.Body, FrontmatterRaw: doc.FrontmatterRaw}
-	prefixType, knownPrefix := typeByPrefix[ticket.Prefix()]
-	if !knownPrefix {
-		ticket.Warnings = append(ticket.Warnings, "filename should be <type>--<slug>.md with a type prefix such as feat--")
-	}
+	ticket = Ticket{Folder: folder, Column: Backlog, Body: doc.Body, FrontmatterRaw: doc.FrontmatterRaw}
+	folderID, slug, folderOK := ParseFolder(folder)
+	ticket.Slug = slug
 
 	ticket.Title = mdfile.Title(doc.Body)
-	if ticket.Title == "" {
-		ticket.Title = slug
-	}
 	ticket.Excerpt = excerpt(doc.Body)
 	if section, ok := mdfile.FindSection(doc.Body, "Acceptance Criteria"); ok {
 		for _, box := range mdfile.Checkboxes(section.Content) {
@@ -113,18 +179,54 @@ func ParseTicket(slug string, column Column, data []byte) Ticket {
 	if section, ok := mdfile.FindSection(doc.Body, "Handoff"); ok {
 		ticket.Handoff = &Handoff{Markdown: strings.TrimSpace(section.Content), Next: handoffList(section.Content, "Next")}
 	}
+	defer func() {
+		if ticket.Title == "" {
+			ticket.Title = ticket.ID
+		}
+		if ticket.Title == "" {
+			ticket.Title = folder
+		}
+	}()
 
 	if doc.FrontmatterError != nil {
 		ticket.Repair = append(ticket.Repair, doc.FrontmatterError.Error())
-		ticket.Type = prefixType
+		if folderOK {
+			ticket.ID = folderID
+		}
 		return ticket
 	}
 	if !doc.HasFrontmatter {
 		ticket.Warnings = append(ticket.Warnings, "no frontmatter")
 	}
 
+	id, hasID := doc.String("id")
+	switch {
+	case hasID && id != "":
+		if _, _, ok := ParseID(id); !ok {
+			ticket.Repair = append(ticket.Repair, fmt.Sprintf("id %q is not a ticket id like FH-42", id))
+		} else {
+			ticket.ID = id
+			if folderOK && folderID != id {
+				ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("id %s does not match the folder name %s", id, folder))
+			}
+		}
+	case folderOK:
+		ticket.ID = folderID
+		ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("missing id; using %s from the folder name", folderID))
+	default:
+		ticket.Repair = append(ticket.Repair, "no ticket id: add id: <KEY>-<number> to the frontmatter")
+	}
+
+	status, hasStatus := doc.String("status")
+	if column, ok := ParseColumn(status); ok {
+		ticket.Column = column
+	} else if !hasStatus || status == "" {
+		ticket.Warnings = append(ticket.Warnings, "missing status; shown in Backlog")
+	} else {
+		ticket.Repair = append(ticket.Repair, fmt.Sprintf("status %q is not one of %s", status, joinColumns()))
+	}
+
 	ticket.Type, _ = doc.String("type")
-	ticket.Project, _ = doc.String("project")
 	ticket.Created, _ = doc.String("created")
 	ticket.Priority, _ = doc.String("priority")
 	ticket.Session, _ = doc.String("session")
@@ -138,7 +240,7 @@ func ParseTicket(slug string, column Column, data []byte) Ticket {
 
 	var missing []string
 	for _, field := range []struct{ name, value string }{
-		{"type", ticket.Type}, {"project", ticket.Project}, {"created", ticket.Created}, {"priority", ticket.Priority},
+		{"type", ticket.Type}, {"priority", ticket.Priority}, {"created", ticket.Created},
 	} {
 		if field.value == "" {
 			missing = append(missing, field.name)
@@ -147,14 +249,8 @@ func ParseTicket(slug string, column Column, data []byte) Ticket {
 	if len(missing) > 0 {
 		ticket.Warnings = append(ticket.Warnings, "missing "+strings.Join(missing, ", "))
 	}
-	if ticket.Type != "" {
-		if !slices.Contains(sortedTypes(), ticket.Type) {
-			ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("type %q is not a known ticket type", ticket.Type))
-		} else if knownPrefix && ticket.Type != prefixType {
-			ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("type %q does not match the %s-- prefix", ticket.Type, ticket.Prefix()))
-		}
-	} else {
-		ticket.Type = prefixType
+	if ticket.Type != "" && !slices.Contains(ticketTypes, ticket.Type) {
+		ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("type %q is not a known ticket type", ticket.Type))
 	}
 	if ticket.Priority != "" && !slices.Contains(priorities, ticket.Priority) {
 		ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("priority %q should be high, medium or low", ticket.Priority))
@@ -165,21 +261,20 @@ func ParseTicket(slug string, column Column, data []byte) Ticket {
 	return ticket
 }
 
+func joinColumns() string {
+	names := make([]string, len(Columns))
+	for index, column := range Columns {
+		names[index] = string(column)
+	}
+	return strings.Join(names, ", ")
+}
+
 func validDate(value string) bool {
 	if !datePattern.MatchString(value) {
 		return false
 	}
 	_, err := time.Parse(time.DateOnly, value)
 	return err == nil
-}
-
-func sortedTypes() []string {
-	types := make([]string, 0, len(typeByPrefix))
-	for _, value := range typeByPrefix {
-		types = append(types, value)
-	}
-	slices.Sort(types)
-	return types
 }
 
 var (
@@ -272,49 +367,79 @@ func ParseWorkstream(slug string, data []byte) Workstream {
 	return workstream
 }
 
-// Attachment is one entry of an attachments index.yaml.
+// Attachment is one entry of a ticket's files/index.yaml.
 type Attachment struct {
-	File, Caption, Kind, Run, Added string
+	File, Caption, Kind, Source, Run, Added string
 }
 
 // Project is one project directory's parsed contents.
 type Project struct {
 	Name, DisplayName string
-	Repos             []string
-	Tickets           []Ticket
-	Workstreams       []Workstream
-	// Archived lists slugs of archived tickets; they count as done.
+	// Key is the ticket id prefix (KEY-1); KeyDerived means project.yaml does
+	// not set it yet.
+	Key         string
+	KeyDerived  bool
+	NextID      int
+	Repos       []string
+	Tickets     []Ticket
+	Workstreams []Workstream
+	// Archived lists ids of archived tickets; they count as done.
 	Archived []string
-	// Reviews holds the slugs that have a review file.
+	// Reviews holds the ids that have a review file.
 	Reviews map[string]bool
-	// Attachments maps ticket slugs to their attachment index.
+	// Attachments maps ticket ids to their files index.
 	Attachments map[string][]Attachment
-	// Warnings are problems with project-level files (project.yaml, indexes).
+	// Warnings are problems with project-level files (project.yaml, keys).
 	Warnings []string
 	// LastModified is the newest modification time among the project's files.
 	LastModified time.Time
 }
 
-// MarkDuplicates marks every ticket whose slug exists in more than one
-// column as needing repair.
-func MarkDuplicates(project *Project) {
-	columns := map[string][]Column{}
+// CheckProject marks tickets that share an id as needing repair and warns
+// about ids whose key is not the project's.
+func CheckProject(project *Project) {
+	folders := map[string][]string{}
 	for _, ticket := range project.Tickets {
-		columns[ticket.Slug] = append(columns[ticket.Slug], ticket.Column)
+		if ticket.ID != "" {
+			folders[ticket.ID] = append(folders[ticket.ID], ticket.Folder)
+		}
 	}
 	for index := range project.Tickets {
 		ticket := &project.Tickets[index]
+		if ticket.ID == "" {
+			continue
+		}
+		if copies := folders[ticket.ID]; len(copies) > 1 {
+			var others []string
+			for _, folder := range copies {
+				if folder != ticket.Folder {
+					others = append(others, folder)
+				}
+			}
+			ticket.Repair = append(ticket.Repair, fmt.Sprintf("id %s is also used by %s; give one a new id", ticket.ID, strings.Join(others, ", ")))
+		}
+		if key, _, ok := ParseID(ticket.ID); ok && project.Key != "" && key != project.Key {
+			ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("id %s uses key %s but this project's key is %s", ticket.ID, key, project.Key))
+		}
+	}
+}
+
+// CheckKeys warns on projects that share a key, which makes ids ambiguous.
+func CheckKeys(b *Board) {
+	owners := map[string][]string{}
+	for _, project := range b.Projects {
+		owners[project.Key] = append(owners[project.Key], project.Name)
+	}
+	for index := range b.Projects {
+		project := &b.Projects[index]
 		var others []string
-		for _, column := range columns[ticket.Slug] {
-			if column != ticket.Column {
-				others = append(others, string(column))
+		for _, name := range owners[project.Key] {
+			if name != project.Name {
+				others = append(others, name)
 			}
 		}
-		if len(columns[ticket.Slug]) > 1 {
-			if len(others) == 0 {
-				others = []string{string(ticket.Column)}
-			}
-			ticket.Repair = append(ticket.Repair, "the same ticket is also in "+strings.Join(others, ", ")+"; keep one copy")
+		if len(others) > 0 {
+			project.Warnings = append(project.Warnings, fmt.Sprintf("key %s is also used by %s; set a unique key in project.yaml", project.Key, strings.Join(others, ", ")))
 		}
 	}
 }

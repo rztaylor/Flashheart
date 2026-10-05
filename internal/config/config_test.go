@@ -14,7 +14,7 @@ func TestDefaultsMatchBoardFormat(t *testing.T) {
 
 	// docs/dev/specs/board-format.md §config.yaml.
 	want := Config{
-		Version:            1,
+		Version:            2,
 		AutoCreateProjects: true,
 		QuietMinutes:       10,
 		EventRetentionDays: 90,
@@ -110,8 +110,8 @@ func TestParseRejectsInvalidValues(t *testing.T) {
 		data string
 		want string
 	}{
-		{"newer version", "version: 2", "board root uses format version 2; this flashheart understands version 1"},
-		{"zero version", "version: 0", "version must be 1"},
+		{"newer version", "version: 3", "board root uses format version 3; this flashheart understands version 2"},
+		{"zero version", "version: 0", "version must be 1 or 2"},
 		{"theme", "ui: {theme: sepia}", `ui.theme "sepia" must be one of system, light, dark`},
 		{"density", "ui: {density: roomy}", `ui.density "roomy" must be one of compact, normal, detailed`},
 		{"virtual column", "ui: {virtual_columns: [blocked]}", `ui.virtual_columns "blocked" must be one of needs-you, agent-working`},
@@ -133,10 +133,19 @@ func TestParseRejectsInvalidValues(t *testing.T) {
 	}
 }
 
+func TestVersionOneIsReadableForMigration(t *testing.T) {
+	t.Parallel()
+
+	config, err := Parse([]byte("version: 1\n"))
+	if err != nil || config.Version != 1 {
+		t.Errorf("Parse(version 1) = %+v, %v", config, err)
+	}
+}
+
 func TestNewerVersionIsDistinguishable(t *testing.T) {
 	t.Parallel()
 
-	if _, err := Parse([]byte("version: 3")); !errors.Is(err, ErrNewerVersion) {
+	if _, err := Parse([]byte("version: 4")); !errors.Is(err, ErrNewerVersion) {
 		t.Errorf("err = %v, want ErrNewerVersion", err)
 	}
 }
