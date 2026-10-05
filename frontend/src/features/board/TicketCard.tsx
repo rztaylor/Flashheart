@@ -1,10 +1,11 @@
-import { forwardRef, type KeyboardEvent } from "react";
+import { type CSSProperties, forwardRef, type KeyboardEvent } from "react";
 
 import { type Card, splitReasons } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
+import { type Paint, paintVars } from "../../model/paint";
 import { runningTime } from "../../model/time";
 import type { Density } from "../filters/FilterBar";
 
@@ -13,6 +14,7 @@ interface TicketCardProps {
   line?: Line;
   workstreamTitle?: string;
   density: Density;
+  paint?: Paint;
   dimmed?: boolean;
   showProject?: string;
   selected?: boolean;
@@ -29,10 +31,12 @@ const priorityLabel: Record<string, string> = {
   low: "Low",
 };
 
-// TicketCard is one ticket on the board (VIEW-6). Compact: line bullet,
-// title, type and priority. Normal adds the blocked proof and criteria.
-// Detailed adds the excerpt, handoff "next" and attachments. Real blockers
-// are marked; waits on an earlier station of the line are quiet.
+// TicketCard is one ticket on the board (VIEW-6). The workstream's line runs
+// down its left edge; the header takes a tint of the board's "Colour by"
+// attribute, named in a tag of the strong shade. Compact: title, id, type and
+// priority. Normal adds the blocked proof and criteria. Detailed adds the
+// excerpt, handoff "next" and attachments. Real blockers are marked; waits on
+// an earlier station of the line are quiet.
 export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
   function TicketCard(
     {
@@ -40,6 +44,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
       line,
       workstreamTitle,
       density,
+      paint,
       dimmed,
       showProject,
       selected,
@@ -58,6 +63,11 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     const blocker = blockers[0];
     const wait = waits[0];
     const more = card.blockedBy.length - 1;
+    const painted = paint && !repair ? paint : undefined;
+    const inset = line ? "pl-4" : "pl-3";
+    const priority = card.priority
+      ? (priorityLabel[card.priority] ?? card.priority)
+      : "";
     return (
       <button
         ref={ref}
@@ -67,22 +77,38 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
         onKeyDown={onKeyDown}
         onFocus={onFocus}
         aria-current={selected ? "true" : undefined}
+        data-ticket={card.id}
         aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}`}
-        className={`group relative flex w-full shrink-0 flex-col gap-1.5 overflow-hidden rounded-card border bg-card px-3 py-2.5 text-left transition-[border-color,opacity,box-shadow] duration-150 hover:border-ink-muted ${
+        data-paint={painted?.token}
+        style={paintVars(painted) as CSSProperties | undefined}
+        className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px ${
           selected
-            ? "border-rule-strong shadow-[0_0_0_1px_var(--fh-rule-strong)]"
+            ? "border-rule-strong shadow-[0_0_0_1px_var(--fh-rule-strong),var(--fh-shadow-card-hover)]"
             : repair
-              ? "border-dashed border-ink-muted"
-              : "border-rule"
-        } ${dimmed ? "opacity-35" : ""} ${repair ? "pt-3.5" : ""}`}
+              ? "border-dashed border-ink-muted shadow-card"
+              : "border-rule/70 shadow-card hover:shadow-card-hover"
+        } ${dimmed ? "opacity-35" : ""}`}
       >
+        {line ? (
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-0 left-0 w-1"
+            style={{ background: `var(--fh-line-${line.colour})` }}
+          />
+        ) : null}
         {repair ? (
           <span
             aria-hidden="true"
             className="hatched-strong absolute inset-x-0 top-0 h-1.5"
           />
         ) : null}
-        <span className="flex items-start gap-2">
+        <span
+          className={`flex items-start gap-2 pr-3 ${inset} ${repair ? "pt-3.5" : "pt-2.5"} ${
+            painted
+              ? `pb-2 ${done ? "bg-[color-mix(in_srgb,var(--paint-tint)_55%,var(--fh-card))]" : "bg-(--paint-tint)"}`
+              : "pb-1.5"
+          }`}
+        >
           <LineBullet line={line} size="sm" label={workstreamTitle} />
           <span
             className={`min-w-0 flex-1 text-sm leading-snug font-medium ${done ? "text-ink-muted" : "text-ink"}`}
@@ -91,7 +117,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           </span>
           {age ? (
             <span
-              className="shrink-0 text-2xs text-ink-faint"
+              className="shrink-0 text-2xs text-ink-muted"
               title={`Last changed ${card.modified}`}
             >
               {age}
@@ -99,91 +125,105 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           ) : null}
         </span>
 
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-ink-muted">
-          {showProject ? (
-            <span className="font-medium text-ink">{showProject}</span>
-          ) : null}
-          <span className="shrink-0 font-mono font-semibold text-ink">
-            {card.id}
+        <span
+          className={`flex flex-col gap-1.5 pr-3 pb-2.5 ${inset} ${painted ? "pt-2" : ""}`}
+        >
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-ink-muted">
+            {showProject ? (
+              <span className="font-medium text-ink">{showProject}</span>
+            ) : null}
+            <span className="shrink-0 font-semibold tracking-[0.02em] tabular-nums text-ink">
+              {card.id}
+            </span>
+            {painted ? (
+              <span className="rounded-[3px] bg-(--paint) px-1.5 leading-4 font-semibold text-(--paint-ink)">
+                {painted.label}
+              </span>
+            ) : null}
+            {card.type && painted?.token.startsWith("type-") !== true ? (
+              <span>{card.type}</span>
+            ) : null}
+            {priority && painted?.token.startsWith("priority-") !== true ? (
+              <span
+                className={
+                  card.priority === "high"
+                    ? "font-semibold text-ink"
+                    : undefined
+                }
+              >
+                {priority}
+              </span>
+            ) : null}
+            {density === "compact" && blocker ? (
+              <span className="flex items-center gap-0.5 font-semibold text-ink">
+                <Icon name="diamond" size={10} />
+                Blocked
+              </span>
+            ) : null}
           </span>
-          {card.priority ? (
-            <span
-              className={
-                card.priority === "high" ? "font-semibold text-ink" : undefined
-              }
-            >
-              {priorityLabel[card.priority] ?? card.priority}
+
+          {repair ? (
+            <StateNote kind="repair" compact>
+              {card.needsRepair[0] ?? "Needs repair"}
+            </StateNote>
+          ) : null}
+
+          {density !== "compact" && blocker ? (
+            <StateNote kind="blocked" compact>
+              {more > 0 ? `${blocker.text} (+${more} more)` : blocker.text}
+            </StateNote>
+          ) : null}
+          {density !== "compact" && !blocker && wait ? (
+            <StateNote kind="waiting" compact>
+              {wait.text}
+            </StateNote>
+          ) : null}
+
+          {density === "detailed" && card.excerpt ? (
+            <span className="line-clamp-3 text-xs text-ink-muted">
+              {card.excerpt}
             </span>
           ) : null}
-          {density === "compact" && blocker ? (
-            <span className="flex items-center gap-0.5 font-semibold text-ink">
-              <Icon name="diamond" size={10} />
-              Blocked
+
+          {density === "detailed" && card.handoffNext ? (
+            <span className="flex items-start gap-1.5 text-xs text-ink">
+              <Icon name="next" size={12} className="mt-[0.2em]" />
+              <span className="line-clamp-2">
+                <span className="sr-only">Next: </span>
+                {card.handoffNext}
+              </span>
+            </span>
+          ) : null}
+
+          {density !== "compact" &&
+          (card.criteria.total > 0 ||
+            (density === "detailed" &&
+              (card.attachments > 0 || card.hasReview))) ? (
+            <span className="flex items-center gap-3 text-2xs text-ink-muted">
+              {card.criteria.total > 0 ? (
+                <span
+                  className="flex items-center gap-1"
+                  title="Acceptance criteria ticked"
+                >
+                  <Icon name="criteria" size={12} />
+                  {card.criteria.done}/{card.criteria.total}
+                </span>
+              ) : null}
+              {density === "detailed" && card.attachments > 0 ? (
+                <span className="flex items-center gap-1" title="Attachments">
+                  <Icon name="attachment" size={12} />
+                  {card.attachments}
+                </span>
+              ) : null}
+              {density === "detailed" && card.hasReview ? (
+                <span className="flex items-center gap-1">
+                  <Icon name="review" size={12} />
+                  Review
+                </span>
+              ) : null}
             </span>
           ) : null}
         </span>
-
-        {repair ? (
-          <StateNote kind="repair" compact>
-            {card.needsRepair[0] ?? "Needs repair"}
-          </StateNote>
-        ) : null}
-
-        {density !== "compact" && blocker ? (
-          <StateNote kind="blocked" compact>
-            {more > 0 ? `${blocker.text} (+${more} more)` : blocker.text}
-          </StateNote>
-        ) : null}
-        {density !== "compact" && !blocker && wait ? (
-          <StateNote kind="waiting" compact>
-            {wait.text}
-          </StateNote>
-        ) : null}
-
-        {density === "detailed" && card.excerpt ? (
-          <span className="line-clamp-3 text-xs text-ink-muted">
-            {card.excerpt}
-          </span>
-        ) : null}
-
-        {density === "detailed" && card.handoffNext ? (
-          <span className="flex items-start gap-1.5 text-xs text-ink">
-            <Icon name="next" size={12} className="mt-[0.2em]" />
-            <span className="line-clamp-2">
-              <span className="sr-only">Next: </span>
-              {card.handoffNext}
-            </span>
-          </span>
-        ) : null}
-
-        {density !== "compact" &&
-        (card.criteria.total > 0 ||
-          (density === "detailed" &&
-            (card.attachments > 0 || card.hasReview))) ? (
-          <span className="flex items-center gap-3 text-2xs text-ink-muted">
-            {card.criteria.total > 0 ? (
-              <span
-                className="flex items-center gap-1"
-                title="Acceptance criteria ticked"
-              >
-                <Icon name="criteria" size={12} />
-                {card.criteria.done}/{card.criteria.total}
-              </span>
-            ) : null}
-            {density === "detailed" && card.attachments > 0 ? (
-              <span className="flex items-center gap-1" title="Attachments">
-                <Icon name="attachment" size={12} />
-                {card.attachments}
-              </span>
-            ) : null}
-            {density === "detailed" && card.hasReview ? (
-              <span className="flex items-center gap-1">
-                <Icon name="review" size={12} />
-                Review
-              </span>
-            ) : null}
-          </span>
-        ) : null}
       </button>
     );
   },

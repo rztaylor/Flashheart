@@ -40,7 +40,7 @@ export function StateNote({
       {icon ? (
         <Icon name={icon} size={compact ? 12 : 14} className="mt-[0.2em]" />
       ) : null}
-      <span className={compact ? "line-clamp-2" : undefined}>
+      <span className={compact ? "line-clamp-3" : undefined}>
         <span className="sr-only">{labels[kind]}: </span>
         {children}
       </span>

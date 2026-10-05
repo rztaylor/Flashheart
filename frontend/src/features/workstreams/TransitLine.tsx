@@ -139,7 +139,7 @@ export function TransitLine({ workstream, line, onOpen }: TransitLineProps) {
                 >
                   {ticket.title}
                 </span>
-                <span className="max-w-full truncate font-mono text-2xs text-ink-faint">
+                <span className="max-w-full truncate text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
                   {ticket.id}
                 </span>
                 <span className="text-2xs text-ink-muted">

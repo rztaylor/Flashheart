@@ -19,7 +19,7 @@ export function LineLegend({
 }: LineLegendProps) {
   if (workstreams.length === 0) return null;
   return (
-    <fieldset className="flex flex-wrap items-center gap-1.5 px-4 pt-3">
+    <fieldset className="flex items-center gap-1.5">
       <legend className="sr-only">
         Workstream lines: choose one to highlight it
       </legend>
@@ -31,7 +31,7 @@ export function LineLegend({
             type="button"
             aria-pressed={active}
             onClick={() => onFocus(active ? "" : workstream.slug)}
-            className={`flex items-center gap-2 rounded-full border py-0.5 pr-3 pl-0.5 text-xs transition-colors ${
+            className={`flex items-center gap-2 rounded-full border py-0.5 pr-3 pl-0.5 text-xs shadow-card transition-[color,border-color,opacity] ${
               active
                 ? "border-rule-strong bg-card text-ink"
                 : "border-rule bg-card text-ink-muted hover:border-ink-muted hover:text-ink"

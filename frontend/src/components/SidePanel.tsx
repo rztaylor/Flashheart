@@ -8,9 +8,10 @@ interface SidePanelProps {
   children: ReactNode;
 }
 
-// SidePanel slides over the right of the screen and keeps the board visible
-// (CARD-1). It is not modal: focus moves in on open, Escape closes it and
-// the caller restores focus.
+// SidePanel sits beside the board on desktop, which narrows to make room and
+// stays scrollable (CARD-1); on narrow screens it covers the view. It is not
+// modal: focus moves in on open, Escape closes it and the caller restores
+// focus.
 export function SidePanel({ label, onClose, children }: SidePanelProps) {
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -28,7 +29,7 @@ export function SidePanel({ label, onClose, children }: SidePanelProps) {
       ref={ref}
       tabIndex={-1}
       aria-label={label}
-      className="panel-enter fixed top-12 right-0 bottom-0 z-30 flex w-[min(560px,100vw)] flex-col border-l border-rule bg-card shadow-panel outline-none"
+      className="panel-enter relative flex min-h-0 flex-col border-l border-rule bg-card shadow-panel outline-none max-md:fixed max-md:inset-x-0 max-md:top-12 max-md:bottom-0 max-md:z-30 md:w-[clamp(26rem,36vw,35rem)]"
     >
       <button
         type="button"

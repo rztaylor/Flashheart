@@ -129,25 +129,20 @@ function PanelHeader({
   ].filter(Boolean);
   return (
     <header className="px-6 pt-5 pb-4 pr-14">
-      <p className="flex items-center gap-2 text-xs text-ink-muted">
-        <span className="border-t-2 border-rule-strong pt-0.5 text-ink station-sign">
-          {column}
+      <h2 className="text-xl leading-tight font-semibold tracking-[-0.01em]">
+        {detail.title}
+      </h2>
+      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
+        <span className="font-semibold tracking-[0.02em] tabular-nums text-ink">
+          {detail.id}
         </span>
+        <span className="font-semibold text-ink">{column}</span>
         {detail.workstream ? (
           <span className="flex items-center gap-1.5">
             <LineBullet line={line} size="sm" />
             {workstreamTitle}
           </span>
         ) : null}
-        <span className="ml-auto" title={absoluteTime(detail.modified)}>
-          {changedLabel(detail.modified)}
-        </span>
-      </p>
-      <h2 className="mt-2 text-xl leading-tight font-semibold tracking-[-0.01em]">
-        {detail.title}
-      </h2>
-      <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
-        <span className="font-mono font-semibold text-ink">{detail.id}</span>
         {facts.map((fact) => (
           <span key={fact}>{fact}</span>
         ))}
@@ -157,6 +152,9 @@ function PanelHeader({
             {detail.branch}
           </span>
         ) : null}
+        <span title={absoluteTime(detail.modified)}>
+          {changedLabel(detail.modified)}
+        </span>
       </p>
     </header>
   );
@@ -443,10 +441,10 @@ function ReviewTab({
 function PanelSkeleton() {
   return (
     <div aria-hidden="true" className="flex flex-col gap-3 p-6">
-      <div className="h-3 w-24 animate-pulse rounded bg-well" />
-      <div className="h-6 w-3/4 animate-pulse rounded bg-well" />
-      <div className="h-3 w-1/2 animate-pulse rounded bg-well" />
-      <div className="mt-6 h-24 animate-pulse rounded bg-well" />
+      <div className="h-3 w-24 animate-pulse rounded-card bg-well" />
+      <div className="h-6 w-3/4 animate-pulse rounded-card bg-well" />
+      <div className="h-3 w-1/2 animate-pulse rounded-card bg-well" />
+      <div className="mt-6 h-24 animate-pulse rounded-card bg-well" />
     </div>
   );
 }

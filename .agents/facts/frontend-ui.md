@@ -34,8 +34,11 @@
   **Transit Line Map**, Vignelli diagram and Unimark signage. Black signage
   band; white map ground (charcoal at night); Archivo Variable self-hosted,
   tabular numerals; columns and sections as station signs (heavy top rule);
-  round line bullets in the MTA palette are the only hues and always mean a
-  workstream; ticket state is ink, shape and words (diamond = blocked by a
+  round line bullets and a card-edge stripe in the MTA palette always mean a
+  workstream; a muted paint palette shows the board's "Colour by" attribute
+  (type, priority, age or none) as a tinted card header plus a named tag;
+  black band and black project rail frame a dotted platform ground with
+  shadowed cards (board-refresh, 2026-10-05); ticket state is ink, shape and words (diamond = blocked by a
   dependency, quiet text = waiting on the line's order, dashed border plus
   hatched band = needs repair); Workstreams drawn as transit lines. The
   contract lives in `.impeccable/surfaces/`; `DESIGN.md` records the built

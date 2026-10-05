@@ -10,7 +10,8 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 
 ## Execution order
 
-1. [`board-refresh`](roadmap-items/board-refresh.md) — **Pending**. Card
+1. [`board-refresh`](roadmap-items/board-refresh.md) — **Done**, awaiting
+   review; remove this entry and its brief once approved. Card
    panel beside the board instead of over it, and a bolder visual identity
    (rail, colour on cards, depth).
 2. [`board-editing`](roadmap-items/board-editing.md) — **Pending**. Locked

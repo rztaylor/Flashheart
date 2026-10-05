@@ -4,7 +4,10 @@
  * Line colours are ordered so neighbouring indices are far apart in hue
  * (red, blue, yellow, green, purple, orange, lime, brown, grey).
  * Line colours mean workstreams and nothing else; ticket state is ink, shape
- * and words. Themes switch on <html data-theme>.
+ * and words. Paint colours (--fh-paint-*) show the board's "Colour by"
+ * attribute (type, priority or age), always beside its name; each has a strong
+ * shade for tags, a tint for card headers and an ink for text on the strong
+ * shade. Themes switch on <html data-theme>.
  */
 :root {
   --fh-ground: #ffffff;
@@ -45,13 +48,66 @@
   --fh-line-ink-6: #111111;
   --fh-line-ink-7: #ffffff;
   --fh-line-ink-8: #111111;
+
+  /* The board is a lit platform: cards lift off a dotted map ground. */
+  --fh-platform: #eceef1;
+  --fh-platform-dot: rgb(17 17 17 / 0.09);
+  --fh-shadow-card:
+    0 1px 1px rgb(17 24 39 / 0.06), 0 2px 6px -1px rgb(17 24 39 / 0.1);
+  --fh-shadow-card-hover:
+    0 2px 3px rgb(17 24 39 / 0.07), 0 10px 22px -6px rgb(17 24 39 / 0.22);
+  --fh-band-track: #3a3d43;
+  --fh-flash: #ffd23f;
+
+  --fh-paint-type-feature: #3f5f8a;
+  --fh-paint-type-feature-tint: #e7ecf3;
+  --fh-paint-type-feature-ink: #ffffff;
+  --fh-paint-type-bug: #a2453a;
+  --fh-paint-type-bug-tint: #f6e6e3;
+  --fh-paint-type-bug-ink: #ffffff;
+  --fh-paint-type-infra: #2f6b68;
+  --fh-paint-type-infra-tint: #e1eeed;
+  --fh-paint-type-infra-ink: #ffffff;
+  --fh-paint-type-test: #4a7050;
+  --fh-paint-type-test-tint: #e5eee6;
+  --fh-paint-type-test-ink: #ffffff;
+  --fh-paint-type-refactor: #66548c;
+  --fh-paint-type-refactor-tint: #ece8f3;
+  --fh-paint-type-refactor-ink: #ffffff;
+  --fh-paint-type-docs: #6b6628;
+  --fh-paint-type-docs-tint: #efeedd;
+  --fh-paint-type-docs-ink: #ffffff;
+  --fh-paint-type-spike: #8c4870;
+  --fh-paint-type-spike-tint: #f3e6ee;
+  --fh-paint-type-spike-ink: #ffffff;
+  --fh-paint-type-other: #5b6170;
+  --fh-paint-type-other-tint: #eceef1;
+  --fh-paint-type-other-ink: #ffffff;
+  --fh-paint-priority-high: #a3472a;
+  --fh-paint-priority-high-tint: #f6e7e0;
+  --fh-paint-priority-high-ink: #ffffff;
+  --fh-paint-priority-medium: #80651f;
+  --fh-paint-priority-medium-tint: #f2ecdb;
+  --fh-paint-priority-medium-ink: #ffffff;
+  --fh-paint-priority-low: #52667a;
+  --fh-paint-priority-low-tint: #e7ecf1;
+  --fh-paint-priority-low-ink: #ffffff;
+  --fh-paint-age-today: #4a7050;
+  --fh-paint-age-today-tint: #e5eee6;
+  --fh-paint-age-today-ink: #ffffff;
+  --fh-paint-age-week: #80651f;
+  --fh-paint-age-week-tint: #f2ecdb;
+  --fh-paint-age-week-ink: #ffffff;
+  --fh-paint-age-older: #8c4a3c;
+  --fh-paint-age-older-tint: #f3e6e2;
+  --fh-paint-age-older-ink: #ffffff;
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
   --fh-ground: #121315;
   --fh-well: #1b1c1f;
-  --fh-card: #202226;
+  --fh-card: #24262b;
   --fh-rule: #33363c;
   --fh-rule-strong: #f1f2f4;
   --fh-ink: #f1f2f4;
@@ -87,6 +143,58 @@
   --fh-line-ink-6: #111111;
   --fh-line-ink-7: #111111;
   --fh-line-ink-8: #111111;
+
+  --fh-platform: #17181b;
+  --fh-platform-dot: rgb(255 255 255 / 0.06);
+  --fh-shadow-card:
+    0 0 0 1px rgb(255 255 255 / 0.06), 0 4px 14px -2px rgb(0 0 0 / 0.7);
+  --fh-shadow-card-hover:
+    0 0 0 1px rgb(255 255 255 / 0.1), 0 14px 30px -6px rgb(0 0 0 / 0.85);
+  --fh-band-track: #34373d;
+  --fh-flash: #ffd23f;
+
+  --fh-paint-type-feature: #8fa9cf;
+  --fh-paint-type-feature-tint: #222a38;
+  --fh-paint-type-feature-ink: #111111;
+  --fh-paint-type-bug: #dc8f84;
+  --fh-paint-type-bug-tint: #33211f;
+  --fh-paint-type-bug-ink: #111111;
+  --fh-paint-type-infra: #83bdb8;
+  --fh-paint-type-infra-tint: #1b2c2b;
+  --fh-paint-type-infra-ink: #111111;
+  --fh-paint-type-test: #98c09d;
+  --fh-paint-type-test-tint: #1e2a20;
+  --fh-paint-type-test-ink: #111111;
+  --fh-paint-type-refactor: #b5a6d8;
+  --fh-paint-type-refactor-tint: #282537;
+  --fh-paint-type-refactor-ink: #111111;
+  --fh-paint-type-docs: #c9c27e;
+  --fh-paint-type-docs-tint: #2b2a1c;
+  --fh-paint-type-docs-ink: #111111;
+  --fh-paint-type-spike: #d699bc;
+  --fh-paint-type-spike-tint: #30222a;
+  --fh-paint-type-spike-ink: #111111;
+  --fh-paint-type-other: #a9aeb8;
+  --fh-paint-type-other-tint: #272a30;
+  --fh-paint-type-other-ink: #111111;
+  --fh-paint-priority-high: #e19c7e;
+  --fh-paint-priority-high-tint: #33241d;
+  --fh-paint-priority-high-ink: #111111;
+  --fh-paint-priority-medium: #d6b56c;
+  --fh-paint-priority-medium-tint: #2e2818;
+  --fh-paint-priority-medium-ink: #111111;
+  --fh-paint-priority-low: #a5b6c6;
+  --fh-paint-priority-low-tint: #232931;
+  --fh-paint-priority-low-ink: #111111;
+  --fh-paint-age-today: #98c09d;
+  --fh-paint-age-today-tint: #1e2a20;
+  --fh-paint-age-today-ink: #111111;
+  --fh-paint-age-week: #d6b56c;
+  --fh-paint-age-week-tint: #2e2818;
+  --fh-paint-age-week-ink: #111111;
+  --fh-paint-age-older: #d39a86;
+  --fh-paint-age-older-tint: #32231f;
+  --fh-paint-age-older-ink: #111111;
   color-scheme: dark;
 }
 
@@ -107,6 +215,11 @@
   --color-danger: var(--fh-danger);
   --color-danger-surface: var(--fh-danger-surface);
   --color-overlay: var(--fh-overlay);
+  --color-platform: var(--fh-platform);
+  --color-band-track: var(--fh-band-track);
+  --color-flash: var(--fh-flash);
+  --shadow-card: var(--fh-shadow-card);
+  --shadow-card-hover: var(--fh-shadow-card-hover);
 }
 
 @theme {

@@ -25,6 +25,11 @@ All notable changes to this project are documented here. The project follows
   blocked-by explanations, handoff, criteria and review, Workstreams drawn as
   transit lines, a sortable Table, filters and search, light and dark themes
   and full keyboard movement.
+- Board refresh: the card panel sits beside the board, which narrows and
+  keeps the card's column in view; a black project rail with project-key
+  badges; cards lift off a dotted platform with the workstream's line down
+  their left edge; **Colour by** type (default), priority, age or none tints
+  card headers and names the value, with a colour key.
 - Read-only board API over the root: projects with counts, project and
   all-projects boards with blocked-by explanations, ticket detail with
   review, handoff and attachments, workstreams with derived status, and

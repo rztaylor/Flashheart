@@ -1,6 +1,7 @@
 # board-refresh
 
-Status: **Pending**.
+Status: **Done**, awaiting review; remove this brief and its roadmap entry
+once approved.
 
 ## Goal
 
@@ -27,3 +28,14 @@ and the board is too bland ("Flash by name, Flash by nature").
 ## Out of scope
 
 Editing and live updates (board-editing).
+
+## Evidence
+
+- Panel beside the board at 1280 px with the origin column whole and every
+  column reachable by scrolling: `e2e/board.spec.mjs` ("the panel sits
+  beside the board…").
+- Colour by type, priority, age and none, with a named tag and colour key:
+  `model/paint.test.ts`, `e2e/board.spec.mjs`. axe-core passes in light and
+  dark at 1280 and 1920; palette contrast checked (tags and headers ≥ 4.5:1).
+- Design: user decisions recorded in the surface brief; finish review
+  findings applied; `DESIGN.md` regenerated from the build.

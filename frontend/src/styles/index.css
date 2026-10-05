@@ -65,6 +65,28 @@
   opacity: 0.55;
 }
 
+/* The same hatch drawn in on-band white, for route bars on the black rail. */
+@utility hatched-band {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--fh-on-band) 0 3px,
+    transparent 3px 7px
+  );
+  opacity: 0.7;
+}
+
+/* The board's platform: a dotted map ground that cards lift off. */
+@utility platform-ground {
+  background-color: var(--fh-platform);
+  background-image: radial-gradient(
+    circle,
+    var(--fh-platform-dot) 1px,
+    transparent 1.25px
+  );
+  background-size: 16px 16px;
+  background-position: 8px 8px;
+}
+
 @utility hatched {
   background-image: repeating-linear-gradient(
     -45deg,
@@ -141,12 +163,12 @@
   }
 
   .panel-enter {
-    animation: panel-in 220ms var(--ease-out-expo);
+    animation: panel-in 260ms var(--ease-out-expo);
   }
   @keyframes panel-in {
     from {
-      transform: translateX(24px);
-      opacity: 0.6;
+      clip-path: inset(0 0 0 100%);
+      opacity: 0.4;
     }
   }
   @media (prefers-reduced-motion: reduce) {

@@ -7,6 +7,7 @@ import {
   NO_WORKSTREAM,
   type StateFilter,
 } from "../../model/filters";
+import { PAINT_MODES, type PaintMode } from "../../model/paint";
 
 export type Density = "compact" | "normal" | "detailed";
 
@@ -18,10 +19,12 @@ interface FilterBarProps {
   total: number;
   density?: Density;
   onDensity?(density: Density): void;
+  paint?: PaintMode;
+  onPaint?(paint: PaintMode): void;
 }
 
-// FilterBar holds the board and table filters (VIEW-7) and card density
-// (VIEW-6). Search lives in the header.
+// FilterBar holds the board and table filters (VIEW-7), card density and
+// what card colour shows (VIEW-6). Search lives in the header.
 export function FilterBar({
   filters,
   options,
@@ -30,6 +33,8 @@ export function FilterBar({
   total,
   density,
   onDensity,
+  paint,
+  onPaint,
 }: FilterBarProps) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
   const filtered = isFiltered(filters);
@@ -110,18 +115,36 @@ export function FilterBar({
       <span className="text-xs text-ink-muted" aria-live="polite">
         {filtered ? `${shown} of ${total} tickets` : `${total} tickets`}
       </span>
-      {density && onDensity ? (
-        <div className="ml-auto">
-          <SegmentedControl
-            label="Density"
-            value={density}
-            onChange={onDensity}
-            options={[
-              { value: "compact", label: "Compact" },
-              { value: "normal", label: "Normal" },
-              { value: "detailed", label: "Detailed" },
-            ]}
-          />
+      {(paint && onPaint) || (density && onDensity) ? (
+        <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+          {paint && onPaint ? (
+            <SelectField
+              label="Colour by"
+              value={paint === "none" ? "" : paint}
+              onChange={(value) => onPaint((value || "none") as PaintMode)}
+            >
+              {PAINT_MODES.map((mode) => (
+                <option
+                  key={mode.value}
+                  value={mode.value === "none" ? "" : mode.value}
+                >
+                  {mode.label}
+                </option>
+              ))}
+            </SelectField>
+          ) : null}
+          {density && onDensity ? (
+            <SegmentedControl
+              label="Density"
+              value={density}
+              onChange={onDensity}
+              options={[
+                { value: "compact", label: "Compact" },
+                { value: "normal", label: "Normal" },
+                { value: "detailed", label: "Detailed" },
+              ]}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

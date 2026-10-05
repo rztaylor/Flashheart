@@ -163,7 +163,7 @@ export function TableView({
                     <span className="font-medium text-ink hover:underline">
                       {card.title}
                     </span>
-                    <span className="font-mono text-2xs text-ink-faint">
+                    <span className="text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
                       {card.id}
                     </span>
                   </button>

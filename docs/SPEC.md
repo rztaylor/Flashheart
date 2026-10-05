@@ -201,7 +201,11 @@ Full format: `docs/dev/specs/board-format.md`.
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
 - `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
   workstream, blocked, live badge, criteria progress), *Detailed* (+
-  description excerpt, handoff "next", attachments count).
+  description excerpt, handoff "next", attachments count). Every card shows
+  its id and its workstream's line as a stripe and bullet. **Colour by**
+  (type by default, priority, age or none) tints the card header and names
+  the value in a tag, with a colour key on the board; the colour is never the
+  only carrier of meaning and never uses the workstream line colours.
 - `VIEW-7` Filters and search across title, slug, body, tags, type, priority,
   workstream, blocked/unblocked, has-run, has-question, `later-possibility`.
   Filters and view choices are remembered per project (`CFG-2`).
@@ -210,7 +214,9 @@ Full format: `docs/dev/specs/board-format.md`.
 
 ### 6.5 Card detail (`CARD`)
 
-- `CARD-1` Opening a card shows a panel with tabs: **Ticket** (rendered
+- `CARD-1` Opening a card shows a panel beside the board (covering the view
+  only on narrow screens); the board narrows and scrolls so the card's column
+  stays in view. Its tabs: **Ticket** (rendered
   markdown), **Edit** (frontmatter form and raw markdown), **Runs** (timeline
   and subagent tree), **Attachments**, **Review** (when a review file exists).
 - `CARD-2` Markdown renders GitHub-flavoured markdown (tables, task lists,

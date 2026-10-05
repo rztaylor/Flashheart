@@ -28,6 +28,7 @@ import {
   isFiltered,
 } from "../model/filters";
 import { linesByProject } from "../model/lines";
+import type { PaintMode } from "../model/paint";
 import { useResource } from "../state/useResource";
 import { BackendStatus } from "./BackendStatus";
 import { type Route, type Scope, useRoute, type View } from "./route";
@@ -53,6 +54,7 @@ export function Shell({ lifecycle, info }: ShellProps) {
   const [route, navigate] = useRoute();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [density, setDensity] = useState<Density>("normal");
+  const [paint, setPaint] = useState<PaintMode>("type");
   const [doneAll, setDoneAll] = useState(false);
   const [narrowColumn, setNarrowColumn] = useState<Column>("in-progress");
   const opener = useRef<HTMLElement | null>(null);
@@ -162,13 +164,23 @@ export function Shell({ lifecycle, info }: ShellProps) {
   return (
     <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3rem_auto_1fr]">
       <header className="flex min-w-0 items-center gap-2 overflow-hidden bg-band px-3 text-on-band sm:gap-4 sm:px-4">
-        <span className="wordmark text-md">Flashheart</span>
+        <span className="flex items-center gap-1.5">
+          <Bolt />
+          <span className="wordmark text-md">Flashheart</span>
+        </span>
         <span aria-hidden="true" className="h-5 w-px bg-on-band-muted/40" />
         <h1
-          className="min-w-0 max-w-56 truncate border-t-2 border-on-band pt-0.5 text-sm leading-tight station-sign max-sm:sr-only"
+          className="flex min-w-0 max-w-64 items-center gap-2 text-sm leading-tight station-sign max-sm:sr-only"
           title={scopeName}
         >
-          {scopeName}
+          {current ? (
+            <span className="rounded-[3px] bg-on-band px-1 py-px text-2xs leading-4 text-band">
+              {current.key}
+            </span>
+          ) : null}
+          <span className="truncate border-t-2 border-on-band pt-0.5">
+            {scopeName}
+          </span>
         </h1>
         <nav aria-label="Views" className="ml-2 flex h-full items-stretch">
           {views.map((view) => {
@@ -251,8 +263,8 @@ export function Shell({ lifecycle, info }: ShellProps) {
         ) : null}
       </div>
 
-      <div className="grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_1fr]">
-        <div className="hidden min-h-0 flex-col md:flex">
+      <div className="grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto]">
+        <div className="hidden min-h-0 flex-col bg-band md:flex">
           <div className="min-h-0 flex-1">
             <ProjectRail
               projects={summaries}
@@ -352,6 +364,8 @@ export function Shell({ lifecycle, info }: ShellProps) {
                 total={allCards.length}
                 density={route.view === "board" ? density : undefined}
                 onDensity={route.view === "board" ? setDensity : undefined}
+                paint={route.view === "board" ? paint : undefined}
+                onPaint={route.view === "board" ? setPaint : undefined}
               />
               {board.status === "loading" ? <BoardSkeleton /> : null}
               {board.status === "error" ? (
@@ -389,6 +403,7 @@ export function Shell({ lifecycle, info }: ShellProps) {
                     }
                     projectNames={projectNames}
                     density={density}
+                    paint={paint}
                     selected={route.ticket}
                     doneTotal={board.data.doneTotal}
                     doneShown={board.data.doneShown}
@@ -415,21 +430,36 @@ export function Shell({ lifecycle, info }: ShellProps) {
             </>
           )}
         </main>
-      </div>
 
-      {route.ticket ? (
-        <CardPanel
-          key={route.ticket.id}
-          ticket={route.ticket}
-          fetcher={fetcher}
-          lines={lines}
-          workstreamTitle={workstreamTitle}
-          keys={keys}
-          onOpen={openTicket}
-          onClose={closeTicket}
-        />
-      ) : null}
+        {route.ticket ? (
+          <CardPanel
+            key={route.ticket.id}
+            ticket={route.ticket}
+            fetcher={fetcher}
+            lines={lines}
+            workstreamTitle={workstreamTitle}
+            keys={keys}
+            onOpen={openTicket}
+            onClose={closeTicket}
+          />
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+// Bolt is the brand mark beside the wordmark: the one flash of signal yellow.
+function Bolt() {
+  return (
+    <svg
+      viewBox="0 0 16 20"
+      width={13}
+      height={16}
+      aria-hidden="true"
+      className="shrink-0 text-flash"
+    >
+      <path d="M10 0 1 11.5h6L5.5 20 15 7.5H8.8L10 0Z" fill="currentColor" />
+    </svg>
   );
 }
 
@@ -445,7 +475,7 @@ function V1Notice({
   return (
     <section
       aria-label="Older board format"
-      className="mx-4 mt-3 rounded-sm border border-rule bg-well px-4 py-3 text-sm text-ink-muted"
+      className="mx-4 mt-3 rounded-card border border-rule bg-well px-4 py-3 text-sm text-ink-muted"
     >
       <p>
         {projects.length === 1 ? "The project " : "The projects "}
@@ -466,12 +496,16 @@ function RailFooter({ root, info }: { root: string; info: ServerInfoState }) {
   return (
     <section
       aria-label="Board root"
-      className="border-t border-r border-rule bg-well px-4 py-3 text-2xs text-ink-muted"
+      className="border-t border-band-track px-4 py-3 text-2xs text-on-band-muted"
     >
       <dl>
         <dt className="sr-only">Board root</dt>
-        <dd className="truncate font-mono" title={root}>
-          {root}
+        {/* Truncated from the start so the meaningful tail stays visible. */}
+        <dd
+          className="truncate text-left font-mono [direction:rtl]"
+          title={root}
+        >
+          <bdi>{root}</bdi>
         </dd>
         {info.status === "ready" ? (
           <>
@@ -488,7 +522,7 @@ function RailFooter({ root, info }: { root: string; info: ServerInfoState }) {
 
 function BoardSkeleton() {
   return (
-    <div aria-hidden="true" className="grid grid-cols-4 gap-3 p-4">
+    <div aria-hidden="true" className="grid grid-cols-5 gap-4 p-4">
       {COLUMNS.map((column) => (
         <div key={column.id} className="flex flex-col gap-2">
           <div className="h-5 border-t-3 border-rule" />

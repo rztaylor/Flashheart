@@ -41,9 +41,10 @@ Obsidian without Flashheart running.
 
 - Runs locally from a terminal (`flashheart`), opens a private loopback tab,
   and stops when the user quits or closes the last tab.
-- Board files live in `~/reports/Kanban/<project>/` in column directories
-  (`todo`, `in-progress`, `ready-to-review`, `done`); external edits from
-  editors, Obsidian and agents appear live.
+- Board files live in `~/reports/Kanban/<project>/tickets/`, a folder per
+  ticket (`FH-42-<slug>/`) with its status in frontmatter (Backlog, Up next,
+  In progress, Ready to review, Done); external edits from editors and
+  agents appear live.
 - Alongside the board: agent chat windows, terminals, editors, Git branches
   and worktrees, pull requests, screenshots agents capture for review.
 

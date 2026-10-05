@@ -1,4 +1,10 @@
-import { type KeyboardEvent, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   type Card,
@@ -11,7 +17,9 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
+import { type PaintMode, paintFor, paintKey } from "../../model/paint";
 import type { Density } from "../filters/FilterBar";
+import { ColourKey } from "./ColourKey";
 import { LineLegend } from "./LineLegend";
 import { TicketCard } from "./TicketCard";
 
@@ -22,6 +30,7 @@ interface BoardViewProps {
   legend?: { project: string; workstreams: WorkstreamBrief[] };
   projectNames?: Map<string, string>;
   density: Density;
+  paint: PaintMode;
   selected?: TicketRef;
   doneTotal: number;
   doneShown: number;
@@ -39,8 +48,9 @@ const keyMoves: Record<string, GridMove> = {
   End: "end",
 };
 
-// BoardView shows real columns in workflow order (VIEW-1). Arrow keys move
-// between cards; Enter opens one.
+// BoardView shows real columns in workflow order (VIEW-1) on the platform
+// ground. Arrow keys move between cards; Enter opens one. When a card opens
+// and the panel narrows the board, its column scrolls back into view.
 export function BoardView(props: BoardViewProps) {
   const {
     cards,
@@ -49,6 +59,7 @@ export function BoardView(props: BoardViewProps) {
     legend,
     projectNames,
     density,
+    paint,
     selected,
     doneTotal,
     doneShown,
@@ -81,6 +92,21 @@ export function BoardView(props: BoardViewProps) {
     : { column: firstNonEmpty, row: 0 };
 
   const keyOf = (column: number, row: number) => `${column}:${row}`;
+  const paints = useMemo(
+    () => paintKey(cards, paint, new Date()),
+    [cards, paint],
+  );
+
+  // Keep the selected card (and so its column) in view as the panel opens
+  // beside the board, without moving focus.
+  const selectedID = selected?.id;
+  useLayoutEffect(() => {
+    if (!selectedID) return;
+    const node = [...refs.current.values()].find(
+      (element) => element.dataset.ticket === selectedID,
+    );
+    node?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [selectedID]);
   const onKey = (event: KeyboardEvent<HTMLButtonElement>) => {
     const move = keyMoves[event.key];
     if (!move) return;
@@ -97,37 +123,44 @@ export function BoardView(props: BoardViewProps) {
     card.workstream;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {legend ? (
-        <LineLegend
-          workstreams={legend.workstreams}
-          lines={lines.get(legend.project) ?? new Map()}
-          focused={focusedLine}
-          onFocus={setFocusedLine}
-        />
+    <div className="platform-ground flex h-full min-h-0 flex-col">
+      {(legend && legend.workstreams.length > 0) || paints.length > 0 ? (
+        <div className="flex items-center justify-between gap-x-6 overflow-x-auto px-4 pt-3 pb-1 [&>*]:shrink-0">
+          {legend ? (
+            <LineLegend
+              workstreams={legend.workstreams}
+              lines={lines.get(legend.project) ?? new Map()}
+              focused={focusedLine}
+              onFocus={setFocusedLine}
+            />
+          ) : (
+            <span />
+          )}
+          <ColourKey mode={paint} paints={paints} />
+        </div>
       ) : null}
-      <div className="board-grid grid min-h-0 flex-1 grid-cols-[repeat(5,minmax(15rem,1fr))] overflow-x-auto px-4 pt-4">
+      <div className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(5,minmax(15rem,1fr))] gap-x-5 overflow-x-auto px-4 pt-4">
         {columns.map((column, columnIndex) => (
           <section
             key={column.id}
             data-column={column.id}
             aria-labelledby={`column-${column.id}`}
-            className="flex min-h-0 flex-col border-l border-rule px-3 first:border-l-0 first:pl-0 last:pr-0"
+            className="flex min-h-0 snap-start flex-col"
           >
             <h2
               id={`column-${column.id}`}
               className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-3 text-md station-sign"
             >
               <span>{column.title}</span>
-              <span className="text-xs text-ink-muted">
+              <span className="text-sm font-semibold text-ink">
                 {column.id === "done" && doneTotal > column.cards.length
                   ? `${column.cards.length} of ${doneTotal}`
                   : column.cards.length}
               </span>
             </h2>
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-4">
+            <div className="-mx-2 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2 pt-0.5 pb-6">
               {column.cards.length === 0 ? (
-                <p className="px-2 py-6 text-center text-xs text-ink-faint">
+                <p className="px-2 py-6 text-center text-xs text-ink-muted">
                   {column.id === "in-progress"
                     ? "Nothing in progress"
                     : "No tickets"}
@@ -155,6 +188,7 @@ export function BoardView(props: BoardViewProps) {
                       card.workstream ? workstreamTitle(card) : undefined
                     }
                     density={density}
+                    paint={paintFor(card, paint, now)}
                     dimmed={
                       focusedLine !== "" && card.workstream !== focusedLine
                     }

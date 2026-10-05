@@ -58,6 +58,12 @@ function column(page, name) {
   return page.getByRole("region", { name });
 }
 
+async function colourBy(page, option) {
+  await page.getByRole("combobox", { name: "Colour by" }).selectOption({
+    label: option,
+  });
+}
+
 function card(page, title) {
   return page.getByRole("button", { name: new RegExp(`^${title},`) });
 }
@@ -199,6 +205,61 @@ test("the card panel explains, links and renders without raw HTML", async () => 
   await expect(
     page.getByRole("complementary", { name: "Ticket FH-26" }),
   ).toBeVisible();
+});
+
+test("the panel sits beside the board and keeps the card's column in view", async () => {
+  const page = shared;
+  await open(page, "#/p/flashheart/board", { width: 1280, height: 800 });
+  await card(page, "axe-core checks in both themes").click();
+  const panel = page.getByRole("complementary", { name: "Ticket FH-31" });
+  await expect(panel).toBeVisible();
+  const origin = column(page, "Ready to review");
+  const board = page.locator(".board-grid");
+  await expect(async () => {
+    const [box, panelBox, boardBox] = await Promise.all([
+      origin.boundingBox(),
+      panel.boundingBox(),
+      board.boundingBox(),
+    ]);
+    // The panel does not cover the board, and the origin column is whole.
+    expect(boardBox.x + boardBox.width).toBeLessThanOrEqual(panelBox.x + 1);
+    expect(box.x).toBeGreaterThanOrEqual(boardBox.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(
+      boardBox.x + boardBox.width + 1,
+    );
+  }).toPass();
+  // Every other column is reachable by scrolling the board.
+  await board.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await expect(column(page, "Backlog")).toBeInViewport();
+  await board.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(column(page, "Done")).toBeInViewport();
+  await page.keyboard.press("Escape");
+});
+
+test("cards are coloured by type, priority, age or not at all", async () => {
+  const page = shared;
+  await open(page, "#/p/flashheart/board");
+  const locked = card(page, "Locked atomic ticket writes");
+  const focus = card(page, "Focus ring invisible on the dark signage band");
+  await expect(locked).toHaveAttribute("data-paint", "type-feature");
+  await expect(focus).toHaveAttribute("data-paint", "type-bug");
+  await expect(
+    page.getByRole("list", { name: "Card colours by type" }),
+  ).toContainText("bug");
+
+  await colourBy(page, "Priority");
+  await expect(locked).toHaveAttribute("data-paint", "priority-high");
+  await expect(locked).toContainText("High");
+  await colourBy(page, "Age");
+  await expect(locked).toHaveAttribute("data-paint", "age-today");
+  await colourBy(page, "None");
+  await expect(locked).not.toHaveAttribute("data-paint");
+  await expect(page.getByRole("list", { name: /Card colours/ })).toHaveCount(0);
+  await colourBy(page, "Type");
 });
 
 test("arrow keys move between cards and filters narrow the board", async () => {
