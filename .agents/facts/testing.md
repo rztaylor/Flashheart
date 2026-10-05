@@ -13,6 +13,9 @@
   `.cache/playwright-screenshots/`) and axe-core; required for visible UI
   changes. It drives the real binary with `PATH=/nonexistent` so the
   manual-URL path opens the page, against a copy of `testdata/boards/sample`.
+- CI runs `scripts/check.sh` on ubuntu-latest and macos-latest and
+  `scripts/e2e.sh` on ubuntu-latest for every pull request and push to
+  `main`.
 - Tests never touch the real board root or real agent configuration: use
   temporary directories, `testdata/boards/` copies, and fixture config files.
 - Hook adapters are tested against recorded, scrubbed payloads in
