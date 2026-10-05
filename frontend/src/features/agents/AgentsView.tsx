@@ -12,7 +12,7 @@ import {
   agentName,
   type LaneRun,
   laneRuns,
-  permissionReason,
+  needsReason,
   STATE_LABEL,
 } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
@@ -192,6 +192,7 @@ function LaneSection({
             <li key={entry.run.id} className="border-b border-rule">
               <RunRow
                 run={entry.run}
+                subagents={entry.children}
                 projectKey={keys?.get(entry.run.project)}
                 expanded={open === entry.run.id}
                 onToggle={() => onToggle(entry.run.id)}
@@ -243,6 +244,8 @@ interface RunRowProps {
   now: Date;
   onOpen(ticket: TicketRef): void;
   subagent?: boolean;
+  // subagents are a session's subagents, to say which one needs you.
+  subagents?: Run[];
 }
 
 function RunRow({
@@ -255,6 +258,7 @@ function RunRow({
   now,
   onOpen,
   subagent,
+  subagents = [],
 }: RunRowProps) {
   const detailId = useId();
   const name = subagent
@@ -262,7 +266,7 @@ function RunRow({
     : agentName(run.agent);
   const note =
     run.state === "needs-you"
-      ? permissionReason(run.permission)
+      ? needsReason(run, subagents)
       : run.noHandoff
         ? "No handoff since its edits"
         : "";

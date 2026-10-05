@@ -8,13 +8,20 @@ claude` with recovery notes, runs in serve and the API, Agents view, live
 badges, virtual columns, Runs tab, Needs you badges, the manual hook guide,
 the latency bench (p95 about 6 ms) and the recorder script.
 
+Live check (2026-10-05, user in the Claude desktop app's Code tab with the
+hooks in `~/.claude/settings.json`): a session went Working → Needs you
+(permission, including one raised by its Explore subagent) → Working →
+Ended in the Agents view, with its subagents nested; a resumed session got
+its recovery note and branch link (FH-1). The session made no task list, so
+"with its plan" is shown only by tests.
+
 Remaining (needs a person at the keyboard):
 
-- Record real payloads for the cases `testdata/hooks/claude/MANIFEST.md`
-  lists as documented-only (only `SessionStart`, `UserPromptSubmit` and
-  `SessionEnd` are recorded so far) with `scripts/record-claude-hooks.sh`,
-  and fix any differences the recordings show.
-- The real-session acceptance check below.
+- Record raw payloads for the cases `testdata/hooks/claude/MANIFEST.md`
+  lists as documented-only with `scripts/record-claude-hooks.sh`, and fix
+  any differences the recordings show.
+- A real session that keeps a task list, to see its plan in the Agents
+  view.
 
 ## Goal
 

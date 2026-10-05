@@ -10,7 +10,12 @@ working on, and lifts sessions that need you (a permission prompt) into a
 `flashheart setup claude` will write this configuration for you once the
 `mcp-protocol` roadmap item lands. Until then, add it by hand.
 
-Checked against Claude Code 2.1.288 (2026-10-05).
+Works in the Claude Code CLI, the IDE extensions and the Claude desktop
+app's Code tab, which runs the same Claude Code and reads
+`~/.claude/settings.json` (user-level hooks reach every session; project
+settings are read from the main checkout, not a worktree). Ordinary chats in
+the Claude app do not run Claude Code and have no hooks. Checked against
+Claude Code 2.1.288, CLI and desktop app (2026-10-05).
 
 ## Add the hooks
 

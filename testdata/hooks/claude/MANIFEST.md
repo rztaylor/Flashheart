@@ -20,6 +20,19 @@ Checked 2026-10-05 against Claude Code 2.1.288.
 | Recorded from Claude Code 2.1.288 | `SessionStart/startup`, `UserPromptSubmit/prompt`, `SessionEnd/other` |
 | Documented schema, not yet recorded | every other case |
 
+Live check, 2026-10-05: a session in the Claude desktop app's Code tab
+(which runs the same Claude Code 2.1.288 with `--setting-sources
+user,project,local`) produced, through `flashheart hook claude`, the events
+these fixtures expect for session start and end, prompts, `Read`, `Write`,
+`Edit` and `Bash` tool use, permission requests (with `tool_name`, including
+one from inside an Explore subagent carrying `agent_id`), permission
+notifications, an Explore subagent start, subagent stops and turn ends. That
+confirms the fields the adapter reads, but stores no raw payloads, so those
+cases stay in the second row until recorded. The app also sends
+`SubagentStop` for internal helper agents it never reported starting; the
+run fold ignores those. No session has yet exercised `TodoWrite` or the task
+tools for real.
+
 Re-record with `scripts/record-claude-hooks.sh` when Claude Code changes its
 hook schema, and move cases from the second row to the first as recordings
 replace them. Recorded payloads win over the documentation

@@ -6,6 +6,7 @@ import {
   compactTimeline,
   describeEntry,
   laneRuns,
+  needsReason,
   permissionReason,
   planStations,
 } from "./runs";
@@ -197,4 +198,23 @@ it("says what a run waiting on permission needs", () => {
   expect(permissionReason("Bash")).toBe("Permission for Bash");
   expect(permissionReason("?")).toBe("Waiting for permission");
   expect(permissionReason("")).toBe("Waiting for permission");
+});
+
+it("names the subagent a session is waiting on", () => {
+  const session = run("claude:s", { state: "needs-you" });
+  const explore = run("claude:s/x", {
+    state: "needs-you",
+    agentType: "Explore",
+    permission: "Bash",
+  });
+  expect(needsReason(session, [explore])).toBe(
+    "Explore needs permission for Bash",
+  );
+  expect(needsReason({ ...session, permission: "Edit" }, [explore])).toBe(
+    "Permission for Edit",
+  );
+  expect(needsReason(session, [])).toBe("Waiting for permission");
+  expect(
+    needsReason(session, [{ ...explore, agentType: "", permission: "?" }]),
+  ).toBe("Subagent needs permission");
 });

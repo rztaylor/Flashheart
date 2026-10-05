@@ -175,6 +175,12 @@ func (s *Set) Apply(e events.Event) {
 	if e.Run == "" {
 		return
 	}
+	// A subagent first seen ending did nothing visible (Claude Code's
+	// desktop app stops internal helper agents it never reported starting),
+	// so it is not a run.
+	if _, known := s.runs[e.Run]; !known && e.Kind == events.RunEnd && strings.Contains(e.Run, "/") {
+		return
+	}
 	r := s.run(e)
 	if e.Time.After(r.LastActivity) {
 		r.LastActivity = e.Time

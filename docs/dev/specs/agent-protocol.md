@@ -95,7 +95,8 @@ A run's last event includes its subagents' events. A subagent ends with its
 session, and a session needs you while one of its live subagents does. A
 pending permission is cleared by the run's next `tool.used`, `turn.start`,
 `turn.end`, `permission.resolved` or `run.end`. `run.start` after `run.end`
-(resume) reopens the run. Runs and timelines are derived from the last two
+(resume) reopens the run. A subagent first seen ending (the Claude desktop
+app stops internal helper agents it never reported starting) is not a run. Runs and timelines are derived from the last two
 days of event files.
 
 Flags:

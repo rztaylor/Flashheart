@@ -23,6 +23,18 @@ export function permissionReason(tool: string): string {
     : "Waiting for permission";
 }
 
+// needsReason says why a session needs you: its own permission prompt, or
+// the subagent that is waiting on one.
+export function needsReason(run: Run, children: Run[]): string {
+  if (run.permission) return permissionReason(run.permission);
+  const child = children.find((item) => item.state === "needs-you");
+  if (!child) return permissionReason("");
+  const name = child.agentType || "Subagent";
+  return child.permission && child.permission !== "?"
+    ? `${name} needs permission for ${child.permission}`
+    : `${name} needs permission`;
+}
+
 export function agentName(agent: string): string {
   if (agent === "claude") return "Claude";
   if (agent === "codex") return "Codex";

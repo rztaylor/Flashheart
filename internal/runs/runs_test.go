@@ -337,3 +337,22 @@ func TestViewsAreDerivedCopies(t *testing.T) {
 		t.Fatalf("view changed: %+v", v)
 	}
 }
+
+// Claude Code's desktop app stops internal helper agents it never reported
+// starting; with nothing to show, they are not runs.
+func TestSubagentFirstSeenEndingIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	set := NewSet()
+	set.Apply(start(0))
+	set.Apply(ev(1, session+"/helper", events.RunEnd, events.RunEndData{Reason: "completed"}))
+	if set.Get(session+"/helper") != nil || len(set.Get(session).Children) != 0 {
+		t.Fatal("a subagent seen only ending became a run")
+	}
+	// A subagent seen working before it ends is kept.
+	set.Apply(ev(2, session+"/a1", events.ToolUsed, events.ToolData{Tool: "Read", OK: true}))
+	set.Apply(ev(3, session+"/a1", events.RunEnd, events.RunEndData{}))
+	if set.Get(session+"/a1") == nil {
+		t.Fatal("a working subagent was dropped")
+	}
+}
