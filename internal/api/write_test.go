@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/index"
@@ -156,7 +157,9 @@ func TestRawSaveAndCriteria(t *testing.T) {
 	if after.Criteria.Done != 2 {
 		t.Errorf("criteria = %+v", after.Criteria)
 	}
-	send(t, handler, http.MethodPost, "/api/tickets/AL-3/criteria", CriterionRequest{Index: 9, Checked: true}, http.StatusNotFound, nil)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-3/criteria", CriterionRequest{Base: saved.Hash, Index: 9, Checked: true}, http.StatusNotFound, nil)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-3/criteria", CriterionRequest{Index: 0, Checked: true}, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/raw", RawRequest{Content: "x"}, http.StatusBadRequest, nil)
 
 	raw := strings.Replace(after.Raw, "Fixture ticket.", "Edited in the raw editor.", 1)
 	send(t, handler, http.MethodPut, "/api/tickets/AL-3/raw", RawRequest{Base: saved.Hash, Content: raw}, http.StatusOK, &saved)
@@ -246,5 +249,38 @@ func TestReadOnlyServerRefusesWrites(t *testing.T) {
 	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "done"}, http.StatusNotImplemented, nil)
 	if detail := ticketDetail(t, handler, "AL-2"); detail.Hash != "" {
 		t.Error("read-only detail has a hash")
+	}
+}
+
+// The detail an edit is based on matches the hash it sends, even before the
+// snapshot catches up with a change on disk.
+func TestTicketDetailMatchesItsHash(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	ticketDetail(t, handler, "BE-1")
+	writeFile(t, filepath.Join(root, "beta", "tickets", "BE-1-hello", "BE-1-hello.md"),
+		"---\nid: BE-1\nstatus: backlog\n---\n# Renamed on disk\n\n## Acceptance Criteria\n\n- [ ] New first\n- [ ] Old\n")
+	detail := ticketDetail(t, handler, "BE-1")
+	if detail.Title != "Renamed on disk" || len(detail.CriteriaItems) != 2 || detail.CriteriaItems[0].Text != "New first" ||
+		!strings.Contains(detail.Raw, "Renamed on disk") {
+		t.Errorf("detail = %+v", detail.Card)
+	}
+}
+
+func TestTitlesAreMeasuredInCharacters(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := writableAPI(t)
+	title := strings.Repeat("é", 300)
+	base := ticketDetail(t, handler, "AL-4").Hash
+	send(t, handler, http.MethodPatch, "/api/tickets/AL-4", map[string]any{"base": base, "fields": map[string]any{"title": title}}, http.StatusOK, nil)
+	if got := ticketDetail(t, handler, "AL-4").Title; got != title {
+		t.Errorf("title = %q", got)
+	}
+	var created CreateResponse
+	send(t, handler, http.MethodPost, "/api/projects/beta/tickets", CreateRequest{Title: "a" + strings.Repeat("é", 400)}, http.StatusCreated, &created)
+	if got := ticketDetail(t, handler, created.ID).Title; !utf8.ValidString(got) || utf8.RuneCountInString(got) != 300 {
+		t.Errorf("created title has %d runes, valid=%v", utf8.RuneCountInString(got), utf8.ValidString(got))
 	}
 }

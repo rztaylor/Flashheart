@@ -133,7 +133,7 @@ The title is the first `#` heading. Unknown keys are preserved in place
 
 A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content
-hash they read. Every write by Flashheart stamps `updated`. The folder never
+hash they read. Every ticket write by Flashheart stamps `updated`. The folder never
 moves except to `.archive/`.
 
 ### References in text

@@ -41,6 +41,13 @@ export function Dialog({
         event.preventDefault();
         onClose();
       }}
+      // Escape closes only the dialog, not the panel underneath it.
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }}
       className={`m-auto max-h-[min(44rem,90vh)] ${wide ? "w-[min(calc(100vw-2rem),60rem)]" : "w-[min(calc(100vw-2rem),32rem)]"} overflow-hidden rounded-panel border border-rule bg-card p-0 text-ink shadow-panel`}
     >
       <div className="flex max-h-[inherit] flex-col">

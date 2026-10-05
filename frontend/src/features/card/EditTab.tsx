@@ -1,5 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
-
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
   COLUMNS,
   type TicketDetail,
@@ -17,10 +16,8 @@ import {
 import { Button } from "../../components/Button";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
 import { SegmentedControl } from "../../components/SegmentedControl";
+import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 import { ConflictDialog } from "../editing/ConflictDialog";
-
-const TYPES = ["feature", "bug", "infra", "test", "refactor", "docs", "spike"];
-const PRIORITIES = ["high", "medium", "low"];
 
 interface Form {
   title: string;
@@ -35,6 +32,10 @@ interface Form {
 }
 
 const lists: (keyof Form)[] = ["depends-on", "tags"];
+
+function baseOf(detail: TicketDetail) {
+  return { hash: detail.hash, form: formOf(detail), raw: detail.raw };
+}
 
 function formOf(detail: TicketDetail): Form {
   return {
@@ -85,22 +86,38 @@ export function EditTab({
   workstreams: WorkstreamBrief[];
   onSaved(saved: Saved | undefined, what: string): void;
 }) {
-  const saved = formOf(detail);
+  // base is the version of the file the drafts started from. Edits are
+  // measured against it and saved with its hash, so a change on disk since
+  // then is a conflict, never a silent overwrite (STO-3, EDIT-7).
+  const [base, setBase] = useState(() => baseOf(detail));
   const [mode, setMode] = useState<"fields" | "raw">("fields");
-  const [form, setForm] = useState<Form>(saved);
-  const [raw, setRaw] = useState(detail.raw);
+  const [form, setForm] = useState<Form>(base.form);
+  const [raw, setRaw] = useState(base.raw);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
-  const edits = changes(form, saved);
+  // adopt takes the next version of the file after a save or a reload.
+  const adopt = useRef(false);
+  const latest = useRef(detail);
+  latest.current = detail;
+  const edits = changes(form, base.form);
   const dirty = Object.keys(edits).length > 0;
-  const rawDirty = raw !== detail.raw;
+  const rawDirty = raw !== base.raw;
 
-  // Follow the file when it changes on disk, unless there are unsaved edits.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only when the file itself changes.
+  const reset = (from: TicketDetail) => {
+    const next = baseOf(from);
+    setBase(next);
+    setForm(next.form);
+    setRaw(next.raw);
+  };
+  // Follow the file while nothing is being edited, and after a save.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the file itself changes.
   useEffect(() => {
-    if (!dirty) setForm(formOf(detail));
-    if (!rawDirty) setRaw(detail.raw);
+    if (detail.hash === base.hash) return;
+    if (adopt.current || (!dirty && !rawDirty)) {
+      adopt.current = false;
+      reset(detail);
+    }
   }, [detail.hash]);
 
   const run = async (
@@ -111,7 +128,11 @@ export function EditTab({
     setBusy(true);
     setError("");
     try {
-      onSaved(await save(), what);
+      const result = await save();
+      // Live updates may already have brought the saved version.
+      if (latest.current.hash === result.hash) reset(latest.current);
+      else adopt.current = true;
+      onSaved(result, what);
     } catch (caught) {
       const conflict = conflictOf(caught);
       if (conflict) setPending(onConflict(conflict));
@@ -124,14 +145,14 @@ export function EditTab({
   const saveFields = (event: FormEvent) => {
     event.preventDefault();
     void run(
-      () => patchTicket(fetcher, detail.id, detail.hash, edits),
+      () => patchTicket(fetcher, detail.id, base.hash, edits),
       "Saved",
       (conflict) => ({ kind: "fields", fields: edits, conflict }),
     );
   };
   const saveText = () =>
     run(
-      () => saveRaw(fetcher, detail.id, detail.hash, raw),
+      () => saveRaw(fetcher, detail.id, base.hash, raw),
       "Saved the file",
       (conflict) => ({ kind: "raw", content: raw, conflict }),
     );
@@ -175,7 +196,7 @@ export function EditTab({
             </FormField>
             <FormField label="Type">
               <Select value={form.type} onChange={set("type")}>
-                {[...new Set([...TYPES, form.type].filter(Boolean))].map(
+                {[...new Set([...TICKET_TYPES, form.type].filter(Boolean))].map(
                   (item) => (
                     <option key={item}>{item}</option>
                   ),
@@ -249,7 +270,7 @@ export function EditTab({
             <Button
               variant="quiet"
               disabled={!dirty || busy}
-              onClick={() => setForm(saved)}
+              onClick={() => setForm(base.form)}
             >
               Discard
             </Button>
@@ -280,7 +301,7 @@ export function EditTab({
             <Button
               variant="quiet"
               disabled={!rawDirty || busy}
-              onClick={() => setRaw(detail.raw)}
+              onClick={() => setRaw(base.raw)}
             >
               Discard
             </Button>
@@ -309,8 +330,10 @@ export function EditTab({
           onCancel={() => setPending(null)}
           onReload={() => {
             setPending(null);
-            setForm(saved);
-            setRaw(detail.raw);
+            // Take the version on disk now, and any newer one the reload
+            // brings.
+            reset(detail);
+            adopt.current = true;
             onSaved(undefined, "Reloaded");
           }}
           onOverwrite={() => {

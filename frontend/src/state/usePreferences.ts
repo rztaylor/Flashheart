@@ -21,7 +21,9 @@ export function usePreferences(fetcher: AuthenticatedFetch, enabled: boolean) {
   const [loaded, setLoaded] = useState(false);
   const latest = useRef<Preferences>(defaultPreferences);
   const timer = useRef<number | undefined>(undefined);
-  const saving = useRef(true);
+  // Nothing is saved until the saved preferences have loaded, so an early
+  // change cannot overwrite them with defaults.
+  const saving = useRef(false);
 
   useEffect(() => {
     if (!enabled) return;
@@ -29,16 +31,18 @@ export function usePreferences(fetcher: AuthenticatedFetch, enabled: boolean) {
     fetchPreferences(fetcher, controller.signal)
       .then((saved) => {
         latest.current = saved;
+        saving.current = true;
         setPreferences(saved);
         setLoaded(true);
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        saving.current = false;
         setLoaded(true);
       });
     return () => controller.abort();
   }, [fetcher, enabled]);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const update = useCallback(
     (change: (current: Preferences) => Preferences) => {

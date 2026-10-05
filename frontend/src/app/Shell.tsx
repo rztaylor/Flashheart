@@ -196,7 +196,7 @@ export function Shell({
     // Remember what opened the panel (a card, row or station) so Escape can
     // return focus there; links inside the panel keep the original opener.
     const active = document.activeElement;
-    if (active instanceof HTMLElement && !active.closest("aside")) {
+    if (active instanceof HTMLElement && !active.closest("aside, dialog")) {
       opener.current = active;
     }
     go({ ticket });
@@ -204,9 +204,15 @@ export function Shell({
   const closeTicket = useCallback(() => {
     navigate({ ...route, ticket: undefined });
     const element = opener.current;
+    const id = route.ticket?.id;
     opener.current = null;
     window.setTimeout(() => {
+      // Return to what opened the panel, or else to the ticket's own card.
       if (element?.isConnected) element.focus();
+      else if (id)
+        document
+          .querySelector<HTMLElement>(`[data-ticket="${CSS.escape(id)}"]`)
+          ?.focus();
     }, 0);
   }, [navigate, route]);
   const workstreamTitle = (project: string, slug: string) =>

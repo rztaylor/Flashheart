@@ -194,8 +194,15 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
   const saved = await readTicket("FH-36-split-api");
   expect(saved).toContain("# Split API handlers by resource and verb");
   expect(saved).toContain("priority: high");
+  // The raw editor shows the version just saved.
+  await panel.getByText("Raw file", { exact: true }).click();
+  await expect(panel.getByRole("textbox", { name: "Ticket file" })).toHaveValue(
+    /priority: high/,
+  );
+  await panel.getByText("Fields", { exact: true }).click();
 
-  // Another writer changes the file while the form has unsaved edits.
+  // Another writer changes the file while the form has unsaved edits; the
+  // change arrives by live update before the save, and still conflicts.
   await panel
     .getByRole("textbox", { name: "Branch" })
     .fill("feature/split-api");
@@ -203,6 +210,7 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
     ticketFile("FH-36-split-api"),
     saved.replace("priority: high", "priority: low"),
   );
+  await expect(panel.getByText("low priority")).toBeVisible();
   await panel.getByRole("button", { name: "Save changes" }).click();
   const conflict = page.getByRole("dialog", {
     name: "FH-36 changed while you were editing",
@@ -358,7 +366,9 @@ test("the Edit tab and dialogs are accessible in dark", async () => {
   await page.screenshot({
     path: resolve(screenshotDir, "new-ticket-1440-dark.png"),
   });
+  // Escape closes the dialog only; the panel under it stays open.
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(panel).toBeVisible();
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
 });

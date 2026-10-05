@@ -11,7 +11,9 @@ export interface ToastMessage {
   action?: { label: string; run(): void };
 }
 
+// An action such as Undo stays long enough to reach by keyboard.
 const DISMISS_MS = 8_000;
+const ACTION_DISMISS_MS = 20_000;
 
 // Toast announces the result of an edit in a polite live region at the foot
 // of the screen, with an optional action such as Undo.
@@ -24,7 +26,10 @@ export function Toast({
 }) {
   useEffect(() => {
     if (!message) return;
-    const timer = window.setTimeout(onDismiss, DISMISS_MS);
+    const timer = window.setTimeout(
+      onDismiss,
+      message.action ? ACTION_DISMISS_MS : DISMISS_MS,
+    );
     return () => window.clearTimeout(timer);
   }, [message, onDismiss]);
   return (

@@ -389,6 +389,22 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// With the write side, show the ticket parsed from the same bytes as the
+	// hash an edit will send, so an edit never applies to content the user
+	// did not see (STO-3).
+	var hash, raw string
+	if b.write != nil {
+		if data, current, err := b.write.ReadTicket(project.Name, ticket.ID); err == nil {
+			fresh := board.ParseTicket(ticket.Folder, data)
+			fresh.Modified = ticket.Modified
+			for _, warning := range ticket.Warnings {
+				if !slices.Contains(fresh.Warnings, warning) {
+					fresh.Warnings = append(fresh.Warnings, warning)
+				}
+			}
+			ticket, hash, raw = fresh, current, string(data)
+		}
+	}
 	detail := TicketDetail{
 		Card:                 card(snapshot, project, ticket, true),
 		Body:                 ticket.Body,
@@ -415,11 +431,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 			URL: filesURL(project.Name, ticket.ID) + url.PathEscape(attachment.File),
 		})
 	}
-	if b.write != nil {
-		if data, hash, err := b.write.ReadTicket(project.Name, ticket.ID); err == nil {
-			detail.Hash, detail.Raw = hash, string(data)
-		}
-	}
+	detail.Hash, detail.Raw = hash, raw
 	writeJSON(w, http.StatusOK, TicketResponse{Revision: snapshot.Revision, Ticket: detail})
 }
 

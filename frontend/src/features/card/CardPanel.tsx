@@ -89,9 +89,12 @@ export function CardPanel({
   };
   const toggle =
     editable && detail && editing
-      ? (index: number, checked: boolean) =>
-          void setCriterion(fetcher, detail.id, detail.hash, index, checked)
-            .then(() => resource.reload())
+      ? (index: number, checked: boolean): Promise<boolean> =>
+          setCriterion(fetcher, detail.id, detail.hash, index, checked)
+            .then(() => {
+              resource.reload();
+              return true;
+            })
             .catch((error: unknown) => {
               resource.reload();
               editing.notify({
@@ -99,6 +102,7 @@ export function CardPanel({
                   ? `${detail.id} changed on disk; showing the current criteria.`
                   : `Not saved: ${error instanceof Error ? error.message : "unknown error"}`,
               });
+              return false;
             })
       : undefined;
   const body = (current: TicketDetail) => {
@@ -337,7 +341,8 @@ function Criterion({
 }: {
   text: string;
   done: boolean;
-  onToggle(checked: boolean): void;
+  // onToggle resolves false when the change was not saved.
+  onToggle(checked: boolean): Promise<boolean>;
 }) {
   const [checked, setChecked] = useState(done);
   useEffect(() => setChecked(done), [done]);
@@ -347,8 +352,11 @@ function Criterion({
         type="checkbox"
         checked={checked}
         onChange={(event) => {
-          setChecked(event.target.checked);
-          onToggle(event.target.checked);
+          const next = event.target.checked;
+          setChecked(next);
+          void onToggle(next).then((ok) => {
+            if (!ok) setChecked(done);
+          });
         }}
         className="mt-[0.2em] size-3.5 shrink-0 accent-[var(--fh-ink)]"
       />
@@ -367,7 +375,7 @@ function TicketTab({
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
   // onToggle ticks or unticks a criterion (CARD-3); absent when read-only.
-  onToggle?(index: number, checked: boolean): void;
+  onToggle?(index: number, checked: boolean): Promise<boolean>;
 }) {
   const done = detail.criteriaItems.filter((item) => item.done).length;
   // Criteria are addressed by position in the file, and their text may

@@ -405,3 +405,36 @@ func TestUpdateConfigWritesUnderTheRootLock(t *testing.T) {
 		t.Errorf("missing config = %q, %v", data, err)
 	}
 }
+
+func TestCreateTicketKeepsACRLFProjectFile(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	write(t, filepath.Join(root, "app", "project.yaml"), "name: My App\r\nrepos:\r\n  - /src/app\r\n")
+	for range 2 {
+		if _, err := s.CreateTicket("app", NewTicket{Title: "First"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	data, _ := os.ReadFile(filepath.Join(root, "app", "project.yaml"))
+	if string(data) != "name: My App\r\nrepos:\r\n  - /src/app\r\nkey: APP\r\nnext_id: 3\r\n" {
+		t.Errorf("project.yaml = %q", data)
+	}
+	project, _ := s.ReadProject("app")
+	if project.DisplayName != "My App" || len(project.Repos) != 1 {
+		t.Errorf("project = %+v", project)
+	}
+}
+
+func TestCreateTicketWritesNothingWhenProjectFileIsBroken(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	write(t, filepath.Join(root, "app", "project.yaml"), "name: [oops\n")
+	if _, err := s.CreateTicket("app", NewTicket{Title: "First"}); err == nil {
+		t.Fatal("CreateTicket succeeded with a broken project.yaml")
+	}
+	if entries, _ := os.ReadDir(filepath.Join(root, "app", "tickets")); len(entries) != 0 {
+		t.Errorf("tickets written: %d", len(entries))
+	}
+}

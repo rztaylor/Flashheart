@@ -1,14 +1,11 @@
 import { type FormEvent, useId, useState } from "react";
-
 import { COLUMNS, type Column, type ProjectSummary } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { type Created, createTicket, keysInUse } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
-
-const TYPES = ["feature", "bug", "infra", "test", "refactor", "docs", "spike"];
-const PRIORITIES = ["high", "medium", "low"];
+import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 
 const ticketCount = (project: ProjectSummary) =>
   COLUMNS.reduce((sum, column) => sum + project.counts[column.id], 0);
@@ -104,7 +101,15 @@ export function NewTicketDialog({
       <form id={formId} onSubmit={submit} className="flex flex-col gap-3">
         {projects.length > 1 && !initialProject ? (
           <FormField label="Project">
-            <Select value={projectName} onChange={setProjectName}>
+            <Select
+              value={projectName}
+              onChange={(name) => {
+                setProjectName(name);
+                // Key and workstream belong to the chosen project.
+                setKey(projects.find((item) => item.name === name)?.key ?? "");
+                setWorkstream("");
+              }}
+            >
               {projects.map((item) => (
                 <option key={item.name} value={item.name}>
                   {item.displayName}
@@ -139,7 +144,7 @@ export function NewTicketDialog({
         <div className="grid grid-cols-3 gap-3">
           <FormField label="Type">
             <Select value={type} onChange={setType}>
-              {TYPES.map((item) => (
+              {TICKET_TYPES.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </Select>

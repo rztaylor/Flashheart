@@ -386,11 +386,17 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if err != nil {
 		return Created{}, err
 	}
+	// Prepare project.yaml first, so a file that cannot be edited stops the
+	// create before anything is written.
+	projectFile, err := s.projectFields(project, key, number+1)
+	if err != nil {
+		return Created{}, err
+	}
 	if err := s.WriteFileAtomic(name, data); err != nil {
 		return Created{}, err
 	}
 	created.Hash = Hash(data)
-	if err := s.setProjectFields(project, key, number+1); err != nil {
+	if err := projectFile.write(s); err != nil {
 		return created, err
 	}
 	return created, nil
@@ -586,35 +592,57 @@ func (s *Store) SetProjectKey(project, key string) error {
 	return s.setProjectFields(project, chosen, 0)
 }
 
-// setProjectFields writes key and, when positive, next_id into project.yaml,
-// keeping its other lines.
-func (s *Store) setProjectFields(project, key string, nextID int) error {
+// projectEdit is project.yaml's new content, written only when it changed.
+type projectEdit struct {
+	name    string
+	data    []byte
+	changed bool
+}
+
+func (e projectEdit) write(s *Store) error {
+	if !e.changed {
+		return nil
+	}
+	return s.WriteFileAtomic(e.name, e.data)
+}
+
+// projectFields computes project.yaml with key and, when positive, next_id
+// set, keeping its other lines and line endings.
+func (s *Store) projectFields(project, key string, nextID int) (projectEdit, error) {
 	name := path.Join(project, "project.yaml")
 	data, err := s.ReadFile(name)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
+		return projectEdit{}, err
+	}
+	crlf := bytes.Contains(data, []byte("\r\n"))
+	text := strings.ReplaceAll(string(data), "\r\n", "\n")
+	if text != "" && !strings.HasSuffix(text, "\n") {
+		text += "\n"
 	}
 	// project.yaml is plain YAML; edit it as frontmatter of an empty body.
-	doc := append([]byte("---\n"), data...)
-	if len(data) > 0 && !bytes.HasSuffix(data, []byte("\n")) {
-		doc = append(doc, '\n')
-	}
-	doc = append(doc, []byte("---\n")...)
-	doc, err = mdfile.SetScalar(doc, "key", key)
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+	doc := []byte("---\n" + text + "---\n")
+	if doc, err = mdfile.SetScalar(doc, "key", key); err != nil {
+		return projectEdit{}, fmt.Errorf("%s: %w", name, err)
 	}
 	if nextID > 0 {
-		doc, err = mdfile.SetScalar(doc, "next_id", strconv.Itoa(nextID))
-		if err != nil {
-			return fmt.Errorf("%s: %w", name, err)
+		if doc, err = mdfile.SetScalar(doc, "next_id", strconv.Itoa(nextID)); err != nil {
+			return projectEdit{}, fmt.Errorf("%s: %w", name, err)
 		}
 	}
 	out := strings.TrimSuffix(strings.TrimPrefix(string(doc), "---\n"), "---\n")
-	if out == string(data) {
-		return nil
+	if crlf {
+		out = strings.ReplaceAll(out, "\n", "\r\n")
 	}
-	return s.WriteFileAtomic(name, []byte(out))
+	return projectEdit{name: name, data: []byte(out), changed: out != string(data)}, nil
+}
+
+// setProjectFields writes key and next_id into project.yaml.
+func (s *Store) setProjectFields(project, key string, nextID int) error {
+	edit, err := s.projectFields(project, key, nextID)
+	if err != nil {
+		return err
+	}
+	return edit.write(s)
 }
 
 // Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8).

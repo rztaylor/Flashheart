@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/config"
@@ -85,8 +86,12 @@ func writeStoreError(w http.ResponseWriter, err error) {
 			Code    string `json:"code"`
 			Message string `json:"message"`
 		}
+		message := "This ticket changed since you opened it."
+		if conflict.Name == "workstream" || strings.Contains(conflict.Name, "/workstreams/") {
+			message = "This workstream's tickets changed since you opened it."
+		}
 		writeJSON(w, http.StatusConflict, map[string]any{
-			"error":   body{Code: "conflict", Message: "This ticket changed since you opened it."},
+			"error":   body{Code: "conflict", Message: message},
 			"current": ConflictJSON{Hash: conflict.Hash, Content: string(conflict.Current)},
 		})
 	case errors.As(err, &taken):
@@ -209,12 +214,22 @@ func plural(n int, one, many string) string {
 	return many
 }
 
+// oneLine joins whitespace and keeps at most limit characters.
 func oneLine(value string, limit int) string {
 	value = strings.Join(strings.Fields(value), " ")
-	if len(value) > limit {
-		value = value[:limit]
+	if runes := []rune(value); len(runes) > limit {
+		value = string(runes[:limit])
 	}
 	return value
+}
+
+// requireBase refuses an edit without the hash it was based on (STO-3).
+func requireBase(w http.ResponseWriter, base string) bool {
+	if base == "" {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Edits must send the hash of the ticket they were based on")
+		return false
+	}
+	return true
 }
 
 // PatchRequest is PATCH /api/tickets/{id}: typed frontmatter fields and the
@@ -234,7 +249,7 @@ var (
 func validateField(key, value string) error {
 	switch key {
 	case "title":
-		if strings.TrimSpace(value) == "" || len(value) > 300 {
+		if strings.TrimSpace(value) == "" || utf8.RuneCountInString(value) > 300 {
 			return errors.New("title must be 1 to 300 characters")
 		}
 	case "status":
@@ -262,7 +277,7 @@ func validateField(key, value string) error {
 			return fmt.Errorf("%q is not a ticket id like FH-42", value)
 		}
 	case "branch", "tags":
-		if strings.ContainsAny(value, "\n\r") || len(value) > 200 {
+		if strings.ContainsAny(value, "\n\r") || utf8.RuneCountInString(value) > 200 {
 			return fmt.Errorf("%s must be one line of at most 200 characters", key)
 		}
 	}
@@ -275,7 +290,7 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request PatchRequest
-	if !decode(w, r, &request) {
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
 		return
 	}
 	type change struct {
@@ -358,7 +373,7 @@ func (b boardAPI) putRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request RawRequest
-	if !decode(w, r, &request) {
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
 		return
 	}
 	if len(request.Content) > store.MaxFileBytes {
@@ -396,7 +411,7 @@ func (b boardAPI) setCriterion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request CriterionRequest
-	if !decode(w, r, &request) {
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
 		return
 	}
 	_, project, ticket, ok := b.findTicket(w, r)
@@ -620,9 +635,14 @@ func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "Too many remembered views")
 		return
 	}
+	// Validate before taking the lock, so only real write failures remain.
+	if _, err := config.SetUI(nil, ui); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		return
+	}
 	err := b.write.UpdateConfig(func(data []byte) ([]byte, error) { return config.SetUI(data, ui) })
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		writeStoreError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
