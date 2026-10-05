@@ -30,7 +30,7 @@ Brief: `docs/dev/roadmap-items/board-editing.md`. Branch:
 
 ## Progress
 
-- [ ] 1 mdfile edits
+- [x] 1 mdfile edits
 - [ ] 2 store writes
 - [ ] 3 watching and long-poll
 - [ ] 4 config and preferences
