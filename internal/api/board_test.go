@@ -87,7 +87,7 @@ func TestProjectsListsKeysCountsAndActivity(t *testing.T) {
 
 	handler, root := sampleAPI(t, nil)
 	newer := time.Now().Add(time.Hour)
-	if err := os.Chtimes(filepath.Join(root, "beta", "tickets", "BE-1-hello", "ticket.md"), newer, newer); err != nil {
+	if err := os.Chtimes(filepath.Join(root, "beta", "tickets", "BE-1-hello", "BE-1-hello.md"), newer, newer); err != nil {
 		t.Fatal(err)
 	}
 	var body ProjectsResponse
@@ -175,7 +175,7 @@ func TestDoneColumnIsLimitedUnlessAllIsRequested(t *testing.T) {
 	handler, _ := sampleAPI(t, func(root string) {
 		for n := range 25 {
 			id := fmt.Sprintf("BE-%d", n+10)
-			name := filepath.Join(root, "beta", "tickets", id+"-done", "ticket.md")
+			name := filepath.Join(root, "beta", "tickets", id+"-done", id+"-done.md")
 			writeFile(t, name, "---\nid: "+id+"\nstatus: done\n---\n# Done\n")
 			at := time.Now().Add(time.Duration(n) * time.Minute)
 			_ = os.Chtimes(name, at, at)
@@ -264,7 +264,7 @@ func TestHeldStationsAreBlockedFromOutsideTheirLine(t *testing.T) {
 	t.Parallel()
 
 	handler, _ := sampleAPI(t, func(root string) {
-		path := filepath.Join(root, "alpha", "tickets", "AL-4-drag-and-drop", "ticket.md")
+		path := filepath.Join(root, "alpha", "tickets", "AL-4-drag-and-drop", "AL-4-drag-and-drop.md")
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)

@@ -620,7 +620,7 @@ async function writeProject(root, project, display, rows) {
   for (const item of tickets) {
     const dir = join(root, project, "tickets", item.folder);
     await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, "ticket.md"), item.content);
+    await writeFile(join(dir, `${item.folder}.md`), item.content);
   }
   await writeFile(
     join(root, project, "project.yaml"),
@@ -680,7 +680,7 @@ export async function writeDemoBoard(root) {
     [
       "# Review: Store read side on os.Root",
       "",
-      "**Work Item:** [FH-8](ticket.md)",
+      `**Work Item:** [FH-8](${folders.get("FH-8")}.md)`,
       "",
       "## Summary",
       "",

@@ -30,8 +30,8 @@ All notable changes to this project are documented here. The project follows
   review, handoff and attachments, workstreams with derived status, and
   allow-listed attachment files. Unparseable, oversized or escaping files are
   reported as needing repair instead of being hidden.
-- Board format v2: a folder per ticket (`tickets/FH-42-slug/ticket.md` with
-  `review.md` and `files/`), status in frontmatter, and five columns:
+- Board format v2: a folder per ticket (`tickets/FH-42-slug/FH-42-slug.md`
+  with `review.md` and `files/`), status in frontmatter, and five columns:
   Backlog, Up next, In progress, Ready to review and Done.
 - Ticket ids like `FH-42` from a per-project key, shown on cards, the panel,
   the table and in URLs; search by id; a bare id in ticket or review text

@@ -201,7 +201,8 @@ func TestIndexesFiveThousandTicketsQuickly(t *testing.T) {
 				fmt.Fprintf(&workstream, "  - %s\n", id)
 			}
 			content := fmt.Sprintf("---\nid: %s\nstatus: %s\ntype: feature\ncreated: 2026-10-04\npriority: medium\n%sworkstream: main\ntags: [generated]\n---\n\n# Ticket %d\n\n## Description\n\nGenerated ticket %d for the index benchmark.\n\n## Acceptance Criteria\n\n- [x] One\n- [ ] Two\n\n## Notes\n\nNone.\n", id, column, deps, n, n)
-			path := filepath.Join(root, project, "tickets", fmt.Sprintf("%s-ticket-%d", id, n), "ticket.md")
+			folder := fmt.Sprintf("%s-ticket-%d", id, n)
+			path := filepath.Join(root, project, "tickets", folder, folder+".md")
 			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 				t.Fatal(err)
 			}

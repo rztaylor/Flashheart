@@ -75,7 +75,7 @@ low-token way to find its work, claim it, report progress and hand off.
 |---|---|
 | **Root** | The board directory, default `~/reports/Kanban` (`FLASHHEART_ROOT`, `--root`). |
 | **Project** | A subdirectory of the root, normally one per repository, named after the repository's main checkout. |
-| **Ticket** | One unit of work with a stable id such as `FH-42`: a folder `tickets/FH-42-<slug>/` holding `ticket.md`, its review and copied files. |
+| **Ticket** | One unit of work with a stable id such as `FH-42`: a folder `tickets/FH-42-<slug>/` holding the ticket file `FH-42-<slug>.md`, its review and copied files. |
 | **Ticket id** | `<project key>-<number>`, unique across the root; how humans and agents refer to tickets (`KEY`). |
 | **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. |
 | **Workstream** | An ordered group of tickets with a shared goal; order implies blocking. |
@@ -121,7 +121,8 @@ watches the root and keeps an in-memory index; the UI is optional.
   `<name>-<first 6 hex of sha256(path)>` and both are shown with their paths.
 - `PRJ-4` Agent activity outside any git repository goes to `_scratch`.
 - `PRJ-5` A project directory is created on first agent contact when
-  `auto_create_projects` is on (default on) and can be archived (moved to
+  `auto_create_projects` is on (default on), with a `project.yaml` holding its
+  name and repository but no key yet (`KEY-5`). A project can be archived (moved to
   `<root>/.archive/`) from the UI; Flashheart never deletes a project.
 - `PRJ-6` The UI lists projects with counts per column, active runs and a
   **Needs you** count, sorted by most recent activity; **All projects** shows
@@ -160,8 +161,8 @@ Full format: `docs/dev/specs/board-format.md`.
 ### 6.3 Ticket ids (`KEY`)
 
 - `KEY-1` Every project has a key (2–10 characters, uppercase letter then
-  uppercase letters or digits) recorded in `project.yaml`, unique across the
-  root, derived from the project name until set.
+  uppercase letters or digits) recorded in `project.yaml` and unique across
+  the root. A project without one shows a key derived from its name.
 - `KEY-2` Every ticket has an id `<key>-<number>`, assigned under the project
   lock at creation from `next_id`, never reused or renumbered.
 - `KEY-3` Ids are how tickets are named everywhere: cards, the card panel,
@@ -172,6 +173,15 @@ Full format: `docs/dev/specs/board-format.md`.
   server knows the caller's project (PRJ-2) and its key, and `list_tickets`
   returns open tickets filtered by type, status, priority or text, highest
   priority first (`MCP-7`).
+- `KEY-5` A key is chosen before the project's first ticket and then fixed.
+  Agents choose it, because they know what the project is called in
+  conversation: `board_context` says when a project has no key and suggests
+  one, and the agent sets 2–5 letters with `set_project_key` or with
+  `project_key` on its first `create_ticket`. The UI can set it too. A
+  ticket created with no key chosen records the derived key, adding a digit
+  when it is taken. Keys are assigned under the root lock, so two new
+  projects never get the same key; a taken or invalid key is refused with
+  the keys in use.
 
 ### 6.4 Views (`VIEW`)
 
@@ -302,6 +312,7 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `modelcontextprotocol/go-sdk`.
 - `MCP-2` Tools: `board_context`, `list_tickets`, `get_ticket`, `claim`,
   `release`, `checkpoint`, `update_ticket`, `move`, `create_ticket`,
+  `set_project_key`,
   `write_review`, `attach`, `ask_human`. Tickets are named by id. No delete
   tool exists.
 - `MCP-3` Tool outputs are compact text designed for model context;

@@ -12,7 +12,9 @@ editors, and (later) agents.
 - `internal/store` write side: per-project advisory lock, atomic writes,
   content-hash preconditions, moves as `status` edits, archive and unarchive
   of ticket folders, id assignment from `next_id` (`STO-3`, `EDIT-8`,
-  `KEY-2`).
+  `KEY-2`); choosing a project key under the root lock, refused once the
+  project has tickets, with the derived key (plus a digit when taken)
+  recorded by the first ticket (`KEY-5`).
 - `internal/mdfile` round-trip edits preserving key order, comments and
   unknown keys (`STO-2`); checkbox toggling; section replace (`## Handoff`)
   and append (`## Notes`).
@@ -35,6 +37,9 @@ editors, and (later) agents.
   byte-identical files.
 - An edit made in a text editor appears in an open browser within one second.
 - Every drag action is possible with the keyboard alone (Playwright).
+- Two processes choosing the same key for different projects: one succeeds,
+  the other is refused with the keys in use; a project with tickets refuses a
+  key change.
 
 ## Out of scope
 

@@ -345,13 +345,18 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 			continue
 		}
 		present := map[string]fs.DirEntry{}
+		var files []string
 		for _, entry := range entries {
 			present[entry.Name()] = entry
+			if entry.Type().IsRegular() || entry.Type()&fs.ModeSymlink != 0 {
+				files = append(files, entry.Name())
+			}
 		}
-		if present["ticket.md"] == nil {
+		name, misnamed, ok := board.TicketFile(folder, files)
+		if !ok {
 			continue
 		}
-		file := path.Join(tickets, folder, "ticket.md")
+		file := path.Join(tickets, folder, name)
 		data, info, problem := r.read(file)
 		var ticket board.Ticket
 		if problem != "" {
@@ -363,6 +368,9 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 		}
 		if info != nil {
 			ticket.Modified = info.ModTime()
+		}
+		if misnamed != "" {
+			ticket.Warnings = append(ticket.Warnings, misnamed)
 		}
 		project.Tickets = append(project.Tickets, ticket)
 		if ticket.ID == "" {
@@ -420,6 +428,10 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 	if project.NextID <= highest {
 		project.NextID = highest + 1
 	}
+	// A project with no key is quiet until it owns ids (KEY-5).
+	if project.KeyDerived && project.OwnsIDs() && !slices.ContainsFunc(project.Warnings, func(w string) bool { return strings.HasPrefix(w, "key ") }) {
+		project.Warnings = append(project.Warnings, fmt.Sprintf("no key in project.yaml; using %s until one is set", project.Key))
+	}
 	project.LastModified = r.modified
 	return project, r.parts, nil
 }
@@ -443,7 +455,6 @@ func (r *reader) readProjectFile(project *board.Project) {
 	project.Key, project.KeyDerived = board.DeriveKey(project.Name), true
 	name := path.Join(project.Name, "project.yaml")
 	if !r.exists(name) {
-		project.Warnings = append(project.Warnings, fmt.Sprintf("no key in project.yaml; using %s until one is set", project.Key))
 		return
 	}
 	data, _, problem := r.read(name)
@@ -462,7 +473,6 @@ func (r *reader) readProjectFile(project *board.Project) {
 	project.Repos = parsed.Repos
 	switch key := strings.TrimSpace(parsed.Key); {
 	case key == "":
-		project.Warnings = append(project.Warnings, fmt.Sprintf("no key in project.yaml; using %s until one is set", project.Key))
 	case board.ValidKey(key):
 		project.Key, project.KeyDerived = key, false
 	default:

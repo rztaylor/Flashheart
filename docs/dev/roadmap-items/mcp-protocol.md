@@ -24,6 +24,9 @@ a small MCP tool set, and setup installs everything for Claude Code safely.
 - Ticket ids everywhere (`KEY-3`); `list_tickets` and plain-words requests
   such as "tackle the three top-priority bugs" (`KEY-4`, `MCP-7`,
   agent-protocol §7.3); `create_ticket` assigns the next id (`KEY-2`).
+- Agents choose their project's key: `board_context` asks for one while it is
+  unset, `set_project_key` and `create_ticket`'s `project_key` record it
+  (`KEY-5`), and the protocol text explains how to pick 2–5 letters.
 - Copy files referenced by local path in `write_review` and `checkpoint`
   into the ticket's `files/` before recording them (`REV-5`).
 
@@ -38,6 +41,8 @@ a small MCP tool set, and setup installs everything for Claude Code safely.
   without `--write`, and `--uninstall` restores the original byte for byte.
 - Asked "tackle the top two bugs", a real session lists, claims and works the
   two highest-priority open bug tickets of its own project.
+- In a new project, a real session sets a key it chose before creating its
+  first ticket; a taken key is refused with the keys in use.
 - A review that links a screenshot by absolute path still renders after the
   original file is deleted.
 - A real Claude Code session, against a scratch root, claims a ticket, checkpoints, asks a question,

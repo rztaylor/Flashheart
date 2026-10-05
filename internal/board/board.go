@@ -74,6 +74,32 @@ func ParseFolder(folder string) (string, string, bool) {
 	return match[1], match[2], true
 }
 
+// TicketFile picks a ticket folder's ticket file from the names in it: the
+// file named after the folder (FH-42-slug/FH-42-slug.md), or else a single
+// markdown file named after the folder's id, which happens when a folder is
+// renamed by hand; that case returns a warning. ok is false when there is no
+// ticket file or the choice is ambiguous.
+func TicketFile(folder string, names []string) (file, warning string, ok bool) {
+	want := folder + ".md"
+	if slices.Contains(names, want) {
+		return want, "", true
+	}
+	id, _, parsed := ParseFolder(folder)
+	if !parsed {
+		return "", "", false
+	}
+	var candidates []string
+	for _, name := range names {
+		if name == id+".md" || (strings.HasPrefix(name, id+"-") && strings.HasSuffix(name, ".md")) {
+			candidates = append(candidates, name)
+		}
+	}
+	if len(candidates) != 1 {
+		return "", "", false
+	}
+	return candidates[0], fmt.Sprintf("ticket file %s should be named %s", candidates[0], want), true
+}
+
 // DeriveKey proposes a project key from a directory name: the initials of a
 // multi-word name, otherwise its first three letters, uppercased.
 func DeriveKey(name string) string {
@@ -161,7 +187,7 @@ func (t Ticket) NeedsRepair() bool { return len(t.Repair) > 0 }
 
 var datePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
-// ParseTicket parses tickets/<folder>/ticket.md. It never fails: problems that
+// ParseTicket parses a ticket file, tickets/<folder>/<folder>.md. It never fails: problems that
 // stop the ticket being understood become repair reasons, the rest warnings.
 func ParseTicket(folder string, data []byte) (ticket Ticket) {
 	doc := mdfile.Parse(data)
@@ -424,14 +450,26 @@ func CheckProject(project *Project) {
 	}
 }
 
-// CheckKeys warns on projects that share a key, which makes ids ambiguous.
+// OwnsIDs reports whether the project has tickets, live or archived, so its
+// key is fixed (KEY-5).
+func (p Project) OwnsIDs() bool { return len(p.Tickets) > 0 || len(p.Archived) > 0 }
+
+// CheckKeys warns on projects that share a key, which makes ids ambiguous. A
+// derived key on a project with no tickets is only a suggestion and is
+// skipped.
 func CheckKeys(b *Board) {
 	owners := map[string][]string{}
 	for _, project := range b.Projects {
+		if project.KeyDerived && !project.OwnsIDs() {
+			continue
+		}
 		owners[project.Key] = append(owners[project.Key], project.Name)
 	}
 	for index := range b.Projects {
 		project := &b.Projects[index]
+		if project.KeyDerived && !project.OwnsIDs() {
+			continue
+		}
 		var others []string
 		for _, name := range owners[project.Key] {
 			if name != project.Name {

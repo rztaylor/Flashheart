@@ -1,6 +1,6 @@
 # Review: Board columns
 
-**Work Item:** [AL-2](ticket.md)
+**Work Item:** [AL-2](AL-2-board-columns.md)
 **Branch:** feature/board-columns
 **Date:** 2026-10-03
 

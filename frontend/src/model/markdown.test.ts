@@ -6,18 +6,23 @@ const context = { project: "alpha", ticket: "AL-2" };
 
 describe("resolveLink", () => {
   it("opens tickets for links into ticket folders", () => {
-    expect(resolveLink("../AL-4-drag-and-drop/ticket.md", context)).toEqual({
-      kind: "ticket",
-      id: "AL-4",
-    });
-    expect(resolveLink("ticket.md", context)).toEqual({
+    expect(
+      resolveLink("../AL-4-drag-and-drop/AL-4-drag-and-drop.md", context),
+    ).toEqual({ kind: "ticket", id: "AL-4" });
+    expect(resolveLink("AL-2-board-columns.md", context)).toEqual({
       kind: "ticket",
       id: "AL-2",
     });
-    expect(resolveLink("../BE-1-hello/ticket.md#notes", context)).toEqual({
+    expect(resolveLink("../BE-1-hello/BE-1-hello.md#notes", context)).toEqual({
       kind: "ticket",
       id: "BE-1",
     });
+    // A file named after a different id than its folder is not a ticket link.
+    expect(resolveLink("../BE-1-hello/AL-3-x.md", context)).toEqual({
+      kind: "none",
+    });
+    expect(resolveLink("review.md", context)).toEqual({ kind: "none" });
+    expect(resolveLink("ticket.md", context)).toEqual({ kind: "none" });
     expect(resolveLink("#ticket-AL-9", context)).toEqual({
       kind: "ticket",
       id: "AL-9",

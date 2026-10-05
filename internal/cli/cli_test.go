@@ -485,7 +485,7 @@ func TestMigrateWriteConvertsTheRoot(t *testing.T) {
 	if !strings.Contains(stdout, "Migrated "+root+" to board format v2: 2 projects, 8 tickets.") {
 		t.Errorf("stdout = %q", stdout)
 	}
-	if _, err := os.Stat(filepath.Join(root, "alpha", "tickets", "AL-3-card-panel", "ticket.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "alpha", "tickets", "AL-3-card-panel", "AL-3-card-panel.md")); err != nil {
 		t.Errorf("migrated ticket missing: %v", err)
 	}
 	code, stdout, _ = h.run("migrate", "--write", "--root", root)

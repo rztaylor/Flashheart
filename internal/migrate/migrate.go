@@ -302,7 +302,7 @@ func Apply(s *store.Store, plan Plan) error {
 				data = rewriteList(data, "depends-on", ids)
 				data = []byte(rewriteLinks(string(data), ticket.Folder, folderOf[project.Name], slugs[project.Name]))
 			}
-			if err := s.WriteFileAtomic(path.Join(target, "ticket.md"), data); err != nil {
+			if err := s.WriteFileAtomic(path.Join(target, ticket.Folder+".md"), data); err != nil {
 				return err
 			}
 			if ticket.Review != "" {
@@ -487,9 +487,9 @@ func rewriteLinks(text, current string, folders, ids map[string]string) string {
 		if !ok {
 			return link
 		}
-		newTarget := "../" + folder + "/ticket.md"
+		newTarget := "../" + folder + "/" + folder + ".md"
 		if folder == current {
-			newTarget = "ticket.md"
+			newTarget = folder + ".md"
 		}
 		if label == slug {
 			label = ids[slug]

@@ -214,7 +214,7 @@ Calls with no resolvable run still work for read-only tools and record
 
 | Tool | Input | Effect | Output |
 |---|---|---|---|
-| `board_context` | `project?`, `run?` | none | ≤1,500 tokens: your project and its key; your run and link; your ticket's handoff and unticked criteria; answered questions not yet delivered; other in-progress tickets with holders; the top 5 unblocked Up next tickets by priority (then Backlog when Up next is short) |
+| `board_context` | `project?`, `run?` | none | ≤1,500 tokens: your project and its key, or, when none is chosen yet, a suggested key, the keys in use and a request to set one (`KEY-5`); your run and link; your ticket's handoff and unticked criteria; answered questions not yet delivered; other in-progress tickets with holders; the top 5 unblocked Up next tickets by priority (then Backlog when Up next is short) |
 | `list_tickets` | `project?`, `type?`, `status?` (list; default open: in-progress, up-next, backlog), `priority?`, `tag?`, `blocked?`, `text?`, `limit?` (default 10, max 50) | none | one line per ticket, ordered by status (In progress, Up next, Backlog), then priority, then age: `FH-42 bug high up-next "Title" [blocked: …]` (`MCP-7`) |
 | `get_ticket` | `ticket` (id) | none | ticket markdown, column, blocked reasons, review, files list |
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff |
@@ -222,13 +222,15 @@ Calls with no resolvable run still work for read-only tools and record
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
 | `update_ticket` | `ticket`, `set?` (frontmatter fields), `check?` (criteria text or index), `append_notes?` | frontmatter/body edit with hash precondition | changed fields |
 | `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`) | new column, warnings |
-| `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?` | new ticket folder with the next id (`KEY-2`) | id |
+| `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
+| `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `project_key?` (only for a project with no key yet) | new ticket folder with the next id (`KEY-2`); a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`) | id |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
 | `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" |
 
 Errors are `{code, message, fix}` with codes such as `not_found`,
 `conflict`, `claimed`, `blocked`, `ambiguous_run`, `invalid_input`,
+`key_taken`, `key_fixed`,
 `outside_root`, `type_not_allowed`, `too_large`.
 
 Every `ticket` argument is a ticket id (`FH-42`); the id's key names the
@@ -301,6 +303,9 @@ When `enforce_handoff` is on for the project, at `Stop`:
 
 - at start: read the recovery note; if none, call `board_context`, which
   names your project and its ticket key;
+- if your project has no key yet, choose 2–5 letters a person would use for
+  it in conversation (`FH` for Flashheart, `NG` for NG+), and set it with
+  `set_project_key` before creating tickets; pick another if it is taken;
 - refer to tickets by id (`FH-42`); when asked for work in plain words ("the
   three top-priority bugs"), use `list_tickets`, then `claim` each ticket;
 - before work on a ticket: `claim`; create tickets for new work rather than

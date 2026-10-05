@@ -13,6 +13,7 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 │   ├── config.yaml                       version: 2, settings, UI preferences (CFG-1, CFG-2)
 │   ├── cache/cwd.json                    cwd → project/branch cache (agent-protocol §2)
 │   ├── backup/v1-<UTC timestamp>/        the v1 tree moved aside by migrate
+│   ├── lock                              advisory root lock for choosing keys (KEY-5)
 │   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
 │   └── serve.log                         background serve diagnostics (LIFE-4), rotated at 1 MB
 ├── .archive/                             archived projects (PRJ-5)
@@ -22,7 +23,7 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
     ├── workstreams/<slug>.md
     ├── tickets/
     │   └── FH-42-card-panel/             one folder per ticket: <id>-<slug>
-    │       ├── ticket.md                 the ticket
+    │       ├── FH-42-card-panel.md       the ticket, named after its folder
     │       ├── review.md                 review guide (REV-4), optional
     │       └── files/                    copied files (REV-1, REV-5)
     │           ├── index.yaml
@@ -37,9 +38,12 @@ Rules:
 
 - A project is a directory with a `tickets/` folder or a `project.yaml`
   (PRJ-1).
-- A ticket is a folder in `tickets/` containing `ticket.md`. The folder name
-  `<id>-<slug>` is a readable hint; the frontmatter `id` is authoritative and a
-  mismatch is a warning. A folder without `ticket.md` is ignored.
+- A ticket is a folder `<id>-<slug>` in `tickets/` containing the ticket file
+  `<id>-<slug>.md`, named after the folder so editor tabs and search results
+  say which ticket they are. The frontmatter `id` is authoritative; a mismatch
+  with the folder is a warning. If the folder was renamed by hand, a single
+  `<id>-*.md` file in it is read with a warning. A folder with no ticket file,
+  or more than one candidate, is ignored.
 - Two tickets with the same id are both shown as *needs repair*.
 - Directories starting with `.` are Flashheart's or archives. Unknown files and
   directories are ignored and preserved.
@@ -50,7 +54,15 @@ Rules:
   followed by uppercase letters or digits (`FH`, `NG`, `OPS2`), set as `key`
   in `project.yaml` and unique across the root. Without one, readers derive a
   default (the initials of a multi-word directory name, otherwise its first
-  three letters, uppercased) and show a warning; writers record it.
+  three letters, uppercased), warning only when the project already has
+  tickets.
+- A key is chosen before the first ticket and then fixed (`KEY-5`): by an
+  agent (`set_project_key`, or `project_key` on its first `create_ticket`), in
+  the UI, or, failing both, the derived default with a digit added when that
+  key is taken (`NG`, `NG2`). Choosing a key takes the root lock
+  (`<root>/.flashheart/lock`), checks it against every project's key, and
+  writes `project.yaml` atomically; it is refused once the project has a
+  ticket, live or archived.
 - A ticket id is `<key>-<number>` (`FH-42`). Numbers start at 1, are assigned
   under the project lock from `next_id` in `project.yaml` (never lower than
   one past the highest existing or archived number), and are never reused or
@@ -60,7 +72,7 @@ Rules:
 
 ## Ticket
 
-`tickets/<id>-<slug>/ticket.md`:
+`tickets/<id>-<slug>/<id>-<slug>.md`:
 
 ```markdown
 ---
@@ -125,8 +137,8 @@ precondition (`STO-3`); the folder never moves except to `.archive/`.
 ### References in text
 
 Ticket ids written in markdown (`FH-42`) render as links to that ticket.
-Relative links into another ticket folder (`../FH-12-x/ticket.md`) also open
-that ticket. Files are referenced relative to the ticket folder
+Relative links to a ticket file (`FH-42-card-panel.md` in the same folder,
+`../FH-12-x/FH-12-x.md` for another) also open that ticket. Files are referenced relative to the ticket folder
 (`files/20261005T1412-board.png`).
 
 ### Handoff section
@@ -231,7 +243,7 @@ a ticket or review refers to is copied in before it is recorded (`REV-5`).
 ## project.yaml
 
 ```yaml
-key: FH                   # ticket id prefix (KEY-1); unique across the root
+key: FH                   # ticket id prefix (KEY-1); unique; absent until chosen (KEY-5)
 next_id: 43               # next ticket number (KEY-2)
 name: Flashheart          # display name; defaults to the directory name
 repos:                    # main-checkout paths seen by hooks (PRJ-3)
@@ -277,7 +289,7 @@ performs.
 1. Each project gets a key: its existing `key`, a `--key <project>=<KEY>`
    argument, or the derived default.
 2. Tickets, including archived ones, are numbered once in `created` order
-   (then by v1 slug) and written to `tickets/<id>-<slug>/ticket.md` with `id`
+   (then by v1 slug) and written to `tickets/<id>-<slug>/<id>-<slug>.md` with `id`
    and `status` inserted at the top of the frontmatter (v1 `todo` becomes
    `backlog`, `ready-to-review` becomes `review`) and the `<type>--` prefix
    dropped from the slug. Unparseable tickets are copied byte for byte and

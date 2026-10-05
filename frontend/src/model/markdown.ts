@@ -9,7 +9,7 @@ export type LinkTarget =
   | { kind: "none" };
 
 // LinkContext is where the markdown lives: a ticket's folder, which holds
-// ticket.md, review.md and files/.
+// <id>-<slug>.md, review.md and files/.
 export interface LinkContext {
   project: string;
   ticket: string;
@@ -49,7 +49,9 @@ export function resolveLink(href: string, context: LinkContext): LinkTarget {
     id = match[1];
     rest = parts.slice(2);
   }
-  if (rest.length === 1 && rest[0] === "ticket.md")
+  // The ticket file is named after its folder, <id>-<slug>.md.
+  const file = rest.length === 1 ? ticketFolder.exec(rest[0] ?? "") : null;
+  if (file?.[1] === id && rest[0]?.endsWith(".md"))
     return { kind: "ticket", id };
   if (
     rest.length === 2 &&

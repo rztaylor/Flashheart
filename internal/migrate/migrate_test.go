@@ -71,8 +71,8 @@ func TestRewriteLinks(t *testing.T) {
 		"See [the other one](../todo/feat--x.md#notes) and [web](https://example.com/a.md).\n" +
 		"![Board](../attachments/feat--board-columns/shot.png) ![Other](../attachments/feat--x/b.png)\n"
 	got := rewriteLinks(body, "AL-2-board-columns", folders, ids)
-	want := "**Work Item:** [AL-2](ticket.md)\n" +
-		"See [the other one](../AL-9-x/ticket.md#notes) and [web](https://example.com/a.md).\n" +
+	want := "**Work Item:** [AL-2](AL-2-board-columns.md)\n" +
+		"See [the other one](../AL-9-x/AL-9-x.md#notes) and [web](https://example.com/a.md).\n" +
 		"![Board](files/shot.png) ![Other](../AL-9-x/files/b.png)\n"
 	if got != want {
 		t.Errorf("rewriteLinks =\n%s\nwant\n%s", got, want)
@@ -154,14 +154,14 @@ func TestApplyProducesTheV2Tree(t *testing.T) {
 		return string(data)
 	}
 
-	overflow := read("alpha/tickets/AL-5-column-overflow/ticket.md")
+	overflow := read("alpha/tickets/AL-5-column-overflow/AL-5-column-overflow.md")
 	if !strings.HasPrefix(overflow, "---\nid: AL-5\nstatus: backlog\ntype: bug\n") || !strings.Contains(overflow, "depends-on: [AL-4]") {
 		t.Errorf("column overflow ticket =\n%s", overflow)
 	}
-	if offline := read("alpha/tickets/AL-6-offline-mode/ticket.md"); !strings.Contains(offline, "depends-on: [feat--does-not-exist]") {
+	if offline := read("alpha/tickets/AL-6-offline-mode/AL-6-offline-mode.md"); !strings.Contains(offline, "depends-on: [feat--does-not-exist]") {
 		t.Errorf("unknown dependency was not kept:\n%s", offline)
 	}
-	broken := read("alpha/tickets/AL-7-broken-frontmatter/ticket.md")
+	broken := read("alpha/tickets/AL-7-broken-frontmatter/AL-7-broken-frontmatter.md")
 	original, _ := os.ReadFile(filepath.Join("..", "..", "testdata", "boards", "sample-v1", "alpha", "todo", "docs--broken-frontmatter.md"))
 	if broken != string(original) {
 		t.Errorf("broken ticket was rewritten:\n%s", broken)
@@ -170,7 +170,7 @@ func TestApplyProducesTheV2Tree(t *testing.T) {
 		t.Errorf("workstream =\n%s", ws)
 	}
 	review := read("alpha/tickets/AL-2-board-columns/review.md")
-	if !strings.Contains(review, "[AL-2](ticket.md)") || !strings.Contains(review, "(files/20261003T1000-board-desktop.png)") {
+	if !strings.Contains(review, "[AL-2](AL-2-board-columns.md)") || !strings.Contains(review, "(files/20261003T1000-board-desktop.png)") {
 		t.Errorf("review =\n%s", review)
 	}
 	if _, err := os.Stat(filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "files", "index.yaml")); err != nil {

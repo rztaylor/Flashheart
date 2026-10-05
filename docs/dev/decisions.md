@@ -159,7 +159,7 @@ constrains the format (user, 2026-10-05). The board also needs a new column
 Options: keep column folders and add ids; a flat `tickets/` folder with the
 status in frontmatter; a folder per ticket with the status in frontmatter.
 
-Decision: a folder per ticket (`tickets/FH-42-<slug>/` holding `ticket.md`,
+Decision: a folder per ticket (`tickets/FH-42-<slug>/` holding `FH-42-<slug>.md`,
 `review.md` and `files/`) with the column as a frontmatter `status`. Moves
 become a field edit under the lock with a hash precondition instead of a
 rename that races other writers; columns are a list rather than folders, so
@@ -181,3 +181,11 @@ root, ids need no project prefix. Existing tickets are numbered once, oldest
 first, by `flashheart migrate`. With `list_tickets` (MCP-7) and the caller's
 project known from its working directory, a user can ask an agent for "the
 three top-priority bugs" or "FH-42" in plain words.
+
+Keys are chosen before a project's first ticket and then fixed (KEY-5).
+Agents choose them, since they know what the project is called in
+conversation: `board_context` asks while the key is unset and
+`set_project_key` records it under a root-wide lock, so two new projects
+cannot take the same key. The ticket file is named after its folder
+(`FH-42-<slug>.md`) so editor tabs and search results identify the ticket
+(user, 2026-10-05).

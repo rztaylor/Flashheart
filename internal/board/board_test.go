@@ -385,7 +385,7 @@ func TestSampleFixtureTickets(t *testing.T) {
 
 	dir := filepath.Join("..", "..", "testdata", "boards", "sample", "alpha", "tickets")
 	read := func(folder string) Ticket {
-		data, err := os.ReadFile(filepath.Join(dir, folder, "ticket.md"))
+		data, err := os.ReadFile(filepath.Join(dir, folder, folder+".md"))
 		if err != nil {
 			t.Fatal(err)
 		}

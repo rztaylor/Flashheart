@@ -63,7 +63,7 @@ func TestNewWaitsForTheRootToExist(t *testing.T) {
 	if _, _, err := store.ReadBoard(); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("ReadBoard before the root exists = %v, want ErrNotExist", err)
 	}
-	write(t, filepath.Join(root, "late", "tickets", "LA-1-x", "ticket.md"), "---\nid: LA-1\nstatus: backlog\n---\n# X\n")
+	write(t, filepath.Join(root, "late", "tickets", "LA-1-x", "LA-1-x.md"), "---\nid: LA-1\nstatus: backlog\n---\n# X\n")
 	b, _, err := store.ReadBoard()
 	if err != nil || len(b.Projects) != 1 || b.Projects[0].Name != "late" {
 		t.Errorf("ReadBoard after creation = %+v, %v", b.Projects, err)
@@ -74,14 +74,14 @@ func TestProjectDiscovery(t *testing.T) {
 	t.Parallel()
 
 	root := sampleCopy(t)
-	write(t, filepath.Join(root, "_ignored", "tickets", "IG-1-x", "ticket.md"), "# X\n")
-	write(t, filepath.Join(root, ".hidden", "tickets", "HI-1-x", "ticket.md"), "# X\n")
-	write(t, filepath.Join(root, "_scratch", "tickets", "SC-1-s", "ticket.md"), "# S\n")
+	write(t, filepath.Join(root, "_ignored", "tickets", "IG-1-x", "IG-1-x.md"), "# X\n")
+	write(t, filepath.Join(root, ".hidden", "tickets", "HI-1-x", "HI-1-x.md"), "# X\n")
+	write(t, filepath.Join(root, "_scratch", "tickets", "SC-1-s", "SC-1-s.md"), "# S\n")
 	write(t, filepath.Join(root, "only-config", "project.yaml"), "name: Only\n")
 	write(t, filepath.Join(root, "legacy", "todo", "feat--x.md"), "# X\n")
 	write(t, filepath.Join(root, "notes.md"), "not a project\n")
 	outside := t.TempDir()
-	write(t, filepath.Join(outside, "tickets", "OU-1-x", "ticket.md"), "# X\n")
+	write(t, filepath.Join(outside, "tickets", "OU-1-x", "OU-1-x.md"), "# X\n")
 	if err := os.Symlink(outside, filepath.Join(root, "escapes")); err != nil {
 		t.Fatal(err)
 	}
@@ -153,9 +153,9 @@ func TestKeysAndNextIDs(t *testing.T) {
 
 	root := sampleCopy(t)
 	write(t, filepath.Join(root, "beta", "project.yaml"), "name: Beta\n")
-	write(t, filepath.Join(root, "gamma", "tickets", "GAM-4-x", "ticket.md"), "---\nid: GAM-4\nstatus: backlog\n---\n# X\n")
+	write(t, filepath.Join(root, "gamma", "tickets", "GAM-4-x", "GAM-4-x.md"), "---\nid: GAM-4\nstatus: backlog\n---\n# X\n")
 	write(t, filepath.Join(root, "delta", "project.yaml"), "key: lower\nnext_id: 2\n")
-	write(t, filepath.Join(root, "delta", "tickets", "DEL-7-x", "ticket.md"), "---\nid: DEL-7\nstatus: backlog\n---\n# X\n")
+	write(t, filepath.Join(root, "delta", "tickets", "DEL-7-x", "DEL-7-x.md"), "---\nid: DEL-7\nstatus: backlog\n---\n# X\n")
 	store := open(t, root)
 
 	beta, _ := store.ReadProject("beta")
@@ -169,6 +169,34 @@ func TestKeysAndNextIDs(t *testing.T) {
 	delta, _ := store.ReadProject("delta")
 	if delta.Key != "DEL" || delta.NextID != 8 || !strings.Contains(strings.Join(delta.Warnings, "\n"), `key "lower"`) {
 		t.Errorf("delta key=%s next=%d warnings=%q", delta.Key, delta.NextID, delta.Warnings)
+	}
+}
+
+func TestTicketFileIsNamedAfterItsFolder(t *testing.T) {
+	t.Parallel()
+
+	root := sampleCopy(t)
+	// A folder renamed by hand keeps its ticket, with a warning.
+	write(t, filepath.Join(root, "beta", "tickets", "BE-2-renamed", "BE-2-old-name.md"), "---\nid: BE-2\nstatus: backlog\n---\n# Renamed\n")
+	// The old fixed name is not a ticket file, nor is an unrelated note.
+	write(t, filepath.Join(root, "beta", "tickets", "BE-3-legacy", "ticket.md"), "---\nid: BE-3\nstatus: backlog\n---\n# Legacy\n")
+	write(t, filepath.Join(root, "beta", "tickets", "BE-4-notes", "notes.md"), "# Notes\n")
+	// Two candidates are ambiguous, so the folder is skipped.
+	write(t, filepath.Join(root, "beta", "tickets", "BE-5-two", "BE-5-a.md"), "# A\n")
+	write(t, filepath.Join(root, "beta", "tickets", "BE-5-two", "BE-5-b.md"), "# B\n")
+	beta, err := open(t, root).ReadProject("beta")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, ticket := range beta.Tickets {
+		ids = append(ids, ticket.ID)
+		if ticket.ID == "BE-2" && !strings.Contains(strings.Join(ticket.Warnings, "\n"), "ticket file BE-2-old-name.md should be named BE-2-renamed.md") {
+			t.Errorf("BE-2 warnings = %q", ticket.Warnings)
+		}
+	}
+	if strings.Join(ids, ",") != "BE-1,BE-2" {
+		t.Errorf("tickets = %v, want BE-1,BE-2", ids)
 	}
 }
 
@@ -195,12 +223,12 @@ func TestFilesThatEscapeOrOverflowNeedRepair(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "beta", "tickets", "BE-2-escape"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, filepath.Join(root, "beta", "tickets", "BE-2-escape", "ticket.md")); err != nil {
+	if err := os.Symlink(outside, filepath.Join(root, "beta", "tickets", "BE-2-escape", "BE-2-escape.md")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, filepath.Join(root, "beta", "tickets", "BE-3-huge", "ticket.md"), "# Huge\n"+strings.Repeat("x", MaxFileBytes))
+	write(t, filepath.Join(root, "beta", "tickets", "BE-3-huge", "BE-3-huge.md"), "# Huge\n"+strings.Repeat("x", MaxFileBytes))
 	write(t, filepath.Join(root, "beta", "tickets", "README.txt"), "ignored\n")
-	write(t, filepath.Join(root, "beta", "tickets", ".BE-4-hidden", "ticket.md"), "# hidden\n")
+	write(t, filepath.Join(root, "beta", "tickets", ".BE-4-hidden", ".BE-4-hidden.md"), "# hidden\n")
 	if err := os.MkdirAll(filepath.Join(root, "beta", "tickets", "BE-5-empty"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -241,6 +269,30 @@ func TestDuplicateKeysAreFlagged(t *testing.T) {
 	}
 }
 
+func TestNewProjectWithoutAKeyIsQuiet(t *testing.T) {
+	t.Parallel()
+
+	root := sampleCopy(t)
+	// Created by a hook before its agent chose a key (PRJ-5, KEY-5); its
+	// derived key AL matches alpha's but owns no ids yet.
+	write(t, filepath.Join(root, "a-l", "project.yaml"), "name: A L\nrepos: [/src/a-l]\n")
+	b, _, err := open(t, root).ReadBoard()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, project := range b.Projects {
+		if project.Name != "a-l" && project.Name != "alpha" {
+			continue
+		}
+		if len(project.Warnings) != 0 {
+			t.Errorf("%s warnings = %q, want none", project.Name, project.Warnings)
+		}
+		if project.Name == "a-l" && (project.Key != "AL" || !project.KeyDerived) {
+			t.Errorf("a-l key = %s derived=%v", project.Key, project.KeyDerived)
+		}
+	}
+}
+
 func TestReadBoardAndFingerprint(t *testing.T) {
 	t.Parallel()
 
@@ -258,7 +310,7 @@ func TestReadBoardAndFingerprint(t *testing.T) {
 		t.Fatalf("unchanged board fingerprint changed: %s -> %s (%v)", fingerprint, again, err)
 	}
 
-	path := filepath.Join(root, "beta", "tickets", "BE-1-hello", "ticket.md")
+	path := filepath.Join(root, "beta", "tickets", "BE-1-hello", "BE-1-hello.md")
 	data, _ := os.ReadFile(path)
 	write(t, path, string(data)+"\nMore.\n")
 	later := time.Now().Add(2 * time.Second)

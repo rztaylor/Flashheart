@@ -21,7 +21,8 @@ New sessions get a recovery note.
   `RUN-1`–`RUN-5`).
 - `internal/hooks` + `internal/hooks/claude`: every event in agent-protocol
   §5.2 except MCP stamping; recovery note (§8, `HOOK-3`); fail-open
-  (`HOOK-1`); auto-create projects (`PRJ-5`).
+  (`HOOK-1`); auto-create projects with a
+  `project.yaml` but no key (`PRJ-5`, `KEY-5`).
 - `flashheart hook claude <Event>` wired in the CLI.
 - UI: Agents view with lanes and subagent nesting (`VIEW-3`); live badges
   (`VIEW-8`); virtual columns with toggles (`VIEW-2`); Runs tab timeline
