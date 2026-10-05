@@ -8,17 +8,26 @@
   use token-backed utilities, never raw hex values. Light and dark themes via
   a `data-theme` attribute set from the saved preference (system for now).
 - Layers and dependency direction: `styles/` (tokens) and `model/` (pure
-  view models: line assignment, filters, times, markdown links, grid
-  movement) → `components/` (primitives and shared patterns: Button, Icon,
-  LineBullet, StateNote, Tabs, SidePanel, SegmentedControl, fields, Markdown,
-  RouteBar, EmptyState) → `features/<feature>/` (board, card, workstreams,
-  table, projects, filters; later agents, settings) → `app/` (shell, hash
-  routing, composition). Shared layers never import features or the shell.
+  view models: line assignment, filters, paint, remembered scopes, times,
+  markdown links, grid movement) → `components/` (primitives and shared
+  patterns: Button, Icon, LineBullet, StateNote, Tabs, SidePanel,
+  SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
+  RouteBar, EmptyState) → `features/<feature>/` (board, card, editing,
+  workstreams, table, projects, filters; later agents, settings) → `app/`
+  (shell, hash routing, composition). Shared layers never import features
+  or the shell.
 - `src/lifecycle/` owns the single Singleserve session (`connect` from
   `/_singleserve/client.js`), heartbeat, backend-lost and terminal states.
   `src/api/` owns typed requests via `session.fetch` only. `src/state/` owns
-  loading and freshness (`useResource`: last good value kept, 10 s refresh
-  while visible, replaced by long-poll with board-editing).
+  loading and freshness: `useRevision` long-polls `/api/changes` and
+  `useResource` keeps the last good value and reloads when the revision
+  moves; `usePreferences` saves UI preferences through the backend.
+- Editing: every edit from the panel carries the ticket's content hash; a
+  409 opens the conflict dialog. Moves from the board set only `status`.
+  Native `<dialog>` for decisions (blocked move, conflict, new ticket); a
+  polite toast with Undo for results. Drag and drop uses `@dnd-kit` pointer
+  sensors; the keyboard alternative is Shift with an arrow, and the panel's
+  Move to menu.
 - Tickets are named by id (`FH-42`) everywhere: cards, panel, table,
   search and the `?t=<id>` route parameter. Bare ids of known project keys in
   markdown link to the ticket (`model/markdown.ts`, KEY-3). A board with v1

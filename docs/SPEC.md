@@ -140,7 +140,9 @@ Full format: `docs/dev/specs/board-format.md`.
   and unknown keys, and produce minimal diffs.
 - `STO-3` All writes are atomic (write temp, fsync, rename) and made under the
   project lock. Edits from the UI and MCP carry the content hash they were
-  based on and fail with a conflict if the file changed since.
+  based on and fail with a conflict if the file changed since. A move sets
+  only `status`, applied to the file as it is under the lock, so it needs no
+  hash and cannot lose another writer's change.
 - `STO-4` A ticket whose frontmatter cannot be parsed is shown as a
   *needs repair* card with the parse error, never hidden or rewritten
   automatically.
@@ -234,7 +236,9 @@ Full format: `docs/dev/specs/board-format.md`.
 ### 6.6 Editing (`EDIT`)
 
 - `EDIT-1` Drag and drop moves a ticket between columns (edits its `status`).
-  Every drag action has a keyboard and menu alternative (**Move to …**).
+  Every drag action has a keyboard and menu alternative: Shift with an arrow
+  moves a focused card to the next column (and a station along its line),
+  and the card panel has **Move to …**. Each move can be undone.
 - `EDIT-2` Moving a blocked ticket into *in-progress* asks for confirmation
   and records the override reason in `## Notes`.
 - `EDIT-3` Moving into *Ready to review* warns when the review file is
@@ -378,9 +382,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `CFG-1` Settings live in `<root>/.flashheart/config.yaml` (global) and
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
-- `CFG-2` UI preferences (theme, density, visible virtual columns, filters)
-  are saved through the backend in the global config, never in browser
-  storage.
+- `CFG-2` UI preferences (theme, density, colour by, visible virtual columns,
+  and each project's view and filters) are saved through the backend in the
+  global config, never in browser storage.
 
 ### 6.13 Lifecycle (`LIFE`)
 

@@ -1,6 +1,7 @@
 # Engineering facts
 
-- Early implementation: `foundation` is built; follow `docs/dev/roadmap.md`.
+- The board (reading, format v2, editing, live updates) is built; agent
+  integration is next. Follow `docs/dev/roadmap.md`.
 - Prefer small, focused standard-library Go packages and explicit TypeScript
   models; use mature libraries for commodity problems (YAML round-tripping,
   MCP, file watching, drag and drop, markdown).

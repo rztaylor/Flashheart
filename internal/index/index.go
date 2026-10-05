@@ -74,6 +74,8 @@ type Index struct {
 	mu          sync.Mutex
 	current     *Snapshot
 	fingerprint string
+	// changed is closed and replaced whenever the revision advances.
+	changed chan struct{}
 }
 
 // New returns an index over source. Nothing is read until first use.
@@ -153,6 +155,11 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 			snapshot.archived[id] = true
 		}
 	}
+	advanced := i.current == nil || snapshot.Revision != i.current.Revision
 	i.current, i.fingerprint = snapshot, fingerprint
+	if advanced && i.changed != nil {
+		close(i.changed)
+		i.changed = nil
+	}
 	return snapshot, nil
 }

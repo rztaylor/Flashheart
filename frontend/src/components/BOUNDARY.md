@@ -2,8 +2,8 @@
 
 Owns shared, product-neutral UI primitives in the transit-map vocabulary:
 `Button`, `Icon` (authored set), `LineBullet`, `StateNote`, `Tabs`,
-`SidePanel`, `SegmentedControl`, fields, `Markdown`, `RouteBar` and
-`EmptyState`. Components take typed props and callbacks, use token-backed
+`SidePanel`, `SegmentedControl`, fields and form fields, `Dialog`, `Toast`,
+`Markdown`, `RouteBar` and `EmptyState`. Components take typed props and callbacks, use token-backed
 utilities only, and carry their own accessibility semantics.
 
 Does not own API calls, lifecycle or session state, data loading or feature

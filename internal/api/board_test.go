@@ -391,3 +391,52 @@ func TestListsAreNeverNull(t *testing.T) {
 		}
 	}
 }
+
+func TestChangesLongPollsUntilTheRevisionMoves(t *testing.T) {
+	t.Parallel()
+
+	root := copyBoard(t, "sample")
+	files := store.New(root)
+	t.Cleanup(func() { files.Close() })
+	board := index.New(files, index.Options{})
+	stopping := make(chan struct{})
+	handler := New(Options{Info: Info{Root: root}, Board: board, Files: files, Stopping: stopping, LongPoll: 2 * time.Second})
+
+	var first struct{ Revision uint64 }
+	getJSON(t, handler, "/api/changes?since=0", http.StatusOK, &first)
+	if first.Revision == 0 {
+		t.Fatalf("revision = %d", first.Revision)
+	}
+
+	done := make(chan uint64, 1)
+	go func() {
+		var next struct{ Revision uint64 }
+		getJSON(t, handler, fmt.Sprintf("/api/changes?since=%d", first.Revision), http.StatusOK, &next)
+		done <- next.Revision
+	}()
+	time.Sleep(50 * time.Millisecond)
+	writeFile(t, filepath.Join(root, "beta", "tickets", "BE-1-hello", "BE-1-hello.md"), "---\nid: BE-1\nstatus: done\n---\n# Hello\n")
+	if _, err := board.Rebuild(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case revision := <-done:
+		if revision <= first.Revision {
+			t.Errorf("revision = %d, want > %d", revision, first.Revision)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("long-poll did not return after a change")
+	}
+
+	// Shutting down releases waiting requests at once.
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		close(stopping)
+	}()
+	start := time.Now()
+	getJSON(t, handler, "/api/changes?since=999", http.StatusOK, nil)
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("long-poll held shutdown for %s", elapsed)
+	}
+	getJSON(t, handler, "/api/changes?since=x", http.StatusBadRequest, nil)
+}

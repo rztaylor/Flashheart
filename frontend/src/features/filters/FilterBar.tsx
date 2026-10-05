@@ -9,7 +9,10 @@ import {
 } from "../../model/filters";
 import { PAINT_MODES, type PaintMode } from "../../model/paint";
 
-export type Density = "compact" | "normal" | "detailed";
+export type { Density } from "../../api/preferences";
+
+import type { Density } from "../../api/preferences";
+import { Icon } from "../../components/Icon";
 
 interface FilterBarProps {
   filters: Filters;
@@ -21,6 +24,8 @@ interface FilterBarProps {
   onDensity?(density: Density): void;
   paint?: PaintMode;
   onPaint?(paint: PaintMode): void;
+  // onNewTicket opens the New ticket dialog (EDIT-5); absent when read-only.
+  onNewTicket?(): void;
 }
 
 // FilterBar holds the board and table filters (VIEW-7), card density and
@@ -35,11 +40,22 @@ export function FilterBar({
   onDensity,
   paint,
   onPaint,
+  onNewTicket,
 }: FilterBarProps) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
   const filtered = isFiltered(filters);
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-rule bg-ground px-4 py-2">
+      {onNewTicket ? (
+        <Button
+          variant="primary"
+          className="h-7 py-0 text-xs"
+          onClick={onNewTicket}
+        >
+          <Icon name="plus" size={14} />
+          New ticket
+        </Button>
+      ) : null}
       <SelectField
         label="Type"
         value={filters.type}
