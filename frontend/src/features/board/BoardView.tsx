@@ -47,8 +47,8 @@ interface BoardViewProps {
   projectNames?: Map<string, string>;
   density: Density;
   paint: PaintMode;
-  // virtualColumns are shown before Backlog, mirroring tickets whose runs
-  // need you or are working (VIEW-2).
+  // virtualColumns are shown before Backlog while they hold tickets,
+  // mirroring tickets whose runs need you or are working (VIEW-2).
   virtualColumns?: VirtualColumn[];
   selected?: TicketRef;
   doneTotal: number;
@@ -88,6 +88,13 @@ export const VIRTUAL_COLUMNS: {
     holds: (card) => card.agentWorking,
   },
 ];
+
+// shownVirtual lists the chosen virtual columns that hold tickets.
+export function shownVirtual(cards: Card[], chosen: VirtualColumn[]) {
+  return VIRTUAL_COLUMNS.filter(
+    (column) => chosen.includes(column.id) && cards.some(column.holds),
+  );
+}
 
 const columnTitle = (id: string) =>
   COLUMNS.find((column) => column.id === id)?.title ??
@@ -135,9 +142,9 @@ export function BoardView(props: BoardViewProps) {
       COLUMNS.map((column) => [column.id, []]),
     );
     for (const card of cards) grouped.get(card.column)?.push(card);
-    const mirrors = VIRTUAL_COLUMNS.filter((column) =>
-      virtualColumns.includes(column.id),
-    ).map((column) => ({
+    // A virtual column appears only while it holds tickets, so a board
+    // with nothing to flag stays calm.
+    const mirrors = shownVirtual(cards, virtualColumns).map((column) => ({
       id: column.id as Column | VirtualColumn,
       title: column.title,
       empty: column.empty,

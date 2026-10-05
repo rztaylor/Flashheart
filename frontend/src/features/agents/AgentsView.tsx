@@ -270,7 +270,7 @@ function RunRow({
   return (
     <div data-run={run.id} className={expanded ? "bg-well" : undefined}>
       <div className={`${rowGrid} px-2 py-2`}>
-        <div className="flex min-w-0 flex-col gap-0.5 text-xs max-lg:col-span-2 max-lg:flex-row max-lg:items-center max-lg:gap-3">
+        <div className="flex min-w-0 flex-col items-start gap-0.5 text-xs max-lg:col-span-2 max-lg:flex-row max-lg:items-center max-lg:gap-3">
           <RunStateLabel state={run.state} />
           {note ? (
             <span

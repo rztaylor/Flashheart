@@ -186,6 +186,10 @@ export function CardPanel({
           {items.length > 1 ? (
             <div
               role="tabpanel"
+              // The ARIA tabs pattern makes the panel a tab stop, so a
+              // scrolling panel with no controls (Runs) is still reachable.
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: see above.
+              tabIndex={0}
               id={panelId(tabsId, activeTab)}
               aria-labelledby={tabId(tabsId, activeTab)}
               className={panelBodyClass}

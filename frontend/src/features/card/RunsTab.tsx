@@ -88,7 +88,7 @@ function RunCard({
           aria-label="Subagents"
           className="border-l border-ink/40 pl-4 text-xs"
         >
-          <h4 className="mb-1.5 text-sm station-sign">Subagents</h4>
+          <h3 className="mb-1.5 text-sm station-sign">Subagents</h3>
           <ul className="flex flex-col gap-1">
             {subagents.map((child) => (
               <li key={child.id} className="flex items-center gap-3">

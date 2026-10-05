@@ -157,16 +157,6 @@ function RailItem({
               </span>
             </span>
           ) : null}
-          {runs.live > runs.needsYou ? (
-            <span
-              className="flex items-center gap-1"
-              title="Agent runs in progress"
-            >
-              <RunStateMark state="working" size={9} still />
-              {runs.live - runs.needsYou}
-              <span className="sr-only"> agents running</span>
-            </span>
-          ) : null}
           <span>{counts["in-progress"]} in progress</span>
           {blocked > 0 ? (
             <span

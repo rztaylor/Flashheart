@@ -21,7 +21,7 @@ import { AgentsView } from "../features/agents/AgentsView";
 import {
   BoardView,
   NoTickets,
-  VIRTUAL_COLUMNS,
+  shownVirtual as shownVirtualColumns,
 } from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
@@ -248,7 +248,7 @@ export function Shell({
       <header className="flex min-w-0 items-center gap-2 overflow-hidden bg-band px-3 text-on-band sm:gap-4 sm:px-4">
         <span className="flex items-center gap-1.5">
           <Bolt />
-          <span className="wordmark text-md">Flashheart</span>
+          <span className="wordmark text-md max-sm:sr-only">Flashheart</span>
         </span>
         <span aria-hidden="true" className="h-5 w-px bg-on-band-muted/40" />
         <h1
@@ -264,7 +264,7 @@ export function Shell({
             {scopeName}
           </span>
         </h1>
-        <nav aria-label="Views" className="ml-2 flex h-full items-stretch">
+        <nav aria-label="Views" className="flex h-full items-stretch sm:ml-2">
           {views.map((view) => {
             const active = route.view === view.id;
             return (
@@ -277,7 +277,7 @@ export function Shell({
                   go({ view: view.id });
                   remember(filters, view.id);
                 }}
-                className={`flex items-center gap-1.5 border-b-3 px-3 pt-[3px] text-sm transition-colors focus-visible:-outline-offset-2 focus-visible:outline-on-band ${
+                className={`flex items-center gap-1.5 border-b-3 px-2 pt-[3px] text-sm sm:px-3 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-on-band ${
                   active
                     ? "border-on-band text-on-band"
                     : "border-transparent text-on-band-muted hover:text-on-band"
@@ -430,9 +430,7 @@ export function Shell({
                 value={narrowColumn}
                 onChange={setNarrowColumn}
               >
-                {VIRTUAL_COLUMNS.filter((column) =>
-                  shownVirtual.includes(column.id),
-                ).map((column) => (
+                {shownVirtualColumns(visible, shownVirtual).map((column) => (
                   <option key={column.id} value={column.id}>
                     {column.title}
                   </option>

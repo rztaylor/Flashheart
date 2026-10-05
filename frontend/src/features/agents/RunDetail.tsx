@@ -131,9 +131,9 @@ function DetailSection({
 }) {
   return (
     <section className="min-w-0">
-      <h4 className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm station-sign">
+      <h3 className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm station-sign">
         {title}
-      </h4>
+      </h3>
       {children}
     </section>
   );
