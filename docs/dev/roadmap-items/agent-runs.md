@@ -1,6 +1,6 @@
 # agent-runs
 
-Status: **Pending**.
+Status: **Partial**. Plan: `docs/dev/plans/002-agent-runs.md`.
 
 ## Goal
 
