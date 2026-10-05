@@ -7,7 +7,9 @@
 # hooks are added for this session only, with --settings).
 #
 # Usage: scripts/record-claude-hooks.sh [OUT_DIR]   (default .cache/hook-recordings)
-# Set CLAUDE to the claude binary if it is not on PATH.
+# Set CLAUDE to the claude binary if it is not on PATH; on macOS the copy
+# bundled with the Claude desktop app is used when there is none. Run it in
+# an interactive terminal: it starts a normal Claude Code session.
 #
 # Payloads contain your paths and prompts: scrub them as described in
 # testdata/hooks/claude/MANIFEST.md before committing any.
@@ -15,6 +17,13 @@ set -euo pipefail
 
 out="${1:-.cache/hook-recordings}"
 claude_bin="${CLAUDE:-claude}"
+if [ -z "${CLAUDE:-}" ] && ! command -v claude >/dev/null 2>&1; then
+  # Fall back to the newest Claude Code bundled with the Claude desktop app.
+  bundled=$(ls -d "$HOME/Library/Application Support/Claude/claude-code"/*/*/claude.app/Contents/MacOS/claude 2>/dev/null | sort -V | tail -n 1)
+  if [ -n "$bundled" ]; then
+    claude_bin="$bundled"
+  fi
+fi
 if ! command -v "$claude_bin" >/dev/null 2>&1; then
   echo "record-claude-hooks: cannot find '$claude_bin'; set CLAUDE=/path/to/claude" >&2
   exit 1
