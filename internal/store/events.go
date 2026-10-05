@@ -234,3 +234,13 @@ func indent(block string) string {
 	}
 	return b.String()
 }
+
+// IsV1Project reports a project directory still in the v1 column-folder
+// layout, which only `flashheart migrate` may change (MIG-1).
+func (s *Store) IsV1Project(name string) bool {
+	_, fsys, err := s.handle()
+	if err != nil || !ValidProject(name) || isDir(fsys, path.Join(name, "tickets")) {
+		return false
+	}
+	return slices.ContainsFunc(V1Columns, func(column string) bool { return isDir(fsys, path.Join(name, column)) })
+}

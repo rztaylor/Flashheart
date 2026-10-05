@@ -1,5 +1,5 @@
 // Package logfile owns Flashheart's append-only diagnostic logs under the
-// root's .flashheart directory (serve.log now, hook-errors.log later).
+// root's .flashheart directory (serve.log and hook-errors.log).
 //
 // It creates the file and its directory only on the first write, prefixes
 // each write with a UTC timestamp, and keeps one rotated generation. Callers
