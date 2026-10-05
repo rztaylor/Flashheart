@@ -303,3 +303,37 @@ func TestNoHandoff(t *testing.T) {
 		t.Fatal("live run flagged")
 	}
 }
+
+func TestViewsAreDerivedCopies(t *testing.T) {
+	t.Parallel()
+
+	set := NewSet()
+	set.Apply(start(0))
+	set.Apply(turn(1))
+	set.Apply(ev(2, session, events.PlanUpdated, events.PlanData{Items: []events.PlanItem{{Text: "Step", Status: events.PlanInProgress}}}))
+	set.Apply(tool(3, "Edit", "a.ts"))
+	set.Apply(ev(4, session+"/a1", events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
+	set.Apply(ev(5, session+"/a1", events.ToolUsed, events.ToolData{Tool: "Read", OK: true}))
+	byBranch := func(string, string) []string { return []string{"AL-3"} }
+
+	views := set.Views(at(6), DefaultSettings(), byBranch)
+	if len(views) != 2 {
+		t.Fatalf("views = %d", len(views))
+	}
+	v := views[0]
+	if v.ID != session || v.State != Working || v.Link != (Link{Ticket: "AL-3", By: LinkBranch}) || !v.Dirty || v.Progress.Current != "Step" {
+		t.Fatalf("view = %+v", v)
+	}
+	if !v.LastActivity.Equal(at(5)) {
+		t.Fatalf("last activity = %v; a session's includes its subagents'", v.LastActivity)
+	}
+	if !slices.Equal(v.Children, []string{session + "/a1"}) || views[1].Link.Ticket != "AL-3" {
+		t.Fatalf("children = %v, child link = %+v", v.Children, views[1].Link)
+	}
+	// Later events do not change a view already taken.
+	set.Apply(ev(7, session, events.PlanUpdated, events.PlanData{Items: []events.PlanItem{{Text: "Other", Status: events.PlanPending}}}))
+	set.Apply(tool(8, "Edit", "b.ts"))
+	if v.Plan[0].Text != "Step" || len(v.Timeline) != 4 || len(v.Files) != 1 {
+		t.Fatalf("view changed: %+v", v)
+	}
+}

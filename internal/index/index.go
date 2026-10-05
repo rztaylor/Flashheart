@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/runs"
 )
 
 // DefaultMaxAge is how old a snapshot may be before Current rebuilds it.
@@ -24,6 +25,9 @@ type Source interface {
 type Options struct {
 	MaxAge time.Duration
 	Now    func() time.Time
+	// Events, when set, adds agent runs to snapshots, derived with Runs.
+	Events EventSource
+	Runs   runs.Settings
 }
 
 // Snapshot is an immutable view of the board at one revision.
@@ -36,6 +40,8 @@ type Snapshot struct {
 	V1Projects []string
 	Board      board.Board
 	Analysis   board.Analysis
+	// Runs are the agent runs of the last two days' event logs at BuiltAt.
+	Runs []runs.View
 
 	projects map[string]int
 	tickets  map[string][2]int // id → project index, ticket index (first copy)
@@ -70,6 +76,8 @@ type Index struct {
 	source Source
 	maxAge time.Duration
 	now    func() time.Time
+	runs   runs.Settings
+	events *tracker
 
 	mu          sync.Mutex
 	current     *Snapshot
@@ -86,7 +94,14 @@ func New(source Source, options Options) *Index {
 	if options.Now == nil {
 		options.Now = time.Now
 	}
-	return &Index{source: source, maxAge: options.MaxAge, now: options.Now}
+	index := &Index{source: source, maxAge: options.MaxAge, now: options.Now, runs: options.Runs}
+	if options.Events != nil {
+		index.events = &tracker{source: options.Events}
+		if index.runs == (runs.Settings{}) {
+			index.runs = runs.DefaultSettings()
+		}
+	}
+	return index
 }
 
 // Current returns the snapshot, rebuilding it first if it is older than
@@ -126,6 +141,17 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 			fingerprint += "\x00v1:" + strings.Join(v1, ",")
 		}
 	}
+	now := i.now()
+	var views []runs.View
+	if i.events != nil && !missing {
+		names := make([]string, 0, len(b.Projects))
+		for _, project := range b.Projects {
+			names = append(names, project.Name)
+		}
+		read := i.events.update(names, now)
+		views = i.events.views(b, now, i.runs)
+		fingerprint += "\x00runs:" + read + "\x00" + signature(views)
+	}
 	revision := uint64(1)
 	if i.current != nil {
 		revision = i.current.Revision
@@ -135,11 +161,12 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 	}
 	snapshot := &Snapshot{
 		Revision:    revision,
-		BuiltAt:     i.now(),
+		BuiltAt:     now,
 		RootMissing: missing,
 		V1Projects:  v1,
 		Board:       b,
 		Analysis:    board.Analyze(b),
+		Runs:        views,
 		projects:    make(map[string]int, len(b.Projects)),
 		tickets:     map[string][2]int{},
 		archived:    map[string]bool{},

@@ -13,7 +13,8 @@ import (
 
 // Watching (STO-7). fsnotify watches are per directory (and, with kqueue on
 // macOS, per file in it), so the watcher covers the board's structure (the
-// root, each project, tickets/, workstreams/, .archive/tickets/) plus the
+// root, each project, tickets/, workstreams/, .archive/tickets/, and the
+// event log in .flashheart/events/ for agent runs) plus the
 // most recently changed ticket folders up to FolderBudget. Any event
 // rebuilds the snapshot after a short debounce, so the revision moves within
 // a second of an edit. A slow full rebuild catches edits in folders beyond
@@ -132,9 +133,14 @@ func (i *Index) sweepOnly(ctx context.Context) {
 }
 
 // ignored reports events Flashheart itself causes that never change the
-// board: lock files, logs and caches under .flashheart/.
+// board: lock files, logs and caches under .flashheart/. Event logs are the
+// exception: appends change agent runs.
 func ignored(name string) bool {
-	return strings.Contains(filepath.ToSlash(name), "/.flashheart/") || strings.HasSuffix(name, string(filepath.Separator)+".flashheart")
+	slashed := filepath.ToSlash(name)
+	if strings.Contains(slashed, "/.flashheart/events") {
+		return false
+	}
+	return strings.Contains(slashed, "/.flashheart/") || strings.HasSuffix(slashed, "/.flashheart")
 }
 
 // watchSet lists the directories to watch: the root, each project and its
@@ -161,7 +167,7 @@ func watchSet(root string) map[string]bool {
 		}
 		project := filepath.Join(root, name)
 		want[project] = true
-		for _, sub := range []string{"tickets", "workstreams", filepath.Join(".archive", "tickets")} {
+		for _, sub := range []string{"tickets", "workstreams", filepath.Join(".archive", "tickets"), ".flashheart", filepath.Join(".flashheart", "events")} {
 			dir := filepath.Join(project, sub)
 			if info, err := os.Stat(dir); err == nil && info.IsDir() {
 				want[dir] = true

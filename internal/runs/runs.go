@@ -402,3 +402,58 @@ func (s *Set) NoHandoff(id string, now time.Time, settings Settings, byBranch In
 	r := s.runs[id]
 	return r != nil && r.Dirty() && s.State(id, now, settings) == Ended && s.Link(id, byBranch).Ticket != ""
 }
+
+// View is a run with its derived state, link and flags at one moment. It
+// shares nothing with the Set, so it can be read while the Set changes.
+type View struct {
+	ID, Agent, Kind, Parent, Project string
+	Cwd, Branch, Worktree            string
+	Source, AgentType, EndReason     string
+	Children                         []string
+
+	State     State
+	Link      Link
+	Dirty     bool
+	NoHandoff bool
+	// Permission is the tool awaiting permission ("?" when unknown).
+	Permission string
+
+	Started time.Time
+	// LastActivity includes the run's subagents.
+	LastActivity time.Time
+	EndedAt      time.Time
+
+	Tools, Edits int
+	Files        []string
+	Plan         []events.PlanItem
+	Progress     Progress
+	Timeline     []Entry
+}
+
+// Views derives every run's view at now, in first-seen order.
+func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []View {
+	views := make([]View, 0, len(s.order))
+	for _, id := range s.order {
+		r := s.runs[id]
+		state := s.State(id, now, settings)
+		link := s.Link(id, byBranch)
+		views = append(views, View{
+			ID: r.ID, Agent: r.Agent, Kind: r.Kind, Parent: r.Parent, Project: r.Project,
+			Cwd: r.Cwd, Branch: r.Branch, Worktree: r.Worktree,
+			Source: r.Source, AgentType: r.AgentType, EndReason: r.EndReason,
+			Children:   slices.Clone(r.Children),
+			State:      state,
+			Link:       link,
+			Dirty:      r.Dirty(),
+			NoHandoff:  r.Dirty() && state == Ended && link.Ticket != "",
+			Permission: r.Permission,
+			Started:    r.Started, LastActivity: s.lastActivity(r), EndedAt: r.EndedAt,
+			Tools: r.Tools, Edits: r.Edits,
+			Files:    slices.Clone(r.Files),
+			Plan:     slices.Clone(r.Plan),
+			Progress: r.Progress(),
+			Timeline: slices.Clone(r.Timeline),
+		})
+	}
+	return views
+}

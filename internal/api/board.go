@@ -62,6 +62,8 @@ type ProjectSummary struct {
 	Warnings     []string          `json:"warnings"`
 	LastModified string            `json:"lastModified"`
 	Workstreams  []WorkstreamBrief `json:"workstreams"`
+	// Runs counts the project's agent runs by state (PRJ-6).
+	Runs RunCountsJSON `json:"runs"`
 }
 
 // ProjectsResponse is GET /api/projects.
@@ -74,6 +76,8 @@ type ProjectsResponse struct {
 	V1Projects     []string         `json:"v1Projects"`
 	MigrateCommand string           `json:"migrateCommand"`
 	Projects       []ProjectSummary `json:"projects"`
+	// Runs counts every project's runs, for the band's Needs you badge.
+	Runs RunCountsJSON `json:"runs"`
 }
 
 // Progress counts acceptance criteria.
@@ -120,6 +124,11 @@ type Card struct {
 	NeedsRepair []string     `json:"needsRepair"`
 	Warnings    []string     `json:"warnings"`
 	SearchText  string       `json:"searchText,omitempty"`
+	// Live is the linked run that most needs attention (VIEW-8); NeedsYou
+	// and AgentWorking place the card in the virtual columns (VIEW-2).
+	Live         *LiveJSON `json:"live,omitempty"`
+	NeedsYou     bool      `json:"needsYou"`
+	AgentWorking bool      `json:"agentWorking"`
 }
 
 // BoardResponse is GET /api/projects/{project}/board.
@@ -177,6 +186,8 @@ type TicketDetail struct {
 	// whole file for the raw editor (EDIT-6). Both are empty when read-only.
 	Hash string `json:"hash"`
 	Raw  string `json:"raw"`
+	// Runs are the runs linked to the ticket, most recent first (CARD-1).
+	Runs []RunJSON `json:"runs"`
 }
 
 // TicketResponse is GET /api/tickets/{id} and
@@ -245,6 +256,7 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/projects/{project}/tickets/{id}/files/{file}", getOnly(b.attachment))
 	mux.Handle("/api/all/board", getOnly(b.allBoard))
 	mux.Handle("/api/changes", getOnly(b.changes))
+	b.registerRuns(mux)
 	b.registerWrites(mux)
 }
 
@@ -328,6 +340,7 @@ func (b boardAPI) projects(w http.ResponseWriter, _ *http.Request) {
 		RootMissing: snapshot.RootMissing,
 		V1Projects:  nonNil(snapshot.V1Projects),
 		Projects:    summaries(snapshot),
+		Runs:        countsJSON(snapshot.RunCounts("")),
 	}
 	if len(snapshot.V1Projects) > 0 {
 		response.MigrateCommand = "flashheart migrate --root " + shellQuote(b.root)
@@ -414,6 +427,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 		DependsOnWorkstreams: nonNil(ticket.DependsOnWorkstreams),
 		CriteriaItems:        nonNil(ticket.Criteria),
 		AttachmentFiles:      []AttachmentJSON{},
+		Runs:                 ticketRuns(snapshot, ticket.ID),
 	}
 	if ticket.Handoff != nil {
 		detail.Handoff = &HandoffJSON{Markdown: ticket.Handoff.Markdown, Next: nonNil(ticket.Handoff.Next)}
@@ -600,6 +614,7 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 	if ticket.Handoff != nil && len(ticket.Handoff.Next) > 0 {
 		result.HandoffNext = ticket.Handoff.Next[0]
 	}
+	liveBadge(snapshot, &result)
 	if withSearch {
 		text := []rune(ticket.Body)
 		if len(text) > searchTextRunes {
@@ -651,6 +666,7 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 		Repos:  nonNil(project.Repos),
 		Counts: map[string]int{}, Warnings: nonNil(project.Warnings), LastModified: timestamp(project.LastModified),
 		Workstreams: []WorkstreamBrief{},
+		Runs:        countsJSON(snapshot.RunCounts(project.Name)),
 	}
 	for _, workstream := range project.Workstreams {
 		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, ID: workstream.Slug}]
