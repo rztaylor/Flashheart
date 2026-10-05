@@ -10,6 +10,9 @@ UI, testing, release or Git policy.
 
 - Follow the execution sequence in `docs/dev/roadmap.md`; each item's brief in
   `docs/dev/roadmap-items/` holds its scope and acceptance criteria.
+- Dogfood: keep this repository's own tickets (project `Flashheart`, key
+  `FH`, in `~/reports/Kanban`) current as you work; see
+  `.agents/facts/roadmap.md`.
 - The board files are the source of truth. Tickets are human-readable markdown
   in the format in `docs/dev/specs/board-format.md`; never move durable ticket
   state into a database or a private cache.

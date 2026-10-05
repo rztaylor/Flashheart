@@ -9,3 +9,11 @@
 - Remove completed items once outcomes are in the spec, decisions, changelog
   and tests.
 - Later possibilities (SPEC §9) are candidates, not commitments.
+- Dogfooding: Flashheart's own work is tracked on its board, project
+  `Flashheart` (key `FH`) in the default root `~/reports/Kanban`, which is
+  not committed (D12). Roadmap briefs stay the scope source; each ticket
+  names its brief. Agents working here move their ticket to `in-progress`
+  with `branch:` set when work starts and to `review` when the pull request
+  opens, and keep `## Handoff` current; until the MCP tools exist, edit
+  tickets through the board UI or in board format v2. Machines without the
+  board (CI, other checkouts) skip this.
