@@ -288,3 +288,35 @@ func appendSection(lines []string, name, content string) []string {
 	lines[len(lines)-1] += "\n"
 	return lines
 }
+
+// SetTitle replaces the first level-1 heading outside code fences, or adds
+// one at the top of the body.
+func SetTitle(data []byte, title string) ([]byte, error) {
+	title = strings.Join(strings.Fields(title), " ")
+	f := split(data)
+	body, offset := f.body()
+	for index, line := range scan(strings.Join(body, "")) {
+		if line.inFence {
+			continue
+		}
+		match := heading.FindStringSubmatch(strings.TrimRight(line.text, "\n"))
+		if match == nil || len(match[1]) != 1 {
+			continue
+		}
+		if match[2] == title {
+			return data, nil
+		}
+		f.lines[offset+index] = "# " + title + "\n"
+		return f.bytes(), nil
+	}
+	rest := slices.Clone(f.lines[offset:])
+	for len(rest) > 0 && strings.TrimSpace(rest[0]) == "" {
+		rest = rest[1:]
+	}
+	top := []string{"# " + title + "\n"}
+	if len(rest) > 0 {
+		top = append(top, "\n")
+	}
+	f.lines = slices.Concat(f.lines[:offset], top, rest)
+	return f.bytes(), nil
+}

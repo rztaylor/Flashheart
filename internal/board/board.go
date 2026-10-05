@@ -39,9 +39,11 @@ func ParseColumn(value string) (Column, bool) {
 	return column, slices.Contains(Columns, column)
 }
 
-var ticketTypes = []string{"feature", "test", "bug", "refactor", "infra", "docs", "spike"}
+// TicketTypes are the known ticket types.
+var TicketTypes = []string{"feature", "test", "bug", "refactor", "infra", "docs", "spike"}
 
-var priorities = []string{"high", "medium", "low"}
+// Priorities are the known Priorities, highest first.
+var Priorities = []string{"high", "medium", "low"}
 
 var (
 	keyPattern    = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,9}$`)
@@ -275,10 +277,10 @@ func ParseTicket(folder string, data []byte) (ticket Ticket) {
 	if len(missing) > 0 {
 		ticket.Warnings = append(ticket.Warnings, "missing "+strings.Join(missing, ", "))
 	}
-	if ticket.Type != "" && !slices.Contains(ticketTypes, ticket.Type) {
+	if ticket.Type != "" && !slices.Contains(TicketTypes, ticket.Type) {
 		ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("type %q is not a known ticket type", ticket.Type))
 	}
-	if ticket.Priority != "" && !slices.Contains(priorities, ticket.Priority) {
+	if ticket.Priority != "" && !slices.Contains(Priorities, ticket.Priority) {
 		ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("priority %q should be high, medium or low", ticket.Priority))
 	}
 	if ticket.Created != "" && !validDate(ticket.Created) {

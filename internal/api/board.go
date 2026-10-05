@@ -173,6 +173,10 @@ type TicketDetail struct {
 	Handoff              *HandoffJSON      `json:"handoff"`
 	Review               *ReviewJSON       `json:"review"`
 	AttachmentFiles      []AttachmentJSON  `json:"attachmentFiles"`
+	// Hash is the file's content hash, sent back with every edit; Raw is the
+	// whole file for the raw editor (EDIT-6). Both are empty when read-only.
+	Hash string `json:"hash"`
+	Raw  string `json:"raw"`
 }
 
 // TicketResponse is GET /api/tickets/{id} and
@@ -229,6 +233,7 @@ type boardAPI struct {
 	doneLimit int
 	stopping  <-chan struct{}
 	longPoll  time.Duration
+	write     Writer
 }
 
 func (b boardAPI) register(mux *http.ServeMux) {
@@ -240,6 +245,7 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/projects/{project}/tickets/{id}/files/{file}", getOnly(b.attachment))
 	mux.Handle("/api/all/board", getOnly(b.allBoard))
 	mux.Handle("/api/changes", getOnly(b.changes))
+	b.registerWrites(mux)
 }
 
 // ChangesResponse is GET /api/changes?since=N: the revision once it is newer
@@ -408,6 +414,11 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 			Run: attachment.Run, Added: attachment.Added,
 			URL: filesURL(project.Name, ticket.ID) + url.PathEscape(attachment.File),
 		})
+	}
+	if b.write != nil {
+		if data, hash, err := b.write.ReadTicket(project.Name, ticket.ID); err == nil {
+			detail.Hash, detail.Raw = hash, string(data)
+		}
 	}
 	writeJSON(w, http.StatusOK, TicketResponse{Revision: snapshot.Revision, Ticket: detail})
 }

@@ -251,3 +251,19 @@ func TestSetListWritesFlowLists(t *testing.T) {
 		t.Errorf("SetList(empty) = %v\n%s", err, got)
 	}
 }
+
+func TestSetTitle(t *testing.T) {
+	t.Parallel()
+
+	got, err := SetTitle([]byte(ticket), "Card panel v2")
+	if err != nil || !strings.Contains(string(got), "\n# Card panel v2\n") || strings.Contains(string(got), "# Card panel\n") {
+		t.Errorf("SetTitle = %v\n%s", err, got)
+	}
+	if same, _ := SetTitle([]byte(ticket), "Card panel"); string(same) != ticket {
+		t.Error("unchanged title rewrote the file")
+	}
+	got, err = SetTitle([]byte("---\na: b\n---\n\nBody.\n"), "New")
+	if err != nil || string(got) != "---\na: b\n---\n# New\n\nBody.\n" {
+		t.Errorf("SetTitle(missing) = %q, %v", got, err)
+	}
+}

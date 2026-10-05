@@ -306,11 +306,6 @@ type Created struct {
 	Key string
 }
 
-var (
-	ticketTypes = []string{"feature", "test", "bug", "refactor", "infra", "docs", "spike"}
-	priorities  = []string{"high", "medium", "low"}
-)
-
 func (t *NewTicket) validate() error {
 	t.Title = strings.Join(strings.Fields(t.Title), " ")
 	if t.Title == "" {
@@ -319,14 +314,14 @@ func (t *NewTicket) validate() error {
 	if t.Type == "" {
 		t.Type = "feature"
 	}
-	if !slices.Contains(ticketTypes, t.Type) {
-		return fmt.Errorf("%w: type must be one of %s", ErrInvalidInput, strings.Join(ticketTypes, ", "))
+	if !slices.Contains(board.TicketTypes, t.Type) {
+		return fmt.Errorf("%w: type must be one of %s", ErrInvalidInput, strings.Join(board.TicketTypes, ", "))
 	}
 	if t.Priority == "" {
 		t.Priority = "medium"
 	}
-	if !slices.Contains(priorities, t.Priority) {
-		return fmt.Errorf("%w: priority must be one of %s", ErrInvalidInput, strings.Join(priorities, ", "))
+	if !slices.Contains(board.Priorities, t.Priority) {
+		return fmt.Errorf("%w: priority must be one of %s", ErrInvalidInput, strings.Join(board.Priorities, ", "))
 	}
 	if t.Status == "" {
 		t.Status = board.Backlog
