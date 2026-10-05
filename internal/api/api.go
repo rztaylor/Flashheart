@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 // Info is the GET /api/info response.
@@ -25,6 +26,11 @@ type Options struct {
 	// DoneLimit is how many done tickets a board shows by default (VIEW-1);
 	// zero shows all.
 	DoneLimit int
+	// Stopping is closed when the server starts shutting down; it releases
+	// long-polls so they never hold up the drain.
+	Stopping <-chan struct{}
+	// LongPoll bounds how long GET /api/changes waits (default 20s).
+	LongPoll time.Duration
 }
 
 // New returns the handler for every /api/ route.
@@ -41,7 +47,13 @@ func New(options Options) http.Handler {
 		writeJSON(w, http.StatusOK, info)
 	})
 	if options.Board != nil {
-		boardAPI{board: options.Board, files: options.Files, root: info.Root, doneLimit: options.DoneLimit}.register(mux)
+		if options.LongPoll <= 0 {
+			options.LongPoll = 20 * time.Second
+		}
+		boardAPI{
+			board: options.Board, files: options.Files, root: info.Root, doneLimit: options.DoneLimit,
+			stopping: options.Stopping, longPoll: options.LongPoll,
+		}.register(mux)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "No such API endpoint")

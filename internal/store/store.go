@@ -331,7 +331,9 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 	if !isProject(fsys, name) {
 		return board.Project{}, nil, fmt.Errorf("project %q: %w", name, ErrNotFound)
 	}
-	r := &reader{root: root, fsys: fsys}
+	// The project itself is part of the fingerprint, so an empty new
+	// project is a change.
+	r := &reader{root: root, fsys: fsys, parts: []string{"project " + name + "\n"}}
 	project := board.Project{
 		Name: name, DisplayName: name, NextID: 1,
 		Reviews: map[string]bool{}, Attachments: map[string][]board.Attachment{},

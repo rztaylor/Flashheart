@@ -43,7 +43,20 @@ type runtime struct {
 	server   *singleserve.Server
 	requests *requestTracker
 	files    *store.Store
+	board    *index.Index
+	stopping *stopSignal
 }
+
+// stopSignal is closed once when shutdown begins, releasing long-polls so
+// they never hold up the drain.
+type stopSignal struct {
+	once sync.Once
+	ch   chan struct{}
+}
+
+func newStopSignal() *stopSignal { return &stopSignal{ch: make(chan struct{})} }
+
+func (s *stopSignal) stop() { s.once.Do(func() { close(s.ch) }) }
 
 // Run serves Flashheart and blocks until the server has drained.
 func Run(ctx context.Context, options Options) error {
@@ -65,6 +78,19 @@ func Run(ctx context.Context, options Options) error {
 	if err != nil {
 		return fmt.Errorf("start local server: %w", err)
 	}
+	// External edits become new revisions within a second (STO-7).
+	watchCtx, stopWatching := context.WithCancel(context.Background())
+	defer stopWatching()
+	if runtime.board != nil {
+		go runtime.board.Watch(watchCtx, options.Root, nil)
+	}
+	go func() {
+		select {
+		case <-ctx.Done():
+			runtime.stopping.stop()
+		case <-watchCtx.Done():
+		}
+	}()
 
 	launched := Launched{Address: launch.Address()}
 	if err := launch.OpenBrowser(ctx); err != nil {
@@ -108,8 +134,11 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 		return nil, err
 	}
 	files := store.New(options.Root)
+	stopping := newStopSignal()
+	var board *index.Index
 	apiHandler := apiOverride
 	if apiHandler == nil {
+		board = index.New(files, index.Options{})
 		apiHandler = api.New(api.Options{
 			Info: api.Info{
 				Version:         options.Build.Version,
@@ -119,9 +148,10 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 				Root:            options.Root,
 				Theme:           settings.UI.Theme,
 			},
-			Board:     index.New(files, index.Options{}),
+			Board:     board,
 			Files:     files,
 			DoneLimit: settings.DoneColumnLimit,
+			Stopping:  stopping.ch,
 		})
 	}
 	mux := http.NewServeMux()
@@ -136,6 +166,7 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 			if requests.Writes() > 0 {
 				return singleserve.DenyShutdown("save_in_progress", "A change is still being saved. Quit again when it finishes.")
 			}
+			stopping.stop()
 			return nil
 		}),
 	}
@@ -147,7 +178,7 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 		files.Close()
 		return nil, fmt.Errorf("configure local server: %w", err)
 	}
-	return &runtime{server: server, requests: requests, files: files}, nil
+	return &runtime{server: server, requests: requests, files: files, board: board, stopping: stopping}, nil
 }
 
 // requestTracker counts in-flight application requests; requests with unsafe

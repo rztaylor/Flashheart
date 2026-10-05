@@ -32,7 +32,7 @@ Brief: `docs/dev/roadmap-items/board-editing.md`. Branch:
 
 - [x] 1 mdfile edits
 - [x] 2 store writes
-- [ ] 3 watching and long-poll
+- [x] 3 watching and long-poll
 - [ ] 4 config and preferences
 - [ ] 5 write API and guard
 - [ ] 6 frontend editing

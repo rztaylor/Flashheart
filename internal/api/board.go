@@ -2,12 +2,14 @@ package api
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,9 +22,11 @@ import (
 // client-side search (VIEW-7).
 const searchTextRunes = 1000
 
-// BoardSource supplies the current board snapshot.
+// BoardSource supplies the current board snapshot and waits for changes.
 type BoardSource interface {
 	Current() (*index.Snapshot, error)
+	Rebuild() (*index.Snapshot, error)
+	Wait(ctx context.Context, since uint64) uint64
 }
 
 // FileSource reads files that are not kept in the snapshot.
@@ -223,6 +227,8 @@ type boardAPI struct {
 	files     FileSource
 	root      string
 	doneLimit int
+	stopping  <-chan struct{}
+	longPoll  time.Duration
 }
 
 func (b boardAPI) register(mux *http.ServeMux) {
@@ -233,6 +239,36 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/projects/{project}/workstreams", getOnly(b.workstreams))
 	mux.Handle("/api/projects/{project}/tickets/{id}/files/{file}", getOnly(b.attachment))
 	mux.Handle("/api/all/board", getOnly(b.allBoard))
+	mux.Handle("/api/changes", getOnly(b.changes))
+}
+
+// ChangesResponse is GET /api/changes?since=N: the revision once it is newer
+// than since, or the unchanged revision when the wait ends (LIFE-3).
+type ChangesResponse struct {
+	Revision uint64 `json:"revision"`
+}
+
+func (b boardAPI) changes(w http.ResponseWriter, r *http.Request) {
+	since, err := strconv.ParseUint(r.URL.Query().Get("since"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "since must be a revision number")
+		return
+	}
+	if b.snapshot(w) == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), b.longPoll)
+	defer cancel()
+	if b.stopping != nil {
+		go func() {
+			select {
+			case <-b.stopping:
+				cancel()
+			case <-ctx.Done():
+			}
+		}()
+	}
+	writeJSON(w, http.StatusOK, ChangesResponse{Revision: b.board.Wait(ctx, since)})
 }
 
 func getOnly(handler http.HandlerFunc) http.Handler {
