@@ -1,0 +1,30 @@
+[
+  {
+    "run": "claude:5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
+    "kind": "tool.used",
+    "data": {
+      "tool": "TodoWrite",
+      "ok": true
+    }
+  },
+  {
+    "run": "claude:5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
+    "kind": "plan.updated",
+    "data": {
+      "items": [
+        {
+          "text": "Write notes",
+          "status": "completed"
+        },
+        {
+          "text": "Edit the readme",
+          "status": "in_progress"
+        },
+        {
+          "text": "Explore the repository",
+          "status": "pending"
+        }
+      ]
+    }
+  }
+]
