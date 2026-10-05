@@ -189,3 +189,33 @@ conversation: `board_context` asks while the key is unset and
 cannot take the same key. The ticket file is named after its folder
 (`FH-42-<slug>.md`) so editor tabs and search results identify the ticket
 (user, 2026-10-05).
+
+## 2026-10-05 — D17: Agent runs are derived on read; Needs you leads
+
+Decision: runs are never stored. Hooks append facts to the event log and
+every reader (serve's index, the session-start recovery note) folds them
+into runs with a clock, so state transitions that only need time (Working
+to Quiet, stale to Ended) need no writer, and a corrupt or deleted log
+costs history, not tickets. Serve folds only the last two days of event
+files, incrementally, and moves the board revision when the clock changes a
+run's state. A pending permission is resolved in derivation by the run's
+next tool result, prompt or turn end rather than by an extra event, so the
+hot path never reads the log. `turn.start` repeats the working directory
+and branch, so a session first seen mid-way (hooks installed while it ran)
+still has them.
+
+In the UI, the Agents view is a departure board with Needs you as its first
+lane, not the spec's original order, because the one thing that needs the
+human must be first (PRODUCT principle 2). Virtual columns sit before
+Backlog and appear only while they hold tickets, so a board with nothing to
+flag stays calm. Run state follows the ticket-state rule: ink, shape and
+words, with Needs you as the one inverted plate and a slowly beating dot as
+the board's only motion (user, 2026-10-05).
+
+Rejected: storing run state in a file (a second source of truth that hooks
+would have to rewrite under a lock on every event); a run-state daemon
+(D4, no required daemon).
+
+Dogfooding (user, 2026-10-05): Flashheart's own work is tracked on its board
+(project `Flashheart`, key `FH`) in the default root, outside the
+repository (D12).

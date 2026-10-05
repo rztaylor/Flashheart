@@ -16,8 +16,9 @@ told where the work stood and carries on. Meanwhile you can see, for every
 project at once, which agents are working, which have gone quiet, and which
 are waiting for you.
 
-**Status: early development.** `flashheart` starts and opens an empty board
-shell in your browser; board views, hooks and MCP are not built yet. See the
+**Status: early development.** The board (views, editing, live updates) and
+live agent runs from Claude Code hooks work; the MCP server, setup
+automation and Codex support are next. See the
 [roadmap](docs/dev/roadmap.md).
 
 ## How it works
@@ -32,9 +33,9 @@ Obsidian / your editor ───────────────────
 Browser ◀── loopback, authenticated ──▶ flashheart serve (watches the files)
 ```
 
-- **Files are the truth.** Tickets are markdown with YAML frontmatter in one
-  folder per column (`todo/`, `in-progress/`, `ready-to-review/`, `done/`),
-  readable in any editor or Obsidian. See
+- **Files are the truth.** Tickets are markdown with YAML frontmatter, one
+  folder per ticket (`tickets/FH-42-<slug>/`) with its column in
+  frontmatter, readable in any editor or Obsidian. See
   [`docs/dev/specs/board-format.md`](docs/dev/specs/board-format.md).
 - **Hooks do the bookkeeping.** Session starts, plans, permission prompts,
   subagents and stops are recorded automatically; the model only reports what
@@ -55,6 +56,10 @@ flashheart version
 The server stops when you choose **Quit** in the board or close its last tab.
 If no browser can be opened, Flashheart prints a one-time link that works for
 two minutes.
+
+To see your Claude Code sessions on the board, add Flashheart's hooks to
+Claude Code's settings:
+[`docs/user/claude-code-hooks.md`](docs/user/claude-code-hooks.md).
 
 Planned:
 

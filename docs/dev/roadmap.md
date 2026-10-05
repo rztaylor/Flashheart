@@ -10,8 +10,9 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 
 ## Execution order
 
-1. [`agent-runs`](roadmap-items/agent-runs.md) — **Partial**. Event log, run
-   state, `hook claude`, Agents view, virtual columns, recovery notes.
+1. [`agent-runs`](roadmap-items/agent-runs.md) — **Partial**. Built; open:
+   recording the remaining real Claude Code payloads and the real-session
+   acceptance check (needs a person).
 2. [`mcp-protocol`](roadmap-items/mcp-protocol.md) — **Pending**. MCP server,
    claims, checkpoints, questions, `setup claude`, protocol skill,
    handoff enforcement. Depends on `agent-runs`.

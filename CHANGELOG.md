@@ -60,6 +60,25 @@ All notable changes to this project are documented here. The project follows
   numbers tickets oldest first, rewrites references to ids and moves the v1
   files into `.flashheart/backup/`, deleting nothing. A board with v1
   projects shows the command to run.
+- Agent runs from Claude Code hooks: `flashheart hook claude <Event>`
+  records sessions, subagents, prompts, tool use, edited files, plans,
+  permission prompts and compaction in each project's event log, creating a
+  project for a new repository on first contact. It always exits 0, logs
+  problems to `.flashheart/hook-errors.log`, never stores prompts, commands
+  or tool inputs and outputs, and scrubs likely secrets. At session start it
+  tells the agent about the ticket linked to its branch, the ticket's
+  handoff and an earlier session that left edits. Manual setup:
+  [`docs/user/claude-code-hooks.md`](docs/user/claude-code-hooks.md).
+- The Agents view: every session and subagent across projects as a
+  departure board, lanes by state with Needs you first, each run's ticket,
+  plan, branch and last activity, opening to its plan, edited files and
+  activity. Cards show their live run, Needs you and Agent working columns
+  mirror tickets at the front of the board, the card panel has a Runs tab
+  and warns when a run has edited since the handoff, and Needs you shows in
+  the top bar and the project rail.
+- Event logs expire after `event_retention_days` (90 by default).
+- `scripts/hook-bench.sh` measures hook latency (p95 under 50 ms) and
+  `scripts/record-claude-hooks.sh` records real hook payloads for the tests.
 - GitHub foundation: CI runs `scripts/check.sh` on Linux and macOS and the
   Playwright suite on Linux for every pull request; Dependabot, a pull
   request template, `CONTRIBUTING.md` and `SECURITY.md`.

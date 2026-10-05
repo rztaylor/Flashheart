@@ -191,13 +191,14 @@ Full format: `docs/dev/specs/board-format.md`.
   next, In progress, Ready to review, Done).
   *done* shows the most recent 20 by default with **Show all**.
 - `VIEW-2` **Virtual columns**: *Needs you* (tickets with a run in Needs you or
-  an open question) and *Agent working* (tickets claimed by a live run). Each
-  can be shown or hidden; a ticket in a virtual column also stays in its real
-  column, marked as mirrored.
+  an open question) and *Agent working* (tickets linked to a Working or Quiet
+  run). They sit before Backlog and appear while they hold tickets. Each
+  can be shown or hidden (Needs you shown by default); a ticket in a virtual
+  column also stays in its real column, marked as mirrored.
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
-  (`RUN-3`): *Working*, *Needs you*, *Waiting*, *Quiet*, *Ended*. Subagents
-  nest under their parent. Ended runs older than 24 hours are hidden by
-  default.
+  (`RUN-3`), Needs you first: *Needs you*, *Working*, *Quiet*, *Waiting*,
+  *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
+  are hidden by default.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
   tickets in ticket order with status, blocked state and progress.
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
@@ -452,9 +453,10 @@ the system.
   status and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.
-- **Agents**: lanes by run state; each run row shows agent, project, ticket,
-  plan progress, last activity, and expands to its event timeline and
-  subagents.
+- **Agents**: a departure board: lanes by run state, Needs you first; each
+  run row shows agent, project, ticket (or Unassigned), plan progress drawn
+  as a route, branch and last activity, and expands to its plan, edited files
+  and activity; subagents hang beneath their session.
 - **Needs you** is visible from every view and project (badge in the rail and
   top bar).
 - Narrow widths keep a single column with a column picker; the board is not

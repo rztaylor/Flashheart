@@ -1,6 +1,20 @@
 # agent-runs
 
-Status: **Partial**. Plan: `docs/dev/plans/002-agent-runs.md`.
+Status: **Partial**. Plan: `docs/dev/plans/002-agent-runs.md`. Tracked on
+the dogfood board as FH-1, FH-2 and FH-3.
+
+Built (2026-10-05): event log, scrubber, gitinfo, run derivation, `hook
+claude` with recovery notes, runs in serve and the API, Agents view, live
+badges, virtual columns, Runs tab, Needs you badges, the manual hook guide,
+the latency bench (p95 about 6 ms) and the recorder script.
+
+Remaining (needs a person at the keyboard):
+
+- Record real payloads for the cases `testdata/hooks/claude/MANIFEST.md`
+  lists as documented-only (only `SessionStart`, `UserPromptSubmit` and
+  `SessionEnd` are recorded so far) with `scripts/record-claude-hooks.sh`,
+  and fix any differences the recordings show.
+- The real-session acceptance check below.
 
 ## Goal
 

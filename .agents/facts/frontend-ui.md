@@ -12,8 +12,9 @@
   markdown links, grid movement) → `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  RouteBar, EmptyState) → `features/<feature>/` (board, card, editing,
-  workstreams, table, projects, filters; later agents, settings) → `app/`
+  RouteBar, EmptyState, RunState, PlanRoute) → `features/<feature>/` (board,
+  card, editing, agents, workstreams, table, projects, filters; later
+  settings) → `app/`
   (shell, hash routing, composition). Shared layers never import features
   or the shell.
 - `src/lifecycle/` owns the single Singleserve session (`connect` from
@@ -49,7 +50,9 @@
   black band and black project rail frame a dotted platform ground with
   shadowed cards (board-refresh, 2026-10-05); ticket state is ink, shape and words (diamond = blocked by a
   dependency, quiet text = waiting on the line's order, dashed border plus
-  hatched band = needs repair); Workstreams drawn as transit lines. The
+  hatched band = needs repair); run state is ink and shape too (Needs you is
+  the one inverted plate; a Working run's dot beats slowly, the board's only
+  motion, off under reduced motion); Workstreams drawn as transit lines. The
   contract lives in `.impeccable/surfaces/`; `DESIGN.md` records the built
   system. Icons are an authored SVG set in `components/Icon.tsx`.
 - Validation: Vitest for view-models and components; Playwright screenshots

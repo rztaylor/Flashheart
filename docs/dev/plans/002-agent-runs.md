@@ -31,12 +31,12 @@ Each slice is test-first and committed on its own.
 
 ## Progress
 
-- [ ] 1 golden payloads
-- [ ] 2 scrub
-- [ ] 3 events
-- [ ] 4 gitinfo
-- [ ] 5 runs
-- [ ] 6 hooks and CLI
-- [ ] 7 serve runs API
-- [ ] 8 frontend
-- [ ] 9 docs, e2e, closure
+- [~] 1 golden payloads (3 recorded; the rest follow the documented schema)
+- [x] 2 scrub
+- [x] 3 events
+- [x] 4 gitinfo
+- [x] 5 runs
+- [x] 6 hooks and CLI
+- [x] 7 serve runs API
+- [x] 8 frontend
+- [~] 9 docs, e2e, closure (real-session check open)

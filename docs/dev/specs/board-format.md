@@ -11,7 +11,7 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 <root>/                                   default ~/reports/Kanban
 ├── .flashheart/
 │   ├── config.yaml                       version: 2, settings, UI preferences (CFG-1, CFG-2)
-│   ├── cache/cwd.json                    cwd → project/branch cache (agent-protocol §2)
+│   ├── cache/cwd.json                    cwd → project/branch cache, validated by HEAD's mtime (agent-protocol §2)
 │   ├── backup/v1-<UTC timestamp>/        the v1 tree moved aside by migrate
 │   ├── lock                              advisory root lock for choosing keys (KEY-5)
 │   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
@@ -269,9 +269,9 @@ ui:
   theme: system           # system | light | dark
   density: normal         # compact | normal | detailed
   colour_by: type         # type | priority | age | none
-  virtual_columns: [needs-you]
+  virtual_columns: [needs-you]   # needs-you, agent-working; [] shows none
   scopes:                 # remembered view and filters, per project or "all"
-    flashheart: {view: board, type: bug, state: blocked, hide_later: true}
+    flashheart: {view: board, type: bug, state: blocked, hide_later: true}   # view: board, agents, workstreams or table
 ```
 
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
@@ -283,7 +283,8 @@ column folders (`todo/`, `in-progress/`, `ready-to-review/`, `done/`).
 ## Event log
 
 `<project>/.flashheart/events/YYYY-MM-DD.jsonl` (UTC date), one JSON object
-per line, appended under the project lock. Schema and event kinds:
+per line, appended under the project lock by `flashheart hook` (and later
+`mcp` and `serve`). Schema and event kinds:
 `docs/dev/specs/agent-protocol.md` §3. Events name tickets by id. Readers skip
 malformed lines and unknown kinds. Files older than `event_retention_days` are
 deleted by `serve` at startup and daily; this is the only deletion Flashheart
