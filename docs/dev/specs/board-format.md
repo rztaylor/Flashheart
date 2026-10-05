@@ -1,64 +1,82 @@
-# Board format (v1)
+# Board format (v2)
 
-The on-disk format Flashheart reads and writes. It is the kanban-tracker skill's
-format with a few additive extensions, so existing boards work unchanged
-(`STO-1`). Requirement ids refer to `docs/SPEC.md`.
+The on-disk format Flashheart reads and writes. Tickets stay plain markdown
+with YAML frontmatter, readable in any editor; Flashheart owns the layout
+(decision D15). Version 1, the kanban-tracker column-folder layout, is read
+only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 
 ## Layout
 
 ```text
-<root>/                                  default ~/reports/Kanban
+<root>/                                   default ~/reports/Kanban
 ├── .flashheart/
-│   ├── config.yaml                      global settings and UI preferences (CFG-1, CFG-2)
-│   ├── cache/cwd.json                   cwd → project/branch cache (agent-protocol §2)
-│   ├── hook-errors.log                  hook failures (HOOK-1), rotated at 1 MB
-│   └── serve.log                        background serve diagnostics (LIFE-4), rotated at 1 MB
-├── .archive/                            archived projects (PRJ-5)
-├── _scratch/                            agent activity outside any git repository (PRJ-4)
-└── <project>/                           e.g. ngplus
-    ├── project.yaml                     optional (PRJ-3)
+│   ├── config.yaml                       version: 2, settings, UI preferences (CFG-1, CFG-2)
+│   ├── cache/cwd.json                    cwd → project/branch cache (agent-protocol §2)
+│   ├── backup/v1-<UTC timestamp>/        the v1 tree moved aside by migrate
+│   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
+│   └── serve.log                         background serve diagnostics (LIFE-4), rotated at 1 MB
+├── .archive/                             archived projects (PRJ-5)
+├── _scratch/                             agent activity outside any git repository (PRJ-4)
+└── <project>/                            e.g. flashheart
+    ├── project.yaml                      key, display name, repos, next id (PRJ-3, KEY-1)
     ├── workstreams/<slug>.md
-    ├── todo/<type>--<slug>.md
-    ├── in-progress/<type>--<slug>.md
-    ├── ready-to-review/<type>--<slug>.md
-    ├── done/<type>--<slug>.md
-    ├── reviews/<type>--<slug>.md        review guide; same filename as its ticket
-    ├── attachments/<type>--<slug>/      files added with `attach` (REV-1)
-    │   ├── 20261004T1412-board-desktop.png
-    │   └── index.yaml                   caption, kind, run and time per file
-    ├── .archive/                        archived tickets (EDIT-8), same column layout
+    ├── tickets/
+    │   └── FH-42-card-panel/             one folder per ticket: <id>-<slug>
+    │       ├── ticket.md                 the ticket
+    │       ├── review.md                 review guide (REV-4), optional
+    │       └── files/                    copied files (REV-1, REV-5)
+    │           ├── index.yaml
+    │           └── 20261005T1412-board-desktop.png
+    ├── .archive/tickets/FH-7-old-idea/   archived tickets (EDIT-8)
     └── .flashheart/
-        ├── lock                         advisory project lock (STO-3)
-        └── events/2026-10-04.jsonl      event log (STO-5)
+        ├── lock                          advisory project lock (STO-3)
+        └── events/2026-10-05.jsonl       event log (STO-5)
 ```
 
 Rules:
 
-- A ticket's column is its directory. Exactly one file per slug may exist
-  across the four columns; if two exist, both are shown as *needs repair*.
-- Directories starting with `.` are Flashheart's or archives; Obsidian and most
-  editors hide them.
-- Unknown files and directories are ignored and preserved.
+- A project is a directory with a `tickets/` folder or a `project.yaml`
+  (PRJ-1).
+- A ticket is a folder in `tickets/` containing `ticket.md`. The folder name
+  `<id>-<slug>` is a readable hint; the frontmatter `id` is authoritative and a
+  mismatch is a warning. A folder without `ticket.md` is ignored.
+- Two tickets with the same id are both shown as *needs repair*.
+- Directories starting with `.` are Flashheart's or archives. Unknown files and
+  directories are ignored and preserved.
+
+## Ticket ids (KEY)
+
+- Every project has a **key**: 2 to 10 characters, an uppercase letter
+  followed by uppercase letters or digits (`FH`, `NG`, `OPS2`), set as `key`
+  in `project.yaml` and unique across the root. Without one, readers derive a
+  default (the initials of a multi-word directory name, otherwise its first
+  three letters, uppercased) and show a warning; writers record it.
+- A ticket id is `<key>-<number>` (`FH-42`). Numbers start at 1, are assigned
+  under the project lock from `next_id` in `project.yaml` (never lower than
+  one past the highest existing or archived number), and are never reused or
+  renumbered.
+- Ids are global across the root because keys are unique, so references never
+  need a project prefix.
 
 ## Ticket
 
-Filename: `<prefix>--<kebab-slug>.md`, prefix one of `feat`, `test`, `bug`,
-`refactor`, `infra`, `docs`, `spike`. The slug is the filename without `.md`.
+`tickets/<id>-<slug>/ticket.md`:
 
 ```markdown
 ---
+id: FH-42
+status: up-next          # backlog | up-next | in-progress | review | done
 type: feature            # feature | test | bug | refactor | infra | docs | spike
-project: ngplus
-created: 2026-10-04
 priority: high           # high | medium | low
-session: claude-code-desktop:3321f965-…   # creating session (free text)
-git-ref: cf98240
+created: 2026-10-04
 branch: feature/x        # empty until work starts
-workstream: ofqual-regulatory-layer
-depends-on: [feat--other-ticket]
+workstream: board-ui
+depends-on: [FH-12, NG-3]
 depends-on-workstreams: []
-tags: [assessment]
-updated: 2026-10-04T14:12:09Z    # v1 extension, optional: last write by Flashheart
+tags: [ui]
+session: claude:3321f965-…   # creating session (free text)
+git-ref: cf98240
+updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 ---
 
 # Title
@@ -69,26 +87,47 @@ updated: 2026-10-04T14:12:09Z    # v1 extension, optional: last write by Flashhe
 ## Test Plan            (feature)   /   ## Reproduction   (bug)
 ## Context
 ## Notes
-## Handoff              (v1 extension, written by checkpoint)
+## Handoff              (written by checkpoint)
 ```
 
 ### Frontmatter
 
 | Field | Required | Notes |
 |---|---|---|
-| `type` | yes | Must agree with the filename prefix (`feat` ↔ `feature`); disagreement is a warning, not an error. |
-| `project` | yes | Informational; the directory decides the project. |
-| `created` | yes | `YYYY-MM-DD`. |
+| `id` | yes | `<key>-<number>`. Taken from the folder name, with a warning, when absent. |
+| `status` | yes | The column. Missing reads as `backlog` with a warning; an unknown value marks the ticket *needs repair* (shown in Backlog). |
+| `type` | yes | `feature`, `test`, `bug`, `refactor`, `infra`, `docs`, `spike`. |
 | `priority` | yes | `high`, `medium`, `low`. |
-| `session`, `git-ref` | yes in the skill, optional here | Free text. |
+| `created` | yes | `YYYY-MM-DD`. Orders numbering at migration and ties in sorting. |
 | `branch` | no | Used for provisional run links (`RUN-5`). |
 | `workstream` | no | Slug of a workstream in this project. |
-| `depends-on` | no | Ticket slugs in this project. `<project>/<slug>` refers to another project (v1 extension). |
-| `depends-on-workstreams` | no | Workstream slugs. |
-| `tags` | no | Free text. |
-| `updated` | no | v1 extension. RFC 3339 UTC. |
+| `depends-on` | no | Ticket ids, in any project. |
+| `depends-on-workstreams` | no | Workstream slugs in this project. |
+| `tags` | no | Free text; `later-possibility` marks ideas (`VIEW-7`). |
+| `session`, `git-ref`, `updated` | no | Free text / RFC 3339 UTC. |
 
-Unknown keys are preserved in place (`STO-2`).
+The title is the first `#` heading. Unknown keys are preserved in place
+(`STO-2`).
+
+### Columns
+
+| `status` | Column | Meaning |
+|---|---|---|
+| `backlog` | Backlog | Captured; not yet chosen. |
+| `up-next` | Up next | Picked and ready for implementation, in priority order. |
+| `in-progress` | In progress | Being worked on. |
+| `review` | Ready to review | Implemented; waiting for human review. |
+| `done` | Done | Accepted. |
+
+A move is a frontmatter edit of `status` under the lock with a content-hash
+precondition (`STO-3`); the folder never moves except to `.archive/`.
+
+### References in text
+
+Ticket ids written in markdown (`FH-42`) render as links to that ticket.
+Relative links into another ticket folder (`../FH-12-x/ticket.md`) also open
+that ticket. Files are referenced relative to the ticket folder
+(`files/20261005T1412-board.png`).
 
 ### Handoff section
 
@@ -118,22 +157,23 @@ assessment objectives?" Answer (Robert): "Yes".`
 
 ## Blocking
 
-A ticket is **blocked** when any of these holds (the kanban-tracker rules):
+A ticket is **blocked** when any of these holds:
 
-1. a `depends-on` ticket is not in `ready-to-review/` or `done/`;
-2. a `depends-on-workstreams` workstream has a ticket not in `ready-to-review/`
-   or `done/`;
+1. a `depends-on` ticket is not in `review` or `done`;
+2. a `depends-on-workstreams` workstream has a ticket not in `review` or
+   `done`;
 3. it belongs to a workstream and an earlier ticket in that workstream's
-   `tickets:` list is not in `ready-to-review/` or `done/`;
+   `tickets:` list is not in `review` or `done`;
 4. a workstream that lists it has a `depends-on-workstreams` workstream with a
-   ticket not in `ready-to-review/` or `done/`.
+   ticket not in `review` or `done`.
 
 A workstream's `tickets:` list defines membership and order; a ticket whose
 `workstream:` field disagrees with the lists gets a warning. A reference to a
 missing ticket or workstream (including a missing `workstream:`) is shown as a
-warning and counts as blocking. Archived tickets count as done for blocking.
-A ticket that exists in several columns counts as done only when every copy
-does. Only tickets in `todo/` and `in-progress/` are shown as blocked.
+warning and counts as blocking. Archived tickets count as done. A duplicated
+id counts as done only when every copy does. Only tickets in `backlog`,
+`up-next` and `in-progress` are shown as blocked; waits on rule 3 alone are
+shown quietly as waiting (D14).
 
 ## Workstream
 
@@ -141,13 +181,13 @@ does. Only tickets in `todo/` and `in-progress/` are shown as blocked.
 
 ```markdown
 ---
-slug: ofqual-regulatory-layer
-status: active            # active | blocked | completed (informational; derived in the UI)
+slug: board-ui
+status: active            # informational; the UI derives status
 priority: high
 created: 2026-10-04
-tickets:                  # ordered; order implies blocking
-  - bug--board-label-claims-known-specification
-  - feat--ofqual-assessment-objectives
+tickets:                  # ticket ids, ordered; order implies blocking
+  - FH-12
+  - FH-13
 depends-on-workstreams: []
 tags: []
 ---
@@ -161,37 +201,41 @@ tags: []
 
 The UI derives status (`completed` when every ticket is in review or done,
 `blocked` when its own `depends-on-workstreams` are incomplete or its next
-ticket in order is blocked, otherwise `active`) and does not rewrite the `status` field unless
-the user edits it.
+ticket in order is blocked, otherwise `active`) and does not rewrite the
+`status` field unless the user edits it.
 
 ## Review
 
-`reviews/<same filename as the ticket>.md`, in the kanban-tracker review
-template (Summary, Key Files, How to Verify, Risks, PR Notes). Screenshots are
-referenced with paths relative to the review file:
-`![Board at desktop](../attachments/feat--x/20261004T1412-board-desktop.png)`.
+`tickets/<folder>/review.md`, in the review template (Summary, Key Files, How
+to Verify, Risks, PR Notes). Screenshots are referenced as
+`![Board at desktop](files/20261004T1412-board-desktop.png)`.
 
-## Attachments index
+## Files and the files index
 
-`attachments/<ticket>/index.yaml`:
+`tickets/<folder>/files/index.yaml`:
 
 ```yaml
 - file: 20261004T1412-board-desktop.png
   caption: Board at 1440×900, dark theme
   kind: screenshot        # screenshot | log | other
+  source: /Users/robert/src/flashheart/.playwright/board.png   # where it was copied from
   run: claude:3f2a…
   added: 2026-10-04T14:12:09Z
   sha256: 9b1c…
 ```
 
-Stored names are `<UTC timestamp>-<sanitised original name>`.
+Stored names are `<UTC timestamp>-<sanitised original name>`. Files are always
+copies (`REV-1`); agents' own files may be cleaned up at any time, so anything
+a ticket or review refers to is copied in before it is recorded (`REV-5`).
 
 ## project.yaml
 
 ```yaml
-name: NG+                 # display name; defaults to the directory name
+key: FH                   # ticket id prefix (KEY-1); unique across the root
+next_id: 43               # next ticket number (KEY-2)
+name: Flashheart          # display name; defaults to the directory name
 repos:                    # main-checkout paths seen by hooks (PRJ-3)
-  - /Users/robert/src/ngplus
+  - /Users/robert/src/flashheart
 settings:                 # per-project overrides of global config
   enforce_handoff: false
   quiet_minutes: 10
@@ -200,7 +244,7 @@ settings:                 # per-project overrides of global config
 ## config.yaml
 
 ```yaml
-version: 1
+version: 2
 auto_create_projects: true
 quiet_minutes: 10
 event_retention_days: 90
@@ -213,19 +257,38 @@ ui:
   virtual_columns: [needs-you]
 ```
 
+A root without `config.yaml` is version 2 unless a project in it still has v1
+column folders (`todo/`, `in-progress/`, `ready-to-review/`, `done/`).
+
 ## Event log
 
 `<project>/.flashheart/events/YYYY-MM-DD.jsonl` (UTC date), one JSON object
 per line, appended under the project lock. Schema and event kinds:
-`docs/dev/specs/agent-protocol.md` §3. Readers skip malformed lines and
-unknown kinds. Files older than `event_retention_days` are deleted by `serve`
-at startup and daily; this is the only deletion Flashheart performs.
+`docs/dev/specs/agent-protocol.md` §3. Events name tickets by id. Readers skip
+malformed lines and unknown kinds. Files older than `event_retention_days` are
+deleted by `serve` at startup and daily; this is the only deletion Flashheart
+performs.
 
-## Compatibility
+## Migration from v1
 
-- **v1 readers** (the kanban-tracker skill, Obsidian, humans) can ignore every
-  extension: `updated`, `## Handoff`, `done/`, `.archive/`, `attachments/`,
-  `.flashheart/`, cross-project `depends-on`.
-- A future incompatible change bumps `version` in `config.yaml` and ships a
-  migration command; Flashheart refuses to write to a root with a newer
-  version than it understands.
+`flashheart migrate` shows the plan and changes nothing; `--write` applies it
+(`MIG-1`):
+
+1. Each project gets a key: its existing `key`, a `--key <project>=<KEY>`
+   argument, or the derived default.
+2. Tickets, including archived ones, are numbered once in `created` order
+   (then by v1 slug) and written to `tickets/<id>-<slug>/ticket.md` with `id`
+   and `status` inserted at the top of the frontmatter (v1 `todo` becomes
+   `backlog`, `ready-to-review` becomes `review`) and the `<type>--` prefix
+   dropped from the slug. Unparseable tickets are copied byte for byte and
+   stay *needs repair*.
+3. `depends-on` slugs and workstream `tickets:` lists are rewritten to ids;
+   reviews become `review.md`; attachments move to `files/`; ticket links in
+   reviews and tickets are rewritten to ids.
+4. The v1 files and folders are moved, never deleted, to
+   `.flashheart/backup/v1-<UTC timestamp>/`, and `config.yaml` records
+   `version: 2`.
+
+`serve` on a v1 root shows the migration command instead of the board and
+writes nothing. Flashheart refuses to write to a root with a newer version
+than it understands.

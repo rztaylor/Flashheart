@@ -1,17 +1,18 @@
 # board-editing
 
-Status: **Pending**. Its dependency, `board-core`, is complete.
+Status: **Pending**. Depends on `board-refresh` (and format v2).
 
 ## Goal
 
 Make the board a safe editor shared with other writers: humans in the UI, in
-editors and Obsidian, and (later) agents.
+editors, and (later) agents.
 
 ## Scope
 
 - `internal/store` write side: per-project advisory lock, atomic writes,
-  content-hash preconditions, moves between columns, archive and unarchive
-  (`STO-3`, `EDIT-8`).
+  content-hash preconditions, moves as `status` edits, archive and unarchive
+  of ticket folders, id assignment from `next_id` (`STO-3`, `EDIT-8`,
+  `KEY-2`).
 - `internal/mdfile` round-trip edits preserving key order, comments and
   unknown keys (`STO-2`); checkbox toggling; section replace (`## Handoff`)
   and append (`## Notes`).

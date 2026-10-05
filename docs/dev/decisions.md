@@ -29,7 +29,7 @@ Flashheart); high-volume run activity goes to per-project daily JSONL files.
 `serve` builds an in-memory index at start and keeps no database. Durable
 meaning (handoffs, answers) is written into tickets so the log is disposable.
 
-## 2026-10-04 — D3: A ticket's column is its directory
+## 2026-10-04 — D3: A ticket's column is its directory (superseded by D15)
 
 Options: directory (kanban-tracker format); a `status:` field.
 
@@ -148,3 +148,36 @@ accessibility. Waits on an earlier station are shown quietly so the blocked
 diamond answers "what is stuck". Frontend additions under D10: self-hosted
 `@fontsource-variable/archivo` (OFL) for the signage grotesk under the
 strict CSP, and an authored icon set instead of an icon library.
+
+## 2026-10-05 — D15: Board format v2: a folder per ticket, status in frontmatter
+
+Context: the kanban-tracker skill will be replaced by Flashheart and Obsidian
+is not in use, so compatibility with the v1 column-folder layout no longer
+constrains the format (user, 2026-10-05). The board also needs a new column
+(Up next) and a home for files agents refer to.
+
+Options: keep column folders and add ids; a flat `tickets/` folder with the
+status in frontmatter; a folder per ticket with the status in frontmatter.
+
+Decision: a folder per ticket (`tickets/FH-42-<slug>/` holding `ticket.md`,
+`review.md` and `files/`) with the column as a frontmatter `status`. Moves
+become a field edit under the lock with a hash precondition instead of a
+rename that races other writers; columns are a list rather than folders, so
+Up next costs nothing; archiving or copying a ticket carries its review and
+files with it; and a ticket's files can be copied in before agents clean
+theirs up (REV-5). Tickets stay plain markdown. The columns are Backlog, Up
+next, In progress, Ready to review and Done; v1 boards convert once with
+`flashheart migrate`, which moves the old tree into a backup inside the root.
+Supersedes D3 and the kanban-tracker compatibility in STO-1.
+
+## 2026-10-05 — D16: JIRA-style ticket ids
+
+Decision: every project has a short key (`FH`) in `project.yaml` and every
+ticket an id `FH-42` in its frontmatter, assigned from `next_id` under the
+project lock and never reused. The id lives in the file so it is greppable and
+visible to agents reading files directly. Ids name tickets everywhere (UI,
+URLs, events, MCP, dependencies), and because keys are unique across the
+root, ids need no project prefix. Existing tickets are numbered once, oldest
+first, by `flashheart migrate`. With `list_tickets` (MCP-7) and the caller's
+project known from its working directory, a user can ask an agent for "the
+three top-priority bugs" or "FH-42" in plain words.

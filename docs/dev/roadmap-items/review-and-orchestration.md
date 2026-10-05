@@ -12,6 +12,9 @@ orchestrator's subagents.
 
 - `attach` tool with allow-list, size limit and index (`REV-1`, `REV-2`,
   `SEC-4`); Attachments tab with gallery and lightbox.
+- Referenced-file copying beyond the MCP tools: when `serve` sees a ticket or
+  review edited directly with links to local files outside the root, it
+  copies them into `files/` and rewrites the links (`REV-5`).
 - Review tab: review file beside screenshots, *How to Verify* as a checklist
   (`REV-3`); `write_review` already exists from `mcp-protocol` (`REV-4`).
 - Subagent tree on the card's Runs tab and in the Agents view, with each

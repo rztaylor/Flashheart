@@ -19,8 +19,13 @@ a small MCP tool set, and setup installs everything for Claude Code safely.
 - `internal/setup`: `flashheart setup claude` diff, `--write` with backups,
   `--uninstall`; installs `~/.claude/skills/flashheart/SKILL.md`
   (`SET-1`–`SET-3`).
-- Replace the user's kanban-tracker skill usage: the protocol skill keeps its
-  ticket conventions and points file handling at Flashheart.
+- Replace the user's kanban-tracker skill: the protocol skill carries the
+  ticket conventions and routes all ticket work through the tools.
+- Ticket ids everywhere (`KEY-3`); `list_tickets` and plain-words requests
+  such as "tackle the three top-priority bugs" (`KEY-4`, `MCP-7`,
+  agent-protocol §7.3); `create_ticket` assigns the next id (`KEY-2`).
+- Copy files referenced by local path in `write_review` and `checkpoint`
+  into the ticket's `files/` before recording them (`REV-5`).
 
 ## Acceptance criteria
 
@@ -31,6 +36,10 @@ a small MCP tool set, and setup installs everything for Claude Code safely.
 - End-to-end smoke (agent-protocol §13) passes against a temp root.
 - `setup claude` on a fixture settings file shows a diff, writes nothing
   without `--write`, and `--uninstall` restores the original byte for byte.
+- Asked "tackle the top two bugs", a real session lists, claims and works the
+  two highest-priority open bug tickets of its own project.
+- A review that links a screenshot by absolute path still renders after the
+  original file is deleted.
 - A real Claude Code session, against a scratch root, claims a ticket, checkpoints, asks a question,
   receives the answer on its next prompt, and a fresh session gets the
   recovery note.
