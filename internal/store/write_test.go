@@ -384,3 +384,24 @@ func TestConcurrentKeyChoicesOneWins(t *testing.T) {
 		t.Errorf("key writers = %v, want one ok and one taken", outputs)
 	}
 }
+
+func TestUpdateConfigWritesUnderTheRootLock(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	if err := s.UpdateConfig(func(data []byte) ([]byte, error) {
+		return append(data, []byte("custom: yes\n")...), nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := s.ReadConfig()
+	if err != nil || !strings.HasSuffix(string(data), "custom: yes\n") {
+		t.Errorf("ReadConfig = %q, %v", data, err)
+	}
+	if err := os.Remove(filepath.Join(root, ".flashheart", "config.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := s.ReadConfig(); err != nil || data != nil {
+		t.Errorf("missing config = %q, %v", data, err)
+	}
+}

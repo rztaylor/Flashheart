@@ -648,3 +648,36 @@ func (s *Store) moveTicket(project, id, from, to string) error {
 	folder := path.Dir(file)
 	return s.Move(folder, path.Join(to, path.Base(folder)))
 }
+
+// ConfigFile is the global settings file, relative to the root (CFG-1).
+const ConfigFile = ".flashheart/config.yaml"
+
+// ReadConfig returns config.yaml, or nil when there is none.
+func (s *Store) ReadConfig() ([]byte, error) {
+	data, err := s.ReadFile(ConfigFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	return data, err
+}
+
+// UpdateConfig applies edit to config.yaml under the root lock (CFG-2).
+func (s *Store) UpdateConfig(edit Edit) error {
+	release, err := s.lock(".")
+	if err != nil {
+		return err
+	}
+	defer release()
+	current, err := s.ReadConfig()
+	if err != nil {
+		return err
+	}
+	next, err := edit(current)
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(next, current) {
+		return nil
+	}
+	return s.WriteFileAtomic(ConfigFile, next)
+}
