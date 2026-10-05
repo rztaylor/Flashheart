@@ -10,7 +10,7 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 
 ## Execution order
 
-1. [`board-editing`](roadmap-items/board-editing.md) — **Pending**. Locked
+1. [`board-editing`](roadmap-items/board-editing.md) — **Partial**. Locked
    atomic writes, drag and drop, editing, new ticket, conflicts, live updates.
 2. [`agent-runs`](roadmap-items/agent-runs.md) — **Pending**. Event log, run
    state, `hook claude`, Agents view, virtual columns, recovery notes.

@@ -1,6 +1,7 @@
 # board-editing
 
-Status: **Pending**. Depends on `board-refresh` (and format v2).
+Status: **Partial**: in progress on `feature/board-editing`; plan in
+`docs/dev/plans/001-board-editing.md`.
 
 ## Goal
 
