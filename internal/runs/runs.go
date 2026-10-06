@@ -41,14 +41,13 @@ const (
 
 // Entry is one timeline event of a run, with the fields worth showing.
 type Entry struct {
-	Time    time.Time `json:"time"`
-	Kind    string    `json:"kind"`
-	Tool    string    `json:"tool,omitempty"`
-	Path    string    `json:"path,omitempty"`
-	Failed  bool      `json:"failed,omitempty"`
-	Detail  string    `json:"detail,omitempty"`
-	Ticket  string    `json:"ticket,omitempty"`
-	Subject string    `json:"subject,omitempty"`
+	Time   time.Time `json:"time"`
+	Kind   string    `json:"kind"`
+	Tool   string    `json:"tool,omitempty"`
+	Path   string    `json:"path,omitempty"`
+	Failed bool      `json:"failed,omitempty"`
+	Detail string    `json:"detail,omitempty"`
+	Ticket string    `json:"ticket,omitempty"`
 }
 
 // Run is everything the events say about one session or subagent (RUN-2).
@@ -209,20 +208,22 @@ func (s *Set) Apply(e events.Event) {
 	case events.RunEnd:
 		var data events.RunEndData
 		_ = e.Decode(&data)
-		r.ended, r.EndedAt, r.EndReason, r.Permission = true, e.Time, data.Reason, ""
-		if r.Kind == events.KindSubagent {
-			r.turnOpen = false
-		}
+		// A session that ends mid-turn (interrupted, so no Stop) is not still
+		// working when it resumes.
+		r.ended, r.EndedAt, r.EndReason, r.Permission, r.turnOpen = true, e.Time, data.Reason, "", false
+		s.settleChildren(r)
 		entry.Detail = data.Reason
 	case events.TurnStart:
 		var data events.TurnStartData
 		_ = e.Decode(&data)
 		r.turnOpen, r.Permission = true, ""
+		s.settleChildren(r)
 		r.Cwd = first(data.Cwd, r.Cwd)
 		r.Branch = first(data.Branch, r.Branch)
 		r.Worktree = first(data.Worktree, r.Worktree)
 	case events.TurnEnd:
 		r.turnOpen, r.Permission = false, ""
+		s.settleChildren(r)
 	case events.ToolUsed:
 		var data events.ToolData
 		_ = e.Decode(&data)
@@ -279,6 +280,18 @@ func (s *Set) Apply(e events.Event) {
 	r.Timeline = append(r.Timeline, entry)
 	if len(r.Timeline) > MaxTimeline {
 		r.Timeline = slices.Delete(r.Timeline, 0, len(r.Timeline)-MaxTimeline)
+	}
+}
+
+// settleChildren clears the pending permission prompts of a session's
+// subagents when the session itself moves on: a denial sends no event, and
+// a subagent may never report again, so the prompt would otherwise hold the
+// session in Needs you until it went stale.
+func (s *Set) settleChildren(r *Run) {
+	for _, id := range r.Children {
+		if child := s.runs[id]; child != nil {
+			child.Permission = ""
+		}
 	}
 }
 
@@ -400,13 +413,6 @@ func (s *Set) Link(id string, byBranch InProgress) Link {
 		return Link{Ticket: tickets[0], By: LinkBranch}
 	}
 	return Link{}
-}
-
-// NoHandoff reports an Ended run that is linked to a ticket and edited files
-// since its last checkpoint (RUN-3).
-func (s *Set) NoHandoff(id string, now time.Time, settings Settings, byBranch InProgress) bool {
-	r := s.runs[id]
-	return r != nil && r.Dirty() && s.State(id, now, settings) == Ended && s.Link(id, byBranch).Ticket != ""
 }
 
 // View is a run with its derived state, link and flags at one moment. It

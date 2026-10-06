@@ -19,12 +19,11 @@ const MaxLineBytes = 64 << 10
 
 // Limits on agent-written strings in event data (HOOK-2, agent-protocol §3).
 const (
-	MaxPlanItems   = 50
-	MaxPlanText    = 200
-	MaxSummary     = 120
-	MaxNameLength  = 200
-	MaxReasonText  = 200
-	MaxQuestionLen = 1000
+	MaxPlanItems  = 50
+	MaxPlanText   = 200
+	MaxSummary    = 120
+	MaxNameLength = 200
+	MaxReasonText = 200
 )
 
 // Event kinds (agent-protocol §3).
@@ -59,9 +58,6 @@ var known = map[string]bool{
 	TicketMoved: true, TicketUpdated: true, TicketCreated: true, ReviewWritten: true,
 	AttachmentAdded: true, QuestionAsked: true, QuestionAnswered: true, QuestionDelivered: true,
 }
-
-// Known reports whether kind is an event kind this build understands.
-func Known(kind string) bool { return known[kind] }
 
 // Plan item statuses; "deleted" appears only in merges and removes the item.
 const (

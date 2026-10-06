@@ -42,9 +42,8 @@ type Pending struct {
 
 // Input is an adapter's reading of one payload.
 type Input struct {
-	Session string
-	Cwd     string
-	Events  []Pending
+	Cwd    string
+	Events []Pending
 	// Recovery asks for the recovery note (session start, HOOK-3).
 	Recovery bool
 }
@@ -134,14 +133,13 @@ func handle(options Options) error {
 
 	info := resolve(s, input.Cwd, now())
 	project, err := s.ProjectFor(info.Project, info.Repo, settings.AutoCreateProjects)
-	if errors.Is(err, store.ErrNotFound) {
+	switch {
+	case errors.Is(err, store.ErrNotFound):
 		return nil // auto_create_projects is off and the project does not exist
-	}
-	if err != nil {
-		return err
-	}
-	if s.IsV1Project(project) {
+	case errors.Is(err, store.ErrNeedsMigration):
 		return nil // the board needs `flashheart migrate` first (MIG-1)
+	case err != nil:
+		return err
 	}
 
 	at := now().UTC()
@@ -189,14 +187,14 @@ func clean(data any, info gitinfo.Info, cwd string) any {
 	switch d := data.(type) {
 	case events.RunStartData:
 		if d.Kind == events.KindSession {
-			d.Cwd, d.Branch, d.Worktree = cwd, info.Branch, info.Worktree
+			d.Cwd, d.Branch, d.Worktree = place(cwd, info)
 		}
 		d.Parent = scrub.Limit(d.Parent, 300)
 		d.Source = text(d.Source, 40)
 		d.AgentType = text(d.AgentType, events.MaxNameLength)
 		return d
 	case events.TurnStartData:
-		d.Cwd, d.Branch, d.Worktree = cwd, info.Branch, info.Worktree
+		d.Cwd, d.Branch, d.Worktree = place(cwd, info)
 		return d
 	case events.RunEndData:
 		d.Reason = text(d.Reason, events.MaxReasonText)
@@ -227,6 +225,12 @@ func clean(data any, info gitinfo.Info, cwd string) any {
 	return data
 }
 
+// place is where a run works, bounded so a pathological directory or branch
+// name cannot overflow an event line or the recovery note.
+func place(cwd string, info gitinfo.Info) (string, string, string) {
+	return scrub.Limit(cwd, events.MaxNameLength*5), scrub.Text(info.Branch, events.MaxNameLength), scrub.Limit(info.Worktree, events.MaxNameLength*5)
+}
+
 // recoveryWindow is how far back session start looks for earlier runs.
 const recoveryWindow = 24 * time.Hour
 
@@ -250,15 +254,7 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 	if err != nil {
 		return "", err
 	}
-	byBranch := func(_, branch string) []string {
-		var ids []string
-		for _, ticket := range details.Tickets {
-			if ticket.Column == board.InProgress && ticket.Branch != "" && ticket.Branch == branch {
-				ids = append(ids, ticket.ID)
-			}
-		}
-		return ids
-	}
+	byBranch := func(_, branch string) []string { return details.InProgressOnBranch(branch) }
 	note := protocol.Recovery{Run: current, Project: project, Branch: info.Branch}
 	if !details.KeyDerived {
 		note.Key = details.Key

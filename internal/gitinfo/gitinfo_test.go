@@ -187,3 +187,27 @@ func TestRelative(t *testing.T) {
 		t.Errorf("Relative outside git = %q", got)
 	}
 }
+
+// A checkout reached through a symlink (macOS /tmp → /private/tmp, or a
+// linked ~/src) is the same repository as its worktrees, which git records
+// by real path, and edits named through either form are inside it.
+func TestResolveFollowsSymlinks(t *testing.T) {
+	t.Parallel()
+
+	base := layout(t)
+	link := filepath.Join(t.TempDir(), "linked-src")
+	if err := os.Symlink(filepath.Join(base, "src"), link); err != nil {
+		t.Fatal(err)
+	}
+	viaLink := Resolve(filepath.Join(link, "ngplus", "web"))
+	direct := Resolve(filepath.Join(base, "wt", "feature-x"))
+	if viaLink.Repo == "" || viaLink.Repo != direct.Repo || viaLink.Project != "ngplus" {
+		t.Fatalf("via link %+v, worktree %+v", viaLink, direct)
+	}
+	if got := viaLink.Relative(filepath.Join(link, "ngplus", "web", "src", "app.ts")); got != "web/src/app.ts" {
+		t.Fatalf("Relative through the link = %q", got)
+	}
+	if got := viaLink.Relative(filepath.Join(link, "ngplus", "web", "new-file.ts")); got != "web/new-file.ts" {
+		t.Fatalf("Relative of a new file through the link = %q", got)
+	}
+}

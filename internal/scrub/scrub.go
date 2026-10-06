@@ -26,8 +26,10 @@ var tokens = []*regexp.Regexp{
 // bearer keeps the scheme word and redacts the credential after it.
 var bearer = regexp.MustCompile(`(?i)\b(bearer|basic|token)(\s+)[A-Za-z0-9._~+/=-]{12,}`)
 
-// assignment keeps a secret-named key and redacts its value.
-var assignment = regexp.MustCompile(`(?i)\b(password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|auth)(["']?\s*[:=]\s*["']?)([^\s"',;]{4,})`)
+// assignment keeps a secret-named key and redacts its value. The name may
+// be part of an environment-style name (DB_PASSWORD, AWS_SECRET_ACCESS_KEY,
+// GITHUB_TOKEN), which \b alone misses after an underscore.
+var assignment = regexp.MustCompile(`(?i)\b((?:[A-Za-z0-9]+_)*(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|auth)(?:_[A-Za-z0-9]+)*)(["']?\s*[:=]\s*["']?)([^\s"',;]{4,})`)
 
 // urlCredentials redacts user:password@ in URLs.
 var urlCredentials = regexp.MustCompile(`([A-Za-z][A-Za-z0-9+.-]*://)[^/\s:@]+:[^/\s@]+@`)

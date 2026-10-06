@@ -535,7 +535,9 @@ func TestHookRecordsEventsAndPrintsNothing(t *testing.T) {
 func TestHookAlwaysExitsZero(t *testing.T) {
 	t.Parallel()
 
-	for _, args := range [][]string{{"hook"}, {"hook", "claude"}, {"hook", "gemini", "SessionStart"}, {"hook", "claude", "SessionStart", "extra"}} {
+	// Exit 2 would make Claude Code block the turn, prompt or tool, so even
+	// flags this build does not know, or a --root with no value, exit 0.
+	for _, args := range [][]string{{"hook"}, {"hook", "claude"}, {"hook", "gemini", "SessionStart"}, {"hook", "claude", "SessionStart", "extra"}, {"hook", "claude", "Stop", "--bogus"}} {
 		h := newHarness(t)
 		root := t.TempDir()
 		h.stdin = "{"
@@ -559,5 +561,16 @@ func TestHookAlwaysExitsZero(t *testing.T) {
 	}
 	if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); !strings.Contains(string(data), "claude Stop: payload is not JSON") {
 		t.Fatalf("hook-errors.log = %q", data)
+	}
+}
+
+func TestHookWithADanglingRootExitsZero(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.stdin = "{}"
+	code, stdout, stderr := h.run("hook", "claude", "Stop", "--root")
+	if code != 0 || stdout != "" || !strings.Contains(stderr, "flashheart hook:") {
+		t.Fatalf("dangling --root = %d, %q, %q", code, stdout, stderr)
 	}
 }

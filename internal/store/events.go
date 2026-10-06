@@ -114,17 +114,22 @@ func (s *Store) IsProject(name string) bool {
 
 var unsafeProjectRun = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 
-// ProjectName turns a repository directory name into a safe project name.
+// ErrNeedsMigration reports a v1 project, which only `flashheart migrate`
+// may change (MIG-1).
+var ErrNeedsMigration = errors.New("the project uses board format v1; run flashheart migrate")
+
+// ProjectName turns a repository directory name into a safe project name,
+// or "" when nothing usable is left.
 func ProjectName(name string) string {
-	name = strings.Trim(unsafeProjectRun.ReplaceAllString(name, "-"), "-.")
+	name = strings.Trim(unsafeProjectRun.ReplaceAllString(name, "-"), "-._")
 	for strings.Contains(name, "..") {
 		name = strings.ReplaceAll(name, "..", ".")
 	}
 	if len(name) > 200 {
 		name = name[:200]
 	}
-	if name == "" || !ValidProject(name) {
-		return ScratchProject
+	if name == "" || !safeName.MatchString(name) {
+		return ""
 	}
 	return name
 }
@@ -139,11 +144,16 @@ func repoSuffix(repo string) string {
 // key when create is set (PRJ-5, KEY-5). A project that records no
 // repositories adopts this one; a project that records others leaves this
 // repository to <name>-<6 hex of sha256(repo)> (PRJ-3). An empty repo means
-// activity outside git, which goes to _scratch (PRJ-4).
+// activity outside git, which goes to _scratch (PRJ-4); a name with nothing
+// usable becomes repo-<6 hex>, never _scratch. A v1 project is left for
+// migrate (ErrNeedsMigration).
 func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 	candidates := []string{ScratchProject}
 	if repo != "" {
 		base := ProjectName(name)
+		if base == "" {
+			base = "repo-" + repoSuffix(repo)
+		}
 		candidates = []string{base, base + "-" + repoSuffix(repo)}
 	}
 	// Fast path without a lock: the project already records this repository.
@@ -158,6 +168,9 @@ func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 	}
 	defer release()
 	for _, candidate := range candidates {
+		if s.IsV1Project(candidate) {
+			return "", fmt.Errorf("project %q: %w", candidate, ErrNeedsMigration)
+		}
 		repos, exists := s.projectRepos(candidate)
 		switch {
 		case exists && (repo == "" || slices.Contains(repos, repo)):
@@ -213,6 +226,9 @@ func (s *Store) addRepo(project, repo string) error {
 }
 
 func (s *Store) createProject(project, repo string) error {
+	if !ValidProject(project) {
+		return fmt.Errorf("project %q: %w", project, ErrInvalidName)
+	}
 	content := "name: " + project + "\n"
 	if repo != "" {
 		quoted, err := yaml.Marshal([]string{repo})

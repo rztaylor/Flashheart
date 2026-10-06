@@ -72,7 +72,7 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 	if p.AgentID != "" {
 		actor = session + "/" + p.AgentID
 	}
-	input := hooks.Input{Session: p.SessionID, Cwd: p.Cwd}
+	input := hooks.Input{Cwd: p.Cwd}
 	add := func(run, kind string, data any) {
 		input.Events = append(input.Events, hooks.Pending{Run: run, Kind: kind, Data: data})
 	}

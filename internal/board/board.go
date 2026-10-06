@@ -452,6 +452,22 @@ func CheckProject(project *Project) {
 	}
 }
 
+// InProgressOnBranch lists the in-progress tickets whose branch is branch,
+// the provisional link of a run on that branch (RUN-5). Tickets that need
+// repair are left out: their fields cannot be trusted.
+func (p Project) InProgressOnBranch(branch string) []string {
+	if branch == "" {
+		return nil
+	}
+	var ids []string
+	for _, ticket := range p.Tickets {
+		if ticket.Column == InProgress && ticket.Branch == branch && !ticket.NeedsRepair() {
+			ids = append(ids, ticket.ID)
+		}
+	}
+	return ids
+}
+
 // OwnsIDs reports whether the project has tickets, live or archived, so its
 // key is fixed (KEY-5).
 func (p Project) OwnsIDs() bool { return len(p.Tickets) > 0 || len(p.Archived) > 0 }

@@ -141,3 +141,23 @@ func TestWatchSeesAppendedEvents(t *testing.T) {
 		t.Fatalf("state = %s", snapshot.Runs[0].State)
 	}
 }
+
+// A new UTC day starts the fold again from the window: recent runs stay,
+// and nothing is counted twice.
+func TestTrackerRollsOverAtMidnight(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	appendEvent(t, log, clock.now, events.RunStart, events.RunStartData{Kind: events.KindSession})
+	appendEvent(t, log, clock.now, events.ToolUsed, events.ToolData{Tool: "Edit", OK: true, Path: "a.ts"})
+	first, _ := index.Rebuild()
+	if len(first.Runs) != 1 || first.Runs[0].Tools != 1 {
+		t.Fatalf("day one runs = %+v", first.Runs)
+	}
+	clock.now = clock.now.Add(11 * time.Hour) // past midnight UTC
+	appendEvent(t, log, clock.now, events.ToolUsed, events.ToolData{Tool: "Read", OK: true})
+	next, _ := index.Rebuild()
+	if len(next.Runs) != 1 || next.Runs[0].Tools != 2 || next.Runs[0].Edits != 1 {
+		t.Fatalf("after midnight runs = %+v", next.Runs)
+	}
+}

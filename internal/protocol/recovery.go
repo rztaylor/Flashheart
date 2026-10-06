@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
+
+	"github.com/rztaylor/flashheart/internal/scrub"
 )
 
 // MaxRecoveryBytes keeps a recovery note near its 400-token budget
@@ -54,13 +55,6 @@ func ShortRun(id string) string {
 	return agent + ":" + session
 }
 
-func clip(s string, limit int) string {
-	if utf8.RuneCountInString(s) <= limit {
-		return s
-	}
-	return string([]rune(s)[:limit-1]) + "…"
-}
-
 // RecoveryNote renders the note returned at session start, or "" when there
 // is no linked ticket and no earlier run that left edits. Ticket text is
 // framed as information (SEC-5); lists are cut before the ticket id or Next.
@@ -95,7 +89,7 @@ func RecoveryNote(r Recovery) string {
 	build := func(nextItems int, titleLimit int) string {
 		lines := []string{header}
 		if t := r.Ticket; t != nil {
-			line := fmt.Sprintf("Ticket %s %q (%s, linked by %s).", t.ID, clip(t.Title, titleLimit), t.Column, t.LinkedBy)
+			line := fmt.Sprintf("Ticket %s %q (%s, linked by %s).", t.ID, scrub.Limit(t.Title, titleLimit), t.Column, t.LinkedBy)
 			if status != "" {
 				line += " " + status
 			}
@@ -103,7 +97,7 @@ func RecoveryNote(r Recovery) string {
 			if len(t.Next) > 0 {
 				items := make([]string, 0, nextItems)
 				for _, item := range t.Next[:min(nextItems, len(t.Next))] {
-					items = append(items, clip(strings.TrimSuffix(item, "."), 200))
+					items = append(items, scrub.Limit(strings.TrimSuffix(item, "."), 200))
 				}
 				lines = append(lines, "Last handoff — Next: "+strings.Join(items, "; ")+".")
 			}

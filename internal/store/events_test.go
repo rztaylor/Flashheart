@@ -2,11 +2,14 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -134,5 +137,92 @@ func TestProjectForCreatesAdoptsAndSeparatesRepositories(t *testing.T) {
 		if !slices.Contains(projects, want) {
 			t.Errorf("Projects() = %v, missing %s", projects, want)
 		}
+	}
+}
+
+// A v1 project is left for flashheart migrate: a hook never writes into it.
+func TestProjectForLeavesV1ProjectsAlone(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	if err := os.MkdirAll(filepath.Join(root, "legacy", "todo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ProjectFor("legacy", "/src/legacy", true); !errors.Is(err, ErrNeedsMigration) {
+		t.Fatalf("ProjectFor(v1) = %v, want ErrNeedsMigration", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "legacy", "project.yaml")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("project.yaml written into a v1 project")
+	}
+}
+
+// Repository names that are not usable as directories get a derived name,
+// never the reserved _scratch project.
+func TestProjectForUnusableNames(t *testing.T) {
+	t.Parallel()
+
+	s, _ := writable(t)
+	if name, err := s.ProjectFor("_hidden", "/src/_hidden", true); err != nil || name != "hidden" {
+		t.Fatalf("_hidden = %q, %v", name, err)
+	}
+	first, err := s.ProjectFor("日本", "/src/日本", true)
+	if err != nil || first != "repo-"+repoSuffix("/src/日本") {
+		t.Fatalf("non-ASCII = %q, %v", first, err)
+	}
+	second, err := s.ProjectFor("中文", "/src/中文", true)
+	if err != nil || second == first || second == ScratchProject {
+		t.Fatalf("second non-ASCII = %q, %v", second, err)
+	}
+	if repos, _ := s.projectRepos(ScratchProject); len(repos) != 0 {
+		t.Fatalf("_scratch adopted a repository: %v", repos)
+	}
+}
+
+// TestProjectForHelperProcess creates the same project from a child process.
+func TestProjectForHelperProcess(t *testing.T) {
+	root := os.Getenv("FLASHHEART_PROJECTFOR_ROOT")
+	if root == "" {
+		t.Skip("helper process only")
+	}
+	s, err := Open(root)
+	if err != nil {
+		os.Exit(2)
+	}
+	name, err := s.ProjectFor("shared", os.Getenv("FLASHHEART_PROJECTFOR_REPO"), true)
+	if err != nil {
+		os.Exit(3)
+	}
+	fmt.Print(name)
+	os.Exit(0)
+}
+
+// Processes racing to create projects for two repositories with the same
+// name end with one project each, never both in one (PRJ-3).
+func TestProjectForAcrossProcesses(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	names := make([]string, 4)
+	var wg sync.WaitGroup
+	for i := range names {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			repo := "/src/a/shared"
+			if i%2 == 1 {
+				repo = "/src/b/shared"
+			}
+			cmd := exec.Command(os.Args[0], "-test.run=^TestProjectForHelperProcess$")
+			cmd.Env = append(os.Environ(), "FLASHHEART_PROJECTFOR_ROOT="+root, "FLASHHEART_PROJECTFOR_REPO="+repo)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Errorf("helper %d: %v", i, err)
+			}
+			names[i] = string(out)
+		}()
+	}
+	wg.Wait()
+	if names[0] != names[2] || names[1] != names[3] || names[0] == names[1] {
+		t.Fatalf("projects = %v; want one per repository", names)
 	}
 }

@@ -77,17 +77,16 @@ func (t *tracker) update(projects []string, now time.Time) string {
 // views derives every tracked run at now, linking runs by branch to the
 // board's in-progress tickets (RUN-5).
 func (t *tracker) views(b board.Board, now time.Time, settings runs.Settings) []runs.View {
-	branches := map[string]map[string][]string{}
-	for _, project := range b.Projects {
-		byBranch := map[string][]string{}
-		for _, ticket := range project.Tickets {
-			if ticket.Column == board.InProgress && ticket.Branch != "" && !ticket.NeedsRepair() {
-				byBranch[ticket.Branch] = append(byBranch[ticket.Branch], ticket.ID)
-			}
-		}
-		branches[project.Name] = byBranch
+	projects := make(map[string]*board.Project, len(b.Projects))
+	for i := range b.Projects {
+		projects[b.Projects[i].Name] = &b.Projects[i]
 	}
-	inProgress := func(project, branch string) []string { return branches[project][branch] }
+	inProgress := func(project, branch string) []string {
+		if p := projects[project]; p != nil {
+			return p.InProgressOnBranch(branch)
+		}
+		return nil
+	}
 	names := make([]string, 0, len(t.projects))
 	for name := range t.projects {
 		names = append(names, name)

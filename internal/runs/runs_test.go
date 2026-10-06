@@ -70,6 +70,7 @@ func TestStateTable(t *testing.T) {
 		{"just under stale: quiet", []events.Event{start(0), turn(1)}, 12*60 - 1, Quiet},
 		{"stale waiting run: ended", []events.Event{start(0), turn(1), stop(2)}, 12*60 + 2, Ended},
 		{"resume after end reopens the run", []events.Event{start(0), ev(3, session, events.RunEnd, events.RunEndData{}), start(10)}, 11, Waiting},
+		{"ended mid-turn then resumed: waiting, not working", []events.Event{start(0), turn(1), ev(2, session, events.RunEnd, events.RunEndData{}), start(10)}, 11, Waiting},
 		{"first seen mid-session from a prompt", []events.Event{turn(1)}, 2, Working},
 		{"compaction is activity", []events.Event{start(0), turn(1), ev(15, session, events.Compact, events.CompactData{Phase: "pre"})}, 16, Working},
 	}
@@ -292,14 +293,14 @@ func TestNoHandoff(t *testing.T) {
 	set.Apply(ev(2, session, events.RunEnd, events.RunEndData{}))
 	linked := func(string, string) []string { return []string{"AL-3"} }
 	unlinked := func(string, string) []string { return nil }
-	if !set.NoHandoff(session, at(3), settings, linked) {
+	if !set.Views(at(3), settings, linked)[0].NoHandoff {
 		t.Fatal("ended, linked and dirty run should be flagged no handoff")
 	}
-	if set.NoHandoff(session, at(3), settings, unlinked) {
+	if set.Views(at(3), settings, unlinked)[0].NoHandoff {
 		t.Fatal("unlinked run flagged")
 	}
 	set.Apply(start(4))
-	if set.NoHandoff(session, at(5), settings, linked) {
+	if set.Views(at(5), settings, linked)[0].NoHandoff {
 		t.Fatal("live run flagged")
 	}
 }
@@ -354,5 +355,30 @@ func TestSubagentFirstSeenEndingIsIgnored(t *testing.T) {
 	set.Apply(ev(3, session+"/a1", events.RunEnd, events.RunEndData{}))
 	if set.Get(session+"/a1") == nil {
 		t.Fatal("a working subagent was dropped")
+	}
+}
+
+// A subagent's unanswered permission prompt ends when its session moves on:
+// a denial sends no event, and the subagent may never report again.
+func TestSessionTurnsClearASubagentsPendingPermission(t *testing.T) {
+	t.Parallel()
+
+	child := session + "/a1"
+	for _, next := range []events.Event{turn(5), stop(5), ev(5, session, events.RunEnd, events.RunEndData{})} {
+		set := NewSet()
+		set.Apply(start(0))
+		set.Apply(turn(1))
+		set.Apply(ev(2, child, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
+		set.Apply(ev(3, child, events.PermissionRequested, events.PermissionData{Tool: "Bash"}))
+		if got := set.State(session, at(4), DefaultSettings()); got != NeedsYou {
+			t.Fatalf("before %s: %s", next.Kind, got)
+		}
+		set.Apply(next)
+		if got := set.State(child, at(6), DefaultSettings()); got == NeedsYou {
+			t.Fatalf("after session %s the subagent still needs you", next.Kind)
+		}
+		if got := set.State(session, at(6), DefaultSettings()); got == NeedsYou {
+			t.Fatalf("after session %s the session still needs you", next.Kind)
+		}
 	}
 }

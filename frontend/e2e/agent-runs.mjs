@@ -2,7 +2,7 @@
 // a sandbox board: the same path Claude Code takes. All sessions, repositories
 // and plans are synthetic test data.
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { executable } from "./support.mjs";
@@ -11,7 +11,9 @@ async function repo(home, name, branch) {
   const dir = join(home, "src", name);
   await mkdir(join(dir, ".git"), { recursive: true });
   await writeFile(join(dir, ".git", "HEAD"), `ref: refs/heads/${branch}\n`);
-  return dir;
+  // Hooks name repositories by real path (macOS temp folders sit behind a
+  // symlink), so the sandbox does too.
+  return realpath(dir);
 }
 
 function hook(root, event, payload) {

@@ -49,7 +49,12 @@ func Resolve(cwd string) Info {
 	if cwd == "" || !filepath.IsAbs(cwd) {
 		return Info{}
 	}
-	dir := filepath.Clean(cwd)
+	// Real paths, so a checkout reached through a symlink matches the real
+	// paths git records for its worktrees.
+	dir, err := filepath.EvalSymlinks(filepath.Clean(cwd))
+	if err != nil {
+		return Info{}
+	}
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		return Info{}
 	}
@@ -83,12 +88,18 @@ func fromDotGit(worktree, dotgit string, info os.FileInfo) (Info, bool) {
 		}
 		gitdir = filepath.Clean(target)
 	}
+	if real, err := filepath.EvalSymlinks(gitdir); err == nil {
+		gitdir = real
+	}
 	common := gitdir
 	if relative, ok := readSmall(filepath.Join(gitdir, "commondir")); ok && relative != "" {
 		if !filepath.IsAbs(relative) {
 			relative = filepath.Join(gitdir, relative)
 		}
 		common = filepath.Clean(relative)
+		if real, err := filepath.EvalSymlinks(common); err == nil {
+			common = real
+		}
 	}
 	// PRJ-2: the main checkout is the common git directory's parent. A bare
 	// repository (repo.git) names itself; anything else, such as a
@@ -131,14 +142,34 @@ func (i Info) Relative(path string) string {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(i.Worktree, path)
 	}
-	rel, err := filepath.Rel(i.Worktree, filepath.Clean(path))
-	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return ""
+	path = filepath.Clean(path)
+	if rel, ok := inside(i.Worktree, path); ok {
+		return rel
 	}
-	return filepath.ToSlash(rel)
+	// The path may name the worktree through a symlink: resolve it, or its
+	// directory when the file does not exist yet.
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		dir, dirErr := filepath.EvalSymlinks(filepath.Dir(path))
+		if dirErr != nil {
+			return ""
+		}
+		real = filepath.Join(dir, filepath.Base(path))
+	}
+	rel, _ := inside(i.Worktree, real)
+	return rel
 }
 
-// MaxEntries bounds the cache; the least recently used entries are dropped.
+func inside(dir, path string) (string, bool) {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return filepath.ToSlash(rel), true
+}
+
+// MaxEntries bounds the cache; the entries resolved longest ago are dropped
+// (a cache hit does not count, so hits never cause a write).
 const MaxEntries = 500
 
 // Entry is one cached resolution with its validator.

@@ -25,9 +25,13 @@ func TestSecretsAreRedacted(t *testing.T) {
 		{"password assignment", "password=hunter2hunter2"},
 		{"token assignment", `api_key: "q8f7e6d5c4b3a2"`},
 		{"url credentials", "https://robert:s3cr3t@example.com/repo.git"},
+		{"env-style password", "DB_PASSWORD=hunter2hunter2"},
+		{"env-style token", "GITHUB_TOKEN=abcdef0123456789abcdef"},
+		{"env-style key with a suffix", "AWS_SECRET_ACCESS_KEY=q8f7e6d5c4b3a2"},
+		{"env-style secret key", "STRIPE_SECRET_KEY=rk_live_q8f7e6d5c4b3a2"},
 		{"private key", "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXk\n-----END OPENSSH PRIVATE KEY-----"},
 	}
-	secrets := []string{"AbCdEfGhIjKl", "IOSFODNN7", "0123456789abcdefABCDEF", "11ABCDEFG", "abcdefghij0123456789", "1234567890-abcdefghij", "SyA-1234567890", "c2lnbmF0dXJl", "abcdef0123456789abcdef", "hunter2", "q8f7e6d5c4b3a2", "s3cr3t", "b3BlbnNzaC1rZXk"}
+	secrets := []string{"AbCdEfGhIjKl", "IOSFODNN7", "0123456789abcdefABCDEF", "11ABCDEFG", "abcdefghij0123456789", "1234567890-abcdefghij", "SyA-1234567890", "c2lnbmF0dXJl", "abcdef0123456789abcdef", "hunter2", "q8f7e6d5c4b3a2", "s3cr3t", "b3BlbnNzaC1rZXk", "rk_live"}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -53,6 +57,8 @@ func TestOrdinaryTextIsKept(t *testing.T) {
 		"password reset flow: add the form",
 		"Review FH-42 before release",
 		"https://example.com/docs/page",
+		"Set TOKEN_LIMIT in the docs",
+		"MAX_TOKENS: 4",
 	} {
 		if got := Secrets(in); got != in {
 			t.Errorf("Secrets(%q) = %q, want it unchanged", in, got)

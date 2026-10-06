@@ -186,6 +186,13 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 			writeCommandUsage(stdout, *selected)
 			return 0
 		}
+		if name == "hook" {
+			// Exit 2 would tell the agent to block; a hook never does. Parsing
+			// stopped early, so find --root in the raw arguments for the log.
+			globals.root, globals.rootSet = rootArgument(flagArgs)
+			reportHookProblem(env, globals, err.Error(), nil)
+			return 0
+		}
 		return reportUsage(stderr, usageError{err.Error()})
 	}
 	flags.Visit(func(f *flag.Flag) {
@@ -399,10 +406,7 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 		adapter = hookAdapters[args[0]]
 	}
 	if problem != "" {
-		fmt.Fprintf(env.stderr, "flashheart hook: %s\n", problem)
-		log := logfile.HookErrors(root)
-		_, _ = fmt.Fprintf(log, "hook %s: %s", strings.Join(args, " "), problem)
-		_ = log.Close()
+		reportHookProblem(env, globals, problem, args)
 		return nil
 	}
 	stdin := env.deps.Stdin
@@ -411,6 +415,35 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	}
 	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: adapter})
 	return nil
+}
+
+// rootArgument finds --root DIR or --root=DIR without parsing other flags.
+func rootArgument(args []string) (string, bool) {
+	for index, arg := range args {
+		for _, prefix := range []string{"--root=", "-root="} {
+			if value, found := strings.CutPrefix(arg, prefix); found {
+				return value, true
+			}
+		}
+		if (arg == "--root" || arg == "-root") && index+1 < len(args) {
+			return args[index+1], true
+		}
+	}
+	return "", false
+}
+
+// reportHookProblem tells a person on stderr and logs to hook-errors.log
+// when the root can be resolved; agents do not show stderr from a hook that
+// exits 0.
+func reportHookProblem(env *environment, globals *globalFlags, problem string, args []string) {
+	fmt.Fprintf(env.stderr, "flashheart hook: %s\n", problem)
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		return
+	}
+	log := logfile.HookErrors(root)
+	_, _ = fmt.Fprintf(log, "hook %s: %s", strings.Join(args, " "), problem)
+	_ = log.Close()
 }
 
 func runMigrate(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
