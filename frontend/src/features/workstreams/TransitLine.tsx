@@ -21,15 +21,11 @@ import {
   useState,
 } from "react";
 
-import {
-  type TicketRef,
-  type Workstream,
-  type WorkstreamTicket,
-} from "../../api/board";
+import type { TicketRef, Workstream, WorkstreamTicket } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { Pill, StatusPill } from "../../components/Pill";
-import { statusOf } from "../../model/status";
 import type { Line } from "../../model/lines";
+import { statusOf } from "../../model/status";
 
 interface TransitLineProps {
   workstream: Workstream;

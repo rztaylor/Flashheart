@@ -16,9 +16,9 @@ import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Markdown } from "../../components/Markdown";
+import { BlockerPill, Pill, StatusPill, Tag } from "../../components/Pill";
 import { QuestionCard } from "../../components/QuestionCard";
 import { SidePanel } from "../../components/SidePanel";
-import { BlockerPill, Pill, StatusPill, Tag } from "../../components/Pill";
 import { StateNote } from "../../components/StateNote";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
@@ -280,7 +280,10 @@ export function PanelHeader({
       </h2>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <StatusPill column={detail.column} />
-        {detail.blocked ? <Pill tone="blocked">Blocked</Pill> : null}
+        {/* Only a real blocker, never a wait on the line's own order. */}
+        {splitReasons(detail.blockedBy).blockers.length > 0 ? (
+          <Pill tone="blocked">Blocked</Pill>
+        ) : null}
         {priority ? (
           <Tag strong={detail.priority === "high"}>{priority}</Tag>
         ) : null}

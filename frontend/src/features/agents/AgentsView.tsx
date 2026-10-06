@@ -94,7 +94,7 @@ export function AgentsView({
   const lanes = laneRuns(list);
   return (
     <div className="relative min-h-0 flex-1 overflow-y-auto">
-      <div className="px-4 pb-12">
+      <div className="px-4 pb-12 md:px-6">
         {runs.error ? (
           <p role="status" className="mt-3 text-xs text-ink-muted">
             Showing the last good copy: {runs.error}
@@ -165,31 +165,40 @@ function LaneSection({
     <section
       aria-labelledby={headingId}
       data-lane={state}
-      className="mt-6 first:mt-4"
+      className="mt-4 rounded-panel border border-rule bg-column p-2.5 first:mt-1"
     >
+      {/* Headed like a board column: count badge, run mark, title. The
+          badge comes first visually and last in the lane's name. */}
       <h2
         id={headingId}
-        className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-1.5 text-md heading-cut"
+        className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-lg leading-tight heading-cut"
       >
-        <span className="flex items-center gap-2">
+        <span
+          className={
+            state === "needs-you"
+              ? "grid size-5 place-items-center rounded-full bg-attention text-on-attention"
+              : "text-ink"
+          }
+        >
           <RunStateMark
             state={state}
-            size={12}
-            className="translate-y-[1px]"
+            size={state === "needs-you" ? 9 : 13}
             still
           />
-          {STATE_LABEL[state]}
         </span>
-        <span className="text-sm font-semibold text-ink">{runs.length}</span>
+        {STATE_LABEL[state]}
+        <span className="order-first grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-card px-2 text-sm font-semibold tabular-nums text-ink shadow-card">
+          {runs.length}
+        </span>
       </h2>
       {runs.length === 0 ? (
-        <p className="border-t border-rule py-2.5 text-xs text-ink-muted">
+        <p className="rounded-card border border-dashed border-rule px-3 py-3 text-xs text-ink-muted">
           {emptyLane[state]}
         </p>
       ) : (
-        <ul className="border-t border-rule">
+        <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
           {runs.map((entry) => (
-            <li key={entry.run.id} className="border-b border-rule">
+            <li key={entry.run.id}>
               <RunRow
                 run={entry.run}
                 subagents={entry.children}
@@ -319,7 +328,7 @@ function RunRow({
           {projectKey && !subagent ? (
             <span
               title={run.project}
-              className="shrink-0 rounded-[3px] px-1 text-2xs leading-4 font-bold heading-cut shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
+              className="shrink-0 rounded-[4px] px-1 text-2xs leading-4 font-bold heading-cut shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
             >
               {projectKey}
             </span>
@@ -439,7 +448,7 @@ function AgentsSkeleton() {
     <div aria-hidden="true" className="flex flex-col gap-6 p-4">
       {[0, 1, 2].map((lane) => (
         <div key={lane} className="flex flex-col gap-2">
-          <div className="h-6 border-t-[5px] border-rule" />
+          <div className="h-7 w-1/4 rounded-full bg-well" />
           <div className="h-9 animate-pulse rounded-card bg-well" />
           <div className="h-9 animate-pulse rounded-card bg-well" />
         </div>
