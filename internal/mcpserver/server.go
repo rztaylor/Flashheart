@@ -96,9 +96,16 @@ func asToolError(err error) *toolError {
 	var te *toolError
 	var conflict *store.ConflictError
 	var taken *store.KeyTakenError
+	var workstream *store.WorkstreamNotFoundError
 	switch {
 	case errors.As(err, &te):
 		return te
+	case errors.As(err, &workstream):
+		fix := "create it with create_workstream"
+		if len(workstream.Available) > 0 {
+			fix = "use one of " + strings.Join(workstream.Available, ", ") + ", or " + fix
+		}
+		return fail("not_found", fix, "%v", err)
 	case errors.As(err, &taken):
 		return fail("key_taken", "choose another key; keys in use: "+strings.Join(taken.InUse, ", "), "%s", taken.Error())
 	case errors.As(err, &conflict):

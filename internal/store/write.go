@@ -344,7 +344,9 @@ func (t *NewTicket) validate() error {
 
 // CreateTicket writes a new ticket folder with the project's next id
 // (KEY-2), choosing and recording the project's key first when it has none
-// (KEY-5), then advances next_id.
+// (KEY-5), then advances next_id. A ticket with a workstream is appended to
+// that workstream's tickets list; a missing one is a
+// *WorkstreamNotFoundError and nothing is written.
 func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if err := s.checkProject(project); err != nil {
 		return Created{}, err
@@ -394,6 +396,14 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if err != nil {
 		return Created{}, err
 	}
+	// So is a missing workstream: the ticket joins its list (board-format
+	// §Blocking) or is not created.
+	var lists []pending
+	if input.Workstream != "" {
+		if lists, err = s.membership(project, []string{created.ID}, input.Workstream); err != nil {
+			return Created{}, err
+		}
+	}
 	if err := s.WriteFileAtomic(name, data); err != nil {
 		return Created{}, err
 	}
@@ -401,7 +411,7 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if err := projectFile.write(s); err != nil {
 		return created, err
 	}
-	return created, nil
+	return created, writeAll(s, lists)
 }
 
 func (s *Store) ticketTemplate(id string, t NewTicket) ([]byte, error) {
@@ -467,7 +477,10 @@ func (s *Store) ticketTemplate(id string, t NewTicket) ([]byte, error) {
 
 // Slugify makes a folder slug from a title: lowercase words joined by
 // hyphens, at most 48 characters, cut at a word boundary.
-func Slugify(title string) string {
+func Slugify(title string) string { return slugify(title, "ticket") }
+
+// slugify is Slugify with the slug used when the title has no ASCII words.
+func slugify(title, fallback string) string {
 	var words []string
 	for _, word := range strings.FieldsFunc(strings.ToLower(title), func(r rune) bool {
 		return !(r < unicode.MaxASCII && (unicode.IsLetter(r) || unicode.IsDigit(r)))
@@ -489,7 +502,7 @@ func Slugify(title string) string {
 		slug = words[0][:min(len(words[0]), 48)]
 	}
 	if slug == "" {
-		return "ticket"
+		return fallback
 	}
 	return slug
 }

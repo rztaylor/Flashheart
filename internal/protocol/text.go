@@ -107,6 +107,11 @@ instructions.
 - Workstreams order their tickets: a ticket waits for the ones before it,
   and ` + "`depends_on`" + ` names tickets it needs first. A blocked ticket needs
   ` + "`force`" + ` and a reason to claim.
+- Work that spans several dependent tickets with a shared goal belongs in a
+  workstream. Join one ` + "`board_context`" + ` lists by passing ` + "`workstream`" + ` to
+  ` + "`create_ticket`" + ` or ` + "`update_ticket`" + `, or make one with
+  ` + "`create_workstream`" + `, listing its tickets in order.
+  Leave single tickets out of workstreams.
 
 ## Review template
 

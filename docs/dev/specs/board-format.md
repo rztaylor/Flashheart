@@ -182,7 +182,9 @@ A ticket is **blocked** when any of these holds:
    ticket not in `review` or `done`.
 
 A workstream's `tickets:` list defines membership and order; a ticket whose
-`workstream:` field disagrees with the lists gets a warning. A reference to a
+`workstream:` field disagrees with the lists gets a warning. Flashheart's own
+writes (ticket creation and the agent tools) change the field and the lists
+together, appending a joining ticket to the end of its list. A reference to a
 missing ticket or workstream (including a missing `workstream:`) is shown as a
 warning and counts as blocking. Archived tickets count as done. A duplicated
 id counts as done only when every copy does. Only tickets in `backlog`,
