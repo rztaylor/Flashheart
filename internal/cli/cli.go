@@ -21,6 +21,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/mcpserver"
 	"github.com/rztaylor/flashheart/internal/migrate"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/setup"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -52,6 +53,10 @@ type Dependencies struct {
 	Stdin io.Reader
 	// Getwd returns the process's working directory.
 	Getwd func() (string, error)
+	// FindClaude locates the claude CLI that registers MCP servers.
+	FindClaude func(home string) string
+	// RunCommand runs an external command for setup; nil runs it directly.
+	RunCommand func(name string, args ...string) ([]byte, error)
 }
 
 type usageError struct{ message string }
@@ -77,11 +82,16 @@ type environment struct {
 	deps           Dependencies
 	serve          *serveFlags
 	migrate        *migrateFlags
+	setup          *setupFlags
 }
 
 type serveFlags struct {
 	foreground      bool
 	backgroundChild bool
+}
+
+type setupFlags struct {
+	write, uninstall bool
 }
 
 type migrateFlags struct {
@@ -135,7 +145,17 @@ func commands() []command {
 				"problems to <root>/.flashheart/hook-errors.log.",
 			run: runHook,
 		},
-		{name: "setup", summary: "show or apply agent configuration (not yet available)", usage: "setup <agent> [--write | --uninstall]", detail: "Show the hook, MCP and protocol changes for an agent; write them with --write.", run: notYet},
+		{
+			name:    "setup",
+			summary: "show or apply an agent's configuration for Flashheart",
+			usage:   "setup claude [--uninstall] [--write] [--root DIR]",
+			detail: "Show the changes that connect Claude Code to Flashheart: its hooks in\n" +
+				"~/.claude/settings.json, the flashheart MCP server, and the Flashheart\n" +
+				"skill (which replaces kanban-tracker). Nothing changes without --write;\n" +
+				"backups go to ~/.claude/flashheart-backup/. --uninstall shows, and with\n" +
+				"--write applies, the reverse.",
+			run: runSetup,
+		},
 		{name: "doctor", summary: "check the board root and agent configuration (not yet available)", usage: "doctor [--root DIR]", detail: "Check the board root, permissions, agent configuration and recent hook errors.", run: notYet},
 		{
 			name:    "migrate",
@@ -161,7 +181,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	if stderr == nil {
 		stderr = io.Discard
 	}
-	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}, migrate: &migrateFlags{keys: keyFlags{}}}
+	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}, migrate: &migrateFlags{keys: keyFlags{}}, setup: &setupFlags{}}
 
 	name, flagArgs := splitCommand(args)
 	if name == "" && wantsHelp(flagArgs) {
@@ -191,6 +211,9 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	case "migrate":
 		flags.BoolVar(&env.migrate.write, "write", false, "")
 		flags.Var(env.migrate.keys, "key", "")
+	case "setup":
+		flags.BoolVar(&env.setup.write, "write", false, "")
+		flags.BoolVar(&env.setup.uninstall, "uninstall", false, "")
 	}
 	if err := parseInterspersed(flags, flagArgs); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -218,7 +241,11 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	case err == nil:
 		return 0
 	case errors.Is(err, errNotYetAvailable):
-		fmt.Fprintf(stderr, "flashheart: %s is not yet available\n", name)
+		what := name
+		if name == "setup" && flags.NArg() > 0 {
+			what += " " + flags.Arg(0)
+		}
+		fmt.Fprintf(stderr, "flashheart: %s is not yet available\n", what)
 		return 2
 	case errors.As(err, &usage):
 		return reportUsage(stderr, usage)
@@ -456,6 +483,62 @@ func runMCP(ctx context.Context, env *environment, flags *flag.FlagSet, globals 
 	return mcpserver.Serve(ctx, mcpserver.Options{Root: root, Cwd: cwd}, stdin, env.stdout)
 }
 
+// runSetup shows, or with --write applies, an agent's configuration
+// (SET-1–SET-3, D9).
+func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
+	switch {
+	case flags.NArg() == 0:
+		return usageError{"setup needs an agent: flashheart setup claude"}
+	case flags.NArg() > 1:
+		return usageError{"setup takes one agent"}
+	case flags.Arg(0) == "codex":
+		return errNotYetAvailable
+	case flags.Arg(0) != "claude":
+		return usageError{fmt.Sprintf("unknown agent %q (known: claude)", flags.Arg(0))}
+	}
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		return err
+	}
+	if env.deps.HomeDir == nil || env.deps.Executable == nil {
+		return errors.New("setup needs the home directory and the flashheart binary's path")
+	}
+	home, err := env.deps.HomeDir()
+	if err != nil {
+		return fmt.Errorf("find the home directory: %w", err)
+	}
+	binary, err := env.deps.Executable()
+	if err != nil {
+		return fmt.Errorf("find the flashheart binary: %w", err)
+	}
+	options := setup.Options{Home: home, Binary: binary, Run: env.deps.RunCommand}
+	if root != filepath.Join(home, "reports", "Kanban") {
+		options.Root = root
+	}
+	if env.deps.FindClaude != nil {
+		options.Claude = env.deps.FindClaude(home)
+	}
+	plan, err := setup.Install(options)
+	if env.setup.uninstall {
+		plan, err = setup.Uninstall(options)
+	}
+	if err != nil {
+		return err
+	}
+	if env.setup.write {
+		return plan.Apply(env.stdout)
+	}
+	plan.Render(env.stdout)
+	if !plan.Empty() {
+		again := "--write"
+		if env.setup.uninstall {
+			again = "--uninstall --write"
+		}
+		fmt.Fprintf(env.stdout, "\nNothing was changed. Run flashheart setup claude %s to apply these changes.\n", again)
+	}
+	return nil
+}
+
 // rootArgument finds --root DIR or --root=DIR without parsing other flags.
 func rootArgument(args []string) (string, bool) {
 	for index, arg := range args {
@@ -585,6 +668,12 @@ func writeCommandUsage(output io.Writer, command command) {
 	case "serve":
 		fmt.Fprintln(output, "Options:")
 		fmt.Fprintln(output, "  --foreground  keep the server attached to this terminal until it stops")
+		writeGlobalOptionLines(output)
+		return
+	case "setup":
+		fmt.Fprintln(output, "Options:")
+		fmt.Fprintln(output, "  --write       apply the changes (otherwise only show them)")
+		fmt.Fprintln(output, "  --uninstall   show (with --write, apply) the reverse")
 		writeGlobalOptionLines(output)
 		return
 	case "migrate":

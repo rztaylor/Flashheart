@@ -12,6 +12,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/cli"
 	"github.com/rztaylor/flashheart/internal/logfile"
+	"github.com/rztaylor/flashheart/internal/setup"
 )
 
 func main() {
@@ -28,6 +29,7 @@ func main() {
 		OpenServeLog:    func(root string) io.Writer { return logfile.ServeLog(root) },
 		Stdin:           os.Stdin,
 		Getwd:           os.Getwd,
+		FindClaude:      setup.FindClaude,
 		OpenHandshake: func() (cli.Handshake, error) {
 			return background.OpenHandshake()
 		},

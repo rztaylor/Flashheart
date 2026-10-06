@@ -662,3 +662,77 @@ func (r *holdingReader) Read(p []byte) (int, error) {
 	}
 	return 0, io.EOF
 }
+
+func TestSetupClaudeShowsThenWritesThenUninstalls(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	settings := filepath.Join(h.home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	original := []byte("{\n  \"model\": \"opus\"\n}\n")
+	if err := os.WriteFile(settings, original, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var ran [][]string
+	deps := h.deps()
+	deps.FindClaude = func(string) string { return "/usr/bin/claude" }
+	deps.RunCommand = func(name string, args ...string) ([]byte, error) {
+		ran = append(ran, append([]string{name}, args...))
+		return nil, nil
+	}
+	run := func(args ...string) (int, string, string) {
+		var stdout, stderr bytes.Buffer
+		code := Run(context.Background(), args, &stdout, &stderr, deps)
+		return code, stdout.String(), stderr.String()
+	}
+
+	code, stdout, stderr := run("setup", "claude")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, `"command": "/opt/bin/flashheart hook claude SessionStart",`) ||
+		!strings.Contains(stdout, "Nothing was changed. Run flashheart setup claude --write to apply these changes.") {
+		t.Fatalf("dry run: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+	if data, _ := os.ReadFile(settings); !bytes.Equal(data, original) || len(ran) > 0 {
+		t.Fatal("the dry run changed something")
+	}
+	// A non-default root is passed to every command (SET-3).
+	code, stdout, _ = run("setup", "claude", "--root", "/data/board")
+	if code != 0 || !strings.Contains(stdout, "hook claude Stop --root /data/board") || !strings.Contains(stdout, `"args":["mcp","--root","/data/board"]`) {
+		t.Fatalf("root: code %d, stdout:\n%s", code, stdout)
+	}
+
+	if code, stdout, stderr = run("setup", "claude", "--write"); code != 0 || !strings.Contains(stdout, "Wrote ~/.claude/settings.json") {
+		t.Fatalf("write: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+	if len(ran) != 1 || ran[0][0] != "/usr/bin/claude" || ran[0][2] != "add-json" {
+		t.Fatalf("ran = %v", ran)
+	}
+	if code, stdout, _ = run("setup", "claude", "--uninstall"); code != 0 || !strings.Contains(stdout, "Delete ~/.claude/skills/flashheart/SKILL.md.") || !strings.Contains(stdout, "--uninstall --write") {
+		t.Fatalf("uninstall preview: code %d, stdout:\n%s", code, stdout)
+	}
+	if code, _, stderr = run("setup", "claude", "--uninstall", "--write"); code != 0 {
+		t.Fatalf("uninstall: code %d, stderr %q", code, stderr)
+	}
+	if data, _ := os.ReadFile(settings); !bytes.Equal(data, original) {
+		t.Fatalf("settings after uninstall:\n%s", data)
+	}
+}
+
+func TestSetupUsage(t *testing.T) {
+	t.Parallel()
+
+	for args, want := range map[string]string{
+		"setup":        "setup needs an agent",
+		"setup gemini": `unknown agent "gemini"`,
+	} {
+		code, _, stderr := newHarness(t).run(strings.Fields(args)...)
+		if code != 2 || !strings.Contains(stderr, want) {
+			t.Errorf("%s: code %d, stderr %q", args, code, stderr)
+		}
+	}
+	code, _, stderr := newHarness(t).run("setup", "codex")
+	if code != 2 || stderr != "flashheart: setup codex is not yet available\n" {
+		t.Errorf("codex: code %d, stderr %q", code, stderr)
+	}
+}
