@@ -184,9 +184,16 @@ Claude Code (`~/.claude/settings.json`, merged, with backup):
 }
 ```
 
-(abbreviated; every event in §5.2 is registered the same way). MCP
-registration is the equivalent of
-`claude mcp add --scope user flashheart -- /usr/local/bin/flashheart mcp`.
+(abbreviated; every event in §5.2 is registered the same way). The MCP
+server is registered by running
+`claude mcp add-json --scope user flashheart '{"type":"stdio","command":"/usr/local/bin/flashheart","args":["mcp"]}'`,
+because Claude Code owns `~/.claude.json`; without a `claude` command setup
+prints it for the user. The protocol skill goes to
+`~/.claude/skills/flashheart/SKILL.md`, and the kanban-tracker skill, which
+it replaces, moves into the backup (user, 2026-10-06). `--write` backs up
+what it changes in `~/.claude/flashheart-backup/<UTC time>/`;
+`--uninstall --write` restores the backed-up `settings.json` byte for byte
+when nothing changed since, else removes only setup's own hooks.
 
 Codex: `[mcp_servers.flashheart]` with `command = "/usr/local/bin/flashheart"`
 and `args = ["mcp"]` in `~/.codex/config.toml`, and the hooks in
@@ -223,12 +230,16 @@ Every tool accepts an optional `run` argument. The server resolves the caller:
 
 1. `run` argument present (stamped by the `PreToolUse` hook where the agent
    supports input rewriting, or copied by the model from the recovery note);
-2. else the single run whose `cwd` resolves to the server's working directory
-   and branch and is not Ended;
+2. else the single session that is not Ended and works in the worktree and
+   branch of the server's working directory: `CLAUDE_PROJECT_DIR` when the
+   agent sets it (Claude Code starts user-scope MCP servers in `~/.claude`,
+   not the project), else the process's directory;
 3. else error `ambiguous_run` listing candidates and saying to pass `run`.
 
 Calls with no resolvable run still work for read-only tools and record
-`by: "unknown"` for writes.
+`by: "unknown"` for writes; `claim`, `release` and `ask_human` belong to a
+run and fail with `ambiguous_run`. A shortened run id (`claude:3f2a9c1e`, as
+the recovery note shows it) is accepted when it names one run.
 
 ### 7.2 Tools
 
@@ -241,17 +252,19 @@ Calls with no resolvable run still work for read-only tools and record
 | `release` | `ticket`, `reason?` | §6 | ok |
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
 | `update_ticket` | `ticket`, `set?` (frontmatter fields), `check?` (criteria text or index), `append_notes?` | frontmatter/body edit with hash precondition | changed fields |
-| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`) | new column, warnings |
+| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` is refused (humans move tickets to Done); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `project_key?` (only for a project with no key yet) | new ticket folder with the next id (`KEY-2`); a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`) | id |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
 | `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" |
 
-Errors are `{code, message, fix}` with codes such as `not_found`,
-`conflict`, `claimed`, `blocked`, `ambiguous_run`, `invalid_input`,
-`key_taken`, `key_fixed`,
-`outside_root`, `type_not_allowed`, `too_large`.
+Errors are `{code, message, fix}`, rendered as `error <code>: <message>`
+and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
+`blocked`, `ambiguous_run`, `invalid_input`, `key_taken`, `key_fixed`,
+`needs_repair`, `busy`, `outside_root`, `type_not_allowed`, `too_large` and
+`internal`. Writes to a ticket held by another live run (other than the
+caller's own session or subagents) fail with `claimed`.
 
 Every `ticket` argument is a ticket id (`FH-42`); the id's key names the
 project, so no `project` argument is needed. `checkpoint` copies local paths

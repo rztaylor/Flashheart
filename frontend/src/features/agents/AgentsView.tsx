@@ -84,11 +84,8 @@ export function AgentsView({
     return (
       <EmptyState title="No agent runs yet">
         Runs appear here as soon as a Claude Code session with Flashheart's
-        hooks starts in one of your repositories. The hook settings are in{" "}
-        <code className="font-mono text-ink">
-          docs/user/claude-code-hooks.md
-        </code>
-        .
+        hooks starts in one of your repositories. Connect Claude Code with{" "}
+        <code className="font-mono text-ink">flashheart setup claude</code>.
       </EmptyState>
     );
   }

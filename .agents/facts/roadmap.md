@@ -14,6 +14,7 @@
   not committed (D12). Roadmap briefs stay the scope source; each ticket
   names its brief. Agents working here move their ticket to `in-progress`
   with `branch:` set when work starts and to `review` when the pull request
-  opens, and keep `## Handoff` current; until the MCP tools exist, edit
-  tickets through the board UI or in board format v2. Machines without the
-  board (CI, other checkouts) skip this.
+  opens, and keep `## Handoff` current, through the `flashheart` MCP tools
+  where `setup claude` is applied (`claim`, `checkpoint`, `move`), else
+  through the board UI or in board format v2. Machines without the board
+  (CI, other checkouts) skip this.

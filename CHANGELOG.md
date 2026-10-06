@@ -12,8 +12,8 @@ All notable changes to this project are documented here. The project follows
   shell in the browser and returns the terminal, running the server in the
   background until Quit or the last tab closes; `--foreground` keeps it
   attached. The background server records later errors in
-  `<root>/.flashheart/serve.log`. `version` prints the build and agent protocol version; `mcp`,
-  `setup` and `doctor` report that they are not yet available.
+  `<root>/.flashheart/serve.log`. `version` prints the build and agent protocol version;
+  `doctor` reports that it is not yet available.
 - Board root resolution from `--root`, `FLASHHEART_ROOT` or
   `~/reports/Kanban`, and read-only loading of `.flashheart/config.yaml` with
   documented defaults and validation.
@@ -67,8 +67,7 @@ All notable changes to this project are documented here. The project follows
   problems to `.flashheart/hook-errors.log`, never stores prompts, commands
   or tool inputs and outputs, and scrubs likely secrets. At session start it
   tells the agent about the ticket linked to its branch, the ticket's
-  handoff and an earlier session that left edits. Manual setup:
-  [`docs/user/claude-code-hooks.md`](docs/user/claude-code-hooks.md).
+  handoff and an earlier session that left edits.
 - The Agents view: every session and subagent across projects as a
   departure board, lanes by state with Needs you first, each run's ticket,
   plan, branch and last activity, opening to its plan, edited files and
@@ -76,6 +75,28 @@ All notable changes to this project are documented here. The project follows
   mirror tickets at the front of the board, the card panel has a Runs tab
   and warns when a run has edited since the handoff, and Needs you shows in
   the top bar and the project rail.
+- `flashheart mcp`: the MCP server agents use (agent protocol 1).
+  `board_context`, `list_tickets` and `get_ticket` find work ("the two
+  top-priority bugs", "FH-42"); `claim` and `release` hold a ticket for a
+  session while it is active; `checkpoint` rewrites the ticket's handoff;
+  `update_ticket`, `move`, `create_ticket` and `set_project_key` edit the
+  board (agents choose a new project's key and never move tickets to Done);
+  `write_review` writes the review; `ask_human` asks you a question.
+  Screenshots and other files a review or checkpoint links by local path are
+  copied into the ticket, so they survive the agent cleaning up.
+- `flashheart setup claude` shows, as a diff, the hooks, MCP server and
+  Flashheart skill that connect Claude Code, and applies them with
+  `--write`, backing up what it changes in `~/.claude/flashheart-backup/`
+  and moving the kanban-tracker skill aside; `--uninstall` undoes it. Guide:
+  [`docs/user/claude-code.md`](docs/user/claude-code.md).
+- Questions from agents show as Needs you on the ticket's card and in the
+  Agents view; answer them there and the answer is noted in the ticket and
+  reaches the session with its next prompt or in its recovery note.
+- Optional handoff enforcement (`enforce_handoff`, per project or global):
+  a session linked to a ticket that tries to stop with edits since its last
+  checkpoint is asked, once, to checkpoint first.
+- Recovery notes now point agents at the MCP tools and include answers
+  waiting for them; claims are leases (`lease_minutes`, 30 by default).
 - Event logs expire after `event_retention_days` (90 by default).
 - `scripts/hook-bench.sh` measures hook latency (p95 under 50 ms) and
   `scripts/record-claude-hooks.sh` records real hook payloads for the tests.

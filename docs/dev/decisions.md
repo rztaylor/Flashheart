@@ -219,3 +219,41 @@ would have to rewrite under a lock on every event); a run-state daemon
 Dogfooding (user, 2026-10-05): Flashheart's own work is tracked on its board
 (project `Flashheart`, key `FH`) in the default root, outside the
 repository (D12).
+
+## 2026-10-06 — D18: Setup registers MCP through the claude CLI and retires kanban-tracker
+
+Options for registering the user-scope MCP server: edit `~/.claude.json`
+directly; run `claude mcp add-json` / `claude mcp remove`; print the command
+only. Decision (user): run the claude CLI, and print the command when none is
+found. `~/.claude.json` is a large file running sessions rewrite constantly,
+so an edit from outside could be lost or lose theirs; the CLI owns it.
+
+The kanban-tracker skill would give agents a second, conflicting set of
+ticket rules. Decision (user): `setup --write` moves it into setup's backup
+and `--uninstall` puts it back, rather than leaving it in place with a note.
+
+`setup` edits `settings.json` preserving key order and the file's indent,
+owns only hooks whose command runs a flashheart binary's `hook`
+subcommand, and restores the backed-up file byte for byte on uninstall when
+nothing changed since. `--uninstall` previews like setup does and applies
+with `--write` (D9).
+
+## 2026-10-06 — D19: Answers reach a session through an inbox
+
+The prompt hook must stay fast (`HOOK-1`) and never reads the event log
+(D17), but it must hand a session the answers to its questions (`HOOK-5`).
+Decision: answering appends `question.answered` and queues the answer in the
+asking session's inbox, `<project>/.flashheart/answers/<agent>--<session>.jsonl`;
+the prompt hook checks for that file (one `stat` when nothing waits),
+empties it and records `question.delivered`. The recovery note and
+`board_context` deliver from the inbox and the log, so nothing is lost if
+the inbox is. The inbox is a delivery queue, not a store of meaning: the
+answer lives in the log and the ticket's `## Notes` (`STO-6`). A question
+stays Needs you until its answer is delivered, because delivery needs the
+human to prompt the session.
+
+Run attribution (`MCP-4`): Claude Code's `PreToolUse` hook may rewrite a
+tool's input without deciding its permission, so the hook stamps the run
+into Flashheart's own tool calls. Claude Code starts user-scope MCP servers
+in `~/.claude`, so the fallback reads the project from
+`CLAUDE_PROJECT_DIR`.

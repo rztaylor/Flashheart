@@ -1,6 +1,31 @@
 # mcp-protocol
 
-Status: **Pending**. Depends on `agent-runs`.
+Status: **Partial**. Plan: `docs/dev/plans/003-mcp-protocol.md`. Tracked on
+the dogfood board as FH-4 (and FH-3 for `agent-runs`' remaining real-session
+evidence).
+
+Built (2026-10-06): `internal/mcpserver` with every tool below and contract
+tests over the in-memory transport; `flashheart mcp` (initialize in about
+6 ms); claim leases and questions in the run fold; checkpoints into
+`## Handoff`; referenced-file copies (`REV-5`); `PreToolUse` run stamping;
+answers delivered through the session's inbox (D19); handoff enforcement;
+`flashheart setup claude` (D18); the protocol skill; answering questions in
+the card panel and the Agents view; `TestProtocolSmoke`; a Playwright test
+that asks through the real MCP server and answers in the browser.
+
+Remaining (needs a person at the keyboard, with `setup claude --write`
+applied on their machine):
+
+- "Tackle the top two bugs" in a real session lists, claims and works the
+  two highest-priority open bugs of its project.
+- A real session in a new project sets a key it chose before its first
+  ticket; a taken key is refused with the keys in use.
+- A real session claims, checkpoints, asks a question, receives the answer
+  on its next prompt, and a fresh session gets the recovery note; this also
+  confirms `updatedInput` stamping and `CLAUDE_PROJECT_DIR` in a live
+  Claude Code.
+- A review linking a screenshot by absolute path still renders after the
+  original is deleted (covered by tests; to be seen once in the UI).
 
 ## Goal
 

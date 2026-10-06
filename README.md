@@ -16,9 +16,10 @@ told where the work stood and carries on. Meanwhile you can see, for every
 project at once, which agents are working, which have gone quiet, and which
 are waiting for you.
 
-**Status: early development.** The board (views, editing, live updates) and
-live agent runs from Claude Code hooks work; the MCP server, setup
-automation and Codex support are next. See the
+**Status: early development.** The board (views, editing, live updates),
+live agent runs from Claude Code hooks, and the MCP server, protocol skill
+and setup for Claude Code work; Codex support and the review panel are
+next. See the
 [roadmap](docs/dev/roadmap.md).
 
 ## How it works
@@ -57,18 +58,15 @@ The server stops when you choose **Quit** in the board or close its last tab.
 If no browser can be opened, Flashheart prints a one-time link that works for
 two minutes.
 
-To see your Claude Code sessions on the board, add Flashheart's hooks to
-Claude Code's settings:
-[`docs/user/claude-code-hooks.md`](docs/user/claude-code-hooks.md).
-
-Planned:
+Connect Claude Code (hooks, the MCP server and the Flashheart skill):
 
 ```sh
-flashheart setup claude             # show the hook, MCP and skill changes
+flashheart setup claude             # show the changes as a diff
 flashheart setup claude --write     # apply them, with backups
-flashheart setup codex --write
-flashheart doctor                   # check the root and agent configuration
 ```
+
+See [`docs/user/claude-code.md`](docs/user/claude-code.md). Planned:
+`flashheart setup codex` and `flashheart doctor`.
 
 The board root defaults to `~/reports/Kanban`; override with `--root` or
 `FLASHHEART_ROOT`.
