@@ -336,6 +336,10 @@ safeguard, so a lost or edited `next_id` cannot reuse a deleted id. The
 confirmation's preview carries a token over everything it lists; the
 delete is refused when any of it changed. Agents get no delete tool.
 
+Danger red marks the delete (user, 2026-10-06): errors and actions that
+cannot be undone are red. The row's Delete permanently is red text and the
+confirmation's button a red fill (`DESIGN.md` Danger role).
+
 ## 2026-10-06 — D25: Projects archive and delete like tickets
 
 Decision (user, FH-21): a project can be archived from the UI and deleted

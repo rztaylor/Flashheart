@@ -16,6 +16,19 @@ describe("Button", () => {
     expect(primary).not.toEqual(quiet);
   });
 
+  it("marks actions that cannot be undone in red", () => {
+    const danger = renderToStaticMarkup(
+      <Button variant="danger">Delete permanently</Button>,
+    );
+    const quiet = renderToStaticMarkup(
+      <Button variant="danger-quiet">Delete permanently</Button>,
+    );
+    expect(danger).toContain("bg-danger");
+    expect(danger).toContain("text-on-danger");
+    expect(quiet).toContain("text-danger");
+    expect(quiet).not.toMatch(/ bg-danger( |")/);
+  });
+
   it("passes through accessible attributes", () => {
     const markup = renderToStaticMarkup(
       <Button aria-label="Check connection" disabled>

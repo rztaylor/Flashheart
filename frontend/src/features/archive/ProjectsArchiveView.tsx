@@ -164,7 +164,7 @@ export function ProjectsArchiveView({
                         Restore
                       </Button>
                       <Button
-                        variant="quiet"
+                        variant="danger-quiet"
                         className="h-8 py-0 text-xs"
                         aria-label={`Delete permanently ${project.displayName}`}
                         onClick={() => setDeleting(project.name)}

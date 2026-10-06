@@ -34,7 +34,8 @@ All notable changes to this project are documented here. The project follows
   archived tickets, restore one to the column it left, or delete it
   permanently. Deleting needs the ticket's id typed, lists every ticket and
   workstream that refers to it, removes those references so nothing waits
-  on it, and retires the id so it is never reused (FH-20).
+  on it, and retires the id so it is never reused (FH-20). Permanent
+  deletes are marked in red, like errors.
 - Projects can be archived from the archive page (All projects › Archive, or
   Archive project… in a project's archive), with a warning about live
   sessions, tickets being worked on and open questions; restored; and,

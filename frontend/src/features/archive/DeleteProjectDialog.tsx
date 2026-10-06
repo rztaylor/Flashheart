@@ -79,7 +79,7 @@ export function DeleteProjectDialog({
       actions={
         <>
           <Button onClick={onClose}>Keep it archived</Button>
-          <Button variant="primary" disabled={!ready} onClick={confirm}>
+          <Button variant="danger" disabled={!ready} onClick={confirm}>
             {busy ? "Deleting…" : "Delete permanently"}
           </Button>
         </>

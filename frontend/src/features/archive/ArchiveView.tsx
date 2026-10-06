@@ -197,7 +197,7 @@ export function ArchiveView({
                         Restore
                       </Button>
                       <Button
-                        variant="quiet"
+                        variant="danger-quiet"
                         className="h-8 py-0 text-xs"
                         aria-label={`Delete permanently ${item.id}`}
                         onClick={() => setDeleting(item.id)}

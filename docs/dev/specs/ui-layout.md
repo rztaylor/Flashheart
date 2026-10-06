@@ -218,7 +218,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | Paint | The Colour by value | Card header tint, filled tag, colour key | The value's word |
 | State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green | Icon and column word |
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
-| Danger | Application errors | Alert strips, failed loads | Words |
+| Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |
 | Selection | What is chosen or applied | Open ticket's card ring and table row, current panel tab, chosen density, applied filter, pressed workstream chip, drop target | `aria-current`, `aria-selected`, `aria-pressed` or the control's value |
 
