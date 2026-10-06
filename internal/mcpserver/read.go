@@ -44,19 +44,9 @@ func (srv *server) boardContext(input BoardContextInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Answers shown here count as delivered (HOOK-5).
-	var answers []protocol.Answer
-	if c.run != "" {
-		var delivered []events.Event
-		for _, q := range c.set.PendingAnswers(c.session()) {
-			answers = append(answers, protocol.Answer{Question: q.Text, Answer: q.Answer, By: q.AnsweredBy, Ticket: q.Ticket})
-			delivered = append(delivered, events.Event{Time: c.now, Run: q.Run, Agent: agentOf(q.Run), Kind: events.QuestionDelivered, Project: project.Name, Data: events.DeliveredData{ID: q.ID}})
-		}
-		if len(delivered) > 0 {
-			if err := srv.log.Append(delivered...); err != nil {
-				return "", err
-			}
-		}
+	answers, err := c.deliverAnswers()
+	if err != nil {
+		return "", err
 	}
 	for limit := 12; ; limit-- {
 		out := c.renderContext(project, answers, limit)
@@ -142,6 +132,40 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 	}
 	lines = append(lines, dataNote)
 	return strings.Join(lines, "\n") + "\n"
+}
+
+// deliverAnswers hands the caller's waiting answers over: its session's
+// inbox and any answered question the log shows undelivered. They count as
+// delivered once shown (HOOK-5).
+func (c *call) deliverAnswers() ([]protocol.Answer, error) {
+	if c.run == "" || c.project == "" {
+		return nil, nil
+	}
+	waiting, err := c.srv.log.TakeAnswers(c.project, c.session())
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	for _, d := range waiting {
+		seen[d.ID] = true
+	}
+	for _, q := range c.set.PendingAnswers(c.session()) {
+		if !seen[q.ID] {
+			waiting = append(waiting, events.Delivery{ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Answer: q.Answer, By: q.AnsweredBy})
+		}
+	}
+	var answers []protocol.Answer
+	var delivered []events.Event
+	for _, d := range waiting {
+		answers = append(answers, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
+		delivered = append(delivered, events.Event{Time: c.now, Run: d.Run, Agent: agentOf(d.Run), Kind: events.QuestionDelivered, Project: c.project, Data: events.DeliveredData{ID: d.ID}})
+	}
+	if len(delivered) > 0 {
+		if err := c.srv.log.Append(delivered...); err != nil {
+			return nil, err
+		}
+	}
+	return answers, nil
 }
 
 func handoffLines(markdown string, limit int, text func(string) string) []string {

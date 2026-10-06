@@ -293,7 +293,13 @@ func TestBoardContextDeliversAnswers(t *testing.T) {
 	out := e.ok("ask_human", map[string]any{"kind": "question", "text": "Ship it?"})
 	id := strings.TrimSpace(out[strings.Index(out, "question=")+len("question="):])
 	e.events(session, events.Event{Kind: events.QuestionAnswered, Data: events.AnswerData{ID: id, Answer: "Not yet", By: "Robert"}})
+	if err := events.New(e.store).QueueAnswer("demo", session, events.Delivery{ID: id, Run: session, Question: "Ship it?", Answer: "Not yet", By: "Robert"}); err != nil {
+		t.Fatal(err)
+	}
 	contains(t, e.ok("board_context", nil), `- "Ship it?" → "Not yet" (Robert)`)
+	if waiting, _ := events.New(e.store).TakeAnswers("demo", session); len(waiting) != 0 {
+		t.Fatalf("inbox still holds %+v", waiting)
+	}
 	if strings.Contains(e.ok("board_context", nil), "Ship it?") {
 		t.Fatal("answer delivered twice")
 	}
