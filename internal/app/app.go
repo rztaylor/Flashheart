@@ -157,6 +157,7 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 			Board:     board,
 			Files:     files,
 			Writer:    files,
+			Events:    events.New(files),
 			DoneLimit: settings.DoneColumnLimit,
 			Stopping:  stopping.ch,
 		})

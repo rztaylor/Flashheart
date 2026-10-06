@@ -80,6 +80,7 @@ type RunJSON struct {
 	Files        []string          `json:"files"`
 	Plan         []events.PlanItem `json:"plan"`
 	Progress     runs.Progress     `json:"progress"`
+	Questions    []runs.Question   `json:"questions"`
 	Timeline     []runs.Entry      `json:"timeline,omitempty"`
 }
 
@@ -111,6 +112,7 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission,
 		Started: timestamp(v.Started), LastActivity: timestamp(v.LastActivity), Ended: timestamp(v.EndedAt), EndReason: v.EndReason,
 		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files), Plan: nonNil(v.Plan), Progress: v.Progress,
+		Questions: nonNil(v.Questions),
 	}
 	if v.Link.Ticket != "" {
 		if _, ticket, ok := snapshot.FindTicket(v.Link.Ticket); ok {
@@ -173,6 +175,9 @@ func (b boardAPI) run(w http.ResponseWriter, r *http.Request) {
 
 // liveBadge fills a card's live run and virtual-column flags (VIEW-2, VIEW-8).
 func liveBadge(snapshot *index.Snapshot, card *Card) {
+	// An open question about the ticket needs you whoever asked it.
+	card.Questions = len(snapshot.Questions(card.ID))
+	card.NeedsYou = card.Questions > 0
 	v, ok := snapshot.TicketRun(card.ID)
 	if !ok {
 		return
@@ -193,7 +198,7 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 			}
 		}
 	}
-	card.NeedsYou = v.State == runs.NeedsYou
+	card.NeedsYou = card.NeedsYou || v.State == runs.NeedsYou
 	card.AgentWorking = v.State == runs.Working || v.State == runs.Quiet
 }
 

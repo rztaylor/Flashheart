@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/index"
+	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -129,6 +131,8 @@ type Card struct {
 	Live         *LiveJSON `json:"live,omitempty"`
 	NeedsYou     bool      `json:"needsYou"`
 	AgentWorking bool      `json:"agentWorking"`
+	// Questions counts open questions about the ticket (CARD-6).
+	Questions int `json:"questions"`
 }
 
 // BoardResponse is GET /api/projects/{project}/board.
@@ -188,6 +192,8 @@ type TicketDetail struct {
 	Raw  string `json:"raw"`
 	// Runs are the runs linked to the ticket, most recent first (CARD-1).
 	Runs []RunJSON `json:"runs"`
+	// Questions are the open questions about the ticket (CARD-6).
+	Questions []runs.Question `json:"questions"`
 }
 
 // TicketResponse is GET /api/tickets/{id} and
@@ -245,6 +251,7 @@ type boardAPI struct {
 	stopping  <-chan struct{}
 	longPoll  time.Duration
 	write     Writer
+	events    *events.Log
 }
 
 func (b boardAPI) register(mux *http.ServeMux) {
@@ -428,6 +435,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 		CriteriaItems:        nonNil(ticket.Criteria),
 		AttachmentFiles:      []AttachmentJSON{},
 		Runs:                 ticketRuns(snapshot, ticket.ID),
+		Questions:            nonNil(snapshot.Questions(ticket.ID)),
 	}
 	if ticket.Handoff != nil {
 		detail.Handoff = &HandoffJSON{Markdown: ticket.Handoff.Markdown, Next: nonNil(ticket.Handoff.Next)}

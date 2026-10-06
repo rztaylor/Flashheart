@@ -55,6 +55,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/projects/{project}/tickets", b.createTicket)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/order", b.reorderWorkstream)
 	mux.HandleFunc("PUT /api/projects/{project}/key", b.setKey)
+	mux.HandleFunc("POST /api/questions/{id}/answer", b.answer)
 	mux.HandleFunc("GET /api/preferences", b.preferences)
 	mux.HandleFunc("PUT /api/preferences", b.savePreferences)
 }

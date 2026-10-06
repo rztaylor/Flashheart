@@ -174,3 +174,33 @@ func (s *Snapshot) TicketRuns(id string) []runs.View {
 	sort.SliceStable(list, func(a, b int) bool { return list[a].LastActivity.After(list[b].LastActivity) })
 	return list
 }
+
+// Questions returns the open questions about a ticket (asked by any live
+// run, answered or not, until delivered), oldest first (CARD-6, VIEW-2).
+func (s *Snapshot) Questions(ticket string) []runs.Question {
+	var list []runs.Question
+	for _, run := range s.Runs {
+		if run.State == runs.Ended {
+			continue
+		}
+		for _, q := range run.Questions {
+			if q.Ticket == ticket && q.Open() {
+				list = append(list, q)
+			}
+		}
+	}
+	sort.SliceStable(list, func(a, b int) bool { return list[a].Asked.Before(list[b].Asked) })
+	return list
+}
+
+// Question finds a question by id among the snapshot's runs.
+func (s *Snapshot) Question(id string) (runs.Question, runs.View, bool) {
+	for _, run := range s.Runs {
+		for _, q := range run.Questions {
+			if q.ID == id {
+				return q, run, true
+			}
+		}
+	}
+	return runs.Question{}, runs.View{}, false
+}
