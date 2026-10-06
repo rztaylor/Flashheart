@@ -83,6 +83,8 @@ type ProjectsResponse struct {
 	Projects       []ProjectSummary `json:"projects"`
 	// Runs counts every project's runs, for the band's Needs you badge.
 	Runs RunCountsJSON `json:"runs"`
+	// ArchivedProjects counts the projects under <root>/.archive/ (PRJ-5).
+	ArchivedProjects int `json:"archivedProjects"`
 }
 
 // Progress counts acceptance criteria.
@@ -272,6 +274,7 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	b.registerRuns(mux)
 	b.registerWrites(mux)
 	b.registerArchive(mux)
+	b.registerProjectArchive(mux)
 }
 
 // ChangesResponse is GET /api/changes?since=N: the revision once it is newer
@@ -355,6 +358,8 @@ func (b boardAPI) projects(w http.ResponseWriter, _ *http.Request) {
 		V1Projects:  nonNil(snapshot.V1Projects),
 		Projects:    summaries(snapshot),
 		Runs:        countsJSON(snapshot.RunCounts("")),
+
+		ArchivedProjects: len(snapshot.Board.ArchivedProjects),
 	}
 	if len(snapshot.V1Projects) > 0 {
 		response.MigrateCommand = "flashheart migrate --root " + shellQuote(b.root)

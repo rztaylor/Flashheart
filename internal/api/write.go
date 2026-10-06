@@ -104,6 +104,8 @@ func writeStoreError(w http.ResponseWriter, err error) {
 			InUse   []string `json:"inUse"`
 		}
 		writeJSON(w, http.StatusConflict, map[string]body{"error": {Code: "key_taken", Message: taken.Error(), InUse: taken.InUse}})
+	case errors.Is(err, store.ErrExists):
+		writeError(w, http.StatusConflict, "exists", strings.TrimPrefix(err.Error(), store.ErrExists.Error()+": "))
 	case errors.Is(err, store.ErrKeyFixed):
 		writeError(w, http.StatusConflict, "key_fixed", err.Error())
 	case errors.Is(err, store.ErrNotFound):

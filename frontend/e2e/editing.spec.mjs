@@ -513,6 +513,77 @@ test("the archive restores tickets and deletes them for good", async () => {
   );
 });
 
+test("projects archive, restore and delete for good", async () => {
+  await open("#/all/board");
+  await page.getByRole("link", { name: /^Archive/ }).click();
+  await expect(page).toHaveURL(/#\/all\/archive/);
+  await page.getByRole("button", { name: "Archive beta" }).click();
+  const archiveDialog = page.getByRole("dialog", { name: "Archive beta?" });
+  await expect(archiveDialog).toContainText("1 ticket");
+  await expectNoAxeViolations("archive project dialog");
+  await archiveDialog.getByRole("button", { name: "Archive project" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Archived project beta." }),
+  ).toBeVisible();
+  const rail = page.getByRole("navigation", { name: "Projects" });
+  await expect(rail.getByRole("button", { name: /beta/ })).toHaveCount(0);
+  const archived = page.getByRole("table", { name: "Archived projects" });
+  await expect(archived).toContainText("beta");
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`projects archive ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `projects-archive-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+
+  // Restore puts it back on the board.
+  await archived.getByRole("button", { name: "Restore beta" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Restored project beta." }),
+  ).toBeVisible();
+  await expect(rail.getByRole("button", { name: /beta/ })).toBeVisible();
+
+  // Archive alpha from its own archive; its tickets no longer block beta.
+  await open("#/p/alpha/archive");
+  await page.getByRole("button", { name: "Archive project…" }).click();
+  await page
+    .getByRole("dialog", { name: "Archive Alpha?" })
+    .getByRole("button", { name: "Archive project" })
+    .click();
+  await expect(page).toHaveURL(/#\/all\/archive/);
+  await open("#/p/beta/board");
+  await expect(card("Hello")).not.toHaveAccessibleName(/blocked/);
+
+  // Delete it permanently: the dialog lists beta's dependent ticket and
+  // waits for the typed name.
+  await open("#/all/archive");
+  await page.getByRole("button", { name: "Delete permanently Alpha" }).click();
+  const deleteDialog = page.getByRole("dialog", {
+    name: "Delete Alpha permanently?",
+  });
+  await expect(deleteDialog).toContainText("BE-1");
+  const confirm = deleteDialog.getByRole("button", {
+    name: "Delete permanently",
+  });
+  await deleteDialog.getByLabel("Type alpha to confirm").fill("Alpha");
+  await expect(confirm).toBeDisabled();
+  await deleteDialog.getByLabel("Type alpha to confirm").fill("alpha");
+  await expect(confirm).toBeEnabled();
+  await expectNoAxeViolations("delete project dialog");
+  await page.screenshot({
+    path: resolve(screenshotDir, "delete-project-1440-light.png"),
+  });
+  await confirm.click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Deleted project Alpha permanently." }),
+  ).toBeVisible();
+  await expect(page.getByText("No archived projects")).toBeVisible();
+});
+
 test("stations reorder along their line with Shift and an arrow", async () => {
   await open("#/p/flashheart/workstreams");
   const line = page.getByRole("article", { name: "Board editing" });

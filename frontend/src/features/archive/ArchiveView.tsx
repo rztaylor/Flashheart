@@ -14,6 +14,7 @@ import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
+import { ArchiveProjectDialog } from "./ArchiveProjectDialog";
 import { DeleteTicketDialog } from "./DeleteTicketDialog";
 
 const columnTitle = (column: string) =>
@@ -24,7 +25,8 @@ const failure = (error: unknown) =>
 
 // ArchiveView lists a project's archived tickets (EDIT-8), searchable, with
 // Restore (back to the column it left) and Delete permanently, which only
-// archived tickets offer.
+// archived tickets offer. Archive project… archives the whole project
+// (PRJ-5).
 export function ArchiveView({
   fetcher,
   project,
@@ -32,6 +34,7 @@ export function ArchiveView({
   editing,
   onOpen,
   onBack,
+  onProjectArchived,
 }: {
   fetcher: AuthenticatedFetch;
   project: string;
@@ -39,6 +42,8 @@ export function ArchiveView({
   editing: Editing;
   onOpen(ticket: TicketRef): void;
   onBack(): void;
+  // onProjectArchived follows archiving the whole project (PRJ-5).
+  onProjectArchived(displayName: string): void;
 }) {
   const load = useCallback(
     (signal: AbortSignal) => fetchArchive(fetcher, project, signal),
@@ -47,6 +52,7 @@ export function ArchiveView({
   const archive = useResource(load, project, revision);
   const [query, setQuery] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [archivingProject, setArchivingProject] = useState(false);
   const items = archive.status === "ready" ? archive.data.tickets : [];
   const shown = useMemo(() => filterArchived(items, query), [items, query]);
   const { notify } = editing;
@@ -76,7 +82,15 @@ export function ArchiveView({
             onChange={setQuery}
           />
         </div>
-        <Button variant="quiet" className="ml-auto" onClick={onBack}>
+        <Button
+          variant="quiet"
+          className="ml-auto"
+          onClick={() => setArchivingProject(true)}
+        >
+          <Icon name="archive" size={14} />
+          Archive project…
+        </Button>
+        <Button variant="quiet" onClick={onBack}>
           <Icon name="board" size={14} />
           Back to the board
         </Button>
@@ -195,6 +209,17 @@ export function ArchiveView({
             </tbody>
           </table>
         </div>
+      ) : null}
+      {archivingProject ? (
+        <ArchiveProjectDialog
+          fetcher={fetcher}
+          project={project}
+          onClose={() => setArchivingProject(false)}
+          onArchived={(displayName) => {
+            setArchivingProject(false);
+            onProjectArchived(displayName);
+          }}
+        />
       ) : null}
       {deleting ? (
         <DeleteTicketDialog

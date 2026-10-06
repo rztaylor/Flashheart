@@ -330,3 +330,31 @@ func TestV1ProjectsAreLeftForMigrate(t *testing.T) {
 		t.Fatalf("hook-errors.log = %q", log)
 	}
 }
+
+func TestArchivedProjectsRepositoryIsQuiet(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	cwd := repo(t)
+	run(t, root, "UserPromptSubmit", "s1 "+cwd, fake{})
+	s, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ArchiveProject("demo"); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+
+	for _, event := range []string{"SessionStart", "UserPromptSubmit", "Edit", "Stop"} {
+		if out := run(t, root, event, "s1 "+cwd, fake{}); out != "" {
+			t.Errorf("%s stdout = %q, want nothing", event, out)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "demo")); !errors.Is(err, os.ErrNotExist) {
+		t.Error("the archived project was recreated")
+	}
+	if log := errorLog(t, root); log != "" {
+		t.Errorf("hook-errors.log = %q", log)
+	}
+}

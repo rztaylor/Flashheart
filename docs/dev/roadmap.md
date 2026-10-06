@@ -36,7 +36,7 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    requests outside the other items: shared column scrolling (FH-24),
    saved manual card order (FH-23), archive views with a two-step
    permanent delete for tickets (FH-20) and projects (FH-21), and discreet
-   humour in secondary copy (FH-22). Built: FH-24, FH-23, FH-20.
+   humour in secondary copy (FH-22). Built: FH-24, FH-23, FH-20, FH-21.
 
 ## Later possibilities (not scheduled)
 

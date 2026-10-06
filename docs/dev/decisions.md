@@ -336,3 +336,23 @@ safeguard, so a lost or edited `next_id` cannot reuse a deleted id. The
 confirmation's preview carries a token over everything it lists; the
 delete is refused when any of it changed. Agents get no delete tool.
 
+## 2026-10-06 — D25: Projects archive and delete like tickets
+
+Decision (user, FH-21): a project can be archived from the UI and deleted
+permanently only once archived, the same two steps as tickets (D24).
+
+- Keys are retired, not released. Ids are global across the root and may be
+  referenced from other projects' text and logs, so a deleted project's key
+  goes into `<root>/.flashheart/retired.yaml` and is never given to another
+  project. An archived project's key stays taken.
+- References after a delete are removed, as for tickets: the confirmation
+  lists other projects' tickets that depend on the project's tickets, and
+  the delete removes those `depends-on` entries, so nothing is left blocked
+  on a missing ticket. Prose mentions stay as text.
+- Agents in an archived project's repository: with `auto_create_projects`
+  on, their next hook or MCP call would otherwise recreate an empty project.
+  Instead hooks no-op quietly (fail-open) and MCP tools answer
+  `project_archived` without creating anything. After a permanent delete
+  the repository is unknown again, so activity there starts a new project,
+  with a new key because the old one is retired.
+

@@ -533,6 +533,20 @@ func (s *Store) keysInUse(except string) ([]keyOwner, error) {
 			owners = append(owners, keyOwner{project: name, key: info.Key})
 		}
 	}
+	// Archived projects keep their keys, and deleted projects' keys are
+	// retired (KEY-5).
+	archived, err := s.ArchivedProjects()
+	if err != nil {
+		return nil, err
+	}
+	for _, project := range archived {
+		if project.Name != except && (!project.KeyDerived || len(project.IDs) > 0) {
+			owners = append(owners, keyOwner{project: archiveDir + "/" + project.Name, key: project.Key})
+		}
+	}
+	for _, key := range s.retiredKeys() {
+		owners = append(owners, keyOwner{project: retiredFile, key: key})
+	}
 	return owners, nil
 }
 

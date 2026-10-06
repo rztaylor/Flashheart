@@ -106,6 +106,8 @@ export interface ProjectsResponse {
   v1Projects: string[];
   migrateCommand: string;
   projects: ProjectSummary[];
+  // archivedProjects counts projects under <root>/.archive/ (PRJ-5).
+  archivedProjects: number;
   runs: RunCounts;
 }
 
@@ -259,6 +261,7 @@ const isProjects = (value: unknown): value is ProjectsResponse =>
   isString(value.migrateCommand) &&
   Array.isArray(value.projects) &&
   value.projects.every(isSummary) &&
+  typeof value.archivedProjects === "number" &&
   isRunCounts(value.runs);
 
 const isBoard = (value: unknown): value is BoardResponse =>

@@ -879,6 +879,9 @@ func (srv *server) askHuman(input AskHumanInput) (string, error) {
 			project = r.Project
 		}
 	}
+	if project == "" && c.archived != "" {
+		return "", c.archivedError()
+	}
 	if project == "" {
 		return "", fail("not_found", "run the session inside a project's repository", "there is no project to record the question in")
 	}

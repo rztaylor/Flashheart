@@ -122,8 +122,18 @@ watches the root and keeps an in-memory index; the UI is optional.
 - `PRJ-4` Agent activity outside any git repository goes to `_scratch`.
 - `PRJ-5` A project directory is created on first agent contact when
   `auto_create_projects` is on (default on), with a `project.yaml` holding its
-  name and repository but no key yet (`KEY-5`). A project can be archived (moved to
-  `<root>/.archive/`) from the UI; Flashheart never deletes a project.
+  name and repository but no key yet (`KEY-5`). A project can be archived
+  from the UI (moved to `<root>/.archive/<project>/`, after a confirmation
+  that warns about live runs, tickets being worked on and open questions)
+  and restored, unless a live project has its name. While archived its
+  tickets count as done for other projects, its key stays taken, and agent
+  activity in its repositories is not recorded and does not recreate it:
+  hooks stay quiet and MCP tools answer `project_archived`. A project is
+  deleted permanently only once archived, with its name typed: the delete
+  removes other projects' `depends-on` references to its tickets, retires
+  its key and removes the directory. After a delete its repositories are
+  unknown again, so new activity there starts a new project with a new key.
+  Agents have no archive or delete tool.
 - `PRJ-6` The UI lists projects with counts per column, active runs and a
   **Needs you** count, sorted by most recent activity; **All projects** shows
   every project's tickets and runs together.
@@ -185,7 +195,9 @@ Full format: `docs/dev/specs/board-format.md`.
   ticket created with no key chosen records the derived key, adding a digit
   when it is taken. Keys are assigned under the root lock, so two new
   projects never get the same key; a taken or invalid key is refused with
-  the keys in use.
+  the keys in use. Archived projects keep their keys, and a permanently
+  deleted project's key is retired (`<root>/.flashheart/retired.yaml`), so
+  no other project takes it and its ids are never reused.
 
 ### 6.4 Views (`VIEW`)
 

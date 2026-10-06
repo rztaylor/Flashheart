@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
+import { restoreProject } from "../api/archive";
 import {
   type Card,
   COLUMNS,
@@ -20,6 +20,7 @@ import { RunStateMark } from "../components/RunState";
 import { Toast } from "../components/Toast";
 import { AgentsView } from "../features/agents/AgentsView";
 import { ArchiveView } from "../features/archive/ArchiveView";
+import { ProjectsArchiveView } from "../features/archive/ProjectsArchiveView";
 import { BoardView, NoTickets } from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
@@ -51,7 +52,13 @@ import { useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
 import { BackendStatus } from "./BackendStatus";
 import { PageHeader } from "./PageHeader";
-import { type Route, type Scope, useRoute, type View } from "./route";
+import {
+  formatRoute,
+  type Route,
+  type Scope,
+  useRoute,
+  type View,
+} from "./route";
 import type { ServerInfoState } from "./useServerInfo";
 
 type BoardData = { cards: Card[]; doneTotal: number; doneShown: number };
@@ -270,6 +277,28 @@ export function Shell({
           ?.focus();
     }, 0);
   }, [navigate, route]);
+  // projectArchived leaves an archived project's scope for the projects
+  // archive, with Undo (PRJ-5).
+  const projectArchived = (name: string, displayName: string) => {
+    navigate({ scope: { kind: "all" }, view: "archive" });
+    reloadAll();
+    editing.notify({
+      text: `Archived project ${displayName}.`,
+      action: {
+        label: "Undo",
+        run: () =>
+          void restoreProject(fetcher, name)
+            .then(reloadAll)
+            .catch((error: unknown) =>
+              editing.notify({
+                text: `${displayName} was not restored: ${
+                  error instanceof Error ? error.message : "the request failed"
+                }`,
+              }),
+            ),
+      },
+    });
+  };
   const workstreamTitle = (project: string, slug: string) =>
     workstreams.get(project)?.find((workstream) => workstream.slug === slug)
       ?.title ?? slug;
@@ -301,7 +330,11 @@ export function Shell({
     workstreams: (current ? [current] : summaries).flatMap(
       (project) => project.workstreams,
     ),
-    archived: current?.archived,
+    archived: current
+      ? { count: current.archived, of: "tickets" }
+      : projects.status === "ready" && route.scope.kind === "all"
+        ? { count: projects.data.archivedProjects, of: "projects" }
+        : undefined,
   });
 
   return (
@@ -452,9 +485,15 @@ export function Shell({
             summary={summary}
             live={route.view === "board" || route.view === "table"}
             aside={
-              current && route.view !== "archive" ? (
+              route.view !== "archive" &&
+              projects.status === "ready" &&
+              (current || route.scope.kind === "all") ? (
                 <a
-                  href={`#/p/${encodeURIComponent(current.name)}/archive`}
+                  href={formatRoute({
+                    ...route,
+                    view: "archive",
+                    ticket: undefined,
+                  })}
                   onClick={(event) => {
                     event.preventDefault();
                     go({ view: "archive", ticket: undefined });
@@ -463,7 +502,11 @@ export function Shell({
                 >
                   <Icon name="archive" size={14} />
                   Archive
-                  <span className="tabular-nums">{current.archived}</span>
+                  <span className="tabular-nums">
+                    {current
+                      ? current.archived
+                      : projects.data.archivedProjects}
+                  </span>
                 </a>
               ) : undefined
             }
@@ -546,11 +589,29 @@ export function Shell({
                 editing={editing}
                 onOpen={openTicket}
                 onBack={() => go({ view: "board", ticket: undefined })}
+                onProjectArchived={(displayName) =>
+                  projectArchived(current.name, displayName)
+                }
+              />
+            ) : projects.status === "ready" && route.scope.kind === "all" ? (
+              <ProjectsArchiveView
+                fetcher={fetcher}
+                revision={revision}
+                projects={summaries}
+                editing={editing}
+                onArchived={projectArchived}
+                onOpenProject={(project) =>
+                  navigate({
+                    scope: { kind: "project", project },
+                    view: "board",
+                  })
+                }
+                onBack={() => go({ view: "board", ticket: undefined })}
               />
             ) : projects.status === "ready" ? (
-              <EmptyState title="Choose a project">
-                Each project keeps its own archive. Pick one in the list to see
-                its archived tickets.
+              <EmptyState title="No such project">
+                {scopeProject} is not on the board. It may have been archived;
+                see All projects › Archive.
               </EmptyState>
             ) : (
               <BoardSkeleton />

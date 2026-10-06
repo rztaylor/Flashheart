@@ -17,12 +17,14 @@ export function viewSummary({
   filtered: boolean;
   runs?: RunCounts;
   workstreams: { done: number; total: number }[];
-  archived?: number;
+  archived?: { count: number; of: "tickets" | "projects" };
 }): string {
   switch (view) {
-    case "archive":
-      if (archived === undefined) return "";
-      return `${archived} archived ${archived === 1 ? "ticket" : "tickets"}`;
+    case "archive": {
+      if (!archived) return "";
+      const one = archived.of === "tickets" ? "ticket" : "project";
+      return `${archived.count} archived ${archived.count === 1 ? one : archived.of}`;
+    }
     case "agents": {
       if (!runs) return "";
       const live = `${runs.live} live ${runs.live === 1 ? "run" : "runs"}`;

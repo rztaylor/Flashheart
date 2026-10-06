@@ -3,11 +3,27 @@ package board
 import (
 	"fmt"
 	"slices"
+	"time"
 )
 
-// Board is every project under a root.
+// Board is every project under a root, and the projects archived under
+// <root>/.archive/ (PRJ-5).
 type Board struct {
-	Projects []Project
+	Projects         []Project
+	ArchivedProjects []ArchivedProject
+}
+
+// ArchivedProject is a project moved to <root>/.archive/. Its tickets count
+// as done for other projects (like archived tickets) and its key stays
+// taken (KEY-5).
+type ArchivedProject struct {
+	Name, DisplayName, Key string
+	KeyDerived             bool
+	Repos                  []string
+	// IDs are its tickets' ids, live and archived within it.
+	IDs []string
+	// Archived is when it was archived (its directory's modification time).
+	Archived time.Time
 }
 
 // Ref names a ticket (ID is its id) or a workstream (ID is its slug) in a
@@ -102,6 +118,15 @@ func Analyze(b Board) Analysis {
 				if !slices.Contains(a.members[id], ref) {
 					a.members[id] = append(a.members[id], ref)
 				}
+			}
+		}
+	}
+
+	for _, project := range b.ArchivedProjects {
+		for _, id := range project.IDs {
+			a.archived[id] = true
+			if _, known := a.project[id]; !known {
+				a.project[id] = project.Name
 			}
 		}
 	}

@@ -21,7 +21,8 @@ restrained humour in secondary copy.
   for archived tickets only, removing references and retiring the id
   (`EDIT-8`, `KEY-2`, D24). **Built.**
 - FH-21 — archive, restore and permanently delete projects (`PRJ-5`,
-  `KEY-5`).
+  `KEY-5`, D25); agents in an archived project's repository are not
+  recorded (`project_archived`). **Built.**
 - FH-22 — discreet Blackadder remarks from the reviewed collection in
   secondary copy.
 

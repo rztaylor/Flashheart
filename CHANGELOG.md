@@ -35,6 +35,14 @@ All notable changes to this project are documented here. The project follows
   permanently. Deleting needs the ticket's id typed, lists every ticket and
   workstream that refers to it, removes those references so nothing waits
   on it, and retires the id so it is never reused (FH-20).
+- Projects can be archived from the archive page (All projects › Archive, or
+  Archive project… in a project's archive), with a warning about live
+  sessions, tickets being worked on and open questions; restored; and,
+  once archived, deleted permanently with the name typed. An archived
+  project's tickets count as done for other projects and its key stays
+  reserved; a deleted project's key is retired. Agents working in an
+  archived project's repository no longer recreate it: hooks stay quiet and
+  MCP tools answer `project_archived` (FH-21).
 
 - `flashheart` binary: `serve` (default) opens a private, authenticated board
   shell in the browser and returns the terminal, running the server in the

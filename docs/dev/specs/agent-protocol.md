@@ -33,7 +33,10 @@ user's agent configuration; change it deliberately and bump
   A bare repository (`repo.git`) names itself (`repo`); a submodule, whose
   git directory sits under its parent's `.git/modules/`, is its own
   checkout. Outside git → `_scratch`. Names are made safe for a directory
-  (other characters become `-`).
+  (other characters become `-`). A repository whose project is archived
+  (`PRJ-5`) is not recorded: hooks exit 0 quietly and record nothing, and
+  MCP tools answer `project_archived` without creating anything, until the
+  human restores it.
 - **Branch and worktree**: read from the worktree's `HEAD` file directly (no
   `git` subprocess on the hot path); detached HEAD records the short SHA.
 - Resolution results are cached per `cwd` in
@@ -263,8 +266,9 @@ the recovery note shows it) is accepted when it names one run.
 Errors are `{code, message, fix}`, rendered as `error <code>: <message>`
 and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
 `blocked`, `ambiguous_run`, `invalid_input`, `key_taken`, `key_fixed`,
-`needs_repair`, `busy`, `outside_root`, `type_not_allowed`, `too_large` and
-`internal`. Writes to a ticket held by another live run (other than the
+`needs_repair`, `busy`, `outside_root`, `type_not_allowed`, `too_large`,
+`project_archived` (the caller's project, or a ticket's, is archived; the
+fix asks the human to restore it) and `internal`. Writes to a ticket held by another live run (other than the
 caller's own session or subagents) fail with `claimed`.
 
 Every `ticket` argument is a ticket id (`FH-42`); the id's key names the
@@ -402,5 +406,6 @@ requires `setup` to be re-run.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`
-listing unfinished workstreams (2026-10-06). Re-running `setup` installs the
+listing unfinished workstreams (2026-10-06); the `project_archived` error
+for archived projects (2026-10-06). Re-running `setup` installs the
 updated skill text.

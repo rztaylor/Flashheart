@@ -14,9 +14,10 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 │   ├── cache/cwd.json                    cwd → project/branch cache, validated by HEAD's mtime (agent-protocol §2)
 │   ├── backup/v1-<UTC timestamp>/        the v1 tree moved aside by migrate
 │   ├── lock                              advisory root lock for choosing keys (KEY-5)
+│   ├── retired.yaml                      keys of permanently deleted projects (KEY-5)
 │   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
 │   └── serve.log                         background serve diagnostics (LIFE-4), rotated at 1 MB
-├── .archive/                             archived projects (PRJ-5)
+├── .archive/<project>/                   archived projects (PRJ-5), as they were
 ├── _scratch/                             agent activity outside any git repository (PRJ-4)
 └── <project>/                            e.g. flashheart
     ├── project.yaml                      key, display name, repos, next id (PRJ-3, KEY-1)
@@ -320,9 +321,23 @@ per line, appended under the project lock by `flashheart hook` (and later
 `mcp` and `serve`). Schema and event kinds:
 `docs/dev/specs/agent-protocol.md` §3. Events name tickets by id. Readers skip
 malformed lines and unknown kinds. Files older than `event_retention_days` are
-deleted by `serve` at startup and daily. The only other deletion is a
-permanent delete of an archived ticket the user confirms (`EDIT-8`); events
-naming its id are left to this retention.
+deleted by `serve` at startup and daily. The only other deletions are
+permanent deletes the user confirms: of an archived ticket (`EDIT-8`), whose
+events are left to this retention, and of an archived project (`PRJ-5`),
+whose event log goes with its directory.
+
+## Archived projects
+
+Archiving moves `<root>/<project>/` to `<root>/.archive/<project>/` under
+the root lock and sets the directory's time, which dates the archive.
+Restoring moves it back, refused while a live project has that name. An
+archived project's ticket ids (live and archived inside it) count as done
+for other projects' blocking, and its key stays taken. A permanent delete
+takes the root lock and the lock of each project it rewrites (in name
+order), removes other projects' `depends-on` entries naming its tickets,
+adds its key to `<root>/.flashheart/retired.yaml` (`keys: [AL]`), and
+removes the directory. All of it is by project name, never a path, and an
+archived directory that is a symbolic link is refused.
 
 ## Migration from v1
 

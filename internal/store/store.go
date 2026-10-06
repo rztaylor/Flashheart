@@ -230,6 +230,10 @@ func (s *Store) ReadBoard() (board.Board, string, error) {
 			io.WriteString(hash, part)
 		}
 	}
+	b.ArchivedProjects = archivedProjects(root, fsys)
+	for _, project := range b.ArchivedProjects {
+		fmt.Fprintf(hash, "archived project %s %s\n", project.Name, project.Archived)
+	}
 	board.CheckKeys(&b)
 	return b, hex.EncodeToString(hash.Sum(nil)), nil
 }
