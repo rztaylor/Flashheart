@@ -13,46 +13,48 @@
  * contrast and neutrality. Themes switch on <html data-theme>.
  */
 :root {
-  /* Neutrals: warm paper ground, ivory column wells, white cards. */
-  --fh-ground: #f8f4e9;
+  /* Neutrals: a clean white ground, cool light-grey column wells, white
+     cards (D22). */
+  --fh-ground: #ffffff;
   --fh-panel: #ffffff;
   --fh-card: #ffffff;
-  --fh-column: #f2eee3;
-  --fh-well: #f5f1e7;
-  --fh-rule: #ddd6c9;
-  --fh-rule-strong: #121a2e;
-  --fh-ink: #121a2e;
-  --fh-ink-muted: #4a5468;
-  --fh-ink-faint: #5a6375;
+  --fh-column: #f3f4f6;
+  --fh-well: #f6f7f9;
+  --fh-rule: #e3e5e9;
+  --fh-rule-strong: #18181b;
+  --fh-ink: #18181b;
+  --fh-ink-muted: #52525b;
+  --fh-ink-faint: #5f5f68;
 
-  /* Frame: the Metro blue band and a paper rail. */
-  --fh-band: #1d4fd7;
+  /* Frame: the raspberry band and a near-white rail. Raspberry is light's
+     one accent: action, current project, selection and focus (D22). */
+  --fh-band: #be185d;
   --fh-on-band: #ffffff;
-  --fh-on-band-muted: #d6e0ff;
-  --fh-band-field: #1846c4;
-  --fh-band-tab-active: #1641b8;
-  --fh-band-tab-line: #1641b8;
-  --fh-band-rule: #5279e6;
-  --fh-rail: #efece4;
-  --fh-on-rail: #121a2e;
-  --fh-on-rail-muted: #4f586b;
-  --fh-rail-active: #1d4fd7;
-  --fh-on-rail-active: #ffffff;
-  --fh-on-rail-active-muted: #d6e0ff;
-  --fh-rail-active-mark: #1d4fd7;
-  --fh-rail-rule: #d9d4c8;
+  --fh-on-band-muted: #fde2ee;
+  --fh-band-field: #9d174d;
+  --fh-band-tab-active: #831843;
+  --fh-band-tab-line: #ffffff;
+  --fh-band-rule: #fde2ee;
+  --fh-rail: #fafafa;
+  --fh-on-rail: #18181b;
+  --fh-on-rail-muted: #5b5b63;
+  --fh-rail-active: #fdf0f6;
+  --fh-on-rail-active: #831843;
+  --fh-on-rail-active-muted: #831843;
+  --fh-rail-active-mark: #be185d;
+  --fh-rail-rule: #e7e7eb;
 
   /* Action: the primary button and the current view. */
-  --fh-action: #c2410c;
+  --fh-action: #be185d;
   --fh-on-action: #ffffff;
-  --fh-action-hover: #a8380a;
+  --fh-action-hover: #9d174d;
   /* Attention: Needs you, the one thing that must read across the room. */
   --fh-attention: #ff9447;
   --fh-on-attention: #111111;
 
-  --fh-focus: #1d4fd7;
-  --fh-select: #1d4fd7;
-  --fh-select-surface: #e3ebff;
+  --fh-focus: #be185d;
+  --fh-select: #be185d;
+  --fh-select-surface: #fdf0f6;
   --fh-danger: #b42318;
   --fh-danger-surface: #fdecea;
   --fh-selection: #ffe08a;
@@ -71,10 +73,10 @@
   --fh-state-blocked-ink: #a1241a;
 
   /* Callouts in the card panel: the handoff and a question for the user. */
-  --fh-callout-handoff: #fff3ea;
-  --fh-callout-handoff-edge: #c2410c;
-  --fh-callout-question: #eaf0ff;
-  --fh-callout-question-edge: #1d4fd7;
+  --fh-callout-handoff: #fff4ec;
+  --fh-callout-handoff-edge: #ea580c;
+  --fh-callout-question: #fdf0f6;
+  --fh-callout-question-edge: #be185d;
 
   /* How much of its line colour washes a workstream's route card. */
   --fh-route-wash: 7%;

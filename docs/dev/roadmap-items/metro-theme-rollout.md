@@ -27,6 +27,9 @@ The four original PNGs and their generation prompts/checksums are saved in
 - [Generation provenance](../../../.impeccable/mocks/metro-theme-rollout/provenance.json).
 
 User selection supersedes D14's visual direction for this planned rollout.
+After seeing it built, the user replaced the light references' blue band and
+cream grounds with a raspberry bar on white (D22); light structure still
+follows Metro Pop.
 Garden Line and the original navy Night Service are not selected. The user
 explicitly dislikes navy/blue grounds in dark themes. Use neutral black and
 charcoal grounds, wells, panels and borders; route colours remain accents.

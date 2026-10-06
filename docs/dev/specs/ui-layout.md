@@ -201,7 +201,7 @@ for another role's job, and none is ever the only carrier of meaning.
 
 | Role | Carries | Where | Always paired with |
 | --- | --- | --- | --- |
-| Frame | Brand surface and the current scope | Band and its current view tab (Metro blue light, black dark), rail and its current tile | The tab's or project's name |
+| Frame | Brand surface and the current scope | Band and its current view tab (raspberry light, black dark), rail and its current tile | The tab's or project's name |
 | Action | The primary action | Primary button | Its label |
 | Attention | A run or question that needs the user | Needs you plate (band, rail, card, lane, panel) | Disc mark and words |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |

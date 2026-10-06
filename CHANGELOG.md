@@ -8,8 +8,8 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
-- New look for the board: Metro Pop in light and Night Service in black
-  and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
+- New look for the board: Metro Pop in light (a raspberry bar and accent on
+  a clean white background) and Night Service in black and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
   Views open with the project's name as a page header; columns are rounded
   wells; cards show id and time, title, workstream and type tags, blocker
   pills, the live run and a footer with criteria and priority at every

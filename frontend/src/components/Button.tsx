@@ -9,7 +9,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const base =
   "inline-flex items-center justify-center gap-2 rounded-control px-3 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
-// primary is the action colour (Metro orange, Night Service lime); band
+// primary is the action colour (raspberry in light, lime in dark); band
 // sits on the frame.
 const variants: Record<Variant, string> = {
   primary: "bg-action text-on-action hover:enabled:bg-action-hover",

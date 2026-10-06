@@ -7,18 +7,18 @@
       "ground": {
         "role": "neutral",
         "displayName": "Ground",
-        "canonical": "#f8f4e9",
-        "oklch": "oklch(96.7% 0.015 90.2)",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
         "purpose": "Page ground under the page header, toolbar and views.",
         "tonalRamp": [
-          "#0d0b07",
-          "#23211c",
-          "#3d3a34",
-          "#58554d",
-          "#7e7a71",
-          "#a29e95",
-          "#c7c4bb",
-          "#eeebe3"
+          "#0b0b0b",
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#7a7a7a",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#ebebeb"
         ]
       },
       "panel": {
@@ -58,137 +58,137 @@
       "column": {
         "role": "neutral",
         "displayName": "Column Well",
-        "canonical": "#f2eee3",
-        "oklch": "oklch(94.9% 0.015 90.2)",
+        "canonical": "#f3f4f6",
+        "oklch": "oklch(96.7% 0.003 264.5)",
         "purpose": "Board column wells, Agents lanes and the table head.",
         "tonalRamp": [
-          "#0d0b07",
-          "#23211c",
-          "#3d3a34",
-          "#58554d",
-          "#7e7a71",
-          "#a29e95",
-          "#c7c4bb",
-          "#eeebe3"
+          "#0b0b0c",
+          "#212223",
+          "#3a3a3c",
+          "#545557",
+          "#797a7c",
+          "#9d9ea0",
+          "#c3c4c5",
+          "#eaebec"
         ]
       },
       "well": {
         "role": "neutral",
         "displayName": "Well",
-        "canonical": "#f5f1e7",
-        "oklch": "oklch(95.9% 0.014 88.7)",
+        "canonical": "#f6f7f9",
+        "oklch": "oklch(97.6% 0.003 264.5)",
         "purpose": "Skeletons, code, attachment frames, notices, hover rows.",
         "tonalRamp": [
-          "#0d0b07",
-          "#23211c",
-          "#3d3a34",
-          "#58554e",
-          "#7e7a71",
-          "#a19e96",
-          "#c7c4bc",
-          "#eeebe4"
+          "#0b0b0c",
+          "#212223",
+          "#3a3a3c",
+          "#545557",
+          "#797a7c",
+          "#9d9ea0",
+          "#c3c4c5",
+          "#eaebec"
         ]
       },
       "rule": {
         "role": "neutral",
         "displayName": "Rule",
-        "canonical": "#ddd6c9",
-        "oklch": "oklch(87.8% 0.019 83.1)",
+        "canonical": "#e3e5e9",
+        "oklch": "oklch(92.2% 0.006 264.5)",
         "purpose": "Borders of cards, wells, fields and dividers.",
         "tonalRamp": [
-          "#0d0b06",
-          "#25211b",
-          "#3e3a32",
-          "#5a554b",
-          "#807a6e",
-          "#a49e92",
-          "#c9c3b9",
-          "#efebe1"
+          "#0a0b0d",
+          "#212224",
+          "#393a3d",
+          "#545558",
+          "#797a7e",
+          "#9d9ea2",
+          "#c2c4c7",
+          "#eaebee"
         ]
       },
       "rule-strong": {
         "role": "primary",
         "displayName": "Strong Rule",
-        "canonical": "#121a2e",
-        "oklch": "oklch(22.1% 0.041 266.5)",
+        "canonical": "#18181b",
+        "oklch": "oklch(21.0% 0.006 285.9)",
         "purpose": "Rare strong rule; equal to ink.",
         "tonalRamp": [
-          "#070b16",
-          "#1b212f",
-          "#333a4c",
-          "#4c556a",
-          "#6f7a93",
-          "#949eb6",
-          "#bac4da",
-          "#e2ebff"
+          "#0b0b0d",
+          "#212123",
+          "#3a3a3d",
+          "#555558",
+          "#7a7a7e",
+          "#9e9ea2",
+          "#c4c4c7",
+          "#ebebee"
         ]
       },
       "ink": {
         "role": "primary",
         "displayName": "Ink",
-        "canonical": "#121a2e",
-        "oklch": "oklch(22.1% 0.041 266.5)",
+        "canonical": "#18181b",
+        "oklch": "oklch(21.0% 0.006 285.9)",
         "purpose": "Text and icons.",
         "tonalRamp": [
-          "#070b16",
-          "#1b212f",
-          "#333a4c",
-          "#4c556a",
-          "#6f7a93",
-          "#949eb6",
-          "#bac4da",
-          "#e2ebff"
+          "#0b0b0d",
+          "#212123",
+          "#3a3a3d",
+          "#555558",
+          "#7a7a7e",
+          "#9e9ea2",
+          "#c4c4c7",
+          "#ebebee"
         ]
       },
       "ink-muted": {
         "role": "neutral",
         "displayName": "Ink Muted",
-        "canonical": "#4a5468",
-        "oklch": "oklch(44.5% 0.035 264.1)",
+        "canonical": "#52525b",
+        "oklch": "oklch(44.2% 0.015 285.8)",
         "purpose": "Metadata, running times, labels.",
         "tonalRamp": [
-          "#070b14",
-          "#1c222d",
-          "#333b49",
-          "#4d5567",
-          "#707b90",
-          "#949fb3",
-          "#bbc4d7",
-          "#e3ebfc"
+          "#0b0b0f",
+          "#212126",
+          "#3a3a40",
+          "#54545c",
+          "#797983",
+          "#9d9da7",
+          "#c3c3cc",
+          "#eaeaf2"
         ]
       },
       "ink-faint": {
         "role": "neutral",
         "displayName": "Ink Faint",
-        "canonical": "#5a6375",
-        "oklch": "oklch(49.9% 0.031 264.2)",
+        "canonical": "#5f5f68",
+        "oklch": "oklch(48.9% 0.014 285.9)",
         "purpose": "Quiet waits, mirror notes, file names.",
         "tonalRamp": [
-          "#070b13",
-          "#1c222c",
-          "#343b47",
-          "#4e5565",
-          "#717b8d",
-          "#969fb1",
-          "#bcc4d5",
-          "#e4ebfa"
+          "#0b0b0f",
+          "#212126",
+          "#3a3a40",
+          "#54545c",
+          "#797982",
+          "#9d9da6",
+          "#c3c3cb",
+          "#eaeaf2"
         ]
       },
       "band": {
         "role": "primary",
         "displayName": "Band",
-        "canonical": "#1d4fd7",
-        "oklch": "oklch(48.9% 0.215 264.2)",
-        "purpose": "The top band: Metro blue in light, black in dark.",
+        "canonical": "#be185d",
+        "oklch": "oklch(52.5% 0.199 4.0)",
+        "purpose": "The top band: raspberry in light, black in dark.",
         "tonalRamp": [
-          "#010040",
-          "#001066",
-          "#0a2c8f",
-          "#1d48ba",
-          "#376ef5",
-          "#5f97ff",
-          "#8bc0ff",
-          "#b9e9ff"
+          "#2b0006",
+          "#4e001a",
+          "#740031",
+          "#9b104a",
+          "#d0346d",
+          "#f66591",
+          "#ff95b8",
+          "#ffc3e0"
         ]
       },
       "on-band": {
@@ -211,162 +211,60 @@
       "on-band-muted": {
         "role": "neutral",
         "displayName": "On Band Muted",
-        "canonical": "#d6e0ff",
-        "oklch": "oklch(90.9% 0.044 271.3)",
+        "canonical": "#fde2ee",
+        "oklch": "oklch(93.8% 0.033 349.1)",
         "purpose": "Inactive view tabs, search placeholder.",
         "tonalRamp": [
-          "#070a16",
-          "#1c2130",
-          "#343a4d",
-          "#4d546b",
-          "#717994",
-          "#959eb8",
-          "#bcc3dc",
-          "#e3ebff"
+          "#11080c",
+          "#2a1d23",
+          "#45353d",
+          "#624f58",
+          "#8a737d",
+          "#ae97a1",
+          "#d2bdc7",
+          "#f8e5ee"
         ]
       },
       "band-field": {
         "role": "neutral",
         "displayName": "Band Field",
-        "canonical": "#1846c4",
-        "oklch": "oklch(45.4% 0.202 264.2)",
+        "canonical": "#9d174d",
+        "oklch": "oklch(45.9% 0.170 3.8)",
         "purpose": "Search well and tab hover on the band.",
         "tonalRamp": [
-          "#01003d",
-          "#011362",
-          "#0d2f8a",
-          "#214ab4",
-          "#3c70ee",
-          "#6398ff",
-          "#8ec1ff",
-          "#bceaff"
+          "#270007",
+          "#49001b",
+          "#6d0a33",
+          "#92254c",
+          "#c6456f",
+          "#eb7194",
+          "#ff9dba",
+          "#ffcae2"
         ]
       },
       "band-tab-active": {
         "role": "primary",
         "displayName": "Band Tab Active",
-        "canonical": "#1641b8",
-        "oklch": "oklch(43.2% 0.193 264.2)",
+        "canonical": "#831843",
+        "oklch": "oklch(40.8% 0.144 2.4)",
         "purpose": "The current view tab.",
         "tonalRamp": [
-          "#01003a",
-          "#02155f",
-          "#103087",
-          "#234bb0",
-          "#3f71e9",
-          "#6699ff",
-          "#91c1ff",
-          "#beeaff"
+          "#230008",
+          "#44011e",
+          "#661935",
+          "#8a314f",
+          "#bc5173",
+          "#e07997",
+          "#ffa4be",
+          "#ffcfe5"
         ]
       },
       "band-tab-line": {
         "role": "secondary",
         "displayName": "Band Tab Line",
-        "canonical": "#1641b8",
-        "oklch": "oklch(43.2% 0.193 264.2)",
-        "purpose": "Underline of the current view tab (lime in dark).",
-        "tonalRamp": [
-          "#01003a",
-          "#02155f",
-          "#103087",
-          "#234bb0",
-          "#3f71e9",
-          "#6699ff",
-          "#91c1ff",
-          "#beeaff"
-        ]
-      },
-      "band-rule": {
-        "role": "neutral",
-        "displayName": "Band Rule",
-        "canonical": "#5279e6",
-        "oklch": "oklch(60.3% 0.171 266.5)",
-        "purpose": "Search border and toast border.",
-        "tonalRamp": [
-          "#010035",
-          "#091858",
-          "#1b327e",
-          "#2f4da6",
-          "#4c72dc",
-          "#7299fe",
-          "#9bc1ff",
-          "#c7e9ff"
-        ]
-      },
-      "rail": {
-        "role": "neutral",
-        "displayName": "Rail",
-        "canonical": "#efece4",
-        "oklch": "oklch(94.3% 0.011 89.7)",
-        "purpose": "The project rail: warm paper in light, charcoal in dark.",
-        "tonalRamp": [
-          "#0c0b08",
-          "#23211e",
-          "#3c3a35",
-          "#57554f",
-          "#7d7a73",
-          "#a19e97",
-          "#c6c4be",
-          "#edebe5"
-        ]
-      },
-      "on-rail": {
-        "role": "neutral",
-        "displayName": "On Rail",
-        "canonical": "#121a2e",
-        "oklch": "oklch(22.1% 0.041 266.5)",
-        "purpose": "Project names and counts.",
-        "tonalRamp": [
-          "#070b16",
-          "#1b212f",
-          "#333a4c",
-          "#4c556a",
-          "#6f7a93",
-          "#949eb6",
-          "#bac4da",
-          "#e2ebff"
-        ]
-      },
-      "on-rail-muted": {
-        "role": "neutral",
-        "displayName": "On Rail Muted",
-        "canonical": "#4f586b",
-        "oklch": "oklch(46.0% 0.033 265.1)",
-        "purpose": "Rail sub-lines, route bars and the footer.",
-        "tonalRamp": [
-          "#070b14",
-          "#1c222d",
-          "#343a48",
-          "#4e5566",
-          "#717a8e",
-          "#959fb2",
-          "#bcc4d6",
-          "#e4ebfb"
-        ]
-      },
-      "rail-active": {
-        "role": "primary",
-        "displayName": "Rail Active",
-        "canonical": "#1d4fd7",
-        "oklch": "oklch(48.9% 0.215 264.2)",
-        "purpose": "The current scope tile, page-header key badge.",
-        "tonalRamp": [
-          "#010040",
-          "#001066",
-          "#0a2c8f",
-          "#1d48ba",
-          "#376ef5",
-          "#5f97ff",
-          "#8bc0ff",
-          "#b9e9ff"
-        ]
-      },
-      "on-rail-active": {
-        "role": "neutral",
-        "displayName": "On Rail Active",
         "canonical": "#ffffff",
         "oklch": "oklch(100.0% 0.000 89.9)",
-        "purpose": "Text on the current scope tile.",
+        "purpose": "Underline of the current view tab (lime in dark).",
         "tonalRamp": [
           "#0b0b0b",
           "#222222",
@@ -378,72 +276,174 @@
           "#ebebeb"
         ]
       },
+      "band-rule": {
+        "role": "neutral",
+        "displayName": "Band Rule",
+        "canonical": "#fde2ee",
+        "oklch": "oklch(93.8% 0.033 349.1)",
+        "purpose": "Search border and toast border.",
+        "tonalRamp": [
+          "#11080c",
+          "#2a1d23",
+          "#45353d",
+          "#624f58",
+          "#8a737d",
+          "#ae97a1",
+          "#d2bdc7",
+          "#f8e5ee"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Rail",
+        "canonical": "#fafafa",
+        "oklch": "oklch(98.5% 0.000 89.9)",
+        "purpose": "The project rail: near-white in light, charcoal in dark.",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#7a7a7a",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#ebebeb"
+        ]
+      },
+      "on-rail": {
+        "role": "neutral",
+        "displayName": "On Rail",
+        "canonical": "#18181b",
+        "oklch": "oklch(21.0% 0.006 285.9)",
+        "purpose": "Project names and counts.",
+        "tonalRamp": [
+          "#0b0b0d",
+          "#212123",
+          "#3a3a3d",
+          "#555558",
+          "#7a7a7e",
+          "#9e9ea2",
+          "#c4c4c7",
+          "#ebebee"
+        ]
+      },
+      "on-rail-muted": {
+        "role": "neutral",
+        "displayName": "On Rail Muted",
+        "canonical": "#5b5b63",
+        "oklch": "oklch(47.4% 0.013 285.9)",
+        "purpose": "Rail sub-lines, route bars and the footer.",
+        "tonalRamp": [
+          "#0b0b0e",
+          "#212126",
+          "#3a3a40",
+          "#54545b",
+          "#797982",
+          "#9d9da6",
+          "#c3c3cb",
+          "#eaeaf1"
+        ]
+      },
+      "rail-active": {
+        "role": "primary",
+        "displayName": "Rail Active",
+        "canonical": "#fdf0f6",
+        "oklch": "oklch(96.7% 0.016 347.6)",
+        "purpose": "The current scope tile, page-header key badge.",
+        "tonalRamp": [
+          "#0e0a0c",
+          "#262023",
+          "#40383c",
+          "#5b5257",
+          "#82777c",
+          "#a69ba0",
+          "#cbc1c5",
+          "#f1e8ec"
+        ]
+      },
+      "on-rail-active": {
+        "role": "neutral",
+        "displayName": "On Rail Active",
+        "canonical": "#831843",
+        "oklch": "oklch(40.8% 0.144 2.4)",
+        "purpose": "Text on the current scope tile.",
+        "tonalRamp": [
+          "#230008",
+          "#44011e",
+          "#661935",
+          "#8a314f",
+          "#bc5173",
+          "#e07997",
+          "#ffa4be",
+          "#ffcfe5"
+        ]
+      },
       "on-rail-active-muted": {
         "role": "neutral",
         "displayName": "On Rail Active Muted",
-        "canonical": "#d6e0ff",
-        "oklch": "oklch(90.9% 0.044 271.3)",
+        "canonical": "#831843",
+        "oklch": "oklch(40.8% 0.144 2.4)",
         "purpose": "Sub-lines on the current scope tile.",
         "tonalRamp": [
-          "#070a16",
-          "#1c2130",
-          "#343a4d",
-          "#4d546b",
-          "#717994",
-          "#959eb8",
-          "#bcc3dc",
-          "#e3ebff"
+          "#230008",
+          "#44011e",
+          "#661935",
+          "#8a314f",
+          "#bc5173",
+          "#e07997",
+          "#ffa4be",
+          "#ffcfe5"
         ]
       },
       "rail-active-mark": {
         "role": "secondary",
         "displayName": "Rail Active Mark",
-        "canonical": "#1d4fd7",
-        "oklch": "oklch(48.9% 0.215 264.2)",
+        "canonical": "#be185d",
+        "oklch": "oklch(52.5% 0.199 4.0)",
         "purpose": "Left edge of the current tile (lime in dark).",
         "tonalRamp": [
-          "#010040",
-          "#001066",
-          "#0a2c8f",
-          "#1d48ba",
-          "#376ef5",
-          "#5f97ff",
-          "#8bc0ff",
-          "#b9e9ff"
+          "#2b0006",
+          "#4e001a",
+          "#740031",
+          "#9b104a",
+          "#d0346d",
+          "#f66591",
+          "#ff95b8",
+          "#ffc3e0"
         ]
       },
       "rail-rule": {
         "role": "neutral",
         "displayName": "Rail Rule",
-        "canonical": "#d9d4c8",
-        "oklch": "oklch(87.1% 0.017 88.0)",
+        "canonical": "#e7e7eb",
+        "oklch": "oklch(92.9% 0.005 286.3)",
         "purpose": "Rail border and dividers.",
         "tonalRamp": [
-          "#0d0b07",
-          "#24211b",
-          "#3d3a33",
-          "#59554c",
-          "#7e7a6f",
-          "#a29e94",
-          "#c8c4ba",
-          "#eeebe2"
+          "#0b0b0c",
+          "#212123",
+          "#3a3a3d",
+          "#555558",
+          "#7a7a7d",
+          "#9e9ea1",
+          "#c4c4c7",
+          "#ebebee"
         ]
       },
       "action": {
         "role": "secondary",
         "displayName": "Action",
-        "canonical": "#c2410c",
-        "oklch": "oklch(55.3% 0.174 38.4)",
-        "purpose": "Primary button: Metro orange in light, lime in dark.",
+        "canonical": "#be185d",
+        "oklch": "oklch(52.5% 0.199 4.0)",
+        "purpose": "Primary button: raspberry in light, lime in dark.",
         "tonalRamp": [
-          "#290000",
-          "#4b0000",
-          "#701000",
-          "#962a00",
-          "#ca4b1e",
-          "#ef7650",
-          "#ffa380",
-          "#ffcfb0"
+          "#2b0006",
+          "#4e001a",
+          "#740031",
+          "#9b104a",
+          "#d0346d",
+          "#f66591",
+          "#ff95b8",
+          "#ffc3e0"
         ]
       },
       "on-action": {
@@ -466,18 +466,18 @@
       "action-hover": {
         "role": "secondary",
         "displayName": "Action Hover",
-        "canonical": "#a8380a",
-        "oklch": "oklch(49.8% 0.155 38.6)",
+        "canonical": "#9d174d",
+        "oklch": "oklch(45.9% 0.170 3.8)",
         "purpose": "Primary button hover.",
         "tonalRamp": [
-          "#260000",
-          "#480000",
-          "#6b1900",
-          "#90320f",
-          "#c3532d",
-          "#e77c5a",
-          "#ffa787",
-          "#ffd3b6"
+          "#270007",
+          "#49001b",
+          "#6d0a33",
+          "#92254c",
+          "#c6456f",
+          "#eb7194",
+          "#ff9dba",
+          "#ffcae2"
         ]
       },
       "attention": {
@@ -517,52 +517,52 @@
       "focus": {
         "role": "secondary",
         "displayName": "Focus",
-        "canonical": "#1d4fd7",
-        "oklch": "oklch(48.9% 0.215 264.2)",
+        "canonical": "#be185d",
+        "oklch": "oklch(52.5% 0.199 4.0)",
         "purpose": "Keyboard focus outline.",
         "tonalRamp": [
-          "#010040",
-          "#001066",
-          "#0a2c8f",
-          "#1d48ba",
-          "#376ef5",
-          "#5f97ff",
-          "#8bc0ff",
-          "#b9e9ff"
+          "#2b0006",
+          "#4e001a",
+          "#740031",
+          "#9b104a",
+          "#d0346d",
+          "#f66591",
+          "#ff95b8",
+          "#ffc3e0"
         ]
       },
       "select": {
         "role": "secondary",
         "displayName": "Selection",
-        "canonical": "#1d4fd7",
-        "oklch": "oklch(48.9% 0.215 264.2)",
+        "canonical": "#be185d",
+        "oklch": "oklch(52.5% 0.199 4.0)",
         "purpose": "Selected card ring, current tab underline, applied filter, chosen density.",
         "tonalRamp": [
-          "#010040",
-          "#001066",
-          "#0a2c8f",
-          "#1d48ba",
-          "#376ef5",
-          "#5f97ff",
-          "#8bc0ff",
-          "#b9e9ff"
+          "#2b0006",
+          "#4e001a",
+          "#740031",
+          "#9b104a",
+          "#d0346d",
+          "#f66591",
+          "#ff95b8",
+          "#ffc3e0"
         ]
       },
       "select-surface": {
         "role": "neutral",
         "displayName": "Selection Surface",
-        "canonical": "#e3ebff",
-        "oklch": "oklch(94.0% 0.028 268.4)",
+        "canonical": "#fdf0f6",
+        "oklch": "oklch(96.7% 0.016 347.6)",
         "purpose": "Selected table row, chosen density segment, pressed chip.",
         "tonalRamp": [
-          "#080b12",
-          "#1e212b",
-          "#363a46",
-          "#4f5563",
-          "#737a8b",
-          "#979eaf",
-          "#bec4d3",
-          "#e5ebf9"
+          "#0e0a0c",
+          "#262023",
+          "#40383c",
+          "#5b5257",
+          "#82777c",
+          "#a69ba0",
+          "#cbc1c5",
+          "#f1e8ec"
         ]
       },
       "danger": {
@@ -806,69 +806,69 @@
       "callout-handoff": {
         "role": "neutral",
         "displayName": "Handoff Callout",
-        "canonical": "#fff3ea",
-        "oklch": "oklch(97.1% 0.018 59.5)",
+        "canonical": "#fff4ec",
+        "oklch": "oklch(97.4% 0.016 58.6)",
         "purpose": "Handoff callout surface in the panel.",
         "tonalRamp": [
-          "#0f0a07",
-          "#26201c",
+          "#0e0a07",
+          "#26201d",
           "#403934",
-          "#5c534d",
-          "#827870",
-          "#a69c95",
-          "#cbc2bb",
-          "#f2e9e3"
+          "#5b544e",
+          "#827871",
+          "#a69c96",
+          "#cbc2bc",
+          "#f1eae4"
         ]
       },
       "callout-handoff-edge": {
         "role": "secondary",
         "displayName": "Handoff Edge",
-        "canonical": "#c2410c",
-        "oklch": "oklch(55.3% 0.174 38.4)",
+        "canonical": "#ea580c",
+        "oklch": "oklch(64.6% 0.194 41.1)",
         "purpose": "Handoff callout edge and icon.",
         "tonalRamp": [
-          "#290000",
-          "#4b0000",
-          "#701000",
-          "#962a00",
-          "#ca4b1e",
-          "#ef7650",
-          "#ffa380",
-          "#ffcfb0"
+          "#2c0000",
+          "#4f0000",
+          "#740100",
+          "#9c2100",
+          "#d14300",
+          "#f6713b",
+          "#ff9f71",
+          "#ffcca4"
         ]
       },
       "callout-question": {
         "role": "neutral",
         "displayName": "Question Callout",
-        "canonical": "#eaf0ff",
-        "oklch": "oklch(95.5% 0.021 268.4)",
+        "canonical": "#fdf0f6",
+        "oklch": "oklch(96.7% 0.016 347.6)",
         "purpose": "Questions-for-you callout surface.",
         "tonalRamp": [
-          "#090b11",
-          "#1f2129",
-          "#373a43",
-          "#515560",
-          "#757a87",
-          "#999eab",
-          "#bfc4d0",
-          "#e7ebf5"
+          "#0e0a0c",
+          "#262023",
+          "#40383c",
+          "#5b5257",
+          "#82777c",
+          "#a69ba0",
+          "#cbc1c5",
+          "#f1e8ec"
         ]
       },
       "callout-question-edge": {
         "role": "secondary",
         "displayName": "Question Edge",
-        "canonical": "#1d4fd7",
-        "oklch": "oklch(48.9% 0.215 264.2)",
+        "canonical": "#be185d",
+        "oklch": "oklch(52.5% 0.199 4.0)",
         "purpose": "Questions-for-you callout edge.",
         "tonalRamp": [
-          "#010040",
-          "#001066",
-          "#0a2c8f",
-          "#1d48ba",
-          "#376ef5",
-          "#5f97ff",
-          "#8bc0ff",
-          "#b9e9ff"
+          "#2b0006",
+          "#4e001a",
+          "#740031",
+          "#9b104a",
+          "#d0346d",
+          "#f66591",
+          "#ff95b8",
+          "#ffc3e0"
         ]
       },
       "line-0": {
@@ -2066,7 +2066,7 @@
         "displayName": "Night Band",
         "canonical": "#070708",
         "oklch": "oklch(12.9% 0.003 286.0)",
-        "purpose": "The top band: Metro blue in light, black in dark. Dark theme.",
+        "purpose": "The top band: raspberry in light, black in dark. Dark theme.",
         "tonalRamp": [
           "#0b0b0c",
           "#212122",
@@ -2185,7 +2185,7 @@
         "displayName": "Night Rail",
         "canonical": "#111112",
         "oklch": "oklch(17.8% 0.002 286.2)",
-        "purpose": "The project rail: warm paper in light, charcoal in dark. Dark theme.",
+        "purpose": "The project rail: near-white in light, charcoal in dark. Dark theme.",
         "tonalRamp": [
           "#0b0b0c",
           "#212122",
@@ -2321,7 +2321,7 @@
         "displayName": "Night Action",
         "canonical": "#c6f432",
         "oklch": "oklch(90.3% 0.208 122.9)",
-        "purpose": "Primary button: Metro orange in light, lime in dark. Dark theme.",
+        "purpose": "Primary button: raspberry in light, lime in dark. Dark theme.",
         "tonalRamp": [
           "#040f00",
           "#162900",
@@ -3909,7 +3909,7 @@
       "refersTo": "button-primary",
       "description": "Action fill for the one main command (New ticket, Send answer).",
       "html": "<button class=\"ds-btn ds-btn-primary\">New ticket</button>",
-      "css": ".ds-btn{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:6px 12px;font-size:0.8125rem;font-weight:600;border:1px solid transparent;cursor:pointer;} .ds-btn:focus-visible{outline:2px solid var(--fh-focus,#1d4fd7);outline-offset:2px;} .ds-btn-primary{background:var(--fh-action,#c2410c);color:var(--fh-on-action,#fff);} .ds-btn-primary:hover{background:var(--fh-action-hover,#a8380a);}"
+      "css": ".ds-btn{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:6px 12px;font-size:0.8125rem;font-weight:600;border:1px solid transparent;cursor:pointer;} .ds-btn:focus-visible{outline:2px solid var(--fh-focus,#be185d);outline-offset:2px;} .ds-btn-primary{background:var(--fh-action,#be185d);color:var(--fh-on-action,#fff);} .ds-btn-primary:hover{background:var(--fh-action-hover,#9d174d);}"
     },
     {
       "name": "Secondary Button",
@@ -3917,7 +3917,7 @@
       "refersTo": "button-secondary",
       "description": "Card surface with a rule border.",
       "html": "<button class=\"ds-btn2\">Archive</button>",
-      "css": ".ds-btn2{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:8px;padding:6px 12px;font-size:0.8125rem;font-weight:600;background:var(--fh-card,#fff);color:var(--fh-ink,#121a2e);border:1px solid var(--fh-rule,#ddd6c9);box-shadow:var(--fh-shadow-card);}"
+      "css": ".ds-btn2{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:8px;padding:6px 12px;font-size:0.8125rem;font-weight:600;background:var(--fh-card,#fff);color:var(--fh-ink,#18181b);border:1px solid var(--fh-rule,#e3e5e9);box-shadow:var(--fh-shadow-card);}"
     },
     {
       "name": "Needs You Plate",
@@ -3949,7 +3949,7 @@
       "refersTo": "ticket-card",
       "description": "One ticket: stripe, header, title, tags, footer.",
       "html": "<div class=\"ds-card\"><span class=\"s\"></span><div class=\"h\"><b>FH-14</b><span>2h</span></div><div class=\"t\">Locked atomic ticket writes</div><div class=\"f\"><span>☑ 1/3</span><span class=\"p\">High</span></div></div>",
-      "css": ".ds-card{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;position:relative;overflow:hidden;width:240px;border-radius:10px;border:1px solid var(--fh-rule,#ddd6c9);background:var(--fh-card,#fff);box-shadow:var(--fh-shadow-card);padding:10px 12px 10px 16px;color:var(--fh-ink,#121a2e);} .ds-card .s{position:absolute;inset:0 auto 0 0;width:4px;background:var(--fh-line-1,#1d5bd8);} .ds-card .h{display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--fh-ink-muted,#4a5468);} .ds-card .h b{color:var(--fh-ink,#121a2e);} .ds-card .t{font-size:0.875rem;font-weight:600;margin:4px 0 8px;} .ds-card .f{display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--fh-ink-muted,#4a5468);} .ds-card .p{border:1px solid var(--fh-rule,#ddd6c9);border-radius:9999px;padding:0 8px;font-weight:600;color:var(--fh-ink,#121a2e);}"
+      "css": ".ds-card{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;position:relative;overflow:hidden;width:240px;border-radius:10px;border:1px solid var(--fh-rule,#e3e5e9);background:var(--fh-card,#fff);box-shadow:var(--fh-shadow-card);padding:10px 12px 10px 16px;color:var(--fh-ink,#18181b);} .ds-card .s{position:absolute;inset:0 auto 0 0;width:4px;background:var(--fh-line-1,#1d5bd8);} .ds-card .h{display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--fh-ink-muted,#4a5468);} .ds-card .h b{color:var(--fh-ink,#18181b);} .ds-card .t{font-size:0.875rem;font-weight:600;margin:4px 0 8px;} .ds-card .f{display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--fh-ink-muted,#4a5468);} .ds-card .p{border:1px solid var(--fh-rule,#e3e5e9);border-radius:9999px;padding:0 8px;font-weight:600;color:var(--fh-ink,#18181b);}"
     },
     {
       "name": "Column Well",
@@ -3957,7 +3957,7 @@
       "refersTo": "column-well",
       "description": "A board column: count badge and display head.",
       "html": "<div class=\"ds-col\"><h3><span>4</span>Up next</h3></div>",
-      "css": ".ds-col{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;width:260px;border-radius:14px;border:1px solid var(--fh-rule,#ddd6c9);background:var(--fh-column,#f2eee3);padding:10px;} .ds-col h3{display:flex;align-items:center;gap:10px;margin:0;font-size:1.375rem;font-weight:800;font-stretch:80%;color:var(--fh-ink,#121a2e);} .ds-col h3 span{display:grid;place-items:center;min-width:28px;height:28px;border-radius:9999px;background:var(--fh-card,#fff);font-size:0.8125rem;font-weight:600;font-stretch:100%;box-shadow:var(--fh-shadow-card);}"
+      "css": ".ds-col{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;width:260px;border-radius:14px;border:1px solid var(--fh-rule,#e3e5e9);background:var(--fh-column,#f3f4f6);padding:10px;} .ds-col h3{display:flex;align-items:center;gap:10px;margin:0;font-size:1.375rem;font-weight:800;font-stretch:80%;color:var(--fh-ink,#18181b);} .ds-col h3 span{display:grid;place-items:center;min-width:28px;height:28px;border-radius:9999px;background:var(--fh-card,#fff);font-size:0.8125rem;font-weight:600;font-stretch:100%;box-shadow:var(--fh-shadow-card);}"
     },
     {
       "name": "Band",
@@ -3965,7 +3965,7 @@
       "refersTo": "band",
       "description": "Bolt, wordmark and view tabs.",
       "html": "<nav class=\"ds-band\"><b>⚡ Flashheart</b><a class=\"on\">Board</a><a>Agents</a><a>Workstreams</a><a>Table</a></nav>",
-      "css": ".ds-band{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px;height:56px;padding:0 20px;background:var(--fh-band,#1d4fd7);color:var(--fh-on-band,#fff);} .ds-band b{font-size:1.375rem;font-weight:800;font-stretch:87.5%;margin-right:18px;} .ds-band a{padding:8px 12px;border-radius:8px;font-size:0.8125rem;font-weight:600;color:var(--fh-on-band-muted,#d6e0ff);} .ds-band a.on{background:var(--fh-band-tab-active,#1641b8);color:var(--fh-on-band,#fff);box-shadow:inset 0 -3px 0 var(--fh-band-tab-line,#1641b8);}"
+      "css": ".ds-band{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px;height:56px;padding:0 20px;background:var(--fh-band,#be185d);color:var(--fh-on-band,#fff);} .ds-band b{font-size:1.375rem;font-weight:800;font-stretch:87.5%;margin-right:18px;} .ds-band a{padding:8px 12px;border-radius:8px;font-size:0.8125rem;font-weight:600;color:var(--fh-on-band-muted,#fde2ee);} .ds-band a.on{background:var(--fh-band-tab-active,#831843);color:var(--fh-on-band,#fff);box-shadow:inset 0 -3px 0 var(--fh-band-tab-line,#831843);}"
     },
     {
       "name": "Handoff Callout",
@@ -3973,12 +3973,12 @@
       "refersTo": "handoff-callout",
       "description": "The handoff with next steps large.",
       "html": "<section class=\"ds-ho\"><h4>→ Handoff</h4><p>Verify the live session</p></section>",
-      "css": ".ds-ho{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:10px;border-left:4px solid var(--fh-callout-handoff-edge,#c2410c);background:var(--fh-callout-handoff,#fff3ea);padding:16px;color:var(--fh-ink,#121a2e);} .ds-ho h4{margin:0 0 8px;font-weight:700;font-stretch:87.5%;} .ds-ho p{margin:0;font-size:1.125rem;font-weight:600;}"
+      "css": ".ds-ho{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:10px;border-left:4px solid var(--fh-callout-handoff-edge,#be185d);background:var(--fh-callout-handoff,#fff4ec);padding:16px;color:var(--fh-ink,#18181b);} .ds-ho h4{margin:0 0 8px;font-weight:700;font-stretch:87.5%;} .ds-ho p{margin:0;font-size:1.125rem;font-weight:600;}"
     }
   ],
   "narrative": {
     "northStar": "Metro Pop",
-    "overview": "A friendly metro system for work: each workstream is a route with its own colour, its tickets are stations, and the board is a bright kanban that still reads as calm, dense tooling. One structure (docs/dev/specs/ui-layout.md), two palettes: Metro Pop light (Metro blue band, warm paper, ivory wells, white cards, orange action) and Night Service dark (black band, neutral charcoal, lime action, coral attention, lifted route colours). Replaced the Transit Line Map of D14 per D18.",
+    "overview": "A friendly metro system for work: each workstream is a route with its own colour, its tickets are stations, and the board is a bright kanban that still reads as calm, dense tooling. One structure (docs/dev/specs/ui-layout.md), two palettes: Metro Pop light (raspberry band and accent on a clean white ground, cool grey wells, white cards; D22) and Night Service dark (black band, neutral charcoal, lime action, coral attention, lifted route colours). Replaced the Transit Line Map of D14 per D18.",
     "keyCharacteristics": [
       "A 56px band over a 248px rail; every view opens on a page header naming its scope.",
       "Rounded: 8px controls, 10px cards, 14px wells and route cards, full pills.",

@@ -2,39 +2,39 @@
 name: Flashheart
 description: A local kanban for AI-assisted projects, drawn as a friendly metro system (Metro Pop light, Night Service dark).
 colors:
-  ground: "#f8f4e9"
+  ground: "#ffffff"
   panel: "#ffffff"
   card: "#ffffff"
-  column: "#f2eee3"
-  well: "#f5f1e7"
-  rule: "#ddd6c9"
-  rule-strong: "#121a2e"
-  ink: "#121a2e"
-  ink-muted: "#4a5468"
-  ink-faint: "#5a6375"
-  band: "#1d4fd7"
+  column: "#f3f4f6"
+  well: "#f6f7f9"
+  rule: "#e3e5e9"
+  rule-strong: "#18181b"
+  ink: "#18181b"
+  ink-muted: "#52525b"
+  ink-faint: "#5f5f68"
+  band: "#be185d"
   on-band: "#ffffff"
-  on-band-muted: "#d6e0ff"
-  band-field: "#1846c4"
-  band-tab-active: "#1641b8"
-  band-tab-line: "#1641b8"
-  band-rule: "#5279e6"
-  rail: "#efece4"
-  on-rail: "#121a2e"
-  on-rail-muted: "#4f586b"
-  rail-active: "#1d4fd7"
-  on-rail-active: "#ffffff"
-  on-rail-active-muted: "#d6e0ff"
-  rail-active-mark: "#1d4fd7"
-  rail-rule: "#d9d4c8"
-  action: "#c2410c"
+  on-band-muted: "#fde2ee"
+  band-field: "#9d174d"
+  band-tab-active: "#831843"
+  band-tab-line: "#ffffff"
+  band-rule: "#fde2ee"
+  rail: "#fafafa"
+  on-rail: "#18181b"
+  on-rail-muted: "#5b5b63"
+  rail-active: "#fdf0f6"
+  on-rail-active: "#831843"
+  on-rail-active-muted: "#831843"
+  rail-active-mark: "#be185d"
+  rail-rule: "#e7e7eb"
+  action: "#be185d"
   on-action: "#ffffff"
-  action-hover: "#a8380a"
+  action-hover: "#9d174d"
   attention: "#ff9447"
   on-attention: "#111111"
-  focus: "#1d4fd7"
-  select: "#1d4fd7"
-  select-surface: "#e3ebff"
+  focus: "#be185d"
+  select: "#be185d"
+  select-surface: "#fdf0f6"
   danger: "#b42318"
   danger-surface: "#fdecea"
   selection: "#ffe08a"
@@ -49,10 +49,10 @@ colors:
   state-done-ink: "#0b6534"
   state-blocked: "#fde3df"
   state-blocked-ink: "#a1241a"
-  callout-handoff: "#fff3ea"
-  callout-handoff-edge: "#c2410c"
-  callout-question: "#eaf0ff"
-  callout-question-edge: "#1d4fd7"
+  callout-handoff: "#fff4ec"
+  callout-handoff-edge: "#ea580c"
+  callout-question: "#fdf0f6"
+  callout-question-edge: "#be185d"
   line-0: "#d42f25"
   line-1: "#1d5bd8"
   line-2: "#f5c400"
@@ -425,7 +425,7 @@ components:
 
 **Creative North Star: "Metro Pop"**
 
-Flashheart is a friendly metro system for work. Each workstream is a route with its own colour, its tickets are stations, and the board is a bright, colourful kanban that still reads as calm, dense tooling on a second monitor. There is one structure and two palettes. **Metro Pop** (light) puts a Metro-blue band over a warm paper rail and ground, with ivory column wells holding white rounded cards and an orange primary action. **Night Service** (dark) keeps every structure and swaps only the palette: a black band and neutral charcoal rail, wells and cards with no navy cast, a lime action and focus, coral attention, and lifted route colours.
+Flashheart is a friendly metro system for work. Each workstream is a route with its own colour, its tickets are stations, and the board is a bright, colourful kanban that still reads as calm, dense tooling on a second monitor. There is one structure and two palettes. **Metro Pop** (light) puts a strong raspberry band over a clean white ground and near-white rail, with cool light-grey column wells holding white rounded cards; raspberry is light's one accent (primary action, current project, selection and focus). The user chose raspberry over blue ("everyone uses blue") and a white ground over the references' cream (D22). **Night Service** (dark) keeps every structure and swaps only the palette: a black band and neutral charcoal rail, wells and cards with no navy cast, a lime action and focus, coral attention, and lifted route colours.
 
 Structure and content are fixed in [the UI layout contract](docs/dev/specs/ui-layout.md); this file records how that structure looks. A theme changes tokens, never layout. Metro Pop replaced the Transit Line Map of D14 (D18, 2026-10-06), chosen from the generated references in `.impeccable/mocks/metro-theme-rollout/`.
 
@@ -441,17 +441,17 @@ Structure and content are fixed in [the UI layout contract](docs/dev/specs/ui-la
 Two palettes on the same roles (contract §7). Light values first; dark values are the `night-` keys.
 
 ### Primary
-- **Band** (`band` #1d4fd7 Metro blue; `night-band` #070708 black): the top band. The current view tab sits on a deeper blue pill (`band-tab-active`); in dark it is a charcoal field with a lime underline (`night-band-tab-line`).
-- **Ink** (`ink` #121a2e; `night-ink` #f2f2f3): text and icons.
-- **Rail Active** (`rail-active` #1d4fd7; `night-rail-active` #232325 with a lime edge): the current scope tile and the page header's key badge.
+- **Band** (`band` #be185d raspberry; `night-band` #070708 black): the top band. The current view tab sits on a deeper raspberry pill with a white underline (`band-tab-active`, `band-tab-line`); in dark it is a charcoal field with a lime underline.
+- **Ink** (`ink` #18181b; `night-ink` #f2f2f3): text and icons.
+- **Rail Active** (`rail-active` #fdf0f6 raspberry tint with a raspberry edge and #831843 text; `night-rail-active` #232325 with a lime edge): the current scope tile and the page header's key badge.
 
 ### Secondary
-- **Action** (`action` #c2410c Metro orange; `night-action` #c6f432 lime): the primary button only (New ticket, Send answer). Hover darkens or lifts it.
-- **Selection and Focus** (`select`/`focus` #1d4fd7; `night-select`/`night-focus` lime): the selected card ring, the current panel tab's underline, an applied filter's ring, the chosen density segment's edge and the focus outline.
+- **Action** (`action` #be185d raspberry; `night-action` #c6f432 lime): the primary button only (New ticket, Send answer). Hover darkens or lifts it.
+- **Selection and Focus** (`select`/`focus` #be185d raspberry with `select-surface` #fdf0f6; `night-select`/`night-focus` lime): the selected card ring, the current panel tab's underline, an applied filter's ring, the chosen density segment's edge and the focus outline.
 - **Lines** (`line-0`…`line-8`: red, blue, yellow, green, purple, orange, lime, brown, teal; lifted in dark): workstreams only. Each workstream takes one line stably, by a hash of its slug in creation order, so a newer workstream never recolours an older one. A bullet carries its paired initials ink (`line-ink-*`, AA on its fill). No line is grey: grey would read as an inactive state.
 - **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the card header and fills that value's tag; the strong shade sets the tag's word (always AA on the tint) and the colour key's swatch. Paint is softer than the lines on purpose, so a tag never reads as a workstream.
 - **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Blocked red with a diamond and its reason.
-- **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` blue in light, coral in dark): the left accent of the Handoff and questions-for-you callouts, as in the references.
+- **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the left accent of the Handoff and questions-for-you callouts, as in the references.
 
 ### Tertiary
 - **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, lane head, panel, virtual column). Only Needs you uses it.
@@ -459,7 +459,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Danger** (`danger` on `danger-surface`): application errors only, never a ticket state.
 
 ### Neutral
-- **Ground** (`ground` #f8f4e9 warm paper; `night-ground` #0c0c0d), **Rail** (`rail` #efece4; `night-rail` #111112), **Column** (`column` #f2eee3 ivory; `night-column` #161617), **Card** and **Panel** (white; `night-card` #1e1e20, `night-panel` #141415), **Well** (`well` #f5f1e7; `night-well` #252527), **Rule** (`rule` #ddd6c9; `night-rule` #303033), **Ink Muted** and **Ink Faint** (AA on every surface).
+- **Ground** (`ground` #ffffff; `night-ground` #0c0c0d), **Rail** (`rail` #fafafa; `night-rail` #111112), **Column** (`column` #f3f4f6 cool light grey; `night-column` #161617), **Card** and **Panel** (white; `night-card` #1e1e20, `night-panel` #141415), **Well** (`well` #f6f7f9; `night-well` #252527), **Rule** (`rule` #e3e5e9; `night-rule` #303033), **Ink Muted** and **Ink Faint** (AA on every surface).
 - Dark neutrals have no hue (OKLCH chroma under 0.012): black and charcoal, never navy.
 
 ### Named Rules

@@ -24,14 +24,17 @@ its own colour, tickets are its stations, and the board is a bright,
 colourful kanban that still reads as calm, dense tooling. One structure, two
 palettes.
 
-OWN-WORLD: Metro Pop. A Metro-blue band carries the wordmark and the view
-tabs; a warm paper rail lists projects with key badges, route bars and
-counts; columns are ivory rounded wells holding white rounded cards.
+OWN-WORLD: Metro Pop. A strong raspberry band carries the wordmark and the
+view tabs over a clean white ground (the user rejected blue, "everyone uses
+blue", and the references' cream as old-school web, D22); a near-white rail
+lists projects with key badges, route bars and counts; columns are cool
+light-grey rounded wells holding white rounded cards.
 Route colours (bullet, card stripe, route track) always mean a workstream.
 The Colour by value tints the card header and fills its named tag. Status
 reads as soft pills that always carry an icon and the column's word (amber
 in progress, blue review, green done, red blocked with its reason). Needs
-you is the one orange attention plate. Orange is the primary action.
+you is the one orange attention plate. Raspberry is the primary action,
+the current project, selection and focus.
 Archivo Variable in a heavy condensed cut for titles, tabular numerals,
 sentence case. Night Service keeps every structure and swaps the palette:
 black band, neutral charcoal rail, wells and cards, lime action and focus,

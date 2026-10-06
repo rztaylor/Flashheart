@@ -291,3 +291,14 @@ order D18 set), or theme now and have FH-6 build its new surfaces
 the shared contract in `docs/dev/specs/ui-layout.md`. The second was
 chosen: the contract already specifies those surfaces, so the themes need
 no second pass, and FH-6's pieces are not built under the theme tickets.
+
+## 2026-10-06 — D22: Light theme on white with a raspberry bar
+
+Decision (user): the light palette drops the references' Metro-blue band and
+cream grounds, which read as old-school web, for a white background with a
+strong-coloured bar that is not blue ("everyone uses blue"). From rendered
+options (emerald, raspberry, violet) the user chose raspberry (#be185d). It
+is light's one accent: the bar, the primary action, the current project,
+selection and focus. Grounds are white and cool light greys. Night Service
+(dark) is unchanged. Structure is unchanged (D18, `ui-layout.md`); only light
+tokens moved, and the palette test still holds every pair to WCAG AA.
