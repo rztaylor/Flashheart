@@ -231,6 +231,7 @@ func (s *Store) ReadBoard() (board.Board, string, error) {
 		}
 	}
 	b.ArchivedProjects = archivedProjects(root, fsys)
+	b.RetiredKeys = s.retiredKeys()
 	for _, project := range b.ArchivedProjects {
 		fmt.Fprintf(hash, "archived project %s %s\n", project.Name, project.Archived)
 	}

@@ -1,23 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
 import {
   deleteProject,
   fetchProjectDeletePlan,
   type ProjectDeletePlan,
 } from "../../api/archive";
-import { ApiError, type AuthenticatedFetch } from "../../api/client";
-import { Button } from "../../components/Button";
-import { Dialog } from "../../components/Dialog";
-import { FormField, TextInput } from "../../components/Field";
-import { StateNote } from "../../components/StateNote";
-import { confirmsDelete } from "../../model/archive";
+import type { AuthenticatedFetch } from "../../api/client";
+import { TypedDeleteDialog } from "./TypedDeleteDialog";
 
-const failure = (error: unknown) =>
-  error instanceof Error ? error.message : "The request failed";
-
-// DeleteProjectDialog deletes an archived project for good (PRJ-5): it lists
-// what goes and the other projects' tickets whose dependencies are removed,
-// and asks for the project's name before the delete button works.
+// DeleteProjectDialog deletes an archived project for good (PRJ-5), after
+// listing what goes and the other projects' tickets whose dependencies are
+// removed, and the typed project name.
 export function DeleteProjectDialog({
   fetcher,
   project,
@@ -29,96 +22,24 @@ export function DeleteProjectDialog({
   onClose(): void;
   onDeleted(displayName: string): void;
 }) {
-  const [plan, setPlan] = useState<ProjectDeletePlan | null>(null);
-  const [error, setError] = useState("");
-  const [changed, setChanged] = useState(false);
-  const [typed, setTyped] = useState("");
-  const [busy, setBusy] = useState(false);
-
   const load = useCallback(
-    (signal?: AbortSignal) =>
-      fetchProjectDeletePlan(fetcher, project, signal)
-        .then((next) => {
-          setPlan(next);
-          setError("");
-        })
-        .catch((reason: unknown) => {
-          if (!signal?.aborted) setError(failure(reason));
-        }),
+    (signal?: AbortSignal) => fetchProjectDeletePlan(fetcher, project, signal),
     [fetcher, project],
   );
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
-
-  const ready = !!plan && confirmsDelete(typed, project) && !busy;
-  const confirm = async () => {
-    if (!plan || !ready) return;
-    setBusy(true);
-    try {
-      await deleteProject(fetcher, project, plan.token, typed.trim());
-      onDeleted(plan.displayName);
-    } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 409) {
-        setChanged(true);
-        await load();
-      } else {
-        setError(failure(reason));
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
-    <Dialog
-      title={`Delete ${plan?.displayName ?? project} permanently?`}
-      onClose={onClose}
-      actions={
-        <>
-          <Button onClick={onClose}>Keep it archived</Button>
-          <Button variant="danger" disabled={!ready} onClick={confirm}>
-            {busy ? "Deleting…" : "Delete permanently"}
-          </Button>
-        </>
+    <TypedDeleteDialog<ProjectDeletePlan>
+      title={(plan) => `Delete ${plan?.displayName ?? project} permanently?`}
+      word={project}
+      hint="This removes the project's folder from the board's archive."
+      load={load}
+      remove={(plan, typed) =>
+        deleteProject(fetcher, project, plan.token, typed)
       }
+      onClose={onClose}
+      onDeleted={(plan) => onDeleted(plan.displayName)}
     >
-      {plan ? (
-        <>
-          <ProjectDeletePreview plan={plan} />
-          {changed ? (
-            <div className="mt-4">
-              <StateNote kind="warning">
-                Something here changed since you opened this. The list is up to
-                date now; check it before deleting.
-              </StateNote>
-            </div>
-          ) : null}
-          <div className="mt-5">
-            <FormField
-              label={`Type ${project} to confirm`}
-              hint="This removes the project's folder from the board's archive."
-            >
-              <TextInput
-                value={typed}
-                onChange={setTyped}
-                autoFocus
-                spellCheck={false}
-              />
-            </FormField>
-          </div>
-        </>
-      ) : error ? null : (
-        <p className="text-ink-muted">Checking what the delete touches…</p>
-      )}
-      {error ? (
-        <p role="alert" className="mt-3 text-danger">
-          {error}
-        </p>
-      ) : null}
-    </Dialog>
+      {(plan) => <ProjectDeletePreview plan={plan} />}
+    </TypedDeleteDialog>
   );
 }
 

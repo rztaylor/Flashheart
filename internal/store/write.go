@@ -98,7 +98,12 @@ func (s *Store) lock(dir string) (func(), error) {
 		return nil, err
 	}
 	name := path.Join(dir, ".flashheart", "lock")
-	if err := root.MkdirAll(path.Dir(name), 0o755); err != nil {
+	// Only .flashheart is made, never the directory it sits in, so a writer
+	// cannot recreate a project archived or removed meanwhile.
+	if err := root.Mkdir(path.Dir(name), 0o755); err != nil && !errors.Is(err, fs.ErrExist) {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("lock %s: %w", dir, ErrNotFound)
+		}
 		return nil, fmt.Errorf("lock %s: %w", dir, err)
 	}
 	file, err := openLockFile(root, name)
@@ -109,10 +114,19 @@ func (s *Store) lock(dir string) (func(), error) {
 		file.Close()
 		return nil, err
 	}
-	return func() {
+	release := func() {
 		_ = funlock(file)
 		file.Close()
-	}, nil
+	}
+	// The directory may have moved (an archive) while this writer waited;
+	// then the lock it holds is no longer at name.
+	if held, err := file.Stat(); err == nil {
+		if current, err := root.Lstat(name); err != nil || !os.SameFile(held, current) {
+			release()
+			return nil, fmt.Errorf("lock %s: %w", dir, ErrNotFound)
+		}
+	}
+	return release, nil
 }
 
 // openLockFile opens the lock file, creating it if needed. Concurrent first

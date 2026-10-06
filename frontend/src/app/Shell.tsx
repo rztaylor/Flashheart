@@ -249,7 +249,7 @@ export function Shell({
         ? {}
         : { after, undoAfter: predecessor(allCards, card) },
     );
-  // stepTicket is the panel's Position menu: a step among the visible cards
+  // stepTicket is the panel's Position buttons: a step among the visible cards
   // of the ticket's column, offered only while the board shows the ticket.
   const shownTicket = allCards.find((card) => card.id === route.ticket?.id);
   const stepTicket =

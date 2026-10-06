@@ -229,6 +229,56 @@ test("a card dropped in another column lands where it was dropped", async () => 
   await expect.poll(() => ticketById(moving)).toContain("status: up-next");
 });
 
+test("a drop lands at the pointer after the board scrolls mid-drag", async () => {
+  await open("#/p/flashheart/board");
+  await boardTop();
+  const backlog = column("Backlog");
+  const ids = await order("Backlog");
+  const moving = ids[0];
+  const source = await backlog
+    .locator(`[data-ticket="${moving}"]`)
+    .boundingBox();
+  await page.mouse.move(source.x + source.width / 2, source.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(source.x + source.width / 2 + 10, source.y + 30, {
+    steps: 4,
+  });
+  // Hold the card at the board's bottom edge until it scrolls, then aim
+  // above a card that is now in view.
+  const edge = await page.locator(".board-grid").boundingBox();
+  await page.mouse.move(source.x + source.width / 2, edge.y + edge.height - 6, {
+    steps: 10,
+  });
+  await expect
+    .poll(() =>
+      page.locator(".board-grid").evaluate((element) => element.scrollTop),
+    )
+    .toBeGreaterThan(300);
+  await page.mouse.move(source.x + source.width / 2, edge.y + edge.height / 2, {
+    steps: 4,
+  });
+  const grid = await page.locator(".board-grid").boundingBox();
+  const target = await backlog.locator("[data-ticket]").evaluateAll(
+    (nodes, middle) =>
+      nodes
+        .map((node) => ({
+          id: node.dataset.ticket,
+          box: node.getBoundingClientRect(),
+        }))
+        .find(({ box }) => box.top > middle)?.id,
+    grid.y + grid.height / 2,
+  );
+  const box = await backlog.locator(`[data-ticket="${target}"]`).boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 6, { steps: 8 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => {
+      const now = await order("Backlog");
+      return now[now.indexOf(target) - 1];
+    })
+    .toBe(moving);
+});
+
 test("Shift with Up or Down moves a card within its column, with Undo", async () => {
   await open("#/p/flashheart/board");
   const [first, second] = await order("Up next");
@@ -254,17 +304,18 @@ test("Shift with Up or Down moves a card within its column, with Undo", async ()
     .toEqual([second, first]);
 });
 
-test("the panel moves a ticket to the top or bottom of its column", async () => {
+test("the panel moves a ticket within its column", async () => {
   await open("#/p/flashheart/board");
   const ids = await order("Up next");
   const last = ids.at(-1);
   await open(`#/p/flashheart/board?t=${last}`);
   const panel = page.getByRole("complementary", { name: `Ticket ${last}` });
-  await panel.getByLabel("Position").selectOption("top");
+  await panel.getByRole("button", { name: "Top of its column" }).click();
   await expect.poll(async () => (await order("Up next"))[0]).toBe(last);
-  await panel.getByLabel("Position").selectOption("bottom");
+  await panel.getByRole("button", { name: "Down one place" }).click();
+  await expect.poll(async () => (await order("Up next"))[1]).toBe(last);
+  await panel.getByRole("button", { name: "Bottom of its column" }).click();
   await expect.poll(async () => (await order("Up next")).at(-1)).toBe(last);
-  await expect(panel.getByLabel("Position")).toHaveValue("");
   await page.keyboard.press("Escape");
 });
 

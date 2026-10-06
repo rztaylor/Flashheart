@@ -114,11 +114,12 @@ func (s *Store) archivedFolder(project, id string) (string, error) {
 		if folderID, _, ok := board.ParseFolder(entry.Name()); !ok || folderID != id {
 			continue
 		}
-		if entry.Type()&fs.ModeSymlink != 0 {
-			return "", fmt.Errorf("%w: archived ticket %s is a symbolic link; Flashheart does not delete through links", ErrInvalidInput, id)
+		folder := path.Join(dir, entry.Name())
+		if err := s.refuseLinks(folder); err != nil {
+			return "", err
 		}
 		if entry.IsDir() {
-			return path.Join(dir, entry.Name()), nil
+			return folder, nil
 		}
 	}
 	return "", fmt.Errorf("archived ticket %s in %s: %w", id, project, ErrNotFound)

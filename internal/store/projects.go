@@ -42,6 +42,9 @@ func (s *Store) ArchiveProject(project string) error {
 	if err := s.checkProject(project); err != nil {
 		return err
 	}
+	if err := s.refuseLinks(project); err != nil {
+		return err
+	}
 	releaseRoot, err := s.lock(".")
 	if err != nil {
 		return err
@@ -77,15 +80,13 @@ func (s *Store) archivedProjectDir(project string) (string, error) {
 		return "", err
 	}
 	dir := path.Join(archiveDir, project)
-	info, err := root.Lstat(dir)
-	if errors.Is(err, fs.ErrNotExist) {
+	if _, err := root.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
 		return "", fmt.Errorf("archived project %q: %w", project, ErrNotFound)
-	}
-	if err != nil {
+	} else if err != nil {
 		return "", err
 	}
-	if info.Mode()&fs.ModeSymlink != 0 {
-		return "", fmt.Errorf("%w: archived project %s is a symbolic link; Flashheart does not follow links", ErrInvalidInput, project)
+	if err := s.refuseLinks(dir); err != nil {
+		return "", err
 	}
 	if !isProject(fsys, dir) {
 		return "", fmt.Errorf("archived project %q: %w", project, ErrNotFound)
@@ -106,9 +107,34 @@ func (s *Store) RestoreProject(project string) error {
 	}
 	defer release()
 	if s.Exists(project) {
+		_, fsys, _ := s.handle()
+		if fsys != nil && !isProject(fsys, project) {
+			return fmt.Errorf("%w: a folder named %s, which is not a project, is in the way in the board root; move it aside first", ErrExists, project)
+		}
 		return fmt.Errorf("%w: a project named %s is on the board; rename or archive it first", ErrExists, project)
 	}
 	return s.Move(dir, project)
+}
+
+// refuseLinks refuses a path any of whose segments is a symbolic link, so
+// moves and deletes never act through one (SEC-2).
+func (s *Store) refuseLinks(name string) error {
+	root, _, err := s.handle()
+	if err != nil {
+		return err
+	}
+	current := ""
+	for _, segment := range strings.Split(name, "/") {
+		current = path.Join(current, segment)
+		info, err := root.Lstat(current)
+		if err != nil {
+			return err
+		}
+		if info.Mode()&fs.ModeSymlink != 0 {
+			return fmt.Errorf("%w: %s is a symbolic link; Flashheart does not move or delete through links", ErrInvalidInput, current)
+		}
+	}
+	return nil
 }
 
 // ArchivedProjects lists the archived projects in name order.

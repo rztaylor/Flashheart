@@ -1,24 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
 import {
   type DeletePlan,
   deleteArchived,
   fetchDeletePlan,
 } from "../../api/archive";
-import { ApiError, type AuthenticatedFetch } from "../../api/client";
-import { Button } from "../../components/Button";
-import { Dialog } from "../../components/Dialog";
-import { FormField, TextInput } from "../../components/Field";
-import { StateNote } from "../../components/StateNote";
-import { confirmsDelete } from "../../model/archive";
+import type { AuthenticatedFetch } from "../../api/client";
+import { TypedDeleteDialog } from "./TypedDeleteDialog";
 
-const failure = (error: unknown) =>
-  error instanceof Error ? error.message : "The request failed";
-
-// DeleteTicketDialog deletes an archived ticket for good (EDIT-8): it lists
-// everything the delete touches and asks for the ticket's id before the
-// delete button works. If anything listed changed meanwhile, the server
-// refuses, and the list is reloaded for another look.
+// DeleteTicketDialog deletes an archived ticket for good (EDIT-8), after
+// listing everything the delete touches and the typed id.
 export function DeleteTicketDialog({
   fetcher,
   project,
@@ -32,97 +23,29 @@ export function DeleteTicketDialog({
   onClose(): void;
   onDeleted(): void;
 }) {
-  const [plan, setPlan] = useState<DeletePlan | null>(null);
-  const [error, setError] = useState("");
-  const [changed, setChanged] = useState(false);
-  const [typed, setTyped] = useState("");
-  const [busy, setBusy] = useState(false);
-
   const load = useCallback(
-    (signal?: AbortSignal) =>
-      fetchDeletePlan(fetcher, project, id, signal)
-        .then((next) => {
-          setPlan(next);
-          setError("");
-        })
-        .catch((reason: unknown) => {
-          if (!signal?.aborted) setError(failure(reason));
-        }),
+    (signal?: AbortSignal) => fetchDeletePlan(fetcher, project, id, signal),
     [fetcher, project, id],
   );
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
-
-  const ready = !!plan && confirmsDelete(typed, id) && !busy;
-  const confirm = async () => {
-    if (!plan || !ready) return;
-    setBusy(true);
-    try {
-      await deleteArchived(fetcher, project, id, plan.token, typed.trim());
-      onDeleted();
-    } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 409) {
-        setChanged(true);
-        await load();
-      } else {
-        setError(failure(reason));
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
-    <Dialog
-      title={`Delete ${id} permanently?`}
-      onClose={onClose}
-      actions={
-        <>
-          <Button onClick={onClose}>Keep it archived</Button>
-          <Button variant="danger" disabled={!ready} onClick={confirm}>
-            {busy ? "Deleting…" : "Delete permanently"}
-          </Button>
-        </>
+    <TypedDeleteDialog<DeletePlan>
+      title={() => `Delete ${id} permanently?`}
+      word={id}
+      hint="This removes the ticket's folder from the board."
+      load={load}
+      remove={(plan, typed) =>
+        deleteArchived(fetcher, project, id, plan.token, typed)
       }
+      onClose={onClose}
+      onDeleted={onDeleted}
     >
-      {plan ? (
+      {(plan) => (
         <>
           {plan.title ? <p className="mb-3 font-medium">{plan.title}</p> : null}
           <DeletePreview plan={plan} />
-          {changed ? (
-            <div className="mt-4">
-              <StateNote kind="warning">
-                Something here changed since you opened this. The list is up to
-                date now; check it before deleting.
-              </StateNote>
-            </div>
-          ) : null}
-          <div className="mt-5">
-            <FormField
-              label={`Type ${id} to confirm`}
-              hint="This removes the ticket's folder from the board."
-            >
-              <TextInput
-                value={typed}
-                onChange={setTyped}
-                autoFocus
-                spellCheck={false}
-              />
-            </FormField>
-          </div>
         </>
-      ) : error ? null : (
-        <p className="text-ink-muted">Checking what the delete touches…</p>
       )}
-      {error ? (
-        <p role="alert" className="mt-3 text-danger">
-          {error}
-        </p>
-      ) : null}
-    </Dialog>
+    </TypedDeleteDialog>
   );
 }
 

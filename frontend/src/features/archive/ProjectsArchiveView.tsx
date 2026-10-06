@@ -79,6 +79,9 @@ export function ProjectsArchiveView({
         <h2 id="archived-projects" className="mb-3 text-lg heading-cut">
           Archived projects
         </h2>
+        {archive.status === "loading" ? (
+          <p className="text-sm text-ink-muted">Loading the archive…</p>
+        ) : null}
         {archive.status === "error" ? (
           <div className="flex items-center gap-3 text-sm">
             <p role="alert" className="text-danger">
@@ -190,30 +193,37 @@ export function ProjectsArchiveView({
           Archiving a project takes it and its tickets off the board; you can
           restore it from here.
         </p>
-        <ul className="divide-y divide-rule overflow-hidden rounded-panel border border-rule bg-card shadow-card">
-          {projects.map((project) => (
-            <li
-              key={project.name}
-              className="flex items-center gap-3 px-3 py-2 text-sm"
-            >
-              <KeyBadge>{project.key}</KeyBadge>
-              <span className="min-w-0 flex-1 truncate font-semibold">
-                {project.displayName}
-              </span>
-              <span className="text-xs text-ink-muted tabular-nums">
-                {ticketCount(project)}
-              </span>
-              <Button
-                className="h-8 py-0 text-xs"
-                aria-label={`Archive ${project.displayName}`}
-                onClick={() => setArchiving(project.name)}
+        {projects.length === 0 ? (
+          <p className="text-sm text-ink-muted">
+            No projects are on the board.
+          </p>
+        ) : null}
+        {projects.length > 0 ? (
+          <ul className="divide-y divide-rule overflow-hidden rounded-panel border border-rule bg-card shadow-card">
+            {projects.map((project) => (
+              <li
+                key={project.name}
+                className="flex items-center gap-3 px-3 py-2 text-sm"
               >
-                <Icon name="archive" size={14} />
-                Archive…
-              </Button>
-            </li>
-          ))}
-        </ul>
+                <KeyBadge>{project.key}</KeyBadge>
+                <span className="min-w-0 flex-1 truncate font-semibold">
+                  {project.displayName}
+                </span>
+                <span className="text-xs text-ink-muted tabular-nums">
+                  {ticketCount(project)}
+                </span>
+                <Button
+                  className="h-8 py-0 text-xs"
+                  aria-label={`Archive ${project.displayName}`}
+                  onClick={() => setArchiving(project.name)}
+                >
+                  <Icon name="archive" size={14} />
+                  Archive…
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
       {archiving ? (
         <ArchiveProjectDialog

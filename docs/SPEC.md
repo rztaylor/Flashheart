@@ -287,7 +287,7 @@ Full format: `docs/dev/specs/board-format.md`.
   recently finished first and is not reordered. Places are taken among the
   visible cards of the ticket's own project, so filtered-out tickets and
   other projects in *All projects* keep their order. Shift with Up or Down
-  and the panel's **Position** menu are the keyboard and menu alternatives;
+  and the panel's **Position** buttons are the keyboard and menu alternatives;
   Undo puts the ticket back after the card it followed. A temporary display
   sort (the Table's column sort, or a future board sort) rearranges only what
   is shown and never writes ranks; while one is on, cards cannot be

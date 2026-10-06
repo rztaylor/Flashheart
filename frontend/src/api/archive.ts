@@ -38,6 +38,9 @@ const isArchived = (value: unknown): value is Archived =>
   isRecord(value) &&
   isString(value.id) &&
   isString(value.title) &&
+  isString(value.type) &&
+  isString(value.priority) &&
+  isString(value.workstream) &&
   COLUMNS.some((column) => column.id === value.column) &&
   isString(value.archived) &&
   typeof value.attachments === "number" &&
@@ -52,13 +55,22 @@ const isArchiveList = (value: unknown): value is ArchiveList =>
 const isDeletePlan = (value: unknown): value is DeletePlan =>
   isRecord(value) &&
   isString(value.id) &&
+  isString(value.title) &&
   isString(value.token) &&
   Array.isArray(value.files) &&
   value.files.every(isString) &&
   Array.isArray(value.tickets) &&
-  value.tickets.every((item) => isRecord(item) && isString(item.id)) &&
+  value.tickets.every(
+    (item) =>
+      isRecord(item) &&
+      isString(item.id) &&
+      isString(item.project) &&
+      isString(item.title),
+  ) &&
   Array.isArray(value.workstreams) &&
-  value.workstreams.every((item) => isRecord(item) && isString(item.slug));
+  value.workstreams.every(
+    (item) => isRecord(item) && isString(item.slug) && isString(item.title),
+  );
 
 const archivePath = (project: string) =>
   `/api/projects/${segment(project)}/archive`;
@@ -146,6 +158,7 @@ export interface ProjectDeletePlan {
 const isArchiveCheck = (value: unknown): value is ArchiveCheck =>
   isRecord(value) &&
   isString(value.name) &&
+  isString(value.displayName) &&
   typeof value.tickets === "number" &&
   isRecord(value.counts) &&
   typeof value.liveRuns === "number" &&
@@ -172,13 +185,18 @@ const isArchivedProjects = (
 const isProjectDeletePlan = (value: unknown): value is ProjectDeletePlan =>
   isRecord(value) &&
   isString(value.name) &&
+  isString(value.displayName) &&
   isString(value.key) &&
   typeof value.tickets === "number" &&
   isString(value.token) &&
   Array.isArray(value.references) &&
   value.references.every(
     (item) =>
-      isRecord(item) && isString(item.id) && Array.isArray(item.dependsOn),
+      isRecord(item) &&
+      isString(item.id) &&
+      isString(item.project) &&
+      isString(item.title) &&
+      Array.isArray(item.dependsOn),
   );
 
 const archivedProjectPath = (project: string) =>

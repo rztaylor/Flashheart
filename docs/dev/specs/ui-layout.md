@@ -99,8 +99,8 @@ load) sit as a full-width strip under the band, above the rail and Main.
   change nothing) (`EDIT-9`). Keyboard: arrows move between cards, Shift with
   Left/Right moves the ticket to the next column (`EDIT-1`), Shift with
   Up/Down moves it within its column, Enter opens it. The panel's actions
-  add a **Position** menu (Top of column, Up one, Down one, Bottom of
-  column) while the board shows the ticket outside Done.
+  add **Position** buttons (Top, Up, Down, Bottom; each named by its full
+  action) while the board shows the ticket outside Done.
 
 ### Ticket card
 

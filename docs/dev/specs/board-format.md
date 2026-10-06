@@ -142,7 +142,7 @@ archived ticket (`EDIT-8`): the delete takes the root lock and the lock of
 every project it rewrites (in name order), removes the id from every
 ticket's `depends-on` and the project's workstream `tickets:` lists, adds
 it to `retired` in `project.yaml`, and removes the folder. It takes an id,
-never a path, and refuses an archived folder that is a symbolic link.
+never a path, and refuses any symbolic link on the folder's path.
 
 ### Order within a column
 
@@ -215,7 +215,9 @@ A workstream's `tickets:` list defines membership and order; a ticket whose
 writes (ticket creation and the agent tools) change the field and the lists
 together, appending a joining ticket to the end of its list. A reference to a
 missing ticket or workstream (including a missing `workstream:`) is shown as a
-warning and counts as blocking. Archived tickets count as done. A duplicated
+warning and counts as blocking. Archived tickets count as done, and so do
+permanently deleted ids (a project's `retired`) and every id of a deleted
+project's key (`retired.yaml`), wherever a reference to them survives. A duplicated
 id counts as done only when every copy does. Only tickets in `backlog`,
 `up-next` and `in-progress` are shown as blocked; waits on rule 3 alone are
 shown quietly as waiting (D14).
@@ -336,8 +338,9 @@ for other projects' blocking, and its key stays taken. A permanent delete
 takes the root lock and the lock of each project it rewrites (in name
 order), removes other projects' `depends-on` entries naming its tickets,
 adds its key to `<root>/.flashheart/retired.yaml` (`keys: [AL]`), and
-removes the directory. All of it is by project name, never a path, and an
-archived directory that is a symbolic link is refused.
+removes the directory. All of it is by project name, never a path, and a
+symbolic link anywhere on the project's path is refused. A writer that was waiting for a
+project's lock while it was archived finds it gone and writes nothing.
 
 ## Migration from v1
 

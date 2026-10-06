@@ -27,7 +27,7 @@ All notable changes to this project are documented here. The project follows
 - Manual card order: drag a card to any place in its column, or to a place
   in another column, and the order is saved in the ticket's new `rank`
   field, so it survives reloads and restarts. Shift with Up or Down and the
-  panel's Position menu move a card within its column; Undo puts it back.
+  panel's Position buttons move a card within its column; Undo puts it back.
   New tickets join below the ordered ones, Done stays most recent first,
   and workstream order is unaffected (FH-23).
 - Archive view for each project (Archive in the page header): search

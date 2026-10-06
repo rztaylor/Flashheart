@@ -10,6 +10,7 @@ import {
   unarchiveTicket,
 } from "../../api/edit";
 import type { ToastMessage } from "../../components/Toast";
+import { markSaved, type PendingMoves, serial, settle } from "./pending";
 
 export interface Movable {
   id: string;
@@ -31,13 +32,7 @@ export interface BlockedMove {
   placement: Placement;
 }
 
-// Pending is a move shown before the board data has it: its column, its
-// placement, and whether the save has returned.
-export interface Pending {
-  column: Column;
-  after?: string;
-  saved: boolean;
-}
+export type { Pending } from "./pending";
 
 const columnTitle = (column: Column) =>
   COLUMNS.find((item) => item.id === column)?.title ?? column;
@@ -58,20 +53,18 @@ export function useEditing(
 ) {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [blocked, setBlocked] = useState<BlockedMove | null>(null);
-  const [pending, setPending] = useState<Record<string, Pending>>({});
+  const [pending, setPending] = useState<PendingMoves>({});
   const counter = useRef(0);
+  // Moves are saved one at a time, in the order they were made; seq tells
+  // a move's entry from a later one for the same ticket.
+  const queue = useRef(serial());
+  const seq = useRef(0);
 
   const notify = useCallback((message: Omit<ToastMessage, "id">) => {
     counter.current += 1;
     setToast({ id: counter.current, ...message });
   }, []);
   const dismiss = useCallback(() => setToast(null), []);
-  const settle = useCallback((id: string) => {
-    setPending((current) => {
-      const { [id]: _, ...rest } = current;
-      return rest;
-    });
-  }, []);
 
   const move = useCallback(
     async (
@@ -82,25 +75,17 @@ export function useEditing(
     ) => {
       const { after, undoAfter } = placement;
       if (ticket.column === to && after === undefined) return;
+      seq.current += 1;
+      const mine = seq.current;
       setPending((current) => ({
         ...current,
-        [ticket.id]: { column: to, after, saved: false },
+        [ticket.id]: { column: to, after, saved: false, seq: mine },
       }));
       try {
-        const saved = await moveTicket(
-          fetcher,
-          ticket.id,
-          to,
-          "",
-          reason,
-          after,
+        const saved = await queue.current(() =>
+          moveTicket(fetcher, ticket.id, to, "", reason, after),
         );
-        setPending((current) => {
-          const entry = current[ticket.id];
-          return entry
-            ? { ...current, [ticket.id]: { ...entry, saved: true } }
-            : current;
-        });
+        setPending((current) => markSaved(current, ticket.id, mine));
         notify({
           text:
             ticket.column === to
@@ -123,7 +108,7 @@ export function useEditing(
         });
         onChanged();
       } catch (error) {
-        settle(ticket.id);
+        setPending((current) => settle(current, ticket.id, mine));
         const reasons = blockedReasons(error);
         if (reasons) {
           setBlocked({ ticket, to, reasons, placement });
@@ -132,7 +117,7 @@ export function useEditing(
         notify({ text: `${ticket.id} was not moved: ${failure(error)}` });
       }
     },
-    [fetcher, notify, onChanged, settle, remark],
+    [fetcher, notify, onChanged, remark],
   );
 
   const confirmBlocked = useCallback(

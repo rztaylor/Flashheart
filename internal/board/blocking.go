@@ -11,6 +11,9 @@ import (
 type Board struct {
 	Projects         []Project
 	ArchivedProjects []ArchivedProject
+	// RetiredKeys are the keys of permanently deleted projects (KEY-5); their
+	// ids count as done, like each project's Retired ids.
+	RetiredKeys []string
 }
 
 // ArchivedProject is a project moved to <root>/.archive/. Its tickets count
@@ -86,6 +89,7 @@ type analyzer struct {
 	project     map[string]string   // ticket id → project
 	columns     map[string][]Column // ticket id → columns of every copy
 	archived    map[string]bool
+	retiredKeys map[string]bool
 	workstreams map[Ref]Workstream
 	members     map[string][]Ref // ticket id → workstreams listing it, in file order
 }
@@ -94,7 +98,7 @@ type analyzer struct {
 // states, and membership warnings. Ticket ids are global across projects.
 func Analyze(b Board) Analysis {
 	a := analyzer{
-		project: map[string]string{}, columns: map[string][]Column{}, archived: map[string]bool{},
+		project: map[string]string{}, columns: map[string][]Column{}, archived: map[string]bool{}, retiredKeys: map[string]bool{},
 		workstreams: map[Ref]Workstream{}, members: map[string][]Ref{},
 	}
 	for _, project := range b.Projects {
@@ -104,6 +108,11 @@ func Analyze(b Board) Analysis {
 			}
 			a.project[ticket.ID] = project.Name
 			a.columns[ticket.ID] = append(a.columns[ticket.ID], ticket.Column)
+		}
+		// A permanently deleted ticket blocks nothing, even where a
+		// reference to it survived (EDIT-8).
+		for _, id := range project.Retired {
+			a.archived[id] = true
 		}
 		for _, id := range project.Archived {
 			a.archived[id] = true
@@ -122,6 +131,9 @@ func Analyze(b Board) Analysis {
 		}
 	}
 
+	for _, key := range b.RetiredKeys {
+		a.retiredKeys[key] = true
+	}
 	for _, project := range b.ArchivedProjects {
 		for _, id := range project.IDs {
 			a.archived[id] = true
@@ -167,6 +179,10 @@ func (a analyzer) ticketColumn(id string) (Column, bool, bool) {
 	}
 	columns := a.columns[id]
 	if len(columns) == 0 {
+		// Ids of a deleted project's key were removed on purpose (PRJ-5).
+		if key, _, ok := ParseID(id); ok && a.retiredKeys[key] {
+			return "", true, true
+		}
 		return "", false, false
 	}
 	for _, column := range columns {

@@ -224,11 +224,15 @@ export function CardPanel({
   );
 }
 
-const steps: { value: Step; label: string }[] = [
-  { value: "top", label: "Top of column" },
-  { value: "up", label: "Up one" },
-  { value: "down", label: "Down one" },
-  { value: "bottom", label: "Bottom of column" },
+const steps: { value: Step; short: string; label: string }[] = [
+  { value: "top", short: "Top", label: "Top of its column" },
+  { value: "up", short: "Up", label: "Up one place" },
+  { value: "down", short: "Down", label: "Down one place" },
+  {
+    value: "bottom",
+    short: "Bottom",
+    label: "Bottom of its column",
+  },
 ];
 
 // PanelActions moves the ticket to any column or to a place in its column
@@ -262,21 +266,24 @@ function PanelActions({
         </Select>
       </label>
       {onStep ? (
-        // biome-ignore lint/a11y/noLabelWithoutControl: the Select inside is the control.
-        <label className="flex items-center gap-2 text-xs text-ink-muted">
-          Position
-          {/* An action menu: it runs the step and returns to its prompt. */}
-          <Select value="" onChange={(value) => onStep(value as Step)}>
-            <option value="" disabled>
-              Move within column
-            </option>
-            {steps.map((step) => (
-              <option key={step.value} value={step.value}>
-                {step.label}
-              </option>
-            ))}
-          </Select>
-        </label>
+        <fieldset className="flex items-center gap-1 text-xs text-ink-muted">
+          <legend className="sr-only">Position in its column</legend>
+          <span aria-hidden="true" className="mr-1">
+            Position
+          </span>
+          {steps.map((step) => (
+            <Button
+              key={step.value}
+              variant="quiet"
+              className="h-8 px-2 py-0 text-xs"
+              aria-label={step.label}
+              title={step.label}
+              onClick={() => onStep(step.value)}
+            >
+              {step.short}
+            </Button>
+          ))}
+        </fieldset>
       ) : null}
       <Button className="h-8 py-0 text-xs" onClick={onArchive}>
         <Icon name="archive" size={14} />

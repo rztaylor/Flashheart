@@ -186,9 +186,36 @@ func PlanPlacement(column []Ticket, moving, after string) ([]RankWrite, bool) {
 		}
 	}
 	ranks := RanksBetween(low, high, len(run)+1)
+	// Ranks squeezed into one gap again and again grow long; past the limit
+	// the whole column is spread out afresh, keeping its order.
+	if slices.ContainsFunc(ranks, func(rank string) bool { return len(rank) > maxRankLength }) {
+		run = slices.Insert(slices.Clone(others), at, Ticket{ID: moving})
+		ranks = RanksBetween("", "", len(run))
+		writes := make([]RankWrite, 0, len(run))
+		for index, ticket := range run {
+			if ticket.ID == moving || ticket.Rank != ranks[index] {
+				writes = append(writes, RankWrite{ID: ticket.ID, Rank: ranks[index]})
+			}
+		}
+		// The moving ticket is written last.
+		slices.SortStableFunc(writes, func(a, b RankWrite) int {
+			return boolOrder(a.ID == moving, b.ID == moving)
+		})
+		return writes, true
+	}
 	writes := make([]RankWrite, 0, len(ranks))
 	for index, ticket := range run {
 		writes = append(writes, RankWrite{ID: ticket.ID, Rank: ranks[index]})
 	}
 	return append(writes, RankWrite{ID: moving, Rank: ranks[len(ranks)-1]}), true
+}
+
+func boolOrder(a, b bool) int {
+	switch {
+	case a == b:
+		return 0
+	case a:
+		return 1
+	}
+	return -1
 }

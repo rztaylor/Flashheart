@@ -226,3 +226,27 @@ func TestPlanPlacement(t *testing.T) {
 		t.Error("placing a ticket after itself should be refused")
 	}
 }
+
+func TestPlanPlacementRespreadsWhenARankWouldGrowTooLong(t *testing.T) {
+	t.Parallel()
+
+	long := strings.Repeat("z", maxRankLength)
+	column := []Ticket{
+		ticket("FH-1", Backlog, "low", "2026-10-01", "V"),
+		ticket("FH-2", Backlog, "low", "2026-10-01", long),
+		ticket("FH-3", Backlog, "low", "2026-10-01", ""),
+	}
+	writes, ok := PlanPlacement(column, "FH-9", "FH-2")
+	if !ok {
+		t.Fatal("refused")
+	}
+	for _, write := range writes {
+		if !ValidRank(write.Rank) {
+			t.Errorf("%s rank %q is not valid", write.ID, write.Rank)
+		}
+	}
+	got := place(t, column, ticket("FH-9", UpNext, "low", "2026-10-01", ""), "FH-2")
+	if !slices.Equal(got, []string{"FH-1", "FH-2", "FH-9", "FH-3"}) {
+		t.Errorf("order = %v", got)
+	}
+}

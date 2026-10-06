@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/mdfile"
@@ -192,5 +193,80 @@ func TestArchivedProjectsRepositoryIsNotRecreated(t *testing.T) {
 	// Another repository with the same name still gets its own project.
 	if name, err := s.ProjectFor("alpha", "/Users/example/src/other/alpha", true); err != nil || name == "alpha" {
 		t.Errorf("other repository: %q, %v", name, err)
+	}
+}
+
+func TestASymlinkedProjectIsNotArchived(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	// A link inside the root (absolute links that leave it are refused by
+	// the root itself).
+	if err := os.Symlink("beta", filepath.Join(root, "linked")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ArchiveProject("linked"); !errors.Is(err, ErrInvalidInput) {
+		t.Errorf("archive a symlinked project: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, "linked")); err != nil {
+		t.Errorf("the link moved: %v", err)
+	}
+}
+
+func TestAWriterWaitingWhileItsProjectIsArchivedLeavesNoTrace(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	release, err := s.lock("alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	other := open(t, root)
+	done := make(chan error, 1)
+	go func() {
+		done <- other.AppendEventLines("alpha", "2026-10-06.jsonl", []byte("{}\n"))
+	}()
+	time.Sleep(100 * time.Millisecond)
+	// The project is archived while the writer waits for its lock.
+	if err := os.MkdirAll(filepath.Join(root, ".archive"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(filepath.Join(root, "alpha"), filepath.Join(root, ".archive", "alpha")); err != nil {
+		t.Fatal(err)
+	}
+	release()
+	if err := <-done; !errors.Is(err, ErrNotFound) {
+		t.Errorf("writer error = %v, want ErrNotFound", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "alpha")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the writer recreated alpha: %v", err)
+	}
+	if err := s.RestoreProject("alpha"); err != nil {
+		t.Errorf("restore: %v", err)
+	}
+}
+
+func TestDeletesRefuseLinksAnywhereOnTheirPath(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	// alpha's archive folder is a link into beta's live tickets.
+	if err := os.RemoveAll(filepath.Join(root, "alpha", ".archive")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "alpha", ".archive"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("..", "..", "beta", "tickets"), filepath.Join(root, "alpha", ".archive", "tickets")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PlanDelete("alpha", "BE-1"); !errors.Is(err, ErrInvalidInput) {
+		t.Errorf("plan through a linked archive: %v", err)
+	}
+	if _, err := s.DeleteArchived("alpha", "BE-1", "x"); !errors.Is(err, ErrInvalidInput) {
+		t.Errorf("delete through a linked archive: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "beta", "tickets", "BE-1-hello")); err != nil {
+		t.Errorf("live ticket damaged: %v", err)
 	}
 }

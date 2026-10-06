@@ -145,6 +145,19 @@ export function BoardView(props: BoardViewProps) {
   });
   const [dragging, setDragging] = useState<Card | null>(null);
   const [drop, setDrop] = useState<DropAt | null>(null);
+  // pointerY follows the pointer while a card is dragged.
+  const pointerY = useRef<number | null>(null);
+  useEffect(() => {
+    if (!dragging) return;
+    const follow = (event: PointerEvent) => {
+      pointerY.current = event.clientY;
+    };
+    window.addEventListener("pointermove", follow, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", follow);
+      pointerY.current = null;
+    };
+  }, [dragging]);
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const refocus = useRef("");
   const grid = useRef<HTMLDivElement>(null);
@@ -313,13 +326,14 @@ export function BoardView(props: BoardViewProps) {
 
   // dropAt finds where in the hovered column a drop would land: below every
   // shown card whose middle is above the pointer. Done keeps most recent
-  // first, and a display sort has no places, so neither shows one.
+  // first, and a display sort has no places, so neither shows one. The
+  // pointer is read from the page, not from the drag's delta, which counts
+  // the board's own scrolling too.
   const dropAt = (event: DragMoveEvent): DropAt | null => {
     const column = event.over?.id as Column | undefined;
-    const start = event.activatorEvent as PointerEvent | undefined;
-    if (!column || column === "done" || !reorderable || !start?.clientY)
+    const pointer = pointerY.current;
+    if (!column || column === "done" || !reorderable || pointer === null)
       return null;
-    const pointer = start.clientY + event.delta.y;
     const nodes = grid.current?.querySelectorAll<HTMLElement>(
       `section[data-column="${column}"] [data-ticket]`,
     );
@@ -339,8 +353,11 @@ export function BoardView(props: BoardViewProps) {
         : next,
     );
   };
-  const onDragStart = (event: DragStartEvent) =>
+  const onDragStart = (event: DragStartEvent) => {
+    const start = event.activatorEvent as PointerEvent | undefined;
+    pointerY.current = start?.clientY ?? null;
     setDragging(cards.find((card) => card.id === event.active.id) ?? null);
+  };
   const onDragEnd = (event: DragEndEvent) => {
     const at = drop;
     setDragging(null);
@@ -424,7 +441,7 @@ export function BoardView(props: BoardViewProps) {
           // grow with their cards and scroll down together, and the row
           // stretches every well to the tallest, or to the board's height
           // when every column is short (ui-layout.md §2).
-          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 auto-rows-[minmax(max-content,1fr)] grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
+          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-pt-16 scroll-px-4 auto-rows-[minmax(max-content,1fr)] grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
           style={{ "--board-columns": columns.length } as CSSProperties}
         >
           {columns.map((column, columnIndex) => (
