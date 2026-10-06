@@ -295,7 +295,7 @@ func TestSessionStartReturnsTheRecoveryNote(t *testing.T) {
 		"context:[Flashheart] run=fake:s1 project=demo (key DM) branch=feature/demo",
 		`Ticket DM-1 "Card panel" (in-progress, linked by branch). Previous run fake:s0 in this worktree is still open, 1 edit since its last checkpoint.`,
 		"Last handoff — Next: Wire the Runs tab.",
-		"Ticket file: " + filepath.Join(root, "demo", "tickets", "DM-1-card-panel", "DM-1-card-panel.md"),
+		"Use the flashheart MCP tools: claim to continue, checkpoint before you stop.",
 	} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("output missing %q:\n%s", part, out)

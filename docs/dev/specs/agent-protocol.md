@@ -272,9 +272,9 @@ Use the flashheart MCP tools: claim to continue, checkpoint before you stop. Tic
 ```
 
 Budget about 400 tokens (1,600 bytes); truncate lists first, never the
-ticket id or "Next". Until the MCP tools exist (`mcp-protocol`), the note
-gives the ticket file's path in place of the line about the tools; a
-previous run that is still open says so instead of "ended". A ticket is
+ticket id or "Next". A previous run that is still open says so instead of
+"ended". Up to three answered questions not yet delivered are listed and
+then count as delivered. A ticket is
 linked to the worktree by branch (`RUN-5`); the previous run is the most
 recent other session in the same worktree in the last day, mentioned only
 when it left edits since its last checkpoint.

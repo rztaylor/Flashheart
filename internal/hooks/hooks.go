@@ -6,8 +6,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
-	"path/filepath"
 	"runtime/debug"
 	"slices"
 	"time"
@@ -265,9 +263,6 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 			linked := &protocol.RecoveryTicket{ID: ticket.ID, Title: ticket.Title, Column: string(ticket.Column), LinkedBy: link.By}
 			if ticket.Handoff != nil {
 				linked.Next = ticket.Handoff.Next
-			}
-			if file, err := s.TicketFile(project, ticket.ID); err == nil {
-				linked.File = filepath.Join(s.Path(), filepath.FromSlash(path.Clean(file)))
 			}
 			note.Ticket = linked
 		}
