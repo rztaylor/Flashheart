@@ -1,7 +1,10 @@
 # metro-theme-rollout
 
-Status: **Partial**. FH-10's contract is written
-([`ui-layout.md`](../specs/ui-layout.md)); FH-11–FH-14 implement it.
+Status: **Partial**. Built on `feature/metro-theme-rollout`: the contract
+([`ui-layout.md`](../specs/ui-layout.md), FH-10) and both themes across the
+shell, Board, Workstreams, card panel, Agents and Table (FH-11–FH-14), with
+DESIGN.md, the surface brief, facts and changelog updated. Open: the user's
+visual sign-off on the delivery tickets' screenshots; then remove this item.
 Planning ticket: FH-9. Delivery tickets: FH-10 through FH-14.
 
 ## Goal

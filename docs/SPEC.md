@@ -446,9 +446,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 
 Desktop-first, information-dense, calm when nothing needs attention. The
 layout and content of every view, in every theme, follow
-`docs/dev/specs/ui-layout.md`; `DESIGN.md` records the visual system (Metro
-Pop light and Night Service dark, D18, replacing the Transit Line Map of
-D14 as the rollout lands).
+`docs/dev/specs/ui-layout.md`; `DESIGN.md` records the visual system: Metro
+Pop in light and Night Service, in black and neutral charcoal, in dark
+(D18), which replaced the Transit Line Map of D14.
 
 - **Shell**: left rail of projects (with Needs you badges) and **All
   projects**; top bar with view switcher (Board · Agents · Workstreams ·

@@ -7,78 +7,59 @@ related_targets: ["frontend/src/features"]
 
 # Board shell, Board, Agents, card panel and Workstreams
 
-Scope: the app shell (project rail, signage header), Board with three card
-densities and virtual columns, Agents view, card panel (Ticket, Edit, Runs
-and Review tabs), Workstreams and Table views.
+Scope: the app shell (band, project rail, page header), Board with three
+card densities and virtual columns, Agents view, card panel (Ticket, Edit,
+Runs and Review tabs; Attachments to come), Workstreams and Table views.
 Visitor mode: Operate. Used ambiently on a second monitor and in focused
 review sessions; must answer at a glance who needs the user, what is moving,
 what is stuck and where each project stands. Pinned by the user: a standard
-kanban structure "with style", light and dark modes.
-
-> Being replaced (D18, D21): Metro Pop light and Night Service charcoal
-> dark, on the layout and content contract in `docs/dev/specs/ui-layout.md`.
-> The direction below describes the shipped Transit Line Map until the
-> rollout lands.
+kanban structure "with style", light and dark modes; Metro Pop for light,
+Night Service in black and neutral charcoal for dark, never navy grounds
+(D18).
 
 ## Direction contract
 
-THESIS: The board is a transit system: each workstream is a coloured line and
-its tickets are stations, so order, progress and blockage read as a route map.
-It refuses the grey SaaS lane-and-badge kanban.
+THESIS: A friendly metro system for work: each workstream is a route with
+its own colour, tickets are its stations, and the board is a bright,
+colourful kanban that still reads as calm, dense tooling. One structure, two
+palettes.
 
-OWN-WORLD: Unimark/Vignelli signage. A black signage band and a black
-project rail form an L-shaped signage frame around a lit platform: the board
-ground is platform grey with a faint map-dot grid, and cards lift off it with
-soft shadows. One grotesk (Helvetica class) in tight sentence case, tabular
-numerals for every count and age. Round line bullets and a 4px left stripe in
-the MTA line palette always mean a workstream. A second, muted paint palette
-shows the board's "Colour by" attribute (type by default; priority, age or
-none), always as a tinted card header plus a tag that names it, with a colour
-key on the board. Ticket state stays monochrome shape plus words (diamond for
-blocked, dashed border and hatched band for needs repair). The only other hue
-is the signal-yellow bolt of the brand mark. (Revised with the user,
-2026-10-05: "Flash by name, Flash by nature".)
+OWN-WORLD: Metro Pop. A Metro-blue band carries the wordmark and the view
+tabs; a warm paper rail lists projects with key badges, route bars and
+counts; columns are cool grey rounded wells holding white rounded cards.
+Route colours (bullet, card stripe, route track) always mean a workstream.
+The Colour by value tints the card header and fills its named tag. Status
+reads as soft pills that always carry an icon and the column's word (amber
+in progress, blue review, green done, red blocked with its reason). Needs
+you is the one orange attention plate. Orange is the primary action.
+Archivo Variable in a heavy condensed cut for titles, tabular numerals,
+sentence case. Night Service keeps every structure and swaps the palette:
+black band, neutral charcoal rail, wells and cards, lime action and focus,
+coral attention, lifted route colours.
 
-STORY: The visitor sees per-project route bars and station-code keys in the
-black rail, columns as station signs, cards whose stripe names the line and
-whose header colour names the chosen attribute, blocked tickets with their
-reason inline, and opens a card to read its handoff, criteria and review in a
-panel beside the board, which narrows and keeps the card's column in view.
+STORY: The visitor sees the band with Needs you, the project's identity as
+the page title, the workstream strip and colour key, five wells of cards
+with stripe, id, title, tags, blockers and live runs, opens a card into the
+panel (status, blocker and priority pills, questions and handoff as callouts,
+criteria as a checklist), and follows each workstream as a route of
+stations on its own colour-washed card.
 
-FIRST VIEWPORT: 48px black band: bolt and wordmark, the current project's key
-and name as a station sign, view tabs (Board, Agents, Workstreams, Table),
-a "N need you" plate while any run needs you, search, quiet status dot and
-Quit right. 248px black rail (key badges only, 3.5rem,
-while a ticket is open below 1440px): All projects, then
-projects with key badge, route bar and counts. Main: filter bar with Colour by
-and density, a strip with the line legend and colour key, then five columns
-on the platform headed by a rule and station-sign label with a right-aligned
-count. Cards: workstream stripe, tinted header with line bullet, title and
-running time; id, colour tag, type and priority; blocked reason line. The card
-panel sits beside the board (clamp(26rem, 32vw, 35rem)); on phones it covers
-the view.
+FIRST VIEWPORT: 56px band (bolt and wordmark, view tabs, Needs you plate,
+search, quiet status dot, Quit); 248px rail (key badges only while a ticket
+is open below 1440px); page header (key badge, display title, one summary
+line); toolbar (New ticket, filters, Show, Colour by, Density); workstream
+strip; five column wells. Structure and content: `docs/dev/specs/ui-layout.md`.
 
-FORM: Transit line map (Vignelli 1972 diagram and Unimark signage); position
-6 of 7 on the ordered list; seed key 4687b54f. Raises: numbers set as data
-(Ikeda); running times right-aligned (cassette j-card); colour quarantined to
-jobs (lexicon); every status paired with its proof (monochrome product); focus
-dims instead of filtering (streaming wall). Signature move: workstreams drawn
-as transit lines with tickets as stations, done stations filled, the next
-station an interchange ring, blocked segments dashed as suspended service.
+FORM: Metro Pop light and Night Service charcoal dark, selected by the user
+from generated comps on 2026-10-06 (references and provenance in
+`.impeccable/mocks/metro-theme-rollout/`). Signature move: workstreams drawn
+as metro routes with tickets as stations, a check only for finished work,
+the next stop as a large ring, suspended service dashed.
 
-PROVENANCE (agent-runs, 2026-10-05): the Agents view, live badges, virtual
-columns, Runs tab and Needs you badges extend this established surface in
-its committed world, code-led with no comp round. Decisions came from the
-user's answers: Agents view as a "Departure board (Recommended)", lane order
-"Needs you first (Recommended)", virtual columns "Before Backlog
-(Recommended)". Showing a virtual column only while it holds tickets was a
-build decision after inspection.
-
-PROVENANCE: The 2026-10-05 board refresh was code-led on this machine (no image
-generation; `config.local.json` buildPath code). Its changes came from the
-user's own decisions in conversation (panel beside the board; black rail with
-key badges; workstream stripe; "Colour by" with type as default and a tinted
-header plus named tag) rather than an approved comp; the comp round was
-skipped.
+PROVENANCE (metro-theme-rollout, 2026-10-06): comp round run with image
+generation; the user chose Metro Pop and Night Service charcoal over Garden
+Line and a navy Night Service (D18). FH-10 reconciled the comps with SPEC
+into `ui-layout.md`; FH-11 to FH-14 built it code-first against those
+references. Replaces the Transit Line Map direction of D14 (2026-10-04).
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

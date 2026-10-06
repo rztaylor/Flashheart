@@ -53,7 +53,7 @@ the board icon in the all scope), then one quiet summary line for the view:
 | View | Summary line |
 | --- | --- |
 | Board | `N tickets` (`n of N tickets` when filtered) |
-| Agents | `N runs` and, when any, `k need you` |
+| Agents | `N live runs` and, when any, `k need(s) you` |
 | Workstreams | `N workstreams` and `d of t stations served` |
 | Table | as Board |
 
