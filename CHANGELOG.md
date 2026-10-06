@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- `scripts/check.sh` runs the 5,000-ticket indexing time check (NFR-1) on
+  its own after the other Go tests, so a busy CI runner no longer fails it;
+  the one-second budget is unchanged (FH-30).
 - New look for the board: Metro Pop in light (a raspberry bar and accent on
   a clean white background) and Night Service in black and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
   Views open with the project's name as a page header; columns are rounded
