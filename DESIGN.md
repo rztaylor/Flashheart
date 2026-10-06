@@ -573,5 +573,6 @@ Selects 32px, card surface, rule border, chevron; an applied filter gains a sele
 - **Don't** use navy or blue-tinted grounds, surfaces or borders in dark.
 - **Don't** use a line colour for status, priority or type, or a paint colour for a workstream.
 - **Don't** add a second attention plate or a second looping animation.
+- **Don't** show more than one marginal remark on a screen, or put one in an error, blocker, permission or control (ui-layout.md §8).
 - **Don't** hardcode the references' sample copy, counts, dates or invented types.
 - **Don't** set labels in tracked uppercase, ids in monospace, or counts in proportional numerals.

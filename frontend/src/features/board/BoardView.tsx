@@ -33,6 +33,7 @@ import {
   type WorkstreamBrief,
 } from "../../api/board";
 import type { VirtualColumn } from "../../api/preferences";
+import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
@@ -455,6 +456,12 @@ export function BoardView(props: BoardViewProps) {
                 {column.cards.length === 0 ? (
                   <EmptySlot>{column.empty}</EmptySlot>
                 ) : null}
+                {column.cards.length === 0 && column.id === "review" ? (
+                  <Aside
+                    placement="review-empty"
+                    className="px-1 text-center"
+                  />
+                ) : null}
                 {column.cards.map((card, rowIndex) => {
                   // The drop line sits above the card at the drop's place
                   // (counting cards other than the dragged one).
@@ -635,11 +642,13 @@ export function NoTickets({ filtered }: { filtered: boolean }) {
   return filtered ? (
     <EmptyState title="No tickets match these filters">
       Clear a filter or the search to see more.
+      <Aside placement="search" className="mt-3" />
     </EmptyState>
   ) : (
     <EmptyState title="No tickets yet">
       The line is open and nothing is running on it. Agents add tickets here as
       they pick up work.
+      <Aside placement="board-empty" className="mt-3" />
     </EmptyState>
   );
 }

@@ -584,6 +584,70 @@ test("projects archive, restore and delete for good", async () => {
   await expect(page.getByText("No archived projects")).toBeVisible();
 });
 
+// remarksIn reads the reviewed remarks with ids in [from, to].
+async function remarksIn(from, to) {
+  const text = await readFile(
+    resolve(import.meta.dirname, "../src/model/remarks.md"),
+    "utf8",
+  );
+  return [...text.matchAll(/^(\d+)\. (.+)$/gm)]
+    .filter(([, id]) => Number(id) >= from && Number(id) <= to)
+    .map(([, , line]) => line.replaceAll("’", "'"));
+}
+
+test("finishing a workstream earns a remark; progress remarks are rare", async () => {
+  // A one-ticket workstream around FH-32 (in Backlog).
+  const folder = (
+    await readdir(join(sandbox.root, "flashheart", "tickets"))
+  ).find((name) => name.startsWith("FH-32-"));
+  const file = join(
+    sandbox.root,
+    "flashheart",
+    "tickets",
+    folder,
+    `${folder}.md`,
+  );
+  const ticket = await readFile(file, "utf8");
+  await writeFile(file, ticket.replace(/^workstream:.*$/m, "workstream: solo"));
+  await writeFile(
+    join(sandbox.root, "flashheart", "workstreams", "solo.md"),
+    "---\nslug: solo\nstatus: active\npriority: low\ncreated: 2026-10-06\ntickets:\n  - FH-32\ndepends-on-workstreams: []\ntags: []\n---\n\n# Solo\n",
+  );
+  // The board loads afresh after the Workstreams view has the new line.
+  await open("#/p/flashheart/workstreams");
+  await expect(page.getByRole("article", { name: "Solo" })).toBeVisible();
+  const toast = page.getByRole("status").filter({ hasText: /^Moved/ });
+  const completion = await remarksIn(61, 70);
+  const progress = await remarksIn(51, 60);
+  const moveToDone = async (id) => {
+    await open(`#/p/flashheart/board?t=${id}`);
+    await page
+      .getByRole("complementary", { name: `Ticket ${id}` })
+      .getByLabel("Move to")
+      .selectOption("done");
+    await expect(toast).toContainText(`Moved ${id} to Done.`);
+  };
+
+  await moveToDone("FH-32");
+  const aside = toast.locator("[data-aside]");
+  await expect(aside).toHaveCount(1);
+  expect(completion).toContain(
+    (await aside.textContent()).replaceAll("’", "'"),
+  );
+
+  // An ordinary move to Done: a progress remark, then none for a while.
+  await moveToDone("FH-33");
+  await expect(aside).toHaveCount(1);
+  expect(progress).toContain((await aside.textContent()).replaceAll("’", "'"));
+  await moveToDone("FH-36");
+  await expect(aside).toHaveCount(0);
+
+  // A fresh load brings no toast and no celebration.
+  await page.reload();
+  await open("#/p/flashheart/board");
+  await expect(toast).toHaveCount(0);
+});
+
 test("stations reorder along their line with Shift and an arrow", async () => {
   await open("#/p/flashheart/workstreams");
   const line = page.getByRole("article", { name: "Board editing" });

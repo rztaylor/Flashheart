@@ -7,6 +7,7 @@ import {
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { reorderWorkstream } from "../../api/edit";
+import { Aside } from "../../components/Aside";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { KeyBadge } from "../../components/KeyBadge";
@@ -48,6 +49,7 @@ export function WorkstreamsView({
         <code className="font-mono">workstreams/&lt;slug&gt;.md</code> with a{" "}
         <code className="font-mono">tickets:</code> list, and it appears here as
         a line.
+        <Aside placement="workstreams-none" className="mt-3" />
       </EmptyState>
     );
   }

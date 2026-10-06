@@ -3,6 +3,7 @@ import { useCallback, useId, useState } from "react";
 import type { ProjectSummary, TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { fetchRun, fetchRuns, type Run, type RunState } from "../../api/runs";
+import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
@@ -89,6 +90,7 @@ export function AgentsView({
         Runs appear here as soon as a Claude Code session with Flashheart's
         hooks starts in one of your repositories. Connect Claude Code with{" "}
         <code className="font-mono text-ink">flashheart setup claude</code>.
+        <Aside placement="agents-none" className="mt-3" />
       </EmptyState>
     );
   }
@@ -114,6 +116,9 @@ export function AgentsView({
             revision={revision}
             now={now}
             onOpen={onOpen}
+            nobodyNeedsYou={projects.every(
+              (summary) => summary.runs.needsYou === 0,
+            )}
             footer={
               lane.state === "ended" && (hiddenEnded > 0 || endedAll) ? (
                 <Button
@@ -146,6 +151,8 @@ interface LaneSectionProps {
   now: Date;
   onOpen(ticket: TicketRef): void;
   footer?: React.ReactNode;
+  // nobodyNeedsYou is true when no run in any project needs the user.
+  nobodyNeedsYou?: boolean;
 }
 
 function LaneSection({
@@ -160,6 +167,7 @@ function LaneSection({
   now,
   onOpen,
   footer,
+  nobodyNeedsYou,
 }: LaneSectionProps) {
   const headingId = useId();
   return (
@@ -175,7 +183,12 @@ function LaneSection({
         mark={state}
       />
       {runs.length === 0 ? (
-        <EmptySlot>{emptyLane[state]}</EmptySlot>
+        <>
+          <EmptySlot>{emptyLane[state]}</EmptySlot>
+          {state === "needs-you" && nobodyNeedsYou ? (
+            <Aside placement="needs-you-clear" className="mt-2 px-1" />
+          ) : null}
+        </>
       ) : (
         <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
           {runs.map((entry) => (

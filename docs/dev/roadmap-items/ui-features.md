@@ -1,6 +1,6 @@
 # ui-features
 
-Status: **Partial**. Tracked on the dogfood board as the `ui-features`
+Status: **Partial** (all built; awaiting the user's review). Tracked on the dogfood board as the `ui-features`
 workstream: FH-24, FH-23, FH-20, FH-21, FH-22, in that order. No roadmap
 dependencies; FH-22 follows the Metro Pop rollout (FH-14).
 
@@ -24,7 +24,7 @@ restrained humour in secondary copy.
   `KEY-5`, D25); agents in an archived project's repository are not
   recorded (`project_archived`). **Built.**
 - FH-22 — discreet Blackadder remarks from the reviewed collection in
-  secondary copy.
+  secondary copy, placed as ui-layout.md §8 lists. **Built.**
 
 Each ticket's acceptance criteria and test plan are on the board; the
 behaviour lands in `docs/SPEC.md`, the board-format and layout specs, the

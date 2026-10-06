@@ -43,6 +43,12 @@ All notable changes to this project are documented here. The project follows
   reserved; a deleted project's key is retired. Agents working in an
   archived project's repository no longer recreate it: hooks stay quiet and
   MCP tools answer `project_archived` (FH-21).
+- Dry marginal remarks from the reviewed Blackadder collection in quiet
+  moments: empty boards and searches, an empty review column, quiet Agents
+  lanes, open runs' plans, handoffs, the toast when a move finishes a
+  workstream (and now and then for other work done), and the stopped
+  screen after Quit. At most one shows per screen; none appears in errors,
+  blockers or anything agents read (FH-22).
 
 - `flashheart` binary: `serve` (default) opens a private, authenticated board
   shell in the browser and returns the terminal, running the server in the

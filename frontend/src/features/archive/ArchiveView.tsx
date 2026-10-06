@@ -4,6 +4,7 @@ import { type Archived, fetchArchive } from "../../api/archive";
 import { COLUMNS, type TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { unarchiveTicket } from "../../api/edit";
+import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchField } from "../../components/Field";
@@ -118,6 +119,7 @@ export function ArchiveView({
       {archive.status === "ready" && items.length > 0 && shown.length === 0 ? (
         <EmptyState title="No archived tickets match">
           Clear the search to see all {items.length}.
+          <Aside placement="search" className="mt-3" />
         </EmptyState>
       ) : null}
       {shown.length > 0 ? (

@@ -622,6 +622,44 @@ for (const theme of ["light", "dark"]) {
   });
 }
 
+test("marginal remarks: one per screen, only in quiet states, and stable", async () => {
+  const page = shared;
+  const asides = page.locator("[data-aside]:visible");
+  for (const hash of [
+    "#/p/flashheart/board",
+    "#/all/board",
+    "#/all/agents",
+    "#/p/flashheart/workstreams",
+    "#/p/flashheart/table",
+    "#/p/flashheart/board?t=FH-11",
+    "#/p/alpha/board?t=AL-3",
+  ]) {
+    await open(page, hash);
+    await page.waitForTimeout(150);
+    expect(await asides.count(), hash).toBeLessThanOrEqual(1);
+  }
+
+  // A search that finds nothing earns one remark, which stays put while
+  // the board refreshes and re-renders.
+  await open(page, "#/p/flashheart/board");
+  await page
+    .getByRole("searchbox", { name: "Search tickets" })
+    .fill("no ticket says this");
+  const empty = page.getByText("No tickets match these filters");
+  await expect(empty).toBeVisible();
+  await expect(asides).toHaveCount(1);
+  const first = await asides.textContent();
+  await page.getByText("Compact", { exact: true }).click();
+  await page.waitForTimeout(1500);
+  await page.getByText("Normal", { exact: true }).click();
+  expect(await asides.textContent()).toBe(first);
+  // Remarks never sit in alerts, blockers or controls.
+  await expect(page.locator("[role=alert] [data-aside]")).toHaveCount(0);
+  await expect(page.locator("button [data-aside]")).toHaveCount(0);
+  await page.getByRole("searchbox", { name: "Search tickets" }).fill("");
+  await expect(empty).toHaveCount(0);
+});
+
 test("no request leaves the loopback origin", async () => {
   const page = shared;
   const foreign = [];

@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 
+import type { Placement } from "../model/remarks";
+import { Aside } from "./Aside";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
 
@@ -9,6 +11,9 @@ export interface ToastMessage {
   // detail lines, such as review warnings, shown under the text.
   details?: string[];
   action?: { label: string; run(): void };
+  // aside is a marginal remark earned by the result (FH-22); it is not
+  // announced.
+  aside?: { placement: Placement; text: string };
 }
 
 // An action such as Undo stays long enough to reach by keyboard.
@@ -50,6 +55,14 @@ export function Toast({
                 {detail}
               </p>
             ))}
+            {message.aside ? (
+              <Aside
+                placement={message.aside.placement}
+                text={message.aside.text}
+                hidden
+                className="mt-1 text-on-band-muted"
+              />
+            ) : null}
           </div>
           {message.action ? (
             <Button

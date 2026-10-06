@@ -49,7 +49,13 @@ const failure = (error: unknown) =>
 // EDIT-3, EDIT-8): it shows the new column and place at once (EDIT-9), asks
 // for a reason before starting a blocked ticket, and announces each result
 // with Undo, which puts the ticket back in its old column and place.
-export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
+// remark, when given, picks a marginal remark for a successful move's toast
+// (FH-22); it is asked only after the save succeeds.
+export function useEditing(
+  fetcher: AuthenticatedFetch,
+  onChanged: () => void,
+  remark?: (ticket: Movable, to: Column) => ToastMessage["aside"],
+) {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [blocked, setBlocked] = useState<BlockedMove | null>(null);
   const [pending, setPending] = useState<Record<string, Pending>>({});
@@ -101,6 +107,7 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
               ? `Moved ${ticket.id} in ${columnTitle(to)}.`
               : `Moved ${ticket.id} to ${columnTitle(to)}.`,
           details: saved.warnings,
+          aside: remark?.(ticket, to),
           action: {
             label: "Undo",
             run: () =>
@@ -125,7 +132,7 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
         notify({ text: `${ticket.id} was not moved: ${failure(error)}` });
       }
     },
-    [fetcher, notify, onChanged, settle],
+    [fetcher, notify, onChanged, settle, remark],
   );
 
   const confirmBlocked = useCallback(

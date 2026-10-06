@@ -240,6 +240,24 @@ is dashed and hatched in ink.
 | Long content | Titles wrap (card three lines, then clamped); ids never cut; paths, branches and run ids cut from the start |
 | Narrow (< 48rem) | Rail hidden, control row with Project and Column pickers, band tabs as icons, Needs you plate keeps its words, panel covers the view |
 | Backend lost / stopped | Band status in words; the stopped screen replaces the app (`LIFE-1`) |
+| Marginal remark | At most one per screen: one quiet line in faint ink under a real quiet state, chosen once from its placement's lines (below) and kept while shown, never the line shown last. Never in errors, blockers, permissions, controls or anything to act on; identical in both themes; no motion |
+
+Marginal remarks come from the reviewed collection in
+`frontend/src/model/remarks.md` (ids are its numbers). Placements, highest
+priority first when several are on screen:
+
+| Placement | When | Lines |
+| --- | --- | --- |
+| Move toast (not announced) | A move to Done that finishes its workstream: completion. Any other move to Done: progress, at most every ten minutes | 61–70; 51–53, 55, 57, 58 |
+| Card panel | A current handoff (not stale) with a next step; an in-progress ticket with no handoff | 75, 77, 79, 80; 73 |
+| Open run (Agents) | A plan; no plan | 32, 34–36, 39, 40; 33 |
+| Empty views | No tickets; nothing matches the filters or search (also the archive's search); no workstreams; no agent runs | 21–30 (reviewed ones); 82–88; 31; 41–50 |
+| Columns and lanes | Ready to review is empty; the Needs you lane is empty and nothing anywhere needs you | 71, 72; 11–19 |
+| Stopped screen | After a successful Quit only (never on a lost or failed connection) | 92–100 |
+| Wordmark tooltip | Always; an Easter egg, never visible text | 1–7 |
+
+Deferred: 54 (claims a plan's first task) and 60 (claims a reader for a
+handoff).
 
 Focus is always visible; reduced motion removes transitions, the panel
 reveal and the Working beat; every control has an accessible name; contrast

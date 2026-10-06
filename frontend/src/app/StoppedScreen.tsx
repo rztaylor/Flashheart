@@ -1,3 +1,4 @@
+import { Aside } from "../components/Aside";
 import { Button } from "../components/Button";
 
 interface StoppedScreenProps {
@@ -21,6 +22,9 @@ export function StoppedScreen({ phase, failures, detail }: StoppedScreenProps) {
           {copy.heading}
         </h1>
         <p className="mt-3 text-ink-muted">{copy.body}</p>
+        {phase === "stopped" ? (
+          <Aside placement="shutdown" className="mt-3" />
+        ) : null}
         {copy.restart ? (
           <p className="mt-3 text-ink-muted">
             To start it again, run <code>flashheart</code> in a terminal.

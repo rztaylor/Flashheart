@@ -11,6 +11,7 @@ import {
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { conflictOf, type Saved, setCriterion } from "../../api/edit";
+import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
@@ -581,7 +582,12 @@ export function TicketTab({
               </Markdown>
             </div>
           </details>
+          {!stale && detail.handoff.next.length > 0 ? (
+            <Aside placement="handoff" className="mt-3" />
+          ) : null}
         </section>
+      ) : detail.column === "in-progress" ? (
+        <Aside placement="handoff-missing" />
       ) : null}
 
       <ReasonList

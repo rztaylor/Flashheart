@@ -12,12 +12,13 @@ import {
 import type { Created } from "../api/edit";
 import type { ThemePreference } from "../api/info";
 import type { Preferences } from "../api/preferences";
+import { AsideProvider } from "../components/Aside";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
 import { RunStateMark } from "../components/RunState";
-import { Toast } from "../components/Toast";
+import { Toast, type ToastMessage } from "../components/Toast";
 import { AgentsView } from "../features/agents/AgentsView";
 import { ArchiveView } from "../features/archive/ArchiveView";
 import { ProjectsArchiveView } from "../features/archive/ProjectsArchiveView";
@@ -25,7 +26,7 @@ import { BoardView, NoTickets } from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
-import { useEditing } from "../features/editing/useEditing";
+import { type Movable, useEditing } from "../features/editing/useEditing";
 import { FilterBar } from "../features/filters/FilterBar";
 import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
@@ -46,6 +47,7 @@ import {
   predecessor,
   type Step,
 } from "../model/order";
+import { completesWorkstream, nextRemark, progressDue } from "../model/remarks";
 import { filtersFor, rememberScope, sameScope } from "../model/scopes";
 import { viewSummary } from "../model/summary";
 import { useResource } from "../state/useResource";
@@ -132,7 +134,29 @@ export function Shell({
     projects.reload();
     board.reload();
   }, [projects.reload, board.reload]);
-  const editing = useEditing(fetcher, reloadAll);
+  // A move to Done may earn a remark in its toast (FH-22): completion only
+  // when it finishes a workstream, otherwise progress now and then.
+  const cardsForRemarks = useRef<Card[]>([]);
+  const lastProgress = useRef<number | undefined>(undefined);
+  const remark = useCallback(
+    (ticket: Movable, to: Column): ToastMessage["aside"] => {
+      if (to !== "done" || ticket.column === "done") return undefined;
+      const cards = cardsForRemarks.current;
+      const card = cards.find((item) => item.id === ticket.id);
+      if (
+        card &&
+        completesWorkstream(cards, { ...card, column: ticket.column }, to)
+      )
+        return { placement: "completion", text: nextRemark("completion").text };
+      const now = Date.now();
+      if (!progressDue(lastProgress.current, now)) return undefined;
+      lastProgress.current = now;
+      return { placement: "progress", text: nextRemark("progress").text };
+    },
+    [],
+  );
+  const editing = useEditing(fetcher, reloadAll, remark);
+  const [brand] = useState(() => nextRemark("brand").text);
   const { reconcile } = editing;
 
   // The view and filters are remembered per project (VIEW-7, CFG-2).
@@ -208,6 +232,7 @@ export function Shell({
       ),
     [loadedCards, editing.pending],
   );
+  cardsForRemarks.current = allCards;
   const visible = useMemo(
     () => applyFilters(allCards, filters),
     [allCards, filters],
@@ -338,459 +363,466 @@ export function Shell({
   });
 
   return (
-    <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3.5rem_auto_1fr]">
-      <header className="relative flex min-w-0 items-center gap-1.5 overflow-hidden bg-band px-3 text-on-band sm:gap-6 sm:px-5">
-        <span className="flex items-center gap-2">
-          <Bolt />
-          <span className="wordmark text-xl max-sm:sr-only">Flashheart</span>
-        </span>
-        <nav aria-label="Views" className="flex items-center gap-0.5 sm:gap-1">
-          {views.map((view) => {
-            const active = route.view === view.id;
-            return (
-              <a
-                key={view.id}
-                href={`#${view.id}`}
-                aria-current={active ? "page" : undefined}
-                onClick={(event) => {
-                  event.preventDefault();
-                  go({ view: view.id });
-                  remember(filters, view.id);
-                }}
-                className={`flex h-9 items-center gap-2 rounded-control px-2 text-sm font-semibold transition-colors focus-visible:outline-on-band sm:px-3 ${
-                  active
-                    ? "bg-band-tab-active text-on-band-tab-active shadow-card"
-                    : "text-on-band-muted hover:bg-band-field hover:text-on-band"
-                }`}
-              >
-                <Icon name={view.icon} size={16} />
-                <span className="max-sm:sr-only">{view.label}</span>
-              </a>
-            );
-          })}
-        </nav>
-        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
-          {needsYou > 0 ? (
-            <button
-              type="button"
-              onClick={() => {
-                go({
-                  scope: { kind: "all" },
-                  view: "agents",
-                  ticket: undefined,
-                });
-              }}
-              className="flex h-8 items-center gap-1.5 rounded-full bg-attention px-2.5 text-xs font-semibold whitespace-nowrap sm:h-9 sm:px-3.5 sm:text-sm text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band"
-            >
-              <RunStateMark state="needs-you" size={11} />
-              {needsYou}
-              <span className="hidden sm:inline">
-                {needsYou === 1 ? " needs you" : " need you"}
-              </span>
-              <span className="sm:hidden">
-                {needsYou === 1 ? " agent needs you" : " agents need you"}
-              </span>
-            </button>
-          ) : null}
-          {route.view === "board" || route.view === "table" ? (
-            <div className="hidden md:flex">
-              <SearchField
-                label="Search tickets"
-                placeholder="Search id, title, text, tags"
-                value={filters.query}
-                onChange={(query) => setFilters({ ...filters, query })}
-              />
-            </div>
-          ) : null}
-          <BackendStatus
-            state={state}
-            checking={lifecycle.checking}
-            onCheck={() => void lifecycle.checkHealth()}
-          />
-          <Button
-            variant="band"
-            className="h-9 py-0 max-sm:px-2"
-            onClick={() => void lifecycle.quit()}
-            disabled={!ready || stopping}
-          >
-            <Icon name="power" size={14} />
-            <span className="max-sm:sr-only">
-              {stopping ? "Quitting…" : "Quit"}
+    <AsideProvider>
+      <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3.5rem_auto_1fr]">
+        <header className="relative flex min-w-0 items-center gap-1.5 overflow-hidden bg-band px-3 text-on-band sm:gap-6 sm:px-5">
+          <span className="flex items-center gap-2">
+            <Bolt />
+            <span className="wordmark text-xl max-sm:sr-only" title={brand}>
+              Flashheart
             </span>
-          </Button>
-        </div>
-      </header>
-
-      <div>
-        {state.shutdownDenied ? (
-          <div
-            role="alert"
-            className="flex items-center justify-between gap-4 border-b border-rule bg-danger-surface px-4 py-2 text-sm"
+          </span>
+          <nav
+            aria-label="Views"
+            className="flex items-center gap-0.5 sm:gap-1"
           >
-            <span>
-              <strong className="font-semibold">
-                Flashheart did not quit.
-              </strong>{" "}
-              {state.shutdownDenied}
-            </span>
-            <Button variant="quiet" onClick={lifecycle.dismissDenial}>
-              Dismiss
-            </Button>
-          </div>
-        ) : null}
-        {board.status === "ready" && board.error ? (
-          <p
-            role="status"
-            className="border-b border-rule bg-well px-4 py-1.5 text-xs text-ink-muted"
-          >
-            Showing the last good copy: {board.error}
-          </p>
-        ) : null}
-      </div>
-
-      {/* Below 1440px an open panel shrinks the rail to its key badges so the
-          board keeps three whole columns. */}
-      <div
-        data-panel={route.ticket ? "open" : undefined}
-        className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[4rem_minmax(0,1fr)_auto]"
-      >
-        <div className="hidden min-h-0 flex-col border-r border-rail-rule bg-rail md:flex">
-          <div className="min-h-0 flex-1">
-            <ProjectRail
-              projects={summaries}
-              runs={
-                projects.status === "ready" ? projects.data.runs : undefined
-              }
-              scope={route.scope}
-              onSelect={selectScope}
-            />
-          </div>
-          <RailFooter
-            root={root}
-            info={info}
-            theme={preferences.theme}
-            onTheme={(theme) =>
-              updatePreferences((current) => ({ ...current, theme }))
-            }
-          />
-        </div>
-
-        <main
-          className="flex min-h-0 min-w-0 flex-col"
-          aria-label={`${scopeName} ${route.view}`}
-        >
-          <PageHeader
-            projectKey={current?.key}
-            title={scopeName}
-            summary={summary}
-            live={route.view === "board" || route.view === "table"}
-            aside={
-              route.view !== "archive" &&
-              projects.status === "ready" &&
-              (current || route.scope.kind === "all") ? (
+            {views.map((view) => {
+              const active = route.view === view.id;
+              return (
                 <a
-                  href={formatRoute({
-                    ...route,
-                    view: "archive",
-                    ticket: undefined,
-                  })}
+                  key={view.id}
+                  href={`#${view.id}`}
+                  aria-current={active ? "page" : undefined}
                   onClick={(event) => {
                     event.preventDefault();
-                    go({ view: "archive", ticket: undefined });
+                    go({ view: view.id });
+                    remember(filters, view.id);
                   }}
-                  className="flex items-center gap-1.5 rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-well hover:text-ink"
+                  className={`flex h-9 items-center gap-2 rounded-control px-2 text-sm font-semibold transition-colors focus-visible:outline-on-band sm:px-3 ${
+                    active
+                      ? "bg-band-tab-active text-on-band-tab-active shadow-card"
+                      : "text-on-band-muted hover:bg-band-field hover:text-on-band"
+                  }`}
                 >
-                  <Icon name="archive" size={14} />
-                  Archive
-                  <span className="tabular-nums">
-                    {current
-                      ? current.archived
-                      : projects.data.archivedProjects}
-                  </span>
+                  <Icon name={view.icon} size={16} />
+                  <span className="max-sm:sr-only">{view.label}</span>
                 </a>
-              ) : undefined
-            }
-          />
-          <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
+              );
+            })}
+          </nav>
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
+            {needsYou > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  go({
+                    scope: { kind: "all" },
+                    view: "agents",
+                    ticket: undefined,
+                  });
+                }}
+                className="flex h-8 items-center gap-1.5 rounded-full bg-attention px-2.5 text-xs font-semibold whitespace-nowrap sm:h-9 sm:px-3.5 sm:text-sm text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band"
+              >
+                <RunStateMark state="needs-you" size={11} />
+                {needsYou}
+                <span className="hidden sm:inline">
+                  {needsYou === 1 ? " needs you" : " need you"}
+                </span>
+                <span className="sm:hidden">
+                  {needsYou === 1 ? " agent needs you" : " agents need you"}
+                </span>
+              </button>
+            ) : null}
             {route.view === "board" || route.view === "table" ? (
-              <div className="flex w-full">
+              <div className="hidden md:flex">
                 <SearchField
-                  tone="plain"
                   label="Search tickets"
-                  placeholder="Search tickets"
+                  placeholder="Search id, title, text, tags"
                   value={filters.query}
                   onChange={(query) => setFilters({ ...filters, query })}
                 />
               </div>
             ) : null}
-            <SelectField
-              label="Project"
-              value={scopeProject}
-              onChange={(project) =>
-                selectScope(
-                  project ? { kind: "project", project } : { kind: "all" },
-                )
-              }
+            <BackendStatus
+              state={state}
+              checking={lifecycle.checking}
+              onCheck={() => void lifecycle.checkHealth()}
+            />
+            <Button
+              variant="band"
+              className="h-9 py-0 max-sm:px-2"
+              onClick={() => void lifecycle.quit()}
+              disabled={!ready || stopping}
             >
-              <option value="">All projects</option>
-              {summaries.map((project) => (
-                <option key={project.name} value={project.name}>
-                  {project.displayName}
-                </option>
-              ))}
-            </SelectField>
-            {route.view === "board" ? (
+              <Icon name="power" size={14} />
+              <span className="max-sm:sr-only">
+                {stopping ? "Quitting…" : "Quit"}
+              </span>
+            </Button>
+          </div>
+        </header>
+
+        <div>
+          {state.shutdownDenied ? (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-4 border-b border-rule bg-danger-surface px-4 py-2 text-sm"
+            >
+              <span>
+                <strong className="font-semibold">
+                  Flashheart did not quit.
+                </strong>{" "}
+                {state.shutdownDenied}
+              </span>
+              <Button variant="quiet" onClick={lifecycle.dismissDenial}>
+                Dismiss
+              </Button>
+            </div>
+          ) : null}
+          {board.status === "ready" && board.error ? (
+            <p
+              role="status"
+              className="border-b border-rule bg-well px-4 py-1.5 text-xs text-ink-muted"
+            >
+              Showing the last good copy: {board.error}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Below 1440px an open panel shrinks the rail to its key badges so the
+          board keeps three whole columns. */}
+        <div
+          data-panel={route.ticket ? "open" : undefined}
+          className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[4rem_minmax(0,1fr)_auto]"
+        >
+          <div className="hidden min-h-0 flex-col border-r border-rail-rule bg-rail md:flex">
+            <div className="min-h-0 flex-1">
+              <ProjectRail
+                projects={summaries}
+                runs={
+                  projects.status === "ready" ? projects.data.runs : undefined
+                }
+                scope={route.scope}
+                onSelect={selectScope}
+              />
+            </div>
+            <RailFooter
+              root={root}
+              info={info}
+              theme={preferences.theme}
+              onTheme={(theme) =>
+                updatePreferences((current) => ({ ...current, theme }))
+              }
+            />
+          </div>
+
+          <main
+            className="flex min-h-0 min-w-0 flex-col"
+            aria-label={`${scopeName} ${route.view}`}
+          >
+            <PageHeader
+              projectKey={current?.key}
+              title={scopeName}
+              summary={summary}
+              live={route.view === "board" || route.view === "table"}
+              aside={
+                route.view !== "archive" &&
+                projects.status === "ready" &&
+                (current || route.scope.kind === "all") ? (
+                  <a
+                    href={formatRoute({
+                      ...route,
+                      view: "archive",
+                      ticket: undefined,
+                    })}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      go({ view: "archive", ticket: undefined });
+                    }}
+                    className="flex items-center gap-1.5 rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-well hover:text-ink"
+                  >
+                    <Icon name="archive" size={14} />
+                    Archive
+                    <span className="tabular-nums">
+                      {current
+                        ? current.archived
+                        : projects.data.archivedProjects}
+                    </span>
+                  </a>
+                ) : undefined
+              }
+            />
+            <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
+              {route.view === "board" || route.view === "table" ? (
+                <div className="flex w-full">
+                  <SearchField
+                    tone="plain"
+                    label="Search tickets"
+                    placeholder="Search tickets"
+                    value={filters.query}
+                    onChange={(query) => setFilters({ ...filters, query })}
+                  />
+                </div>
+              ) : null}
               <SelectField
-                label="Column"
-                value={narrowShown}
-                onChange={setNarrowColumn}
+                label="Project"
+                value={scopeProject}
+                onChange={(project) =>
+                  selectScope(
+                    project ? { kind: "project", project } : { kind: "all" },
+                  )
+                }
               >
-                {narrowVirtual.map((column) => (
-                  <option key={column.id} value={column.id}>
-                    {column.title}
-                  </option>
-                ))}
-                {COLUMNS.map((column) => (
-                  <option key={column.id} value={column.id}>
-                    {column.title}
+                <option value="">All projects</option>
+                {summaries.map((project) => (
+                  <option key={project.name} value={project.name}>
+                    {project.displayName}
                   </option>
                 ))}
               </SelectField>
+              {route.view === "board" ? (
+                <SelectField
+                  label="Column"
+                  value={narrowShown}
+                  onChange={setNarrowColumn}
+                >
+                  {narrowVirtual.map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.title}
+                    </option>
+                  ))}
+                  {COLUMNS.map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.title}
+                    </option>
+                  ))}
+                </SelectField>
+              ) : null}
+            </div>
+
+            {projects.status === "error" ? (
+              <p role="alert" className="m-4 text-sm text-danger">
+                The board could not be read: {projects.error}
+              </p>
             ) : null}
-          </div>
 
-          {projects.status === "error" ? (
-            <p role="alert" className="m-4 text-sm text-danger">
-              The board could not be read: {projects.error}
-            </p>
-          ) : null}
+            {v1Projects.length > 0 && projects.status === "ready" ? (
+              <V1Notice
+                projects={v1Projects}
+                command={projects.data.migrateCommand}
+              />
+            ) : null}
 
-          {v1Projects.length > 0 && projects.status === "ready" ? (
-            <V1Notice
-              projects={v1Projects}
-              command={projects.data.migrateCommand}
+            {rootMissing ? (
+              <EmptyState title="No board here yet">
+                Flashheart reads tickets from{" "}
+                <code className="font-mono text-ink">{root}</code>, which does
+                not exist yet. Agents create it when they first record work, or
+                make a project folder there with a{" "}
+                <code className="font-mono">tickets/</code> directory inside.
+              </EmptyState>
+            ) : route.view === "archive" ? (
+              current ? (
+                <ArchiveView
+                  fetcher={fetcher}
+                  project={current.name}
+                  revision={revision}
+                  editing={editing}
+                  onOpen={openTicket}
+                  onBack={() => go({ view: "board", ticket: undefined })}
+                  onProjectArchived={(displayName) =>
+                    projectArchived(current.name, displayName)
+                  }
+                />
+              ) : projects.status === "ready" && route.scope.kind === "all" ? (
+                <ProjectsArchiveView
+                  fetcher={fetcher}
+                  revision={revision}
+                  projects={summaries}
+                  editing={editing}
+                  onArchived={projectArchived}
+                  onOpenProject={(project) =>
+                    navigate({
+                      scope: { kind: "project", project },
+                      view: "board",
+                    })
+                  }
+                  onBack={() => go({ view: "board", ticket: undefined })}
+                />
+              ) : projects.status === "ready" ? (
+                <EmptyState title="No such project">
+                  {scopeProject} is not on the board. It may have been archived;
+                  see All projects › Archive.
+                </EmptyState>
+              ) : (
+                <BoardSkeleton />
+              )
+            ) : route.view === "agents" ? (
+              projects.status === "ready" ? (
+                <AgentsView
+                  fetcher={fetcher}
+                  project={scopeProject}
+                  projects={summaries}
+                  revision={revision}
+                  onOpen={openTicket}
+                  onAnswer={editing.answer}
+                />
+              ) : (
+                <BoardSkeleton />
+              )
+            ) : route.view === "workstreams" ? (
+              projects.status === "ready" ? (
+                <WorkstreamsView
+                  projects={current ? [current] : summaries}
+                  fetcher={fetcher}
+                  lines={lines}
+                  revision={revision}
+                  editing={editing}
+                  onOpen={openTicket}
+                />
+              ) : (
+                <BoardSkeleton />
+              )
+            ) : (
+              <>
+                <FilterBar
+                  filters={filters}
+                  options={options}
+                  onChange={setFilters}
+                  density={route.view === "board" ? density : undefined}
+                  onDensity={
+                    route.view === "board"
+                      ? (value) =>
+                          updatePreferences((current) => ({
+                            ...current,
+                            density: value,
+                          }))
+                      : undefined
+                  }
+                  virtualColumns={
+                    route.view === "board" ? shownVirtual : undefined
+                  }
+                  onVirtualColumns={
+                    route.view === "board"
+                      ? (virtualColumns) =>
+                          updatePreferences((current) => ({
+                            ...current,
+                            virtualColumns,
+                          }))
+                      : undefined
+                  }
+                  paint={route.view === "board" ? paint : undefined}
+                  onPaint={
+                    route.view === "board"
+                      ? (value) =>
+                          updatePreferences((current) => ({
+                            ...current,
+                            colourBy: value,
+                          }))
+                      : undefined
+                  }
+                  onNewTicket={
+                    summaries.length > 0 ? () => setNewTicket(true) : undefined
+                  }
+                />
+                {board.status === "loading" ? <BoardSkeleton /> : null}
+                {board.status === "error" ? (
+                  <div className="m-4 flex items-center gap-3 text-sm">
+                    <p role="alert" className="text-danger">
+                      This board could not be loaded: {board.error}
+                    </p>
+                    <Button onClick={board.reload}>
+                      <Icon name="refresh" size={14} />
+                      Try again
+                    </Button>
+                  </div>
+                ) : null}
+                {board.status === "ready" && visible.length === 0 ? (
+                  <NoTickets filtered={isFiltered(filters)} />
+                ) : null}
+                {board.status === "ready" &&
+                visible.length > 0 &&
+                route.view === "board" ? (
+                  <div
+                    className="min-h-0 flex-1"
+                    data-narrow-column={narrowShown}
+                  >
+                    <BoardView
+                      cards={visible}
+                      lines={lines}
+                      workstreams={workstreams}
+                      legend={
+                        current
+                          ? {
+                              project: current.name,
+                              workstreams: current.workstreams,
+                            }
+                          : undefined
+                      }
+                      projectNames={projectNames}
+                      density={density}
+                      paint={paint}
+                      virtualColumns={shownVirtual}
+                      selected={route.ticket}
+                      doneTotal={board.data.doneTotal}
+                      doneShown={board.data.doneShown}
+                      doneAll={doneAll}
+                      onDoneAll={setDoneAll}
+                      onOpen={openTicket}
+                      onMove={place}
+                    />
+                  </div>
+                ) : null}
+                {board.status === "ready" &&
+                visible.length > 0 &&
+                route.view === "table" ? (
+                  <div className="min-h-0 flex-1">
+                    <TableView
+                      cards={visible}
+                      lines={lines}
+                      workstreams={workstreams}
+                      projectNames={projectNames}
+                      selected={route.ticket}
+                      onOpen={openTicket}
+                    />
+                  </div>
+                ) : null}
+              </>
+            )}
+          </main>
+
+          {route.ticket ? (
+            <CardPanel
+              key={route.ticket.id}
+              ticket={route.ticket}
+              fetcher={fetcher}
+              lines={lines}
+              workstreamTitle={workstreamTitle}
+              keys={keys}
+              onOpen={openTicket}
+              onClose={closeTicket}
+              revision={revision}
+              editing={editing}
+              onStep={stepTicket}
+              workstreamsOf={(project) => workstreams.get(project) ?? []}
             />
           ) : null}
+        </div>
 
-          {rootMissing ? (
-            <EmptyState title="No board here yet">
-              Flashheart reads tickets from{" "}
-              <code className="font-mono text-ink">{root}</code>, which does not
-              exist yet. Agents create it when they first record work, or make a
-              project folder there with a{" "}
-              <code className="font-mono">tickets/</code> directory inside.
-            </EmptyState>
-          ) : route.view === "archive" ? (
-            current ? (
-              <ArchiveView
-                fetcher={fetcher}
-                project={current.name}
-                revision={revision}
-                editing={editing}
-                onOpen={openTicket}
-                onBack={() => go({ view: "board", ticket: undefined })}
-                onProjectArchived={(displayName) =>
-                  projectArchived(current.name, displayName)
-                }
-              />
-            ) : projects.status === "ready" && route.scope.kind === "all" ? (
-              <ProjectsArchiveView
-                fetcher={fetcher}
-                revision={revision}
-                projects={summaries}
-                editing={editing}
-                onArchived={projectArchived}
-                onOpenProject={(project) =>
-                  navigate({
-                    scope: { kind: "project", project },
-                    view: "board",
-                  })
-                }
-                onBack={() => go({ view: "board", ticket: undefined })}
-              />
-            ) : projects.status === "ready" ? (
-              <EmptyState title="No such project">
-                {scopeProject} is not on the board. It may have been archived;
-                see All projects › Archive.
-              </EmptyState>
-            ) : (
-              <BoardSkeleton />
-            )
-          ) : route.view === "agents" ? (
-            projects.status === "ready" ? (
-              <AgentsView
-                fetcher={fetcher}
-                project={scopeProject}
-                projects={summaries}
-                revision={revision}
-                onOpen={openTicket}
-                onAnswer={editing.answer}
-              />
-            ) : (
-              <BoardSkeleton />
-            )
-          ) : route.view === "workstreams" ? (
-            projects.status === "ready" ? (
-              <WorkstreamsView
-                projects={current ? [current] : summaries}
-                fetcher={fetcher}
-                lines={lines}
-                revision={revision}
-                editing={editing}
-                onOpen={openTicket}
-              />
-            ) : (
-              <BoardSkeleton />
-            )
-          ) : (
-            <>
-              <FilterBar
-                filters={filters}
-                options={options}
-                onChange={setFilters}
-                density={route.view === "board" ? density : undefined}
-                onDensity={
-                  route.view === "board"
-                    ? (value) =>
-                        updatePreferences((current) => ({
-                          ...current,
-                          density: value,
-                        }))
-                    : undefined
-                }
-                virtualColumns={
-                  route.view === "board" ? shownVirtual : undefined
-                }
-                onVirtualColumns={
-                  route.view === "board"
-                    ? (virtualColumns) =>
-                        updatePreferences((current) => ({
-                          ...current,
-                          virtualColumns,
-                        }))
-                    : undefined
-                }
-                paint={route.view === "board" ? paint : undefined}
-                onPaint={
-                  route.view === "board"
-                    ? (value) =>
-                        updatePreferences((current) => ({
-                          ...current,
-                          colourBy: value,
-                        }))
-                    : undefined
-                }
-                onNewTicket={
-                  summaries.length > 0 ? () => setNewTicket(true) : undefined
-                }
-              />
-              {board.status === "loading" ? <BoardSkeleton /> : null}
-              {board.status === "error" ? (
-                <div className="m-4 flex items-center gap-3 text-sm">
-                  <p role="alert" className="text-danger">
-                    This board could not be loaded: {board.error}
-                  </p>
-                  <Button onClick={board.reload}>
-                    <Icon name="refresh" size={14} />
-                    Try again
-                  </Button>
-                </div>
-              ) : null}
-              {board.status === "ready" && visible.length === 0 ? (
-                <NoTickets filtered={isFiltered(filters)} />
-              ) : null}
-              {board.status === "ready" &&
-              visible.length > 0 &&
-              route.view === "board" ? (
-                <div
-                  className="min-h-0 flex-1"
-                  data-narrow-column={narrowShown}
-                >
-                  <BoardView
-                    cards={visible}
-                    lines={lines}
-                    workstreams={workstreams}
-                    legend={
-                      current
-                        ? {
-                            project: current.name,
-                            workstreams: current.workstreams,
-                          }
-                        : undefined
-                    }
-                    projectNames={projectNames}
-                    density={density}
-                    paint={paint}
-                    virtualColumns={shownVirtual}
-                    selected={route.ticket}
-                    doneTotal={board.data.doneTotal}
-                    doneShown={board.data.doneShown}
-                    doneAll={doneAll}
-                    onDoneAll={setDoneAll}
-                    onOpen={openTicket}
-                    onMove={place}
-                  />
-                </div>
-              ) : null}
-              {board.status === "ready" &&
-              visible.length > 0 &&
-              route.view === "table" ? (
-                <div className="min-h-0 flex-1">
-                  <TableView
-                    cards={visible}
-                    lines={lines}
-                    workstreams={workstreams}
-                    projectNames={projectNames}
-                    selected={route.ticket}
-                    onOpen={openTicket}
-                  />
-                </div>
-              ) : null}
-            </>
-          )}
-        </main>
-
-        {route.ticket ? (
-          <CardPanel
-            key={route.ticket.id}
-            ticket={route.ticket}
-            fetcher={fetcher}
-            lines={lines}
-            workstreamTitle={workstreamTitle}
-            keys={keys}
-            onOpen={openTicket}
-            onClose={closeTicket}
-            revision={revision}
-            editing={editing}
-            onStep={stepTicket}
-            workstreamsOf={(project) => workstreams.get(project) ?? []}
+        {editing.blocked ? (
+          <BlockedMoveDialog
+            move={editing.blocked}
+            onConfirm={editing.confirmBlocked}
+            onCancel={editing.cancelBlocked}
           />
         ) : null}
+        {newTicket ? (
+          <NewTicketDialog
+            fetcher={fetcher}
+            projects={summaries}
+            project={scopeProject}
+            onClose={() => setNewTicket(false)}
+            onCreated={(created: Created) => {
+              setNewTicket(false);
+              reloadAll();
+              editing.notify({ text: `Created ${created.id}.` });
+              openTicket({ id: created.id });
+            }}
+          />
+        ) : null}
+        <Toast message={editing.toast} onDismiss={editing.dismiss} />
       </div>
-
-      {editing.blocked ? (
-        <BlockedMoveDialog
-          move={editing.blocked}
-          onConfirm={editing.confirmBlocked}
-          onCancel={editing.cancelBlocked}
-        />
-      ) : null}
-      {newTicket ? (
-        <NewTicketDialog
-          fetcher={fetcher}
-          projects={summaries}
-          project={scopeProject}
-          onClose={() => setNewTicket(false)}
-          onCreated={(created: Created) => {
-            setNewTicket(false);
-            reloadAll();
-            editing.notify({ text: `Created ${created.id}.` });
-            openTicket({ id: created.id });
-          }}
-        />
-      ) : null}
-      <Toast message={editing.toast} onDismiss={editing.dismiss} />
-    </div>
+    </AsideProvider>
   );
 }
 
