@@ -17,6 +17,7 @@ func TestDefaultsMatchBoardFormat(t *testing.T) {
 		Version:            2,
 		AutoCreateProjects: true,
 		QuietMinutes:       10,
+		LeaseMinutes:       30,
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},

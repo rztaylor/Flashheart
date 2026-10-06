@@ -483,6 +483,7 @@ export function Shell({
                 projects={summaries}
                 revision={revision}
                 onOpen={openTicket}
+                onAnswer={editing.answer}
               />
             ) : (
               <BoardSkeleton />

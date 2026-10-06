@@ -16,13 +16,15 @@ import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Markdown } from "../../components/Markdown";
+import { QuestionCard } from "../../components/QuestionCard";
 import { SidePanel } from "../../components/SidePanel";
 import { StateNote } from "../../components/StateNote";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
-import { counted, sessionsOf } from "../../model/runs";
+import { counted, sessionsOf, shortRun } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
+import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
 import { EditTab } from "./EditTab";
@@ -115,6 +117,12 @@ export function CardPanel({
               return false;
             })
       : undefined;
+  // answer sends an answer to an agent's question (CARD-6).
+  const answer =
+    editing && detail
+      ? (id: string, text: string) =>
+          editing.answer(id, text).finally(() => resource.reload())
+      : undefined;
   const body = (current: TicketDetail) => {
     switch (activeTab) {
       case "review":
@@ -137,6 +145,7 @@ export function CardPanel({
             keys={keys}
             onOpen={onOpen}
             onToggle={toggle}
+            onAnswer={answer}
           />
         );
     }
@@ -386,13 +395,17 @@ function TicketTab({
   keys,
   onOpen,
   onToggle,
+  onAnswer,
 }: {
   detail: TicketDetail;
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
   // onToggle ticks or unticks a criterion (CARD-3); absent when read-only.
   onToggle?(index: number, checked: boolean): Promise<boolean>;
+  // onAnswer answers an agent's question (CARD-6); absent when read-only.
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
 }) {
+  const now = useNow();
   const done = detail.criteriaItems.filter((item) => item.done).length;
   // Criteria are addressed by position in the file, and their text may
   // repeat, so the key is position and text.
@@ -446,6 +459,30 @@ function TicketTab({
         reasons={waits}
         onOpen={onOpen}
       />
+
+      {detail.questions.length > 0 ? (
+        <section
+          aria-labelledby="questions-heading"
+          className="flex flex-col gap-2"
+        >
+          <h3 id="questions-heading" className="text-sm station-sign">
+            {detail.questions.length === 1
+              ? "Question for you"
+              : `${detail.questions.length} questions for you`}
+          </h3>
+          {detail.questions.map((question) => (
+            <QuestionCard
+              key={question.id}
+              question={question}
+              asker={shortRun(question.run)}
+              now={now}
+              onAnswer={
+                onAnswer ? (text) => onAnswer(question.id, text) : undefined
+              }
+            />
+          ))}
+        </section>
+      ) : null}
 
       {detail.handoff ? (
         <section

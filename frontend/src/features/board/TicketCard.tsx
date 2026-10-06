@@ -102,7 +102,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
         aria-current={selected && !mirrored ? "true" : undefined}
         data-ticket={card.id}
         data-mirrored={mirrored ? "" : undefined}
-        aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
+        aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
         data-paint={painted?.token}
         style={paintVars(painted) as CSSProperties | undefined}
         className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px ${
@@ -205,6 +205,18 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           {density !== "compact" && card.live ? (
             <LiveBadge live={card.live} now={now} />
           ) : null}
+          {/* Another session's question about the ticket needs you even
+              while its own run is not waiting on you. */}
+          {density !== "compact" &&
+          card.openQuestions > 0 &&
+          card.live?.state !== "needs-you" ? (
+            <span className="flex min-w-0 items-center gap-2 text-2xs">
+              <RunStateLabel state="needs-you" />
+              <span className="font-semibold text-ink">
+                {questionsWaiting(card.openQuestions)}
+              </span>
+            </span>
+          ) : null}
 
           {repair ? (
             <StateNote kind="repair" compact>
@@ -272,6 +284,11 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     );
   },
 );
+
+// questionsWaiting says that agents' questions about a ticket wait for
+// the user, when no live run of its own explains it (CARD-6).
+const questionsWaiting = (count: number) =>
+  count === 1 ? "Question waiting" : `${count} questions waiting`;
 
 const columnName = (id: string) =>
   COLUMNS.find((column) => column.id === id)?.title ?? id;

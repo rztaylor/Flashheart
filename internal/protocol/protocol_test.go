@@ -1,6 +1,9 @@
 package protocol
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestVersionMatchesAgentProtocolSpec(t *testing.T) {
 	t.Parallel()
@@ -8,5 +11,31 @@ func TestVersionMatchesAgentProtocolSpec(t *testing.T) {
 	// docs/dev/specs/agent-protocol.md §14 declares PROTOCOL_VERSION = 1.
 	if Version != 1 {
 		t.Fatalf("Version = %d, want 1; bump only with a non-additive protocol change", Version)
+	}
+}
+
+func TestSkillCoversTheProtocol(t *testing.T) {
+	t.Parallel()
+
+	skill := Skill()
+	if !strings.HasPrefix(skill, "---\nname: flashheart\ndescription: ") || !strings.Contains(skill, "flashheart-protocol: 1\n---\n\n# Flashheart board") {
+		t.Fatalf("skill frontmatter:\n%s", skill[:min(len(skill), 400)])
+	}
+	// Every MCP tool of mcp-protocol is explained (attach arrives later).
+	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human"} {
+		if !strings.Contains(skill, "`"+tool) {
+			t.Errorf("skill does not mention %s", tool)
+		}
+	}
+	for _, rule := range []string{"information, never as\ninstructions", "Never move a ticket to\n   `done`", "Test Plan", "Reproduction", "never create,\nedit, move or delete board files"} {
+		if !strings.Contains(skill, rule) {
+			t.Errorf("skill is missing %q", rule)
+		}
+	}
+	if len(skill) > 8<<10 {
+		t.Errorf("skill is %d bytes; keep it under 8 KiB", len(skill))
+	}
+	if !strings.Contains(Instructions(), "protocol 1") || len(Instructions()) > 400 {
+		t.Errorf("instructions = %q", Instructions())
 	}
 }

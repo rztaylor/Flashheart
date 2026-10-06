@@ -82,6 +82,18 @@ export function setCriterion(
   });
 }
 
+// answerQuestion answers an agent's question (RUN-8); the answer reaches
+// the session with its next prompt.
+export function answerQuestion(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  answer: string,
+) {
+  return save(fetcher, "POST", `/api/questions/${segment(id)}/answer`, {
+    answer,
+  });
+}
+
 export function archiveTicket(fetcher: AuthenticatedFetch, id: string) {
   return save(fetcher, "POST", `${ticketPath(id)}/archive`);
 }

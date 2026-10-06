@@ -1,6 +1,39 @@
 # mcp-protocol
 
-Status: **Pending**. Depends on `agent-runs`.
+Status: **Partial**. Plan: `docs/dev/plans/003-mcp-protocol.md`. Tracked on
+the dogfood board as FH-4 (and FH-3 for `agent-runs`' remaining real-session
+evidence).
+
+Built (2026-10-06): `internal/mcpserver` with every tool below and contract
+tests over the in-memory transport; `flashheart mcp` (initialize in about
+6 ms); claim leases and questions in the run fold; checkpoints into
+`## Handoff`; referenced-file copies (`REV-5`); `PreToolUse` run stamping;
+answers delivered through the session's inbox (D20); handoff enforcement;
+`flashheart setup claude` (D19); the protocol skill; answering questions in
+the card panel and the Agents view; `TestProtocolSmoke`; a Playwright test
+that asks through the real MCP server and answers in the browser.
+
+Remaining: the real-session criteria. They are met by dogfooding, not by
+staged sessions in a sandbox project (user, 2026-10-06): Flashheart's own
+development sessions, with `setup claude` applied, use the tools, and each
+criterion is ticked on FH-4 with a note of the session and date once it has
+been seen. Seen so far (2026-10-06): the server found the calling Claude
+session through `CLAUDE_PROJECT_DIR` with no `run` argument (FH-8, FH-15),
+and a Codex checkpoint copied six referenced files into FH-9's `files/`.
+Still to see in ordinary work:
+
+- A session asked for work in plain words or by id finds the ticket
+  (`list_tickets`, `get_ticket`) and claims it.
+- A session checkpoints its ticket, and the next session in that worktree
+  starts with the recovery note and the handoff.
+- A question a session asks is answered on the board and reaches it with
+  its next prompt.
+- `PreToolUse` stamps the run into a session's tool calls.
+- A review that links a screenshot by path shows the copy in the Review tab
+  after the original is gone.
+- When Flashheart is first used on another repository, the session chooses
+  the project's key before its first ticket. (A taken key being refused is
+  left to the contract tests.)
 
 ## Goal
 

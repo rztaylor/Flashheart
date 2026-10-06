@@ -411,3 +411,35 @@ func TestWritePrimitivesStayInsideTheRoot(t *testing.T) {
 		t.Error("Move escaped the root")
 	}
 }
+
+func TestProjectSettingsOverrideHandoffEnforcement(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	for name, yaml := range map[string]string{
+		"on":    "key: ON\nsettings:\n  enforce_handoff: true\n",
+		"off":   "key: OF\nsettings:\n  enforce_handoff: false\n",
+		"unset": "key: UN\n",
+	} {
+		if err := os.MkdirAll(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, name, "project.yaml"), []byte(yaml), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := New(root)
+	defer s.Close()
+	for name, want := range map[string]*bool{"on": ptr(true), "off": ptr(false), "unset": nil} {
+		project, err := s.ReadProject(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := project.EnforceHandoff
+		if (got == nil) != (want == nil) || got != nil && *got != *want {
+			t.Errorf("%s: EnforceHandoff = %v, want %v", name, got, want)
+		}
+	}
+}
+
+func ptr[T any](v T) *T { return &v }

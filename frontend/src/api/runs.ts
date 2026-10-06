@@ -42,7 +42,30 @@ export interface Live {
   // waitingOn names the subagent (by type) whose permission prompt the run
   // is waiting on; empty when it is the session's own.
   waitingOn: string;
+  // question is the kind of open question the run waits on, when that and
+  // not a permission prompt is why it needs you.
+  question: QuestionKind | "";
+  // questionAnswered: that question's answer waits for the next prompt.
+  questionAnswered: boolean;
   lastActivity: string;
+}
+
+export type QuestionKind = "question" | "decision" | "review" | "blocked";
+
+// Question is an agent's ask_human question (RUN-8): open until its answer
+// reaches the session with its next prompt.
+export interface Question {
+  id: string;
+  run: string;
+  ticket?: string;
+  kind: QuestionKind;
+  text: string;
+  options?: string[];
+  asked: string;
+  answer?: string;
+  answeredBy?: string;
+  answeredAt?: string;
+  delivered?: boolean;
 }
 
 export interface PlanItem {
@@ -90,6 +113,7 @@ export interface Run {
   files: string[];
   plan: PlanItem[];
   progress: { done: number; total: number; current?: string };
+  questions: Question[];
   timeline?: TimelineEntry[];
 }
 
@@ -129,7 +153,32 @@ export function isLive(value: unknown): value is Live {
     isString(value.step) &&
     isString(value.permission) &&
     isString(value.waitingOn) &&
+    (value.question === "" || isQuestionKind(value.question)) &&
+    typeof value.questionAnswered === "boolean" &&
     isString(value.lastActivity)
+  );
+}
+
+const QUESTION_KINDS: QuestionKind[] = [
+  "question",
+  "decision",
+  "review",
+  "blocked",
+];
+const isQuestionKind = (value: unknown): value is QuestionKind =>
+  QUESTION_KINDS.includes(value as QuestionKind);
+
+export function isQuestion(value: unknown): value is Question {
+  return (
+    isRecord(value) &&
+    isString(value.id) &&
+    isString(value.run) &&
+    isQuestionKind(value.kind) &&
+    isString(value.text) &&
+    isString(value.asked) &&
+    (value.options === undefined ||
+      (Array.isArray(value.options) && value.options.every(isString))) &&
+    (value.answer === undefined || isString(value.answer))
   );
 }
 
@@ -160,6 +209,8 @@ export function isRun(value: unknown): value is Run {
     Array.isArray(value.files) &&
     Array.isArray(value.plan) &&
     isRecord(value.progress) &&
+    Array.isArray(value.questions) &&
+    value.questions.every(isQuestion) &&
     (value.timeline === undefined ||
       (Array.isArray(value.timeline) && value.timeline.every(isEntry)))
   );

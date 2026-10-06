@@ -452,6 +452,10 @@ type projectFile struct {
 	Key    string   `yaml:"key"`
 	NextID int      `yaml:"next_id"`
 	Repos  []string `yaml:"repos"`
+	// Settings are per-project overrides of config.yaml (CFG-1).
+	Settings struct {
+		EnforceHandoff *bool `yaml:"enforce_handoff"`
+	} `yaml:"settings"`
 }
 
 func (r *reader) readProjectFile(project *board.Project) {
@@ -474,6 +478,7 @@ func (r *reader) readProjectFile(project *board.Project) {
 		project.DisplayName = display
 	}
 	project.Repos = parsed.Repos
+	project.EnforceHandoff = parsed.Settings.EnforceHandoff
 	switch key := strings.TrimSpace(parsed.Key); {
 	case key == "":
 	case board.ValidKey(key):
@@ -493,6 +498,7 @@ type attachmentEntry struct {
 	Source  string `yaml:"source"`
 	Run     string `yaml:"run"`
 	Added   string `yaml:"added"`
+	SHA256  string `yaml:"sha256,omitempty"`
 }
 
 func (r *reader) readFilesIndex(project *board.Project, id, name string) {
@@ -514,7 +520,7 @@ func (r *reader) readFilesIndex(project *board.Project, id, name string) {
 			continue
 		}
 		project.Attachments[id] = append(project.Attachments[id], board.Attachment{
-			File: item.File, Caption: item.Caption, Kind: item.Kind, Source: item.Source, Run: item.Run, Added: item.Added,
+			File: item.File, Caption: item.Caption, Kind: item.Kind, Source: item.Source, Run: item.Run, Added: item.Added, SHA256: item.SHA256,
 		})
 	}
 }
@@ -567,4 +573,25 @@ func (s *Store) OpenAttachment(project, folder, file string) (*os.File, string, 
 		return nil, "", fmt.Errorf("file %s: %w", file, ErrNotFound)
 	}
 	return handle, contentType, nil
+}
+
+// EnforceHandoff reads only project.yaml's settings.enforce_handoff (nil
+// when unset), so a hook can decide whether to look further without
+// reading the project's tickets (HOOK-6).
+func (s *Store) EnforceHandoff(project string) (*bool, error) {
+	if !ValidProject(project) {
+		return nil, fmt.Errorf("project %q: %w", project, ErrInvalidName)
+	}
+	data, err := s.ReadFile(path.Join(project, "project.yaml"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var parsed projectFile
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		return nil, fmt.Errorf("%s/project.yaml settings.enforce_handoff: %w", project, err)
+	}
+	return parsed.Settings.EnforceHandoff, nil
 }

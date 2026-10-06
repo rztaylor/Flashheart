@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-import { seedRuns } from "./agent-runs.mjs";
+import { callTool, IDLE_SESSION, promptHook, seedRuns } from "./agent-runs.mjs";
 import {
   launch,
   makeSandbox,
@@ -16,13 +16,14 @@ import {
 test.describe.configure({ mode: "serial" });
 
 let sandbox;
+let seeded;
 let server;
 let context;
 let page;
 
 test.beforeAll(async ({ browser }) => {
   sandbox = await makeSandbox();
-  await seedRuns(sandbox.home, sandbox.root);
+  seeded = await seedRuns(sandbox.home, sandbox.root);
   server = launch(sandbox, ["serve", "--foreground"]);
   const url = await waitForManualURL(server.child, server.output);
   context = await browser.newContext();
@@ -207,4 +208,66 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   await open("#/p/alpha/board?t=AL-3", { theme: "dark" });
   await page.getByRole("tab", { name: /^Runs/ }).click();
   await shot("runs-tab-1440-dark");
+});
+
+test("a question from an agent is answered on the board and delivered with its next prompt", async () => {
+  // The gamma session asks through the real MCP server, as Claude Code would.
+  const asked = await callTool(sandbox.root, seeded.gamma, "ask_human", {
+    run: `claude:${IDLE_SESSION}`,
+    ticket: "AL-1",
+    kind: "decision",
+    text: "Keep the old project skeleton, or start from the new template?",
+    options: ["Keep it", "New template"],
+  });
+  expect(asked).toContain("the answer will arrive in a later prompt");
+
+  await open("#/p/alpha/board");
+  const needsColumn = page.getByRole("region", { name: /^Needs you/ });
+  const card = needsColumn.getByRole("button", {
+    name: /^Project skeleton, AL-1, needs you: question waiting/,
+  });
+  await expect(card).toBeVisible();
+  await card.click();
+  const panel = page.getByRole("complementary", { name: "Ticket AL-1" });
+  const question = panel.getByRole("region", { name: "Needs a decision" });
+  await expect(question).toBeVisible();
+  await expect(
+    question.getByText(
+      "Keep the old project skeleton, or start from the new template?",
+    ),
+  ).toBeVisible();
+  await expect(question.getByText(/from claude:e2d8f6a4/)).toBeVisible();
+  await expectNoAxeViolations("card panel with a question");
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await shot(`card-question-1440-${theme}`);
+  }
+
+  // A choice fills the answer; sending it says it is on its way.
+  await question.getByRole("button", { name: "Keep it" }).click();
+  await expect(
+    question.getByRole("button", { name: "Keep it" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await question.getByRole("button", { name: "Send answer" }).click();
+  await expect(
+    panel.getByRole("region", { name: "Answer waits for its next prompt" }),
+  ).toContainText("“Keep it”");
+  await expect(panel.getByText(/Answer \(human\): "Keep it"/)).toBeVisible();
+
+  // The Agents view shows the session waiting for its next prompt.
+  await open("#/all/agents");
+  await expect(
+    page
+      .getByRole("region", { name: /^Needs you/ })
+      .getByText("Answer waits for its next prompt"),
+  ).toBeVisible();
+
+  // The session's next prompt delivers the answer, once.
+  const output = promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
+  expect(output).toContain(
+    'AL-1: \\"Keep the old project skeleton, or start from the new template?\\" → \\"Keep it\\" (human)',
+  );
+  expect(promptHook(sandbox.root, IDLE_SESSION, seeded.gamma)).toBe("");
+  await open("#/p/alpha/board");
+  await expect(card).toHaveCount(0);
 });

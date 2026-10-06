@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/app"
 	"github.com/rztaylor/flashheart/internal/background"
@@ -178,7 +180,7 @@ func TestUsageErrorsExitTwoWithUsage(t *testing.T) {
 func TestUnimplementedCommandsExitTwoQuietly(t *testing.T) {
 	t.Parallel()
 
-	for _, args := range [][]string{{"mcp"}, {"setup", "claude"}, {"doctor"}} {
+	for _, args := range [][]string{{"doctor"}} {
 		h := newHarness(t)
 		code, stdout, stderr := h.run(args...)
 		if code != 2 {
@@ -572,5 +574,165 @@ func TestHookWithADanglingRootExitsZero(t *testing.T) {
 	code, stdout, stderr := h.run("hook", "claude", "Stop", "--root")
 	if code != 0 || stdout != "" || !strings.Contains(stderr, "flashheart hook:") {
 		t.Fatalf("dangling --root = %d, %q, %q", code, stdout, stderr)
+	}
+}
+
+func TestMCPServesTheProtocolOnStdio(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	root := t.TempDir()
+	h.env["CLAUDE_PROJECT_DIR"] = t.TempDir()
+	requests := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}` + "\n" +
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}` + "\n" +
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}` + "\n"
+	out := &lockedBuffer{}
+	// Like an agent, keep stdin open until both responses are written.
+	in := &holdingReader{data: []byte(requests), done: func() bool { return strings.Count(out.String(), "\n") >= 2 }}
+	deps := h.deps()
+	deps.Stdin = in
+	var stderrBuffer bytes.Buffer
+	code := Run(context.Background(), []string{"mcp", "--root", root}, out, &stderrBuffer, deps)
+	stdout, stderr := out.String(), stderrBuffer.String()
+	if code != 0 || stderr != "" {
+		t.Fatalf("code = %d, stderr = %q", code, stderr)
+	}
+	// CLI-3: stdout carries only protocol messages.
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("stdout =\n%s", stdout)
+	}
+	for _, line := range lines {
+		if !strings.HasPrefix(line, `{"jsonrpc":"2.0"`) {
+			t.Fatalf("not a protocol message: %q", line)
+		}
+	}
+	for _, part := range []string{`"name":"flashheart"`, `"instructions":"Flashheart (protocol 1)`} {
+		if !strings.Contains(lines[0], part) {
+			t.Errorf("initialize result missing %s:\n%s", part, lines[0])
+		}
+	}
+	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human"} {
+		if !strings.Contains(lines[1], `"name":"`+tool+`"`) {
+			t.Errorf("tools/list missing %s", tool)
+		}
+	}
+}
+
+func TestMCPRejectsArguments(t *testing.T) {
+	t.Parallel()
+
+	code, _, stderr := newHarness(t).run("mcp", "extra")
+	if code != 2 || !strings.Contains(stderr, "mcp takes no arguments") {
+		t.Fatalf("code = %d, stderr = %q", code, stderr)
+	}
+}
+
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// holdingReader returns data, then blocks until done (or 5 s) before EOF.
+type holdingReader struct {
+	data []byte
+	done func() bool
+}
+
+func (r *holdingReader) Read(p []byte) (int, error) {
+	if len(r.data) > 0 {
+		n := copy(p, r.data)
+		r.data = r.data[n:]
+		return n, nil
+	}
+	for deadline := time.Now().Add(5 * time.Second); !r.done() && time.Now().Before(deadline); {
+		time.Sleep(5 * time.Millisecond)
+	}
+	return 0, io.EOF
+}
+
+func TestSetupClaudeShowsThenWritesThenUninstalls(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	settings := filepath.Join(h.home, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	original := []byte("{\n  \"model\": \"opus\"\n}\n")
+	if err := os.WriteFile(settings, original, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var ran [][]string
+	deps := h.deps()
+	deps.FindClaude = func(string) string { return "/usr/bin/claude" }
+	deps.RunCommand = func(name string, args ...string) ([]byte, error) {
+		ran = append(ran, append([]string{name}, args...))
+		return nil, nil
+	}
+	run := func(args ...string) (int, string, string) {
+		var stdout, stderr bytes.Buffer
+		code := Run(context.Background(), args, &stdout, &stderr, deps)
+		return code, stdout.String(), stderr.String()
+	}
+
+	code, stdout, stderr := run("setup", "claude")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, `"command": "/opt/bin/flashheart hook claude SessionStart",`) ||
+		!strings.Contains(stdout, "Nothing was changed. Run flashheart setup claude --write to apply these changes.") {
+		t.Fatalf("dry run: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+	if data, _ := os.ReadFile(settings); !bytes.Equal(data, original) || len(ran) > 0 {
+		t.Fatal("the dry run changed something")
+	}
+	// A non-default root is passed to every command (SET-3).
+	code, stdout, _ = run("setup", "claude", "--root", "/data/board")
+	if code != 0 || !strings.Contains(stdout, "hook claude Stop --root /data/board") || !strings.Contains(stdout, `"args":["mcp","--root","/data/board"]`) {
+		t.Fatalf("root: code %d, stdout:\n%s", code, stdout)
+	}
+
+	if code, stdout, stderr = run("setup", "claude", "--write"); code != 0 || !strings.Contains(stdout, "Wrote ~/.claude/settings.json") {
+		t.Fatalf("write: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+	if len(ran) != 1 || ran[0][0] != "/usr/bin/claude" || ran[0][2] != "add-json" {
+		t.Fatalf("ran = %v", ran)
+	}
+	if code, stdout, _ = run("setup", "claude", "--uninstall"); code != 0 || !strings.Contains(stdout, "Delete ~/.claude/skills/flashheart/SKILL.md.") || !strings.Contains(stdout, "--uninstall --write") {
+		t.Fatalf("uninstall preview: code %d, stdout:\n%s", code, stdout)
+	}
+	if code, _, stderr = run("setup", "claude", "--uninstall", "--write"); code != 0 {
+		t.Fatalf("uninstall: code %d, stderr %q", code, stderr)
+	}
+	if data, _ := os.ReadFile(settings); !bytes.Equal(data, original) {
+		t.Fatalf("settings after uninstall:\n%s", data)
+	}
+}
+
+func TestSetupUsage(t *testing.T) {
+	t.Parallel()
+
+	for args, want := range map[string]string{
+		"setup":        "setup needs an agent",
+		"setup gemini": `unknown agent "gemini"`,
+	} {
+		code, _, stderr := newHarness(t).run(strings.Fields(args)...)
+		if code != 2 || !strings.Contains(stderr, want) {
+			t.Errorf("%s: code %d, stderr %q", args, code, stderr)
+		}
+	}
+	code, _, stderr := newHarness(t).run("setup", "codex")
+	if code != 2 || stderr != "flashheart: setup codex is not yet available\n" {
+		t.Errorf("codex: code %d, stderr %q", code, stderr)
 	}
 }

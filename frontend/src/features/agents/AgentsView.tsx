@@ -29,6 +29,8 @@ interface AgentsViewProps {
   projects: ProjectSummary[];
   revision: number;
   onOpen(ticket: TicketRef): void;
+  // onAnswer answers a run's question (CARD-6); absent when read-only.
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
 }
 
 const emptyLane: Record<RunState, string> = {
@@ -49,6 +51,7 @@ const rowGrid =
 // plan, edited files and activity; the ticket opens the card panel.
 export function AgentsView({
   fetcher,
+  onAnswer,
   project,
   projects,
   revision,
@@ -83,11 +86,8 @@ export function AgentsView({
     return (
       <EmptyState title="No agent runs yet">
         Runs appear here as soon as a Claude Code session with Flashheart's
-        hooks starts in one of your repositories. The hook settings are in{" "}
-        <code className="font-mono text-ink">
-          docs/user/claude-code-hooks.md
-        </code>
-        .
+        hooks starts in one of your repositories. Connect Claude Code with{" "}
+        <code className="font-mono text-ink">flashheart setup claude</code>.
       </EmptyState>
     );
   }
@@ -109,6 +109,7 @@ export function AgentsView({
             open={open}
             onToggle={(id) => setOpen((current) => (current === id ? "" : id))}
             fetcher={fetcher}
+            onAnswer={onAnswer}
             revision={revision}
             now={now}
             onOpen={onOpen}
@@ -139,6 +140,7 @@ interface LaneSectionProps {
   open: string;
   onToggle(id: string): void;
   fetcher: AuthenticatedFetch;
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
   revision: number;
   now: Date;
   onOpen(ticket: TicketRef): void;
@@ -152,6 +154,7 @@ function LaneSection({
   open,
   onToggle,
   fetcher,
+  onAnswer,
   revision,
   now,
   onOpen,
@@ -194,6 +197,7 @@ function LaneSection({
                 expanded={open === entry.run.id}
                 onToggle={() => onToggle(entry.run.id)}
                 fetcher={fetcher}
+                onAnswer={onAnswer}
                 revision={revision}
                 now={now}
                 onOpen={onOpen}
@@ -213,6 +217,7 @@ function LaneSection({
                         expanded={open === child.id}
                         onToggle={() => onToggle(child.id)}
                         fetcher={fetcher}
+                        onAnswer={onAnswer}
                         revision={revision}
                         now={now}
                         onOpen={onOpen}
@@ -237,6 +242,7 @@ interface RunRowProps {
   expanded: boolean;
   onToggle(): void;
   fetcher: AuthenticatedFetch;
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
   revision: number;
   now: Date;
   onOpen(ticket: TicketRef): void;
@@ -251,6 +257,7 @@ function RunRow({
   expanded,
   onToggle,
   fetcher,
+  onAnswer,
   revision,
   now,
   onOpen,
@@ -377,6 +384,7 @@ function RunRow({
           <ExpandedRun
             run={run}
             fetcher={fetcher}
+            onAnswer={onAnswer}
             revision={revision}
             now={now}
           />
@@ -390,11 +398,13 @@ function RunRow({
 function ExpandedRun({
   run,
   fetcher,
+  onAnswer,
   revision,
   now,
 }: {
   run: Run;
   fetcher: AuthenticatedFetch;
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
   revision: number;
   now: Date;
 }) {
@@ -403,6 +413,10 @@ function ExpandedRun({
     [fetcher, run.id],
   );
   const detail = useResource(load, run.id, revision);
+  const answer = onAnswer
+    ? (id: string, text: string) =>
+        onAnswer(id, text).finally(() => detail.reload())
+    : undefined;
   if (detail.status === "error") {
     return (
       <p className="text-xs text-ink-muted">
@@ -415,6 +429,7 @@ function ExpandedRun({
       run={detail.status === "ready" ? detail.data : run}
       timeline={detail.data?.timeline}
       now={now}
+      onAnswer={answer}
     />
   );
 }

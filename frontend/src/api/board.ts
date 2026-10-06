@@ -1,9 +1,11 @@
 import { type AuthenticatedFetch, getJSON, isRecord } from "./client";
 import {
   isLive,
+  isQuestion,
   isRun,
   isRunCounts,
   type Live,
+  type Question,
   type Run,
   type RunCounts,
 } from "./runs";
@@ -66,6 +68,8 @@ export interface Card {
   live?: Live;
   needsYou: boolean;
   agentWorking: boolean;
+  // openQuestions counts open questions about the ticket (CARD-6).
+  openQuestions: number;
 }
 
 export interface WorkstreamBrief {
@@ -144,6 +148,8 @@ export interface TicketDetail extends Card {
   raw: string;
   // runs are the runs linked to the ticket, most recent first (CARD-1).
   runs: Run[];
+  // questions are the open questions about the ticket (CARD-6).
+  questions: Question[];
 }
 
 export interface WorkstreamTicket {
@@ -216,7 +222,8 @@ export function isCard(value: unknown): value is Card {
     isStringArray(value.warnings) &&
     (value.live === undefined || isLive(value.live)) &&
     typeof value.needsYou === "boolean" &&
-    typeof value.agentWorking === "boolean"
+    typeof value.agentWorking === "boolean" &&
+    typeof value.openQuestions === "number"
   );
 }
 
@@ -276,6 +283,8 @@ const isTicket = (
   isCard(value.ticket) &&
   isString(value.ticket.body) &&
   Array.isArray(value.ticket.criteriaItems) &&
+  Array.isArray(value.ticket.questions) &&
+  value.ticket.questions.every(isQuestion) &&
   Array.isArray(value.ticket.attachmentFiles) &&
   Array.isArray(value.ticket.runs) &&
   value.ticket.runs.every(isRun);

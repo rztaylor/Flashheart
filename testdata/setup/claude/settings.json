@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "opus",
+  "LIMIT": 1.50,
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Read(~/src/**)"
+    ],
+    "deny": []
+  },
+  "env": {
+    "EDITOR": "vim — “quoted” ünïcode",
+    "NOTE": "escaped \u2014 dash, \"quote\" and tab\t kept as written"
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write \"$CLAUDE_FILE_PATH\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  }
+}

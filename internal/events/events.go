@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/store"
@@ -24,6 +25,11 @@ const (
 	MaxSummary    = 120
 	MaxNameLength = 200
 	MaxReasonText = 200
+	// MaxQuestionText bounds question.asked text; MaxAnswerText an answer.
+	MaxQuestionText = 1000
+	MaxAnswerText   = 1000
+	MaxOptions      = 10
+	MaxOptionText   = 200
 )
 
 // Event kinds (agent-protocol §3).
@@ -150,11 +156,50 @@ type CompactData struct {
 }
 
 // TicketData carries the ticket of claim, release, review.written and the
-// ticket.* kinds.
+// ticket.* kinds. By names who acted when it was not the event's run
+// (`human` for the UI); From and To are a move's columns, Fields an
+// update's changed fields.
 type TicketData struct {
-	Ticket string `json:"ticket"`
-	Force  bool   `json:"force,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	Ticket string   `json:"ticket"`
+	Force  bool     `json:"force,omitempty"`
+	Reason string   `json:"reason,omitempty"`
+	By     string   `json:"by,omitempty"`
+	From   string   `json:"from,omitempty"`
+	To     string   `json:"to,omitempty"`
+	Fields []string `json:"fields,omitempty"`
+}
+
+// Question kinds (RUN-8).
+const (
+	QuestionKindQuestion = "question"
+	QuestionKindDecision = "decision"
+	QuestionKindReview   = "review"
+	QuestionKindBlocked  = "blocked"
+)
+
+// QuestionKinds lists the kinds ask_human accepts.
+var QuestionKinds = []string{QuestionKindQuestion, QuestionKindDecision, QuestionKindReview, QuestionKindBlocked}
+
+// QuestionData is question.asked's data. Ticket is empty for a question
+// about no ticket.
+type QuestionData struct {
+	ID      string   `json:"id"`
+	Ticket  string   `json:"ticket,omitempty"`
+	Kind    string   `json:"kind"`
+	Text    string   `json:"text"`
+	Options []string `json:"options,omitempty"`
+}
+
+// AnswerData is question.answered's data, recorded on the asking run.
+type AnswerData struct {
+	ID     string `json:"id"`
+	Answer string `json:"answer"`
+	By     string `json:"by"`
+}
+
+// DeliveredData is question.delivered's data: the answer reached the run.
+type DeliveredData struct {
+	ID string `json:"id"`
 }
 
 // CheckpointData is checkpoint's data.
@@ -363,4 +408,45 @@ func (l *Log) Prune(project string, now time.Time, days int) (int, error) {
 		removed++
 	}
 	return removed, nil
+}
+
+// Delivery is one answer waiting in a session's inbox for its next prompt
+// (HOOK-5). Run is the asking run (the session or one of its subagents).
+type Delivery struct {
+	ID       string `json:"id"`
+	Run      string `json:"run"`
+	Ticket   string `json:"ticket,omitempty"`
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
+	By       string `json:"by"`
+}
+
+// QueueAnswer puts an answer in the inbox of the asking run's session.
+func (l *Log) QueueAnswer(project, run string, d Delivery) error {
+	session, _, _ := strings.Cut(run, "/")
+	line, err := json.Marshal(d)
+	if err != nil {
+		return err
+	}
+	return l.store.AppendInbox(project, session, append(line, '\n'))
+}
+
+// TakeAnswers empties a session's inbox and returns its answers, skipping
+// malformed lines.
+func (l *Log) TakeAnswers(project, session string) ([]Delivery, error) {
+	data, err := l.store.TakeInbox(project, session)
+	if err != nil || len(data) == 0 {
+		return nil, err
+	}
+	var list []Delivery
+	seen := map[string]bool{}
+	for _, line := range strings.Split(string(data), "\n") {
+		var d Delivery
+		// An answer queued twice (a retried answer) is delivered once.
+		if json.Unmarshal([]byte(line), &d) == nil && d.ID != "" && !seen[d.ID] {
+			seen[d.ID] = true
+			list = append(list, d)
+		}
+	}
+	return list, nil
 }

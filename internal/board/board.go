@@ -205,7 +205,7 @@ func ParseTicket(folder string, data []byte) (ticket Ticket) {
 		}
 	}
 	if section, ok := mdfile.FindSection(doc.Body, "Handoff"); ok {
-		ticket.Handoff = &Handoff{Markdown: strings.TrimSpace(section.Content), Next: handoffList(section.Content, "Next")}
+		ticket.Handoff = &Handoff{Markdown: strings.TrimSpace(section.Content), Next: HandoffList(section.Content, "Next")}
 	}
 	defer func() {
 		if ticket.Title == "" {
@@ -343,8 +343,8 @@ func excerpt(body string) string {
 
 var boldLabel = regexp.MustCompile(`^\*\*([^*]+)\*\*\s*$`)
 
-// handoffList returns the bullet items under a **Label** line in a handoff.
-func handoffList(content, label string) []string {
+// HandoffList returns the bullet items under a **Label** line in a handoff.
+func HandoffList(content, label string) []string {
 	var items []string
 	inList := false
 	for _, line := range strings.Split(content, "\n") {
@@ -397,7 +397,7 @@ func ParseWorkstream(slug string, data []byte) Workstream {
 
 // Attachment is one entry of a ticket's files/index.yaml.
 type Attachment struct {
-	File, Caption, Kind, Source, Run, Added string
+	File, Caption, Kind, Source, Run, Added, SHA256 string
 }
 
 // Project is one project directory's parsed contents.
@@ -417,6 +417,9 @@ type Project struct {
 	Reviews map[string]bool
 	// Attachments maps ticket ids to their files index.
 	Attachments map[string][]Attachment
+	// EnforceHandoff is project.yaml's settings.enforce_handoff; nil means
+	// the global setting applies (HOOK-6).
+	EnforceHandoff *bool
 	// Warnings are problems with project-level files (project.yaml, keys).
 	Warnings []string
 	// LastModified is the newest modification time among the project's files.

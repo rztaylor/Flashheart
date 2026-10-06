@@ -26,17 +26,34 @@ type Settings struct {
 	Quiet time.Duration
 	// Stale is how long any run may be silent before it is Ended.
 	Stale time.Duration
+	// Lease is how long a claim outlives its run's last activity (§6).
+	Lease time.Duration
 }
 
-// DefaultSettings returns quiet_minutes 10 and stale_hours 12.
+// DefaultSettings returns quiet_minutes 10, stale_hours 12 and
+// lease_minutes 30.
 func DefaultSettings() Settings {
-	return Settings{Quiet: 10 * time.Minute, Stale: 12 * time.Hour}
+	return Settings{Quiet: 10 * time.Minute, Stale: 12 * time.Hour, Lease: 30 * time.Minute}
+}
+
+// SettingsFor returns the default settings with config.yaml's
+// quiet_minutes and lease_minutes (values below 1 keep the default).
+func SettingsFor(quietMinutes, leaseMinutes int) Settings {
+	settings := DefaultSettings()
+	if quietMinutes > 0 {
+		settings.Quiet = time.Duration(quietMinutes) * time.Minute
+	}
+	if leaseMinutes > 0 {
+		settings.Lease = time.Duration(leaseMinutes) * time.Minute
+	}
+	return settings
 }
 
 // Bounds on what a run keeps in memory.
 const (
-	MaxTimeline = 200
-	MaxFiles    = 20
+	MaxTimeline  = 200
+	MaxFiles     = 20
+	MaxQuestions = 20
 )
 
 // Entry is one timeline event of a run, with the fields worth showing.
@@ -80,11 +97,39 @@ type Run struct {
 	// Permission is the tool awaiting permission, or "?" when the agent did
 	// not say which; empty when nothing is pending.
 	Permission string
-	Timeline   []Entry
+	// Questions are the run's own questions, oldest first.
+	Questions []Question
+	// BlockedForHandoff is set when handoff enforcement blocked a stop in
+	// the current turn (HOOK-6).
+	BlockedForHandoff bool
+	Timeline          []Entry
 
 	turnOpen bool
 	ended    bool
 }
+
+// Question is one ask_human question and what became of it (RUN-8).
+type Question struct {
+	ID      string    `json:"id"`
+	Run     string    `json:"run"`
+	Ticket  string    `json:"ticket,omitempty"`
+	Kind    string    `json:"kind"`
+	Text    string    `json:"text"`
+	Options []string  `json:"options,omitempty"`
+	Asked   time.Time `json:"asked"`
+	// Answer is set once a human answered; Delivered once the run was told.
+	Answer     string    `json:"answer,omitempty"`
+	AnsweredBy string    `json:"answeredBy,omitempty"`
+	AnsweredAt time.Time `json:"answeredAt,omitzero"`
+	Delivered  bool      `json:"delivered,omitempty"`
+}
+
+// Answered reports whether a human answered the question.
+func (q Question) Answered() bool { return !q.AnsweredAt.IsZero() }
+
+// Open reports whether the question still needs the human: unanswered, or
+// answered but not yet delivered to the run (agent-protocol §4).
+func (q Question) Open() bool { return !q.Delivered }
 
 // Dirty reports edits since the run's last checkpoint.
 func (r *Run) Dirty() bool { return r.Edits > 0 }
@@ -216,13 +261,16 @@ func (s *Set) Apply(e events.Event) {
 	case events.TurnStart:
 		var data events.TurnStartData
 		_ = e.Decode(&data)
-		r.turnOpen, r.Permission = true, ""
+		r.turnOpen, r.Permission, r.BlockedForHandoff = true, "", false
 		s.settleChildren(r)
 		r.Cwd = first(data.Cwd, r.Cwd)
 		r.Branch = first(data.Branch, r.Branch)
 		r.Worktree = first(data.Worktree, r.Worktree)
 	case events.TurnEnd:
+		var data events.TurnEndData
+		_ = e.Decode(&data)
 		r.turnOpen, r.Permission = false, ""
+		r.BlockedForHandoff = r.BlockedForHandoff || data.BlockedForHandoff
 		s.settleChildren(r)
 	case events.ToolUsed:
 		var data events.ToolData
@@ -273,14 +321,66 @@ func (s *Set) Apply(e events.Event) {
 		switch {
 		case e.Kind == events.Claim:
 			r.Claim = data.Ticket
+			// A ticket has one holder: a claim takes it from any other run.
+			for _, id := range s.order {
+				if other := s.runs[id]; other != r && other.Claim == data.Ticket {
+					other.Claim = ""
+				}
+			}
 		case e.Kind == events.Release && r.Claim == data.Ticket:
 			r.Claim = ""
+		}
+	case events.QuestionAsked:
+		var data events.QuestionData
+		_ = e.Decode(&data)
+		entry.Ticket, entry.Detail = data.Ticket, data.Kind
+		if data.ID != "" && slices.Contains(events.QuestionKinds, data.Kind) && r.question(data.ID) == nil {
+			r.Questions = append(r.Questions, Question{ID: data.ID, Run: r.ID, Ticket: data.Ticket, Kind: data.Kind, Text: data.Text, Options: data.Options, Asked: e.Time})
+			r.boundQuestions()
+		}
+	case events.QuestionAnswered:
+		var data events.AnswerData
+		_ = e.Decode(&data)
+		if q := r.question(data.ID); q != nil {
+			q.Answer, q.AnsweredBy, q.AnsweredAt = data.Answer, data.By, e.Time
+			entry.Ticket = q.Ticket
+		}
+	case events.QuestionDelivered:
+		var data events.DeliveredData
+		_ = e.Decode(&data)
+		if q := r.question(data.ID); q != nil {
+			q.Delivered = true
+			entry.Ticket = q.Ticket
 		}
 	}
 	r.Timeline = append(r.Timeline, entry)
 	if len(r.Timeline) > MaxTimeline {
 		r.Timeline = slices.Delete(r.Timeline, 0, len(r.Timeline)-MaxTimeline)
 	}
+}
+
+func (r *Run) question(id string) *Question {
+	for index := range r.Questions {
+		if r.Questions[index].ID == id {
+			return &r.Questions[index]
+		}
+	}
+	return nil
+}
+
+// boundQuestions keeps MaxQuestions, dropping delivered ones first.
+func (r *Run) boundQuestions() {
+	for len(r.Questions) > MaxQuestions {
+		index := slices.IndexFunc(r.Questions, func(q Question) bool { return q.Delivered })
+		if index < 0 {
+			index = 0
+		}
+		r.Questions = slices.Delete(r.Questions, index, index+1)
+	}
+}
+
+func (r *Run) openQuestion() bool {
+	return slices.ContainsFunc(r.Questions, Question.Open)
 }
 
 // settleChildren clears the pending permission prompts of a session's
@@ -358,11 +458,11 @@ func (s *Set) State(id string, now time.Time, settings Settings) State {
 	if parent := s.runs[r.Parent]; parent != nil && s.State(parent.ID, now, settings) == Ended {
 		return Ended
 	}
-	if r.Permission != "" {
+	if r.Permission != "" || r.openQuestion() {
 		return NeedsYou
 	}
 	for _, childID := range r.Children {
-		if child := s.runs[childID]; child != nil && !child.ended && child.Permission != "" {
+		if child := s.runs[childID]; child != nil && (!child.ended && child.Permission != "" || child.openQuestion()) {
 			return NeedsYou
 		}
 	}
@@ -373,6 +473,52 @@ func (s *Set) State(id string, now time.Time, settings Settings) State {
 		return Quiet
 	}
 	return Working
+}
+
+// Holder returns the run whose claim on ticket is live at now: the run is
+// not Ended and it, or one of its subagents, was active within the lease
+// (agent-protocol §6). It returns nil when the ticket is free.
+func (s *Set) Holder(ticket string, now time.Time, settings Settings) *Run {
+	for _, id := range s.order {
+		r := s.runs[id]
+		if r.Claim != ticket {
+			continue
+		}
+		if s.State(id, now, settings) == Ended || now.Sub(s.lastActivity(r)) >= settings.Lease {
+			return nil
+		}
+		return r
+	}
+	return nil
+}
+
+// PendingAnswers lists the answered questions of a session and its
+// subagents that have not been delivered yet (HOOK-5), oldest first.
+func (s *Set) PendingAnswers(session string) []Question {
+	r := s.runs[session]
+	if r == nil {
+		return nil
+	}
+	var pending []Question
+	for _, run := range append([]*Run{r}, s.children(r)...) {
+		for _, q := range run.Questions {
+			if q.Answered() && !q.Delivered {
+				pending = append(pending, q)
+			}
+		}
+	}
+	slices.SortStableFunc(pending, func(a, b Question) int { return a.AnsweredAt.Compare(b.AnsweredAt) })
+	return pending
+}
+
+func (s *Set) children(r *Run) []*Run {
+	var list []*Run
+	for _, id := range r.Children {
+		if child := s.runs[id]; child != nil {
+			list = append(list, child)
+		}
+	}
+	return list
 }
 
 // How a run is linked to a ticket (RUN-5).
@@ -439,6 +585,7 @@ type View struct {
 	Files        []string
 	Plan         []events.PlanItem
 	Progress     Progress
+	Questions    []Question
 	Timeline     []Entry
 }
 
@@ -461,11 +608,20 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 			Permission: r.Permission,
 			Started:    r.Started, LastActivity: s.lastActivity(r), EndedAt: r.EndedAt,
 			Tools: r.Tools, Edits: r.Edits,
-			Files:    slices.Clone(r.Files),
-			Plan:     slices.Clone(r.Plan),
-			Progress: r.Progress(),
-			Timeline: slices.Clone(r.Timeline),
+			Files:     slices.Clone(r.Files),
+			Plan:      slices.Clone(r.Plan),
+			Progress:  r.Progress(),
+			Questions: cloneQuestions(r.Questions),
+			Timeline:  slices.Clone(r.Timeline),
 		})
 	}
 	return views
+}
+
+func cloneQuestions(list []Question) []Question {
+	out := slices.Clone(list)
+	for index := range out {
+		out[index].Options = slices.Clone(out[index].Options)
+	}
+	return out
 }

@@ -143,7 +143,7 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 	if apiHandler == nil {
 		board = index.New(files, index.Options{
 			Events: events.New(files),
-			Runs:   runs.Settings{Quiet: time.Duration(settings.QuietMinutes) * time.Minute, Stale: runs.DefaultSettings().Stale},
+			Runs:   runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes),
 		})
 		apiHandler = api.New(api.Options{
 			Info: api.Info{
@@ -157,6 +157,7 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 			Board:     board,
 			Files:     files,
 			Writer:    files,
+			Events:    events.New(files),
 			DoneLimit: settings.DoneColumnLimit,
 			Stopping:  stopping.ch,
 		})

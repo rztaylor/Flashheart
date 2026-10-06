@@ -35,6 +35,7 @@ function card(overrides: Partial<Card>): Card {
     warnings: [],
     needsYou: false,
     agentWorking: false,
+    openQuestions: 0,
     ...overrides,
   };
 }

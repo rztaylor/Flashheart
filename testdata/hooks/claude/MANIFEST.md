@@ -3,7 +3,9 @@
 Golden payloads for `internal/hooks/claude` (agent-protocol §13). Each
 `<Event>/<case>.json` is one hook payload as Claude Code sends it on stdin;
 `<case>.events.json` lists the events Flashheart must append for it (run,
-kind and data; `ts` and `project` are checked by the test harness).
+kind and data; `ts` and `project` are checked by the test harness), and an
+optional `<case>.output.json` is the hook output it must print (otherwise
+none).
 
 Every payload is scrubbed: the working directory is `/Users/example/src/demo`
 (the test replaces it with a temporary git repository on branch
