@@ -237,6 +237,7 @@ it("gives a card's live run the same reason as the Agents view", () => {
     permission: "Bash",
     waitingOn: "Explore",
     question: "" as const,
+    questionAnswered: false,
     lastActivity: "",
   };
   expect(liveReason(live)).toBe("Explore needs permission for Bash");
@@ -249,6 +250,15 @@ it("gives a card's live run the same reason as the Agents view", () => {
       question: "decision",
     }),
   ).toBe("Needs a decision");
+  expect(
+    liveReason({
+      ...live,
+      permission: "",
+      waitingOn: "",
+      question: "decision",
+      questionAnswered: true,
+    }),
+  ).toBe("Answer waits for its next prompt");
 });
 
 it("says what a question asks for, and when its answer is on its way", () => {

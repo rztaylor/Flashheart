@@ -10,12 +10,7 @@ import {
   type WorkstreamBrief,
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import {
-  answerQuestion,
-  conflictOf,
-  type Saved,
-  setCriterion,
-} from "../../api/edit";
+import { conflictOf, type Saved, setCriterion } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
@@ -122,20 +117,11 @@ export function CardPanel({
               return false;
             })
       : undefined;
-  // answer sends an answer to an agent's question (CARD-6), resolving to
-  // an error message when it was not sent.
+  // answer sends an answer to an agent's question (CARD-6).
   const answer =
     editing && detail
-      ? (id: string, text: string): Promise<string | undefined> =>
-          answerQuestion(fetcher, id, text)
-            .then((result) => {
-              saved(result, "Answered a question on");
-              return undefined;
-            })
-            .catch((error: unknown) => {
-              resource.reload();
-              return `Not sent: ${error instanceof Error ? error.message : "unknown error"}`;
-            })
+      ? (id: string, text: string) =>
+          editing.answer(id, text).finally(() => resource.reload())
       : undefined;
   const body = (current: TicketDetail) => {
     switch (activeTab) {

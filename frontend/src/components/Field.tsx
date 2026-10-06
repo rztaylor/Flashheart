@@ -191,6 +191,7 @@ export function TextArea({
   onChange(value: string): void;
   rows?: number;
   mono?: boolean;
+  maxLength?: number;
   autoFocus?: boolean;
   placeholder?: string;
   spellCheck?: boolean;

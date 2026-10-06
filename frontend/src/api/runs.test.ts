@@ -23,6 +23,7 @@ const live = {
   permission: "Bash",
   waitingOn: "",
   question: "",
+  questionAnswered: false,
   lastActivity: "2026-10-06T07:00:00Z",
 };
 const run = {

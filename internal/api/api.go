@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -30,6 +31,8 @@ type Options struct {
 	// Events records answers to agents' questions (RUN-8); answering needs
 	// it and Writer.
 	Events *events.Log
+	// Now is the clock answers are stamped with; nil means time.Now.
+	Now func() time.Time
 	// DoneLimit is how many done tickets a board shows by default (VIEW-1);
 	// zero shows all.
 	DoneLimit int
@@ -60,6 +63,7 @@ func New(options Options) http.Handler {
 		boardAPI{
 			board: options.Board, files: options.Files, root: info.Root, doneLimit: options.DoneLimit,
 			stopping: options.Stopping, longPoll: options.LongPoll, write: options.Writer, events: options.Events,
+			now: options.Now, answering: &sync.Mutex{},
 		}.register(mux)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {

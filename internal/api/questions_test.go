@@ -1,10 +1,14 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,6 +39,8 @@ func questionsAPI(t *testing.T) (http.Handler, string, *events.Log) {
 		Files:  files,
 		Writer: files,
 		Events: log,
+		// The answer is stamped with the time it was given, not the index's.
+		Now: func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) },
 	}), root, log
 }
 
@@ -73,7 +79,7 @@ func TestAnsweringAQuestionRecordsAndQueuesIt(t *testing.T) {
 	send(t, handler, http.MethodPost, "/api/questions/q-1/answer", map[string]string{"answer": "  No  "}, http.StatusOK, nil)
 
 	ticket, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-1-project-skeleton", "AL-1-project-skeleton.md"))
-	if !strings.Contains(string(ticket), `- 2026-10-04 · Question from claude:3f2a9c1e — "Keep the old skeleton?" Answer (human): "No".`) {
+	if !strings.Contains(string(ticket), `- 2026-10-05 · Question from claude:3f2a9c1e — "Keep the old skeleton?" Answer (human): "No".`) {
 		t.Fatalf("ticket notes:\n%s", ticket)
 	}
 	waiting, err := log.TakeAnswers("alpha", sampleSession)
@@ -97,4 +103,32 @@ func TestAnsweringNeedsTheWriteSide(t *testing.T) {
 
 	handler := runsAPI(t, time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC))
 	send(t, handler, http.MethodPost, "/api/questions/q-1/answer", map[string]string{"answer": "Yes"}, http.StatusNotImplemented, nil)
+}
+
+func TestOnlyOneOfTwoConcurrentAnswersIsAccepted(t *testing.T) {
+	t.Parallel()
+
+	handler, _, log := questionsAPI(t)
+	codes := make(chan int, 2)
+	var wait sync.WaitGroup
+	for _, answer := range []string{"Yes", "No"} {
+		wait.Go(func() {
+			body, _ := json.Marshal(map[string]string{"answer": answer})
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/questions/q-1/answer", bytes.NewReader(body)))
+			codes <- recorder.Code
+		})
+	}
+	wait.Wait()
+	close(codes)
+	accepted := 0
+	for code := range codes {
+		if code == http.StatusOK {
+			accepted++
+		}
+	}
+	waiting, _ := log.TakeAnswers("alpha", sampleSession)
+	if accepted != 1 || len(waiting) != 1 {
+		t.Fatalf("accepted %d answers, inbox holds %d", accepted, len(waiting))
+	}
 }

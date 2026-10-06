@@ -439,9 +439,12 @@ func (l *Log) TakeAnswers(project, session string) ([]Delivery, error) {
 		return nil, err
 	}
 	var list []Delivery
+	seen := map[string]bool{}
 	for _, line := range strings.Split(string(data), "\n") {
 		var d Delivery
-		if json.Unmarshal([]byte(line), &d) == nil && d.ID != "" {
+		// An answer queued twice (a retried answer) is delivered once.
+		if json.Unmarshal([]byte(line), &d) == nil && d.ID != "" && !seen[d.ID] {
+			seen[d.ID] = true
 			list = append(list, d)
 		}
 	}

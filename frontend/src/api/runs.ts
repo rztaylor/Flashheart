@@ -45,6 +45,8 @@ export interface Live {
   // question is the kind of open question the run waits on, when that and
   // not a permission prompt is why it needs you.
   question: QuestionKind | "";
+  // questionAnswered: that question's answer waits for the next prompt.
+  questionAnswered: boolean;
   lastActivity: string;
 }
 
@@ -152,6 +154,7 @@ export function isLive(value: unknown): value is Live {
     isString(value.permission) &&
     isString(value.waitingOn) &&
     (value.question === "" || isQuestionKind(value.question)) &&
+    typeof value.questionAnswered === "boolean" &&
     isString(value.lastActivity)
   );
 }

@@ -48,8 +48,11 @@ type LiveJSON struct {
 	WaitingOn string `json:"waitingOn"`
 	// Question is the kind of the open question the run (or a subagent)
 	// is waiting on when that, not a permission prompt, is why it needs you.
-	Question     string `json:"question"`
-	LastActivity string `json:"lastActivity"`
+	Question string `json:"question"`
+	// QuestionAnswered means that question has an answer waiting for the
+	// session's next prompt.
+	QuestionAnswered bool   `json:"questionAnswered"`
+	LastActivity     string `json:"lastActivity"`
 }
 
 // RunJSON is one run (RUN-2). Timeline is sent only for a single run or a
@@ -202,26 +205,26 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 		}
 	}
 	if v.State == runs.NeedsYou && card.Live.Permission == "" {
-		card.Live.Question = openQuestion(snapshot, v)
+		card.Live.Question, card.Live.QuestionAnswered = openQuestion(snapshot, v)
 	}
 	card.NeedsYou = card.NeedsYou || v.State == runs.NeedsYou
 	card.AgentWorking = v.State == runs.Working || v.State == runs.Quiet
 }
 
 // openQuestion is the kind of the first open question of a run or its
-// subagents, or "".
-func openQuestion(snapshot *index.Snapshot, v runs.View) string {
+// subagents, and whether it is answered and waiting for delivery.
+func openQuestion(snapshot *index.Snapshot, v runs.View) (string, bool) {
 	for _, run := range snapshot.Runs {
 		if run.ID != v.ID && run.Parent != v.ID {
 			continue
 		}
 		for _, q := range run.Questions {
 			if q.Open() {
-				return q.Kind
+				return q.Kind, q.Answered()
 			}
 		}
 	}
-	return ""
+	return "", false
 }
 
 // ticketRuns lists a ticket's runs with timelines for its Runs tab.

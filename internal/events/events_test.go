@@ -248,3 +248,28 @@ func TestConcurrentAppendsFromProcessesKeepWholeLines(t *testing.T) {
 		t.Fatalf("read %d whole events, want 400", count)
 	}
 }
+
+func TestAnInboxDeliversEachAnswerOnce(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "alpha", "tickets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	s, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	log := New(s)
+	answer := Delivery{ID: "q-1", Run: "claude:s/a1", Question: "Q?", Answer: "A", By: "human"}
+	for range 2 {
+		if err := log.QueueAnswer("alpha", answer.Run, answer); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := log.TakeAnswers("alpha", "claude:s")
+	if err != nil || len(got) != 1 || got[0] != answer {
+		t.Fatalf("answers = %+v, %v", got, err)
+	}
+}

@@ -44,6 +44,7 @@ export function RunDetail({
                 question={question}
                 asker={shortRun(question.run)}
                 now={now}
+                headingLevel={headingLevel === 3 ? 4 : 5}
                 onAnswer={
                   onAnswer ? (text) => onAnswer(question.id, text) : undefined
                 }

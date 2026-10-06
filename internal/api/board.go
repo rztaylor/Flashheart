@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -252,6 +253,9 @@ type boardAPI struct {
 	longPoll  time.Duration
 	write     Writer
 	events    *events.Log
+	now       func() time.Time
+	// answering serialises answers, so a question is answered once.
+	answering *sync.Mutex
 }
 
 func (b boardAPI) register(mux *http.ServeMux) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -36,9 +37,18 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("An answer is 1 to %d characters", events.MaxAnswerText))
 		return
 	}
-	snapshot := b.snapshot(w)
-	if snapshot == nil {
+	// Check and record under one lock, against a fresh snapshot, so two
+	// tabs answering at once cannot both be accepted.
+	b.answering.Lock()
+	defer b.answering.Unlock()
+	snapshot, err := b.board.Rebuild()
+	if err != nil || snapshot == nil {
+		writeError(w, http.StatusServiceUnavailable, "board_unavailable", "The board could not be read")
 		return
+	}
+	now := time.Now().UTC()
+	if b.now != nil {
+		now = b.now().UTC()
 	}
 	question, run, ok := snapshot.Question(r.PathValue("id"))
 	if !ok {
@@ -49,12 +59,14 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "already_answered", "This question has already been answered")
 		return
 	}
-	// The log and the inbox carry the answer to the run (HOOK-5); the
-	// ticket keeps it for whoever reads the ticket later (STO-6).
-	err := b.events.Append(events.Event{Time: snapshot.BuiltAt, Run: run.ID, Agent: run.Agent, Kind: events.QuestionAnswered, Project: run.Project,
-		Data: events.AnswerData{ID: question.ID, Answer: answer, By: answeredBy}})
+	// The inbox carries the answer to the run (HOOK-5) and the log records
+	// it; the ticket keeps it for whoever reads the ticket later (STO-6).
+	// Queueing first means a failure leaves the question unanswered, so it
+	// can be answered again; an answer queued twice is delivered once.
+	err = b.events.QueueAnswer(run.Project, run.ID, events.Delivery{ID: question.ID, Run: run.ID, Ticket: question.Ticket, Question: question.Text, Answer: answer, By: answeredBy})
 	if err == nil {
-		err = b.events.QueueAnswer(run.Project, run.ID, events.Delivery{ID: question.ID, Run: run.ID, Ticket: question.Ticket, Question: question.Text, Answer: answer, By: answeredBy})
+		err = b.events.Append(events.Event{Time: now, Run: run.ID, Agent: run.Agent, Kind: events.QuestionAnswered, Project: run.Project,
+			Data: events.AnswerData{ID: question.ID, Answer: answer, By: answeredBy}})
 	}
 	if err != nil {
 		writeStoreError(w, err)
@@ -63,7 +75,7 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 	var warnings []string
 	if question.Ticket != "" {
 		if project, ticket, found := snapshot.FindTicket(question.Ticket); found {
-			note := fmt.Sprintf("- %s · Question from %s — %q Answer (%s): %q.", snapshot.BuiltAt.UTC().Format("2006-01-02"), protocol.ShortRun(run.ID), question.Text, answeredBy, answer)
+			note := fmt.Sprintf("- %s · Question from %s — %q Answer (%s): %q.", now.Format("2006-01-02"), protocol.ShortRun(run.ID), question.Text, answeredBy, answer)
 			if _, err := b.write.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
 				return mdfile.AppendToSection(data, "Notes", note)
 			}); err != nil {

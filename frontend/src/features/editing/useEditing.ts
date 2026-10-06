@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { COLUMNS, type Column } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import {
+  answerQuestion,
   archiveTicket,
   blockedReasons,
   moveTicket,
@@ -112,10 +113,31 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
     [fetcher, notify, onChanged],
   );
 
+  // answer sends an answer to an agent's question (CARD-6) from any view.
+  // It resolves to an error message to show beside the question, or
+  // undefined once sent; warnings (the ticket's notes not updated) are
+  // announced.
+  const answer = useCallback(
+    async (id: string, text: string): Promise<string | undefined> => {
+      try {
+        const saved = await answerQuestion(fetcher, id, text);
+        if (saved.warnings.length > 0)
+          notify({ text: "Answer sent.", details: saved.warnings });
+        return undefined;
+      } catch (error) {
+        return `Not sent: ${failure(error)}`;
+      } finally {
+        onChanged();
+      }
+    },
+    [fetcher, notify, onChanged],
+  );
+
   return {
     toast,
     dismiss,
     notify,
+    answer,
     blocked,
     confirmBlocked,
     cancelBlocked: useCallback(() => setBlocked(null), []),

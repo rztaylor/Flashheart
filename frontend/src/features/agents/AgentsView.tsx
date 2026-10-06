@@ -2,7 +2,6 @@ import { useCallback, useId, useState } from "react";
 
 import type { ProjectSummary, TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import { answerQuestion } from "../../api/edit";
 import { fetchRun, fetchRuns, type Run, type RunState } from "../../api/runs";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
@@ -30,6 +29,8 @@ interface AgentsViewProps {
   projects: ProjectSummary[];
   revision: number;
   onOpen(ticket: TicketRef): void;
+  // onAnswer answers a run's question (CARD-6); absent when read-only.
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
 }
 
 const emptyLane: Record<RunState, string> = {
@@ -50,6 +51,7 @@ const rowGrid =
 // plan, edited files and activity; the ticket opens the card panel.
 export function AgentsView({
   fetcher,
+  onAnswer,
   project,
   projects,
   revision,
@@ -107,6 +109,7 @@ export function AgentsView({
             open={open}
             onToggle={(id) => setOpen((current) => (current === id ? "" : id))}
             fetcher={fetcher}
+            onAnswer={onAnswer}
             revision={revision}
             now={now}
             onOpen={onOpen}
@@ -137,6 +140,7 @@ interface LaneSectionProps {
   open: string;
   onToggle(id: string): void;
   fetcher: AuthenticatedFetch;
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
   revision: number;
   now: Date;
   onOpen(ticket: TicketRef): void;
@@ -150,6 +154,7 @@ function LaneSection({
   open,
   onToggle,
   fetcher,
+  onAnswer,
   revision,
   now,
   onOpen,
@@ -192,6 +197,7 @@ function LaneSection({
                 expanded={open === entry.run.id}
                 onToggle={() => onToggle(entry.run.id)}
                 fetcher={fetcher}
+                onAnswer={onAnswer}
                 revision={revision}
                 now={now}
                 onOpen={onOpen}
@@ -211,6 +217,7 @@ function LaneSection({
                         expanded={open === child.id}
                         onToggle={() => onToggle(child.id)}
                         fetcher={fetcher}
+                        onAnswer={onAnswer}
                         revision={revision}
                         now={now}
                         onOpen={onOpen}
@@ -235,6 +242,7 @@ interface RunRowProps {
   expanded: boolean;
   onToggle(): void;
   fetcher: AuthenticatedFetch;
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
   revision: number;
   now: Date;
   onOpen(ticket: TicketRef): void;
@@ -249,6 +257,7 @@ function RunRow({
   expanded,
   onToggle,
   fetcher,
+  onAnswer,
   revision,
   now,
   onOpen,
@@ -375,6 +384,7 @@ function RunRow({
           <ExpandedRun
             run={run}
             fetcher={fetcher}
+            onAnswer={onAnswer}
             revision={revision}
             now={now}
           />
@@ -388,11 +398,13 @@ function RunRow({
 function ExpandedRun({
   run,
   fetcher,
+  onAnswer,
   revision,
   now,
 }: {
   run: Run;
   fetcher: AuthenticatedFetch;
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
   revision: number;
   now: Date;
 }) {
@@ -401,16 +413,10 @@ function ExpandedRun({
     [fetcher, run.id],
   );
   const detail = useResource(load, run.id, revision);
-  const answer = (id: string, text: string): Promise<string | undefined> =>
-    answerQuestion(fetcher, id, text)
-      .then(() => {
-        detail.reload();
-        return undefined;
-      })
-      .catch(
-        (error: unknown) =>
-          `Not sent: ${error instanceof Error ? error.message : "unknown error"}`,
-      );
+  const answer = onAnswer
+    ? (id: string, text: string) =>
+        onAnswer(id, text).finally(() => detail.reload())
+    : undefined;
   if (detail.status === "error") {
     return (
       <p className="text-xs text-ink-muted">

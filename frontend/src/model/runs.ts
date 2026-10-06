@@ -44,10 +44,10 @@ const QUESTION_REASON: Record<QuestionKind, string> = {
 
 // questionReason says what an agent's question asks for, or that its
 // answer is waiting for the session's next prompt (HOOK-5).
+const ANSWER_WAITING = "Answer waits for its next prompt";
+
 export function questionReason(question: Question): string {
-  return question.answeredAt
-    ? "Answer waits for its next prompt"
-    : QUESTION_REASON[question.kind];
+  return question.answeredAt ? ANSWER_WAITING : QUESTION_REASON[question.kind];
 }
 
 // openQuestion is a run's first question still waiting on the human or on
@@ -74,7 +74,10 @@ export function needsReason(run: Run, children: Run[]): string {
 
 // liveReason is needsReason for a card's live run.
 export function liveReason(live: Live): string {
-  if (!live.permission && live.question) return QUESTION_REASON[live.question];
+  if (!live.permission && live.question)
+    return live.questionAnswered
+      ? ANSWER_WAITING
+      : QUESTION_REASON[live.question];
   return reasonFor(live.permission, live.waitingOn);
 }
 
