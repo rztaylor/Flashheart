@@ -164,25 +164,26 @@ func handle(options Options) error {
 	}
 	log := events.New(s)
 	var out Output
+	// A stop that cannot be checked is allowed and still recorded (HOOK-1).
+	var problem error
 	if input.Stop && !input.StopActive {
-		if out.Block, err = enforce(s, log, project, list, at, settings); err != nil {
-			return err
-		}
+		out.Block, problem = enforce(s, log, project, list, at, settings)
 	}
 	if err := log.Append(list...); err != nil {
-		return err
+		return errors.Join(problem, err)
 	}
 	switch {
 	case input.Recovery:
 		if out.Context, err = recovery(s, log, project, info, list, at, settings); err != nil {
-			return err
+			return errors.Join(problem, err)
 		}
 	case input.Answers != "":
-		if out.Context, err = answers(log, project, input.Answers, at); err != nil {
-			return err
-		}
+		// Answers taken from the inbox are shown even if marking them
+		// delivered fails, so they are never lost.
+		out.Context, err = answers(log, project, input.Answers, at)
+		problem = errors.Join(problem, err)
 	}
-	return write(options, out)
+	return errors.Join(problem, write(options, out))
 }
 
 func write(options Options, out Output) error {
@@ -200,10 +201,7 @@ func answers(log *events.Log, project, session string, at time.Time) (string, er
 	if err != nil || len(waiting) == 0 {
 		return "", err
 	}
-	if err := log.Append(deliveredEvents(project, waiting, at)...); err != nil {
-		return "", err
-	}
-	return protocol.AnswersNote(toAnswers(waiting)), nil
+	return protocol.AnswersNote(toAnswers(waiting)), log.Append(deliveredEvents(project, waiting, at)...)
 }
 
 func deliveredEvents(project string, list []events.Delivery, at time.Time) []events.Event {
@@ -231,16 +229,20 @@ func enforce(s *store.Store, log *events.Log, project string, list []events.Even
 	if index < 0 {
 		return "", nil
 	}
-	details, err := s.ReadProject(project)
+	enabled := settings.EnforceHandoff
+	override, err := s.EnforceHandoff(project)
 	if err != nil {
 		return "", err
 	}
-	enabled := settings.EnforceHandoff
-	if details.EnforceHandoff != nil {
-		enabled = *details.EnforceHandoff
+	if override != nil {
+		enabled = *override
 	}
 	if !enabled {
 		return "", nil
+	}
+	details, err := s.ReadProject(project)
+	if err != nil {
+		return "", err
 	}
 	set := runs.NewSet()
 	if err := log.Read(project, now.Add(-recoveryWindow), set.Apply); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -373,6 +375,15 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 	waiting, err := log.TakeAnswers(project, current)
 	if err != nil {
 		return "", err
+	}
+	if previous != nil {
+		// The previous session's inbox goes too, so resuming it later does
+		// not deliver the same answers again.
+		theirs, err := log.TakeAnswers(project, previous.ID)
+		if err != nil {
+			return "", err
+		}
+		waiting = append(waiting, theirs...)
 	}
 	seen := map[string]bool{}
 	for _, d := range waiting {

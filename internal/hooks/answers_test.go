@@ -167,3 +167,40 @@ func TestReplyNeedsNoBoard(t *testing.T) {
 		t.Fatalf("stamping touched the root: %v", err)
 	}
 }
+
+func TestAnswersDeliveredToTheNextSessionAreNotDeliveredAgain(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), repo(t)
+	asked(t, root, cwd, "s1")
+	// A new session in the worktree gets the previous session's answer.
+	if out := run(t, root, "SessionStart", "s2 "+cwd, fake{}); !strings.Contains(out, `Answered: "Which schema?"`) {
+		t.Fatalf("recovery note = %q", out)
+	}
+	// The previous session, resumed, does not get it again.
+	if out := run(t, root, "Prompt", "s1 "+cwd, fake{}); out != "" {
+		t.Fatalf("resumed session got the answer again: %q", out)
+	}
+}
+
+func TestAStopIsRecordedEvenWhenEnforcementCannotBeChecked(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), repo(t)
+	run(t, root, "SessionStart", "s1 "+cwd, fake{})
+	if err := os.WriteFile(filepath.Join(root, "demo", "project.yaml"), []byte("name: demo\nrepos:\n  - "+cwd+"\nsettings:\n  enforce_handoff: maybe\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out := run(t, root, "Stop", "s1 "+cwd, fake{}); out != "" {
+		t.Fatalf("stop output = %q", out)
+	}
+	ends := 0
+	for _, e := range readEvents(t, root, "demo") {
+		if e.Kind == events.TurnEnd {
+			ends++
+		}
+	}
+	if ends != 1 || !strings.Contains(errorLog(t, root), "enforce_handoff") {
+		t.Fatalf("turn ends = %d, error log = %q", ends, errorLog(t, root))
+	}
+}

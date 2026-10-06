@@ -5,8 +5,11 @@
 // aside. It plans first and renders the plan as a diff; applying takes
 // timestamped backups under ~/.claude/flashheart-backup/, and uninstalling
 // restores them when nothing changed since, else removes only its own
-// entries. It edits settings order- and format-preserving and owns only
-// hooks whose command runs a flashheart binary's hook subcommand.
+// entries. Settings keep their key order, value bytes, indent and line
+// endings (layout is otherwise normalised); a symlinked settings.json is
+// edited through to its target; settings in a shape it does not
+// understand, or changed since the plan, are refused. It owns only hooks
+// whose program is a flashheart binary run with hook.
 //
 // Flags and output streams belong to cli; the skill's text to protocol.
 // It never touches the board root.

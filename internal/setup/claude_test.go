@@ -300,3 +300,102 @@ func TestInstallOnAFreshMachineAndBack(t *testing.T) {
 		t.Fatalf("settings.json was absent before setup but remains:\n%s", m.read(".claude/settings.json"))
 	}
 }
+
+func TestASymlinkedSettingsFileStaysALink(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	dotfiles := filepath.Join(m.home, "dotfiles", "claude-settings.json")
+	m.write("dotfiles/claude-settings.json", string(m.original))
+	settings := filepath.Join(m.home, ".claude", "settings.json")
+	if err := os.Remove(settings); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(dotfiles, settings); err != nil {
+		t.Fatal(err)
+	}
+	m.apply(true)
+	if info, err := os.Lstat(settings); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("settings.json is no longer a link: %v", err)
+	}
+	if data, _ := os.ReadFile(dotfiles); !strings.Contains(string(data), "hook claude SessionStart") {
+		t.Fatal("the link's target was not updated")
+	}
+	m.apply(false)
+	if data, _ := os.ReadFile(dotfiles); !bytes.Equal(data, m.original) {
+		t.Fatal("uninstall did not restore the link's target")
+	}
+}
+
+func TestHooksSetupCannotReadAreRefused(t *testing.T) {
+	t.Parallel()
+
+	for name, settings := range map[string]string{
+		"hooks not an object": `{"hooks": []}`,
+		"event not a list":    `{"hooks": {"Stop": {"oops": 1}}}`,
+		"group not an object": `{"hooks": {"Stop": ["echo"]}}`,
+		"entries not a list":  `{"hooks": {"Stop": [{"hooks": {"type": "command"}}]}}`,
+	} {
+		m := newMachine(t)
+		m.write(".claude/settings.json", settings)
+		if _, err := Install(m.options); err == nil || !strings.Contains(err.Error(), "hooks") {
+			t.Errorf("%s: err = %v", name, err)
+		}
+	}
+}
+
+func TestUninstallOnAMachineWithoutFlashheartSaysSo(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	if err := os.RemoveAll(filepath.Join(m.home, ".claude", "skills", "kanban-tracker")); err != nil {
+		t.Fatal(err)
+	}
+	if out := render(m.plan(false)); !strings.Contains(out, "Flashheart is not set up for Claude Code; nothing to remove.") {
+		t.Fatalf("plan:\n%s", out)
+	}
+}
+
+func TestApplyRefusesASettingsFileThatChangedSinceThePlan(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	plan := m.plan(true)
+	m.write(".claude/settings.json", string(m.original)+" ")
+	if err := plan.Apply(&bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "changed since") {
+		t.Fatalf("err = %v", err)
+	}
+	if m.exists(".claude/skills/flashheart") {
+		t.Fatal("a refused apply wrote something")
+	}
+}
+
+func TestOnlyFlashheartHookCommandsAreOwned(t *testing.T) {
+	t.Parallel()
+
+	for command, own := range map[string]bool{
+		"/usr/local/bin/flashheart hook claude Stop":     true,
+		"'/opt/Flash Heart/flashheart' hook claude Stop": true,
+		"flashheart hook claude Stop --root /b":          true,
+		"/src/build/flashheart-dev hook claude Stop":     true,
+		`echo "flashheart hook fired"`:                   false,
+		"notify-send flashheart hook":                    false,
+		"/usr/local/bin/flashheart serve":                false,
+	} {
+		if got := ownsCommand(command); got != own {
+			t.Errorf("ownsCommand(%q) = %v, want %v", command, got, own)
+		}
+	}
+}
+
+func TestUninstallRestoresAUsersOwnFlashheartSkill(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.write(".claude/skills/flashheart/SKILL.md", "---\nname: flashheart\n---\nmy own notes\n")
+	m.apply(true)
+	m.apply(false)
+	if got := string(m.read(".claude/skills/flashheart/SKILL.md")); got != "---\nname: flashheart\n---\nmy own notes\n" {
+		t.Fatalf("skill after uninstall = %q", got)
+	}
+}

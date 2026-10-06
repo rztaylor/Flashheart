@@ -38,9 +38,27 @@ const (
 	backupDir     = "flashheart-backup"
 )
 
-// ownCommand recognises hooks setup owns: a command that runs a flashheart
-// binary's hook subcommand (§5.4). Everything else is the user's.
-var ownCommand = regexp.MustCompile(`(^|[/'"\s])flashheart['"]?\s+hook\s`)
+// ownBinary names a flashheart build: flashheart, flashheart-dev, …
+var ownBinary = regexp.MustCompile(`^flashheart[-_.A-Za-z0-9]*$`)
+
+// ownsCommand reports whether a hook command is setup's own: its program
+// (the first word, quoted or not) is a flashheart binary and its first
+// argument is hook (§5.4). Everything else is the user's.
+func ownsCommand(command string) bool {
+	command = strings.TrimSpace(command)
+	var program, rest string
+	if quote := command[:min(1, len(command))]; quote == "'" || quote == `"` {
+		end := strings.Index(command[1:], quote)
+		if end < 0 {
+			return false
+		}
+		program, rest = command[1:end+1], command[end+2:]
+	} else {
+		program, rest, _ = strings.Cut(command, " ")
+	}
+	fields := strings.Fields(rest)
+	return ownBinary.MatchString(filepath.Base(program)) && len(fields) > 0 && fields[0] == "hook"
+}
 
 // Options describe one machine's Claude Code configuration.
 type Options struct {
@@ -60,7 +78,10 @@ type Options struct {
 }
 
 type change struct {
-	path          string
+	// path is the file written: for a symlinked settings.json, its target.
+	path string
+	// backup is its name inside the backup folder.
+	backup        string
 	before, after []byte // nil: the file is absent / is deleted
 }
 
@@ -68,12 +89,13 @@ type move struct{ from, to string }
 
 // Plan is what setup would change. Render shows it; Apply makes it so.
 type Plan struct {
-	options  Options
-	backup   string
-	files    []change
-	moves    []move
-	commands [][]string
-	notes    []string
+	options   Options
+	uninstall bool
+	backup    string
+	files     []change
+	moves     []move
+	commands  [][]string
+	notes     []string
 }
 
 func (o Options) claudeDir() string    { return filepath.Join(o.Home, ".claude") }
@@ -124,6 +146,54 @@ func readFile(path string) ([]byte, error) {
 	return data, err
 }
 
+// skillBackup is the skill's name inside a backup folder.
+var skillBackup = filepath.Join("skills", protocol.SkillName, "SKILL.md")
+
+// readUserSettings reads settings.json, through a symlink to its target (a
+// dotfiles manager's file stays a link), and checks the hooks setup edits.
+func (o Options) readUserSettings() (string, []byte, *value, error) {
+	path := o.settingsPath()
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		if path, err = filepath.EvalSymlinks(path); err != nil {
+			return "", nil, nil, fmt.Errorf("%s is a link that cannot be followed: %w", o.settingsPath(), err)
+		}
+	}
+	data, tree, err := readSettings(path)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	if err := checkHooks(tree); err != nil {
+		return "", nil, nil, fmt.Errorf("%s: %w; fix it before running setup", o.settingsPath(), err)
+	}
+	return path, data, tree, nil
+}
+
+// checkHooks refuses hook settings in a shape setup does not understand,
+// rather than replacing them.
+func checkHooks(tree *value) error {
+	hooks := tree.get("hooks")
+	if hooks == nil {
+		return nil
+	}
+	if !hooks.isObj {
+		return errors.New("hooks is not an object")
+	}
+	for _, event := range hooks.object {
+		if !event.value.isArray {
+			return fmt.Errorf("hooks.%s is not a list", event.key)
+		}
+		for _, group := range event.value.array {
+			if !group.isObj {
+				return fmt.Errorf("hooks.%s has an entry that is not an object", event.key)
+			}
+			if entries := group.get("hooks"); entries != nil && !entries.isArray {
+				return fmt.Errorf("hooks.%s has an entry whose hooks is not a list", event.key)
+			}
+		}
+	}
+	return nil
+}
+
 func readSettings(path string) ([]byte, *value, error) {
 	data, err := readFile(path)
 	if err != nil {
@@ -157,6 +227,9 @@ func encodeLike(tree *value, original []byte) []byte {
 	if len(original) > 0 && !bytes.HasSuffix(original, []byte("\n")) {
 		out = bytes.TrimSuffix(out, []byte("\n"))
 	}
+	if bytes.Contains(original, []byte("\r\n")) {
+		out = bytes.ReplaceAll(out, []byte("\n"), []byte("\r\n"))
+	}
 	return out
 }
 
@@ -182,7 +255,7 @@ func stripOwn(hooks *value, prune bool) {
 			}
 			var kept []*value
 			for _, entry := range entries.array {
-				if ownCommand.MatchString(entry.get("command").text()) {
+				if ownsCommand(entry.get("command").text()) {
 					removedAny = true
 					continue
 				}
@@ -265,19 +338,19 @@ func (o Options) newPlan() *Plan {
 // kanban-tracker skill aside.
 func Install(o Options) (*Plan, error) {
 	p := o.newPlan()
-	data, tree, err := readSettings(o.settingsPath())
+	settings, data, tree, err := o.readUserSettings()
 	if err != nil {
 		return nil, err
 	}
 	if after := o.installedSettings(data, tree); !bytes.Equal(after, data) {
-		p.files = append(p.files, change{path: o.settingsPath(), before: data, after: after})
+		p.files = append(p.files, change{path: settings, backup: "settings.json", before: data, after: after})
 	}
 	skill, err := readFile(o.skillPath())
 	if err != nil {
 		return nil, err
 	}
 	if want := []byte(protocol.Skill()); !bytes.Equal(skill, want) {
-		p.files = append(p.files, change{path: o.skillPath(), before: skill, after: want})
+		p.files = append(p.files, change{path: o.skillPath(), backup: skillBackup, before: skill, after: want})
 	}
 	if info, err := os.Stat(o.replacedPath()); err == nil && info.IsDir() {
 		p.moves = append(p.moves, move{from: o.replacedPath(), to: filepath.Join(p.backup, "skills", replacedSkill)})
@@ -301,7 +374,8 @@ func Install(o Options) (*Plan, error) {
 // otherwise only setup's own hooks are removed.
 func Uninstall(o Options) (*Plan, error) {
 	p := o.newPlan()
-	data, tree, err := readSettings(o.settingsPath())
+	p.uninstall = true
+	settings, data, tree, err := o.readUserSettings()
 	if err != nil {
 		return nil, err
 	}
@@ -315,12 +389,19 @@ func Uninstall(o Options) (*Plan, error) {
 		after = encodeLike(tree, data)
 	}
 	if data != nil && !bytes.Equal(after, data) {
-		p.files = append(p.files, change{path: o.settingsPath(), before: data, after: after})
+		p.files = append(p.files, change{path: settings, backup: "settings.json", before: data, after: after})
 	}
+	// Only setup's own skill goes; one the user had before is put back.
 	if skill, err := readFile(o.skillPath()); err != nil {
 		return nil, err
-	} else if skill != nil {
-		p.files = append(p.files, change{path: o.skillPath(), before: skill})
+	} else if skill != nil && bytes.Contains(skill, []byte("flashheart-protocol:")) {
+		var theirs []byte
+		if saved := o.latestBackup(skillBackup); saved != "" {
+			if data, err := os.ReadFile(saved); err == nil && !bytes.Contains(data, []byte("flashheart-protocol:")) {
+				theirs = data
+			}
+		}
+		p.files = append(p.files, change{path: o.skillPath(), backup: skillBackup, before: skill, after: theirs})
 	}
 	if _, err := os.Stat(o.replacedPath()); errors.Is(err, fs.ErrNotExist) {
 		if saved := o.latestBackup(filepath.Join("skills", replacedSkill)); saved != "" {
@@ -421,7 +502,11 @@ func (p *Plan) commandLine(args []string) string {
 // Render prints the plan: a diff per file, the moves and the commands.
 func (p *Plan) Render(w io.Writer) {
 	if p.Empty() {
-		fmt.Fprintln(w, "Claude Code is already configured for Flashheart; nothing to change.")
+		if p.uninstall {
+			fmt.Fprintln(w, "Flashheart is not set up for Claude Code; nothing to remove.")
+		} else {
+			fmt.Fprintln(w, "Claude Code is already configured for Flashheart; nothing to change.")
+		}
 		return
 	}
 	for _, f := range p.files {
@@ -455,15 +540,22 @@ func (p *Plan) Apply(w io.Writer) error {
 		p.Render(w)
 		return nil
 	}
+	// Nothing is written if a file changed since the plan was made (Claude
+	// Code rewrites settings.json itself): the plan would undo that change.
+	for _, f := range p.files {
+		current, err := readFile(f.path)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(current, f.before) {
+			return fmt.Errorf("%s changed since the plan was made; run flashheart setup again", p.display(f.path))
+		}
+	}
 	if err := os.MkdirAll(p.backup, 0o700); err != nil {
 		return fmt.Errorf("create backup folder: %w", err)
 	}
 	for _, f := range p.files {
-		relative, err := filepath.Rel(p.options.claudeDir(), f.path)
-		if err != nil {
-			return err
-		}
-		saved := filepath.Join(p.backup, relative)
+		saved := filepath.Join(p.backup, f.backup)
 		if err := os.MkdirAll(filepath.Dir(saved), 0o700); err != nil {
 			return err
 		}
@@ -480,7 +572,9 @@ func (p *Plan) Apply(w io.Writer) error {
 			if err := os.Remove(f.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
-			_ = os.Remove(filepath.Dir(f.path)) // the skill's folder, when empty
+			if f.backup == skillBackup {
+				_ = os.Remove(filepath.Dir(f.path)) // the skill's folder, when empty
+			}
 			fmt.Fprintf(w, "Deleted %s\n", p.display(f.path))
 			continue
 		}

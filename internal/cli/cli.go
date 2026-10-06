@@ -518,18 +518,19 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 	if env.deps.FindClaude != nil {
 		options.Claude = env.deps.FindClaude(home)
 	}
-	plan, err := setup.Install(options)
+	plan := setup.Install
 	if env.setup.uninstall {
-		plan, err = setup.Uninstall(options)
+		plan = setup.Uninstall
 	}
+	changes, err := plan(options)
 	if err != nil {
 		return err
 	}
 	if env.setup.write {
-		return plan.Apply(env.stdout)
+		return changes.Apply(env.stdout)
 	}
-	plan.Render(env.stdout)
-	if !plan.Empty() {
+	changes.Render(env.stdout)
+	if !changes.Empty() {
 		again := "--write"
 		if env.setup.uninstall {
 			again = "--uninstall --write"
