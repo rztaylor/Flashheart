@@ -40,6 +40,7 @@ func (srv *server) registerWrites(server *mcp.Server) {
 	tool(server, "move", "Move a ticket to another column: backlog, up-next, in-progress or review. Moving to review warns about a missing review or unticked criteria. Agents never move tickets to done.", srv.move)
 	tool(server, "set_project_key", "Choose your project's ticket key (2–5 capital letters or digits, starting with a letter) before its first ticket. Pick what people call the project: FH for Flashheart.", srv.setProjectKey)
 	tool(server, "create_ticket", "Create a ticket in your project with the next id. Feature tickets carry a test plan and bugs a reproduction (plan_or_repro). Returns the new id.", srv.createTicket)
+	tool(server, "create_workstream", "Create a workstream in your project: an ordered group of tickets with a shared goal, where each ticket waits for the ones before it. Use one when work spans several dependent tickets; leave single tickets alone. The tickets you list join it in that order.", srv.createWorkstream)
 	tool(server, "write_review", "Create or replace a ticket's review (the human verification guide, in the review template). Screenshots and other local files linked by absolute path are copied into the ticket.", srv.writeReview)
 	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt.", srv.askHuman)
 }
@@ -433,10 +434,14 @@ func (srv *server) updateTicket(input UpdateTicketInput) (string, error) {
 	if len(changes) == 0 && len(checks) == 0 && note == "" {
 		return "", fail("invalid_input", "pass set, check or append_notes", "nothing to change")
 	}
-	_, err = srv.store.UpdateTicket(project.Name, ticket.ID, base, func(data []byte) ([]byte, error) {
+	// A workstream change also rewrites the workstreams' tickets lists.
+	workstream := slices.IndexFunc(changes, func(ch change) bool { return ch.key == "workstream" })
+	edit := func(data []byte) ([]byte, error) {
 		var err error
 		for _, ch := range changes {
 			switch {
+			case ch.key == "workstream":
+				continue
 			case ch.key == "title":
 				data, err = mdfile.SetTitle(data, ch.value)
 			case ch.isList:
@@ -457,7 +462,12 @@ func (srv *server) updateTicket(input UpdateTicketInput) (string, error) {
 			return mdfile.AppendToSection(data, "Notes", note)
 		}
 		return data, nil
-	})
+	}
+	if workstream >= 0 {
+		_, err = srv.store.SetTicketWorkstream(project.Name, ticket.ID, base, changes[workstream].value, edit)
+	} else {
+		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, base, edit)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -694,6 +704,78 @@ func (srv *server) createTicket(input CreateTicketInput) (string, error) {
 		text += fmt.Sprintf(" Project %s now uses key %s.", project.Name, created.Key)
 	}
 	return text + fmt.Sprintf("\nok ticket=%s\n", created.ID), nil
+}
+
+// CreateWorkstreamInput is create_workstream's input.
+type CreateWorkstreamInput struct {
+	Attribution
+	Title                string   `json:"title" jsonschema:"what the line of work is called; its slug is made from it"`
+	Goal                 string   `json:"goal" jsonschema:"the shared outcome the tickets deliver"`
+	Priority             string   `json:"priority,omitempty" jsonschema:"high, medium (default) or low"`
+	Tickets              []string `json:"tickets,omitempty" jsonschema:"ids of your project's tickets, in the order they should be done"`
+	DependsOnWorkstreams []string `json:"depends_on_workstreams,omitempty" jsonschema:"slugs of workstreams that must finish first"`
+	Tags                 []string `json:"tags,omitempty"`
+}
+
+func (srv *server) createWorkstream(input CreateWorkstreamInput) (string, error) {
+	c, err := srv.begin(input.Run)
+	if err != nil {
+		return "", err
+	}
+	if len(c.candidates) > 1 {
+		if _, err := c.requireRun(); err != nil {
+			return "", err
+		}
+	}
+	project, err := c.projectArg("")
+	if err != nil {
+		return "", err
+	}
+	if len(input.Goal) > maxDescription {
+		return "", fail("too_large", "keep the goal under 16 KiB; link to longer documents", "the goal is too long")
+	}
+	if len(input.Tickets) > maxItems {
+		return "", fail("invalid_input", fmt.Sprintf("list at most %d tickets; add more with update_ticket", maxItems), "too many tickets")
+	}
+	var tickets []string
+	for _, id := range input.Tickets {
+		owner, ticket, err := c.find(id)
+		if err != nil {
+			return "", err
+		}
+		if owner.Name != project.Name {
+			return "", fail("invalid_input", "list tickets of project "+project.Name, "%s belongs to project %s", ticket.ID, owner.Name)
+		}
+		if err := c.guard(ticket.ID); err != nil {
+			return "", err
+		}
+		tickets = append(tickets, ticket.ID)
+	}
+	var dependencies []string
+	for _, slug := range items(input.DependsOnWorkstreams) {
+		dependencies = append(dependencies, strings.TrimSpace(slug))
+	}
+	title := scrub.Text(input.Title, 300)
+	created, err := srv.store.CreateWorkstream(project.Name, store.NewWorkstream{
+		Title: title, Goal: demoteHeadings(scrub.Secrets(input.Goal)), Priority: strings.TrimSpace(input.Priority),
+		Tickets: tickets, DependsOnWorkstreams: dependencies, Tags: items(input.Tags),
+	})
+	if err != nil {
+		return "", err
+	}
+	var list []events.Event
+	for _, id := range tickets {
+		list = append(list, events.Event{Kind: events.TicketUpdated, Data: events.TicketData{Ticket: id, Fields: []string{"workstream"}}})
+	}
+	if err := c.record(project.Name, list...); err != nil {
+		return "", err
+	}
+	text := fmt.Sprintf("Created workstream %s %q", created.Slug, scrub.Limit(title, 200))
+	if len(tickets) > 0 {
+		text += " with " + strings.Join(tickets, ", ")
+	}
+	text += fmt.Sprintf(". Add tickets with create_ticket or update_ticket workstream=%s; each waits for the ones before it.", created.Slug)
+	return text + fmt.Sprintf("\nok workstream=%s\n", created.Slug), nil
 }
 
 // WriteReviewInput is write_review's input.

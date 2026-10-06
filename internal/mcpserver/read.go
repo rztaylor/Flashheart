@@ -130,6 +130,29 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 			lines = append(lines, c.row(project, ticket, text))
 		}
 	}
+
+	// Unfinished workstreams, so agents join one rather than invent another.
+	var workstreams []string
+	for _, workstream := range project.Workstreams {
+		state := c.analysis.Workstreams[board.Ref{Project: project.Name, ID: workstream.Slug}]
+		if workstream.NeedsRepair() || state.Status == board.StatusCompleted {
+			continue
+		}
+		item := fmt.Sprintf("%s %q (%d of %d done", workstream.Slug, text(workstream.Title), state.Done, state.Total)
+		if state.Next != "" {
+			item += ", next " + state.Next
+		}
+		if state.Status == board.StatusBlocked {
+			item += ", blocked"
+		}
+		workstreams = append(workstreams, item+")")
+	}
+	if len(workstreams) > 0 {
+		if len(workstreams) > limit {
+			workstreams = append(workstreams[:limit], fmt.Sprintf("%d more", len(workstreams)-limit))
+		}
+		lines = append(lines, "Workstreams: "+strings.Join(workstreams, "; ")+".")
+	}
 	lines = append(lines, dataNote)
 	return strings.Join(lines, "\n") + "\n"
 }

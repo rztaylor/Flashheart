@@ -31,6 +31,18 @@ func TestStoreErrorsBecomeProtocolCodes(t *testing.T) {
 	}
 }
 
+func TestAMissingWorkstreamNamesTheAvailableOnes(t *testing.T) {
+	t.Parallel()
+
+	got := asToolError(&store.WorkstreamNotFoundError{Project: "demo", Slug: "nope", Available: []string{"panel", "sync"}})
+	if got.Code != "not_found" || got.Fix != "use one of panel, sync, or create it with create_workstream" {
+		t.Fatalf("missing workstream → %+v", got)
+	}
+	if got := asToolError(&store.WorkstreamNotFoundError{Project: "demo", Slug: "nope"}); got.Fix != "create it with create_workstream" {
+		t.Fatalf("no workstreams → %+v", got)
+	}
+}
+
 func TestNewNeedsARoot(t *testing.T) {
 	t.Parallel()
 

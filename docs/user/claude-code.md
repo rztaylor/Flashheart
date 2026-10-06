@@ -73,6 +73,9 @@ Ask in plain words: "tackle the two top-priority bugs", "look at FH-42",
   active (30 minutes after its last activity, `lease_minutes`);
 - **checkpoints** as it goes: done, next, files and open questions replace
   the ticket's `## Handoff`, which the next session resumes from;
+- groups work that spans several dependent tickets into a **workstream**,
+  joining one the board already has or creating one in the order the
+  tickets should be done; single tickets stay out of workstreams;
 - finishes by writing a review, linking screenshots by path (Flashheart
   copies them into the ticket, so they survive the agent cleaning up), and
   moving the ticket to **Ready to review**. Agents never move tickets to

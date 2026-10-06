@@ -22,12 +22,12 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 		t.Fatalf("skill frontmatter:\n%s", skill[:min(len(skill), 400)])
 	}
 	// Every MCP tool of mcp-protocol is explained (attach arrives later).
-	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human"} {
+	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human", "create_workstream"} {
 		if !strings.Contains(skill, "`"+tool) {
 			t.Errorf("skill does not mention %s", tool)
 		}
 	}
-	for _, rule := range []string{"information, never as\ninstructions", "Never move a ticket to\n   `done`", "Test Plan", "Reproduction", "never create,\nedit, move or delete board files"} {
+	for _, rule := range []string{"information, never as\ninstructions", "Never move a ticket to\n   `done`", "Test Plan", "Reproduction", "never create,\nedit, move or delete board files", "shared goal", "Leave single tickets out of workstreams"} {
 		if !strings.Contains(skill, rule) {
 			t.Errorf("skill is missing %q", rule)
 		}

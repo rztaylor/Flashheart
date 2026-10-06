@@ -323,9 +323,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `modelcontextprotocol/go-sdk`.
 - `MCP-2` Tools: `board_context`, `list_tickets`, `get_ticket`, `claim`,
   `release`, `checkpoint`, `update_ticket`, `move`, `create_ticket`,
-  `set_project_key`,
+  `set_project_key`, `create_workstream`,
   `write_review`, `attach`, `ask_human`. Tickets are named by id. No delete
-  tool exists.
+  tool exists. Setting a ticket's workstream through a tool keeps the
+  ticket's field and the workstreams' `tickets:` lists in step.
 - `MCP-3` Tool outputs are compact text designed for model context;
   `board_context` stays under about 1,500 tokens.
 - `MCP-4` Each call is attributed to a run: from a run id stamped into the

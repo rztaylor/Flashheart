@@ -49,7 +49,7 @@ All notable changes to this project are documented here. The project follows
   and is recorded in Notes; moving into review warns about a missing review
   or unticked criteria. The panel ticks acceptance criteria, archives with
   Undo, and has an Edit tab with typed fields and the raw file. New ticket
-  creates the next id. Workstream stations reorder along their line.
+  creates the next id and joins its workstream's list. Workstream stations reorder along their line.
 - Safe concurrent writes: per-project and root locks, content-hash
   preconditions, atomic replace, and a side-by-side conflict dialog when a
   save loses a race.
@@ -94,6 +94,11 @@ All notable changes to this project are documented here. The project follows
   `update_ticket`, `move`, `create_ticket` and `set_project_key` edit the
   board (agents choose a new project's key and never move tickets to Done);
   `write_review` writes the review; `ask_human` asks you a question.
+  `create_workstream` groups dependent tickets with a shared goal, and
+  giving a ticket a workstream (when creating or updating it) also adds it
+  to the end of that workstream's list and takes it out of any other, so
+  its order and blocking apply; an unknown workstream is refused.
+  `board_context` lists the project's unfinished workstreams.
   Screenshots and other files a review or checkpoint links by local path are
   copied into the ticket, so they survive the agent cleaning up.
 - `flashheart setup claude` shows, as a diff, the hooks, MCP server and
