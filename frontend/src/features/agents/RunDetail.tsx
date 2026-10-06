@@ -1,4 +1,5 @@
 import type { PlanItem, Run, TimelineEntry } from "../../api/runs";
+import { Aside } from "../../components/Aside";
 import { Icon } from "../../components/Icon";
 import { QuestionCard } from "../../components/QuestionCard";
 import { compactTimeline, describeEntry, shortRun } from "../../model/runs";
@@ -57,9 +58,15 @@ export function RunDetail({
         <div className="flex min-w-0 flex-col gap-5">
           <DetailSection level={headingLevel} title="Plan">
             {run.plan.length === 0 ? (
-              <p className="text-ink-muted">No plan recorded.</p>
+              <>
+                <p className="text-ink-muted">No plan recorded.</p>
+                <Aside placement="plan-empty" className="mt-1" />
+              </>
             ) : (
-              <PlanList plan={run.plan} />
+              <>
+                <PlanList plan={run.plan} />
+                <Aside placement="plan" className="mt-2" />
+              </>
             )}
           </DetailSection>
           <DetailSection

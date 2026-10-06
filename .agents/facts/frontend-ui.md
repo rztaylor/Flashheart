@@ -12,8 +12,8 @@
   markdown links, grid movement) → `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  RouteBar, EmptyState, RunState, PlanRoute, QuestionCard) → `features/<feature>/` (board,
-  card, editing, agents, workstreams, table, projects, filters; later
+  RouteBar, EmptyState, RunState, PlanRoute, QuestionCard, Aside) → `features/<feature>/` (board,
+  card, editing, agents, workstreams, table, projects, filters, archive; later
   settings) → `app/`
   (shell, hash routing, composition). Shared layers never import features
   or the shell.

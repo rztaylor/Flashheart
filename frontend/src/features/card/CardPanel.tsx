@@ -11,6 +11,7 @@ import {
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { conflictOf, type Saved, setCriterion } from "../../api/edit";
+import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
@@ -23,6 +24,7 @@ import { StateNote } from "../../components/StateNote";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
+import type { Step } from "../../model/order";
 import { counted, sessionsOf, shortRun } from "../../model/runs";
 import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
@@ -49,6 +51,9 @@ interface CardPanelProps {
   // editing enables moves, archiving and the Edit tab; absent when the
   // server is read-only.
   editing?: Editing;
+  // onStep moves the ticket within its column (EDIT-9); absent when the
+  // board does not show it.
+  onStep?: (step: Step) => void;
   workstreamsOf(project: string): WorkstreamBrief[];
 }
 
@@ -69,6 +74,7 @@ export function CardPanel({
   onClose,
   revision,
   editing,
+  onStep,
   workstreamsOf,
 }: CardPanelProps) {
   const load = useCallback(
@@ -174,6 +180,7 @@ export function CardPanel({
                 <PanelActions
                   detail={detail}
                   onMove={(to) => void editing.move(detail, to)}
+                  onStep={onStep}
                   onArchive={() => {
                     void editing.archive(detail);
                     onClose();
@@ -217,15 +224,29 @@ export function CardPanel({
   );
 }
 
-// PanelActions moves the ticket to any column (the menu alternative to
-// dragging, EDIT-1) or archives it (EDIT-8).
+const steps: { value: Step; short: string; label: string }[] = [
+  { value: "top", short: "Top", label: "Top of its column" },
+  { value: "up", short: "Up", label: "Up one place" },
+  { value: "down", short: "Down", label: "Down one place" },
+  {
+    value: "bottom",
+    short: "Bottom",
+    label: "Bottom of its column",
+  },
+];
+
+// PanelActions moves the ticket to any column or to a place in its column
+// (the menu alternatives to dragging, EDIT-1, EDIT-9) or archives it
+// (EDIT-8).
 function PanelActions({
   detail,
   onMove,
+  onStep,
   onArchive,
 }: {
   detail: TicketDetail;
   onMove(to: Column): void;
+  onStep?: (step: Step) => void;
   onArchive(): void;
 }) {
   return (
@@ -244,6 +265,26 @@ function PanelActions({
           ))}
         </Select>
       </label>
+      {onStep ? (
+        <fieldset className="flex items-center gap-1 text-xs text-ink-muted">
+          <legend className="sr-only">Position in its column</legend>
+          <span aria-hidden="true" className="mr-1">
+            Position
+          </span>
+          {steps.map((step) => (
+            <Button
+              key={step.value}
+              variant="quiet"
+              className="h-8 px-2 py-0 text-xs"
+              aria-label={step.label}
+              title={step.label}
+              onClick={() => onStep(step.value)}
+            >
+              {step.short}
+            </Button>
+          ))}
+        </fieldset>
+      ) : null}
       <Button className="h-8 py-0 text-xs" onClick={onArchive}>
         <Icon name="archive" size={14} />
         Archive
@@ -548,7 +589,12 @@ export function TicketTab({
               </Markdown>
             </div>
           </details>
+          {!stale && detail.handoff.next.length > 0 ? (
+            <Aside placement="handoff" className="mt-3" />
+          ) : null}
         </section>
+      ) : detail.column === "in-progress" ? (
+        <Aside placement="handoff-missing" />
       ) : null}
 
       <ReasonList

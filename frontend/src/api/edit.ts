@@ -38,14 +38,23 @@ async function save(
 
 const ticketPath = (id: string) => `/api/tickets/${segment(id)}`;
 
+// moveTicket moves a ticket to a column. With after it is also placed
+// directly after that ticket ("" for the top; EDIT-9); without, it keeps its
+// place in the saved order.
 export function moveTicket(
   fetcher: AuthenticatedFetch,
   id: string,
   to: Column,
   base: string,
   reason = "",
+  after?: string,
 ) {
-  return save(fetcher, "POST", `${ticketPath(id)}/move`, { base, to, reason });
+  return save(fetcher, "POST", `${ticketPath(id)}/move`, {
+    base,
+    to,
+    reason,
+    ...(after === undefined ? {} : { after }),
+  });
 }
 
 export type FieldValue = string | string[];

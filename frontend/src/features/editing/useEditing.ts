@@ -10,6 +10,7 @@ import {
   unarchiveTicket,
 } from "../../api/edit";
 import type { ToastMessage } from "../../components/Toast";
+import { markSaved, type PendingMoves, serial, settle } from "./pending";
 
 export interface Movable {
   id: string;
@@ -17,11 +18,21 @@ export interface Movable {
   column: Column;
 }
 
+// Placement puts a ticket directly after another in its column ("" for the
+// top; EDIT-9). undoAfter is where it was, for Undo.
+export interface Placement {
+  after?: string;
+  undoAfter?: string;
+}
+
 export interface BlockedMove {
   ticket: Movable;
   to: Column;
   reasons: string[];
+  placement: Placement;
 }
+
+export type { Pending } from "./pending";
 
 const columnTitle = (column: Column) =>
   COLUMNS.find((item) => item.id === column)?.title ?? column;
@@ -30,59 +41,90 @@ const failure = (error: unknown) =>
   error instanceof Error ? error.message : "The change could not be saved";
 
 // useEditing coordinates moves and archiving from any view (EDIT-1, EDIT-2,
-// EDIT-3, EDIT-8): it shows the new column at once, asks for a reason before
-// starting a blocked ticket, and announces each result with Undo.
-export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
+// EDIT-3, EDIT-8): it shows the new column and place at once (EDIT-9), asks
+// for a reason before starting a blocked ticket, and announces each result
+// with Undo, which puts the ticket back in its old column and place.
+// remark, when given, picks a marginal remark for a successful move's toast
+// (FH-22); it is asked only after the save succeeds.
+export function useEditing(
+  fetcher: AuthenticatedFetch,
+  onChanged: () => void,
+  remark?: (ticket: Movable, to: Column) => ToastMessage["aside"],
+) {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [blocked, setBlocked] = useState<BlockedMove | null>(null);
-  const [pending, setPending] = useState<Record<string, Column>>({});
+  const [pending, setPending] = useState<PendingMoves>({});
   const counter = useRef(0);
+  // Moves are saved one at a time, in the order they were made; seq tells
+  // a move's entry from a later one for the same ticket.
+  const queue = useRef(serial());
+  const seq = useRef(0);
 
   const notify = useCallback((message: Omit<ToastMessage, "id">) => {
     counter.current += 1;
     setToast({ id: counter.current, ...message });
   }, []);
   const dismiss = useCallback(() => setToast(null), []);
-  const settle = useCallback((id: string) => {
-    setPending((current) => {
-      const { [id]: _, ...rest } = current;
-      return rest;
-    });
-  }, []);
 
   const move = useCallback(
-    async (ticket: Movable, to: Column, reason = "") => {
-      if (ticket.column === to) return;
-      setPending((current) => ({ ...current, [ticket.id]: to }));
+    async (
+      ticket: Movable,
+      to: Column,
+      reason = "",
+      placement: Placement = {},
+    ) => {
+      const { after, undoAfter } = placement;
+      if (ticket.column === to && after === undefined) return;
+      seq.current += 1;
+      const mine = seq.current;
+      setPending((current) => ({
+        ...current,
+        [ticket.id]: { column: to, after, saved: false, seq: mine },
+      }));
       try {
-        const saved = await moveTicket(fetcher, ticket.id, to, "", reason);
+        const saved = await queue.current(() =>
+          moveTicket(fetcher, ticket.id, to, "", reason, after),
+        );
+        setPending((current) => markSaved(current, ticket.id, mine));
         notify({
-          text: `Moved ${ticket.id} to ${columnTitle(to)}.`,
+          text:
+            ticket.column === to
+              ? `Moved ${ticket.id} in ${columnTitle(to)}.`
+              : `Moved ${ticket.id} to ${columnTitle(to)}.`,
           details: saved.warnings,
+          aside: remark?.(ticket, to),
           action: {
             label: "Undo",
-            run: () => void move({ ...ticket, column: to }, ticket.column),
+            run: () =>
+              void move(
+                { ...ticket, column: to },
+                ticket.column,
+                "",
+                after === undefined
+                  ? {}
+                  : { after: undoAfter ?? "", undoAfter: after },
+              ),
           },
         });
         onChanged();
       } catch (error) {
-        settle(ticket.id);
+        setPending((current) => settle(current, ticket.id, mine));
         const reasons = blockedReasons(error);
         if (reasons) {
-          setBlocked({ ticket, to, reasons });
+          setBlocked({ ticket, to, reasons, placement });
           return;
         }
         notify({ text: `${ticket.id} was not moved: ${failure(error)}` });
       }
     },
-    [fetcher, notify, onChanged, settle],
+    [fetcher, notify, onChanged, remark],
   );
 
   const confirmBlocked = useCallback(
     (reason: string) => {
       if (!blocked) return;
       setBlocked(null);
-      void move(blocked.ticket, blocked.to, reason);
+      void move(blocked.ticket, blocked.to, reason, blocked.placement);
     },
     [blocked, move],
   );
@@ -142,8 +184,8 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
     confirmBlocked,
     cancelBlocked: useCallback(() => setBlocked(null), []),
     pending,
-    // reconcile drops optimistic columns the board data now agrees with, or
-    // whose tickets are gone.
+    // reconcile drops optimistic moves the board data now agrees with (a
+    // placement once its save has returned), or whose tickets are gone.
     reconcile: useCallback((cards: { id: string; column: Column }[]) => {
       setPending((current) => {
         const ids = Object.keys(current);
@@ -151,7 +193,10 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
         const columns = new Map(cards.map((card) => [card.id, card.column]));
         const next = Object.fromEntries(
           Object.entries(current).filter(
-            ([id, column]) => columns.has(id) && columns.get(id) !== column,
+            ([id, entry]) =>
+              columns.has(id) &&
+              (columns.get(id) !== entry.column ||
+                (entry.after !== undefined && !entry.saved)),
           ),
         );
         return Object.keys(next).length === ids.length ? current : next;

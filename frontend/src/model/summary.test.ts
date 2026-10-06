@@ -65,4 +65,22 @@ describe("viewSummary", () => {
       }),
     ).toBe("1 workstream · 0 of 0 stations served");
   });
+
+  it("counts archived tickets or projects", () => {
+    expect(
+      viewSummary({
+        ...base,
+        view: "archive",
+        archived: { count: 1, of: "tickets" },
+      }),
+    ).toBe("1 archived ticket");
+    expect(
+      viewSummary({
+        ...base,
+        view: "archive",
+        archived: { count: 3, of: "projects" },
+      }),
+    ).toBe("3 archived projects");
+    expect(viewSummary({ ...base, view: "archive" })).toBe("");
+  });
 });

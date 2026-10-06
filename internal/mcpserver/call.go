@@ -38,10 +38,12 @@ type call struct {
 	board    board.Board
 	analysis board.Analysis
 	where    gitinfo.Info
-	// project is the caller's project, "" when it has none.
-	project string
-	set     *runs.Set
-	folded  map[string]bool
+	// project is the caller's project, "" when it has none; archived names
+	// the caller's project when it is archived (PRJ-5).
+	project  string
+	archived string
+	set      *runs.Set
+	folded   map[string]bool
 	// seen holds every folded event, so runs are folded in time order
 	// across projects.
 	seen []events.Event
@@ -81,6 +83,8 @@ func (srv *server) begin(runArg string) (*call, error) {
 				return nil, err
 			}
 		}
+	case errors.Is(err, store.ErrProjectArchived):
+		c.archived = project
 	case errors.Is(err, store.ErrNotFound), errors.Is(err, store.ErrNeedsMigration):
 	default:
 		return nil, err
@@ -191,6 +195,10 @@ func (c *call) requireRun() (string, error) {
 	if c.run != "" {
 		return c.run, nil
 	}
+	// No run is recorded in an archived project's repository.
+	if c.archived != "" {
+		return "", c.archivedError()
+	}
 	if len(c.candidates) > 1 {
 		short := make([]string, 0, len(c.candidates))
 		for _, id := range c.candidates {
@@ -247,6 +255,9 @@ func (c *call) projectArg(value string) (*board.Project, error) {
 		if project := c.callerProject(); project != nil {
 			return project, nil
 		}
+		if c.archived != "" {
+			return nil, c.archivedError()
+		}
 		return nil, fail("not_found", "pass project, one of: "+strings.Join(c.projectNames(), ", "), "this session's working directory is not a project on the board")
 	}
 	for index := range c.board.Projects {
@@ -290,7 +301,18 @@ func (c *call) find(id string) (*board.Project, board.Ticket, error) {
 			return nil, board.Ticket{}, fail("not_found", "ask the human to unarchive it if work should continue", "%s is archived", id)
 		}
 	}
+	for _, project := range c.board.ArchivedProjects {
+		if slices.Contains(project.IDs, id) {
+			return nil, board.Ticket{}, fail("project_archived", "ask the human to restore the project in Flashheart if work should continue", "%s belongs to archived project %s", id, project.Name)
+		}
+	}
 	return nil, board.Ticket{}, fail("not_found", "check the id with list_tickets", "no ticket %s", id)
+}
+
+// archivedError explains that the caller's project is archived: nothing is
+// recorded for it until the human restores it.
+func (c *call) archivedError() error {
+	return fail("project_archived", "ask the human to restore it from Flashheart's archive; nothing is recorded here until then", "project %q is archived", c.archived)
 }
 
 // blocked describes a ticket's blocking reasons.

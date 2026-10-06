@@ -94,7 +94,8 @@ func (s *Store) OpenEventFile(project, file string) (*os.File, error) {
 }
 
 // RemoveEventFile deletes one event file. Expiring old event files is the
-// only deletion Flashheart performs (board-format.md, Event log).
+// only deletion Flashheart performs unasked; the others are permanent
+// deletes the user confirms (board-format.md, Event log).
 func (s *Store) RemoveEventFile(project, file string) error {
 	if err := s.checkEventFile(project, file); err != nil {
 		return err
@@ -146,7 +147,8 @@ func repoSuffix(repo string) string {
 // repository to <name>-<6 hex of sha256(repo)> (PRJ-3). An empty repo means
 // activity outside git, which goes to _scratch (PRJ-4); a name with nothing
 // usable becomes repo-<6 hex>, never _scratch. A v1 project is left for
-// migrate (ErrNeedsMigration).
+// migrate (ErrNeedsMigration). A repository whose project is archived gets
+// that project's name with ErrProjectArchived, and nothing is created.
 func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 	candidates := []string{ScratchProject}
 	if repo != "" {
@@ -179,7 +181,16 @@ func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 			return candidate, s.addRepo(candidate, repo)
 		case exists:
 			continue
-		case !create:
+		}
+		// An archived project keeps its repositories: activity there waits
+		// for a restore instead of starting an empty project (PRJ-5).
+		if archived, ok := s.archivedRepos(candidate); ok {
+			if repo == "" || len(archived) == 0 || slices.Contains(archived, repo) {
+				return candidate, fmt.Errorf("project %q: %w", candidate, ErrProjectArchived)
+			}
+			continue
+		}
+		if !create {
 			return "", fmt.Errorf("project %q: %w", candidate, ErrNotFound)
 		}
 		return candidate, s.createProject(candidate, repo)

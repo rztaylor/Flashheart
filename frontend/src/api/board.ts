@@ -94,6 +94,8 @@ export interface ProjectSummary {
   warnings: string[];
   lastModified: string;
   workstreams: WorkstreamBrief[];
+  // archived counts the project's archived tickets (EDIT-8).
+  archived: number;
   runs: RunCounts;
 }
 
@@ -104,6 +106,8 @@ export interface ProjectsResponse {
   v1Projects: string[];
   migrateCommand: string;
   projects: ProjectSummary[];
+  // archivedProjects counts projects under <root>/.archive/ (PRJ-5).
+  archivedProjects: number;
   runs: RunCounts;
 }
 
@@ -241,6 +245,7 @@ function isSummary(value: unknown): value is ProjectSummary {
     ) &&
     typeof value.needsRepair === "number" &&
     typeof value.blocked === "number" &&
+    typeof value.archived === "number" &&
     isString(value.lastModified) &&
     Array.isArray(value.workstreams) &&
     isRunCounts(value.runs)
@@ -256,6 +261,7 @@ const isProjects = (value: unknown): value is ProjectsResponse =>
   isString(value.migrateCommand) &&
   Array.isArray(value.projects) &&
   value.projects.every(isSummary) &&
+  typeof value.archivedProjects === "number" &&
   isRunCounts(value.runs);
 
 const isBoard = (value: unknown): value is BoardResponse =>

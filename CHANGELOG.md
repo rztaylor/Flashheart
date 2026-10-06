@@ -18,8 +18,38 @@ All notable changes to this project are documented here. The project follows
   finished work; the card panel leads with status, blocker and priority
   pills and sets questions and the handoff as callouts. Both palettes meet
   WCAG 2.2 AA, checked by a palette test.
+- Board columns scroll together on one surface, like a single page: a wheel
+  or trackpad anywhere over the board moves every column, column heads stay
+  in view, and no column has its own scrollbar (FH-24).
 
 ### Added
+
+- Manual card order: drag a card to any place in its column, or to a place
+  in another column, and the order is saved in the ticket's new `rank`
+  field, so it survives reloads and restarts. Shift with Up or Down and the
+  panel's Position buttons move a card within its column; Undo puts it back.
+  New tickets join below the ordered ones, Done stays most recent first,
+  and workstream order is unaffected (FH-23).
+- Archive view for each project (Archive in the page header): search
+  archived tickets, restore one to the column it left, or delete it
+  permanently. Deleting needs the ticket's id typed, lists every ticket and
+  workstream that refers to it, removes those references so nothing waits
+  on it, and retires the id so it is never reused (FH-20). Permanent
+  deletes are marked in red, like errors.
+- Projects can be archived from the archive page (All projects › Archive, or
+  Archive project… in a project's archive), with a warning about live
+  sessions, tickets being worked on and open questions; restored; and,
+  once archived, deleted permanently with the name typed. An archived
+  project's tickets count as done for other projects and its key stays
+  reserved; a deleted project's key is retired. Agents working in an
+  archived project's repository no longer recreate it: hooks stay quiet and
+  MCP tools answer `project_archived` (FH-21).
+- Dry marginal remarks from the reviewed Blackadder collection in quiet
+  moments: empty boards and searches, an empty review column, quiet Agents
+  lanes, open runs' plans, handoffs, the toast when a move finishes a
+  workstream (and now and then for other work done), and the stopped
+  screen after Quit. At most one shows per screen; none appears in errors,
+  blockers or anything agents read (FH-22).
 
 - `flashheart` binary: `serve` (default) opens a private, authenticated board
   shell in the browser and returns the terminal, running the server in the

@@ -4,13 +4,15 @@ import { Icon } from "../components/Icon";
 import { KeyBadge } from "../components/KeyBadge";
 
 // PageHeader opens every view with its scope's identity, the project's key
-// badge and name as the page title (All projects in the all scope), and one
-// quiet summary line for the view (ui-layout.md §1).
+// badge and name as the page title (All projects in the all scope), one
+// quiet summary line for the view (ui-layout.md §1) and, at the far end, a
+// quiet way into the archive.
 export function PageHeader({
   projectKey,
   title,
   summary,
   live,
+  aside,
 }: {
   // projectKey is absent in the all scope, which shows the board icon.
   projectKey?: string;
@@ -19,6 +21,7 @@ export function PageHeader({
   // live announces changes (a filtered ticket count); off where the line
   // follows live updates (Agents) and would chatter.
   live?: boolean;
+  aside?: ReactNode;
 }) {
   return (
     <header className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-5 pb-3 md:px-6">
@@ -37,6 +40,9 @@ export function PageHeader({
         >
           {summary}
         </p>
+      ) : null}
+      {aside ? (
+        <div className="ml-auto md:self-start md:pt-1">{aside}</div>
       ) : null}
     </header>
   );

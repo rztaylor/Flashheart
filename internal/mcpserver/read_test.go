@@ -1,7 +1,9 @@
 package mcpserver
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -147,4 +149,31 @@ func TestRunAttribution(t *testing.T) {
 	contains(t, e.ok("board_context", map[string]any{"run": "claude:77777777"}), "run=claude:77777777")
 	contains(t, e.ok("board_context", map[string]any{"run": session}), "run=claude:5b0c7e2a")
 	e.fails("board_context", map[string]any{"run": "not a run"}, "invalid_input")
+}
+
+func TestAnArchivedProjectIsNotRecreated(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel", Type: "feature", Priority: "high"})
+	if err := e.store.ArchiveProject("demo"); err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"board_context", nil},
+		{"list_tickets", nil},
+		{"create_ticket", map[string]any{"type": "bug", "title": "X", "description": "x", "criteria": []string{"y"}, "priority": "low"}},
+		{"ask_human", map[string]any{"kind": "question", "text": "Still there?"}},
+	} {
+		out := e.fails(tool.name, tool.args, "project_archived")
+		contains(t, out, `project "demo" is archived`, "ask the human to restore it")
+	}
+	out := e.fails("get_ticket", map[string]any{"ticket": id}, "project_archived")
+	contains(t, out, id, "archived project demo")
+	if _, err := os.Stat(e.root + "/demo"); !errors.Is(err, os.ErrNotExist) {
+		t.Error("the archived project was recreated")
+	}
 }

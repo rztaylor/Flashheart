@@ -37,6 +37,8 @@ colors:
   select: "#be185d"
   select-surface: "#fdf0f6"
   danger: "#b42318"
+  on-danger: "#ffffff"
+  danger-hover: "#912018"
   danger-surface: "#fdecea"
   selection: "#ffe08a"
   flash: "#ffd23f"
@@ -149,6 +151,8 @@ colors:
   night-select: "#c6f432"
   night-select-surface: "#2a2a2d"
   night-danger: "#ff8a80"
+  night-on-danger: "#111111"
+  night-danger-hover: "#ffa69e"
   night-danger-surface: "#2b1513"
   night-selection: "#5a4a12"
   night-state-neutral: "#2a2a2d"
@@ -343,6 +347,18 @@ components:
     textColor: "{colors.ink-muted}"
     rounded: "{rounded.control}"
     padding: "6px 12px"
+  button-danger:
+    backgroundColor: "{colors.danger}"
+    textColor: "{colors.on-danger}"
+    typography: "{typography.heading-small}"
+    rounded: "{rounded.control}"
+    padding: "6px 12px"
+  button-danger-hover:
+    backgroundColor: "{colors.danger-hover}"
+  button-danger-quiet:
+    textColor: "{colors.danger}"
+    rounded: "{rounded.control}"
+    padding: "6px 12px"
   button-band:
     textColor: "{colors.on-band}"
     rounded: "{rounded.control}"
@@ -458,7 +474,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 ### Tertiary
 - **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, lane head, panel, virtual column). Only Needs you uses it.
 - **Flash** (`flash` #ffd23f): the bolt before the wordmark.
-- **Danger** (`danger` on `danger-surface`): application errors only, never a ticket state.
+- **Danger** (`danger`, `on-danger`, `danger-surface`): application errors, and actions that cannot be undone (a permanent delete): red, in both themes. Never a ticket state.
 
 ### Neutral
 - **Ground** (`ground` #ffffff; `night-ground` #0c0c0d), **Rail** (`rail` #fafafa; `night-rail` #111112), **Column** (`column` #f3f4f6 cool light grey; `night-column` #161617), **Card** and **Panel** (white; `night-card` #1e1e20, `night-panel` #141415), **Well** (`well` #f6f7f9; `night-well` #252527), **Rule** (`rule` #e3e5e9; `night-rule` #303033), **Ink Muted** and **Ink Faint** (AA on every surface).
@@ -526,6 +542,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 - **Primary:** action fill, on-action label, 600 weight; hover darkens (light) or lifts (dark).
 - **Secondary:** card surface, rule border, card shadow; hover darkens the border.
 - **Quiet:** muted text; hover to ink.
+- **Danger:** danger fill, on-danger label, 600 weight; only for the confirmation of an action that cannot be undone (Delete permanently), always with words that say so. **Danger quiet:** danger text, a danger-surface hover; the button that opens that confirmation.
 - **Band:** on the band, a 50% on-band-muted border; hover fills band field.
 - **Focus:** 2px outline offset 2px in focus (on-band inside the band). Disabled 50%.
 
@@ -562,7 +579,7 @@ Selects 32px, card surface, rule border, chevron; an applied filter gains a sele
 
 ### Do:
 - **Do** follow the contract for what each view shows and in what order, in both themes.
-- **Do** use the role tokens: action for the primary button, attention for Needs you, select for selection and focus, state for status pills.
+- **Do** use the role tokens: action for the primary button, attention for Needs you, select for selection and focus, state for status pills, danger for errors and for actions that cannot be undone.
 - **Do** pair every colour with words or an icon: pills, tags, the colour key, bullet initials.
 - **Do** keep stripes, bullets, routes and route washes in the workstream's own line colour.
 - **Do** keep a check for finished work only, and dashes for suspended, missing or repair.
@@ -573,5 +590,6 @@ Selects 32px, card surface, rule border, chevron; an applied filter gains a sele
 - **Don't** use navy or blue-tinted grounds, surfaces or borders in dark.
 - **Don't** use a line colour for status, priority or type, or a paint colour for a workstream.
 - **Don't** add a second attention plate or a second looping animation.
+- **Don't** show more than one marginal remark on a screen, or put one in an error, blocker, permission or control (ui-layout.md §8).
 - **Don't** hardcode the references' sample copy, counts, dates or invented types.
 - **Don't** set labels in tracked uppercase, ids in monospace, or counts in proportional numerals.

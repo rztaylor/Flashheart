@@ -302,3 +302,61 @@ is light's one accent: the bar, the primary action, the current project,
 selection and focus. Grounds are white and cool light greys. Night Service
 (dark) is unchanged. Structure is unchanged (D18, `ui-layout.md`); only light
 tokens moved, and the palette test still holds every pair to WCAG AA.
+
+## 2026-10-06 — D23: Manual card order lives in each ticket's `rank`
+
+Decision (FH-23): a ticket's place in its column is an optional `rank`
+frontmatter field holding a fractional index, not a per-project order file.
+Ranked tickets come first; unranked ones keep the old default order
+(priority, created, id).
+
+Options: an order file per project listing ids per column, or a key on each
+ticket. The order file is one write per reorder but drifts from the tickets
+(external moves, archives, new tickets) and is a second source of truth for
+a ticket's place. A per-ticket key keeps the ticket file the source of
+truth (D12, STO-3), survives archive and restore, and a fractional index
+means a placement normally writes one file under the existing lock and
+hash rules. Unranked tickets are ranked only when a placement lands among
+them, in their current order, so nothing else moves. Done keeps recency
+order, which is what people look for there, and is not reordered.
+
+## 2026-10-06 — D24: Tickets can be deleted, in two steps
+
+Decision (user, FH-20): reverses "Flashheart never deletes a ticket". Archive
+stays the normal, undoable action; a ticket can be deleted permanently only
+once archived, from the project's Archive view, after a confirmation that
+lists what the delete touches and asks for the typed id. Board files have no
+history (D12), so the two steps keep accidents rare.
+
+The delete removes the id from other tickets' `depends-on` and from
+workstream lists in the same locked operation, because a reference to a
+missing ticket counts as blocking. Ids stay retired: a `retired:` list in
+`project.yaml` joins existing and archived numbers in the next-id
+safeguard, so a lost or edited `next_id` cannot reuse a deleted id. The
+confirmation's preview carries a token over everything it lists; the
+delete is refused when any of it changed. Agents get no delete tool.
+
+Danger red marks the delete (user, 2026-10-06): errors and actions that
+cannot be undone are red. The row's Delete permanently is red text and the
+confirmation's button a red fill (`DESIGN.md` Danger role).
+
+## 2026-10-06 — D25: Projects archive and delete like tickets
+
+Decision (user, FH-21): a project can be archived from the UI and deleted
+permanently only once archived, the same two steps as tickets (D24).
+
+- Keys are retired, not released. Ids are global across the root and may be
+  referenced from other projects' text and logs, so a deleted project's key
+  goes into `<root>/.flashheart/retired.yaml` and is never given to another
+  project. An archived project's key stays taken.
+- References after a delete are removed, as for tickets: the confirmation
+  lists other projects' tickets that depend on the project's tickets, and
+  the delete removes those `depends-on` entries, so nothing is left blocked
+  on a missing ticket. Prose mentions stay as text.
+- Agents in an archived project's repository: with `auto_create_projects`
+  on, their next hook or MCP call would otherwise recreate an empty project.
+  Instead hooks no-op quietly (fail-open) and MCP tools answer
+  `project_archived` without creating anything. After a permanent delete
+  the repository is unknown again, so activity there starts a new project,
+  with a new key because the old one is retired.
+

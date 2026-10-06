@@ -122,8 +122,18 @@ watches the root and keeps an in-memory index; the UI is optional.
 - `PRJ-4` Agent activity outside any git repository goes to `_scratch`.
 - `PRJ-5` A project directory is created on first agent contact when
   `auto_create_projects` is on (default on), with a `project.yaml` holding its
-  name and repository but no key yet (`KEY-5`). A project can be archived (moved to
-  `<root>/.archive/`) from the UI; Flashheart never deletes a project.
+  name and repository but no key yet (`KEY-5`). A project can be archived
+  from the UI (moved to `<root>/.archive/<project>/`, after a confirmation
+  that warns about live runs, tickets being worked on and open questions)
+  and restored, unless a live project has its name. While archived its
+  tickets count as done for other projects, its key stays taken, and agent
+  activity in its repositories is not recorded and does not recreate it:
+  hooks stay quiet and MCP tools answer `project_archived`. A project is
+  deleted permanently only once archived, with its name typed: the delete
+  removes other projects' `depends-on` references to its tickets, retires
+  its key and removes the directory. After a delete its repositories are
+  unknown again, so new activity there starts a new project with a new key.
+  Agents have no archive or delete tool.
 - `PRJ-6` The UI lists projects with counts per column, active runs and a
   **Needs you** count, sorted by most recent activity; **All projects** shows
   every project's tickets and runs together.
@@ -166,7 +176,9 @@ Full format: `docs/dev/specs/board-format.md`.
   uppercase letters or digits) recorded in `project.yaml` and unique across
   the root. A project without one shows a key derived from its name.
 - `KEY-2` Every ticket has an id `<key>-<number>`, assigned under the project
-  lock at creation from `next_id`, never reused or renumbered.
+  lock at creation from `next_id`, never reused or renumbered. A permanently
+  deleted ticket's id is recorded as retired in `project.yaml` (`EDIT-8`) so
+  it is not reused even if `next_id` is lost.
 - `KEY-3` Ids are how tickets are named everywhere: cards, the card panel,
   search, URLs, events, recovery notes, MCP tool arguments and outputs, and
   `depends-on` and workstream lists. A bare id in ticket or review markdown
@@ -183,13 +195,15 @@ Full format: `docs/dev/specs/board-format.md`.
   ticket created with no key chosen records the derived key, adding a digit
   when it is taken. Keys are assigned under the root lock, so two new
   projects never get the same key; a taken or invalid key is refused with
-  the keys in use.
+  the keys in use. Archived projects keep their keys, and a permanently
+  deleted project's key is retired (`<root>/.flashheart/retired.yaml`), so
+  no other project takes it and its ids are never reused.
 
 ### 6.4 Views (`VIEW`)
 
 - `VIEW-1` **Board**: one column per status in workflow order (Backlog, Up
-  next, In progress, Ready to review, Done).
-  *done* shows the most recent 20 by default with **Show all**.
+  next, In progress, Ready to review, Done), each in its manual order
+  (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
 - `VIEW-2` **Virtual columns**: *Needs you* (tickets with a run in Needs you or
   an open question) and *Agent working* (tickets linked to a Working or Quiet
   run). They sit before Backlog and appear while they hold tickets. Each
@@ -253,8 +267,32 @@ Full format: `docs/dev/specs/board-format.md`.
   dates, lists) and a raw editor for the whole file.
 - `EDIT-7` A save conflict (`STO-3`) shows both versions and lets the user
   reload or overwrite deliberately.
-- `EDIT-8` Flashheart never deletes a ticket. **Archive** moves its folder
-  to `<project>/.archive/tickets/` and can be undone.
+- `EDIT-8` Deleting takes two deliberate steps. **Archive**, the normal
+  action, moves a ticket's folder to `<project>/.archive/tickets/` and can be
+  undone; a project's **Archive** view lists its archived tickets, searchable,
+  and **Restore** returns one to the column it left. Only an archived ticket
+  can be **deleted permanently**, from that view: a confirmation lists the
+  folder's files and every ticket (`depends-on`) and workstream (`tickets:`)
+  that refers to it, and the user types the ticket's id. The delete removes
+  the folder and those references in one locked operation, so nothing waits
+  on the id, and retires the id (`KEY-2`). It is refused when anything listed
+  changed since the confirmation opened. Prose mentions stay as text. Board
+  files have no history (D12), so a delete cannot be undone. Agents have no
+  delete or archive tool.
+- `EDIT-9` **Manual order**: dragging a card within a column, or dropping it
+  at a place in another column, sets its place, saved in the ticket's `rank`
+  (board-format §Order within a column) so it survives reloads and
+  restarts. Ranked tickets come first; unranked ones (new tickets, until
+  placed) follow by priority, created date and id. *Done* lists the most
+  recently finished first and is not reordered. Places are taken among the
+  visible cards of the ticket's own project, so filtered-out tickets and
+  other projects in *All projects* keep their order. Shift with Up or Down
+  and the panel's **Position** buttons are the keyboard and menu alternatives;
+  Undo puts the ticket back after the card it followed. A temporary display
+  sort (the Table's column sort, or a future board sort) rearranges only what
+  is shown and never writes ranks; while one is on, cards cannot be
+  reordered within a column and a move keeps the ticket's rank. Board order
+  is separate from workstream order (`EDIT-4`) and never changes it.
 
 ### 6.7 Runs (`RUN`)
 

@@ -65,6 +65,8 @@ type ProjectSummary struct {
 	Warnings     []string          `json:"warnings"`
 	LastModified string            `json:"lastModified"`
 	Workstreams  []WorkstreamBrief `json:"workstreams"`
+	// Archived counts the project's archived tickets (EDIT-8).
+	Archived int `json:"archived"`
 	// Runs counts the project's agent runs by state (PRJ-6).
 	Runs RunCountsJSON `json:"runs"`
 }
@@ -81,6 +83,8 @@ type ProjectsResponse struct {
 	Projects       []ProjectSummary `json:"projects"`
 	// Runs counts every project's runs, for the band's Needs you badge.
 	Runs RunCountsJSON `json:"runs"`
+	// ArchivedProjects counts the projects under <root>/.archive/ (PRJ-5).
+	ArchivedProjects int `json:"archivedProjects"`
 }
 
 // Progress counts acceptance criteria.
@@ -269,6 +273,8 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/changes", getOnly(b.changes))
 	b.registerRuns(mux)
 	b.registerWrites(mux)
+	b.registerArchive(mux)
+	b.registerProjectArchive(mux)
 }
 
 // ChangesResponse is GET /api/changes?since=N: the revision once it is newer
@@ -352,6 +358,8 @@ func (b boardAPI) projects(w http.ResponseWriter, _ *http.Request) {
 		V1Projects:  nonNil(snapshot.V1Projects),
 		Projects:    summaries(snapshot),
 		Runs:        countsJSON(snapshot.RunCounts("")),
+
+		ArchivedProjects: len(snapshot.Board.ArchivedProjects),
 	}
 	if len(snapshot.V1Projects) > 0 {
 		response.MigrateCommand = "flashheart migrate --root " + shellQuote(b.root)
@@ -543,7 +551,7 @@ func (b boardAPI) attachment(w http.ResponseWriter, r *http.Request) {
 // trimmed to the most recent doneLimit unless all is set (VIEW-1).
 func (b boardAPI) cards(snapshot *index.Snapshot, project *board.Project, all, withSearch bool) ([]Card, int, int) {
 	tickets := slices.Clone(project.Tickets)
-	slices.SortStableFunc(tickets, compareTickets)
+	slices.SortStableFunc(tickets, board.CompareOrder)
 	cards := make([]Card, 0, len(tickets))
 	total, shown := 0, 0
 	for _, ticket := range tickets {
@@ -559,45 +567,8 @@ func (b boardAPI) cards(snapshot *index.Snapshot, project *board.Project, all, w
 	return cards, total, shown
 }
 
-var priorityRank = map[string]int{"high": 0, "medium": 1, "low": 2}
-
 func columnRank(column string) int {
 	return slices.Index(board.Columns, board.Column(column))
-}
-
-func compareTickets(a, b board.Ticket) int {
-	if c := cmp.Compare(columnRank(string(a.Column)), columnRank(string(b.Column))); c != 0 {
-		return c
-	}
-	if a.Column == board.Done {
-		if c := b.Modified.Compare(a.Modified); c != 0 {
-			return c
-		}
-		return compareIDs(a.ID, b.ID)
-	}
-	rank := func(t board.Ticket) int {
-		if r, ok := priorityRank[t.Priority]; ok {
-			return r
-		}
-		return len(priorityRank)
-	}
-	if c := cmp.Compare(rank(a), rank(b)); c != 0 {
-		return c
-	}
-	if c := cmp.Compare(a.Created, b.Created); c != 0 {
-		return c
-	}
-	return compareIDs(a.ID, b.ID)
-}
-
-// compareIDs orders ids by key, then number.
-func compareIDs(a, b string) int {
-	ak, an, _ := board.ParseID(a)
-	bk, bn, _ := board.ParseID(b)
-	if c := cmp.Compare(ak, bk); c != 0 {
-		return c
-	}
-	return cmp.Compare(an, bn)
 }
 
 func filesURL(project, id string) string {
@@ -678,6 +649,7 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 		Repos:  nonNil(project.Repos),
 		Counts: map[string]int{}, Warnings: nonNil(project.Warnings), LastModified: timestamp(project.LastModified),
 		Workstreams: []WorkstreamBrief{},
+		Archived:    len(project.Archived),
 		Runs:        countsJSON(snapshot.RunCounts(project.Name)),
 	}
 	for _, workstream := range project.Workstreams {

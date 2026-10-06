@@ -88,9 +88,19 @@ load) sit as a full-width strip under the band, above the rail and Main.
   In progress).
 - Columns are at least 15rem, scroll horizontally with snap; under 48rem one
   column shows, chosen with the Column picker.
-- Dropping: the hovered column shows a drop outline. Keyboard: arrows move
-  between cards, Shift with Left/Right moves the ticket (`EDIT-1`), Enter
-  opens it.
+- The board is one scrolling surface: columns grow with their cards and
+  scroll down together, from anywhere over the board, and every well
+  stretches to the tallest column (or the board's height). No column scrolls
+  on its own. Column heads stay pinned at the top while the board scrolls; a
+  drag held at an edge scrolls the board. The ticket panel scrolls
+  separately.
+- Dropping: the hovered column shows a drop outline and a select-coloured
+  line where the card will land (none in Done, or where the drop would
+  change nothing) (`EDIT-9`). Keyboard: arrows move between cards, Shift with
+  Left/Right moves the ticket to the next column (`EDIT-1`), Shift with
+  Up/Down moves it within its column, Enter opens it. The panel's actions
+  add **Position** buttons (Top, Up, Down, Bottom; each named by its full
+  action) while the board shows the ticket outside Done.
 
 ### Ticket card
 
@@ -208,7 +218,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | Paint | The Colour by value | Card header tint, filled tag, colour key | The value's word |
 | State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green | Icon and column word |
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
-| Danger | Application errors | Alert strips, failed loads | Words |
+| Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |
 | Selection | What is chosen or applied | Open ticket's card ring and table row, current panel tab, chosen density, applied filter, pressed workstream chip, drop target | `aria-current`, `aria-selected`, `aria-pressed` or the control's value |
 
@@ -230,6 +240,24 @@ is dashed and hatched in ink.
 | Long content | Titles wrap (card three lines, then clamped); ids never cut; paths, branches and run ids cut from the start |
 | Narrow (< 48rem) | Rail hidden, control row with Project and Column pickers, band tabs as icons, Needs you plate keeps its words, panel covers the view |
 | Backend lost / stopped | Band status in words; the stopped screen replaces the app (`LIFE-1`) |
+| Marginal remark | At most one per screen: one quiet line in faint ink under a real quiet state, chosen once from its placement's lines (below) and kept while shown, never the line shown last. Never in errors, blockers, permissions, controls or anything to act on; identical in both themes; no motion |
+
+Marginal remarks come from the reviewed collection in
+`frontend/src/model/remarks.md` (ids are its numbers). Placements, highest
+priority first when several are on screen:
+
+| Placement | When | Lines |
+| --- | --- | --- |
+| Move toast (not announced) | A move to Done that finishes its workstream: completion. Any other move to Done: progress, at most every ten minutes | 61–70; 51–53, 55, 57, 58 |
+| Card panel | A current handoff (not stale) with a next step; an in-progress ticket with no handoff | 75, 77, 79, 80; 73 |
+| Open run (Agents) | A plan; no plan | 32, 34–36, 39, 40; 33 |
+| Empty views | No tickets; nothing matches the filters or search (also the archive's search); no workstreams; no agent runs | 21–30 (reviewed ones); 82–88; 31; 41–50 |
+| Columns and lanes | Ready to review is empty; the Needs you lane is empty and nothing anywhere needs you | 71, 72; 11–19 |
+| Stopped screen | After a successful Quit only (never on a lost or failed connection) | 92–100 |
+| Wordmark tooltip | Always; an Easter egg, never visible text | 1–7 |
+
+Deferred: 54 (claims a plan's first task) and 60 (claims a reader for a
+handoff).
 
 Focus is always visible; reduced motion removes transitions, the panel
 reveal and the Working beat; every control has an accessible name; contrast

@@ -69,6 +69,8 @@ const text: [string, string, number][] = [
   ["on-action", "action", 4.5],
   ["on-attention", "attention", 4.5],
   ["danger", "danger-surface", 4.5],
+  ["on-danger", "danger", 4.5],
+  ["danger", "card", 4.5],
   ["danger", "ground", 4.5],
   ["ink", "select-surface", 4.5],
   ["focus", "ground", 3],

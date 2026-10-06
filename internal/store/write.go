@@ -98,7 +98,12 @@ func (s *Store) lock(dir string) (func(), error) {
 		return nil, err
 	}
 	name := path.Join(dir, ".flashheart", "lock")
-	if err := root.MkdirAll(path.Dir(name), 0o755); err != nil {
+	// Only .flashheart is made, never the directory it sits in, so a writer
+	// cannot recreate a project archived or removed meanwhile.
+	if err := root.Mkdir(path.Dir(name), 0o755); err != nil && !errors.Is(err, fs.ErrExist) {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("lock %s: %w", dir, ErrNotFound)
+		}
 		return nil, fmt.Errorf("lock %s: %w", dir, err)
 	}
 	file, err := openLockFile(root, name)
@@ -109,10 +114,19 @@ func (s *Store) lock(dir string) (func(), error) {
 		file.Close()
 		return nil, err
 	}
-	return func() {
+	release := func() {
 		_ = funlock(file)
 		file.Close()
-	}, nil
+	}
+	// The directory may have moved (an archive) while this writer waited;
+	// then the lock it holds is no longer at name.
+	if held, err := file.Stat(); err == nil {
+		if current, err := root.Lstat(name); err != nil || !os.SameFile(held, current) {
+			release()
+			return nil, fmt.Errorf("lock %s: %w", dir, ErrNotFound)
+		}
+	}
+	return release, nil
 }
 
 // openLockFile opens the lock file, creating it if needed. Concurrent first
@@ -533,6 +547,20 @@ func (s *Store) keysInUse(except string) ([]keyOwner, error) {
 			owners = append(owners, keyOwner{project: name, key: info.Key})
 		}
 	}
+	// Archived projects keep their keys, and deleted projects' keys are
+	// retired (KEY-5).
+	archived, err := s.ArchivedProjects()
+	if err != nil {
+		return nil, err
+	}
+	for _, project := range archived {
+		if project.Name != except && (!project.KeyDerived || len(project.IDs) > 0) {
+			owners = append(owners, keyOwner{project: archiveDir + "/" + project.Name, key: project.Key})
+		}
+	}
+	for _, key := range s.retiredKeys() {
+		owners = append(owners, keyOwner{project: retiredFile, key: key})
+	}
 	return owners, nil
 }
 
@@ -663,17 +691,18 @@ func (s *Store) setProjectFields(project, key string, nextID int) error {
 	return edit.write(s)
 }
 
-// Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8).
+// Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8),
+// first stamping `updated:`, which dates the archive.
 func (s *Store) Archive(project, id string) error {
-	return s.moveTicket(project, id, path.Join(project, "tickets"), path.Join(project, ".archive", "tickets"))
+	return s.moveTicket(project, id, path.Join(project, "tickets"), path.Join(project, ".archive", "tickets"), true)
 }
 
 // Unarchive moves an archived ticket's folder back to tickets/.
 func (s *Store) Unarchive(project, id string) error {
-	return s.moveTicket(project, id, path.Join(project, ".archive", "tickets"), path.Join(project, "tickets"))
+	return s.moveTicket(project, id, path.Join(project, ".archive", "tickets"), path.Join(project, "tickets"), false)
 }
 
-func (s *Store) moveTicket(project, id, from, to string) error {
+func (s *Store) moveTicket(project, id, from, to string, stamp bool) error {
 	if err := s.checkTicket(project, id); err != nil {
 		return err
 	}
@@ -685,6 +714,12 @@ func (s *Store) moveTicket(project, id, from, to string) error {
 	file, err := s.ticketFile(project, from, id)
 	if err != nil {
 		return err
+	}
+	if stamp {
+		// A ticket whose frontmatter does not parse is archived unstamped.
+		_, _ = s.updateLocked(file, "", func(data []byte) ([]byte, error) {
+			return mdfile.SetScalar(data, "updated", s.now().Format(time.RFC3339))
+		}, false)
 	}
 	folder := path.Dir(file)
 	return s.Move(folder, path.Join(to, path.Base(folder)))
@@ -721,4 +756,77 @@ func (s *Store) UpdateConfig(edit Edit) error {
 		return nil
 	}
 	return s.WriteFileAtomic(ConfigFile, next)
+}
+
+// PlaceTicket applies edit to a ticket (a move sets its status) and ranks it
+// so it directly follows after ("" for the top) in its resulting column
+// (EDIT-9), all under one hold of the project lock. A non-empty base must
+// match the ticket's current hash; it is checked before anything is
+// written. Placing may also rank unranked tickets above it, in their current
+// order (board.PlanPlacement). When after is no longer in that column, or
+// the column is Done, the edit is applied without a placement and placed is
+// false. It returns the ticket's new hash.
+func (s *Store) PlaceTicket(project, id, base, after string, edit Edit) (hash string, placed bool, err error) {
+	if err := s.checkTicket(project, id); err != nil {
+		return "", false, err
+	}
+	release, err := s.lock(project)
+	if err != nil {
+		return "", false, err
+	}
+	defer release()
+	name, err := s.TicketFile(project, id)
+	if err != nil {
+		return "", false, err
+	}
+	current, err := s.ReadFile(name)
+	if err != nil {
+		return "", false, err
+	}
+	if base != "" && base != Hash(current) {
+		return "", false, &ConflictError{Name: name, Hash: Hash(current), Current: current}
+	}
+	next, err := edit(current)
+	if err != nil {
+		return "", false, err
+	}
+	column := board.ParseTicket(path.Base(path.Dir(name)), next).Column
+	var writes []board.RankWrite
+	if column != board.Done {
+		info, err := s.ReadProject(project)
+		if err != nil {
+			return "", false, err
+		}
+		tickets := slices.DeleteFunc(slices.Clone(info.Tickets), func(t board.Ticket) bool { return t.Column != column })
+		slices.SortStableFunc(tickets, board.CompareOrder)
+		writes, placed = board.PlanPlacement(tickets, id, after)
+	}
+	if !placed {
+		hash, err := s.updateLocked(name, base, edit, true)
+		return hash, false, err
+	}
+	rank := writes[len(writes)-1].Rank
+	for _, write := range writes[:len(writes)-1] {
+		other, err := s.TicketFile(project, write.ID)
+		if err == nil {
+			_, err = s.updateLocked(other, "", setRank(write.Rank), true)
+		}
+		// A ticket whose frontmatter does not parse cannot hold a rank; it
+		// stays in the unranked tail.
+		if err != nil && !errors.Is(err, mdfile.ErrBrokenFrontmatter) {
+			return "", false, err
+		}
+	}
+	hash, err = s.updateLocked(name, base, func(data []byte) ([]byte, error) {
+		edited, err := edit(data)
+		if err != nil {
+			return nil, err
+		}
+		return setRank(rank)(edited)
+	}, true)
+	return hash, err == nil, err
+}
+
+func setRank(rank string) Edit {
+	return func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "rank", rank) }
 }

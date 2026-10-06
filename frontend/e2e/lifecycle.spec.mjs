@@ -162,6 +162,8 @@ test("quit is refused while the guard denies it, then stops the server", async (
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Close tab" })).toBeVisible();
     await expect(page.getByText(/close it yourself/)).toBeVisible();
+    // A clean stop earns one parting remark.
+    await expect(page.locator("[data-aside]")).toHaveCount(1);
     expect(await exit, output.stderr).toEqual({ code: 0, signal: null });
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);
@@ -216,6 +218,8 @@ test("backend loss enters the terminal state", async ({ page }) => {
       page.getByRole("heading", { name: "Lost connection to Flashheart" }),
     ).toBeVisible({ timeout: 45_000 });
     await expect(page.getByText(/missed heartbeats/)).toBeVisible();
+    // Losing the backend is no moment for a joke.
+    await expect(page.locator("[data-aside]")).toHaveCount(0);
     await expect(page.getByText("flashheart", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Quit" })).toHaveCount(0);
   } finally {

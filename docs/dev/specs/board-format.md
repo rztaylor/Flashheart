@@ -14,9 +14,10 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 │   ├── cache/cwd.json                    cwd → project/branch cache, validated by HEAD's mtime (agent-protocol §2)
 │   ├── backup/v1-<UTC timestamp>/        the v1 tree moved aside by migrate
 │   ├── lock                              advisory root lock for choosing keys (KEY-5)
+│   ├── retired.yaml                      keys of permanently deleted projects (KEY-5)
 │   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
 │   └── serve.log                         background serve diagnostics (LIFE-4), rotated at 1 MB
-├── .archive/                             archived projects (PRJ-5)
+├── .archive/<project>/                   archived projects (PRJ-5), as they were
 ├── _scratch/                             agent activity outside any git repository (PRJ-4)
 └── <project>/                            e.g. flashheart
     ├── project.yaml                      key, display name, repos, next id (PRJ-3, KEY-1)
@@ -65,7 +66,7 @@ Rules:
   ticket, live or archived.
 - A ticket id is `<key>-<number>` (`FH-42`). Numbers start at 1, are assigned
   under the project lock from `next_id` in `project.yaml` (never lower than
-  one past the highest existing or archived number), and are never reused or
+  one past the highest existing, archived or retired number), and are never reused or
   renumbered.
 - Ids are global across the root because keys are unique, so references never
   need a project prefix.
@@ -116,6 +117,7 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 | `depends-on` | no | Ticket ids, in any project. |
 | `depends-on-workstreams` | no | Workstream slugs in this project. |
 | `tags` | no | Free text; `later-possibility` marks ideas (`VIEW-7`). |
+| `rank` | no | Place in its column's manual order (`EDIT-9`); written by Flashheart. See below. |
 | `session`, `git-ref`, `updated` | no | Free text / RFC 3339 UTC. |
 
 The title is the first `#` heading. Unknown keys are preserved in place
@@ -133,8 +135,35 @@ The title is the first `#` heading. Unknown keys are preserved in place
 
 A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content
-hash they read. Every ticket write by Flashheart stamps `updated`. The folder never
-moves except to `.archive/`.
+hash they read. Every ticket write by Flashheart stamps `updated`; archiving
+stamps it too, which dates the archive. The folder never moves except to
+`.archive/` and back, and is removed only by a permanent delete of an
+archived ticket (`EDIT-8`): the delete takes the root lock and the lock of
+every project it rewrites (in name order), removes the id from every
+ticket's `depends-on` and the project's workstream `tickets:` lists, adds
+it to `retired` in `project.yaml`, and removes the folder. It takes an id,
+never a path, and refuses any symbolic link on the folder's path.
+
+### Order within a column
+
+`rank` is a fractional index: base-62 digits (`0-9A-Za-z`), compared as
+plain strings, never ending in `0`, at most 64 characters, so a new key
+always fits between two others. Within a column, ranked tickets come first
+in rank order; unranked tickets follow by priority (high, medium, low), then
+`created`, then id. Ties fall back to the same order. An invalid `rank` is
+ignored with a warning. *Done* ignores ranks and lists the most recently
+modified first.
+
+Placing a ticket (`POST /api/tickets/{id}/move` with `after`: the id it
+should follow, or `""` for the top) takes the project lock, reads the column
+as it is then and normally writes only that ticket's `rank` (and `status`).
+Placed inside the unranked tail, the unranked tickets above it are ranked
+first, in their current order, and tied ranks above it are spread out, so no
+other ticket changes place. A ticket to follow that has left the column is
+reported and the ticket keeps its rank. A move without `after` (the MCP
+`move` tool, Shift with Left or Right, the panel's **Move to**) keeps the
+rank. Archived tickets keep their `rank` and return to their place when
+restored. Workstream `tickets:` order is separate and unaffected.
 
 ### References in text
 
@@ -186,7 +215,9 @@ A workstream's `tickets:` list defines membership and order; a ticket whose
 writes (ticket creation and the agent tools) change the field and the lists
 together, appending a joining ticket to the end of its list. A reference to a
 missing ticket or workstream (including a missing `workstream:`) is shown as a
-warning and counts as blocking. Archived tickets count as done. A duplicated
+warning and counts as blocking. Archived tickets count as done, and so do
+permanently deleted ids (a project's `retired`) and every id of a deleted
+project's key (`retired.yaml`), wherever a reference to them survives. A duplicated
 id counts as done only when every copy does. Only tickets in `backlog`,
 `up-next` and `in-progress` are shown as blocked; waits on rule 3 alone are
 shown quietly as waiting (D14).
@@ -249,6 +280,7 @@ a ticket or review refers to is copied in before it is recorded (`REV-5`).
 ```yaml
 key: FH                   # ticket id prefix (KEY-1); unique; absent until chosen (KEY-5)
 next_id: 43               # next ticket number (KEY-2)
+retired: [FH-7]           # permanently deleted ids, never reused (EDIT-8); absent until a delete
 name: Flashheart          # display name; defaults to the directory name
 repos:                    # main-checkout paths seen by hooks (PRJ-3)
   - /Users/robert/src/flashheart
@@ -291,8 +323,24 @@ per line, appended under the project lock by `flashheart hook` (and later
 `mcp` and `serve`). Schema and event kinds:
 `docs/dev/specs/agent-protocol.md` §3. Events name tickets by id. Readers skip
 malformed lines and unknown kinds. Files older than `event_retention_days` are
-deleted by `serve` at startup and daily; this is the only deletion Flashheart
-performs.
+deleted by `serve` at startup and daily. The only other deletions are
+permanent deletes the user confirms: of an archived ticket (`EDIT-8`), whose
+events are left to this retention, and of an archived project (`PRJ-5`),
+whose event log goes with its directory.
+
+## Archived projects
+
+Archiving moves `<root>/<project>/` to `<root>/.archive/<project>/` under
+the root lock and sets the directory's time, which dates the archive.
+Restoring moves it back, refused while a live project has that name. An
+archived project's ticket ids (live and archived inside it) count as done
+for other projects' blocking, and its key stays taken. A permanent delete
+takes the root lock and the lock of each project it rewrites (in name
+order), removes other projects' `depends-on` entries naming its tickets,
+adds its key to `<root>/.flashheart/retired.yaml` (`keys: [AL]`), and
+removes the directory. All of it is by project name, never a path, and a
+symbolic link anywhere on the project's path is refused. A writer that was waiting for a
+project's lock while it was archived finds it gone and writes nothing.
 
 ## Migration from v1
 

@@ -230,6 +230,11 @@ func (s *Store) ReadBoard() (board.Board, string, error) {
 			io.WriteString(hash, part)
 		}
 	}
+	b.ArchivedProjects = archivedProjects(root, fsys)
+	b.RetiredKeys = s.retiredKeys()
+	for _, project := range b.ArchivedProjects {
+		fmt.Fprintf(hash, "archived project %s %s\n", project.Name, project.Archived)
+	}
 	board.CheckKeys(&b)
 	return b, hex.EncodeToString(hash.Sum(nil)), nil
 }
@@ -423,7 +428,7 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 	project.Archived = slices.Compact(project.Archived)
 
 	highest := 0
-	for _, id := range append(slices.Clone(project.Archived), ticketIDs(project.Tickets)...) {
+	for _, id := range slices.Concat(project.Archived, project.Retired, ticketIDs(project.Tickets)) {
 		if key, number, ok := board.ParseID(id); ok && key == project.Key && number > highest {
 			highest = number
 		}
@@ -452,6 +457,8 @@ type projectFile struct {
 	Key    string   `yaml:"key"`
 	NextID int      `yaml:"next_id"`
 	Repos  []string `yaml:"repos"`
+	// Retired lists permanently deleted ticket ids (EDIT-8).
+	Retired []string `yaml:"retired"`
 	// Settings are per-project overrides of config.yaml (CFG-1).
 	Settings struct {
 		EnforceHandoff *bool `yaml:"enforce_handoff"`
@@ -478,6 +485,7 @@ func (r *reader) readProjectFile(project *board.Project) {
 		project.DisplayName = display
 	}
 	project.Repos = parsed.Repos
+	project.Retired = parsed.Retired
 	project.EnforceHandoff = parsed.Settings.EnforceHandoff
 	switch key := strings.TrimSpace(parsed.Key); {
 	case key == "":

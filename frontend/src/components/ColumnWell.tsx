@@ -12,24 +12,32 @@ export const wellSurface =
 // WellHead heads a well: a round count badge (first visually, last in the
 // heading's words), the run mark of a virtual column or lane (Needs you in
 // the attention disc), and the title in the display cut. titleId names the
-// title alone, for a region labelled by it.
+// title alone, for a region labelled by it. A sticky head stays at the top
+// of a well that scrolls with its neighbours, so the board keeps its column
+// names and counts in view.
 export function WellHead({
   id,
   titleId,
   title,
   count,
   mark,
+  sticky = false,
 }: {
   id?: string;
   titleId?: string;
   title: string;
   count: ReactNode;
   mark?: RunState;
+  sticky?: boolean;
 }) {
   return (
     <h2
       id={id}
-      className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-xl leading-tight display-cut"
+      className={`flex items-center gap-2.5 px-1 pt-1 pb-3 text-xl leading-tight display-cut ${
+        sticky
+          ? "sticky -top-1 z-[1] -mx-2.5 -mt-2.5 rounded-t-panel bg-column px-3.5 pt-3.5"
+          : ""
+      }`}
     >
       {mark ? (
         <span

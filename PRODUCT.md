@@ -69,7 +69,11 @@ Obsidian without Flashheart running.
   README tagline: *"Woof!"*
 - Voice: plain, precise copy for work. Light, dry wit only in the margins:
   empty states, the stopped screen and similar rare moments. Never in errors,
-  blocking explanations or anything the user must act on.
+  blocking explanations or anything the user must act on. The margins draw
+  only on the user's reviewed collection of Blackadder remarks
+  (`frontend/src/model/remarks.md`; four labelled direct quotes, the rest
+  original allusions), placed as `docs/dev/specs/ui-layout.md` §8 lists, at
+  most one per screen, and never in anything agents read.
 - MIT licence, Robert Taylor.
 
 ## Evidence on Hand
