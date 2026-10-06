@@ -15,6 +15,11 @@ review sessions; must answer at a glance who needs the user, what is moving,
 what is stuck and where each project stands. Pinned by the user: a standard
 kanban structure "with style", light and dark modes.
 
+> Being replaced (D18, D21): Metro Pop light and Night Service charcoal
+> dark, on the layout and content contract in `docs/dev/specs/ui-layout.md`.
+> The direction below describes the shipped Transit Line Map until the
+> rollout lands.
+
 ## Direction contract
 
 THESIS: The board is a transit system: each workstream is a coloured line and

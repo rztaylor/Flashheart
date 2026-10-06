@@ -22,6 +22,10 @@ orchestrator's subagents.
 - `flashheart doctor` (`SET-4`).
 - Protocol text updated for the screenshot workflow (agent-protocol §11).
 
+New surfaces (Attachments tab, lightbox, *How to Verify* checklist, subagent
+tree) follow the card panel structure in `docs/dev/specs/ui-layout.md` §3
+and the Metro Pop / Night Service tokens (D21).
+
 ## Acceptance criteria
 
 - `attach` refuses SVG, HTML, oversized files, and paths that are not regular

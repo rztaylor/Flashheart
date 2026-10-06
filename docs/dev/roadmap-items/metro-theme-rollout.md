@@ -1,6 +1,7 @@
 # metro-theme-rollout
 
-Status: **Pending**. Approved direction, 2026-10-06; no UI implementation yet.
+Status: **Partial**. FH-10's contract is written
+([`ui-layout.md`](../specs/ui-layout.md)); FH-11–FH-14 implement it.
 Planning ticket: FH-9. Delivery tickets: FH-10 through FH-14.
 
 ## Goal
@@ -44,39 +45,27 @@ Do not re-run concept selection or use ui-concept-design for this rollout.
 | 4 | FH-13 | Workstreams and ticket detail, including existing review/attachment flows | FH-12 |
 | 5 | FH-14 | Agents/Table consistency, full visual/accessibility verification and rollout closure | FH-13 |
 
-Preserve the existing roadmap sequence: implementation follows
-`review-and-orchestration` (FH-6), which supplies the review/attachments
-capabilities being styled. FH-10 may be prepared beforehand. No runtime
+Implementation no longer waits for `review-and-orchestration` (FH-6; see
+Sequencing below). No runtime
 dependency on Codex support is introduced. Avoid duplicating work owned by
 agent-runs, mcp-protocol, codex-support or review-and-orchestration; this item
 changes presentation, not those protocol/backend capabilities.
 
 ## Shared layout and content contract (FH-10)
 
-- Define one shell: project rail, project identity, navigation, global Needs
-  you, search, backend status, Quit, theme selector, filters and density.
-  Apply it to Board, Agents, Workstreams and Table in both themes.
-- Define the exact card field order and treatment for Compact, Normal and
-  Detailed densities: title, ID, project where needed, workstream badge and
-  stripe, type/colour-by value, priority, timestamps, blockers, run state,
-  current plan step, criteria, excerpt, handoff and attachment count as
-  appropriate. A visual theme must not omit or reorder information.
-- Retain Backlog → Up next → In progress → Ready to review → Done, and the
-  optional Needs you/Agent working mirrored columns (`VIEW-1`, `VIEW-2`).
-- Define real route order, filled served stations, current station rings,
-  future stations, suspended/missing states and explicit blockers. Never
-  reproduce a generated checked station whose actual ticket is unfinished.
-- Define panel header/actions and Ticket, Edit, Runs, Attachments and Review
-  tabs, preserving availability rules. Keep Handoff and human questions
-  prominent and acceptance criteria directly actionable (`CARD-1`–`CARD-6`).
-- Carry the same hierarchy into Agents and Table; their absence from the
-  selected images is not permission to omit or invent their functionality.
-- Define semantic colour roles once: workstream identity, colour-by paint,
-  state and selection must be distinguishable and labelled. Correct mockup
-  inconsistencies such as an AR card with an orange stripe. Do not infer a
-  new status or type system from a generated badge.
-- Specify empty, loading, error, repair, blocked, long-content and narrow
-  states; preserve keyboard focus, reduced motion, density and contrast.
+Written in [`docs/dev/specs/ui-layout.md`](../specs/ui-layout.md): one
+shell, the card anatomy per density, the panel, Workstreams, Agents and
+Table structures, semantic colour roles, edge states, and the corrections
+and omissions relative to the references. FH-11–FH-14 implement it; a
+change to structure or content changes that file first.
+
+## Sequencing (D21)
+
+The user moved implementation ahead of `review-and-orchestration` on
+2026-10-06: the Review tab and its attachment gallery already exist to
+style, and FH-6's remaining pieces (the Attachments tab, lightbox, *How to
+Verify* checklist, subagent tree and `doctor`) are built to the contract
+when FH-6 runs. This rollout does not build them.
 
 ## Acceptance criteria
 

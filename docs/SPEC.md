@@ -445,8 +445,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 ## 7. UX outline
 
 Desktop-first, information-dense, calm when nothing needs attention. The
-visual direction is the Transit Line Map (decision D14); `DESIGN.md` records
-the system.
+layout and content of every view, in every theme, follow
+`docs/dev/specs/ui-layout.md`; `DESIGN.md` records the visual system (Metro
+Pop light and Night Service dark, D18, replacing the Transit Line Map of
+D14 as the rollout lands).
 
 - **Shell**: left rail of projects (with Needs you badges) and **All
   projects**; top bar with view switcher (Board · Agents · Workstreams ·

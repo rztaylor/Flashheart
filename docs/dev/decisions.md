@@ -279,3 +279,17 @@ tool's input without deciding its permission, so the hook stamps the run
 into Flashheart's own tool calls. Claude Code starts user-scope MCP servers
 in `~/.claude`, so the fallback reads the project from
 `CLAUDE_PROJECT_DIR`.
+
+## 2026-10-06 — D21: Theme rollout no longer waits for review-and-orchestration
+
+Decision (user): implement `metro-theme-rollout` (FH-11–FH-14) now, without
+waiting for `review-and-orchestration` (FH-6). The surfaces being styled
+exist: the card panel's Review tab shows the review and its attachments.
+
+Options: wait for FH-6 so every review surface exists before styling (the
+order D18 set), or theme now and have FH-6 build its new surfaces
+(Attachments tab, lightbox, *How to Verify* checklist, subagent tree) to
+the shared contract in `docs/dev/specs/ui-layout.md`. The second was
+chosen: the contract already specifies those surfaces, so the themes need
+no second pass, and FH-6's pieces are not built under the theme tickets.
+

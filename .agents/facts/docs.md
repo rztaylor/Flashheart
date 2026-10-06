@@ -3,7 +3,8 @@
 - `docs/SPEC.md` is the authoritative product spec with stable requirement
   ids. Other documents defer to it.
 - `docs/dev/specs/board-format.md` and `docs/dev/specs/agent-protocol.md` are
-  the detailed contracts for files and agents.
+  the detailed contracts for files and agents; `docs/dev/specs/ui-layout.md`
+  is the browser board's layout and content contract, shared by every theme.
 - `README.md`: orientation, install, run, agent setup.
 - `docs/dev/roadmap.md`: lean execution index; briefs in
   `docs/dev/roadmap-items/`; active ExecPlans in `docs/dev/plans/`
