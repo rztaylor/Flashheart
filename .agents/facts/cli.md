@@ -7,7 +7,9 @@
 - `hook` and `mcp` print only protocol output to stdout; `hook` always exits 0
   (usage problems go to stderr and `hook-errors.log`); handoff enforcement
   speaks through its JSON output, not the exit code. `hook claude <Event>`
-  is implemented; Codex arrives with `codex-support`.
+  and `mcp` are implemented; Codex arrives with `codex-support`.
+- `mcp` serves stdio and works on the project of `$CLAUDE_PROJECT_DIR`, else
+  the working directory (user-scope MCP servers start in `~/.claude`).
 - Flags may come before or after a command's positional arguments
   (`hook claude Stop --root DIR`).
 - `serve` detaches by default (`LIFE-4`, D13): it re-executes itself in a new

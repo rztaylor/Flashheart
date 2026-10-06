@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/app"
 	"github.com/rztaylor/flashheart/internal/background"
@@ -178,7 +180,7 @@ func TestUsageErrorsExitTwoWithUsage(t *testing.T) {
 func TestUnimplementedCommandsExitTwoQuietly(t *testing.T) {
 	t.Parallel()
 
-	for _, args := range [][]string{{"mcp"}, {"setup", "claude"}, {"doctor"}} {
+	for _, args := range [][]string{{"doctor"}} {
 		h := newHarness(t)
 		code, stdout, stderr := h.run(args...)
 		if code != 2 {
@@ -573,4 +575,90 @@ func TestHookWithADanglingRootExitsZero(t *testing.T) {
 	if code != 0 || stdout != "" || !strings.Contains(stderr, "flashheart hook:") {
 		t.Fatalf("dangling --root = %d, %q, %q", code, stdout, stderr)
 	}
+}
+
+func TestMCPServesTheProtocolOnStdio(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	root := t.TempDir()
+	h.env["CLAUDE_PROJECT_DIR"] = t.TempDir()
+	requests := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}` + "\n" +
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}` + "\n" +
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}` + "\n"
+	out := &lockedBuffer{}
+	// Like an agent, keep stdin open until both responses are written.
+	in := &holdingReader{data: []byte(requests), done: func() bool { return strings.Count(out.String(), "\n") >= 2 }}
+	deps := h.deps()
+	deps.Stdin = in
+	var stderrBuffer bytes.Buffer
+	code := Run(context.Background(), []string{"mcp", "--root", root}, out, &stderrBuffer, deps)
+	stdout, stderr := out.String(), stderrBuffer.String()
+	if code != 0 || stderr != "" {
+		t.Fatalf("code = %d, stderr = %q", code, stderr)
+	}
+	// CLI-3: stdout carries only protocol messages.
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("stdout =\n%s", stdout)
+	}
+	for _, line := range lines {
+		if !strings.HasPrefix(line, `{"jsonrpc":"2.0"`) {
+			t.Fatalf("not a protocol message: %q", line)
+		}
+	}
+	for _, part := range []string{`"name":"flashheart"`, `"instructions":"Flashheart (protocol 1)`} {
+		if !strings.Contains(lines[0], part) {
+			t.Errorf("initialize result missing %s:\n%s", part, lines[0])
+		}
+	}
+	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human"} {
+		if !strings.Contains(lines[1], `"name":"`+tool+`"`) {
+			t.Errorf("tools/list missing %s", tool)
+		}
+	}
+}
+
+func TestMCPRejectsArguments(t *testing.T) {
+	t.Parallel()
+
+	code, _, stderr := newHarness(t).run("mcp", "extra")
+	if code != 2 || !strings.Contains(stderr, "mcp takes no arguments") {
+		t.Fatalf("code = %d, stderr = %q", code, stderr)
+	}
+}
+
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// holdingReader returns data, then blocks until done (or 5 s) before EOF.
+type holdingReader struct {
+	data []byte
+	done func() bool
+}
+
+func (r *holdingReader) Read(p []byte) (int, error) {
+	if len(r.data) > 0 {
+		n := copy(p, r.data)
+		r.data = r.data[n:]
+		return n, nil
+	}
+	for deadline := time.Now().Add(5 * time.Second); !r.done() && time.Now().Before(deadline); {
+		time.Sleep(5 * time.Millisecond)
+	}
+	return 0, io.EOF
 }

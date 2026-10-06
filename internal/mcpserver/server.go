@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -58,14 +59,23 @@ func New(options Options) (*mcp.Server, error) {
 	return server, nil
 }
 
-// Run serves the protocol on stdin and stdout until the client goes away.
-func Run(ctx context.Context, options Options) error {
+// Serve speaks the protocol over in and out (stdin and stdout) until the
+// client closes its side.
+func Serve(ctx context.Context, options Options, in io.Reader, out io.Writer) error {
 	server, err := New(options)
 	if err != nil {
 		return err
 	}
-	return server.Run(ctx, &mcp.StdioTransport{})
+	err = server.Run(ctx, &mcp.IOTransport{Reader: io.NopCloser(in), Writer: nopWriteCloser{out}})
+	if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
+		return nil
+	}
+	return err
 }
+
+type nopWriteCloser struct{ io.Writer }
+
+func (nopWriteCloser) Close() error { return nil }
 
 // toolError is a tool failure the model can act on: {code, message, fix}
 // (agent-protocol §7.2).

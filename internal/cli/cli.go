@@ -18,6 +18,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/hooks"
 	"github.com/rztaylor/flashheart/internal/hooks/claude"
 	"github.com/rztaylor/flashheart/internal/logfile"
+	"github.com/rztaylor/flashheart/internal/mcpserver"
 	"github.com/rztaylor/flashheart/internal/migrate"
 	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -47,8 +48,10 @@ type Dependencies struct {
 	OpenHandshake   func() (Handshake, error)
 	// OpenServeLog returns the background child's diagnostic log for a root.
 	OpenServeLog func(root string) io.Writer
-	// Stdin is the hook payload source.
+	// Stdin is the hook payload and MCP message source.
 	Stdin io.Reader
+	// Getwd returns the process's working directory.
+	Getwd func() (string, error)
 }
 
 type usageError struct{ message string }
@@ -113,7 +116,15 @@ func commands() []command {
 				"returns this terminal; it stops when you choose Quit or close its last tab.",
 			run: runServe,
 		},
-		{name: "mcp", summary: "run the MCP server on stdio (not yet available)", usage: "mcp [--root DIR]", detail: "Run the MCP server on stdio for Claude Code and Codex.", run: notYet},
+		{
+			name:    "mcp",
+			summary: "run the MCP server for agents on stdio",
+			usage:   "mcp [--root DIR]",
+			detail: "Serve the Flashheart MCP tools on stdin and stdout. Agents start this\n" +
+				"from their MCP configuration (flashheart setup writes it); it works on\n" +
+				"the project of $CLAUDE_PROJECT_DIR, else of the working directory.",
+			run: runMCP,
+		},
 		{
 			name:    "hook",
 			summary: "record an agent hook event read from stdin",
@@ -415,6 +426,34 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	}
 	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: adapter})
 	return nil
+}
+
+// projectDirEnv is where Claude Code says the session works; user-scope
+// MCP servers start in ~/.claude, not the project (agent-protocol §7.1).
+const projectDirEnv = "CLAUDE_PROJECT_DIR"
+
+// runMCP serves the MCP tools on stdin and stdout until the agent closes
+// the connection. Only protocol messages reach stdout (CLI-3).
+func runMCP(ctx context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
+	if flags.NArg() > 0 {
+		return usageError{"mcp takes no arguments"}
+	}
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		return err
+	}
+	cwd := ""
+	if env.deps.Getenv != nil {
+		cwd = strings.TrimSpace(env.deps.Getenv(projectDirEnv))
+	}
+	if cwd == "" && env.deps.Getwd != nil {
+		cwd, _ = env.deps.Getwd()
+	}
+	stdin := env.deps.Stdin
+	if stdin == nil {
+		stdin = strings.NewReader("")
+	}
+	return mcpserver.Serve(ctx, mcpserver.Options{Root: root, Cwd: cwd}, stdin, env.stdout)
 }
 
 // rootArgument finds --root DIR or --root=DIR without parsing other flags.
