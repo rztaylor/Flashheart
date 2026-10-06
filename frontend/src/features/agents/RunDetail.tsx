@@ -188,7 +188,7 @@ function DetailSection({
   const Heading = level === 3 ? "h3" : "h4";
   return (
     <section className="min-w-0">
-      <Heading className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm station-sign">
+      <Heading className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm heading-cut">
         {title}
       </Heading>
       {children}

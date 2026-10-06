@@ -360,6 +360,21 @@ test("table sorts and opens tickets", async () => {
   ).toBeVisible();
 });
 
+test("every view names its scope in the page header, not the band", async () => {
+  const page = shared;
+  for (const view of ["board", "agents", "workstreams", "table"]) {
+    await open(page, `#/p/flashheart/${view}`);
+    await expect(
+      page.getByRole("main").getByRole("heading", { level: 1 }),
+    ).toHaveText(/Flashheart/);
+    await expect(page.getByRole("banner").getByRole("heading")).toHaveCount(0);
+  }
+  await open(page, "#/all/board");
+  await expect(
+    page.getByRole("main").getByRole("heading", { level: 1 }),
+  ).toHaveText(/All projects/);
+});
+
 for (const theme of ["light", "dark"]) {
   test(`board views are accessible and render cleanly in ${theme}`, async () => {
     const page = shared;

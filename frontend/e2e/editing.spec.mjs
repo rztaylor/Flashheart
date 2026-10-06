@@ -351,6 +351,37 @@ test("the theme choice is saved", async () => {
     .toContain("theme: system");
 });
 
+test("switching theme keeps the view, filters, open ticket and scroll", async () => {
+  await open("#/p/flashheart/table?t=FH-36");
+  await page.getByRole("combobox", { name: "Priority" }).selectOption("high");
+  const scroller = page.locator("main .overflow-auto").first();
+  await scroller.evaluate((element) => {
+    element.scrollTop = 40;
+  });
+  const before = await scroller.evaluate((element) => element.scrollTop);
+  const url = page.url();
+  // Both palettes share one structure: the same headings in the same order.
+  const outline = () =>
+    page
+      .getByRole("heading")
+      .evaluateAll((nodes) => nodes.map((node) => node.textContent));
+  const lightOutline = await outline();
+  const theme = page.getByRole("group", { name: "Theme" });
+  await theme.getByText("Dark", { exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(page.url()).toBe(url);
+  await expect(page.getByRole("combobox", { name: "Priority" })).toHaveValue(
+    "high",
+  );
+  await expect(
+    page.getByRole("complementary", { name: "Ticket FH-36" }),
+  ).toBeVisible();
+  expect(await scroller.evaluate((element) => element.scrollTop)).toBe(before);
+  expect(await outline()).toEqual(lightOutline);
+  await theme.getByText("System", { exact: true }).click();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+});
+
 test("the Edit tab and dialogs are accessible in dark", async () => {
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
   await open("#/p/flashheart/board?t=FH-36");

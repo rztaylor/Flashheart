@@ -105,7 +105,7 @@ function RunCard({
           aria-labelledby={subagentsId}
           className="border-l border-ink/40 pl-4 text-xs"
         >
-          <h4 id={subagentsId} className="mb-1.5 text-sm station-sign">
+          <h4 id={subagentsId} className="mb-1.5 text-sm heading-cut">
             Subagents
           </h4>
           <ul className="flex flex-col gap-1">

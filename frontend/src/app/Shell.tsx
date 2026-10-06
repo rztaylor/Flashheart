@@ -11,6 +11,7 @@ import {
 import type { Created } from "../api/edit";
 import type { ThemePreference } from "../api/info";
 import type { Preferences } from "../api/preferences";
+import type { RunCounts } from "../api/runs";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
@@ -41,6 +42,7 @@ import { filtersFor, rememberScope, sameScope } from "../model/scopes";
 import { useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
 import { BackendStatus } from "./BackendStatus";
+import { PageHeader } from "./PageHeader";
 import { type Route, type Scope, useRoute, type View } from "./route";
 import type { ServerInfoState } from "./useServerInfo";
 
@@ -250,28 +252,31 @@ export function Shell({
         ? projects.data.root
         : "";
 
+  const summary = viewSummary({
+    view: route.view,
+    board:
+      board.status === "ready"
+        ? { shown: visible.length, total: allCards.length }
+        : undefined,
+    filtered: isFiltered(filters),
+    runs: current
+      ? current.runs
+      : projects.status === "ready"
+        ? projects.data.runs
+        : undefined,
+    workstreams: (current ? [current] : summaries).flatMap(
+      (project) => project.workstreams,
+    ),
+  });
+
   return (
-    <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3rem_auto_1fr]">
-      <header className="flex min-w-0 items-center gap-2 overflow-hidden bg-band px-3 text-on-band sm:gap-4 sm:px-4">
-        <span className="flex items-center gap-1.5">
+    <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3.5rem_auto_1fr]">
+      <header className="flex min-w-0 items-center gap-2 overflow-hidden bg-band px-3 text-on-band sm:gap-6 sm:px-5">
+        <span className="flex items-center gap-2">
           <Bolt />
-          <span className="wordmark text-md max-sm:sr-only">Flashheart</span>
+          <span className="wordmark text-xl max-sm:sr-only">Flashheart</span>
         </span>
-        <span aria-hidden="true" className="h-5 w-px bg-on-band-muted/40" />
-        <h1
-          className="flex min-w-0 max-w-64 items-center gap-2 text-sm leading-tight station-sign max-sm:sr-only"
-          title={scopeName}
-        >
-          {current ? (
-            <span className="rounded-[3px] bg-on-band px-1 py-px text-2xs leading-4 text-band">
-              {current.key}
-            </span>
-          ) : null}
-          <span className="truncate border-t-2 border-on-band pt-0.5">
-            {scopeName}
-          </span>
-        </h1>
-        <nav aria-label="Views" className="flex h-full items-stretch sm:ml-2">
+        <nav aria-label="Views" className="flex items-center gap-1">
           {views.map((view) => {
             const active = route.view === view.id;
             return (
@@ -284,13 +289,13 @@ export function Shell({
                   go({ view: view.id });
                   remember(filters, view.id);
                 }}
-                className={`flex items-center gap-1.5 border-b-3 px-2 pt-[3px] text-sm sm:px-3 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-on-band ${
+                className={`flex h-9 items-center gap-2 rounded-control px-2.5 text-sm font-semibold transition-colors focus-visible:outline-on-band sm:px-3 ${
                   active
-                    ? "border-on-band text-on-band"
-                    : "border-transparent text-on-band-muted hover:text-on-band"
+                    ? "bg-band-tab-active text-on-band shadow-[inset_0_-3px_0_var(--fh-band-tab-line)]"
+                    : "text-on-band-muted hover:bg-band-field hover:text-on-band"
                 }`}
               >
-                <Icon name={view.icon} size={15} />
+                <Icon name={view.icon} size={16} />
                 <span className="max-sm:sr-only">{view.label}</span>
               </a>
             );
@@ -307,9 +312,9 @@ export function Shell({
                   ticket: undefined,
                 });
               }}
-              className="flex h-7 items-center gap-1.5 rounded-[3px] bg-on-band px-2 text-xs font-semibold whitespace-nowrap text-band transition-opacity hover:opacity-90 focus-visible:outline-on-band"
+              className="flex h-9 items-center gap-1.5 rounded-full bg-attention px-3.5 text-sm font-semibold whitespace-nowrap text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band"
             >
-              <RunStateMark state="needs-you" size={10} />
+              <RunStateMark state="needs-you" size={11} />
               {needsYou}
               <span className="hidden sm:inline">
                 {needsYou === 1 ? " needs you" : " need you"}
@@ -336,7 +341,7 @@ export function Shell({
           />
           <Button
             variant="band"
-            className="h-8 py-0"
+            className="h-9 py-0"
             onClick={() => void lifecycle.quit()}
             disabled={!ready || stopping}
           >
@@ -379,9 +384,9 @@ export function Shell({
           board keeps three whole columns. */}
       <div
         data-panel={route.ticket ? "open" : undefined}
-        className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[3.5rem_minmax(0,1fr)_auto]"
+        className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[4rem_minmax(0,1fr)_auto]"
       >
-        <div className="hidden min-h-0 flex-col bg-band md:flex">
+        <div className="hidden min-h-0 flex-col border-r border-rail-rule bg-rail md:flex">
           <div className="min-h-0 flex-1">
             <ProjectRail
               projects={summaries}
@@ -406,6 +411,11 @@ export function Shell({
           className="flex min-h-0 min-w-0 flex-col"
           aria-label={`${scopeName} ${route.view}`}
         >
+          <PageHeader
+            projectKey={current?.key}
+            title={scopeName}
+            summary={summary}
+          />
           <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
             {route.view !== "workstreams" && route.view !== "agents" ? (
               <div className="flex w-full">
@@ -507,8 +517,6 @@ export function Shell({
                 filters={filters}
                 options={options}
                 onChange={setFilters}
-                shown={visible.length}
-                total={allCards.length}
                 density={route.view === "board" ? density : undefined}
                 onDensity={
                   route.view === "board"
@@ -681,7 +689,7 @@ function V1Notice({
   return (
     <section
       aria-label="Older board format"
-      className="mx-4 mt-3 rounded-card border border-rule bg-well px-4 py-3 text-sm text-ink-muted"
+      className="mx-4 mt-1 mb-3 rounded-card border border-rule bg-well px-4 py-3 text-sm text-ink-muted md:mx-6"
     >
       <p>
         {projects.length === 1 ? "The project " : "The projects "}
@@ -720,19 +728,19 @@ function RailFooter({
   return (
     <section
       aria-label="Board root"
-      className="border-t border-band-track px-4 py-3 text-2xs text-on-band-muted max-[90rem]:group-data-[panel=open]/work:hidden"
+      className="border-t border-rail-rule px-4 py-3 text-2xs text-on-rail-muted max-[90rem]:group-data-[panel=open]/work:hidden"
     >
       <fieldset className="mb-2.5 flex items-center gap-2">
         <legend className="sr-only">Theme</legend>
         <span aria-hidden="true">Theme</span>
-        <span className="flex rounded-control border border-band-track p-0.5">
+        <span className="flex rounded-control border border-rail-rule p-0.5">
           {themes.map((option) => (
             <label
               key={option.value}
-              className={`cursor-pointer rounded-[3px] px-1.5 py-px transition-colors has-focus-visible:outline-2 has-focus-visible:outline-on-band ${
+              className={`cursor-pointer rounded-[0.375rem] px-2 py-0.5 text-xs transition-colors has-focus-visible:outline-2 has-focus-visible:outline-focus ${
                 theme === option.value
-                  ? "bg-on-band text-band"
-                  : "text-on-band-muted hover:text-on-band"
+                  ? "bg-rail-active font-semibold text-on-rail-active"
+                  : "text-on-rail-muted hover:text-on-rail"
               }`}
             >
               <input
@@ -772,14 +780,56 @@ function RailFooter({
 
 function BoardSkeleton() {
   return (
-    <div aria-hidden="true" className="grid grid-cols-5 gap-4 p-4">
+    <div
+      aria-hidden="true"
+      className="grid grid-cols-5 gap-4 px-4 py-2 md:px-6"
+    >
       {COLUMNS.map((column) => (
-        <div key={column.id} className="flex flex-col gap-2">
-          <div className="h-5 border-t-3 border-rule" />
-          <div className="h-20 animate-pulse rounded-card bg-well" />
-          <div className="h-16 animate-pulse rounded-card bg-well" />
+        <div
+          key={column.id}
+          className="flex flex-col gap-2.5 rounded-panel border border-rule bg-column p-3"
+        >
+          <div className="h-6 w-2/3 rounded-full bg-well" />
+          <div className="h-24 animate-pulse rounded-card bg-card" />
+          <div className="h-20 animate-pulse rounded-card bg-card" />
         </div>
       ))}
     </div>
   );
+}
+
+// viewSummary is the page header's one quiet line for the view
+// (ui-layout.md §1).
+function viewSummary({
+  view,
+  board,
+  filtered,
+  runs,
+  workstreams,
+}: {
+  view: View;
+  board?: { shown: number; total: number };
+  filtered: boolean;
+  runs?: RunCounts;
+  workstreams: { done: number; total: number }[];
+}): string {
+  switch (view) {
+    case "agents": {
+      if (!runs) return "";
+      const live = `${runs.live} live ${runs.live === 1 ? "run" : "runs"}`;
+      return runs.needsYou > 0
+        ? `${live} · ${runs.needsYou} need${runs.needsYou === 1 ? "s" : ""} you`
+        : live;
+    }
+    case "workstreams": {
+      const done = workstreams.reduce((sum, item) => sum + item.done, 0);
+      const total = workstreams.reduce((sum, item) => sum + item.total, 0);
+      return `${workstreams.length} ${workstreams.length === 1 ? "workstream" : "workstreams"} · ${done} of ${total} stations served`;
+    }
+    default:
+      if (!board) return "";
+      return filtered
+        ? `${board.shown} of ${board.total} tickets`
+        : `${board.total} ${board.total === 1 ? "ticket" : "tickets"}`;
+  }
 }

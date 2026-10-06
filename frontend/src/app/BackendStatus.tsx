@@ -6,8 +6,8 @@ interface BackendStatusProps {
   onCheck(): void;
 }
 
-// BackendStatus sits on the signage band and is quiet while healthy: a small
-// dot with an accessible name. Trouble shows as words.
+// BackendStatus sits on the band at every width and is quiet while healthy:
+// a small dot with an accessible name. Trouble shows as words (LIFE-1).
 export function BackendStatus({
   state,
   checking,
@@ -25,7 +25,7 @@ export function BackendStatus({
         title={view.label}
         onClick={onCheck}
         disabled={checking || !view.checkable}
-        className="flex h-8 items-center gap-2 rounded-control px-2 transition-colors hover:enabled:bg-band-field focus-visible:outline-on-band disabled:cursor-default"
+        className="flex h-9 items-center gap-2 rounded-control px-2 transition-colors hover:enabled:bg-band-field focus-visible:outline-on-band disabled:cursor-default"
       >
         <span
           aria-hidden="true"

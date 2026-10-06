@@ -19,7 +19,7 @@ export function StoppedScreen({ phase, failures, detail }: StoppedScreenProps) {
       >
         <h1
           id="stopped-heading"
-          className="border-t-3 border-rule-strong pt-2 text-xl station-sign"
+          className="border-t-3 border-rule-strong pt-2 text-xl heading-cut"
         >
           {copy.heading}
         </h1>

@@ -1,4 +1,5 @@
 import { Icon } from "./Icon";
+import { BlockerPill } from "./Pill";
 
 type Kind = "blocked" | "waiting" | "repair" | "warning";
 
@@ -15,8 +16,9 @@ const labels = {
 };
 
 // StateNote pairs a ticket state with its proof ("Blocked: Depends on …").
-// States are ink, shape and words, never a hue. A wait on an earlier station
-// of the ticket's own line is quiet: no mark, muted words.
+// A real blocker is the blocked pill; repair and warnings are ink, shape and
+// words. A wait on an earlier station of the ticket's own line is quiet: no
+// mark, muted words.
 export function StateNote({
   kind,
   children,
@@ -26,6 +28,7 @@ export function StateNote({
   children: string;
   compact?: boolean;
 }) {
+  if (kind === "blocked") return <BlockerPill>{children}</BlockerPill>;
   const icon = kind === "waiting" ? undefined : icons[kind];
   return (
     <p

@@ -319,7 +319,7 @@ export function BoardView(props: BoardViewProps) {
             >
               <h2
                 id={`column-${column.id}`}
-                className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-3 text-md station-sign"
+                className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-3 text-md heading-cut"
               >
                 <span className="flex items-center gap-2">
                   {column.virtual ? (

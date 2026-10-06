@@ -169,7 +169,7 @@ function LaneSection({
     >
       <h2
         id={headingId}
-        className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-1.5 text-md station-sign"
+        className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-1.5 text-md heading-cut"
       >
         <span className="flex items-center gap-2">
           <RunStateMark
@@ -319,7 +319,7 @@ function RunRow({
           {projectKey && !subagent ? (
             <span
               title={run.project}
-              className="shrink-0 rounded-[3px] px-1 text-2xs leading-4 font-bold station-sign shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
+              className="shrink-0 rounded-[3px] px-1 text-2xs leading-4 font-bold heading-cut shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
             >
               {projectKey}
             </span>

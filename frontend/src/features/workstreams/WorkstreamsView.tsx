@@ -132,7 +132,7 @@ function ProjectLines({
       className="flex flex-col gap-5"
     >
       {showName ? (
-        <h2 className="text-lg station-sign">{project.displayName}</h2>
+        <h2 className="text-lg heading-cut">{project.displayName}</h2>
       ) : null}
       {resource.status === "loading" ? (
         <div
@@ -193,7 +193,7 @@ function WorkstreamLine({
         <LineBullet line={line} size="lg" />
         <Heading
           id={`ws-${project}-${workstream.slug}`}
-          className="text-md station-sign"
+          className="text-md heading-cut"
         >
           {workstream.title}
         </Heading>

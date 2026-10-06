@@ -115,7 +115,7 @@ export function TableView({
                         : "ascending"
                       : "none"
                   }
-                  className={`border-b-3 border-rule-strong px-2 pt-3 pb-1.5 text-left text-xs station-sign ${column.className ?? ""}`}
+                  className={`border-b-3 border-rule-strong px-2 pt-3 pb-1.5 text-left text-xs heading-cut ${column.className ?? ""}`}
                 >
                   <button
                     type="button"

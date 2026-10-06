@@ -19,8 +19,6 @@ interface FilterBarProps {
   filters: Filters;
   options: { types: string[]; priorities: string[]; workstreams: string[] };
   onChange(filters: Filters): void;
-  shown: number;
-  total: number;
   density?: Density;
   onDensity?(density: Density): void;
   paint?: PaintMode;
@@ -32,15 +30,14 @@ interface FilterBarProps {
   onNewTicket?(): void;
 }
 
-// FilterBar holds the board and table filters (VIEW-7), the virtual
-// columns shown (VIEW-2), card density and what card colour shows (VIEW-6).
-// Search lives in the header.
+// FilterBar is the view toolbar (ui-layout.md §1): New ticket, the board and
+// table filters (VIEW-7), and on the Board the virtual columns shown
+// (VIEW-2), what card colour shows and card density (VIEW-6). Search lives
+// in the band and the ticket count in the page header.
 export function FilterBar({
   filters,
   options,
   onChange,
-  shown,
-  total,
   density,
   onDensity,
   paint,
@@ -52,14 +49,10 @@ export function FilterBar({
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
   const filtered = isFiltered(filters);
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-rule bg-ground px-4 py-2">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pb-3 md:px-6">
       {onNewTicket ? (
-        <Button
-          variant="primary"
-          className="h-7 py-0 text-xs"
-          onClick={onNewTicket}
-        >
-          <Icon name="plus" size={14} />
+        <Button variant="primary" className="h-9 py-0" onClick={onNewTicket}>
+          <Icon name="plus" size={16} />
           New ticket
         </Button>
       ) : null}
@@ -119,7 +112,7 @@ export function FilterBar({
       {filtered ? (
         <Button
           variant="quiet"
-          className="h-7 px-1.5 text-xs"
+          className="h-8 px-1.5 text-xs"
           onClick={() =>
             onChange({
               ...filters,
@@ -135,9 +128,6 @@ export function FilterBar({
           Clear filters
         </Button>
       ) : null}
-      <span className="text-xs text-ink-muted" aria-live="polite">
-        {filtered ? `${shown} of ${total} tickets` : `${total} tickets`}
-      </span>
       {(paint && onPaint) || (density && onDensity) ? (
         <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
           {virtualColumns && onVirtualColumns ? (

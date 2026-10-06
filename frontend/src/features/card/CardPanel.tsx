@@ -322,7 +322,7 @@ function ReasonList({
     <section aria-labelledby={id}>
       <h3
         id={id}
-        className={`mb-2 flex items-center gap-1.5 border-t-2 pt-1.5 text-sm station-sign ${marked ? "border-rule-strong text-ink" : "border-rule text-ink-muted"}`}
+        className={`mb-2 flex items-center gap-1.5 border-t-2 pt-1.5 text-sm heading-cut ${marked ? "border-rule-strong text-ink" : "border-rule text-ink-muted"}`}
       >
         {marked ? <Icon name="diamond" size={14} /> : null}
         {title}
@@ -426,7 +426,7 @@ function TicketTab({
             aria-hidden="true"
             className="hatched-strong absolute inset-x-0 top-0 h-1.5"
           />
-          <h3 id="repair-heading" className="mb-1.5 text-sm station-sign">
+          <h3 id="repair-heading" className="mb-1.5 text-sm heading-cut">
             Needs repair
           </h3>
           {detail.needsRepair.map((problem) => (
@@ -465,7 +465,7 @@ function TicketTab({
           aria-labelledby="questions-heading"
           className="flex flex-col gap-2"
         >
-          <h3 id="questions-heading" className="text-sm station-sign">
+          <h3 id="questions-heading" className="text-sm heading-cut">
             {detail.questions.length === 1
               ? "Question for you"
               : `${detail.questions.length} questions for you`}
@@ -489,7 +489,7 @@ function TicketTab({
           aria-labelledby="handoff-heading"
           className="rounded-panel bg-well p-4"
         >
-          <h3 id="handoff-heading" className="mb-2 text-sm station-sign">
+          <h3 id="handoff-heading" className="mb-2 text-sm heading-cut">
             Handoff
           </h3>
           {staleHandoff(detail) ? (
@@ -539,7 +539,7 @@ function TicketTab({
         <section aria-labelledby="criteria-heading">
           <h3
             id="criteria-heading"
-            className="mb-2 flex items-baseline justify-between border-t-2 border-rule-strong pt-1.5 text-sm station-sign"
+            className="mb-2 flex items-baseline justify-between border-t-2 border-rule-strong pt-1.5 text-sm heading-cut"
           >
             Acceptance criteria
             <span className="text-xs font-normal text-ink-muted">
@@ -615,7 +615,7 @@ function ReviewTab({
         <section aria-labelledby="attachments-heading">
           <h3
             id="attachments-heading"
-            className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm station-sign"
+            className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm heading-cut"
           >
             Attachments
           </h3>
