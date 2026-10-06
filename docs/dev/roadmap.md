@@ -11,12 +11,12 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 ## Execution order
 
 1. [`agent-runs`](roadmap-items/agent-runs.md) — **Partial**. Built; open:
-   recording the remaining real Claude Code payloads and a real session with
-   a task list (needs a person; folded into `mcp-protocol`'s real sessions).
+   the remaining real Claude Code payloads and a session with a task list
+   (evidence from dogfooding).
 2. [`mcp-protocol`](roadmap-items/mcp-protocol.md) — **Partial**. Built (MCP
    server, claims, checkpoints, questions, `setup claude`, protocol skill,
-   handoff enforcement); open: the real-session acceptance checks (needs a
-   person).
+   handoff enforcement); open: the real-session acceptance criteria, met by
+   dogfooding Flashheart's own sessions.
 3. [`mcp-runs`](roadmap-items/mcp-runs.md) — **Pending**. The MCP server
    starts a run for an agent without hooks, so claims, questions and
    attribution work and it shows in the Agents view. Depends on

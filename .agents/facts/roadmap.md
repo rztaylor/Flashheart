@@ -21,3 +21,9 @@
   where `setup claude` is applied (`claim`, `checkpoint`, `move`), else
   through the board UI or in board format v2. Machines without the board
   (CI, other checkouts) skip this.
+- Real-session acceptance criteria are met by dogfooding: Flashheart's own
+  development sessions are the real sessions. Tick a criterion on its
+  ticket, with the session and date in a note, once it has been seen; do
+  not stage sessions in sandbox projects to produce the evidence (user,
+  2026-10-06). An item whose only open scope is such evidence stays
+  `Partial`, and its pull request may merge.

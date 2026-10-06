@@ -13,19 +13,25 @@ answers delivered through the session's inbox (D20); handoff enforcement;
 the card panel and the Agents view; `TestProtocolSmoke`; a Playwright test
 that asks through the real MCP server and answers in the browser.
 
-Remaining (needs a person at the keyboard, with `setup claude --write`
-applied on their machine):
+Remaining: the real-session criteria. They are met by dogfooding, not by
+staged sessions in a sandbox project (user, 2026-10-06): Flashheart's own
+development sessions, with `setup claude` applied, use the tools, and each
+criterion is ticked on FH-4 with a note of the session and date once it has
+been seen. Seen so far (2026-10-06): the server found the calling Claude
+session through `CLAUDE_PROJECT_DIR` with no `run` argument (FH-8, FH-15),
+and a Codex checkpoint copied six referenced files into FH-9's `files/`.
+Still to see:
 
-- "Tackle the top two bugs" in a real session lists, claims and works the
-  two highest-priority open bugs of its project.
-- A real session in a new project sets a key it chose before its first
-  ticket; a taken key is refused with the keys in use.
-- A real session claims, checkpoints, asks a question, receives the answer
-  on its next prompt, and a fresh session gets the recovery note; this also
-  confirms `updatedInput` stamping and `CLAUDE_PROJECT_DIR` in a live
-  Claude Code.
-- A review linking a screenshot by absolute path still renders after the
-  original is deleted (covered by tests; to be seen once in the UI).
+- Asked for work in plain words ("tackle the top two bugs"), a session
+  lists, claims and works the highest-priority open tickets of its project.
+- A session in a project new to the board sets a key it chose before its
+  first ticket, and a taken key is refused with the keys in use (when
+  Flashheart is first used on another repository).
+- A session claims, checkpoints, asks a question and receives the answer on
+  its next prompt, a fresh session gets the recovery note, and
+  `PreToolUse` stamps the run into its tool calls.
+- A review that links a screenshot by absolute path renders after the
+  original is deleted.
 
 ## Goal
 

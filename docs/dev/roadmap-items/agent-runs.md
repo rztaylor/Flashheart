@@ -15,15 +15,18 @@ Ended in the Agents view, with its subagents nested; a resumed session got
 its recovery note and branch link (FH-1). The session made no task list, so
 "with its plan" is shown only by tests.
 
-Remaining (needs a person at the keyboard):
+Remaining, met by dogfooding Flashheart's own sessions rather than staged
+ones (user, 2026-10-06):
 
 - Payloads recorded 2026-10-06 cover every event Flashheart maps except
   `Notification`, `PostCompact`, `PermissionDenied` and the task-list tools
   (`TodoWrite`, `TaskCreate`, `TaskUpdate`, `TaskCreated`,
   `TaskCompleted`); the adapter needed no change. Those remain documented
   only (`testdata/hooks/claude/MANIFEST.md`).
-- A real session that keeps a task list, to see its plan in the Agents
-  view and record the task-tool payloads.
+- A session that keeps a task list, to see its plan in the Agents view.
+  Its event log shows whether the task-tool mapping holds; the golden
+  fixtures for those events stay documented-schema until a session is run
+  through `scripts/record-claude-hooks.sh`.
 
 ## Goal
 
