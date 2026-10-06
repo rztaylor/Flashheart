@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -119,6 +119,153 @@ test("dragging a card to another column moves it", async () => {
   await expect
     .poll(() => readTicket("FH-33-user-guide"))
     .toContain("status: in-progress");
+});
+
+// ticketById reads a ticket file by id, whatever its folder's slug.
+async function ticketById(id) {
+  const dir = join(sandbox.root, "flashheart", "tickets");
+  const folder = (await readdir(dir)).find((name) => name.startsWith(`${id}-`));
+  return readFile(join(dir, folder, `${folder}.md`), "utf8");
+}
+
+function order(name) {
+  return column(name)
+    .locator("[data-ticket]")
+    .evaluateAll((nodes) => nodes.map((node) => node.dataset.ticket));
+}
+
+async function workstreamFiles() {
+  const dir = join(sandbox.root, "flashheart", "workstreams");
+  const names = (await readdir(dir)).sort();
+  return Promise.all(names.map((name) => readFile(join(dir, name), "utf8")));
+}
+
+// boardTop scrolls the board back to its first cards, which earlier tests
+// may have scrolled away.
+async function boardTop() {
+  await page.locator(".board-grid").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+}
+
+// drag moves a card with the pointer to a point, in small steps so the
+// drag sensor and drop indicator follow.
+async function drag(source, x, y) {
+  await source.scrollIntoViewIfNeeded();
+  const box = await source.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 10, box.y + 30, { steps: 4 });
+  await page.mouse.move(x, y, { steps: 12 });
+  await page.mouse.up();
+}
+
+test("dragging a card within a column sets its place, and it stays", async () => {
+  await open("#/p/flashheart/board");
+  await boardTop();
+  const lines = await workstreamFiles();
+  const [first, second, third] = await order("Backlog");
+  const target = await column("Backlog")
+    .locator(`[data-ticket="${first}"]`)
+    .boundingBox();
+  await drag(
+    column("Backlog").locator(`[data-ticket="${third}"]`),
+    target.x + target.width / 2,
+    target.y + 6,
+  );
+  await expect
+    .poll(async () => (await order("Backlog")).slice(0, 3))
+    .toEqual([third, first, second]);
+  await expect.poll(() => ticketById(third)).toMatch(/\nrank: \S+\n/);
+  const toast = page
+    .getByRole("status")
+    .filter({ hasText: `Moved ${third} in Backlog.` });
+  await expect(toast).toBeVisible();
+
+  // The order is the saved one: it survives a reload and a trip elsewhere.
+  await page.reload();
+  await open("#/p/flashheart/table");
+  await open("#/p/flashheart/board");
+  await boardTop();
+  await expect
+    .poll(async () => (await order("Backlog")).slice(0, 3))
+    .toEqual([third, first, second]);
+
+  // Undo puts it back where it was.
+  await drag(
+    column("Backlog").locator(`[data-ticket="${second}"]`),
+    target.x + target.width / 2,
+    target.y + 6,
+  );
+  await expect.poll(async () => (await order("Backlog"))[0]).toBe(second);
+  await page
+    .getByRole("status")
+    .filter({ hasText: `Moved ${second} in Backlog.` })
+    .getByRole("button", { name: "Undo" })
+    .click();
+  await expect
+    .poll(async () => (await order("Backlog")).slice(0, 3))
+    .toEqual([third, first, second]);
+  // Board order never touches a workstream's own order.
+  expect(await workstreamFiles()).toEqual(lines);
+});
+
+test("a card dropped in another column lands where it was dropped", async () => {
+  await open("#/p/flashheart/board");
+  await boardTop();
+  const [moving] = await order("Backlog");
+  const [top, next] = await order("Up next");
+  const below = await column("Up next")
+    .locator(`[data-ticket="${next}"]`)
+    .boundingBox();
+  await drag(
+    column("Backlog").locator(`[data-ticket="${moving}"]`),
+    below.x + below.width / 2,
+    below.y + 6,
+  );
+  await expect
+    .poll(async () => (await order("Up next")).slice(0, 3))
+    .toEqual([top, moving, next]);
+  await expect.poll(() => ticketById(moving)).toContain("status: up-next");
+});
+
+test("Shift with Up or Down moves a card within its column, with Undo", async () => {
+  await open("#/p/flashheart/board");
+  const [first, second] = await order("Up next");
+  await column("Up next").locator(`[data-ticket="${second}"]`).focus();
+  await page.keyboard.press("Shift+ArrowUp");
+  await expect
+    .poll(async () => (await order("Up next")).slice(0, 2))
+    .toEqual([second, first]);
+  await expect(
+    column("Up next").locator(`[data-ticket="${second}"]`),
+  ).toBeFocused();
+  await page.keyboard.press("Shift+ArrowDown");
+  await expect
+    .poll(async () => (await order("Up next")).slice(0, 2))
+    .toEqual([first, second]);
+  await page
+    .getByRole("status")
+    .filter({ hasText: `Moved ${second} in Up next.` })
+    .getByRole("button", { name: "Undo" })
+    .click();
+  await expect
+    .poll(async () => (await order("Up next")).slice(0, 2))
+    .toEqual([second, first]);
+});
+
+test("the panel moves a ticket to the top or bottom of its column", async () => {
+  await open("#/p/flashheart/board");
+  const ids = await order("Up next");
+  const last = ids.at(-1);
+  await open(`#/p/flashheart/board?t=${last}`);
+  const panel = page.getByRole("complementary", { name: `Ticket ${last}` });
+  await panel.getByLabel("Position").selectOption("top");
+  await expect.poll(async () => (await order("Up next"))[0]).toBe(last);
+  await panel.getByLabel("Position").selectOption("bottom");
+  await expect.poll(async () => (await order("Up next")).at(-1)).toBe(last);
+  await expect(panel.getByLabel("Position")).toHaveValue("");
+  await page.keyboard.press("Escape");
 });
 
 test("starting a blocked ticket asks for a reason and records it", async () => {

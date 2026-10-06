@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type Card,
   COLUMNS,
+  type Column,
   fetchAllBoard,
   fetchProjectBoard,
   fetchProjects,
@@ -37,6 +38,12 @@ import {
   isFiltered,
 } from "../model/filters";
 import { linesByProject } from "../model/lines";
+import {
+  afterForStep,
+  placeCard,
+  predecessor,
+  type Step,
+} from "../model/order";
 import { filtersFor, rememberScope, sameScope } from "../model/scopes";
 import { viewSummary } from "../model/summary";
 import { useResource } from "../state/useResource";
@@ -181,13 +188,14 @@ export function Shell({
   useEffect(() => {
     if (loadedCards) reconcile(loadedCards);
   }, [loadedCards, reconcile]);
-  // Moves show in their new column at once, before the save returns.
+  // Moves show in their new column and place at once, before the save
+  // returns.
   const allCards: Card[] = useMemo(
     () =>
-      (loadedCards ?? []).map((card) => {
-        const column = editing.pending[card.id];
-        return column ? { ...card, column } : card;
-      }),
+      Object.entries(editing.pending).reduce(
+        (cards, [id, entry]) => placeCard(cards, id, entry.column, entry.after),
+        loadedCards ?? [],
+      ),
     [loadedCards, editing.pending],
   );
   const visible = useMemo(
@@ -195,6 +203,29 @@ export function Shell({
     [allCards, filters],
   );
   const options = useMemo(() => filterOptions(allCards), [allCards]);
+  // place moves a ticket (to a place in a column when after is given;
+  // EDIT-9), remembering where it was for Undo.
+  const place = (card: Card, to: Column, after?: string) =>
+    void editing.move(
+      card,
+      to,
+      "",
+      after === undefined
+        ? {}
+        : { after, undoAfter: predecessor(allCards, card) },
+    );
+  // stepTicket is the panel's Position menu: a step among the visible cards
+  // of the ticket's column, offered only while the board shows the ticket.
+  const shownTicket = allCards.find((card) => card.id === route.ticket?.id);
+  const stepTicket =
+    shownTicket &&
+    shownTicket.column !== "done" &&
+    visible.some((card) => card.id === shownTicket.id)
+      ? (step: Step) => {
+          const after = afterForStep(visible, shownTicket, step);
+          if (after !== null) place(shownTicket, shownTicket.column, after);
+        }
+      : undefined;
   // The phone column picker falls back to In progress when the virtual
   // column it showed has emptied and gone.
   const narrowVirtual = shownVirtualColumns(visible, shownVirtual);
@@ -598,7 +629,7 @@ export function Shell({
                     doneAll={doneAll}
                     onDoneAll={setDoneAll}
                     onOpen={openTicket}
-                    onMove={(card, to) => void editing.move(card, to)}
+                    onMove={place}
                   />
                 </div>
               ) : null}
@@ -632,6 +663,7 @@ export function Shell({
             onClose={closeTicket}
             revision={revision}
             editing={editing}
+            onStep={stepTicket}
             workstreamsOf={(project) => workstreams.get(project) ?? []}
           />
         ) : null}

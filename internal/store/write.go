@@ -722,3 +722,76 @@ func (s *Store) UpdateConfig(edit Edit) error {
 	}
 	return s.WriteFileAtomic(ConfigFile, next)
 }
+
+// PlaceTicket applies edit to a ticket (a move sets its status) and ranks it
+// so it directly follows after ("" for the top) in its resulting column
+// (EDIT-9), all under one hold of the project lock. A non-empty base must
+// match the ticket's current hash; it is checked before anything is
+// written. Placing may also rank unranked tickets above it, in their current
+// order (board.PlanPlacement). When after is no longer in that column, or
+// the column is Done, the edit is applied without a placement and placed is
+// false. It returns the ticket's new hash.
+func (s *Store) PlaceTicket(project, id, base, after string, edit Edit) (hash string, placed bool, err error) {
+	if err := s.checkTicket(project, id); err != nil {
+		return "", false, err
+	}
+	release, err := s.lock(project)
+	if err != nil {
+		return "", false, err
+	}
+	defer release()
+	name, err := s.TicketFile(project, id)
+	if err != nil {
+		return "", false, err
+	}
+	current, err := s.ReadFile(name)
+	if err != nil {
+		return "", false, err
+	}
+	if base != "" && base != Hash(current) {
+		return "", false, &ConflictError{Name: name, Hash: Hash(current), Current: current}
+	}
+	next, err := edit(current)
+	if err != nil {
+		return "", false, err
+	}
+	column := board.ParseTicket(path.Base(path.Dir(name)), next).Column
+	var writes []board.RankWrite
+	if column != board.Done {
+		info, err := s.ReadProject(project)
+		if err != nil {
+			return "", false, err
+		}
+		tickets := slices.DeleteFunc(slices.Clone(info.Tickets), func(t board.Ticket) bool { return t.Column != column })
+		slices.SortStableFunc(tickets, board.CompareOrder)
+		writes, placed = board.PlanPlacement(tickets, id, after)
+	}
+	if !placed {
+		hash, err := s.updateLocked(name, base, edit, true)
+		return hash, false, err
+	}
+	rank := writes[len(writes)-1].Rank
+	for _, write := range writes[:len(writes)-1] {
+		other, err := s.TicketFile(project, write.ID)
+		if err == nil {
+			_, err = s.updateLocked(other, "", setRank(write.Rank), true)
+		}
+		// A ticket whose frontmatter does not parse cannot hold a rank; it
+		// stays in the unranked tail.
+		if err != nil && !errors.Is(err, mdfile.ErrBrokenFrontmatter) {
+			return "", false, err
+		}
+	}
+	hash, err = s.updateLocked(name, base, func(data []byte) ([]byte, error) {
+		edited, err := edit(data)
+		if err != nil {
+			return nil, err
+		}
+		return setRank(rank)(edited)
+	}, true)
+	return hash, err == nil, err
+}
+
+func setRank(rank string) Edit {
+	return func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "rank", rank) }
+}

@@ -94,9 +94,13 @@ load) sit as a full-width strip under the band, above the rail and Main.
   on its own. Column heads stay pinned at the top while the board scrolls; a
   drag held at an edge scrolls the board. The ticket panel scrolls
   separately.
-- Dropping: the hovered column shows a drop outline. Keyboard: arrows move
-  between cards, Shift with Left/Right moves the ticket (`EDIT-1`), Enter
-  opens it.
+- Dropping: the hovered column shows a drop outline and a select-coloured
+  line where the card will land (none in Done, or where the drop would
+  change nothing) (`EDIT-9`). Keyboard: arrows move between cards, Shift with
+  Left/Right moves the ticket to the next column (`EDIT-1`), Shift with
+  Up/Down moves it within its column, Enter opens it. The panel's actions
+  add a **Position** menu (Top of column, Up one, Down one, Bottom of
+  column) while the board shows the ticket outside Done.
 
 ### Ticket card
 

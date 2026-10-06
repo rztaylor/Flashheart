@@ -302,3 +302,20 @@ is light's one accent: the bar, the primary action, the current project,
 selection and focus. Grounds are white and cool light greys. Night Service
 (dark) is unchanged. Structure is unchanged (D18, `ui-layout.md`); only light
 tokens moved, and the palette test still holds every pair to WCAG AA.
+
+## 2026-10-06 — D23: Manual card order lives in each ticket's `rank`
+
+Decision (FH-23): a ticket's place in its column is an optional `rank`
+frontmatter field holding a fractional index, not a per-project order file.
+Ranked tickets come first; unranked ones keep the old default order
+(priority, created, id).
+
+Options: an order file per project listing ids per column, or a key on each
+ticket. The order file is one write per reorder but drifts from the tickets
+(external moves, archives, new tickets) and is a second source of truth for
+a ticket's place. A per-ticket key keeps the ticket file the source of
+truth (D12, STO-3), survives archive and restore, and a fractional index
+means a placement normally writes one file under the existing lock and
+hash rules. Unranked tickets are ranked only when a placement lands among
+them, in their current order, so nothing else moves. Done keeps recency
+order, which is what people look for there, and is not reordered.

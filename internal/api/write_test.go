@@ -295,3 +295,54 @@ func TestTitlesAreMeasuredInCharacters(t *testing.T) {
 		t.Errorf("created title has %d runes, valid=%v", utf8.RuneCountInString(got), utf8.ValidString(got))
 	}
 }
+
+func backlogOrder(t *testing.T, handler http.Handler) []string {
+	t.Helper()
+	var response BoardResponse
+	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &response)
+	var ids []string
+	for _, card := range response.Cards {
+		if card.Column == "backlog" {
+			ids = append(ids, card.ID)
+		}
+	}
+	return ids
+}
+
+func TestMoveWithAfterPlacesTheTicket(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	top := ""
+	send(t, handler, http.MethodPost, "/api/tickets/AL-4/move", MoveRequest{To: "backlog", After: &top}, http.StatusOK, nil)
+	if got := backlogOrder(t, handler); !slices.Equal(got[:3], []string{"AL-4", "AL-5", "AL-6"}) {
+		t.Errorf("backlog = %v", got)
+	}
+	al4 := "AL-4"
+	send(t, handler, http.MethodPost, "/api/tickets/AL-6/move", MoveRequest{To: "backlog", After: &al4}, http.StatusOK, nil)
+	if got := backlogOrder(t, handler); !slices.Equal(got[:3], []string{"AL-4", "AL-6", "AL-5"}) {
+		t.Errorf("backlog = %v", got)
+	}
+
+	// The ticket to follow has left the column: the move happens, the
+	// placement does not, and the response says so.
+	gone := "AL-3"
+	var moved WriteResponse
+	send(t, handler, http.MethodPost, "/api/tickets/AL-5/move", MoveRequest{To: "up-next", After: &gone}, http.StatusOK, &moved)
+	if len(moved.Warnings) != 1 || !strings.Contains(moved.Warnings[0], "AL-3 is no longer in Up next") {
+		t.Errorf("warnings = %v", moved.Warnings)
+	}
+	if ticketDetail(t, handler, "AL-5").Column != "up-next" {
+		t.Error("AL-5 should have moved")
+	}
+
+	// Done keeps most recent first; a position there is ignored.
+	send(t, handler, http.MethodPost, "/api/tickets/AL-6/move", MoveRequest{To: "done", After: &top}, http.StatusOK, nil)
+	data, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-6-offline-mode", "AL-6-offline-mode.md"))
+	if !strings.Contains(string(data), "status: done") {
+		t.Errorf("AL-6 =\n%s", data)
+	}
+
+	path := "../x"
+	send(t, handler, http.MethodPost, "/api/tickets/AL-4/move", MoveRequest{To: "backlog", After: &path}, http.StatusBadRequest, nil)
+}

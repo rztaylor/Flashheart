@@ -116,6 +116,7 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 | `depends-on` | no | Ticket ids, in any project. |
 | `depends-on-workstreams` | no | Workstream slugs in this project. |
 | `tags` | no | Free text; `later-possibility` marks ideas (`VIEW-7`). |
+| `rank` | no | Place in its column's manual order (`EDIT-9`); written by Flashheart. See below. |
 | `session`, `git-ref`, `updated` | no | Free text / RFC 3339 UTC. |
 
 The title is the first `#` heading. Unknown keys are preserved in place
@@ -135,6 +136,27 @@ A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content
 hash they read. Every ticket write by Flashheart stamps `updated`. The folder never
 moves except to `.archive/`.
+
+### Order within a column
+
+`rank` is a fractional index: base-62 digits (`0-9A-Za-z`), compared as
+plain strings, never ending in `0`, at most 64 characters, so a new key
+always fits between two others. Within a column, ranked tickets come first
+in rank order; unranked tickets follow by priority (high, medium, low), then
+`created`, then id. Ties fall back to the same order. An invalid `rank` is
+ignored with a warning. *Done* ignores ranks and lists the most recently
+modified first.
+
+Placing a ticket (`POST /api/tickets/{id}/move` with `after`: the id it
+should follow, or `""` for the top) takes the project lock, reads the column
+as it is then and normally writes only that ticket's `rank` (and `status`).
+Placed inside the unranked tail, the unranked tickets above it are ranked
+first, in their current order, and tied ranks above it are spread out, so no
+other ticket changes place. A ticket to follow that has left the column is
+reported and the ticket keeps its rank. A move without `after` (the MCP
+`move` tool, Shift with Left or Right, the panel's **Move to**) keeps the
+rank. Archived tickets keep their `rank` and return to their place when
+restored. Workstream `tickets:` order is separate and unaffected.
 
 ### References in text
 

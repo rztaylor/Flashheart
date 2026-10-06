@@ -23,6 +23,7 @@ import { StateNote } from "../../components/StateNote";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
+import type { Step } from "../../model/order";
 import { counted, sessionsOf, shortRun } from "../../model/runs";
 import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
@@ -49,6 +50,9 @@ interface CardPanelProps {
   // editing enables moves, archiving and the Edit tab; absent when the
   // server is read-only.
   editing?: Editing;
+  // onStep moves the ticket within its column (EDIT-9); absent when the
+  // board does not show it.
+  onStep?: (step: Step) => void;
   workstreamsOf(project: string): WorkstreamBrief[];
 }
 
@@ -69,6 +73,7 @@ export function CardPanel({
   onClose,
   revision,
   editing,
+  onStep,
   workstreamsOf,
 }: CardPanelProps) {
   const load = useCallback(
@@ -174,6 +179,7 @@ export function CardPanel({
                 <PanelActions
                   detail={detail}
                   onMove={(to) => void editing.move(detail, to)}
+                  onStep={onStep}
                   onArchive={() => {
                     void editing.archive(detail);
                     onClose();
@@ -217,15 +223,25 @@ export function CardPanel({
   );
 }
 
-// PanelActions moves the ticket to any column (the menu alternative to
-// dragging, EDIT-1) or archives it (EDIT-8).
+const steps: { value: Step; label: string }[] = [
+  { value: "top", label: "Top of column" },
+  { value: "up", label: "Up one" },
+  { value: "down", label: "Down one" },
+  { value: "bottom", label: "Bottom of column" },
+];
+
+// PanelActions moves the ticket to any column or to a place in its column
+// (the menu alternatives to dragging, EDIT-1, EDIT-9) or archives it
+// (EDIT-8).
 function PanelActions({
   detail,
   onMove,
+  onStep,
   onArchive,
 }: {
   detail: TicketDetail;
   onMove(to: Column): void;
+  onStep?: (step: Step) => void;
   onArchive(): void;
 }) {
   return (
@@ -244,6 +260,23 @@ function PanelActions({
           ))}
         </Select>
       </label>
+      {onStep ? (
+        // biome-ignore lint/a11y/noLabelWithoutControl: the Select inside is the control.
+        <label className="flex items-center gap-2 text-xs text-ink-muted">
+          Position
+          {/* An action menu: it runs the step and returns to its prompt. */}
+          <Select value="" onChange={(value) => onStep(value as Step)}>
+            <option value="" disabled>
+              Move within column
+            </option>
+            {steps.map((step) => (
+              <option key={step.value} value={step.value}>
+                {step.label}
+              </option>
+            ))}
+          </Select>
+        </label>
+      ) : null}
       <Button className="h-8 py-0 text-xs" onClick={onArchive}>
         <Icon name="archive" size={14} />
         Archive

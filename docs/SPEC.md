@@ -188,8 +188,8 @@ Full format: `docs/dev/specs/board-format.md`.
 ### 6.4 Views (`VIEW`)
 
 - `VIEW-1` **Board**: one column per status in workflow order (Backlog, Up
-  next, In progress, Ready to review, Done).
-  *done* shows the most recent 20 by default with **Show all**.
+  next, In progress, Ready to review, Done), each in its manual order
+  (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
 - `VIEW-2` **Virtual columns**: *Needs you* (tickets with a run in Needs you or
   an open question) and *Agent working* (tickets linked to a Working or Quiet
   run). They sit before Backlog and appear while they hold tickets. Each
@@ -255,6 +255,20 @@ Full format: `docs/dev/specs/board-format.md`.
   reload or overwrite deliberately.
 - `EDIT-8` Flashheart never deletes a ticket. **Archive** moves its folder
   to `<project>/.archive/tickets/` and can be undone.
+- `EDIT-9` **Manual order**: dragging a card within a column, or dropping it
+  at a place in another column, sets its place, saved in the ticket's `rank`
+  (board-format §Order within a column) so it survives reloads and
+  restarts. Ranked tickets come first; unranked ones (new tickets, until
+  placed) follow by priority, created date and id. *Done* lists the most
+  recently finished first and is not reordered. Places are taken among the
+  visible cards of the ticket's own project, so filtered-out tickets and
+  other projects in *All projects* keep their order. Shift with Up or Down
+  and the panel's **Position** menu are the keyboard and menu alternatives;
+  Undo puts the ticket back after the card it followed. A temporary display
+  sort (the Table's column sort, or a future board sort) rearranges only what
+  is shown and never writes ranks; while one is on, cards cannot be
+  reordered within a column and a move keeps the ticket's rank. Board order
+  is separate from workstream order (`EDIT-4`) and never changes it.
 
 ### 6.7 Runs (`RUN`)
 

@@ -24,6 +24,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Manual card order: drag a card to any place in its column, or to a place
+  in another column, and the order is saved in the ticket's new `rank`
+  field, so it survives reloads and restarts. Shift with Up or Down and the
+  panel's Position menu move a card within its column; Undo puts it back.
+  New tickets join below the ordered ones, Done stays most recent first,
+  and workstream order is unaffected (FH-23).
+
 - `flashheart` binary: `serve` (default) opens a private, authenticated board
   shell in the browser and returns the terminal, running the server in the
   background until Quit or the last tab closes; `--foreground` keeps it

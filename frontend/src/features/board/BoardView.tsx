@@ -1,9 +1,13 @@
 import {
+  type CollisionDetection,
   DndContext,
   type DragEndEvent,
+  type DragMoveEvent,
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
   useDraggable,
   useDroppable,
   useSensor,
@@ -35,6 +39,14 @@ import { EmptyState } from "../../components/EmptyState";
 import { shownVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
+import {
+  afterForIndex,
+  afterForStep,
+  canReorder,
+  type DisplaySort,
+  displayOrder,
+  predecessor,
+} from "../../model/order";
 import { type PaintMode, paintFor, paintKey } from "../../model/paint";
 import { useNow } from "../../state/useNow";
 import type { Density } from "../filters/FilterBar";
@@ -59,8 +71,13 @@ interface BoardViewProps {
   doneAll: boolean;
   onDoneAll(all: boolean): void;
   onOpen(ticket: TicketRef): void;
-  // onMove moves a ticket to another column (EDIT-1); absent when read-only.
-  onMove?(card: Card, to: Column): void;
+  // onMove moves a ticket to another column (EDIT-1) and, with after, to a
+  // place in it: directly after that ticket, "" for the top (EDIT-9);
+  // absent when read-only.
+  onMove?(card: Card, to: Column, after?: string): void;
+  // sort is a temporary display sort; null (the default) shows the saved
+  // manual order, which only then can be rearranged.
+  sort?: DisplaySort;
 }
 
 const keyMoves: Record<string, GridMove> = {
@@ -78,13 +95,26 @@ const columnTitle = (id: string) =>
   id;
 
 const instructions =
-  "Press Shift with the left or right arrow to move this ticket to the next column, or drag it with the pointer. Enter opens it.";
+  "Press Shift with the left or right arrow to move this ticket to the next column, or with the up or down arrow to move it within its column, or drag it with the pointer. Enter opens it.";
+
+// Columns are found under the pointer, so a tall card being dragged does not
+// pick a neighbouring column; outside every column the nearest one wins.
+const collision: CollisionDetection = (args) => {
+  const within = pointerWithin(args);
+  return within.length > 0 ? within : rectIntersection(args);
+};
+
+// A drop's place: an index among the column's shown cards, the dragged card
+// left out.
+type DropAt = { column: Column; index: number };
 
 // BoardView shows real columns in workflow order (VIEW-1) as rounded wells
-// (ui-layout.md §2). Arrow keys move between cards; Shift with an arrow moves the
-// ticket to the next column, as dragging does (EDIT-1); Enter opens it. When
-// a card opens and the panel narrows the board, its column scrolls back into
-// view.
+// (ui-layout.md §2), each in its saved manual order (EDIT-9). Arrow keys move
+// between cards; Shift with Left or Right moves the ticket to the next
+// column, as dragging does (EDIT-1), and Shift with Up or Down moves it
+// within its column; a drag drops it where a line shows. Enter opens it.
+// When a card opens and the panel narrows the board, its column scrolls back
+// into view.
 export function BoardView(props: BoardViewProps) {
   const {
     cards,
@@ -102,7 +132,9 @@ export function BoardView(props: BoardViewProps) {
     onDoneAll,
     onOpen,
     onMove,
+    sort = null,
   } = props;
+  const reorderable = canReorder(sort);
   const [focusedLine, setFocusedLine] = useState("");
   // The cursor names its column, so a virtual column appearing or leaving
   // does not move it to a neighbour.
@@ -111,6 +143,7 @@ export function BoardView(props: BoardViewProps) {
     row: 0,
   });
   const [dragging, setDragging] = useState<Card | null>(null);
+  const [drop, setDrop] = useState<DropAt | null>(null);
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const refocus = useRef("");
   const grid = useRef<HTMLDivElement>(null);
@@ -124,7 +157,8 @@ export function BoardView(props: BoardViewProps) {
     const grouped = new Map<Column, Card[]>(
       COLUMNS.map((column) => [column.id, []]),
     );
-    for (const card of cards) grouped.get(card.column)?.push(card);
+    for (const card of displayOrder(cards, sort))
+      grouped.get(card.column)?.push(card);
     // A virtual column appears only while it holds tickets, so a board
     // with nothing to flag stays calm.
     const mirrors = shownVirtual(cards, virtualColumns).map((column) => ({
@@ -145,7 +179,7 @@ export function BoardView(props: BoardViewProps) {
         cards: grouped.get(column.id) ?? [],
       })),
     ];
-  }, [cards, virtualColumns]);
+  }, [cards, virtualColumns, sort]);
   const sizes = columns.map((column) => column.cards.length);
   const firstNonEmpty = Math.max(
     0,
@@ -218,6 +252,26 @@ export function BoardView(props: BoardViewProps) {
       if (
         event.shiftKey &&
         onMove &&
+        (event.key === "ArrowUp" || event.key === "ArrowDown")
+      ) {
+        event.preventDefault();
+        if (!reorderable || card.column === "done") return;
+        const shown =
+          columns.find((column) => column.id === card.column)?.cards ?? [];
+        const after = afterForStep(
+          shown,
+          card,
+          event.key === "ArrowUp" ? "up" : "down",
+        );
+        if (after !== null) {
+          refocus.current = card.id;
+          onMove(card, card.column, after);
+        }
+        return;
+      }
+      if (
+        event.shiftKey &&
+        onMove &&
         (event.key === "ArrowLeft" || event.key === "ArrowRight")
       ) {
         event.preventDefault();
@@ -253,21 +307,79 @@ export function BoardView(props: BoardViewProps) {
     now,
   });
 
+  const shownIn = (id: string) =>
+    columns.find((column) => column.id === id && !column.virtual)?.cards ?? [];
+
+  // dropAt finds where in the hovered column a drop would land: below every
+  // shown card whose middle is above the pointer. Done keeps most recent
+  // first, and a display sort has no places, so neither shows one.
+  const dropAt = (event: DragMoveEvent): DropAt | null => {
+    const column = event.over?.id as Column | undefined;
+    const start = event.activatorEvent as PointerEvent | undefined;
+    if (!column || column === "done" || !reorderable || !start?.clientY)
+      return null;
+    const pointer = start.clientY + event.delta.y;
+    const nodes = grid.current?.querySelectorAll<HTMLElement>(
+      `section[data-column="${column}"] [data-ticket]`,
+    );
+    let index = 0;
+    for (const node of nodes ?? []) {
+      if (node.dataset.ticket === event.active.id) continue;
+      const box = node.getBoundingClientRect();
+      if (box.top + box.height / 2 < pointer) index++;
+    }
+    return { column, index };
+  };
+  const onDragMove = (event: DragMoveEvent) => {
+    const next = dropAt(event);
+    setDrop((current) =>
+      current?.column === next?.column && current?.index === next?.index
+        ? current
+        : next,
+    );
+  };
   const onDragStart = (event: DragStartEvent) =>
     setDragging(cards.find((card) => card.id === event.active.id) ?? null);
   const onDragEnd = (event: DragEndEvent) => {
+    const at = drop;
     setDragging(null);
+    setDrop(null);
     const card = cards.find((item) => item.id === event.active.id);
     const to = event.over?.id as Column | undefined;
-    if (card && to && to !== card.column) onMove?.(card, to);
+    if (!card || !to) return;
+    if (!at || at.column !== to) {
+      if (to !== card.column) onMove?.(card, to);
+      return;
+    }
+    const shown = shownIn(to);
+    const after = afterForIndex(shown, card, at.index);
+    if (to === card.column && after === predecessor(shown, card)) return;
+    onMove?.(card, to, after);
   };
+  // shownDrop is the drop line's place, unless the drop would change nothing.
+  const shownDrop = (() => {
+    if (!drop || !dragging) return null;
+    const shown = shownIn(drop.column);
+    if (
+      drop.column === dragging.column &&
+      afterForIndex(shown, dragging, drop.index) ===
+        predecessor(shown, dragging)
+    )
+      return null;
+    return drop;
+  })();
 
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={collision}
       onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
-      onDragCancel={() => setDragging(null)}
+      onDragCancel={() => {
+        setDragging(null);
+        setDrop(null);
+      }}
       accessibility={{
         screenReaderInstructions: { draggable: instructions },
         announcements: {
@@ -344,6 +456,15 @@ export function BoardView(props: BoardViewProps) {
                   <EmptySlot>{column.empty}</EmptySlot>
                 ) : null}
                 {column.cards.map((card, rowIndex) => {
+                  // The drop line sits above the card at the drop's place
+                  // (counting cards other than the dragged one).
+                  const before =
+                    shownDrop?.column === column.id &&
+                    card.id !== dragging?.id &&
+                    column.cards
+                      .slice(0, rowIndex)
+                      .filter((item) => item.id !== dragging?.id).length ===
+                      shownDrop.index;
                   // One tab stop per column (the cursor's card, or the first
                   // card elsewhere) so every column is reachable;
                   // arrow keys move freely across the grid.
@@ -375,23 +496,36 @@ export function BoardView(props: BoardViewProps) {
                     );
                   }
                   return (
-                    <DragCard
+                    <div
                       key={`${card.project}/${card.id}`}
-                      enabled={!!onMove}
-                      cardRef={ref}
-                      {...cardProps(card)}
-                      dimmed={
-                        focusedLine !== "" && card.workstream !== focusedLine
-                      }
-                      selected={selected?.id === card.id}
-                      ghost={dragging?.id === card.id}
-                      tabIndex={isActive ? 0 : -1}
-                      onOpen={() => onOpen({ id: card.id })}
-                      onKeyDown={onKey(card)}
-                      onFocus={() => moveCursor(columnIndex, rowIndex)}
-                    />
+                      className="relative"
+                    >
+                      {before ? <DropLine edge="top" /> : null}
+                      <DragCard
+                        enabled={!!onMove}
+                        cardRef={ref}
+                        {...cardProps(card)}
+                        dimmed={
+                          focusedLine !== "" && card.workstream !== focusedLine
+                        }
+                        selected={selected?.id === card.id}
+                        ghost={dragging?.id === card.id}
+                        tabIndex={isActive ? 0 : -1}
+                        onOpen={() => onOpen({ id: card.id })}
+                        onKeyDown={onKey(card)}
+                        onFocus={() => moveCursor(columnIndex, rowIndex)}
+                      />
+                    </div>
                   );
                 })}
+                {shownDrop?.column === column.id &&
+                shownDrop.index ===
+                  column.cards.filter((item) => item.id !== dragging?.id)
+                    .length ? (
+                  <div className="relative">
+                    <DropLine edge="end" />
+                  </div>
+                ) : null}
                 {column.id === "done" &&
                 (doneTotal > doneShown || doneAll) &&
                 doneTotal > 0 ? (
@@ -419,6 +553,20 @@ export function BoardView(props: BoardViewProps) {
         ) : null}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+// DropLine marks where a dragged ticket will land: above a card, or after
+// the last one.
+function DropLine({ edge }: { edge: "top" | "end" }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-drop-line=""
+      className={`pointer-events-none absolute inset-x-1 h-0.5 rounded-full bg-select ${
+        edge === "top" ? "-top-1.5" : "-top-1"
+      }`}
+    />
   );
 }
 

@@ -543,7 +543,7 @@ func (b boardAPI) attachment(w http.ResponseWriter, r *http.Request) {
 // trimmed to the most recent doneLimit unless all is set (VIEW-1).
 func (b boardAPI) cards(snapshot *index.Snapshot, project *board.Project, all, withSearch bool) ([]Card, int, int) {
 	tickets := slices.Clone(project.Tickets)
-	slices.SortStableFunc(tickets, compareTickets)
+	slices.SortStableFunc(tickets, board.CompareOrder)
 	cards := make([]Card, 0, len(tickets))
 	total, shown := 0, 0
 	for _, ticket := range tickets {
@@ -559,45 +559,8 @@ func (b boardAPI) cards(snapshot *index.Snapshot, project *board.Project, all, w
 	return cards, total, shown
 }
 
-var priorityRank = map[string]int{"high": 0, "medium": 1, "low": 2}
-
 func columnRank(column string) int {
 	return slices.Index(board.Columns, board.Column(column))
-}
-
-func compareTickets(a, b board.Ticket) int {
-	if c := cmp.Compare(columnRank(string(a.Column)), columnRank(string(b.Column))); c != 0 {
-		return c
-	}
-	if a.Column == board.Done {
-		if c := b.Modified.Compare(a.Modified); c != 0 {
-			return c
-		}
-		return compareIDs(a.ID, b.ID)
-	}
-	rank := func(t board.Ticket) int {
-		if r, ok := priorityRank[t.Priority]; ok {
-			return r
-		}
-		return len(priorityRank)
-	}
-	if c := cmp.Compare(rank(a), rank(b)); c != 0 {
-		return c
-	}
-	if c := cmp.Compare(a.Created, b.Created); c != 0 {
-		return c
-	}
-	return compareIDs(a.ID, b.ID)
-}
-
-// compareIDs orders ids by key, then number.
-func compareIDs(a, b string) int {
-	ak, an, _ := board.ParseID(a)
-	bk, bn, _ := board.ParseID(b)
-	if c := cmp.Compare(ak, bk); c != 0 {
-		return c
-	}
-	return cmp.Compare(an, bn)
 }
 
 func filesURL(project, id string) string {

@@ -20,6 +20,7 @@ import (
 type Writer interface {
 	ReadTicket(project, id string) ([]byte, string, error)
 	UpdateTicket(project, id, base string, edit store.Edit) (string, error)
+	PlaceTicket(project, id, base, after string, edit store.Edit) (string, bool, error)
 	UpdateWorkstream(project, slug, base string, edit store.Edit) (string, error)
 	CreateTicket(project string, input store.NewTicket) (store.Created, error)
 	SetProjectKey(project, key string) error
@@ -140,6 +141,9 @@ type MoveRequest struct {
 	To   string `json:"to"`
 	// Reason confirms moving a blocked ticket into In progress (EDIT-2).
 	Reason string `json:"reason"`
+	// After places the ticket directly after this ticket in its new column
+	// ("" for the top; EDIT-9). Absent, the ticket keeps its rank.
+	After *string `json:"after,omitempty"`
 }
 
 func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
@@ -155,6 +159,12 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q is not a column", request.To))
 		return
+	}
+	if request.After != nil && *request.After != "" {
+		if _, _, ok := board.ParseID(*request.After); !ok {
+			writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q is not a ticket id", *request.After))
+			return
+		}
 	}
 	snapshot, project, ticket, ok := b.findTicket(w, r)
 	if !ok {
@@ -177,20 +187,31 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		}})
 		return
 	}
-	hash, err := writer.UpdateTicket(project.Name, ticket.ID, request.Base, func(data []byte) ([]byte, error) {
+	edit := func(data []byte) ([]byte, error) {
 		next, err := mdfile.SetScalar(data, "status", string(to))
 		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
 			return next, err
 		}
 		return mdfile.AppendToSection(next, "Notes", board.BlockedStartNote(reason))
-	})
+	}
+	var warnings []string
+	var hash string
+	var err error
+	if request.After != nil && to != board.Done {
+		var placed bool
+		hash, placed, err = writer.PlaceTicket(project.Name, ticket.ID, request.Base, *request.After, edit)
+		if err == nil && !placed {
+			warnings = append(warnings, fmt.Sprintf("%s is no longer in %s, so %s kept its place.", *request.After, to.Title(), ticket.ID))
+		}
+	} else {
+		hash, err = writer.UpdateTicket(project.Name, ticket.ID, request.Base, edit)
+	}
 	if err != nil {
 		writeStoreError(w, err)
 		return
 	}
-	var warnings []string
 	if to == board.Review && ticket.Column != board.Review {
-		warnings = board.ReviewWarnings(ticket, project.Reviews[ticket.ID])
+		warnings = append(warnings, board.ReviewWarnings(ticket, project.Reviews[ticket.ID])...)
 	}
 	b.saved(w, http.StatusOK, hash, warnings)
 }

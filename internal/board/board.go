@@ -167,6 +167,9 @@ type Ticket struct {
 	Session, GitRef, Branch, Workstream   string
 	Updated                               string
 	DependsOn, DependsOnWorkstreams, Tags []string
+	// Rank is the manual board order within a column (EDIT-9); empty when
+	// unranked.
+	Rank string
 
 	Criteria []Criterion
 	Handoff  *Handoff
@@ -265,6 +268,13 @@ func ParseTicket(folder string, data []byte) (ticket Ticket) {
 	ticket.DependsOn = doc.List("depends-on")
 	ticket.DependsOnWorkstreams = doc.List("depends-on-workstreams")
 	ticket.Tags = doc.List("tags")
+	if rank, _ := doc.String("rank"); rank != "" {
+		if ValidRank(rank) {
+			ticket.Rank = rank
+		} else {
+			ticket.Warnings = append(ticket.Warnings, fmt.Sprintf("rank %q is not a valid board position; it is ignored", rank))
+		}
+	}
 
 	var missing []string
 	for _, field := range []struct{ name, value string }{

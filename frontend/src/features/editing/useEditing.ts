@@ -17,10 +17,26 @@ export interface Movable {
   column: Column;
 }
 
+// Placement puts a ticket directly after another in its column ("" for the
+// top; EDIT-9). undoAfter is where it was, for Undo.
+export interface Placement {
+  after?: string;
+  undoAfter?: string;
+}
+
 export interface BlockedMove {
   ticket: Movable;
   to: Column;
   reasons: string[];
+  placement: Placement;
+}
+
+// Pending is a move shown before the board data has it: its column, its
+// placement, and whether the save has returned.
+export interface Pending {
+  column: Column;
+  after?: string;
+  saved: boolean;
 }
 
 const columnTitle = (column: Column) =>
@@ -30,12 +46,13 @@ const failure = (error: unknown) =>
   error instanceof Error ? error.message : "The change could not be saved";
 
 // useEditing coordinates moves and archiving from any view (EDIT-1, EDIT-2,
-// EDIT-3, EDIT-8): it shows the new column at once, asks for a reason before
-// starting a blocked ticket, and announces each result with Undo.
+// EDIT-3, EDIT-8): it shows the new column and place at once (EDIT-9), asks
+// for a reason before starting a blocked ticket, and announces each result
+// with Undo, which puts the ticket back in its old column and place.
 export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [blocked, setBlocked] = useState<BlockedMove | null>(null);
-  const [pending, setPending] = useState<Record<string, Column>>({});
+  const [pending, setPending] = useState<Record<string, Pending>>({});
   const counter = useRef(0);
 
   const notify = useCallback((message: Omit<ToastMessage, "id">) => {
@@ -51,17 +68,50 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
   }, []);
 
   const move = useCallback(
-    async (ticket: Movable, to: Column, reason = "") => {
-      if (ticket.column === to) return;
-      setPending((current) => ({ ...current, [ticket.id]: to }));
+    async (
+      ticket: Movable,
+      to: Column,
+      reason = "",
+      placement: Placement = {},
+    ) => {
+      const { after, undoAfter } = placement;
+      if (ticket.column === to && after === undefined) return;
+      setPending((current) => ({
+        ...current,
+        [ticket.id]: { column: to, after, saved: false },
+      }));
       try {
-        const saved = await moveTicket(fetcher, ticket.id, to, "", reason);
+        const saved = await moveTicket(
+          fetcher,
+          ticket.id,
+          to,
+          "",
+          reason,
+          after,
+        );
+        setPending((current) => {
+          const entry = current[ticket.id];
+          return entry
+            ? { ...current, [ticket.id]: { ...entry, saved: true } }
+            : current;
+        });
         notify({
-          text: `Moved ${ticket.id} to ${columnTitle(to)}.`,
+          text:
+            ticket.column === to
+              ? `Moved ${ticket.id} in ${columnTitle(to)}.`
+              : `Moved ${ticket.id} to ${columnTitle(to)}.`,
           details: saved.warnings,
           action: {
             label: "Undo",
-            run: () => void move({ ...ticket, column: to }, ticket.column),
+            run: () =>
+              void move(
+                { ...ticket, column: to },
+                ticket.column,
+                "",
+                after === undefined
+                  ? {}
+                  : { after: undoAfter ?? "", undoAfter: after },
+              ),
           },
         });
         onChanged();
@@ -69,7 +119,7 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
         settle(ticket.id);
         const reasons = blockedReasons(error);
         if (reasons) {
-          setBlocked({ ticket, to, reasons });
+          setBlocked({ ticket, to, reasons, placement });
           return;
         }
         notify({ text: `${ticket.id} was not moved: ${failure(error)}` });
@@ -82,7 +132,7 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
     (reason: string) => {
       if (!blocked) return;
       setBlocked(null);
-      void move(blocked.ticket, blocked.to, reason);
+      void move(blocked.ticket, blocked.to, reason, blocked.placement);
     },
     [blocked, move],
   );
@@ -142,8 +192,8 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
     confirmBlocked,
     cancelBlocked: useCallback(() => setBlocked(null), []),
     pending,
-    // reconcile drops optimistic columns the board data now agrees with, or
-    // whose tickets are gone.
+    // reconcile drops optimistic moves the board data now agrees with (a
+    // placement once its save has returned), or whose tickets are gone.
     reconcile: useCallback((cards: { id: string; column: Column }[]) => {
       setPending((current) => {
         const ids = Object.keys(current);
@@ -151,7 +201,10 @@ export function useEditing(fetcher: AuthenticatedFetch, onChanged: () => void) {
         const columns = new Map(cards.map((card) => [card.id, card.column]));
         const next = Object.fromEntries(
           Object.entries(current).filter(
-            ([id, column]) => columns.has(id) && columns.get(id) !== column,
+            ([id, entry]) =>
+              columns.has(id) &&
+              (columns.get(id) !== entry.column ||
+                (entry.after !== undefined && !entry.saved)),
           ),
         );
         return Object.keys(next).length === ids.length ? current : next;
