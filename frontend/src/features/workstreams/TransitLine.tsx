@@ -22,12 +22,13 @@ import {
 } from "react";
 
 import {
-  COLUMNS,
   type TicketRef,
   type Workstream,
   type WorkstreamTicket,
 } from "../../api/board";
 import { Icon } from "../../components/Icon";
+import { Pill, StatusPill } from "../../components/Pill";
+import { statusOf } from "../../model/status";
 import type { Line } from "../../model/lines";
 
 interface TransitLineProps {
@@ -43,25 +44,28 @@ const served = (ticket: WorkstreamTicket) =>
   ticket.column === "done" ||
   ticket.column === "archived";
 
+// A check means finished (Done or Archived); Ready to review is served but
+// never checked (ui-layout.md §4).
 function stationState(ticket: WorkstreamTicket, next: string) {
   if (ticket.missing) return "missing";
+  if (ticket.column === "done" || ticket.column === "archived") return "done";
   if (served(ticket)) return "served";
   if (ticket.id === next) return "next";
-  return "pending";
+  return "ahead";
 }
 
 const columnTitle = (column: WorkstreamTicket["column"]) =>
-  column === "archived"
-    ? "Archived"
-    : (COLUMNS.find((item) => item.id === column)?.title ?? "Missing");
+  statusOf(column).label;
 
 type Track = "served" | "ahead" | "suspended";
 
-// TransitLine draws a workstream as a transit line (VIEW-4): its tickets are
-// stations in order. Track already travelled is solid line colour; the route
-// ahead is lighter; only suspended service is dashed: the whole line when
-// its own workstream dependencies are unmet, or the track into a station
-// held by something outside the line. The next stop is an interchange ring.
+// TransitLine draws a workstream as a route (VIEW-4, ui-layout.md §4): its
+// tickets are stations in order, each with its title, id and status pill.
+// Track already travelled is solid line colour; the route ahead is lighter;
+// only suspended service is dashed: the whole line when its own workstream
+// dependencies are unmet, or the track into a station held by something
+// outside the line. The next stop is the larger interchange ring. Stations
+// sit on the route card's surface (--route-surface).
 export function TransitLine({
   workstream,
   line,
@@ -177,7 +181,7 @@ export function TransitLine({
         <div className="relative">
           <ol
             ref={scroller}
-            className="flex overflow-x-auto pt-7 pb-2"
+            className="flex overflow-x-auto pt-8 pb-2"
             aria-label={`${workstream.title} stations`}
           >
             {workstream.tickets.map((ticket, index) => {
@@ -195,14 +199,14 @@ export function TransitLine({
                     <>
                       <span
                         aria-hidden="true"
-                        className="absolute top-[11px] left-0 h-1.5 w-1/2"
+                        className="absolute top-[15px] left-0 h-1.5 w-1/2"
                         style={
                           first ? undefined : trackStyle(trackInto(ticket))
                         }
                       />
                       <span
                         aria-hidden="true"
-                        className="absolute top-[11px] right-0 h-1.5 w-1/2"
+                        className="absolute top-[15px] right-0 h-1.5 w-1/2"
                         style={
                           last
                             ? undefined
@@ -212,37 +216,39 @@ export function TransitLine({
                         }
                       />
                       {state === "next" && ticket.blocked ? (
-                        <span className="absolute -top-6 flex items-center gap-1 text-2xs font-semibold text-ink">
-                          <Icon name="diamond" size={11} />
-                          blocked
+                        <span className="absolute -top-7">
+                          <Pill tone="blocked">Blocked</Pill>
                         </span>
                       ) : null}
                       <button
                         {...drag}
                         type="button"
                         data-station={ticket.id}
+                        data-station-state={state}
                         disabled={ticket.missing && !onReorder}
                         onClick={() =>
                           !ticket.missing && onOpen({ id: ticket.id })
                         }
                         onKeyDown={onKey(index)}
                         aria-label={`${ticket.title}, ${columnTitle(ticket.column)}${ticket.blocked ? ", blocked" : ""}${state === "next" ? ", next stop" : ""}`}
-                        className="group relative z-10 flex flex-col items-center gap-2 rounded-control px-1 pb-1 text-center disabled:cursor-default"
+                        className="group relative z-10 flex flex-col items-center gap-1.5 rounded-control px-1 pb-1 text-center disabled:cursor-default"
                       >
-                        <Station state={state} colour={colour} />
-                        <span
-                          className={`line-clamp-2 text-xs leading-snug font-medium ${state === "served" ? "text-ink-muted" : "text-ink"} group-enabled:group-hover:underline`}
-                        >
+                        <span className="grid h-9 place-items-center">
+                          <Station state={state} colour={colour} />
+                        </span>
+                        <span className="line-clamp-2 text-sm leading-snug font-semibold text-ink group-enabled:group-hover:underline">
                           {ticket.title}
                         </span>
                         <span className="max-w-full truncate text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
                           {ticket.id}
                         </span>
-                        <span className="text-2xs text-ink-muted">
-                          {state === "missing"
-                            ? "Does not exist"
-                            : columnTitle(ticket.column)}
-                        </span>
+                        {state === "missing" ? (
+                          <span className="text-2xs text-ink-muted">
+                            Does not exist
+                          </span>
+                        ) : (
+                          <StatusPill column={ticket.column} />
+                        )}
                       </button>
                     </>
                   )}
@@ -253,10 +259,10 @@ export function TransitLine({
           {more ? (
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-24 items-start justify-end bg-linear-to-l from-ground to-transparent"
+              className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-24 items-start justify-end bg-linear-to-l from-(--route-surface) to-transparent"
             >
               {/* The hint sits in the lane above the track, clear of the stations. */}
-              <span className="mt-0.5 flex items-center gap-1 rounded-control bg-ground px-1 text-2xs text-ink-muted">
+              <span className="mt-0.5 flex items-center gap-1 rounded-control bg-(--route-surface) px-1 text-2xs text-ink-muted">
                 more
                 <Icon name="next" size={11} />
               </span>
@@ -309,30 +315,53 @@ function Station({
   colour: string;
 }) {
   switch (state) {
+    case "done":
+      return (
+        <span
+          className="grid size-8 place-items-center rounded-full"
+          style={{
+            background: colour,
+            color: "var(--route-ink)",
+            boxShadow:
+              "inset 0 0 0 1px var(--fh-casing), 0 0 0 3px var(--route-surface)",
+          }}
+        >
+          <Icon name="check" size={16} className="[stroke-width:3]" />
+        </span>
+      );
     case "served":
       return (
         <span
-          className="grid size-7 place-items-center rounded-full"
+          className="grid size-8 place-items-center rounded-full"
           style={{
             background: colour,
-            boxShadow: "inset 0 0 0 1px var(--fh-casing)",
+            boxShadow:
+              "inset 0 0 0 1px var(--fh-casing), 0 0 0 3px var(--route-surface)",
           }}
         >
-          <span className="size-2.5 rounded-full bg-ground" />
+          <span className="size-2.5 rounded-full bg-(--route-surface)" />
         </span>
       );
     case "next":
       return (
-        <span className="size-7 rounded-full border-[3.5px] border-rule-strong bg-ground shadow-[0_0_0_3px_var(--fh-ground)]" />
+        <span
+          className="grid size-9 place-items-center rounded-full border-[5px] bg-(--route-surface) shadow-[0_0_0_4px_var(--route-surface)]"
+          style={{ borderColor: colour }}
+        >
+          <span
+            className="size-2.5 rounded-full"
+            style={{ background: colour }}
+          />
+        </span>
       );
     case "missing":
       return (
-        <span className="size-7 rounded-full border-2 border-dashed border-ink-faint bg-ground" />
+        <span className="size-7 rounded-full border-2 border-dashed border-ink-faint bg-(--route-surface)" />
       );
     default:
       return (
         <span
-          className="size-7 rounded-full border-4 bg-ground"
+          className="size-7 rounded-full border-4 bg-(--route-surface) shadow-[0_0_0_3px_var(--route-surface)]"
           style={{ borderColor: colour }}
         />
       );

@@ -63,8 +63,11 @@ function RunCard({
   const headingId = useId();
   const subagentsId = useId();
   return (
-    <article aria-labelledby={headingId} className="flex flex-col gap-3">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t-2 border-rule-strong pt-2 text-xs">
+    <article
+      aria-labelledby={headingId}
+      className="flex flex-col gap-3 rounded-card border border-rule bg-card p-4"
+    >
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
         <RunStateLabel state={run.state} />
         {run.state === "needs-you" ? (
           <span className="font-semibold text-ink">

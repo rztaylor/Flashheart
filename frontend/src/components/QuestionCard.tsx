@@ -63,7 +63,7 @@ export function QuestionCard({
     <section
       aria-labelledby={`${id}-heading`}
       aria-describedby={`${id}-text`}
-      className="flex flex-col gap-2.5 rounded-panel bg-well p-3"
+      className="flex flex-col gap-2.5 rounded-card border border-rule bg-card p-3"
       data-question={question.id}
     >
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
@@ -105,7 +105,9 @@ export function QuestionCard({
                   key={option}
                   aria-pressed={answer === option}
                   className={
-                    answer === option ? "border-ink ring-1 ring-ink" : undefined
+                    answer === option
+                      ? "border-select bg-select-surface ring-1 ring-select"
+                      : undefined
                   }
                   onClick={() => setAnswer(option)}
                   disabled={sending}

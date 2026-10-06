@@ -76,6 +76,9 @@
   --fh-callout-question: #eaf0ff;
   --fh-callout-question-edge: #1d4fd7;
 
+  /* How much of its line colour washes a workstream's route card. */
+  --fh-route-wash: 7%;
+
   --fh-hatch: rgb(18 26 46 / 0.12);
   --fh-overlay: rgb(18 26 46 / 0.18);
   --fh-casing: rgb(18 26 46 / 0.2);
@@ -210,6 +213,8 @@
   --fh-callout-handoff-edge: #ff9a52;
   --fh-callout-question: #1c1c1e;
   --fh-callout-question-edge: #ff7a5c;
+
+  --fh-route-wash: 0%;
 
   --fh-hatch: rgb(242 242 243 / 0.12);
   --fh-overlay: rgb(0 0 0 / 0.5);

@@ -17,10 +17,7 @@ export function StoppedScreen({ phase, failures, detail }: StoppedScreenProps) {
         aria-labelledby="stopped-heading"
         className="w-full max-w-lg rounded-panel border border-rule bg-card p-8"
       >
-        <h1
-          id="stopped-heading"
-          className="border-t-3 border-rule-strong pt-2 text-xl heading-cut"
-        >
+        <h1 id="stopped-heading" className="text-2xl display-cut">
           {copy.heading}
         </h1>
         <p className="mt-3 text-ink-muted">{copy.body}</p>
