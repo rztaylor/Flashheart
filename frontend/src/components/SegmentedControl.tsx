@@ -22,7 +22,7 @@ export function SegmentedControl<T extends string>({
         {options.map((option) => (
           <label
             key={option.value}
-            className={`cursor-pointer rounded-[0.375rem] px-2.5 py-1 text-xs transition-colors has-focus-visible:outline-2 has-focus-visible:outline-focus ${
+            className={`cursor-pointer rounded-inner px-2.5 py-1 text-xs transition-colors has-focus-visible:outline-2 has-focus-visible:outline-focus ${
               option.value === value
                 ? "bg-select-surface font-semibold text-ink shadow-[inset_0_0_0_1px_var(--fh-select)]"
                 : "text-ink-muted hover:text-ink"

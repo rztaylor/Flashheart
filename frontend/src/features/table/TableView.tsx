@@ -12,6 +12,7 @@ import { LineBullet } from "../../components/LineBullet";
 import { Pill, StatusPill, Tag } from "../../components/Pill";
 import { RunStateLabel } from "../../components/RunState";
 import type { Line } from "../../model/lines";
+import { priorityLabel } from "../../model/status";
 import { runningTime } from "../../model/time";
 
 type SortKey =
@@ -65,9 +66,6 @@ function compare(a: Card, b: Card, key: SortKey): number {
       return String(a[key]).localeCompare(String(b[key]));
   }
 }
-
-const priorityLabel = (priority: string) =>
-  `${priority[0]?.toUpperCase() ?? ""}${priority.slice(1)}`;
 
 // TableView lists tickets in a sortable table (VIEW-5, ui-layout.md §6):
 // status pills, type and priority tags, blockers and live runs; rows open

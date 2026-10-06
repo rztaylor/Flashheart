@@ -4,10 +4,11 @@ import type { ProjectSummary, TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { fetchRun, fetchRuns, type Run, type RunState } from "../../api/runs";
 import { Button } from "../../components/Button";
+import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { PlanRoute } from "../../components/PlanRoute";
-import { RunStateLabel, RunStateMark } from "../../components/RunState";
+import { RunStateLabel } from "../../components/RunState";
 import {
   agentName,
   counted,
@@ -165,36 +166,16 @@ function LaneSection({
     <section
       aria-labelledby={headingId}
       data-lane={state}
-      className="mt-4 rounded-panel border border-rule bg-column p-2.5 first:mt-1"
+      className={`${wellSurface} mt-4 border-rule first:mt-1`}
     >
-      {/* Headed like a board column: count badge, run mark, title. The
-          badge comes first visually and last in the lane's name. */}
-      <h2
+      <WellHead
         id={headingId}
-        className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-xl leading-tight display-cut"
-      >
-        <span
-          className={
-            state === "needs-you"
-              ? "grid size-5 place-items-center rounded-full bg-attention text-on-attention"
-              : "text-ink"
-          }
-        >
-          <RunStateMark
-            state={state}
-            size={state === "needs-you" ? 9 : 13}
-            still
-          />
-        </span>
-        {STATE_LABEL[state]}
-        <span className="order-first grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-card px-2 text-sm font-semibold tabular-nums text-ink shadow-card">
-          {runs.length}
-        </span>
-      </h2>
+        title={STATE_LABEL[state]}
+        count={runs.length}
+        mark={state}
+      />
       {runs.length === 0 ? (
-        <p className="rounded-card border border-dashed border-rule px-3 py-3 text-xs text-ink-muted">
-          {emptyLane[state]}
-        </p>
+        <EmptySlot>{emptyLane[state]}</EmptySlot>
       ) : (
         <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
           {runs.map((entry) => (
@@ -328,7 +309,7 @@ function RunRow({
           {projectKey && !subagent ? (
             <span
               title={run.project}
-              className="shrink-0 rounded-[4px] px-1 text-2xs leading-4 font-bold heading-cut shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
+              className="shrink-0 rounded-mark px-1 text-2xs leading-4 font-bold heading-cut shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
             >
               {projectKey}
             </span>

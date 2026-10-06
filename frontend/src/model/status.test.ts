@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { statusOf } from "./status";
+import { priorityLabel, statusOf } from "./status";
 
 describe("statusOf", () => {
   it("names every column with its state tone", () => {
@@ -23,5 +23,15 @@ describe("statusOf", () => {
       label: "Archived",
     });
     expect(statusOf("")).toEqual({ tone: "neutral", label: "Missing" });
+  });
+});
+
+describe("priorityLabel", () => {
+  it("names known priorities and keeps a file's own word", () => {
+    expect(priorityLabel("high")).toBe("High");
+    expect(priorityLabel("medium")).toBe("Medium");
+    expect(priorityLabel("low")).toBe("Low");
+    expect(priorityLabel("urgent")).toBe("urgent");
+    expect(priorityLabel("")).toBe("");
   });
 });

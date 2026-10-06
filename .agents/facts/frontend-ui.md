@@ -41,7 +41,7 @@
 - Desktop first (1280 px and up); narrow widths show one column with a column
   picker. Healthy connection state is visually quiet.
 - Visual direction (D18, 2026-10-06): **Metro Pop** in light (Metro blue
-  band, warm paper rail and ground, cool grey column wells, white cards,
+  band, warm paper rail and ground, ivory column wells, white cards,
   orange primary action) and **Night Service** in dark (black band,
   neutral charcoal surfaces with no navy, lime primary action). Both follow
   one layout and content contract, `docs/dev/specs/ui-layout.md`: a theme

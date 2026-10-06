@@ -37,7 +37,7 @@ Needs you plate while any run anywhere needs the user (disc mark, count and
 only), the backend status (quiet dot while healthy, words when not,
 `LIFE-1`) and Quit. The band carries no tagline and no project name.
 
-**Rail** (15.5rem; 3.5rem of key badges while a ticket is open below
+**Rail** (15.5rem; 4rem of key badges while a ticket is open below
 1440px): *All projects*, a divider, then each project, most recently active
 first: key badge, name, ticket count, route bar, and a line with its Needs
 you plate (count), in-progress count, blocked count (diamond) and repair
@@ -95,7 +95,8 @@ load) sit as a full-width strip under the band, above the rail and Main.
 ### Ticket card
 
 One anatomy at every density, the same in both themes. Rows appear in this
-order; a density only removes rows from the end of its list.
+order; a density shows or hides rows (as the table says) but never
+reorders them.
 
 | # | Row | Compact | Normal | Detailed |
 | --- | --- | --- | --- | --- |
@@ -142,7 +143,7 @@ order; a density only removes rows from the end of its list.
    (`CARD-3`) · format warnings · the ticket's markdown (`CARD-2`).
 4. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
    dialog on save (`EDIT-7`).
-5. **Runs tab**: runs newest first, each under a rule with its state, agent,
+5. **Runs tab**: runs newest first, each a card with its state, agent,
    short id, link, branch and time, then its detail and subagents.
 6. **Attachments tab** (planned, `review-and-orchestration`): a two-column
    grid of thumbnails (screenshots) and file tiles, each with caption, file
@@ -200,8 +201,8 @@ for another role's job, and none is ever the only carrier of meaning.
 
 | Role | Carries | Where | Always paired with |
 | --- | --- | --- | --- |
-| Frame | Brand surface | Band (Metro blue light, black dark), rail | — |
-| Action | The primary action and the current view | Primary button, current tab, chosen density | Its label |
+| Frame | Brand surface and the current scope | Band and its current view tab (Metro blue light, black dark), rail and its current tile | The tab's or project's name |
+| Action | The primary action | Primary button | Its label |
 | Attention | A run or question that needs the user | Needs you plate (band, rail, card, lane, panel) | Disc mark and words |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
 | Paint | The Colour by value | Card header tint, filled tag, colour key | The value's word |
@@ -209,7 +210,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
 | Danger | Application errors | Alert strips, failed loads | Words |
 | Focus | Keyboard focus | 2px outline | — |
-| Selection | The open ticket | Card ring, table row tint | `aria-current` |
+| Selection | What is chosen or applied | Open ticket's card ring and table row, current panel tab, chosen density, applied filter, pressed workstream chip, drop target | `aria-current`, `aria-selected`, `aria-pressed` or the control's value |
 
 Run state other than Needs you stays an ink mark with its word. Waiting on an
 earlier station of the same line is muted text with no colour. Needs repair

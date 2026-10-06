@@ -131,7 +131,7 @@ by `net/http`, `--debug` summaries) to `<root>/.flashheart/serve.log`, created
 on first write and rotated at 1 MB; a crash that bypasses Go's logger is still
 lost, and `--foreground` shows everything.
 
-## 2026-10-04 — D14: Board visual direction: Transit Line Map
+## 2026-10-04 — D14: Board visual direction: Transit Line Map (superseded by D18)
 
 Options (impeccable decision page, code-led because no image generation is
 available locally): Transit Line Map (assigned by the concept roll), Flight
@@ -234,13 +234,12 @@ Garden Line and the original navy Night Service were considered but are
 not selected. Generated sample content and inconsistent state/colour details
 are not requirements; SPEC remains the functional authority.
 
-This supersedes D14's visual direction for the planned rollout, not the
-existing implementation. The current DESIGN.md tokens remain a record of
-shipped UI until the rollout updates them. Approved images, provenance,
+This supersedes D14's visual direction; the rollout (FH-10–FH-14) shipped
+it, and DESIGN.md records the built system. Approved images, provenance,
 dependencies and validation are linked from
-[`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md); FH-10 defines
-the shared contract before FH-11–FH-14 implement it. No protocol/storage
-change or cloud deployment is implied.
+[`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md); the shared
+contract is `docs/dev/specs/ui-layout.md`. No protocol/storage change or
+cloud deployment is implied.
 
 ## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker
 
@@ -292,4 +291,3 @@ order D18 set), or theme now and have FH-6 build its new surfaces
 the shared contract in `docs/dev/specs/ui-layout.md`. The second was
 chosen: the contract already specifies those surfaces, so the themes need
 no second pass, and FH-6's pieces are not built under the theme tickets.
-

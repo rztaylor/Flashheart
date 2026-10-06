@@ -26,7 +26,7 @@ palettes.
 
 OWN-WORLD: Metro Pop. A Metro-blue band carries the wordmark and the view
 tabs; a warm paper rail lists projects with key badges, route bars and
-counts; columns are cool grey rounded wells holding white rounded cards.
+counts; columns are ivory rounded wells holding white rounded cards.
 Route colours (bullet, card stripe, route track) always mean a workstream.
 The Colour by value tints the card header and fills its named tag. Status
 reads as soft pills that always carry an icon and the column's word (amber

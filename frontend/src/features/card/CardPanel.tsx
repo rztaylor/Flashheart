@@ -24,6 +24,7 @@ import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
 import { counted, sessionsOf, shortRun } from "../../model/runs";
+import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
@@ -265,7 +266,7 @@ export function PanelHeader({
   actions?: ReactNode;
 }) {
   const priority = detail.priority
-    ? `${detail.priority[0]?.toUpperCase()}${detail.priority.slice(1)} priority`
+    ? `${priorityLabel(detail.priority)} priority`
     : "";
   return (
     <header className="px-6 pt-5 pb-4 pr-16">
@@ -592,7 +593,7 @@ export function TicketTab({
                 >
                   <span
                     aria-hidden="true"
-                    className={`mt-[0.15em] grid size-4 shrink-0 place-items-center rounded-[4px] border ${item.done ? "border-select bg-select text-card" : "border-ink-muted"}`}
+                    className={`mt-[0.15em] grid size-4 shrink-0 place-items-center rounded-mark border ${item.done ? "border-select bg-select text-card" : "border-ink-muted"}`}
                   >
                     {item.done ? <Icon name="check" size={11} /> : null}
                   </span>

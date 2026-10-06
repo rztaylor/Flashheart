@@ -1,6 +1,6 @@
 # metro-theme-rollout
 
-Status: **Partial**. Built on `feature/metro-theme-rollout`: the contract
+Status: **Partial**. Built: the contract
 ([`ui-layout.md`](../specs/ui-layout.md), FH-10) and both themes across the
 shell, Board, Workstreams, card panel, Agents and Table (FH-11–FH-14), with
 DESIGN.md, the surface brief, facts and changelog updated. Open: the user's

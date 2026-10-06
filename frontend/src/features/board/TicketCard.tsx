@@ -15,6 +15,7 @@ import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
 import { type Paint, paintVars } from "../../model/paint";
 import { agentName, liveReason, STATE_LABEL } from "../../model/runs";
+import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import type { Density } from "../filters/FilterBar";
 
@@ -41,12 +42,6 @@ interface TicketCardProps {
   // lives in its real column.
   mirrored?: boolean;
 }
-
-const priorityLabel: Record<string, string> = {
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-};
 
 // TicketCard is one ticket on the board (VIEW-6), in the one anatomy of
 // docs/dev/specs/ui-layout.md §2: header (id, project, running time), title,
@@ -91,9 +86,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     const paintedAs = (kind: string) =>
       painted?.token.startsWith(`${kind}-`) ? painted : undefined;
     const inset = line ? "pl-4" : "pl-3";
-    const priority = card.priority
-      ? (priorityLabel[card.priority] ?? card.priority)
-      : "";
+    const priority = priorityLabel(card.priority);
     const compact = density === "compact";
     const detailed = density === "detailed";
     const showCriteria = !compact && card.criteria.total > 0;

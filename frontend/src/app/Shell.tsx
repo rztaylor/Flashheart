@@ -11,7 +11,6 @@ import {
 import type { Created } from "../api/edit";
 import type { ThemePreference } from "../api/info";
 import type { Preferences } from "../api/preferences";
-import type { RunCounts } from "../api/runs";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
@@ -39,6 +38,7 @@ import {
 } from "../model/filters";
 import { linesByProject } from "../model/lines";
 import { filtersFor, rememberScope, sameScope } from "../model/scopes";
+import { viewSummary } from "../model/summary";
 import { useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
 import { BackendStatus } from "./BackendStatus";
@@ -415,6 +415,7 @@ export function Shell({
             projectKey={current?.key}
             title={scopeName}
             summary={summary}
+            live={route.view === "board" || route.view === "table"}
           />
           <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
             {route.view !== "workstreams" && route.view !== "agents" ? (
@@ -737,7 +738,7 @@ function RailFooter({
           {themes.map((option) => (
             <label
               key={option.value}
-              className={`cursor-pointer rounded-[0.375rem] px-2 py-0.5 text-xs transition-colors has-focus-visible:outline-2 has-focus-visible:outline-focus ${
+              className={`cursor-pointer rounded-inner px-2 py-0.5 text-xs transition-colors has-focus-visible:outline-2 has-focus-visible:outline-focus ${
                 theme === option.value
                   ? "bg-rail-active font-semibold text-on-rail-active"
                   : "text-on-rail-muted hover:text-on-rail"
@@ -796,40 +797,4 @@ function BoardSkeleton() {
       ))}
     </div>
   );
-}
-
-// viewSummary is the page header's one quiet line for the view
-// (ui-layout.md §1).
-function viewSummary({
-  view,
-  board,
-  filtered,
-  runs,
-  workstreams,
-}: {
-  view: View;
-  board?: { shown: number; total: number };
-  filtered: boolean;
-  runs?: RunCounts;
-  workstreams: { done: number; total: number }[];
-}): string {
-  switch (view) {
-    case "agents": {
-      if (!runs) return "";
-      const live = `${runs.live} live ${runs.live === 1 ? "run" : "runs"}`;
-      return runs.needsYou > 0
-        ? `${live} · ${runs.needsYou} need${runs.needsYou === 1 ? "s" : ""} you`
-        : live;
-    }
-    case "workstreams": {
-      const done = workstreams.reduce((sum, item) => sum + item.done, 0);
-      const total = workstreams.reduce((sum, item) => sum + item.total, 0);
-      return `${workstreams.length} ${workstreams.length === 1 ? "workstream" : "workstreams"} · ${done} of ${total} stations served`;
-    }
-    default:
-      if (!board) return "";
-      return filtered
-        ? `${board.shown} of ${board.total} tickets`
-        : `${board.total} ${board.total === 1 ? "ticket" : "tickets"}`;
-  }
 }

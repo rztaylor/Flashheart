@@ -30,8 +30,8 @@ import {
 } from "../../api/board";
 import type { VirtualColumn } from "../../api/preferences";
 import { Button } from "../../components/Button";
+import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
-import { RunStateMark } from "../../components/RunState";
 import { shownVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
@@ -317,38 +317,26 @@ export function BoardView(props: BoardViewProps) {
               enabled={!!onMove && !column.virtual}
               virtual={column.virtual}
             >
-              {/* The head: count badge, then the title (which alone names
-                  the column region). */}
-              <h2 className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-xl leading-tight display-cut">
-                <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-card px-2 text-sm font-semibold tabular-nums text-ink shadow-card">
-                  {column.id === "done" && doneTotal > column.cards.length
+              {/* The title alone names the column region. */}
+              <WellHead
+                titleId={`column-${column.id}`}
+                title={column.title}
+                count={
+                  column.id === "done" && doneTotal > column.cards.length
                     ? `${column.cards.length} of ${doneTotal}`
-                    : column.cards.length}
-                </span>
-                {column.virtual ? (
-                  <span
-                    className={
-                      column.id === "needs-you"
-                        ? "grid size-5 place-items-center rounded-full bg-attention text-on-attention"
-                        : "text-ink"
-                    }
-                  >
-                    <RunStateMark
-                      state={
-                        column.id === "needs-you" ? "needs-you" : "working"
-                      }
-                      size={column.id === "needs-you" ? 9 : 13}
-                      still
-                    />
-                  </span>
-                ) : null}
-                <span id={`column-${column.id}`}>{column.title}</span>
-              </h2>
+                    : column.cards.length
+                }
+                mark={
+                  column.virtual
+                    ? column.id === "needs-you"
+                      ? "needs-you"
+                      : "working"
+                    : undefined
+                }
+              />
               <div className="-mx-1.5 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1.5 pt-0.5 pb-3">
                 {column.cards.length === 0 ? (
-                  <p className="rounded-card border border-dashed border-rule px-2 py-6 text-center text-xs text-ink-muted">
-                    {column.empty}
-                  </p>
+                  <EmptySlot>{column.empty}</EmptySlot>
                 ) : null}
                 {column.cards.map((card, rowIndex) => {
                   // One tab stop per column (the cursor's card, or the first
@@ -448,7 +436,7 @@ function DropColumn({
       data-column={id}
       data-virtual={virtual ? "" : undefined}
       aria-labelledby={`column-${id}`}
-      className={`flex min-h-0 snap-start flex-col rounded-panel border bg-column p-2.5 transition-[border-color,box-shadow] ${
+      className={`${wellSurface} snap-start transition-[border-color,box-shadow] ${
         isOver
           ? "border-select shadow-[inset_0_0_0_1px_var(--fh-select)]"
           : "border-rule"

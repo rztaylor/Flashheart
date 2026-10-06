@@ -9,6 +9,7 @@ import type { AuthenticatedFetch } from "../../api/client";
 import { reorderWorkstream } from "../../api/edit";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
+import { KeyBadge } from "../../components/KeyBadge";
 import { LineBullet } from "../../components/LineBullet";
 import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
@@ -133,12 +134,7 @@ function ProjectLines({
     >
       {showName ? (
         <h2 className="flex items-center gap-2.5 text-lg heading-cut">
-          <span
-            aria-hidden="true"
-            className="grid h-7 min-w-8 place-items-center rounded-control bg-rail-active px-1.5 text-sm text-on-rail-active shadow-[inset_0_0_0_1.5px_var(--fh-rail-active-mark)]"
-          >
-            {project.key}
-          </span>
+          <KeyBadge>{project.key}</KeyBadge>
           {project.displayName}
         </h2>
       ) : null}

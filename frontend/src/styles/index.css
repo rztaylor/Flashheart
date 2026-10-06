@@ -132,7 +132,7 @@
     accent-color: var(--fh-select);
   }
   .markdown code {
-    @apply rounded-[4px] bg-well px-1 py-px font-mono text-[0.8125em];
+    @apply rounded-mark bg-well px-1 py-px font-mono text-[0.8125em];
   }
   .markdown pre {
     @apply overflow-x-auto rounded-card border border-rule bg-well p-3 text-sm;

@@ -19,7 +19,7 @@ export function ColourKey({ mode, paints }: ColourKeyProps) {
         <li key={paint.token} className="flex items-center gap-1.5">
           <span
             aria-hidden="true"
-            className="h-2.5 w-3.5 rounded-[3px] shadow-[inset_0_0_0_1px_var(--fh-casing)]"
+            className="h-2.5 w-3.5 rounded-mark shadow-[inset_0_0_0_1px_var(--fh-casing)]"
             style={{
               background: `linear-gradient(var(--fh-paint-${paint.token}) 0 40%, var(--fh-paint-${paint.token}-tint) 40%)`,
             }}

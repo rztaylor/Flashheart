@@ -362,8 +362,11 @@
   --text-2xl--line-height: 2.125rem;
   --text-3xl: 2.5rem;
   --text-3xl--line-height: 2.625rem;
-  /* Rounded and friendly: controls, cards, then the column and route
+  /* Rounded and friendly: small marks (checkboxes, inline code, key tags),
+     segments inside a control, controls, cards, then the column and route
      surfaces; pills and bullets are fully round. */
+  --radius-mark: 0.25rem;
+  --radius-inner: 0.375rem;
   --radius-control: 0.5rem;
   --radius-card: 0.625rem;
   --radius-panel: 0.875rem;

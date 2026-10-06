@@ -18,3 +18,13 @@ export function statusOf(column: string): { tone: StateTone; label: string } {
   if (!known) return { tone: "neutral", label: "Missing" };
   return { tone: tones[column] ?? "neutral", label: known.title };
 }
+
+const priorities: Record<string, string> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
+// priorityLabel names a known priority; a file's own word stays as written.
+export const priorityLabel = (priority: string): string =>
+  priorities[priority] ?? priority;
