@@ -296,6 +296,12 @@ components:
 
 # Design System: Flashheart
 
+> Planned successor: [Metro Pop / charcoal Night Service](docs/dev/roadmap-items/metro-theme-rollout.md)
+> (D18). Metro Pop will define the shared layout/content contract for both
+> themes; Night Service supplies a neutral black/charcoal dark palette.
+> The tokens and rules below describe the current implementation until that
+> rollout lands, not the newly approved target.
+
 ## Overview
 
 **Creative North Star: "The Transit Line Map"**
