@@ -28,7 +28,7 @@ type member struct {
 func parseJSON(data []byte) (*value, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
-	v, err := decodeValue(decoder)
+	v, err := decodeValue(decoder, data)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,10 @@ func parseJSON(data []byte) (*value, error) {
 	return v, nil
 }
 
-func decodeValue(decoder *json.Decoder) (*value, error) {
+// decodeValue reads one value; scalars keep the bytes they were written
+// with (escapes, number spelling), sliced from data by decoder offsets.
+func decodeValue(decoder *json.Decoder, data []byte) (*value, error) {
+	start := decoder.InputOffset()
 	token, err := decoder.Token()
 	if err != nil {
 		return nil, err
@@ -54,7 +57,7 @@ func decodeValue(decoder *json.Decoder) (*value, error) {
 					return nil, err
 				}
 				key, _ := keyToken.(string)
-				child, err := decodeValue(decoder)
+				child, err := decodeValue(decoder, data)
 				if err != nil {
 					return nil, err
 				}
@@ -65,7 +68,7 @@ func decodeValue(decoder *json.Decoder) (*value, error) {
 		case '[':
 			v := &value{isArray: true}
 			for decoder.More() {
-				child, err := decodeValue(decoder)
+				child, err := decodeValue(decoder, data)
 				if err != nil {
 					return nil, err
 				}
@@ -76,11 +79,10 @@ func decodeValue(decoder *json.Decoder) (*value, error) {
 		}
 		return nil, fmt.Errorf("unexpected %v", t)
 	default:
-		raw, err := json.Marshal(t)
-		if s, ok := t.(string); ok {
-			raw, err = marshalString(s)
-		}
-		return &value{scalar: raw}, err
+		// The offset before a token may sit before the separator and space
+		// that precede it.
+		raw := bytes.TrimLeft(data[start:decoder.InputOffset()], " \t\r\n,:")
+		return &value{scalar: append(json.RawMessage(nil), raw...)}, nil
 	}
 }
 

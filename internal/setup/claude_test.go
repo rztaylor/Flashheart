@@ -159,6 +159,15 @@ func TestInstallWritesKeepsTheUsersSettingsAndIsIdempotent(t *testing.T) {
 	if len(settings.Hooks) != len(claudeEvents) || len(settings.Hooks["Notification"]) != 2 || len(settings.Hooks["PostToolUse"]) != 2 {
 		t.Fatalf("hooks = %v", settings.Hooks)
 	}
+	// Values setup does not own keep their exact bytes, escapes included.
+	for _, kept := range []string{`"NOTE": "escaped \u2014 dash, \"quote\" and tab\t kept as written"`, `"LIMIT": 1.50`} {
+		if !strings.Contains(string(data), kept) {
+			t.Fatalf("settings lost %s:\n%s", kept, data)
+		}
+	}
+	if diff := unifiedDiff("s", m.original, data); strings.Contains(diff, "-    \"") {
+		t.Fatalf("install changed lines outside the hooks:\n%s", diff)
+	}
 	if !strings.Contains(string(data), `"command": "afplay /System/Library/Sounds/Glass.aiff"`) || !strings.Contains(string(data), `"timeout": 5`) {
 		t.Fatalf("settings:\n%s", data)
 	}
