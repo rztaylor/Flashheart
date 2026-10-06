@@ -1,5 +1,11 @@
 # Frontend UI facts
 
+- Approved next visual direction (planned, not implemented): Metro Pop light
+  and Night Service black/neutral charcoal dark. Metro Pop is the shared
+  layout/content authority for both; dark mode changes palette only. See
+  `docs/dev/roadmap-items/metro-theme-rollout.md` and D18. The Transit Line
+  Map details below describe the current implementation until rollout.
+
 - Framework: React with strict TypeScript, built by Vite into static assets
   embedded in the Go binary. Root `frontend/`, source `frontend/src/`.
 - Styling: Tailwind CSS v4. Design tokens (colour, spacing, type, radius,

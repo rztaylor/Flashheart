@@ -219,3 +219,25 @@ would have to rewrite under a lock on every event); a run-state daemon
 Dogfooding (user, 2026-10-05): Flashheart's own work is tracked on its board
 (project `Flashheart`, key `FH`) in the default root, outside the
 repository (D12).
+
+## 2026-10-06 — D18: Metro Pop structure with light and charcoal palettes
+
+Decision (user): adopt Metro Pop as the light-theme direction and Night
+Service in black/neutral charcoal as the dark-theme direction. Standardise
+the actual layout and contents of cards, workstreams and other surfaces
+using Metro Pop. Both themes share structure, information and workflows;
+Night Service references supply the dark palette, not a second layout.
+
+The user rejected navy/dark-blue background surfaces. Keep colour in route
+identities and deliberate accents, with neutral charcoal dark surfaces.
+Garden Line and the original navy Night Service were considered but are
+not selected. Generated sample content and inconsistent state/colour details
+are not requirements; SPEC remains the functional authority.
+
+This supersedes D14's visual direction for the planned rollout, not the
+existing implementation. The current DESIGN.md tokens remain a record of
+shipped UI until the rollout updates them. Approved images, provenance,
+dependencies and validation are linked from
+[`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md); FH-10 defines
+the shared contract before FH-11–FH-14 implement it. No protocol/storage
+change or cloud deployment is implied.
