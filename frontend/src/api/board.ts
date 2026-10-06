@@ -94,6 +94,8 @@ export interface ProjectSummary {
   warnings: string[];
   lastModified: string;
   workstreams: WorkstreamBrief[];
+  // archived counts the project's archived tickets (EDIT-8).
+  archived: number;
   runs: RunCounts;
 }
 
@@ -241,6 +243,7 @@ function isSummary(value: unknown): value is ProjectSummary {
     ) &&
     typeof value.needsRepair === "number" &&
     typeof value.blocked === "number" &&
+    typeof value.archived === "number" &&
     isString(value.lastModified) &&
     Array.isArray(value.workstreams) &&
     isRunCounts(value.runs)

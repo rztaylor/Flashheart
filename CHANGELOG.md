@@ -30,6 +30,11 @@ All notable changes to this project are documented here. The project follows
   panel's Position menu move a card within its column; Undo puts it back.
   New tickets join below the ordered ones, Done stays most recent first,
   and workstream order is unaffected (FH-23).
+- Archive view for each project (Archive in the page header): search
+  archived tickets, restore one to the column it left, or delete it
+  permanently. Deleting needs the ticket's id typed, lists every ticket and
+  workstream that refers to it, removes those references so nothing waits
+  on it, and retires the id so it is never reused (FH-20).
 
 - `flashheart` binary: `serve` (default) opens a private, authenticated board
   shell in the browser and returns the terminal, running the server in the

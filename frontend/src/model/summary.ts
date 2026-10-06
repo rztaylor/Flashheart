@@ -2,21 +2,27 @@ import type { RunCounts } from "../api/runs";
 
 // viewSummary is the page header's one quiet line for a view
 // (ui-layout.md §1): tickets on the Board and Table, live runs on Agents,
-// workstreams and stations served on Workstreams. Empty while loading.
+// workstreams and stations served on Workstreams, archived tickets on the
+// archive. Empty while loading.
 export function viewSummary({
   view,
   board,
   filtered,
   runs,
   workstreams,
+  archived,
 }: {
-  view: "board" | "agents" | "workstreams" | "table";
+  view: "board" | "agents" | "workstreams" | "table" | "archive";
   board?: { shown: number; total: number };
   filtered: boolean;
   runs?: RunCounts;
   workstreams: { done: number; total: number }[];
+  archived?: number;
 }): string {
   switch (view) {
+    case "archive":
+      if (archived === undefined) return "";
+      return `${archived} archived ${archived === 1 ? "ticket" : "tickets"}`;
     case "agents": {
       if (!runs) return "";
       const live = `${runs.live} live ${runs.live === 1 ? "run" : "runs"}`;

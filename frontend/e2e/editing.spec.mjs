@@ -438,6 +438,81 @@ test("archiving hides a ticket and Undo brings it back", async () => {
   await expect(card("Keyboard help overlay")).toBeVisible();
 });
 
+test("the archive restores tickets and deletes them for good", async () => {
+  await open("#/p/alpha/board?t=AL-4");
+  await page
+    .getByRole("complementary", { name: "Ticket AL-4" })
+    .getByRole("button", { name: "Archive" })
+    .click();
+  await expect(card("Drag and drop")).toHaveCount(0);
+  await page.getByRole("link", { name: /^Archive/ }).click();
+  await expect(page).toHaveURL(/#\/p\/alpha\/archive/);
+  await page
+    .getByRole("searchbox", { name: "Search archived tickets" })
+    .fill("drag");
+  const rows = page.getByRole("table", { name: "Archived tickets" });
+  await expect(rows.getByRole("row")).toHaveCount(2);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`archive ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `archive-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+
+  // Restore returns it to the column it left.
+  await rows.getByRole("button", { name: "Restore AL-4" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Restored AL-4 to Up next." }),
+  ).toBeVisible();
+  await expect(rows).toHaveCount(0);
+  await page.getByRole("button", { name: "Back to the board" }).click();
+  await expect(
+    column("Up next").getByRole("button", { name: /^Drag and drop,/ }),
+  ).toBeVisible();
+
+  // Archive again, then delete it permanently: the dialog lists what it
+  // touches and waits for the typed id.
+  await open("#/p/alpha/board?t=AL-4");
+  await page
+    .getByRole("complementary", { name: "Ticket AL-4" })
+    .getByRole("button", { name: "Archive" })
+    .click();
+  await open("#/p/alpha/archive");
+  await page.getByRole("button", { name: "Delete permanently AL-4" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Delete AL-4 permanently?",
+  });
+  await expect(dialog).toContainText("AL-4-drag-and-drop.md");
+  await expect(dialog).toContainText("AL-5");
+  await expect(dialog).toContainText("cannot be undone");
+  const confirm = dialog.getByRole("button", { name: "Delete permanently" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Type AL-4 to confirm").fill("AL-40");
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Type AL-4 to confirm").fill("AL-4");
+  await expect(confirm).toBeEnabled();
+  await expectNoAxeViolations("delete dialog");
+  await page.screenshot({
+    path: resolve(screenshotDir, "delete-ticket-1440-light.png"),
+  });
+  await confirm.click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Deleted AL-4 permanently." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("table", { name: "Archived tickets" }).getByText("AL-4"),
+  ).toHaveCount(0);
+
+  // The ticket that depended on it no longer waits.
+  await open("#/p/alpha/board");
+  await expect(card("Long titles overflow the column")).toBeVisible();
+  await expect(card("Long titles overflow the column")).not.toContainText(
+    "AL-4",
+  );
+});
+
 test("stations reorder along their line with Shift and an arrow", async () => {
   await open("#/p/flashheart/workstreams");
   const line = page.getByRole("article", { name: "Board editing" });

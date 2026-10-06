@@ -5,7 +5,8 @@
 // content-hash precondition and atomic replace (STO-3), places tickets in
 // their column's manual order (EDIT-9), keeps a ticket's
 // workstream field and the workstreams' tickets lists in step and creates
-// workstreams, creates tickets with the next id (KEY-2) and keys under a root lock (KEY-5), archives tickets
+// workstreams, creates tickets with the next id (KEY-2) and keys under a root lock (KEY-5), archives tickets,
+// lists them and deletes archived ones permanently with their references
 // (EDIT-8), copies allow-listed local files into a ticket (REV-1, REV-5),
 // writes reviews (REV-4), finds or creates a repository's project
 // (PRJ-2–PRJ-5), resolves working directories through the cwd cache, and

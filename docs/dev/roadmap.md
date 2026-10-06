@@ -32,6 +32,11 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    layout contract (`docs/dev/specs/ui-layout.md`), FH-10–FH-14. Open: the
    user's visual sign-off of the review screenshots. FH-6's new review
    surfaces follow the contract (D21).
+7. [`ui-features`](roadmap-items/ui-features.md) — **Partial**. Board UI
+   requests outside the other items: shared column scrolling (FH-24),
+   saved manual card order (FH-23), archive views with a two-step
+   permanent delete for tickets (FH-20) and projects (FH-21), and discreet
+   humour in secondary copy (FH-22). Built: FH-24, FH-23, FH-20.
 
 ## Later possibilities (not scheduled)
 

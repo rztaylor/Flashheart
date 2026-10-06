@@ -423,6 +423,9 @@ type Project struct {
 	Workstreams []Workstream
 	// Archived lists ids of archived tickets; they count as done.
 	Archived []string
+	// Retired lists ids of permanently deleted tickets (project.yaml
+	// `retired`); they are never reused (KEY-2).
+	Retired []string
 	// Reviews holds the ids that have a review file.
 	Reviews map[string]bool
 	// Attachments maps ticket ids to their files index.
@@ -481,9 +484,11 @@ func (p Project) InProgressOnBranch(branch string) []string {
 	return ids
 }
 
-// OwnsIDs reports whether the project has tickets, live or archived, so its
-// key is fixed (KEY-5).
-func (p Project) OwnsIDs() bool { return len(p.Tickets) > 0 || len(p.Archived) > 0 }
+// OwnsIDs reports whether the project has tickets, live, archived or
+// deleted, so its key is fixed (KEY-5).
+func (p Project) OwnsIDs() bool {
+	return len(p.Tickets) > 0 || len(p.Archived) > 0 || len(p.Retired) > 0
+}
 
 // CheckKeys warns on projects that share a key, which makes ids ambiguous. A
 // derived key on a project with no tickets is only a suggestion and is

@@ -319,3 +319,20 @@ means a placement normally writes one file under the existing lock and
 hash rules. Unranked tickets are ranked only when a placement lands among
 them, in their current order, so nothing else moves. Done keeps recency
 order, which is what people look for there, and is not reordered.
+
+## 2026-10-06 — D24: Tickets can be deleted, in two steps
+
+Decision (user, FH-20): reverses "Flashheart never deletes a ticket". Archive
+stays the normal, undoable action; a ticket can be deleted permanently only
+once archived, from the project's Archive view, after a confirmation that
+lists what the delete touches and asks for the typed id. Board files have no
+history (D12), so the two steps keep accidents rare.
+
+The delete removes the id from other tickets' `depends-on` and from
+workstream lists in the same locked operation, because a reference to a
+missing ticket counts as blocking. Ids stay retired: a `retired:` list in
+`project.yaml` joins existing and archived numbers in the next-id
+safeguard, so a lost or edited `next_id` cannot reuse a deleted id. The
+confirmation's preview carries a token over everything it lists; the
+delete is refused when any of it changed. Agents get no delete tool.
+

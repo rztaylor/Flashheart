@@ -19,6 +19,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { RunStateMark } from "../components/RunState";
 import { Toast } from "../components/Toast";
 import { AgentsView } from "../features/agents/AgentsView";
+import { ArchiveView } from "../features/archive/ArchiveView";
 import { BoardView, NoTickets } from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
@@ -63,12 +64,13 @@ interface ShellProps {
   updatePreferences(change: (current: Preferences) => Preferences): void;
 }
 
-const views: { id: View; label: string; icon: IconName }[] = [
-  { id: "board", label: "Board", icon: "board" },
-  { id: "agents", label: "Agents", icon: "agents" },
-  { id: "workstreams", label: "Workstreams", icon: "lines" },
-  { id: "table", label: "Table", icon: "table" },
-];
+const views: { id: Exclude<View, "archive">; label: string; icon: IconName }[] =
+  [
+    { id: "board", label: "Board", icon: "board" },
+    { id: "agents", label: "Agents", icon: "agents" },
+    { id: "workstreams", label: "Workstreams", icon: "lines" },
+    { id: "table", label: "Table", icon: "table" },
+  ];
 
 // Shell composes the signage band, the project rail, the filter bar, the
 // routed view and the card panel.
@@ -113,7 +115,7 @@ export function Shell({
     [fetcher, scopeProject, doneAll],
   );
   const board = useResource(
-    ready && route.view !== "workstreams" && route.view !== "agents"
+    ready && (route.view === "board" || route.view === "table")
       ? loadBoard
       : undefined,
     `${scopeKey}:${doneAll}`,
@@ -134,7 +136,8 @@ export function Shell({
     if (preferencesLoaded)
       setFiltersState((current) => filtersFor(saved, current.query));
   }, [scopeKeyName, preferencesLoaded]);
-  const remember = (nextFilters: Filters, view: View) => {
+  // The archive is a side trip and is never the remembered view.
+  const remember = (nextFilters: Filters, view: Exclude<View, "archive">) => {
     const entry = rememberScope(nextFilters, view);
     updatePreferences((current) =>
       sameScope(current.scopes[scopeKeyName], entry)
@@ -144,7 +147,7 @@ export function Shell({
   };
   const setFilters = (next: Filters) => {
     setFiltersState(next);
-    remember(next, route.view);
+    if (route.view !== "archive") remember(next, route.view);
   };
 
   const summaries = projects.status === "ready" ? projects.data.projects : [];
@@ -298,6 +301,7 @@ export function Shell({
     workstreams: (current ? [current] : summaries).flatMap(
       (project) => project.workstreams,
     ),
+    archived: current?.archived,
   });
 
   return (
@@ -355,7 +359,7 @@ export function Shell({
               </span>
             </button>
           ) : null}
-          {route.view !== "workstreams" && route.view !== "agents" ? (
+          {route.view === "board" || route.view === "table" ? (
             <div className="hidden md:flex">
               <SearchField
                 label="Search tickets"
@@ -447,9 +451,25 @@ export function Shell({
             title={scopeName}
             summary={summary}
             live={route.view === "board" || route.view === "table"}
+            aside={
+              current && route.view !== "archive" ? (
+                <a
+                  href={`#/p/${encodeURIComponent(current.name)}/archive`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    go({ view: "archive", ticket: undefined });
+                  }}
+                  className="flex items-center gap-1.5 rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-well hover:text-ink"
+                >
+                  <Icon name="archive" size={14} />
+                  Archive
+                  <span className="tabular-nums">{current.archived}</span>
+                </a>
+              ) : undefined
+            }
           />
           <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
-            {route.view !== "workstreams" && route.view !== "agents" ? (
+            {route.view === "board" || route.view === "table" ? (
               <div className="flex w-full">
                 <SearchField
                   tone="plain"
@@ -517,6 +537,24 @@ export function Shell({
               project folder there with a{" "}
               <code className="font-mono">tickets/</code> directory inside.
             </EmptyState>
+          ) : route.view === "archive" ? (
+            current ? (
+              <ArchiveView
+                fetcher={fetcher}
+                project={current.name}
+                revision={revision}
+                editing={editing}
+                onOpen={openTicket}
+                onBack={() => go({ view: "board", ticket: undefined })}
+              />
+            ) : projects.status === "ready" ? (
+              <EmptyState title="Choose a project">
+                Each project keeps its own archive. Pick one in the list to see
+                its archived tickets.
+              </EmptyState>
+            ) : (
+              <BoardSkeleton />
+            )
           ) : route.view === "agents" ? (
             projects.status === "ready" ? (
               <AgentsView

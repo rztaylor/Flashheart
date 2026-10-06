@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { TICKET_ID, type TicketRef } from "../api/board";
 
-export type View = "board" | "agents" | "workstreams" | "table";
+// archive is reached from the page header, not the band (EDIT-8).
+export type View = "board" | "agents" | "workstreams" | "table" | "archive";
 export type Scope = { kind: "all" } | { kind: "project"; project: string };
 
 export interface Route {
@@ -11,7 +12,7 @@ export interface Route {
   ticket?: TicketRef;
 }
 
-const views: View[] = ["board", "agents", "workstreams", "table"];
+const views: View[] = ["board", "agents", "workstreams", "table", "archive"];
 
 // Routes live in the URL hash (#/all/board, #/p/<project>/<view>?t=<ticket id>)
 // so reloads and new tabs keep their place without any browser storage.

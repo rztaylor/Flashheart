@@ -166,7 +166,9 @@ Full format: `docs/dev/specs/board-format.md`.
   uppercase letters or digits) recorded in `project.yaml` and unique across
   the root. A project without one shows a key derived from its name.
 - `KEY-2` Every ticket has an id `<key>-<number>`, assigned under the project
-  lock at creation from `next_id`, never reused or renumbered.
+  lock at creation from `next_id`, never reused or renumbered. A permanently
+  deleted ticket's id is recorded as retired in `project.yaml` (`EDIT-8`) so
+  it is not reused even if `next_id` is lost.
 - `KEY-3` Ids are how tickets are named everywhere: cards, the card panel,
   search, URLs, events, recovery notes, MCP tool arguments and outputs, and
   `depends-on` and workstream lists. A bare id in ticket or review markdown
@@ -253,8 +255,18 @@ Full format: `docs/dev/specs/board-format.md`.
   dates, lists) and a raw editor for the whole file.
 - `EDIT-7` A save conflict (`STO-3`) shows both versions and lets the user
   reload or overwrite deliberately.
-- `EDIT-8` Flashheart never deletes a ticket. **Archive** moves its folder
-  to `<project>/.archive/tickets/` and can be undone.
+- `EDIT-8` Deleting takes two deliberate steps. **Archive**, the normal
+  action, moves a ticket's folder to `<project>/.archive/tickets/` and can be
+  undone; a project's **Archive** view lists its archived tickets, searchable,
+  and **Restore** returns one to the column it left. Only an archived ticket
+  can be **deleted permanently**, from that view: a confirmation lists the
+  folder's files and every ticket (`depends-on`) and workstream (`tickets:`)
+  that refers to it, and the user types the ticket's id. The delete removes
+  the folder and those references in one locked operation, so nothing waits
+  on the id, and retires the id (`KEY-2`). It is refused when anything listed
+  changed since the confirmation opened. Prose mentions stay as text. Board
+  files have no history (D12), so a delete cannot be undone. Agents have no
+  delete or archive tool.
 - `EDIT-9` **Manual order**: dragging a card within a column, or dropping it
   at a place in another column, sets its place, saved in the ticket's `rank`
   (board-format §Order within a column) so it survives reloads and

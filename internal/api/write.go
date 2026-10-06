@@ -90,6 +90,9 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		if conflict.Name == "workstream" || strings.Contains(conflict.Name, "/workstreams/") {
 			message = "This workstream's tickets changed since you opened it."
 		}
+		if conflict.Name == "delete" {
+			message = "Something this delete touches changed since you looked. Review it again."
+		}
 		writeJSON(w, http.StatusConflict, map[string]any{
 			"error":   body{Code: "conflict", Message: message},
 			"current": ConflictJSON{Hash: conflict.Hash, Content: string(conflict.Current)},

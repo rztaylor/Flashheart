@@ -65,7 +65,7 @@ Rules:
   ticket, live or archived.
 - A ticket id is `<key>-<number>` (`FH-42`). Numbers start at 1, are assigned
   under the project lock from `next_id` in `project.yaml` (never lower than
-  one past the highest existing or archived number), and are never reused or
+  one past the highest existing, archived or retired number), and are never reused or
   renumbered.
 - Ids are global across the root because keys are unique, so references never
   need a project prefix.
@@ -134,8 +134,14 @@ The title is the first `#` heading. Unknown keys are preserved in place
 
 A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content
-hash they read. Every ticket write by Flashheart stamps `updated`. The folder never
-moves except to `.archive/`.
+hash they read. Every ticket write by Flashheart stamps `updated`; archiving
+stamps it too, which dates the archive. The folder never moves except to
+`.archive/` and back, and is removed only by a permanent delete of an
+archived ticket (`EDIT-8`): the delete takes the root lock and the lock of
+every project it rewrites (in name order), removes the id from every
+ticket's `depends-on` and the project's workstream `tickets:` lists, adds
+it to `retired` in `project.yaml`, and removes the folder. It takes an id,
+never a path, and refuses an archived folder that is a symbolic link.
 
 ### Order within a column
 
@@ -271,6 +277,7 @@ a ticket or review refers to is copied in before it is recorded (`REV-5`).
 ```yaml
 key: FH                   # ticket id prefix (KEY-1); unique; absent until chosen (KEY-5)
 next_id: 43               # next ticket number (KEY-2)
+retired: [FH-7]           # permanently deleted ids, never reused (EDIT-8); absent until a delete
 name: Flashheart          # display name; defaults to the directory name
 repos:                    # main-checkout paths seen by hooks (PRJ-3)
   - /Users/robert/src/flashheart
@@ -313,8 +320,9 @@ per line, appended under the project lock by `flashheart hook` (and later
 `mcp` and `serve`). Schema and event kinds:
 `docs/dev/specs/agent-protocol.md` §3. Events name tickets by id. Readers skip
 malformed lines and unknown kinds. Files older than `event_retention_days` are
-deleted by `serve` at startup and daily; this is the only deletion Flashheart
-performs.
+deleted by `serve` at startup and daily. The only other deletion is a
+permanent delete of an archived ticket the user confirms (`EDIT-8`); events
+naming its id are left to this retention.
 
 ## Migration from v1
 

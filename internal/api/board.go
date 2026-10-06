@@ -65,6 +65,8 @@ type ProjectSummary struct {
 	Warnings     []string          `json:"warnings"`
 	LastModified string            `json:"lastModified"`
 	Workstreams  []WorkstreamBrief `json:"workstreams"`
+	// Archived counts the project's archived tickets (EDIT-8).
+	Archived int `json:"archived"`
 	// Runs counts the project's agent runs by state (PRJ-6).
 	Runs RunCountsJSON `json:"runs"`
 }
@@ -269,6 +271,7 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/changes", getOnly(b.changes))
 	b.registerRuns(mux)
 	b.registerWrites(mux)
+	b.registerArchive(mux)
 }
 
 // ChangesResponse is GET /api/changes?since=N: the revision once it is newer
@@ -641,6 +644,7 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 		Repos:  nonNil(project.Repos),
 		Counts: map[string]int{}, Warnings: nonNil(project.Warnings), LastModified: timestamp(project.LastModified),
 		Workstreams: []WorkstreamBrief{},
+		Archived:    len(project.Archived),
 		Runs:        countsJSON(snapshot.RunCounts(project.Name)),
 	}
 	for _, workstream := range project.Workstreams {

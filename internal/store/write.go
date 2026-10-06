@@ -663,17 +663,18 @@ func (s *Store) setProjectFields(project, key string, nextID int) error {
 	return edit.write(s)
 }
 
-// Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8).
+// Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8),
+// first stamping `updated:`, which dates the archive.
 func (s *Store) Archive(project, id string) error {
-	return s.moveTicket(project, id, path.Join(project, "tickets"), path.Join(project, ".archive", "tickets"))
+	return s.moveTicket(project, id, path.Join(project, "tickets"), path.Join(project, ".archive", "tickets"), true)
 }
 
 // Unarchive moves an archived ticket's folder back to tickets/.
 func (s *Store) Unarchive(project, id string) error {
-	return s.moveTicket(project, id, path.Join(project, ".archive", "tickets"), path.Join(project, "tickets"))
+	return s.moveTicket(project, id, path.Join(project, ".archive", "tickets"), path.Join(project, "tickets"), false)
 }
 
-func (s *Store) moveTicket(project, id, from, to string) error {
+func (s *Store) moveTicket(project, id, from, to string, stamp bool) error {
 	if err := s.checkTicket(project, id); err != nil {
 		return err
 	}
@@ -685,6 +686,12 @@ func (s *Store) moveTicket(project, id, from, to string) error {
 	file, err := s.ticketFile(project, from, id)
 	if err != nil {
 		return err
+	}
+	if stamp {
+		// A ticket whose frontmatter does not parse is archived unstamped.
+		_, _ = s.updateLocked(file, "", func(data []byte) ([]byte, error) {
+			return mdfile.SetScalar(data, "updated", s.now().Format(time.RFC3339))
+		}, false)
 	}
 	folder := path.Dir(file)
 	return s.Move(folder, path.Join(to, path.Base(folder)))
