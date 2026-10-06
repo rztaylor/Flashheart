@@ -17,13 +17,17 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    server, claims, checkpoints, questions, `setup claude`, protocol skill,
    handoff enforcement); open: the real-session acceptance checks (needs a
    person).
-3. [`codex-support`](roadmap-items/codex-support.md) — **Pending**. Codex
-   hook adapter, `setup codex`, AGENTS.md protocol text. Depends on
+3. [`mcp-runs`](roadmap-items/mcp-runs.md) — **Pending**. The MCP server
+   starts a run for an agent without hooks, so claims, questions and
+   attribution work and it shows in the Agents view. Depends on
    `mcp-protocol`.
-4. [`review-and-orchestration`](roadmap-items/review-and-orchestration.md) —
+4. [`codex-support`](roadmap-items/codex-support.md) — **Pending**. Codex
+   hook adapter, `setup codex`, AGENTS.md protocol text. Depends on
+   `mcp-runs`.
+5. [`review-and-orchestration`](roadmap-items/review-and-orchestration.md) —
    **Pending**. Attachments, review panel, subagent tree, `doctor`. Depends on
-   `mcp-protocol`; can run in parallel with `codex-support`.
-5. [`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md) — **Pending**.
+   `mcp-protocol`; can run in parallel with `mcp-runs` and `codex-support`.
+6. [`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md) — **Pending**.
    Metro Pop light and black/charcoal Night Service dark, with one shared
    Metro Pop layout/content contract. FH-10 → FH-11 → FH-12 → FH-13 → FH-14.
    Implementation follows `review-and-orchestration`; the shared contract

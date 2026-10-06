@@ -3,7 +3,7 @@
 - Index: `docs/dev/roadmap.md`. Briefs: `docs/dev/roadmap-items/<id>.md`.
 - IDs are short kebab-case text. Statuses: `Pending`, `Partial`, `Blocked`.
 - Order: `agent-runs` → `mcp-protocol` →
-  (`codex-support` ∥ `review-and-orchestration`).
+  ((`mcp-runs` → `codex-support`) ∥ `review-and-orchestration`).
 - `metro-theme-rollout` follows `review-and-orchestration`; its shared
   layout contract may be prepared beforehand. Brief and approved image
   references: `docs/dev/roadmap-items/metro-theme-rollout.md`.
