@@ -44,7 +44,8 @@ interface TicketCardProps {
 }
 
 // TicketCard is one ticket on the board (VIEW-6), in the one anatomy of
-// docs/dev/specs/ui-layout.md §2: header (id, project, running time), title,
+// docs/dev/specs/ui-layout.md §2: header (id, project, running time), title
+// (three lines at most, the rest in its tooltip),
 // tags, state, live run, then by density the excerpt and next step, and a
 // footer with criteria and priority. The workstream's line runs down its
 // left edge; the header takes the tint of the board's "Colour by" value,
@@ -158,7 +159,8 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             ) : null}
           </span>
           <span
-            className={`line-clamp-4 text-md leading-snug heading-cut ${done ? "text-ink-muted" : "text-ink"}`}
+            title={card.title}
+            className={`line-clamp-3 text-base leading-snug font-semibold ${done ? "text-ink-muted" : "text-ink"}`}
           >
             {card.title}
           </span>

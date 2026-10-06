@@ -101,7 +101,7 @@ reorders them.
 | # | Row | Compact | Normal | Detailed |
 | --- | --- | --- | --- | --- |
 | 1 | Header: id, project name (All projects only), running time right | ✓ | ✓ | ✓ |
-| 2 | Title, wrapping to at most four lines | ✓ | ✓ | ✓ |
+| 2 | Title, wrapping to at most three lines (full title in its tooltip and the card's name) | ✓ | ✓ | ✓ |
 | 3 | Tags: workstream bullet, type tag, age tag (Colour by Age), *in <column>* on a mirror | ✓ | ✓ | ✓ |
 | 4 | Needs repair note | ✓ | ✓ | ✓ |
 | 5 | Blocker pill (diamond, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
@@ -227,7 +227,7 @@ is dashed and hatched in ink.
 | Older board format | Notice with the migrate command |
 | Repair | Dashed, hatched, never painted, never hidden |
 | Blocked | Blocker pill with the reason; on stations a pill above the next stop |
-| Long content | Titles wrap (card four lines); ids never cut; paths, branches and run ids cut from the start |
+| Long content | Titles wrap (card three lines, then clamped); ids never cut; paths, branches and run ids cut from the start |
 | Narrow (< 48rem) | Rail hidden, control row with Project and Column pickers, band tabs as icons, Needs you plate keeps its words, panel covers the view |
 | Backend lost / stopped | Band status in words; the stopped screen replaces the app (`LIFE-1`) |
 

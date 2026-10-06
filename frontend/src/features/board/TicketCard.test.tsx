@@ -139,7 +139,13 @@ describe("TicketCard", () => {
     expect(markup).toContain("bg-(--paint-tint)");
   });
 
-  it("wraps a long title to at most four lines", () => {
-    expect(render()).toContain("line-clamp-4");
+  it("sets the title quietly and clamps a long one to three lines", () => {
+    const markup = render({ title: "A".repeat(200) });
+    expect(markup).toContain("line-clamp-3");
+    expect(markup).toContain("text-base");
+    expect(markup).toContain("font-semibold");
+    expect(markup).not.toContain("heading-cut");
+    // The full title stays in the tooltip and the accessible name.
+    expect(markup).toContain(`title="${"A".repeat(200)}"`);
   });
 });

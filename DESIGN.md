@@ -252,6 +252,11 @@ typography:
     lineHeight: 1.25
     letterSpacing: "-0.01em"
     fontVariation: "'wdth' 80"
+  card-title:
+    fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 600
+    lineHeight: "1.35rem"
   heading:
     fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
     fontSize: "1rem"
@@ -482,7 +487,8 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Display page** (800, 2.5rem, 80%): the page header title.
 - **Display panel** (800, 1.875rem, 80%): the card panel's title and workstream names.
 - **Display head** (800, 1.375rem, 80%): board column and Agents lane heads, empty-state titles, dialog titles.
-- **Heading** (700, 1rem, 87.5%): card titles, panel sections (Handoff, Acceptance criteria), markdown headings.
+- **Heading** (700, 1rem, 87.5%): panel sections (Handoff, Acceptance criteria), markdown headings.
+- **Card title** (600, 0.875rem/1.35rem, normal width): ticket card titles, at most three lines, so a long title never outweighs the card.
 - **Heading small** (700, 0.8125rem, 87.5%): tabs, table heads, run detail sections, the workstream strip label.
 - **Body** (400, 0.875rem/1.35rem): panel and markdown reading.
 - **Label** (0.75rem) and **Meta** (0.6875rem): controls, tags, pills, running times, counts.
@@ -525,7 +531,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 - **Tag:** type, priority and age. The Colour by value's tag takes its paint (tint fill, strong word, a 35% ring); the rest are neutral outlined chips; High priority is semibold.
 
 ### Ticket Card
-White, 10px corners, rule border, card shadow, a 4px workstream stripe down the left. Rows (contract §2): header with id, project and running time, then the title (heading cut, up to four lines) on the paint tint; tags (bullet, type, age); repair; blocker pill or quiet wait; live run (Needs you plate or run mark, agent, time; the permission reason on its own line; plan step); question waiting; excerpt and next step (Detailed); footer with criteria left and the priority tag right. Selected: select border and ring. Dimmed: 35%. Mirrored: "in <column>" in faint ink.
+White, 10px corners, rule border, card shadow, a 4px workstream stripe down the left. Rows (contract §2): header with id, project and running time, then the title (card title, up to three lines) on the paint tint; tags (bullet, type, age); repair; blocker pill or quiet wait; live run (Needs you plate or run mark, agent, time; the permission reason on its own line; plan step); question waiting; excerpt and next step (Detailed); footer with criteria left and the priority tag right. Selected: select border and ring. Dimmed: 35%. Mirrored: "in <column>" in faint ink.
 
 ### Column Well and Lane
 Column well surface, rule border, 14px corners, 10px padding; head with a round count badge, the virtual column's mark (Needs you inside an attention disc), and the title in the display head cut. Agents lanes use the same well with run rows inside one card.
