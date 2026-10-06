@@ -1,147 +1,271 @@
 ---
 name: Flashheart
-description: A local kanban for AI-assisted projects, drawn as a transit line map.
+description: A local kanban for AI-assisted projects, drawn as a friendly metro system (Metro Pop light, Night Service dark).
 colors:
-  map-white: "#ffffff"
-  well-grey: "#f2f3f5"
-  platform-grey: "#eceef1"
-  platform-dot: "#11111117"
-  hairline: "#d7dadf"
-  signal-ink: "#111111"
-  ink-muted: "#565c66"
-  ink-faint: "#6a6f78"
-  signage-black: "#111111"
+  ground: "#f8f4e9"
+  panel: "#ffffff"
+  card: "#ffffff"
+  column: "#f2eee3"
+  well: "#f5f1e7"
+  rule: "#ddd6c9"
+  rule-strong: "#121a2e"
+  ink: "#121a2e"
+  ink-muted: "#4a5468"
+  ink-faint: "#5a6375"
+  band: "#1d4fd7"
   on-band: "#ffffff"
-  on-band-muted: "#a9aeb6"
-  band-field: "#26282c"
-  band-track: "#3a3d43"
-  flash-yellow: "#ffd23f"
-  alarm-red: "#b3261e"
-  alarm-surface: "#fdf0ef"
-  selection-yellow: "#fcd96a"
-  night-ground: "#121315"
-  night-well: "#1b1c1f"
-  night-platform: "#17181b"
-  night-platform-dot: "#ffffff0f"
-  night-card: "#24262b"
-  night-hairline: "#33363c"
-  night-ink: "#f1f2f4"
-  night-ink-muted: "#a3a8b1"
-  night-ink-faint: "#8f949d"
-  night-band: "#000000"
-  night-on-band-muted: "#9ea3ab"
-  night-band-field: "#1d1f23"
-  night-band-track: "#34373d"
-  night-alarm: "#ff8a80"
-  night-alarm-surface: "#2a1517"
-  night-selection: "#6b5a12"
-  line-red: "#d52b1e"
-  line-blue: "#0039a6"
-  line-yellow: "#fccc0a"
-  line-green: "#00843d"
-  line-purple: "#a93aa0"
-  line-orange: "#ff6319"
-  line-lime: "#6cbe45"
-  line-brown: "#8a5a2b"
-  line-grey: "#8d8f92"
-  night-line-red: "#ee4b3f"
-  night-line-blue: "#4a86f0"
-  night-line-yellow: "#fccc0a"
-  night-line-green: "#22a65a"
-  night-line-purple: "#cc5fc2"
-  night-line-orange: "#ff7a3d"
-  night-line-lime: "#7acb52"
-  night-line-brown: "#b8854f"
-  night-line-grey: "#a2a4a8"
-  paint-type-feature: "#5b6170"
-  paint-type-feature-tint: "#f1f2f4"
-  paint-type-bug: "#a2453a"
-  paint-type-bug-tint: "#f6e6e3"
-  paint-type-infra: "#2f6b68"
-  paint-type-infra-tint: "#e1eeed"
-  paint-type-test: "#4a7050"
-  paint-type-test-tint: "#e5eee6"
-  paint-type-refactor: "#66548c"
-  paint-type-refactor-tint: "#ece8f3"
-  paint-type-docs: "#6b6628"
-  paint-type-docs-tint: "#efeedd"
-  paint-type-spike: "#8c4870"
-  paint-type-spike-tint: "#f3e6ee"
-  paint-type-other: "#5b6170"
-  paint-type-other-tint: "#eceef1"
-  paint-priority-high: "#a3472a"
-  paint-priority-high-tint: "#f6e7e0"
-  paint-priority-medium: "#80651f"
-  paint-priority-medium-tint: "#f2ecdb"
-  paint-priority-low: "#52667a"
-  paint-priority-low-tint: "#e7ecf1"
-  paint-age-today: "#4a7050"
-  paint-age-today-tint: "#e5eee6"
-  paint-age-week: "#80651f"
-  paint-age-week-tint: "#f2ecdb"
-  paint-age-older: "#8c4a3c"
-  paint-age-older-tint: "#f3e6e2"
-  night-paint-type-feature: "#a9aeb8"
-  night-paint-type-feature-tint: "#2a2c31"
-  night-paint-type-bug: "#dc8f84"
-  night-paint-type-bug-tint: "#33211f"
-  night-paint-type-infra: "#83bdb8"
-  night-paint-type-infra-tint: "#1b2c2b"
-  night-paint-type-test: "#98c09d"
-  night-paint-type-test-tint: "#1e2a20"
-  night-paint-type-refactor: "#b5a6d8"
-  night-paint-type-refactor-tint: "#282537"
-  night-paint-type-docs: "#c9c27e"
-  night-paint-type-docs-tint: "#2b2a1c"
-  night-paint-type-spike: "#d699bc"
-  night-paint-type-spike-tint: "#30222a"
-  night-paint-type-other: "#a9aeb8"
-  night-paint-type-other-tint: "#272a30"
-  night-paint-priority-high: "#e19c7e"
-  night-paint-priority-high-tint: "#33241d"
-  night-paint-priority-medium: "#d6b56c"
-  night-paint-priority-medium-tint: "#2e2818"
-  night-paint-priority-low: "#a5b6c6"
-  night-paint-priority-low-tint: "#232931"
-  night-paint-age-today: "#98c09d"
-  night-paint-age-today-tint: "#1e2a20"
-  night-paint-age-week: "#d6b56c"
-  night-paint-age-week-tint: "#2e2818"
-  night-paint-age-older: "#d39a86"
-  night-paint-age-older-tint: "#32231f"
+  on-band-muted: "#d6e0ff"
+  band-field: "#1846c4"
+  band-tab-active: "#1641b8"
+  band-tab-line: "#1641b8"
+  band-rule: "#5279e6"
+  rail: "#efece4"
+  on-rail: "#121a2e"
+  on-rail-muted: "#4f586b"
+  rail-active: "#1d4fd7"
+  on-rail-active: "#ffffff"
+  on-rail-active-muted: "#d6e0ff"
+  rail-active-mark: "#1d4fd7"
+  rail-rule: "#d9d4c8"
+  action: "#c2410c"
+  on-action: "#ffffff"
+  action-hover: "#a8380a"
+  attention: "#ff9447"
+  on-attention: "#111111"
+  focus: "#1d4fd7"
+  select: "#1d4fd7"
+  select-surface: "#e3ebff"
+  danger: "#b42318"
+  danger-surface: "#fdecea"
+  selection: "#ffe08a"
+  flash: "#ffd23f"
+  state-neutral: "#e6e8ee"
+  state-neutral-ink: "#3d4555"
+  state-progress: "#fff0c2"
+  state-progress-ink: "#6e4a00"
+  state-review: "#e3ebff"
+  state-review-ink: "#1d47b8"
+  state-done: "#dbf3e4"
+  state-done-ink: "#0b6534"
+  state-blocked: "#fde3df"
+  state-blocked-ink: "#a1241a"
+  callout-handoff: "#fff3ea"
+  callout-handoff-edge: "#c2410c"
+  callout-question: "#eaf0ff"
+  callout-question-edge: "#1d4fd7"
+  line-0: "#d42f25"
+  line-1: "#1d5bd8"
+  line-2: "#f5c400"
+  line-3: "#0f7f4b"
+  line-4: "#8b4fd1"
+  line-5: "#f2701d"
+  line-6: "#7cc242"
+  line-7: "#9a6233"
+  line-8: "#0b7a8a"
+  line-ink-0: "#ffffff"
+  line-ink-1: "#ffffff"
+  line-ink-2: "#111111"
+  line-ink-3: "#ffffff"
+  line-ink-4: "#ffffff"
+  line-ink-5: "#111111"
+  line-ink-6: "#111111"
+  line-ink-7: "#ffffff"
+  line-ink-8: "#ffffff"
+  paint-type-feature: "#6247c4"
+  paint-type-feature-tint: "#f0ecfd"
+  paint-type-feature-ink: "#ffffff"
+  paint-type-bug: "#b3362b"
+  paint-type-bug-tint: "#fde9e6"
+  paint-type-bug-ink: "#ffffff"
+  paint-type-infra: "#0f6f68"
+  paint-type-infra-tint: "#def3f0"
+  paint-type-infra-ink: "#ffffff"
+  paint-type-test: "#4b5563"
+  paint-type-test-tint: "#eceef1"
+  paint-type-test-ink: "#ffffff"
+  paint-type-refactor: "#2f55b0"
+  paint-type-refactor-tint: "#e6ecfb"
+  paint-type-refactor-ink: "#ffffff"
+  paint-type-docs: "#7a5c00"
+  paint-type-docs-tint: "#fbf1d3"
+  paint-type-docs-ink: "#ffffff"
+  paint-type-spike: "#a3367a"
+  paint-type-spike-tint: "#fbe7f2"
+  paint-type-spike-ink: "#ffffff"
+  paint-type-other: "#4b5563"
+  paint-type-other-tint: "#eef0f3"
+  paint-type-other-ink: "#ffffff"
+  paint-priority-high: "#b3362b"
+  paint-priority-high-tint: "#fde9e6"
+  paint-priority-high-ink: "#ffffff"
+  paint-priority-medium: "#845700"
+  paint-priority-medium-tint: "#fdf0cf"
+  paint-priority-medium-ink: "#ffffff"
+  paint-priority-low: "#2b7346"
+  paint-priority-low-tint: "#e2f4e8"
+  paint-priority-low-ink: "#ffffff"
+  paint-age-today: "#2b7346"
+  paint-age-today-tint: "#e2f4e8"
+  paint-age-today-ink: "#ffffff"
+  paint-age-week: "#845700"
+  paint-age-week-tint: "#fdf0cf"
+  paint-age-week-ink: "#ffffff"
+  paint-age-older: "#9a4426"
+  paint-age-older-tint: "#f8e7df"
+  paint-age-older-ink: "#ffffff"
+  night-ground: "#0c0c0d"
+  night-panel: "#141415"
+  night-card: "#1e1e20"
+  night-column: "#161617"
+  night-well: "#252527"
+  night-rule: "#303033"
+  night-rule-strong: "#f2f2f3"
+  night-ink: "#f2f2f3"
+  night-ink-muted: "#ababb0"
+  night-ink-faint: "#98989e"
+  night-band: "#070708"
+  night-on-band: "#f2f2f3"
+  night-on-band-muted: "#a3a3a9"
+  night-band-field: "#1b1b1d"
+  night-band-tab-active: "#1b1b1d"
+  night-band-tab-line: "#c6f432"
+  night-band-rule: "#2a2a2d"
+  night-rail: "#111112"
+  night-on-rail: "#f2f2f3"
+  night-on-rail-muted: "#a3a3a9"
+  night-rail-active: "#232325"
+  night-on-rail-active: "#ffffff"
+  night-on-rail-active-muted: "#b3b3b8"
+  night-rail-active-mark: "#c6f432"
+  night-rail-rule: "#262628"
+  night-action: "#c6f432"
+  night-on-action: "#111111"
+  night-action-hover: "#d4f760"
+  night-attention: "#ff7a5c"
+  night-on-attention: "#111111"
+  night-focus: "#c6f432"
+  night-select: "#c6f432"
+  night-select-surface: "#2a2a2d"
+  night-danger: "#ff8a80"
+  night-danger-surface: "#2b1513"
+  night-selection: "#5a4a12"
+  night-state-neutral: "#2a2a2d"
+  night-state-neutral-ink: "#cacacf"
+  night-state-progress: "#3a2e0c"
+  night-state-progress-ink: "#ffd666"
+  night-state-review: "#1f2738"
+  night-state-review-ink: "#a3c1ff"
+  night-state-done: "#13301f"
+  night-state-done-ink: "#72e3a2"
+  night-state-blocked: "#3b1714"
+  night-state-blocked-ink: "#ff9a90"
+  night-callout-handoff: "#1c1c1e"
+  night-callout-handoff-edge: "#ff9a52"
+  night-callout-question: "#1c1c1e"
+  night-callout-question-edge: "#ff7a5c"
+  night-line-0: "#ff5a4f"
+  night-line-1: "#4d8dff"
+  night-line-2: "#ffd23f"
+  night-line-3: "#3ccf7a"
+  night-line-4: "#b07cff"
+  night-line-5: "#ff8c3a"
+  night-line-6: "#a3e04a"
+  night-line-7: "#c8925a"
+  night-line-8: "#3ccfe0"
+  night-line-ink-0: "#111111"
+  night-line-ink-1: "#111111"
+  night-line-ink-2: "#111111"
+  night-line-ink-3: "#111111"
+  night-line-ink-4: "#111111"
+  night-line-ink-5: "#111111"
+  night-line-ink-6: "#111111"
+  night-line-ink-7: "#111111"
+  night-line-ink-8: "#111111"
+  night-paint-type-feature: "#b9a3ff"
+  night-paint-type-feature-tint: "#262033"
+  night-paint-type-feature-ink: "#111111"
+  night-paint-type-bug: "#ff9187"
+  night-paint-type-bug-tint: "#33201e"
+  night-paint-type-bug-ink: "#111111"
+  night-paint-type-infra: "#5fd4c4"
+  night-paint-type-infra-tint: "#15302c"
+  night-paint-type-infra-ink: "#111111"
+  night-paint-type-test: "#b8bec8"
+  night-paint-type-test-tint: "#27282b"
+  night-paint-type-test-ink: "#111111"
+  night-paint-type-refactor: "#9db4ff"
+  night-paint-type-refactor-tint: "#1f2536"
+  night-paint-type-refactor-ink: "#111111"
+  night-paint-type-docs: "#e8c460"
+  night-paint-type-docs-tint: "#2e2814"
+  night-paint-type-docs-ink: "#111111"
+  night-paint-type-spike: "#f29ad0"
+  night-paint-type-spike-tint: "#33202c"
+  night-paint-type-spike-ink: "#111111"
+  night-paint-type-other: "#b8bec8"
+  night-paint-type-other-tint: "#27282b"
+  night-paint-type-other-ink: "#111111"
+  night-paint-priority-high: "#ff9187"
+  night-paint-priority-high-tint: "#33201e"
+  night-paint-priority-high-ink: "#111111"
+  night-paint-priority-medium: "#e8c460"
+  night-paint-priority-medium-tint: "#2e2814"
+  night-paint-priority-medium-ink: "#111111"
+  night-paint-priority-low: "#7fdc9e"
+  night-paint-priority-low-tint: "#16301f"
+  night-paint-priority-low-ink: "#111111"
+  night-paint-age-today: "#7fdc9e"
+  night-paint-age-today-tint: "#16301f"
+  night-paint-age-today-ink: "#111111"
+  night-paint-age-week: "#e8c460"
+  night-paint-age-week-tint: "#2e2814"
+  night-paint-age-week-ink: "#111111"
+  night-paint-age-older: "#f0a585"
+  night-paint-age-older-tint: "#33231c"
+  night-paint-age-older-ink: "#111111"
 typography:
   wordmark:
     fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "1rem"
+    fontSize: "1.375rem"
     fontWeight: 800
-    lineHeight: "1.45rem"
+    lineHeight: "1.75rem"
+    letterSpacing: "-0.015em"
+    fontVariation: "'wdth' 87.5"
+  display-page:
+    fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
+    fontSize: "2.5rem"
+    fontWeight: 800
+    lineHeight: "2.625rem"
     letterSpacing: "-0.01em"
-    fontVariation: "'wdth' 112.5"
-  headline:
+    fontVariation: "'wdth' 80"
+  display-panel:
+    fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
+    fontSize: "1.875rem"
+    fontWeight: 800
+    lineHeight: 1.15
+    letterSpacing: "-0.01em"
+    fontVariation: "'wdth' 80"
+  display-head:
     fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
     fontSize: "1.375rem"
-    fontWeight: 600
+    fontWeight: 800
     lineHeight: 1.25
     letterSpacing: "-0.01em"
-  station-sign:
+    fontVariation: "'wdth' 80"
+  heading:
     fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
     fontSize: "1rem"
-    fontWeight: 650
+    fontWeight: 700
     lineHeight: "1.45rem"
     letterSpacing: "0"
     fontVariation: "'wdth' 87.5"
-  station-sign-small:
+  heading-small:
     fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
     fontSize: "0.8125rem"
-    fontWeight: 650
+    fontWeight: 700
     lineHeight: "1.2rem"
     letterSpacing: "0"
     fontVariation: "'wdth' 87.5"
-  title:
-    fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
-    fontSize: "0.8125rem"
-    fontWeight: 500
-    lineHeight: 1.375
   body:
     fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
     fontSize: "0.875rem"
@@ -173,35 +297,39 @@ typography:
     fontWeight: 400
     lineHeight: "1rem"
 rounded:
-  card: "2px"
-  panel: "2px"
-  tag: "3px"
-  control: "4px"
+  control: "8px"
+  card: "10px"
+  panel: "14px"
+  pill: "9999px"
   bullet: "9999px"
 spacing:
   unit: "4px"
   gap-tight: "8px"
   card-gap: "10px"
-  column-gap: "20px"
+  column-gap: "12px"
+  column-padding: "10px"
   card-x: "12px"
   card-x-striped: "16px"
-  card-y: "10px"
-  line-stripe: "4px"
-  page: "16px"
+  page: "24px"
+  page-narrow: "16px"
   panel-gutter: "24px"
-  band-height: "48px"
+  band-height: "56px"
   rail-width: "248px"
+  rail-collapsed: "64px"
   panel-width: "clamp(26rem, 32vw, 35rem)"
 components:
   button-primary:
-    backgroundColor: "{colors.signal-ink}"
-    textColor: "{colors.map-white}"
-    typography: "{typography.title}"
+    backgroundColor: "{colors.action}"
+    textColor: "{colors.on-action}"
+    typography: "{typography.heading-small}"
     rounded: "{rounded.control}"
     padding: "6px 12px"
+    height: "36px"
+  button-primary-hover:
+    backgroundColor: "{colors.action-hover}"
   button-secondary:
-    backgroundColor: "{colors.map-white}"
-    textColor: "{colors.signal-ink}"
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.control}"
     padding: "6px 12px"
   button-quiet:
@@ -209,292 +337,231 @@ components:
     rounded: "{rounded.control}"
     padding: "6px 12px"
   button-band:
-    backgroundColor: "{colors.signage-black}"
     textColor: "{colors.on-band}"
     rounded: "{rounded.control}"
     padding: "0 12px"
-    height: "32px"
-  button-band-hover:
-    backgroundColor: "{colors.band-field}"
-  signage-band:
-    backgroundColor: "{colors.signage-black}"
+    height: "36px"
+  band:
+    backgroundColor: "{colors.band}"
     textColor: "{colors.on-band}"
     height: "{spacing.band-height}"
-  brand-bolt:
-    textColor: "{colors.flash-yellow}"
-    size: "13px 16px"
+  view-tab-active:
+    backgroundColor: "{colors.band-tab-active}"
+    textColor: "{colors.on-band}"
+    rounded: "{rounded.control}"
+    height: "36px"
+  needs-you-plate:
+    backgroundColor: "{colors.attention}"
+    textColor: "{colors.on-attention}"
+    rounded: "{rounded.pill}"
+    height: "36px"
+    padding: "0 14px"
   search-field-band:
     backgroundColor: "{colors.band-field}"
     textColor: "{colors.on-band}"
     rounded: "{rounded.control}"
-    height: "32px"
-    width: "256px"
+    height: "36px"
+    width: "288px"
+  rail:
+    backgroundColor: "{colors.rail}"
+    textColor: "{colors.on-rail}"
+    width: "{spacing.rail-width}"
+  rail-tile-active:
+    backgroundColor: "{colors.rail-active}"
+    textColor: "{colors.on-rail-active}"
+    rounded: "{rounded.card}"
   select-field:
-    backgroundColor: "{colors.map-white}"
-    textColor: "{colors.signal-ink}"
-    typography: "{typography.label}"
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    height: "28px"
-  segmented-option-active:
-    backgroundColor: "{colors.signal-ink}"
-    textColor: "{colors.map-white}"
-    typography: "{typography.label}"
-    padding: "2px 8px"
-  board-platform:
-    backgroundColor: "{colors.platform-grey}"
+    height: "32px"
+  segmented-chosen:
+    backgroundColor: "{colors.select-surface}"
+    textColor: "{colors.ink}"
+    rounded: "6px"
+  column-well:
+    backgroundColor: "{colors.column}"
+    rounded: "{rounded.panel}"
+    padding: "{spacing.column-padding}"
   ticket-card:
-    backgroundColor: "{colors.map-white}"
-    textColor: "{colors.signal-ink}"
-    typography: "{typography.title}"
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.card}"
     padding: "10px 12px 10px 16px"
-  paint-tag:
-    typography: "{typography.ticket-id}"
-    rounded: "{rounded.tag}"
-    padding: "0 6px"
-  line-bullet:
-    rounded: "{rounded.bullet}"
-    size: "24px"
-  side-panel:
-    backgroundColor: "{colors.map-white}"
-    textColor: "{colors.signal-ink}"
-    width: "{spacing.panel-width}"
-  project-rail:
-    backgroundColor: "{colors.signage-black}"
-    textColor: "{colors.on-band}"
-    width: "{spacing.rail-width}"
-  rail-item-active:
-    backgroundColor: "{colors.band-field}"
-    rounded: "{rounded.control}"
-  project-key-badge-active:
-    backgroundColor: "{colors.on-band}"
-    textColor: "{colors.signage-black}"
-    rounded: "{rounded.tag}"
-    height: "24px"
-  project-key-badge:
-    textColor: "{colors.on-band}"
-    rounded: "{rounded.tag}"
-    height: "24px"
-  needs-you-plate:
-    backgroundColor: "{colors.signal-ink}"
-    textColor: "{colors.map-white}"
+  status-pill-progress:
+    backgroundColor: "{colors.state-progress}"
+    textColor: "{colors.state-progress-ink}"
     typography: "{typography.meta}"
-    rounded: "{rounded.tag}"
-    padding: "0 6px"
-  needs-you-plate-band:
-    backgroundColor: "{colors.on-band}"
-    textColor: "{colors.signage-black}"
+    rounded: "{rounded.pill}"
+  blocker-pill:
+    backgroundColor: "{colors.state-blocked}"
+    textColor: "{colors.state-blocked-ink}"
     typography: "{typography.label}"
-    rounded: "{rounded.tag}"
-    padding: "0 8px"
-    height: "28px"
-  run-row-expanded:
-    backgroundColor: "{colors.well-grey}"
-    textColor: "{colors.signal-ink}"
-    padding: "8px"
+    rounded: "{rounded.control}"
+  handoff-callout:
+    backgroundColor: "{colors.callout-handoff}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.card}"
+    padding: "16px"
+  question-callout:
+    backgroundColor: "{colors.callout-question}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.card}"
+    padding: "16px"
+  card-panel:
+    backgroundColor: "{colors.panel}"
+    textColor: "{colors.ink}"
+    width: "{spacing.panel-width}"
 ---
 
 # Design System: Flashheart
 
-> Planned successor: [Metro Pop / charcoal Night Service](docs/dev/roadmap-items/metro-theme-rollout.md)
-> (D18). The shared layout, content and semantic colour roles for both
-> themes are fixed in [the UI layout contract](docs/dev/specs/ui-layout.md);
-> Night Service supplies a neutral black/charcoal dark palette. The tokens
-> and rules below describe the current implementation until that rollout
-> lands, not the newly approved target.
-
 ## Overview
 
-**Creative North Star: "The Transit Line Map"**
+**Creative North Star: "Metro Pop"**
 
-Flashheart is drawn as a transit system in the Vignelli 1972 diagram and Unimark signage tradition. Each workstream is a coloured line, its tickets are stations, and the shell is a black signage frame: a band across the top and a project rail down the left, forming an L around a lit platform. The board ground is platform grey with a faint map-dot grid, and cards lift off it. Order, progress and blockage read as a route map: a station served, the next stop, a stretch of suspended service.
+Flashheart is a friendly metro system for work. Each workstream is a route with its own colour, its tickets are stations, and the board is a bright, colourful kanban that still reads as calm, dense tooling on a second monitor. There is one structure and two palettes. **Metro Pop** (light) puts a Metro-blue band over a warm paper rail and ground, with ivory column wells holding white rounded cards and an orange primary action. **Night Service** (dark) keeps every structure and swaps only the palette: a black band and neutral charcoal rail, wells and cards with no navy cast, a lime action and focus, coral attention, and lifted route colours.
 
-The world is dense and calm, built to be glanced at on a second monitor all day and read closely in review sessions. One grotesk in tight sentence case, every number set as tabular data. Colour is quarantined to jobs: the line palette names workstreams, a muted paint palette shows the board's "Colour by" attribute and always says its name, and a single signal-yellow bolt marks the brand. Ticket state is ink, shape and words, and so is the state of every agent run. Focus dims the rest of the board instead of filtering it away. The system refuses the grey SaaS lane-and-badge kanban: no coloured status pills, no badge rainbow, no unnamed colour.
+Structure and content are fixed in [the UI layout contract](docs/dev/specs/ui-layout.md); this file records how that structure looks. A theme changes tokens, never layout. Metro Pop replaced the Transit Line Map of D14 (D18, 2026-10-06), chosen from the generated references in `.impeccable/mocks/metro-theme-rollout/`.
 
 **Key Characteristics:**
-- A black signage band (48px) and black project rail (248px) form an L-frame in both themes.
-- The board is a platform: grey ground with a 16px dot grid; cards and legend chips cast soft shadows on it.
-- Line colours mean workstreams; paint colours mean the chosen "Colour by" attribute; ticket state is monochrome.
-- Section heads are station signs: a heavy top rule over a condensed semibold label.
-- Near-square corners (2px) on cards and panels; round only for bullets, stations and chips.
-- Archivo Variable, self-hosted, with tabular numerals everywhere; ticket ids in the sans.
-- Agent runs read as a departure board: monochrome run marks, one inverted "Needs you" plate, and one slowly beating dot for a working agent.
+- A 56px band (bolt, wordmark, view tabs, Needs you, search, status, Quit) over a 248px rail, with every view opening on a page header naming its scope.
+- Rounded throughout: 8px controls, 10px cards, 14px wells and route cards, full pills and bullets.
+- Route colours mean workstreams; paint means the Colour by value; status pills always carry an icon and a word.
+- Archivo Variable across its width axis: a heavy condensed display cut for titles, a condensed bold for heads, tabular numerals everywhere.
+- Needs you is the one loud attention plate; a working agent's dot is the only beat.
 
 ## Colors
 
-A monochrome map in two themes, a nine-colour line palette borrowed from the MTA that only ever names a workstream, a muted paint palette for the board's "Colour by" attribute, and one yellow brand bolt.
+Two palettes on the same roles (contract §7). Light values first; dark values are the `night-` keys.
 
 ### Primary
-- **Signal Ink** (light `signal-ink`, dark `night-ink`): text, primary buttons, the strong rule over station signs, selected-card border and ring, focus outline, the interchange ring of the next stop, column counts, ticket ids, every state mark (diamond, hatching), every run state mark and plan route, and the fill of the Needs you plate. It is the system's only "accent" for state.
+- **Band** (`band` #1d4fd7 Metro blue; `night-band` #070708 black): the top band. The current view tab sits on a deeper blue pill (`band-tab-active`); in dark it is a charcoal field with a lime underline (`night-band-tab-line`).
+- **Ink** (`ink` #121a2e; `night-ink` #f2f2f3): text and icons.
+- **Rail Active** (`rail-active` #1d4fd7; `night-rail-active` #232325 with a lime edge): the current scope tile and the page header's key badge.
 
 ### Secondary
-- **The Line Palette** (`line-red`, `line-blue`, `line-yellow`, `line-green`, `line-purple`, `line-orange`, `line-lime`, `line-brown`, `line-grey`, with lifted `night-line-*` values for dark mode; CSS `--fh-line-0` to `--fh-line-8`): ordered so neighbouring indices are far apart in hue. Each workstream in a project is assigned one line, stably, in creation order (a newer workstream never recolours an older one). Used as line bullet fills, the card's left stripe, transit track and station rings. Bullet initials take a paired ink per line (`--fh-line-ink-*`: white on red, blue, green, purple and brown in light mode; near-black on yellow, orange, lime and grey; near-black on every line in dark mode). Bullets and stations carry a faint casing ring (`--fh-casing`) so yellow and lime hold their edge on white.
-- **The Paint Palette** (`--fh-paint-<token>` strong shade, `-tint` header wash, `-ink` text on the strong shade; tokens `type-feature`, `type-bug`, `type-infra`, `type-test`, `type-refactor`, `type-docs`, `type-spike`, `type-other`, `priority-high`, `priority-medium`, `priority-low`, `age-today`, `age-week`, `age-older`): desaturated mid-tones, deliberately not the line colours. Ink is white on every strong shade in light mode and `#111111` in dark mode, where the strong shades lift and the tints sink below the card. Age shares hues with type and priority (today = test green, this week = medium ochre). `type-feature` is neutral grey (the strong shade of `type-other` with a lighter tint): features are the usual case, so colour picks out the exceptions.
+- **Action** (`action` #c2410c Metro orange; `night-action` #c6f432 lime): the primary button only (New ticket, Send answer). Hover darkens or lifts it.
+- **Selection and Focus** (`select`/`focus` #1d4fd7; `night-select`/`night-focus` lime): the selected card ring, the current panel tab's underline, an applied filter's ring, the chosen density segment's edge and the focus outline.
+- **Lines** (`line-0`…`line-8`: red, blue, yellow, green, purple, orange, lime, brown, teal; lifted in dark): workstreams only. Each workstream takes one line stably, by a hash of its slug in creation order, so a newer workstream never recolours an older one. A bullet carries its paired initials ink (`line-ink-*`, AA on its fill). No line is grey: grey would read as an inactive state.
+- **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the card header and fills that value's tag; the strong shade sets the tag's word (always AA on the tint) and the colour key's swatch. Paint is softer than the lines on purpose, so a tag never reads as a workstream.
+- **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Blocked red with a diamond and its reason.
+- **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` blue in light, coral in dark): the left accent of the Handoff and questions-for-you callouts, as in the references.
 
 ### Tertiary
-- **Flash Yellow** (`flash-yellow`, `--fh-flash`, the same in both themes): the bolt before the wordmark. Nowhere else.
-- **Alarm Red** (light `alarm-red` on `alarm-surface`, dark `night-alarm` on `night-alarm-surface`): app error alerts only (the board root failed to load, shutdown refused, a fetch error). Never a ticket state.
-- **Selection Yellow** (`selection-yellow`, dark `night-selection`): text selection highlight only.
+- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, lane head, panel, virtual column). Only Needs you uses it.
+- **Flash** (`flash` #ffd23f): the bolt before the wordmark.
+- **Danger** (`danger` on `danger-surface`): application errors only, never a ticket state.
 
 ### Neutral
-- **Map White** (`map-white`; dark `night-ground`, and `night-card` #24262b for cards): app ground, filter bar, card and panel surface. In dark mode the card sits two steps above the platform.
-- **Platform Grey** (`platform-grey` #eceef1 with `platform-dot` rgb(17 17 17 / 0.09); dark `night-platform` #17181b with rgb(255 255 255 / 0.06)): the board's ground under the columns.
-- **Well Grey** (`well-grey` #f2f3f5; dark `night-well`): the handoff block, the migrate notice, the notice strip, skeletons, code, attachment frames, the selected table row and the expanded run row on the Agents board.
-- **Hairline** (`hairline`; dark `night-hairline`): card borders (at 70%), filter bar and panel rules, row rules, scrollbars.
-- **Ink Muted / Ink Faint** (`ink-muted`, `ink-faint`; dark `night-ink-muted`, `night-ink-faint`): metadata, running times, done titles, and the quiet "waiting" note. Both pass AA on their grounds.
-- **Signage Black** (`signage-black`; dark `night-band`, true black) with **On Band** text, **On Band Muted** for inactive tabs and secondary rail text, **Band Field** for the search well, the active rail tile and band hovers, and **Band Track** (`band-track`; dark `night-band-track`) for route-bar track and rail dividers.
+- **Ground** (`ground` #f8f4e9 warm paper; `night-ground` #0c0c0d), **Rail** (`rail` #efece4; `night-rail` #111112), **Column** (`column` #f2eee3 ivory; `night-column` #161617), **Card** and **Panel** (white; `night-card` #1e1e20, `night-panel` #141415), **Well** (`well` #f5f1e7; `night-well` #252527), **Rule** (`rule` #ddd6c9; `night-rule` #303033), **Ink Muted** and **Ink Faint** (AA on every surface).
+- Dark neutrals have no hue (OKLCH chroma under 0.012): black and charcoal, never navy.
 
 ### Named Rules
-**The Lines Are Workstreams Rule.** A line colour appears only where a workstream is named or drawn: bullet, the card's 4px left stripe, track, station, legend chip. On a card the stripe is the only full-saturation colour. Never use a line colour for status, priority, type, emphasis, project identity or decoration.
+**The Roles Rule.** Every colour has one job (frame, action, attention, line, paint, state, blocked, danger, focus, selection) and none is the only carrier of meaning: pills carry icons and words, paint carries its word, lines carry initials and names.
 
-**The Paint Rule.** Paint shows the one attribute chosen in "Colour by" (Type by default; Priority, Age or None) and nothing else: a tinted card header plus a strong-shade tag that names the value, with a colour key on the board. Paint is never a line colour, never a ticket state, and never appears without its word. A needs-repair card is never painted; a done card's tint is mixed 55% toward the card.
+**The Lines Are Workstreams Rule.** A line colour appears only where a workstream is named or drawn: bullet, card stripe, route track and stations, the route card's wash. A card's stripe always matches its bullet.
 
-**The Ink, Shape and Words Rule.** Ticket state is monochrome. A real blocker is a diamond plus its reason in ink; a wait on an earlier station of the same line is muted text with no mark; needs repair is a dashed border with a hatched top band plus the reason. Every state is paired with its proof in words.
+**The One Attention Rule.** Needs you is the only attention plate and the loudest thing on any view.
 
-**The Run State Rule.** Agent run state is monochrome too, five marks in ink: Needs you a solid disc, Working a ring around a dot, Quiet the same ring with a faded still dot, Waiting an open ring, Ended a short terminus bar. Each mark travels with its word except in compact spaces (a compact card, a virtual column head), where the word moves to the tooltip or the heading. Needs you is the only state set as an inverted plate (ink fill with ground text on the map; on-band white with band text in the signage frame), so the one thing that wants the user reads from across the room. Working is ink; Quiet, Waiting and Ended are muted ink. The permission reason is shown in semibold ink words beside it.
+**The Checked Means Finished Rule.** A check mark means Done or Archived. Ready to review is served without a check.
 
-**The Alarm Is for the App Rule.** Alarm red is reserved for application error alerts. If it appears on a ticket, it is a bug.
+**The No Navy Rule.** Night Service grounds, surfaces and borders are neutral; colour lives in routes and deliberate accents.
 
-**The Black Frame Rule.** The signage band and project rail are black in both themes (true black in dark mode). The map changes with the theme; the signage does not. The only hue in the frame is the brand bolt.
+**The AA Rule.** `tokens.test.ts` holds every text and surface pair to WCAG 2.2 AA in both palettes; a new token pair joins that test.
 
 ## Typography
 
-**Display Font:** Archivo Variable (with Helvetica Neue, Helvetica, Arial), self-hosted with its width axis
-**Body Font:** Archivo Variable
-**Label/Mono Font:** system monospace (ui-monospace, SF Mono, Menlo, Consolas) for paths, branches, file names and code only
+**Display, heading and body:** Archivo Variable (Helvetica Neue, Helvetica, Arial fallbacks), self-hosted with its width axis.
+**Mono:** system monospace for paths, branches, file names and code only.
 
-**Character:** One Helvetica-class grotesk used across its width axis: condensed for signage, normal for reading, expanded for the wordmark. Sentence case throughout; no uppercase tracking.
+**Character:** one grotesk across its widths: a heavy condensed display cut (800, 80%) for titles, a condensed bold (700, 87.5%) for heads, normal width for reading. Sentence case; no tracked capitals.
 
 ### Hierarchy
-- **Wordmark** (800, 1rem, expanded width 112.5%): the Flashheart name in the band, after the bolt. Nowhere else.
-- **Headline** (600, 1.375rem, tight line height, -0.01em): the ticket title at the top of the card panel.
-- **Station Sign** (650, 1rem, condensed 87.5%): board column heads (virtual columns included), Agents lane heads, empty-state titles, project names (1.125rem) in Workstreams, workstream names.
-- **Station Sign Small** (650, 0.8125rem, condensed 87.5%): panel section heads, tabs, table column heads, run detail section heads (Plan, Edited files, Activity), rendered-markdown headings, the current-project sign in the band; bold (700) at 0.75rem for project key badges.
-- **Title** (500, 0.8125rem, snug): ticket card titles, station names and rail project names (600 when active); done tickets drop to muted ink.
-- **Body** (400, 0.875rem / 1.35rem): panel and markdown reading text, the base size of the app.
-- **Label** (400, 0.75rem): controls, filters, colour key, legend chips, state notes on cards, the panel meta row.
-- **Meta** (400, 0.6875rem): running times, card meta row, criteria and attachment counts, rail sub-lines.
-- **Ticket Id** (600, 0.6875rem, +0.02em, tabular, ink): ids such as FH-11 on cards, tables, stations and the panel meta row. Set in the sans, never monospace.
+- **Wordmark** (800, 1.375rem, 87.5%): "Flashheart" in the band, after the bolt.
+- **Display page** (800, 2.5rem, 80%): the page header title.
+- **Display panel** (800, 1.875rem, 80%): the card panel's title and workstream names.
+- **Display head** (800, 1.375rem, 80%): board column and Agents lane heads, empty-state titles, dialog titles.
+- **Heading** (700, 1rem, 87.5%): card titles, panel sections (Handoff, Acceptance criteria), markdown headings.
+- **Heading small** (700, 0.8125rem, 87.5%): tabs, table heads, run detail sections, the workstream strip label.
+- **Body** (400, 0.875rem/1.35rem): panel and markdown reading.
+- **Label** (0.75rem) and **Meta** (0.6875rem): controls, tags, pills, running times, counts.
+- **Ticket id** (600, 0.6875rem, +0.02em, tabular): FH-11 on cards, stations, rows and the panel. Never monospace.
 
 ### Named Rules
-**The Station Sign Rule.** A section head is a condensed semibold label standing under a strong ink rule. Rule weight follows rank: 5px over board columns and Agents lanes, 3px under table heads and active tabs, 2px over panel sections, run detail sections, each run in the Runs tab, markdown H2s and the band's project sign.
-
-**The Numbers Are Data Rule.** Tabular numerals are on globally. Column counts sit right-aligned in semibold ink at 0.8125rem; rail counts right-aligned in on-band-muted; running times right-aligned on the card's title row.
+**The Numbers Are Data Rule.** Tabular numerals globally; counts sit in round badges on column and lane heads.
 
 ## Layout
 
-A fixed three-row app grid: the 48px signage band, an optional alert strip, then the work area. At 48rem and up the work area is the 248px black project rail beside the main view and, when a ticket is open, the card panel; below that the rail hides and a compact control row takes its place. Below 90rem (1440px), while a ticket is open, the rail shrinks to a 3.5rem column of key badges (names stay for screen readers and in tooltips; the footer hides) so the board keeps three whole columns beside the panel. The rail ends in a footer with the board root path in monospace, truncated from the start so the tail stays visible, and the version line.
-
-The main view starts with the filter bar on the ground (filters, ticket count, then Colour by and Density right-aligned), above the platform. On the platform a strip holds the line legend left and the colour key right. The Board is five columns (Backlog, Up next, In progress, Ready to review, Done), each minimum 15rem, separated by 20px gaps on the platform with no dividers, scroll-snapped horizontally with 16px page padding. Cards stack with a 10px gap. Choosing a line dims other cards to 35% rather than hiding them. Under 48rem the board shows a single column chosen with a column picker. The optional virtual columns (Needs you, Agent working) stand before Backlog only while they hold tickets; a board scrolled to its start stays at its start when one appears.
-
-The Agents view drops the filter bar and platform: lanes run down the map ground with 16px page padding, 24px between lanes, each run one row on a measured six-column grid from 64rem (state 8.5rem, run 9rem, ticket 12 to 26rem, plan, branch 11rem, time 3rem); below that a row folds to two columns with the time top right. An opened run's detail switches from one column to two (plan, files and meta beside activity) by its container's width, not the viewport.
-
-The card panel sits beside the board in flow at clamp(26rem, 32vw, 35rem), narrowing the board, which scrolls the open card's column back into view; on phones it covers the view below the band. Workstreams stacks projects (40px apart) and their lines (separated by hairline rules), each line a horizontal scroller of stations with an edge fade and "more" hint when the route runs off-screen. Table is a full-width sortable table with a sticky head.
-
-Spacing runs on a 4px unit: 8px tight gaps, 10px card gaps and vertical padding, 12px card right padding (16px left, inside the stripe), 16px page edges, 20px column gaps, 24px panel gutters.
+See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 248px rail, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem); below 1440px an open panel collapses the rail to 64px of key badges. Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; Agents stacks lanes; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
 
 ## Elevation & Depth
 
-The platform is the one lit plane. Cards and line legend chips lift off it with soft, short shadows; a card on hover rises 1px and deepens its shadow. The card panel casts the panel shadow along its left edge. Everything else (band, rail, filter bar, tables, wells) is flat, separated by hairlines and tonal steps. Selection is an ink border and 1px ink ring over the hover shadow, not a further lift. In dark mode the card shadow carries a white hairline ring so the edge holds against the near-black platform.
+Cards, chips, buttons, count badges, route cards and the table cast soft, short shadows on their wells; a hovered card rises 1px and deepens its shadow (no rise under reduced motion). The panel casts a soft shadow along its left edge in light and a hairline in dark. Dialogs and toasts take the hover shadow. In dark every card shadow carries a faint white hairline so edges hold on charcoal.
 
 ### Shadow Vocabulary
-- **Card** (`--fh-shadow-card`; light `0 1px 1px rgb(17 24 39 / 0.06), 0 2px 6px -1px rgb(17 24 39 / 0.1)`; dark `0 0 0 1px rgb(255 255 255 / 0.06), 0 4px 14px -2px rgb(0 0 0 / 0.7)`): ticket cards and legend chips at rest.
-- **Card hover** (`--fh-shadow-card-hover`; light `0 2px 3px rgb(17 24 39 / 0.07), 0 10px 22px -6px rgb(17 24 39 / 0.22)`; dark `0 0 0 1px rgb(255 255 255 / 0.1), 0 14px 30px -6px rgb(0 0 0 / 0.85)`): hovered and selected cards.
-- **Panel** (`--shadow-panel`: `-12px 0 32px -8px rgb(0 0 0 / 0.22), -1px 0 0 rgb(0 0 0 / 0.06)`): the card panel's left edge only.
-- **Selection ring** (`0 0 0 1px` signal ink, layered over card hover): the selected ticket card.
-- **Station halo** (`0 0 0 3px` ground): clears the track around the next-stop ring.
-
-### Named Rules
-**The Lit Platform Rule.** Cards and legend chips cast soft shadows on the platform; the panel casts the panel shadow; nothing else casts a shadow. No hard offset shadows, no shadows on the frame, controls or wells.
+- **Card** (`--fh-shadow-card`): cards, chips, badges, secondary buttons, route cards, the table.
+- **Card hover** (`--fh-shadow-card-hover`): hovered and selected cards, dialogs, toasts.
+- **Panel** (`--fh-shadow-panel`): the card panel's left edge.
+- **Selection ring** (`0 0 0 1px` select over card hover): the selected card.
+- **Station halo** (`0 0 0 3–4px` route surface): clears the track around stations.
 
 ## Shapes
 
-Near-square: 2px corners on cards, panels, wells and code blocks; 3px on tags and project key badges; 4px on controls (buttons, fields, segmented controls, rail tiles). Round is reserved for the transit vocabulary: line bullets, stations, route-bar terminals, legend chips, run state marks and plan stations. The Needs you plate takes the 3px tag corner. Borders are 1px hairlines; strong ink rules (2 to 5px) mark signs and selection; the 4px line stripe runs the full height of a card's left edge. Dashes have two meanings only: a dashed card border means needs repair, and dashed track or a dashed station ring means suspended service or a missing station. Hatching is monochrome: the strong 45-degree ink hatch marks the needs-repair band and the in-progress stretch of a route bar (drawn in on-band white on the rail).
+8px controls (buttons, fields, segmented controls, tabs in the band, key badges); 10px cards, rail tiles, criteria lists and callouts; 14px column wells, lanes, route cards, the table and dialogs; full rounds for pills, tags, count badges, bullets, stations and the Needs you plate. Dashes have three meanings only: a dashed card border with a hatched top band means needs repair; dashed track means suspended service; a dashed ring means a missing station. Empty columns and lanes use a dashed outline as an empty slot.
 
 ## Components
 
 ### Buttons
-Plain signage hardware, small and square-shouldered.
-- **Shape:** gently squared (4px), 6px by 12px padding, 0.8125rem medium label, optional 14px icon.
-- **Primary:** signal ink fill with ground-coloured text; hover lightens to 85% ink.
-- **Secondary (default):** card surface with a hairline border; hover darkens the border to muted ink.
-- **Quiet:** text only in muted ink; hover to full ink.
-- **Band:** for controls inside the signage band (Quit): transparent with a 40% on-band-muted border, 32px tall; hover fills with band field and brightens the border.
-- **Focus:** a 2px outline offset 2px in signal ink (on-band white inside the band and rail). Disabled drops to 50% opacity.
+- **Primary:** action fill, on-action label, 600 weight; hover darkens (light) or lifts (dark).
+- **Secondary:** card surface, rule border, card shadow; hover darkens the border.
+- **Quiet:** muted text; hover to ink.
+- **Band:** on the band, a 50% on-band-muted border; hover fills band field.
+- **Focus:** 2px outline offset 2px in focus (on-band inside the band). Disabled 50%.
 
-### Chips and Keys
-- **Line legend chips:** pill-shaped, card surface, hairline border, card shadow, a 24px line bullet at the left, the workstream name and a done/total count. The pressed chip takes an ink border; other chips fade to 50% while one is focused.
-- **Colour key:** a plain list right of the legend, one entry per paint present on the board in the mode's order: a 14 by 10px swatch (strong shade over tint, casing ring) and the value's name in label type. Hidden when Colour by is None.
+### Pills and Tags
+- **Status pill:** state fill, state ink, an icon (ring, half, review page, check) and the column's word.
+- **Blocker pill:** blocked fill and ink, diamond, the reason (one line on a card, full in its tooltip and the panel).
+- **Tag:** type, priority and age. The Colour by value's tag takes its paint (tint fill, strong word, a 35% ring); the rest are neutral outlined chips; High priority is semibold.
 
-### Cards / Containers
-- **Ticket card:** 2px corners, card surface, 70% hairline border, card shadow, a 4px workstream line stripe down the left edge. Header row (10px top, tinted with the paint's `-tint` when painted): line bullet (20px), title, right-aligned running time. Meta row: project (in All view), ticket id, paint tag (strong shade, paint ink, 3px corners, semibold, naming the value), then type and priority in words when not already the paint (High in semibold ink). Then, by density, the state note, criteria count, excerpt, handoff next step and attachments. Hover lifts 1px with the hover shadow; selection is an ink border plus 1px ink ring; needs repair swaps to a dashed muted border with a 6px hatched band across the top and drops paint.
-- **Three densities:** compact (header and meta, a small diamond "Blocked" inline, the live run's mark or Needs you plate in the meta row), normal (adds the blocker or wait note and criteria), detailed (adds excerpt, next step, attachments and review).
-- **Handoff block:** well grey, 2px corners, 16px padding, station-sign head. When a live run has edited since the handoff, a warning state note (warning icon, muted ink words) says so inside it.
-- **Live badge** (normal and detailed cards with a live run): a meta-size line of the run state label, the agent name in muted ink, the permission reason in semibold ink when it needs you, and the running time right-aligned; beneath it the plan step as "done/total · step" in ink.
-- **Mirrored card:** the same card shown in a virtual column, with "in <real column>" in faint ink at the end of its meta row.
+### Ticket Card
+White, 10px corners, rule border, card shadow, a 4px workstream stripe down the left. Rows (contract §2): header with id, project and running time, then the title (heading cut, up to four lines) on the paint tint; tags (bullet, type, age); repair; blocker pill or quiet wait; live run (Needs you plate or run mark, agent, time; the permission reason on its own line; plan step); question waiting; excerpt and next step (Detailed); footer with criteria left and the priority tag right. Selected: select border and ring. Dimmed: 35%. Mirrored: "in <column>" in faint ink.
 
-### Inputs / Fields
-- **Search (band):** 32px tall, 256px wide, band-field well, borderless, on-band text, magnifier icon inset left; focus shows an on-band-muted border and white outline.
-- **Selects** (filters and Colour by: Type, Priority, Age, None): card surface, hairline border, 4px corners, 28 to 32px tall, chevron inset right, label to the left. A select with an active value takes an ink border so applied filters read at a glance.
-- **Segmented control** (Density): joined segments in a hairline frame; the chosen segment is an ink fill with ground text.
-- **Checkboxes:** native, tinted signal ink.
+### Column Well and Lane
+Column well surface, rule border, 14px corners, 10px padding; head with a round count badge, the virtual column's mark (Needs you inside an attention disc), and the title in the display head cut. Agents lanes use the same well with run rows inside one card.
 
 ### Navigation
-- **Signage band:** flash bolt and wordmark, a hairline divider, the current project's key (a filled white 3px badge) and name as a small station sign under a 2px white rule, then view tabs (Board, Agents, Workstreams, Table) with 15px stroke icons (Agents: a point with two pairs of broadcast arcs). Active tab: white text over a 3px white underline; inactive: on-band-muted. Right: the Needs you plate while any run anywhere needs the user (a 28px on-band white button, 3px corners, band text, the still disc, the count and "need(s) you"; it opens Agents across all projects), search (hidden on Agents and Workstreams), a quiet status dot (shape and brightness only, trouble shown in words) and Quit. On phones the labels collapse to icons; the plate keeps its words ("1 agent needs you").
-- **Project rail:** black, continuing the band. All projects (board icon in the badge), a band-track divider, then each project as a station code: a 24px-tall key badge (filled white with black text when active, a 1.5px on-band-muted outline otherwise), name and ticket count, an on-band route bar, then in-progress, blocked (diamond) and repair counts in meta type, led by a small Needs you plate (on-band white, band text, disc and count) while that project has runs that need the user. The active tile fills with band field.
-- **Panel tabs (Ticket, Edit, Runs, Review):** small station-sign labels over a hairline, the active tab underlined 3px in ink. Runs carries its session count.
-
-### Run State Marks
-Twelve-unit SVG marks drawn in currentColor (12px in lane and column heads, 10px beside words, 8 to 10px inside plates), always aria-hidden and paired with words. The Working dot beats: a 1.8s ease-out-expo pulse to 55% scale and opacity and back, the only continuous motion in the app outside loading skeletons, switched off under reduced motion. Marks inside the signage frame and inside the Needs you plate never beat.
-
-**The One Beat Rule.** Only a working agent's dot moves, and only on the map. Nothing else pulses, spins or loops to say "live".
-
-### Plan Route
-An agent's plan drawn as a short monochrome route in ink: served steps filled stations, the current step a larger interchange ring, steps ahead fainter open rings on a 30% track, 9px apart, 8px tall. Up to twelve stations; a longer plan shows as a semibold "done/total". It never takes a line colour, because a plan is not a workstream. Expanded, the plan becomes a vertical list of the same stops (served steps in muted ink, the current step in semibold ink).
-
-### Agents Departure Board
-Lanes in a fixed order (Needs you, Working, Quiet, Waiting, Ended), each a station sign under a 5px ink rule with its run mark and a right-aligned count, empty lanes keeping their sign above one muted sentence. Each run is one dense row between hairlines: state label (with the permission reason, or a warning icon and "No handoff since its edits"), agent name and short id as the expand control, the project key as an outlined 3px badge (all-projects scope only), ticket id and title (or muted "Unassigned"), plan route and current step, branch in monospace, and last activity right-aligned. Subagents hang beneath their session on a spur: a 1px 40% ink line down the left with a short tick into each row. An open row sits on the well ground and shows plan stops, edited files in monospace, a meta list whose long values (run id, branch, worktree) are cut from the start so the tail stays visible, and activity newest first as small ink-ringed stops on a hairline track (permission requests and turn starts filled; failed steps struck through in muted ink). Older ended runs are behind a quiet button.
-
-### Virtual Columns
-Needs you and Agent working, chosen per board, stand before Backlog with the same station-sign head plus the still run mark (disc or ring and dot). They show only while they hold tickets, hold mirrored cards, and never accept a drop.
-
-### Runs Tab
-The card panel's record of runs linked to the ticket, newest first: each run headed by a 2px ink rule with its state label, reason, agent, short id, how it was linked, branch and time; a warning state note when it ended without a handoff; then the run detail; then its subagents on a spur under a small station sign.
+- **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: band-tab-active, plus the lime underline in dark); right: Needs you plate, search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.
+- **Rail:** All projects, a divider, projects with key badge (8px, tinted), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile fills with rail active and a 3px edge mark. Footer: theme (System, Light, Dark), board root (cut from the start) and version.
+- **Page header:** key badge (or board icon) and the scope's name in the display page cut, with one muted summary line.
+- **Panel tabs:** heading-small labels over a rule, the current one underlined 3px in select.
 
 ### Card Panel
-Beside the board in flow (clamp(26rem, 32vw, 35rem)), hairline left border, panel shadow, entering with a 260ms clip-path reveal from the right (ease-out-expo; none under reduced motion). Header: headline title, then a label-size meta row: ticket id, column in semibold ink, workstream with its bullet, type, priority, created date, branch (monospace with icon), and the changed time. Escape or the close button dismisses it.
+Panel surface beside the view. Header: id and project, display title, pill row (status, blocker, priority, type), meta row (workstream, created, branch, changed), Move to and Archive. Ticket tab: repair, the questions callout (blue/coral edge, attention icon, question cards on card surface with option buttons), the Handoff callout (orange edge, next steps large, full handoff behind a disclosure), blockers as pills, criteria as a bordered checklist with a d of t count, warnings, then the markdown.
 
-### Line Bullet
-The round transit bullet: line colour fill, paired ink initials (one or two letters) in a bold condensed cut, a faint casing ring. Sizes 20, 24 and 32px. Dims to 30% when its line is out of focus.
+### Route Card and Stations (signature)
+A rounded card washed with 7% of its line colour in light (plain card in dark), a 44px bullet, the name in the display panel cut, derived status with its icon, and "d of t served". Stations: Done or Archived a filled line-colour disc with a check; Ready to review filled with a centre dot; the next stop a larger 5px line-colour ring with a halo and centre dot; ahead an open ring; missing a dashed faint ring. Under each: title, id, status pill. Track travelled solid, ahead at 35%, suspended dashed.
 
-### Route Bar
-A project's progress as a stretch of track between two terminal stations: review and done solid, in progress hatched, the rest on the track. Terminals fill once served. In the rail it is drawn in on-band tone: on-band white over band track, with the on-band hatch. Monochrome so it never competes with line colours.
+### Run State Marks
+Twelve-unit SVG marks in currentColor beside their words: Needs you a disc (on the attention plate), Working a ring around a beating dot, Quiet a ring with a still dot, Waiting an open ring, Ended a terminus bar. The Working dot beats (1.8s) only on the map and never under reduced motion.
 
-### Transit Line (signature)
-Workstreams drawn as transit lines with tickets as stations, in order. Served stations (review, done, archived) are filled line-colour discs with a ground-coloured centre dot; the next stop is an interchange ring in signal ink with a ground halo; stations ahead are open rings in the line colour. Track already travelled is solid line colour; the route ahead is the same colour at 35% as a solid track. Only suspended service is dashed: the whole line when its workstream dependencies are unmet, or the track into a station held by something outside the line. A missing station is a dashed faint ring reading "Does not exist". A blocked next stop carries a small diamond "blocked" above it.
-
-**The Suspended Service Rule.** Dashed track means suspended service and nothing else. The route ahead is never dashed.
+### Inputs
+Selects 32px, card surface, rule border, chevron; an applied filter gains a select border and ring; Colour by stays plain. Checkboxes take the select accent. Search in the band is a band-field well with a band-rule border.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** draw every workstream reference with its line bullet, stripe or line colour, assigned per project by the stable line assignment.
-- **Do** name every paint in words: the tag on the card and the colour key on the board.
-- **Do** pair every ticket state with its proof in words: diamond plus reason for blockers, muted words for in-line waits, dashed border plus hatched band plus reason for needs repair.
-- **Do** head sections with the station sign: condensed semibold label under a strong ink rule, weight by rank (5px, 3px, 2px).
-- **Do** keep the band and rail black in both themes, with on-band text, band-field wells and band-track rules.
-- **Do** dim out-of-focus items (35% cards, 30% bullets, 50% chips) instead of removing them.
-- **Do** keep corners at 2px for cards and panels, 3px for tags and badges, 4px for controls.
-- **Do** draw run state with its mark and word in ink, and keep Needs you as the one inverted plate wherever it appears (lane, card, rail, band).
-- **Do** draw an agent's plan as an ink route; cut long paths and ids from the start so the tail shows.
+- **Do** follow the contract for what each view shows and in what order, in both themes.
+- **Do** use the role tokens: action for the primary button, attention for Needs you, select for selection and focus, state for status pills.
+- **Do** pair every colour with words or an icon: pills, tags, the colour key, bullet initials.
+- **Do** keep stripes, bullets, routes and route washes in the workstream's own line colour.
+- **Do** keep a check for finished work only, and dashes for suspended, missing or repair.
+- **Do** add any new text and surface pair to `tokens.test.ts`.
 
 ### Don't:
-- **Don't** use a line colour for status, priority, type, project identity or decoration, and don't use a paint colour for a workstream.
-- **Don't** colour ticket states: no red blocked badges, no green done pills, no amber warnings. Alarm red is for app error alerts only.
-- **Don't** cast shadows from anything but cards and legend chips on the platform and the card panel.
-- **Don't** add hue to the frame beyond the brand bolt, or use flash yellow anywhere else.
-- **Don't** dash the route ahead; dashes mean suspended service, a missing station, or needs repair.
-- **Don't** set labels in uppercase or tracked-out caps; signage here is sentence case in the condensed cut.
-- **Don't** set ticket ids in monospace, or use proportional numerals for counts or times.
-- **Don't** colour run states or plans: no green "working" dots, no amber "quiet", no line colour on a plan route.
-- **Don't** add a second inverted state plate or a second looping animation; the Working dot is the only beat, and it stops in the frame and under reduced motion.
+- **Don't** change layout, content or order per theme.
+- **Don't** use navy or blue-tinted grounds, surfaces or borders in dark.
+- **Don't** use a line colour for status, priority or type, or a paint colour for a workstream.
+- **Don't** add a second attention plate or a second looping animation.
+- **Don't** hardcode the references' sample copy, counts, dates or invented types.
+- **Don't** set labels in tracked uppercase, ids in monospace, or counts in proportional numerals.
