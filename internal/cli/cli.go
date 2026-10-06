@@ -15,6 +15,9 @@ import (
 	"github.com/rztaylor/flashheart/internal/app"
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
+	"github.com/rztaylor/flashheart/internal/hooks"
+	"github.com/rztaylor/flashheart/internal/hooks/claude"
+	"github.com/rztaylor/flashheart/internal/logfile"
 	"github.com/rztaylor/flashheart/internal/migrate"
 	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -44,6 +47,8 @@ type Dependencies struct {
 	OpenHandshake   func() (Handshake, error)
 	// OpenServeLog returns the background child's diagnostic log for a root.
 	OpenServeLog func(root string) io.Writer
+	// Stdin is the hook payload source.
+	Stdin io.Reader
 }
 
 type usageError struct{ message string }
@@ -109,7 +114,16 @@ func commands() []command {
 			run: runServe,
 		},
 		{name: "mcp", summary: "run the MCP server on stdio (not yet available)", usage: "mcp [--root DIR]", detail: "Run the MCP server on stdio for Claude Code and Codex.", run: notYet},
-		{name: "hook", summary: "handle an agent hook event (not yet available)", usage: "hook <agent> <event> [--root DIR]", detail: "Record an agent hook event read from stdin.", run: notYet},
+		{
+			name:    "hook",
+			summary: "record an agent hook event read from stdin",
+			usage:   "hook <agent> <event> [--root DIR]",
+			detail: "Record a Claude Code hook event (agent: claude) read from stdin in the\n" +
+				"board's event log, and print the recovery note at session start. Agents\n" +
+				"run this from their hook configuration; it always exits 0 and logs\n" +
+				"problems to <root>/.flashheart/hook-errors.log.",
+			run: runHook,
+		},
 		{name: "setup", summary: "show or apply agent configuration (not yet available)", usage: "setup <agent> [--write | --uninstall]", detail: "Show the hook, MCP and protocol changes for an agent; write them with --write.", run: notYet},
 		{name: "doctor", summary: "check the board root and agent configuration (not yet available)", usage: "doctor [--root DIR]", detail: "Check the board root, permissions, agent configuration and recent hook errors.", run: notYet},
 		{
@@ -167,9 +181,16 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 		flags.BoolVar(&env.migrate.write, "write", false, "")
 		flags.Var(env.migrate.keys, "key", "")
 	}
-	if err := flags.Parse(flagArgs); err != nil {
+	if err := parseInterspersed(flags, flagArgs); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			writeCommandUsage(stdout, *selected)
+			return 0
+		}
+		if name == "hook" {
+			// Exit 2 would tell the agent to block; a hook never does. Parsing
+			// stopped early, so find --root in the raw arguments for the log.
+			globals.root, globals.rootSet = rootArgument(flagArgs)
+			reportHookProblem(env, globals, err.Error(), nil)
 			return 0
 		}
 		return reportUsage(stderr, usageError{err.Error()})
@@ -213,6 +234,29 @@ func splitCommand(args []string) (string, []string) {
 		}
 	}
 	return "", args
+}
+
+// parseInterspersed parses flags wherever they appear among a command's
+// arguments, so `hook claude Stop --root DIR` works; flags.Args() then holds
+// the positional arguments in order.
+func parseInterspersed(flags *flag.FlagSet, args []string) error {
+	var positional []string
+	for {
+		if err := flags.Parse(args); err != nil {
+			return err
+		}
+		rest := flags.Args()
+		if len(rest) == 0 {
+			break
+		}
+		if rest[0] == "--" || (len(args) > len(rest) && args[len(args)-len(rest)-1] == "--") {
+			positional = append(positional, rest...)
+			break
+		}
+		positional = append(positional, rest[0])
+		args = rest[1:]
+	}
+	return flags.Parse(append([]string{"--"}, positional...))
 }
 
 func wantsHelp(args []string) bool {
@@ -336,6 +380,70 @@ func serveBackgroundChild(ctx context.Context, env *environment, options app.Opt
 		fmt.Fprintf(diagnostics, "flashheart: %v\n", err)
 	}
 	return err
+}
+
+// hookAdapters are the agents whose hook payloads Flashheart reads (HOOK-7).
+var hookAdapters = map[string]hooks.Adapter{claude.Agent: claude.Adapter{}}
+
+// runHook records one hook event. It always succeeds: a hook must never
+// break the agent's session (HOOK-1), so problems are logged and reported
+// on stderr only, which agents do not show the model.
+func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		fmt.Fprintf(env.stderr, "flashheart hook: %v\n", err)
+		return nil
+	}
+	args := flags.Args()
+	problem := ""
+	var adapter hooks.Adapter
+	switch {
+	case len(args) != 2:
+		problem = "usage: flashheart hook <agent> <event>"
+	case hookAdapters[args[0]] == nil:
+		problem = fmt.Sprintf("unknown agent %q (known: %s)", args[0], claude.Agent)
+	default:
+		adapter = hookAdapters[args[0]]
+	}
+	if problem != "" {
+		reportHookProblem(env, globals, problem, args)
+		return nil
+	}
+	stdin := env.deps.Stdin
+	if stdin == nil {
+		stdin = strings.NewReader("")
+	}
+	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: adapter})
+	return nil
+}
+
+// rootArgument finds --root DIR or --root=DIR without parsing other flags.
+func rootArgument(args []string) (string, bool) {
+	for index, arg := range args {
+		for _, prefix := range []string{"--root=", "-root="} {
+			if value, found := strings.CutPrefix(arg, prefix); found {
+				return value, true
+			}
+		}
+		if (arg == "--root" || arg == "-root") && index+1 < len(args) {
+			return args[index+1], true
+		}
+	}
+	return "", false
+}
+
+// reportHookProblem tells a person on stderr and logs to hook-errors.log
+// when the root can be resolved; agents do not show stderr from a hook that
+// exits 0.
+func reportHookProblem(env *environment, globals *globalFlags, problem string, args []string) {
+	fmt.Fprintf(env.stderr, "flashheart hook: %s\n", problem)
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		return
+	}
+	log := logfile.HookErrors(root)
+	_, _ = fmt.Fprintf(log, "hook %s: %s", strings.Join(args, " "), problem)
+	_ = log.Close()
 }
 
 func runMigrate(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {

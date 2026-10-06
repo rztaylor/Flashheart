@@ -400,3 +400,21 @@ func TestSampleFixtureTickets(t *testing.T) {
 		t.Errorf("card panel fixture = %+v", panel)
 	}
 }
+
+func TestInProgressOnBranch(t *testing.T) {
+	t.Parallel()
+
+	project := Project{Tickets: []Ticket{
+		{ID: "AL-1", Column: InProgress, Branch: "feature/x"},
+		{ID: "AL-2", Column: Backlog, Branch: "feature/x"},
+		{ID: "AL-3", Column: InProgress, Branch: "main"},
+		{ID: "AL-4", Column: InProgress, Branch: "feature/x", Repair: []string{"bad frontmatter"}},
+		{ID: "AL-5", Column: InProgress},
+	}}
+	if got := project.InProgressOnBranch("feature/x"); len(got) != 1 || got[0] != "AL-1" {
+		t.Fatalf("InProgressOnBranch(feature/x) = %v", got)
+	}
+	if got := project.InProgressOnBranch(""); got != nil {
+		t.Fatalf("InProgressOnBranch(\"\") = %v", got)
+	}
+}

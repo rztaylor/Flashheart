@@ -1,0 +1,10 @@
+{
+  "session_id": "340b083f-5d70-41b2-8cff-ec700908097a",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
+  "prompt_id": "35488d28-060e-4bce-bebb-8ae438498d16",
+  "agent_id": "ae8ecef8da6a4664f",
+  "agent_type": "Explore",
+  "hook_event_name": "SubagentStart"
+}

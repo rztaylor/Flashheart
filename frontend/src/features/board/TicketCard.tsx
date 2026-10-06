@@ -5,13 +5,16 @@ import {
   type KeyboardEvent,
 } from "react";
 
-import { type Card, splitReasons } from "../../api/board";
+import { type Card, COLUMNS, splitReasons } from "../../api/board";
+import type { Live } from "../../api/runs";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
+import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
 import { type Paint, paintVars } from "../../model/paint";
-import { runningTime } from "../../model/time";
+import { agentName, liveReason, STATE_LABEL } from "../../model/runs";
+import { absoluteTime, runningTime } from "../../model/time";
 import type { Density } from "../filters/FilterBar";
 
 interface TicketCardProps {
@@ -33,6 +36,9 @@ interface TicketCardProps {
   // lifted draws the card being dragged; ghost the place it left.
   lifted?: boolean;
   ghost?: boolean;
+  // mirrored marks a copy shown in a virtual column (VIEW-2); the ticket
+  // lives in its real column.
+  mirrored?: boolean;
 }
 
 const priorityLabel: Record<string, string> = {
@@ -66,6 +72,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
       dragProps,
       lifted,
       ghost,
+      mirrored,
     },
     ref,
   ) {
@@ -90,9 +97,12 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
         onClick={onOpen}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
-        aria-current={selected ? "true" : undefined}
+        // Only the real card is the current ticket; its mirror shares the
+        // selection ring but not the announcement.
+        aria-current={selected && !mirrored ? "true" : undefined}
         data-ticket={card.id}
-        aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}`}
+        data-mirrored={mirrored ? "" : undefined}
+        aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
         data-paint={painted?.token}
         style={paintVars(painted) as CSSProperties | undefined}
         className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px ${
@@ -168,6 +178,22 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
                 {priority}
               </span>
             ) : null}
+            {density === "compact" && card.live ? (
+              card.live.state === "needs-you" ? (
+                <RunStateLabel state="needs-you" />
+              ) : (
+                <span
+                  title={`${agentName(card.live.agent)}: ${STATE_LABEL[card.live.state]}`}
+                >
+                  <RunStateMark state={card.live.state} size={10} />
+                </span>
+              )
+            ) : null}
+            {mirrored ? (
+              <span className="text-ink-faint">
+                in {columnName(card.column)}
+              </span>
+            ) : null}
             {density === "compact" && blocker ? (
               <span className="flex items-center gap-0.5 font-semibold text-ink">
                 <Icon name="diamond" size={10} />
@@ -175,6 +201,10 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
               </span>
             ) : null}
           </span>
+
+          {density !== "compact" && card.live ? (
+            <LiveBadge live={card.live} now={now} />
+          ) : null}
 
           {repair ? (
             <StateNote kind="repair" compact>
@@ -242,3 +272,65 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     );
   },
 );
+
+const columnName = (id: string) =>
+  COLUMNS.find((column) => column.id === id)?.title ?? id;
+
+// liveLabel is the live badge in words, for the card's accessible name.
+function liveLabel(live: Live): string {
+  const state =
+    live.state === "needs-you"
+      ? `needs you: ${liveReason(live)}`
+      : STATE_LABEL[live.state].toLowerCase();
+  const plan =
+    live.total > 0
+      ? `, plan ${live.done} of ${live.total}${live.step ? `: ${live.step}` : ""}`
+      : "";
+  return `${agentName(live.agent)} ${state}${plan}`;
+}
+
+// LiveBadge is the card's live run (VIEW-8): its state in ink and words, the
+// agent, the plan step and the time since its last activity.
+function LiveBadge({ live, now }: { live: Live; now: Date }) {
+  const step =
+    live.total > 0
+      ? `${live.done}/${live.total}${live.step ? ` · ${live.step}` : ""}`
+      : "";
+  const needsYou = live.state === "needs-you";
+  const agent = (
+    <span className="shrink-0 text-ink-muted">{agentName(live.agent)}</span>
+  );
+  // Line 1 is the state and, when it needs you, what it needs in words;
+  // line 2 is the agent and its plan step.
+  return (
+    <span
+      className="flex min-w-0 flex-col gap-0.5 text-2xs"
+      data-live={live.state}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <RunStateLabel state={live.state} />
+        {needsYou ? (
+          <span className="font-semibold text-ink">{liveReason(live)}</span>
+        ) : (
+          agent
+        )}
+        <span
+          className="ml-auto shrink-0 text-ink-muted"
+          title={`Last activity ${absoluteTime(live.lastActivity)}`}
+        >
+          {runningTime(live.lastActivity, now)}
+        </span>
+      </span>
+      {needsYou || step ? (
+        <span className="flex min-w-0 items-center gap-2">
+          {needsYou ? agent : null}
+          {step ? (
+            <span className="truncate text-ink" title={live.step}>
+              {step}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+    </span>
+  );
+}

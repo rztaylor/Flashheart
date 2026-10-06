@@ -1,0 +1,16 @@
+{
+  "session_id": "5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/Users/example/src/demo/src/app.ts",
+    "old_string": "zz",
+    "new_string": "b"
+  },
+  "tool_use_id": "toolu_01D",
+  "error": "String to replace not found in file.",
+  "is_interrupt": false
+}

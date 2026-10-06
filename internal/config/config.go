@@ -42,7 +42,7 @@ var (
 	densities      = []string{DensityCompact, DensityNormal, DensityDetailed}
 	virtualColumns = []string{"needs-you", "agent-working"}
 	colourBys      = []string{"type", "priority", "age", "none"}
-	views          = []string{"", "board", "workstreams", "table"}
+	views          = []string{"", "board", "agents", "workstreams", "table"}
 	states         = []string{"", "all", "blocked", "unblocked", "repair"}
 	scopeName      = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )

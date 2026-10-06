@@ -26,6 +26,7 @@ func main() {
 		RunApp:          app.Run,
 		StartBackground: background.Start,
 		OpenServeLog:    func(root string) io.Writer { return logfile.ServeLog(root) },
+		Stdin:           os.Stdin,
 		OpenHandshake: func() (cli.Handshake, error) {
 			return background.OpenHandshake()
 		},

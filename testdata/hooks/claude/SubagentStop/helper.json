@@ -1,0 +1,19 @@
+{
+  "session_id": "340b083f-5d70-41b2-8cff-ec700908097a",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
+  "prompt_id": "8c3f8086-e891-41c9-bae4-85abfe352459",
+  "permission_mode": "auto",
+  "agent_id": "a96012ac652606bb2",
+  "agent_type": "",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "SubagentStop",
+  "stop_hook_active": false,
+  "agent_transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a/subagents/agent-a96012ac652606bb2.jsonl",
+  "last_assistant_message": "Done.",
+  "background_tasks": [],
+  "session_crons": []
+}

@@ -9,7 +9,7 @@ Intended layout (packages are created when they get real content):
   startup handshake (D13).
 - `internal/buildinfo`: version, commit and build date set by linker flags.
 - `internal/logfile`: lazily created, size-rotated diagnostic logs under
-  `<root>/.flashheart/` (`serve.log`; later `hook-errors.log`).
+  `<root>/.flashheart/` (`serve.log`, `hook-errors.log`).
 - `internal/config`: global `config.yaml` and per-project `project.yaml`
   defaults, validation and atomic persistence.
 - `internal/mdfile`: pure markdown-with-frontmatter parsing and round-trip
@@ -25,9 +25,10 @@ Intended layout (packages are created when they get real content):
 - `internal/gitinfo`: project, branch and worktree from a cwd without git
   subprocesses; cached.
 - `internal/runs`: pure run-state derivation, links, claims and flags from
-  events and a clock.
+  events and a clock; it reads `events`' envelope types and no files.
 - `internal/protocol`: `PROTOCOL_VERSION`, recovery note and protocol text
   rendering shared by hooks, MCP and setup.
+- `internal/logfile`: also owns `hook-errors.log` (HOOK-1).
 - `internal/hooks`: agent-neutral hook handling and outputs;
   `internal/hooks/claude` and `internal/hooks/codex` are the only places that
   know each agent's payload schema.
@@ -47,12 +48,15 @@ Intended layout (packages are created when they get real content):
 
 Dependency direction: `cli` → (`app` | `background` | `migrate` | `mcpserver` | `hooks` | `setup`) →
 (`index`, `runs`, `protocol`) → (`store`, `events`) → (`board`, `mdfile`,
-`gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `runs`,
-`scrub`) import no I/O packages. Nothing below `app` imports HTTP or
+`gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `scrub`)
+import no I/O packages; `runs` imports only `events`' types. Nothing below `app` imports HTTP or
 Singleserve.
 
-- `hook` and `mcp` modes never import `index`, `api`, `app` or `webui`; they
-  must start in under 30 ms (`NFR-4`).
+- `hook` and `mcp` modes never use `index`, `api`, `app` or `webui`; they
+  must start in under 30 ms (`NFR-4`). `hooks` is agent-neutral and takes an
+  `Adapter`; `cli` picks the adapter by agent name.
+- Developer tools: `scripts/hookbench` (Go command behind
+  `scripts/hook-bench.sh`), not part of the binary.
 - Concurrency model: many processes write the same root. All ticket and event
   writes go through `store`/`events` under the per-project lock
   (`<project>/.flashheart/lock`) with atomic rename; UI and MCP edits carry a

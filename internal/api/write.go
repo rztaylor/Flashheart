@@ -585,10 +585,12 @@ func (b boardAPI) setKey(w http.ResponseWriter, r *http.Request) {
 
 // Preferences are the UI preferences saved in config.yaml (CFG-2).
 type Preferences struct {
-	Theme    string                  `json:"theme"`
-	Density  string                  `json:"density"`
-	ColourBy string                  `json:"colourBy"`
-	Scopes   map[string]config.Scope `json:"scopes"`
+	Theme    string `json:"theme"`
+	Density  string `json:"density"`
+	ColourBy string `json:"colourBy"`
+	// VirtualColumns lists the virtual columns shown (VIEW-2).
+	VirtualColumns []string                `json:"virtualColumns"`
+	Scopes         map[string]config.Scope `json:"scopes"`
 }
 
 func (b boardAPI) currentUI(w http.ResponseWriter) (config.UI, bool) {
@@ -615,7 +617,7 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	if scopes == nil {
 		scopes = map[string]config.Scope{}
 	}
-	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, Scopes: scopes})
+	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, VirtualColumns: nonNil(ui.VirtualColumns), Scopes: scopes})
 }
 
 func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
@@ -631,6 +633,7 @@ func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ui.Theme, ui.Density, ui.ColourBy, ui.Scopes = request.Theme, request.Density, request.ColourBy, request.Scopes
+	ui.VirtualColumns = nonNil(request.VirtualColumns)
 	if len(ui.Scopes) > 500 {
 		writeError(w, http.StatusBadRequest, "invalid_input", "Too many remembered views")
 		return

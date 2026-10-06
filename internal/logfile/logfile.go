@@ -26,6 +26,11 @@ func ServeLog(root string) *Writer {
 	return New(filepath.Join(root, ".flashheart", "serve.log"), DefaultMaxBytes)
 }
 
+// HookErrors returns the writer for <root>/.flashheart/hook-errors.log (HOOK-1).
+func HookErrors(root string) *Writer {
+	return New(filepath.Join(root, ".flashheart", "hook-errors.log"), DefaultMaxBytes)
+}
+
 // New returns a writer for path that rotates to path+".1" past maxBytes.
 func New(path string, maxBytes int64) *Writer {
 	return &Writer{path: path, maxBytes: maxBytes, now: time.Now}

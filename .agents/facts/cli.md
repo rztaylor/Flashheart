@@ -5,7 +5,11 @@
   Global `--root` (else `FLASHHEART_ROOT`, else `~/reports/Kanban`), `--debug`,
   `--help`.
 - `hook` and `mcp` print only protocol output to stdout; `hook` always exits 0
-  except for the documented handoff-enforcement output.
+  (usage problems go to stderr and `hook-errors.log`); handoff enforcement
+  speaks through its JSON output, not the exit code. `hook claude <Event>`
+  is implemented; Codex arrives with `codex-support`.
+- Flags may come before or after a command's positional arguments
+  (`hook claude Stop --root DIR`).
 - `serve` detaches by default (`LIFE-4`, D13): it re-executes itself in a new
   session, waits for the startup handshake, then returns the terminal.
   `--foreground` keeps it attached; the internal `--background-child` flag is

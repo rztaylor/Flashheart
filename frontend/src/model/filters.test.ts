@@ -33,6 +33,8 @@ function card(overrides: Partial<Card>): Card {
     blockedBy: [],
     needsRepair: [],
     warnings: [],
+    needsYou: false,
+    agentWorking: false,
     ...overrides,
   };
 }

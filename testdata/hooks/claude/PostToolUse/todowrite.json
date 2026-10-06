@@ -1,0 +1,32 @@
+{
+  "session_id": "5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "TodoWrite",
+  "tool_input": {
+    "todos": [
+      {
+        "content": "Write notes",
+        "status": "completed",
+        "activeForm": "Writing notes"
+      },
+      {
+        "content": "Edit the readme",
+        "status": "in_progress",
+        "activeForm": "Editing the readme"
+      },
+      {
+        "content": "Explore the repository",
+        "status": "pending",
+        "activeForm": "Exploring"
+      }
+    ]
+  },
+  "tool_response": {
+    "oldTodos": [],
+    "newTodos": []
+  },
+  "tool_use_id": "toolu_01B"
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-05T11:15:38+00:00",
+  "generatedAt": "2026-10-05T18:00:00+00:00",
   "title": "Design System: Flashheart",
   "extensions": {
     "colorMeta": {
@@ -1930,6 +1930,11 @@
         "name": "focus-dim",
         "value": "opacity 0.35 cards, 0.3 bullets, 0.5 chips",
         "purpose": "Out-of-focus lines dim instead of disappearing."
+      },
+      {
+        "name": "run-beat",
+        "value": "1.8s ease-out-expo infinite, scale 1 to 0.55 and opacity 1 to 0.55 at 50%",
+        "purpose": "The Working run mark's dot: the only continuous motion outside loading skeletons. Off under reduced motion, in the signage frame and inside the Needs you plate."
       }
     ],
     "breakpoints": [
@@ -2066,18 +2071,43 @@
       "description": "Names each paint on the board for the current \"Colour by\" mode: swatch (strong over tint) plus the value in words.",
       "html": "<ul class=\"ds-key-list\" aria-label=\"Card colours by type\"><li><i style=\"--p:var(--fh-paint-type-feature,#5b6170);--t:var(--fh-paint-type-feature-tint,#f1f2f4)\"></i>feature</li><li><i style=\"--p:var(--fh-paint-type-bug,#a2453a);--t:var(--fh-paint-type-bug-tint,#f6e6e3)\"></i>bug</li><li><i style=\"--p:var(--fh-paint-type-test,#4a7050);--t:var(--fh-paint-type-test-tint,#e5eee6)\"></i>test</li><li><i style=\"--p:var(--fh-paint-type-docs,#6b6628);--t:var(--fh-paint-type-docs-tint,#efeedd)\"></i>docs</li></ul>",
       "css": ".ds-key-list{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:12px;margin:0;padding:0;list-style:none;font-size:0.75rem;color:var(--fh-ink-muted,#565c66);white-space:nowrap;} .ds-key-list li{display:flex;align-items:center;gap:6px;} .ds-key-list i{width:14px;height:10px;border-radius:2px;background:linear-gradient(var(--p) 0 40%,var(--t) 40%);box-shadow:inset 0 0 0 1px var(--fh-casing,rgb(17 17 17 / .22));}"
+    },
+    {
+      "name": "Run State Marks",
+      "kind": "chip",
+      "refersTo": "needs-you-plate",
+      "description": "The five agent run states in ink, shape and words; Needs you is the one inverted plate; only the Working dot beats.",
+      "html": "<div class=\"ds-runstates\"><span class=\"ds-plate\"><svg viewBox=\"0 0 12 12\" width=\"9\" height=\"9\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"5.25\" fill=\"currentColor\"/></svg>Needs you</span><span class=\"ds-state is-ink\"><svg viewBox=\"0 0 12 12\" width=\"10\" height=\"10\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"4.75\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><circle class=\"ds-beat\" cx=\"6\" cy=\"6\" r=\"2.25\" fill=\"currentColor\"/></svg>Working</span><span class=\"ds-state\"><svg viewBox=\"0 0 12 12\" width=\"10\" height=\"10\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"4.75\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><circle cx=\"6\" cy=\"6\" r=\"1.75\" fill=\"currentColor\" opacity=\".55\"/></svg>Quiet</span><span class=\"ds-state\"><svg viewBox=\"0 0 12 12\" width=\"10\" height=\"10\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"4.75\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" opacity=\".75\"/></svg>Waiting</span><span class=\"ds-state\"><svg viewBox=\"0 0 12 12\" width=\"10\" height=\"10\" aria-hidden=\"true\"><rect x=\"1.5\" y=\"5\" width=\"9\" height=\"2\" rx=\".5\" fill=\"currentColor\" opacity=\".6\"/></svg>Ended</span></div>",
+      "css": ".ds-runstates{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;flex-wrap:wrap;align-items:center;gap:16px;font-size:0.75rem;padding:12px;background:var(--fh-card,#fff);color:var(--fh-ink,#111);} .ds-state{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;color:var(--fh-ink-muted,#565c66);} .ds-state.is-ink{color:var(--fh-ink,#111);} .ds-plate{display:inline-flex;align-items:center;gap:4px;padding:0 6px;border-radius:3px;line-height:1rem;font-weight:600;white-space:nowrap;background:var(--fh-ink,#111);color:var(--fh-ground,#fff);} .ds-beat{transform-origin:center;transform-box:fill-box;animation:ds-run-beat 1.8s cubic-bezier(0.16,1,0.3,1) infinite;} @keyframes ds-run-beat{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(.55);opacity:.55;}} @media (prefers-reduced-motion:reduce){.ds-beat{animation:none;}}"
+    },
+    {
+      "name": "Needs You Band Plate",
+      "kind": "nav",
+      "refersTo": "needs-you-plate-band",
+      "description": "On-band white plate in the signage band while any run needs the user; opens Agents across all projects. Its mark never beats.",
+      "html": "<div class=\"ds-bandbar\"><button class=\"ds-band-plate\"><svg viewBox=\"0 0 12 12\" width=\"10\" height=\"10\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"5.25\" fill=\"currentColor\"/></svg>2 need you</button></div>",
+      "css": ".ds-bandbar{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;height:48px;padding:0 16px;background:var(--fh-band,#111);} .ds-band-plate{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:0;border-radius:3px;background:var(--fh-on-band,#fff);color:var(--fh-band,#111);font:inherit;font-size:0.75rem;font-weight:600;white-space:nowrap;cursor:pointer;transition:opacity 160ms;} .ds-band-plate:hover{opacity:.9;} .ds-band-plate:focus-visible{outline:2px solid var(--fh-on-band,#fff);outline-offset:2px;}"
+    },
+    {
+      "name": "Agents Departure Board Row",
+      "kind": "custom",
+      "refersTo": "run-row-expanded",
+      "description": "A lane as a station sign over one dense measured row per run: state and reason, agent and id, project key and ticket, monochrome plan route and step, branch, last activity.",
+      "html": "<section class=\"ds-lane\"><h2 class=\"ds-lane-head\"><span><svg viewBox=\"0 0 12 12\" width=\"12\" height=\"12\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"5.25\" fill=\"currentColor\"/></svg>Needs you</span><span>1</span></h2><ul class=\"ds-rows\"><li class=\"ds-row\"><span class=\"ds-cell-state\"><span class=\"ds-plate\"><svg viewBox=\"0 0 12 12\" width=\"9\" height=\"9\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"5.25\" fill=\"currentColor\"/></svg>Needs you</span><b>Wants to run a command</b></span><button class=\"ds-run\">Claude Code <span>3f9a21c0</span></button><span class=\"ds-ticket\"><span class=\"ds-key\">FH</span><b>FH-42</b> Show agent runs</span><span class=\"ds-plan\"><svg role=\"img\" aria-label=\"Plan 2 of 5 done\" viewBox=\"0 0 44 8\" width=\"44\" height=\"8\" style=\"color:var(--fh-ink,#111);flex-shrink:0\"><line x1=\"4\" y1=\"4\" x2=\"22\" y2=\"4\" stroke=\"currentColor\" stroke-width=\"1.5\"/><line x1=\"22\" y1=\"4\" x2=\"40\" y2=\"4\" stroke=\"currentColor\" stroke-width=\"1.5\" opacity=\".3\"/><circle cx=\"4\" cy=\"4\" r=\"2.5\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"1.25\"/><circle cx=\"13\" cy=\"4\" r=\"2.5\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"1.25\"/><circle cx=\"22\" cy=\"4\" r=\"3\" fill=\"var(--fh-card,#fff)\" stroke=\"currentColor\" stroke-width=\"1.75\"/><circle cx=\"31\" cy=\"4\" r=\"2.5\" fill=\"var(--fh-card,#fff)\" stroke=\"currentColor\" stroke-width=\"1.25\" opacity=\".55\"/><circle cx=\"40\" cy=\"4\" r=\"2.5\" fill=\"var(--fh-card,#fff)\" stroke=\"currentColor\" stroke-width=\"1.25\" opacity=\".55\"/></svg><span>Wire the lanes</span></span><span class=\"ds-branch\">feature/agent-runs</span><time>2m</time></li></ul></section>",
+      "css": ".ds-lane{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;padding:0 16px;background:var(--fh-ground,#fff);color:var(--fh-ink,#111);} .ds-lane-head{display:flex;justify-content:space-between;align-items:baseline;margin:0;border-top:5px solid var(--fh-rule-strong,#111);padding:8px 0 6px;font-size:1rem;font-weight:650;font-stretch:87.5%;} .ds-lane-head span:first-child{display:flex;align-items:center;gap:8px;} .ds-lane-head span:last-child{font-size:0.875rem;font-weight:600;} .ds-rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--fh-rule,#d7dadf);} .ds-row{display:grid;grid-template-columns:8.5rem 9rem minmax(12rem,26rem) minmax(10rem,1fr) 11rem 3rem;column-gap:16px;align-items:center;padding:8px;border-bottom:1px solid var(--fh-rule,#d7dadf);font-size:0.875rem;} .ds-row:hover{background:var(--fh-well,#f2f3f5);} .ds-cell-state{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:0.75rem;} .ds-cell-state b{font-size:0.6875rem;font-weight:600;} .ds-plate{display:inline-flex;align-items:center;gap:4px;padding:0 6px;border-radius:3px;line-height:1rem;font-weight:600;background:var(--fh-ink,#111);color:var(--fh-ground,#fff);} .ds-run{display:flex;align-items:center;gap:6px;border:0;background:none;padding:0;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;border-radius:4px;} .ds-run:hover{text-decoration:underline;} .ds-run:focus-visible{outline:2px solid var(--fh-focus,#111);outline-offset:2px;} .ds-run span{font-size:0.6875rem;font-weight:400;color:var(--fh-ink-muted,#565c66);} .ds-ticket{display:flex;align-items:baseline;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;} .ds-ticket b{font-size:0.6875rem;font-weight:600;letter-spacing:0.02em;} .ds-key{padding:0 4px;border-radius:3px;font-size:0.6875rem;font-weight:700;font-stretch:87.5%;line-height:1rem;box-shadow:inset 0 0 0 1.25px var(--fh-ink-muted,#565c66);} .ds-plan{display:flex;align-items:center;gap:8px;font-size:0.75rem;min-width:0;} .ds-branch{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:0.6875rem;color:var(--fh-ink-muted,#565c66);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .ds-row time{text-align:right;font-size:0.6875rem;color:var(--fh-ink-muted,#565c66);}"
     }
   ],
   "narrative": {
     "northStar": "The Transit Line Map",
-    "overview": "Flashheart is drawn as a transit system in the Vignelli 1972 diagram and Unimark signage tradition. Each workstream is a coloured line, its tickets are stations, and the shell is a black signage frame: a band across the top and a project rail down the left, forming an L around a lit platform. The board ground is platform grey with a faint map-dot grid, and cards lift off it. Colour is quarantined to jobs: the line palette names workstreams, a muted paint palette shows the board's \"Colour by\" attribute and always says its name, and a single signal-yellow bolt marks the brand. Ticket state is ink, shape and words. Focus dims the rest of the board instead of filtering it away.",
+    "overview": "Flashheart is drawn as a transit system in the Vignelli 1972 diagram and Unimark signage tradition. Each workstream is a coloured line, its tickets are stations, and the shell is a black signage frame: a band across the top and a project rail down the left, forming an L around a lit platform. The board ground is platform grey with a faint map-dot grid, and cards lift off it. Colour is quarantined to jobs: the line palette names workstreams, a muted paint palette shows the board's \"Colour by\" attribute and always says its name, and a single signal-yellow bolt marks the brand. Ticket state is ink, shape and words, and so is the state of every agent run. Focus dims the rest of the board instead of filtering it away.",
     "keyCharacteristics": [
       "A black signage band (48px) and black project rail (248px) form an L-frame in both themes.",
       "The board is a platform: grey ground with a 16px dot grid; cards and legend chips cast soft shadows on it.",
       "Line colours mean workstreams; paint colours mean the chosen \"Colour by\" attribute; ticket state is monochrome.",
       "Section heads are station signs: a heavy top rule over a condensed semibold label.",
       "Near-square corners (2px) on cards and panels; round only for bullets, stations and chips.",
-      "Archivo Variable, self-hosted, with tabular numerals everywhere; ticket ids in the sans."
+      "Archivo Variable, self-hosted, with tabular numerals everywhere; ticket ids in the sans.",
+      "Agent runs read as a departure board: monochrome run marks, one inverted \"Needs you\" plate, and one slowly beating dot for a working agent."
     ],
     "rules": [
       {
@@ -2094,6 +2124,11 @@
         "name": "The Ink, Shape and Words Rule",
         "body": "Ticket state is monochrome. A real blocker is a diamond plus its reason in ink; a wait on an earlier station of the same line is muted text with no mark; needs repair is a dashed border with a hatched top band plus the reason. Every state is paired with its proof in words.",
         "section": "colors"
+      },
+      {
+        "name": "The Run State Rule",
+        "section": "colors",
+        "body": "Agent run state is monochrome too, five marks in ink: Needs you a solid disc, Working a ring around a dot, Quiet the same ring with a faded still dot, Waiting an open ring, Ended a short terminus bar. Each mark travels with its word except in compact spaces, where the word moves to the tooltip or the heading. Needs you is the only state set as an inverted plate (ink on the map; on-band white with band text in the frame). The permission reason is shown in semibold ink words beside it."
       },
       {
         "name": "The Alarm Is for the App Rule",
@@ -2124,6 +2159,11 @@
         "name": "The Suspended Service Rule",
         "body": "Dashed track means suspended service and nothing else. The route ahead is never dashed.",
         "section": "components"
+      },
+      {
+        "name": "The One Beat Rule",
+        "section": "components",
+        "body": "Only a working agent's dot moves, and only on the map: a 1.8s ease-out-expo beat, stopped in the signage frame, inside the Needs you plate and under reduced motion. Nothing else pulses, spins or loops to say live."
       }
     ],
     "dos": [
@@ -2133,7 +2173,9 @@
       "**Do** head sections with the station sign: condensed semibold label under a strong ink rule, weight by rank (5px, 3px, 2px).",
       "**Do** keep the band and rail black in both themes, with on-band text, band-field wells and band-track rules.",
       "**Do** dim out-of-focus items (35% cards, 30% bullets, 50% chips) instead of removing them.",
-      "**Do** keep corners at 2px for cards and panels, 3px for tags and badges, 4px for controls."
+      "**Do** keep corners at 2px for cards and panels, 3px for tags and badges, 4px for controls.",
+      "**Do** draw run state with its mark and word in ink, and keep Needs you as the one inverted plate wherever it appears (lane, card, rail, band).",
+      "**Do** draw an agent's plan as an ink route; cut long paths and ids from the start so the tail shows."
     ],
     "donts": [
       "**Don't** use a line colour for status, priority, type, project identity or decoration, and don't use a paint colour for a workstream.",
@@ -2142,7 +2184,9 @@
       "**Don't** add hue to the frame beyond the brand bolt, or use flash yellow anywhere else.",
       "**Don't** dash the route ahead; dashes mean suspended service, a missing station, or needs repair.",
       "**Don't** set labels in uppercase or tracked-out caps; signage here is sentence case in the condensed cut.",
-      "**Don't** set ticket ids in monospace, or use proportional numerals for counts or times."
+      "**Don't** set ticket ids in monospace, or use proportional numerals for counts or times.",
+      "**Don't** colour run states or plans: no green working dots, no amber quiet, no line colour on a plan route.",
+      "**Don't** add a second inverted state plate or a second looping animation; the Working dot is the only beat."
     ]
   }
 }

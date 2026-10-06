@@ -1,0 +1,13 @@
+[
+  {
+    "run": "claude:e8d9eb02-6534-4065-ae10-3e032e231c24",
+    "kind": "run.start",
+    "data": {
+      "kind": "session",
+      "source": "startup",
+      "cwd": "/Users/example/src/demo",
+      "branch": "feature/demo",
+      "worktree": "/Users/example/src/demo"
+    }
+  }
+]

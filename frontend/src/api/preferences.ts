@@ -5,7 +5,8 @@ import type { ThemePreference } from "./info";
 
 export type Density = "compact" | "normal" | "detailed";
 export type ColourBy = "type" | "priority" | "age" | "none";
-export type SavedView = "" | "board" | "workstreams" | "table";
+export type SavedView = "" | "board" | "agents" | "workstreams" | "table";
+export type VirtualColumn = "needs-you" | "agent-working";
 export type SavedState = "" | "all" | "blocked" | "unblocked" | "repair";
 
 // ScopePreferences is the remembered view and filters of one project, or of
@@ -23,6 +24,8 @@ export interface Preferences {
   theme: ThemePreference;
   density: Density;
   colourBy: ColourBy;
+  // virtualColumns lists the virtual columns shown on the board (VIEW-2).
+  virtualColumns: VirtualColumn[];
   scopes: Record<string, ScopePreferences>;
 }
 
@@ -30,6 +33,7 @@ export const defaultPreferences: Preferences = {
   theme: "system",
   density: "normal",
   colourBy: "type",
+  virtualColumns: ["needs-you"],
   scopes: {},
 };
 
@@ -41,7 +45,14 @@ const oneOf =
 const isTheme = oneOf<ThemePreference>(["system", "light", "dark"]);
 const isDensity = oneOf<Density>(["compact", "normal", "detailed"]);
 const isColourBy = oneOf<ColourBy>(["type", "priority", "age", "none"]);
-const isView = oneOf<SavedView>(["", "board", "workstreams", "table"]);
+const isView = oneOf<SavedView>([
+  "",
+  "board",
+  "agents",
+  "workstreams",
+  "table",
+]);
+const isVirtualColumn = oneOf<VirtualColumn>(["needs-you", "agent-working"]);
 const isState = oneOf<SavedState>([
   "",
   "all",
@@ -68,6 +79,8 @@ export function isPreferences(value: unknown): value is Preferences {
     isTheme(value.theme) &&
     isDensity(value.density) &&
     isColourBy(value.colourBy) &&
+    Array.isArray(value.virtualColumns) &&
+    value.virtualColumns.every(isVirtualColumn) &&
     isRecord(value.scopes) &&
     Object.values(value.scopes).every(isScope)
   );

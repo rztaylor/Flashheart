@@ -1,0 +1,34 @@
+{
+  "session_id": "340b083f-5d70-41b2-8cff-ec700908097a",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
+  "prompt_id": "ea155e2e-b660-4a53-a9f8-c6b53fd15ecb",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PermissionRequest",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls",
+    "description": "Remove the build directory"
+  },
+  "permission_suggestions": [
+    {
+      "type": "addRules",
+      "rules": [
+        {
+          "toolName": "Bash",
+          "ruleContent": "rm -rf build"
+        },
+        {
+          "toolName": "Bash",
+          "ruleContent": "echo \"exit: $?\""
+        }
+      ],
+      "behavior": "allow",
+      "destination": "localSettings"
+    }
+  ]
+}

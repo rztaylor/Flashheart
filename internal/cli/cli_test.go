@@ -28,6 +28,7 @@ type harness struct {
 	handshake   *fakeHandshake
 	serveLog    *bytes.Buffer
 	logRoots    []string
+	stdin       string
 }
 
 func newHarness(t *testing.T) *harness {
@@ -52,6 +53,7 @@ func (h *harness) deps() Dependencies {
 			return h.bgReport, h.bgErr
 		},
 		Executable: func() (string, error) { return "/opt/bin/flashheart", nil },
+		Stdin:      strings.NewReader(h.stdin),
 		OpenServeLog: func(root string) io.Writer {
 			h.logRoots = append(h.logRoots, root)
 			if h.serveLog == nil {
@@ -176,7 +178,7 @@ func TestUsageErrorsExitTwoWithUsage(t *testing.T) {
 func TestUnimplementedCommandsExitTwoQuietly(t *testing.T) {
 	t.Parallel()
 
-	for _, args := range [][]string{{"mcp"}, {"hook", "claude", "SessionStart"}, {"setup", "claude"}, {"doctor"}} {
+	for _, args := range [][]string{{"mcp"}, {"setup", "claude"}, {"doctor"}} {
 		h := newHarness(t)
 		code, stdout, stderr := h.run(args...)
 		if code != 2 {
@@ -506,5 +508,69 @@ func TestMigrateUsageAndFailures(t *testing.T) {
 	}
 	if code, _, stderr := h.run("migrate", "--root", v1Root(t), "--key", "alpha=al"); code != 1 || !strings.Contains(stderr, "uppercase") {
 		t.Errorf("invalid key: code=%d stderr=%q", code, stderr)
+	}
+}
+
+func TestHookRecordsEventsAndPrintsNothing(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	root := t.TempDir()
+	outside, _ := filepath.EvalSymlinks(t.TempDir())
+	h.stdin = `{"session_id":"abc123","cwd":"` + outside + `","hook_event_name":"UserPromptSubmit","prompt":"secret plans"}`
+	code, stdout, stderr := h.run("hook", "claude", "UserPromptSubmit", "--root", root)
+	if code != 0 || stdout != "" || stderr != "" {
+		t.Fatalf("hook = %d, %q, %q", code, stdout, stderr)
+	}
+	files, _ := filepath.Glob(filepath.Join(root, "_scratch", ".flashheart", "events", "*.jsonl"))
+	if len(files) != 1 {
+		t.Fatalf("event files = %v", files)
+	}
+	data, _ := os.ReadFile(files[0])
+	if !strings.Contains(string(data), `"run":"claude:abc123"`) || strings.Contains(string(data), "secret plans") {
+		t.Fatalf("event log = %s", data)
+	}
+}
+
+func TestHookAlwaysExitsZero(t *testing.T) {
+	t.Parallel()
+
+	// Exit 2 would make Claude Code block the turn, prompt or tool, so even
+	// flags this build does not know, or a --root with no value, exit 0.
+	for _, args := range [][]string{{"hook"}, {"hook", "claude"}, {"hook", "gemini", "SessionStart"}, {"hook", "claude", "SessionStart", "extra"}, {"hook", "claude", "Stop", "--bogus"}} {
+		h := newHarness(t)
+		root := t.TempDir()
+		h.stdin = "{"
+		code, stdout, stderr := h.run(append(args, "--root", root)...)
+		if code != 0 || stdout != "" {
+			t.Errorf("%v: code %d, stdout %q", args, code, stdout)
+		}
+		if !strings.Contains(stderr, "flashheart hook:") {
+			t.Errorf("%v: stderr = %q", args, stderr)
+		}
+		if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); !strings.Contains(string(data), "hook") {
+			t.Errorf("%v: hook-errors.log = %q", args, data)
+		}
+	}
+	// A malformed payload for a known agent is logged, not reported.
+	h := newHarness(t)
+	root := t.TempDir()
+	h.stdin = "{"
+	if code, stdout, stderr := h.run("hook", "claude", "Stop", "--root", root); code != 0 || stdout != "" || stderr != "" {
+		t.Fatalf("malformed payload = %d, %q, %q", code, stdout, stderr)
+	}
+	if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); !strings.Contains(string(data), "claude Stop: payload is not JSON") {
+		t.Fatalf("hook-errors.log = %q", data)
+	}
+}
+
+func TestHookWithADanglingRootExitsZero(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.stdin = "{}"
+	code, stdout, stderr := h.run("hook", "claude", "Stop", "--root")
+	if code != 0 || stdout != "" || !strings.Contains(stderr, "flashheart hook:") {
+		t.Fatalf("dangling --root = %d, %q, %q", code, stdout, stderr)
 	}
 }

@@ -21,12 +21,15 @@ import { StateNote } from "../../components/StateNote";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
+import { counted, sessionsOf } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
 import { EditTab } from "./EditTab";
+import { RunsTab } from "./RunsTab";
 
-const panelBodyClass = "min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10";
+const panelBodyClass =
+  "relative min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10";
 
 interface CardPanelProps {
   ticket: TicketRef;
@@ -45,12 +48,13 @@ interface CardPanelProps {
   workstreamsOf(project: string): WorkstreamBrief[];
 }
 
-type PanelTab = "ticket" | "edit" | "review";
+type PanelTab = "ticket" | "edit" | "runs" | "review";
 
 // CardPanel shows one ticket beside the board (CARD-1): the Ticket tab with
-// blocked-by (CARD-4), handoff, tickable criteria (CARD-3) and the rendered
-// markdown; the Edit tab (EDIT-6); and a Review tab when a review file
-// exists (REV-3). Its header moves and archives the ticket (EDIT-1, EDIT-8).
+// blocked-by (CARD-4), handoff with a warning when a live run has edited
+// since it (CARD-5), tickable criteria (CARD-3) and the rendered markdown;
+// the Edit tab (EDIT-6); the Runs tab (agent runs linked to the ticket); and
+// a Review tab when a review file exists (REV-3). Its header moves and archives the ticket (EDIT-1, EDIT-8).
 export function CardPanel({
   ticket,
   fetcher,
@@ -75,6 +79,12 @@ export function CardPanel({
   const items: { id: PanelTab; label: string }[] = [
     { id: "ticket", label: "Ticket" },
     ...(editable ? [{ id: "edit" as const, label: "Edit" }] : []),
+    {
+      id: "runs",
+      label: detail?.runs.length
+        ? `Runs ${sessionsOf(detail.runs).length}`
+        : "Runs",
+    },
     ...(detail?.review ? [{ id: "review" as const, label: "Review" }] : []),
   ];
   const activeTab = items.some((item) => item.id === tab) ? tab : "ticket";
@@ -109,6 +119,8 @@ export function CardPanel({
     switch (activeTab) {
       case "review":
         return <ReviewTab detail={current} keys={keys} onOpen={onOpen} />;
+      case "runs":
+        return <RunsTab detail={current} />;
       case "edit":
         return (
           <EditTab
@@ -175,6 +187,10 @@ export function CardPanel({
           {items.length > 1 ? (
             <div
               role="tabpanel"
+              // The ARIA tabs pattern makes the panel a tab stop, so a
+              // scrolling panel with no controls (Runs) is still reachable.
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: see above.
+              tabIndex={0}
               id={panelId(tabsId, activeTab)}
               aria-labelledby={tabId(tabsId, activeTab)}
               className={panelBodyClass}
@@ -439,6 +455,11 @@ function TicketTab({
           <h3 id="handoff-heading" className="mb-2 text-sm station-sign">
             Handoff
           </h3>
+          {staleHandoff(detail) ? (
+            <div className="mb-3">
+              <StateNote kind="warning">{staleHandoff(detail)}</StateNote>
+            </div>
+          ) : null}
           {detail.handoff.next.length > 0 ? (
             <div className="mb-3">
               <p className="text-xs text-ink-muted">Next</p>
@@ -623,4 +644,15 @@ function changedLabel(modified: string): string {
   const age = runningTime(modified);
   if (!age) return "";
   return age === "now" ? "changed just now" : `changed ${age} ago`;
+}
+
+// staleHandoff warns when the run working on the ticket has edited files
+// since its last checkpoint, so the handoff may be behind (CARD-5).
+function staleHandoff(detail: TicketDetail): string {
+  const run = detail.runs.find((item) => !item.parent && item.dirty);
+  if (!run) return "";
+  const edits = counted(run.edits, "edit");
+  return run.state === "ended"
+    ? `Run ${run.short} ended after ${edits} without updating this handoff.`
+    : `Run ${run.short} has made ${edits} since this handoff.`;
 }

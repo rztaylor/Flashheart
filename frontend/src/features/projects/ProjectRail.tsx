@@ -1,12 +1,16 @@
 import type { ReactNode } from "react";
 
 import { COLUMNS, type ProjectSummary } from "../../api/board";
+import { noRuns, type RunCounts } from "../../api/runs";
 import type { Scope } from "../../app/route";
 import { Icon } from "../../components/Icon";
 import { RouteBar } from "../../components/RouteBar";
+import { RunStateMark } from "../../components/RunState";
 
 interface ProjectRailProps {
   projects: ProjectSummary[];
+  // runs are every project's run counts, from the server (All projects).
+  runs?: RunCounts;
   scope: Scope;
   onSelect(scope: Scope): void;
 }
@@ -18,7 +22,12 @@ function total(counts: ProjectSummary["counts"]) {
 // ProjectRail is the black signage column beside the board: every project as
 // a station code (its ticket key) with its route bar and trouble counts, most
 // recently active first (PRJ-6).
-export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
+export function ProjectRail({
+  projects,
+  runs,
+  scope,
+  onSelect,
+}: ProjectRailProps) {
   const counts = Object.fromEntries(
     COLUMNS.map((column) => [
       column.id,
@@ -29,6 +38,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
     counts,
     blocked: projects.reduce((sum, project) => sum + project.stuck, 0),
     repair: projects.reduce((sum, project) => sum + project.needsRepair, 0),
+    runs: runs ?? noRuns,
   };
   return (
     <nav
@@ -45,6 +55,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
             counts={all.counts}
             blocked={all.blocked}
             repair={all.repair}
+            runs={all.runs}
             onClick={() => onSelect({ kind: "all" })}
           />
         </li>
@@ -66,6 +77,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
               counts={project.counts}
               blocked={project.stuck}
               repair={project.needsRepair}
+              runs={project.runs}
               onClick={() =>
                 onSelect({ kind: "project", project: project.name })
               }
@@ -86,6 +98,7 @@ interface RailItemProps {
   counts: ProjectSummary["counts"];
   blocked: number;
   repair: number;
+  runs: RunCounts;
   onClick(): void;
 }
 
@@ -97,6 +110,7 @@ function RailItem({
   counts,
   blocked,
   repair,
+  runs,
   onClick,
 }: RailItemProps) {
   const tickets = total(counts);
@@ -104,7 +118,7 @@ function RailItem({
     <button
       type="button"
       onClick={onClick}
-      title={subtitle ? `${title} (${subtitle})` : title}
+      title={`${subtitle ? `${title} (${subtitle})` : title}${runs.needsYou > 0 ? ` — ${runs.needsYou} need${runs.needsYou === 1 ? "s" : ""} you` : ""}`}
       aria-current={active ? "page" : undefined}
       className={`flex w-full items-start gap-2.5 rounded-control px-2 py-2.5 text-left transition-colors focus-visible:outline-on-band max-[90rem]:group-data-[panel=open]/work:justify-center max-[90rem]:group-data-[panel=open]/work:px-0 ${
         active ? "bg-band-field" : "hover:bg-band-field/60"
@@ -131,6 +145,15 @@ function RailItem({
         </span>
         <RouteBar counts={counts} label={title} />
         <span className="flex items-center gap-3 text-2xs whitespace-nowrap text-on-band-muted">
+          {runs.needsYou > 0 ? (
+            <span className="flex items-center gap-1 rounded-[3px] bg-on-band px-1 font-semibold text-band">
+              <RunStateMark state="needs-you" size={8} />
+              {runs.needsYou}
+              <span className="sr-only">
+                {runs.needsYou === 1 ? " agent needs" : " agents need"} you
+              </span>
+            </span>
+          ) : null}
           <span>{counts["in-progress"]} in progress</span>
           {blocked > 0 ? (
             <span

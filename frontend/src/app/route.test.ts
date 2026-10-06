@@ -24,8 +24,18 @@ describe("routes", () => {
     expect(formatRoute(route)).toBe("#/p/my%20project/workstreams?t=FH-42");
   });
 
-  it("ignores unknown views and malformed ticket ids", () => {
+  it("routes the Agents view", () => {
     expect(parseRoute("#/p/alpha/agents")).toEqual({
+      scope: { kind: "project", project: "alpha" },
+      view: "agents",
+    });
+    expect(formatRoute({ scope: { kind: "all" }, view: "agents" })).toBe(
+      "#/all/agents",
+    );
+  });
+
+  it("ignores unknown views and malformed ticket ids", () => {
+    expect(parseRoute("#/p/alpha/runs")).toEqual({
       scope: { kind: "project", project: "alpha" },
       view: "board",
     });

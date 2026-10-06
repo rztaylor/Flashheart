@@ -1,0 +1,9 @@
+{
+  "session_id": "5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "permission_mode": "default",
+  "hook_event_name": "Notification",
+  "message": "Claude is waiting for your input",
+  "notification_type": "idle_prompt"
+}

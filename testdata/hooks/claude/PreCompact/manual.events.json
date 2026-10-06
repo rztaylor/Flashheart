@@ -1,0 +1,9 @@
+[
+  {
+    "run": "claude:340b083f-5d70-41b2-8cff-ec700908097a",
+    "kind": "compact",
+    "data": {
+      "phase": "pre"
+    }
+  }
+]

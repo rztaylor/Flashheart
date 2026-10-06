@@ -1,7 +1,8 @@
 # Engineering facts
 
-- The board (reading, format v2, editing, live updates) is built; agent
-  integration is next. Follow `docs/dev/roadmap.md`.
+- The board (reading, format v2, editing, live updates) and agent runs from
+  Claude Code hooks are built; the MCP server is next. Follow
+  `docs/dev/roadmap.md`.
 - Prefer small, focused standard-library Go packages and explicit TypeScript
   models; use mature libraries for commodity problems (YAML round-tripping,
   MCP, file watching, drag and drop, markdown).

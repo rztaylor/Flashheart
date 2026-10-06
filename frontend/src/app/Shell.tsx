@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type Card,
   COLUMNS,
-  type Column,
   fetchAllBoard,
   fetchProjectBoard,
   fetchProjects,
@@ -16,7 +15,9 @@ import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
+import { RunStateMark } from "../components/RunState";
 import { Toast } from "../components/Toast";
+import { AgentsView } from "../features/agents/AgentsView";
 import { BoardView, NoTickets } from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
@@ -27,6 +28,7 @@ import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
+import { shownVirtual as shownVirtualColumns } from "../model/columns";
 import {
   applyFilters,
   emptyFilters,
@@ -54,6 +56,7 @@ interface ShellProps {
 
 const views: { id: View; label: string; icon: IconName }[] = [
   { id: "board", label: "Board", icon: "board" },
+  { id: "agents", label: "Agents", icon: "agents" },
   { id: "workstreams", label: "Workstreams", icon: "lines" },
   { id: "table", label: "Table", icon: "table" },
 ];
@@ -73,7 +76,7 @@ export function Shell({
   const { density, colourBy: paint } = preferences;
   const [newTicket, setNewTicket] = useState(false);
   const [doneAll, setDoneAll] = useState(false);
-  const [narrowColumn, setNarrowColumn] = useState<Column>("in-progress");
+  const [narrowColumn, setNarrowColumn] = useState<string>("in-progress");
   const opener = useRef<HTMLElement | null>(null);
   const stopping = state.phase === "stopping";
 
@@ -101,7 +104,9 @@ export function Shell({
     [fetcher, scopeProject, doneAll],
   );
   const board = useResource(
-    ready && route.view !== "workstreams" ? loadBoard : undefined,
+    ready && route.view !== "workstreams" && route.view !== "agents"
+      ? loadBoard
+      : undefined,
     `${scopeKey}:${doneAll}`,
     revision,
   );
@@ -156,6 +161,10 @@ export function Shell({
   const current = summaries.find((project) => project.name === scopeProject);
   const v1Projects =
     projects.status === "ready" ? projects.data.v1Projects : [];
+  // Needs you is visible from every view and project (SPEC §7).
+  const needsYou =
+    projects.status === "ready" ? projects.data.runs.needsYou : 0;
+  const shownVirtual = preferences.virtualColumns;
   const projectNames = useMemo(
     () =>
       route.scope.kind === "all"
@@ -184,6 +193,14 @@ export function Shell({
     [allCards, filters],
   );
   const options = useMemo(() => filterOptions(allCards), [allCards]);
+  // The phone column picker falls back to In progress when the virtual
+  // column it showed has emptied and gone.
+  const narrowVirtual = shownVirtualColumns(visible, shownVirtual);
+  const narrowShown =
+    COLUMNS.some((column) => column.id === narrowColumn) ||
+    narrowVirtual.some((column) => column.id === narrowColumn)
+      ? narrowColumn
+      : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
   const selectScope = (scope: Scope) => {
@@ -211,7 +228,9 @@ export function Shell({
       if (element?.isConnected) element.focus();
       else if (id)
         document
-          .querySelector<HTMLElement>(`[data-ticket="${CSS.escape(id)}"]`)
+          .querySelector<HTMLElement>(
+            `[data-ticket="${CSS.escape(id)}"]:not([data-mirrored])`,
+          )
           ?.focus();
     }, 0);
   }, [navigate, route]);
@@ -236,7 +255,7 @@ export function Shell({
       <header className="flex min-w-0 items-center gap-2 overflow-hidden bg-band px-3 text-on-band sm:gap-4 sm:px-4">
         <span className="flex items-center gap-1.5">
           <Bolt />
-          <span className="wordmark text-md">Flashheart</span>
+          <span className="wordmark text-md max-sm:sr-only">Flashheart</span>
         </span>
         <span aria-hidden="true" className="h-5 w-px bg-on-band-muted/40" />
         <h1
@@ -252,7 +271,7 @@ export function Shell({
             {scopeName}
           </span>
         </h1>
-        <nav aria-label="Views" className="ml-2 flex h-full items-stretch">
+        <nav aria-label="Views" className="flex h-full items-stretch sm:ml-2">
           {views.map((view) => {
             const active = route.view === view.id;
             return (
@@ -265,7 +284,7 @@ export function Shell({
                   go({ view: view.id });
                   remember(filters, view.id);
                 }}
-                className={`flex items-center gap-1.5 border-b-3 px-3 pt-[3px] text-sm transition-colors focus-visible:-outline-offset-2 focus-visible:outline-on-band ${
+                className={`flex items-center gap-1.5 border-b-3 px-2 pt-[3px] text-sm sm:px-3 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-on-band ${
                   active
                     ? "border-on-band text-on-band"
                     : "border-transparent text-on-band-muted hover:text-on-band"
@@ -278,7 +297,29 @@ export function Shell({
           })}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
-          {route.view !== "workstreams" ? (
+          {needsYou > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                go({
+                  scope: { kind: "all" },
+                  view: "agents",
+                  ticket: undefined,
+                });
+              }}
+              className="flex h-7 items-center gap-1.5 rounded-[3px] bg-on-band px-2 text-xs font-semibold whitespace-nowrap text-band transition-opacity hover:opacity-90 focus-visible:outline-on-band"
+            >
+              <RunStateMark state="needs-you" size={10} />
+              {needsYou}
+              <span className="hidden sm:inline">
+                {needsYou === 1 ? " needs you" : " need you"}
+              </span>
+              <span className="sm:hidden">
+                {needsYou === 1 ? " agent needs you" : " agents need you"}
+              </span>
+            </button>
+          ) : null}
+          {route.view !== "workstreams" && route.view !== "agents" ? (
             <div className="hidden md:flex">
               <SearchField
                 label="Search tickets"
@@ -344,6 +385,9 @@ export function Shell({
           <div className="min-h-0 flex-1">
             <ProjectRail
               projects={summaries}
+              runs={
+                projects.status === "ready" ? projects.data.runs : undefined
+              }
               scope={route.scope}
               onSelect={selectScope}
             />
@@ -363,7 +407,7 @@ export function Shell({
           aria-label={`${scopeName} ${route.view}`}
         >
           <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
-            {route.view !== "workstreams" ? (
+            {route.view !== "workstreams" && route.view !== "agents" ? (
               <div className="flex w-full">
                 <SearchField
                   tone="plain"
@@ -393,9 +437,14 @@ export function Shell({
             {route.view === "board" ? (
               <SelectField
                 label="Column"
-                value={narrowColumn}
-                onChange={(value) => setNarrowColumn(value as Column)}
+                value={narrowShown}
+                onChange={setNarrowColumn}
               >
+                {narrowVirtual.map((column) => (
+                  <option key={column.id} value={column.id}>
+                    {column.title}
+                  </option>
+                ))}
                 {COLUMNS.map((column) => (
                   <option key={column.id} value={column.id}>
                     {column.title}
@@ -426,6 +475,18 @@ export function Shell({
               project folder there with a{" "}
               <code className="font-mono">tickets/</code> directory inside.
             </EmptyState>
+          ) : route.view === "agents" ? (
+            projects.status === "ready" ? (
+              <AgentsView
+                fetcher={fetcher}
+                project={scopeProject}
+                projects={summaries}
+                revision={revision}
+                onOpen={openTicket}
+              />
+            ) : (
+              <BoardSkeleton />
+            )
           ) : route.view === "workstreams" ? (
             projects.status === "ready" ? (
               <WorkstreamsView
@@ -454,6 +515,18 @@ export function Shell({
                         updatePreferences((current) => ({
                           ...current,
                           density: value,
+                        }))
+                    : undefined
+                }
+                virtualColumns={
+                  route.view === "board" ? shownVirtual : undefined
+                }
+                onVirtualColumns={
+                  route.view === "board"
+                    ? (virtualColumns) =>
+                        updatePreferences((current) => ({
+                          ...current,
+                          virtualColumns,
                         }))
                     : undefined
                 }
@@ -491,7 +564,7 @@ export function Shell({
               route.view === "board" ? (
                 <div
                   className="min-h-0 flex-1"
-                  data-narrow-column={narrowColumn}
+                  data-narrow-column={narrowShown}
                 >
                   <BoardView
                     cards={visible}
@@ -508,6 +581,7 @@ export function Shell({
                     projectNames={projectNames}
                     density={density}
                     paint={paint}
+                    virtualColumns={shownVirtual}
                     selected={route.ticket}
                     doneTotal={board.data.doneTotal}
                     doneShown={board.data.doneShown}

@@ -1,0 +1,8 @@
+{
+  "session_id": "e8d9eb02-6534-4065-ae10-3e032e231c24",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/e8d9eb02-6534-4065-ae10-3e032e231c24.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "prompt_id": "cb655cc1-8ce0-4c0e-8764-3e0d8f73bb39",
+  "hook_event_name": "SessionEnd",
+  "reason": "other"
+}

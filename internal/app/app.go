@@ -12,8 +12,10 @@ import (
 	"github.com/rztaylor/flashheart/internal/api"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/config"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
 	"github.com/rztaylor/flashheart/internal/webui"
 	"github.com/rztaylor/singleserve"
@@ -83,6 +85,7 @@ func Run(ctx context.Context, options Options) error {
 	defer stopWatching()
 	if runtime.board != nil {
 		go runtime.board.Watch(watchCtx, options.Root, nil)
+		go keepEventsPruned(watchCtx, runtime.files, settings.EventRetentionDays, stderr)
 	}
 	go func() {
 		select {
@@ -138,7 +141,10 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 	var board *index.Index
 	apiHandler := apiOverride
 	if apiHandler == nil {
-		board = index.New(files, index.Options{})
+		board = index.New(files, index.Options{
+			Events: events.New(files),
+			Runs:   runs.Settings{Quiet: time.Duration(settings.QuietMinutes) * time.Minute, Stale: runs.DefaultSettings().Stale},
+		})
 		apiHandler = api.New(api.Options{
 			Info: api.Info{
 				Version:         options.Build.Version,

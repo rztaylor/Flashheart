@@ -423,6 +423,15 @@ for (const theme of ["light", "dark"]) {
     await page
       .getByRole("combobox", { name: "Column" })
       .selectOption("up-next");
+    // One chosen column fills the width; nothing scrolls sideways.
+    const overflow = await page.evaluate(
+      () => document.scrollingElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    const column = await page
+      .locator('section[data-column="up-next"]')
+      .boundingBox();
+    expect(column?.width ?? 0).toBeGreaterThan(300);
     await shot(page, `board-narrow-${theme}`);
   });
 }

@@ -1,0 +1,17 @@
+{
+  "session_id": "5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "NotebookEdit",
+  "tool_input": {
+    "notebook_path": "/Users/example/src/demo/analysis.ipynb",
+    "new_source": "print(1)",
+    "cell_id": "c1"
+  },
+  "tool_response": {
+    "cell_id": "c1"
+  },
+  "tool_use_id": "toolu_01B"
+}
