@@ -80,8 +80,8 @@ const columnTitle = (id: string) =>
 const instructions =
   "Press Shift with the left or right arrow to move this ticket to the next column, or drag it with the pointer. Enter opens it.";
 
-// BoardView shows real columns in workflow order (VIEW-1) on the platform
-// ground. Arrow keys move between cards; Shift with an arrow moves the
+// BoardView shows real columns in workflow order (VIEW-1) as rounded wells
+// (ui-layout.md §2). Arrow keys move between cards; Shift with an arrow moves the
 // ticket to the next column, as dragging does (EDIT-1); Enter opens it. When
 // a card opens and the panel narrows the board, its column scrolls back into
 // view.
@@ -284,9 +284,9 @@ export function BoardView(props: BoardViewProps) {
         },
       }}
     >
-      <div className="platform-ground flex h-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-col">
         {(legend && legend.workstreams.length > 0) || paints.length > 0 ? (
-          <div className="flex items-center justify-between gap-x-6 overflow-x-auto px-4 pt-3 pb-1 [&>*]:shrink-0">
+          <div className="flex items-center justify-between gap-x-6 overflow-x-auto border-t border-rule px-4 py-2.5 md:px-6 [&>*]:shrink-0">
             {legend ? (
               <LineLegend
                 workstreams={legend.workstreams}
@@ -307,7 +307,7 @@ export function BoardView(props: BoardViewProps) {
           }}
           // The column count is a variable, not an inline template, so the
           // narrow-width rule in index.css (one chosen column) still wins.
-          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-5 overflow-x-auto px-4 pt-4"
+          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-x-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
           style={{ "--board-columns": columns.length } as CSSProperties}
         >
           {columns.map((column, columnIndex) => (
@@ -317,32 +317,36 @@ export function BoardView(props: BoardViewProps) {
               enabled={!!onMove && !column.virtual}
               virtual={column.virtual}
             >
-              <h2
-                id={`column-${column.id}`}
-                className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-3 text-md heading-cut"
-              >
-                <span className="flex items-center gap-2">
-                  {column.virtual ? (
-                    <RunStateMark
-                      state={
-                        column.id === "needs-you" ? "needs-you" : "working"
-                      }
-                      size={12}
-                      className="translate-y-[1px]"
-                      still
-                    />
-                  ) : null}
-                  {column.title}
-                </span>
-                <span className="text-sm font-semibold text-ink">
+              {/* The head: count badge, then the title (which alone names
+                  the column region). */}
+              <h2 className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-lg leading-tight heading-cut">
+                <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-card px-2 text-sm font-semibold tabular-nums text-ink shadow-card">
                   {column.id === "done" && doneTotal > column.cards.length
                     ? `${column.cards.length} of ${doneTotal}`
                     : column.cards.length}
                 </span>
+                {column.virtual ? (
+                  <span
+                    className={
+                      column.id === "needs-you"
+                        ? "grid size-5 place-items-center rounded-full bg-attention text-on-attention"
+                        : "text-ink"
+                    }
+                  >
+                    <RunStateMark
+                      state={
+                        column.id === "needs-you" ? "needs-you" : "working"
+                      }
+                      size={column.id === "needs-you" ? 9 : 13}
+                      still
+                    />
+                  </span>
+                ) : null}
+                <span id={`column-${column.id}`}>{column.title}</span>
               </h2>
-              <div className="-mx-2 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2 pt-0.5 pb-6">
+              <div className="-mx-1.5 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1.5 pt-0.5 pb-3">
                 {column.cards.length === 0 ? (
-                  <p className="px-2 py-6 text-center text-xs text-ink-muted">
+                  <p className="rounded-card border border-dashed border-rule px-2 py-6 text-center text-xs text-ink-muted">
                     {column.empty}
                   </p>
                 ) : null}
@@ -444,10 +448,10 @@ function DropColumn({
       data-column={id}
       data-virtual={virtual ? "" : undefined}
       aria-labelledby={`column-${id}`}
-      className={`-mx-2 flex min-h-0 snap-start flex-col rounded-card px-2 transition-[background-color,box-shadow] ${
+      className={`flex min-h-0 snap-start flex-col rounded-panel border bg-column p-2.5 transition-[border-color,box-shadow] ${
         isOver
-          ? "bg-card/60 shadow-[inset_0_0_0_2px_var(--fh-rule-strong)]"
-          : ""
+          ? "border-select shadow-[inset_0_0_0_1px_var(--fh-select)]"
+          : "border-rule"
       }`}
     >
       {children}

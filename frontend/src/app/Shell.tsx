@@ -271,12 +271,12 @@ export function Shell({
 
   return (
     <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3.5rem_auto_1fr]">
-      <header className="flex min-w-0 items-center gap-2 overflow-hidden bg-band px-3 text-on-band sm:gap-6 sm:px-5">
+      <header className="relative flex min-w-0 items-center gap-1.5 overflow-hidden bg-band px-3 text-on-band sm:gap-6 sm:px-5">
         <span className="flex items-center gap-2">
           <Bolt />
           <span className="wordmark text-xl max-sm:sr-only">Flashheart</span>
         </span>
-        <nav aria-label="Views" className="flex items-center gap-1">
+        <nav aria-label="Views" className="flex items-center gap-0.5 sm:gap-1">
           {views.map((view) => {
             const active = route.view === view.id;
             return (
@@ -289,7 +289,7 @@ export function Shell({
                   go({ view: view.id });
                   remember(filters, view.id);
                 }}
-                className={`flex h-9 items-center gap-2 rounded-control px-2.5 text-sm font-semibold transition-colors focus-visible:outline-on-band sm:px-3 ${
+                className={`flex h-9 items-center gap-2 rounded-control px-2 text-sm font-semibold transition-colors focus-visible:outline-on-band sm:px-3 ${
                   active
                     ? "bg-band-tab-active text-on-band shadow-[inset_0_-3px_0_var(--fh-band-tab-line)]"
                     : "text-on-band-muted hover:bg-band-field hover:text-on-band"
@@ -312,7 +312,7 @@ export function Shell({
                   ticket: undefined,
                 });
               }}
-              className="flex h-9 items-center gap-1.5 rounded-full bg-attention px-3.5 text-sm font-semibold whitespace-nowrap text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band"
+              className="flex h-8 items-center gap-1.5 rounded-full bg-attention px-2.5 text-xs font-semibold whitespace-nowrap sm:h-9 sm:px-3.5 sm:text-sm text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band"
             >
               <RunStateMark state="needs-you" size={11} />
               {needsYou}
@@ -341,7 +341,7 @@ export function Shell({
           />
           <Button
             variant="band"
-            className="h-9 py-0"
+            className="h-9 py-0 max-sm:px-2"
             onClick={() => void lifecycle.quit()}
             disabled={!ready || stopping}
           >
