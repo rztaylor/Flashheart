@@ -3,6 +3,8 @@
 import {
   type Live,
   type PlanItem,
+  type Question,
+  type QuestionKind,
   RUN_STATES,
   type Run,
   type RunState,
@@ -33,16 +35,46 @@ function reasonFor(permission: string, subagent: string): string {
     : `${subagent} needs permission`;
 }
 
-// needsReason says why a session needs you, from it and its subagents.
+const QUESTION_REASON: Record<QuestionKind, string> = {
+  question: "Has a question",
+  decision: "Needs a decision",
+  review: "Asks for a review",
+  blocked: "Is blocked",
+};
+
+// questionReason says what an agent's question asks for, or that its
+// answer is waiting for the session's next prompt (HOOK-5).
+export function questionReason(question: Question): string {
+  return question.answeredAt
+    ? "Answer waits for its next prompt"
+    : QUESTION_REASON[question.kind];
+}
+
+// openQuestion is a run's first question still waiting on the human or on
+// delivery.
+export function openQuestion(run: Run): Question | undefined {
+  return run.questions.find((question) => !question.delivered);
+}
+
+// needsReason says why a session needs you, from it and its subagents: a
+// permission prompt first, then a question.
 export function needsReason(run: Run, children: Run[]): string {
   if (run.permission) return permissionReason(run.permission);
+  const own = openQuestion(run);
+  if (own) return questionReason(own);
   const child = children.find((item) => item.state === "needs-you");
   if (!child) return permissionReason("");
+  const asked = child.permission ? undefined : openQuestion(child);
+  if (asked) {
+    const reason = questionReason(asked);
+    return `${child.agentType || "Subagent"} ${reason.charAt(0).toLowerCase()}${reason.slice(1)}`;
+  }
   return reasonFor(child.permission, child.agentType || "Subagent");
 }
 
 // liveReason is needsReason for a card's live run.
 export function liveReason(live: Live): string {
+  if (!live.permission && live.question) return QUESTION_REASON[live.question];
   return reasonFor(live.permission, live.waitingOn);
 }
 
@@ -52,6 +84,11 @@ export function shortID(id: string): string {
   const [, rest = id] = id.split(":");
   const parts = rest.split("/");
   return (parts[parts.length - 1] ?? "").slice(0, 8);
+}
+
+// shortRun is a run id as people see it: the agent and its short id.
+export function shortRun(id: string): string {
+  return `${id.split(":")[0] ?? ""}:${shortID(id)}`;
 }
 
 // counted puts a count before a noun, plural unless it is one.

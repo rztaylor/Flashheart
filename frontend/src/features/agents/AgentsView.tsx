@@ -2,6 +2,7 @@ import { useCallback, useId, useState } from "react";
 
 import type { ProjectSummary, TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
+import { answerQuestion } from "../../api/edit";
 import { fetchRun, fetchRuns, type Run, type RunState } from "../../api/runs";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
@@ -403,6 +404,16 @@ function ExpandedRun({
     [fetcher, run.id],
   );
   const detail = useResource(load, run.id, revision);
+  const answer = (id: string, text: string): Promise<string | undefined> =>
+    answerQuestion(fetcher, id, text)
+      .then(() => {
+        detail.reload();
+        return undefined;
+      })
+      .catch(
+        (error: unknown) =>
+          `Not sent: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
   if (detail.status === "error") {
     return (
       <p className="text-xs text-ink-muted">
@@ -415,6 +426,7 @@ function ExpandedRun({
       run={detail.status === "ready" ? detail.data : run}
       timeline={detail.data?.timeline}
       now={now}
+      onAnswer={answer}
     />
   );
 }

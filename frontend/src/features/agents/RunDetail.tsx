@@ -1,18 +1,21 @@
 import type { PlanItem, Run, TimelineEntry } from "../../api/runs";
 import { Icon } from "../../components/Icon";
-import { compactTimeline, describeEntry } from "../../model/runs";
+import { QuestionCard } from "../../components/QuestionCard";
+import { compactTimeline, describeEntry, shortRun } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 
 // MAX_TIMELINE bounds the activity lines shown for one run.
 const MAX_TIMELINE = 40;
 
-// RunDetail is what a run did: its plan as a list of stops, the files it
-// edited and its recent activity, newest first. Agent text is shown as data.
+// RunDetail is what a run did: its open questions, its plan as a list of
+// stops, the files it edited and its recent activity, newest first. Agent
+// text is shown as data.
 export function RunDetail({
   run,
   timeline,
   now,
   headingLevel = 3,
+  onAnswer,
 }: {
   run: Run;
   // timeline is the run's activity, when it has been loaded.
@@ -20,12 +23,35 @@ export function RunDetail({
   now: Date;
   // headingLevel places the section heads under the caller's heading.
   headingLevel?: 3 | 4;
+  // onAnswer answers one of the run's questions (CARD-6); questions are
+  // shown only where they can be answered.
+  onAnswer?(question: string, answer: string): Promise<string | undefined>;
 }) {
   const activity = timeline
     ? compactTimeline(timeline).slice(0, MAX_TIMELINE)
     : [];
+  const questions = onAnswer
+    ? run.questions.filter((question) => !question.delivered)
+    : [];
   return (
-    <div className="@container">
+    <div className="@container flex flex-col gap-5">
+      {questions.length > 0 ? (
+        <DetailSection level={headingLevel} title="Questions for you">
+          <div className="flex max-w-2xl flex-col gap-2">
+            {questions.map((question) => (
+              <QuestionCard
+                key={question.id}
+                question={question}
+                asker={shortRun(question.run)}
+                now={now}
+                onAnswer={
+                  onAnswer ? (text) => onAnswer(question.id, text) : undefined
+                }
+              />
+            ))}
+          </div>
+        </DetailSection>
+      ) : null}
       <div className="grid gap-x-8 gap-y-5 text-xs @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="flex min-w-0 flex-col gap-5">
           <DetailSection level={headingLevel} title="Plan">

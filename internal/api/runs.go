@@ -45,7 +45,10 @@ type LiveJSON struct {
 	Permission string `json:"permission"`
 	// WaitingOn names the subagent (by type) whose permission prompt holds
 	// the run; empty when the prompt is the run's own.
-	WaitingOn    string `json:"waitingOn"`
+	WaitingOn string `json:"waitingOn"`
+	// Question is the kind of the open question the run (or a subagent)
+	// is waiting on when that, not a permission prompt, is why it needs you.
+	Question     string `json:"question"`
 	LastActivity string `json:"lastActivity"`
 }
 
@@ -176,8 +179,8 @@ func (b boardAPI) run(w http.ResponseWriter, r *http.Request) {
 // liveBadge fills a card's live run and virtual-column flags (VIEW-2, VIEW-8).
 func liveBadge(snapshot *index.Snapshot, card *Card) {
 	// An open question about the ticket needs you whoever asked it.
-	card.Questions = len(snapshot.Questions(card.ID))
-	card.NeedsYou = card.Questions > 0
+	card.OpenQuestions = len(snapshot.Questions(card.ID))
+	card.NeedsYou = card.OpenQuestions > 0
 	v, ok := snapshot.TicketRun(card.ID)
 	if !ok {
 		return
@@ -198,8 +201,27 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 			}
 		}
 	}
+	if v.State == runs.NeedsYou && card.Live.Permission == "" {
+		card.Live.Question = openQuestion(snapshot, v)
+	}
 	card.NeedsYou = card.NeedsYou || v.State == runs.NeedsYou
 	card.AgentWorking = v.State == runs.Working || v.State == runs.Quiet
+}
+
+// openQuestion is the kind of the first open question of a run or its
+// subagents, or "".
+func openQuestion(snapshot *index.Snapshot, v runs.View) string {
+	for _, run := range snapshot.Runs {
+		if run.ID != v.ID && run.Parent != v.ID {
+			continue
+		}
+		for _, q := range run.Questions {
+			if q.Open() {
+				return q.Kind
+			}
+		}
+	}
+	return ""
 }
 
 // ticketRuns lists a ticket's runs with timelines for its Runs tab.

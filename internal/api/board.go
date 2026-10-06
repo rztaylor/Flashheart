@@ -131,8 +131,8 @@ type Card struct {
 	Live         *LiveJSON `json:"live,omitempty"`
 	NeedsYou     bool      `json:"needsYou"`
 	AgentWorking bool      `json:"agentWorking"`
-	// Questions counts open questions about the ticket (CARD-6).
-	Questions int `json:"questions"`
+	// OpenQuestions counts open questions about the ticket (CARD-6).
+	OpenQuestions int `json:"openQuestions"`
 }
 
 // BoardResponse is GET /api/projects/{project}/board.

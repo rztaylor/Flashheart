@@ -1,11 +1,14 @@
 // Drives the real `flashheart hook claude` command to put live agent runs on
 // a sandbox board: the same path Claude Code takes. All sessions, repositories
 // and plans are synthetic test data.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { executable } from "./support.mjs";
+
+// IDLE_SESSION waits for a prompt in the gamma repository.
+export const IDLE_SESSION = "e2d8f6a4-9b1c-4c3e-b5a7-1f0e9d8c7b6a";
 
 async function repo(home, name, branch) {
   const dir = join(home, "src", name);
@@ -102,9 +105,70 @@ export async function seedRuns(home, root) {
   working.tool("Grep", {}, { agent_id: "a5e1c0d7", agent_type: "Explore" });
   working.tool("Read", {}, { agent_id: "a5e1c0d7", agent_type: "Explore" });
 
-  const idle = session(root, "e2d8f6a4-9b1c-4c3e-b5a7-1f0e9d8c7b6a", gamma);
+  const idle = session(root, IDLE_SESSION, gamma);
   idle.send("SessionStart", { source: "startup" });
   idle.send("UserPromptSubmit", { prompt: "synthetic" });
   idle.tool("Read", {});
   idle.send("Stop");
+  return { gamma };
+}
+
+// promptHook submits a prompt for a session and returns the hook's output,
+// which carries answers waiting for it (HOOK-5).
+export function promptHook(root, sessionID, cwd) {
+  return execFileSync(
+    executable,
+    ["hook", "claude", "UserPromptSubmit", "--root", root],
+    {
+      input: JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        session_id: sessionID,
+        cwd,
+        prompt: "synthetic",
+      }),
+      env: { ...process.env, PATH: "/nonexistent" },
+    },
+  ).toString();
+}
+
+// callTool calls one tool of the real `flashheart mcp` server, as Claude
+// Code would from a session working in cwd, and returns its text.
+export function callTool(root, cwd, name, args) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(executable, ["mcp", "--root", root], {
+      env: { ...process.env, PATH: "/nonexistent", CLAUDE_PROJECT_DIR: cwd },
+      stdio: ["pipe", "pipe", "inherit"],
+    });
+    let buffer = "";
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error(`flashheart mcp did not answer ${name}`));
+    }, 10_000);
+    child.stdout.on("data", (chunk) => {
+      buffer += chunk;
+      for (const line of buffer.split("\n").slice(0, -1)) {
+        const message = JSON.parse(line);
+        if (message.id !== 2) continue;
+        clearTimeout(timer);
+        child.stdin.end();
+        const text = message.result.content.map((c) => c.text).join("");
+        if (message.result.isError) reject(new Error(text));
+        else resolvePromise(text);
+      }
+      buffer = buffer.slice(buffer.lastIndexOf("\n") + 1);
+    });
+    const send = (message) =>
+      child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", ...message })}\n`);
+    send({
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "e2e", version: "1" },
+      },
+    });
+    send({ method: "notifications/initialized" });
+    send({ id: 2, method: "tools/call", params: { name, arguments: args } });
+  });
 }

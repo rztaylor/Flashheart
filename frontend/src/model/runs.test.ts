@@ -11,6 +11,7 @@ import {
   needsReason,
   permissionReason,
   planStations,
+  questionReason,
   sessionsOf,
   shortID,
 } from "./runs";
@@ -45,6 +46,7 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     files: [],
     plan: [],
     progress: { done: 0, total: 0 },
+    questions: [],
     ...patch,
   };
 }
@@ -234,10 +236,53 @@ it("gives a card's live run the same reason as the Agents view", () => {
     step: "",
     permission: "Bash",
     waitingOn: "Explore",
+    question: "" as const,
     lastActivity: "",
   };
   expect(liveReason(live)).toBe("Explore needs permission for Bash");
   expect(liveReason({ ...live, waitingOn: "" })).toBe("Permission for Bash");
+  expect(
+    liveReason({
+      ...live,
+      permission: "",
+      waitingOn: "",
+      question: "decision",
+    }),
+  ).toBe("Needs a decision");
+});
+
+it("says what a question asks for, and when its answer is on its way", () => {
+  const asked = {
+    id: "q-1",
+    run: "claude:s",
+    kind: "review" as const,
+    text: "Is the layout right?",
+    asked: "2026-10-05T10:00:00Z",
+  };
+  expect(questionReason(asked)).toBe("Asks for a review");
+  expect(questionReason({ ...asked, kind: "blocked" })).toBe("Is blocked");
+  expect(questionReason({ ...asked, kind: "question" })).toBe("Has a question");
+  expect(
+    questionReason({
+      ...asked,
+      answer: "Yes",
+      answeredAt: "2026-10-05T10:01:00Z",
+    }),
+  ).toBe("Answer waits for its next prompt");
+  const session = run("claude:s", { state: "needs-you", questions: [asked] });
+  expect(needsReason(session, [])).toBe("Asks for a review");
+  // A permission prompt is named before a question.
+  expect(needsReason({ ...session, permission: "Bash" }, [])).toBe(
+    "Permission for Bash",
+  );
+  const helper = run("claude:s/x", {
+    state: "needs-you",
+    agentType: "Plan",
+    questions: [{ ...asked, kind: "decision" }],
+  });
+  expect(needsReason(run("claude:s", { state: "needs-you" }), [helper])).toBe(
+    "Plan needs a decision",
+  );
 });
 
 it("shortens run ids and counts things in words", () => {

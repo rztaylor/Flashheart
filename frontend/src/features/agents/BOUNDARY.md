@@ -3,8 +3,8 @@
 Owns the Agents view (VIEW-3): agent runs as a departure board, lanes by
 run state with Needs you first, one row per session with its subagents on a
 spur beneath it, the ticket it is linked to (or Unassigned), its plan as a
-route, branch and last activity, and the run detail (plan stops, edited
-files, activity) shared with the card panel's Runs tab. Loads runs and a
+route, branch and last activity, and the run detail (questions to answer,
+plan stops, edited files, activity) shared with the card panel's Runs tab. Loads runs and a
 run's timeline through `api/runs`.
 
 Does not own run state or links (backend `runs`), lane grouping and wording

@@ -53,13 +53,13 @@ slice 10. Each slice is test-first and committed on its own.
 
 ## Progress
 
-- [ ] 1 events and runs
-- [ ] 2 shared rules and file copies
-- [ ] 3 protocol text
-- [ ] 4 MCP read tools
-- [ ] 5 MCP write tools
-- [ ] 6 `flashheart mcp`
-- [ ] 7 hooks
-- [ ] 8 serve and UI
-- [ ] 9 setup
+- [x] 1 events and runs
+- [x] 2 shared rules and file copies
+- [x] 3 protocol text
+- [x] 4 MCP read tools
+- [x] 5 MCP write tools
+- [x] 6 `flashheart mcp`
+- [x] 7 hooks
+- [x] 8 serve and UI
+- [x] 9 setup
 - [ ] 10 smoke, docs, real sessions, closure

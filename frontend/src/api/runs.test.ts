@@ -22,6 +22,7 @@ const live = {
   step: "Fix header",
   permission: "Bash",
   waitingOn: "",
+  question: "",
   lastActivity: "2026-10-06T07:00:00Z",
 };
 const run = {
@@ -53,6 +54,17 @@ const run = {
   files: ["src/a.ts"],
   plan: [{ text: "Fix header", status: "in_progress" }],
   progress: { done: 0, total: 1, current: "Fix header" },
+  questions: [
+    {
+      id: "q-1",
+      run: "claude:s",
+      ticket: "AL-3",
+      kind: "decision",
+      text: "Which schema?",
+      options: ["v1", "v2"],
+      asked: "2026-10-06T07:04:00Z",
+    },
+  ],
 };
 
 describe("run validators", () => {
@@ -66,6 +78,15 @@ describe("run validators", () => {
         timeline: [{ time: "2026-10-06T07:00:00Z", kind: "turn.start" }],
       }),
     ).toBe(true);
+  });
+
+  it("check questions", () => {
+    expect(isRun({ ...run, questions: undefined })).toBe(false);
+    expect(
+      isRun({ ...run, questions: [{ ...run.questions[0], kind: "chat" }] }),
+    ).toBe(false);
+    expect(isLive({ ...live, question: "decision" })).toBe(true);
+    expect(isLive({ ...live, question: "chat" })).toBe(false);
   });
 
   it("reject unknown states and missing fields", () => {
@@ -97,6 +118,7 @@ describe("run validators", () => {
       warnings: [],
       needsYou: true,
       agentWorking: false,
+      openQuestions: 0,
     };
     expect(isCard({ ...card, live })).toBe(true);
     expect(isCard({ ...card, live: { ...live, state: "busy" } })).toBe(false);

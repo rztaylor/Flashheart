@@ -56,8 +56,12 @@ func TestQuestionsAreShownOnRunsCardsAndTickets(t *testing.T) {
 	var board BoardResponse
 	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
 	for _, card := range board.Cards {
-		if card.ID == "AL-1" && (!card.NeedsYou || card.Questions != 1) {
+		if card.ID == "AL-1" && (!card.NeedsYou || card.OpenQuestions != 1) {
 			t.Fatalf("AL-1 card = %+v", card)
+		}
+		// AL-3's session waits on a permission prompt, which it names first.
+		if card.ID == "AL-3" && (card.Live == nil || card.Live.Permission != "Bash" || card.Live.Question != "") {
+			t.Fatalf("AL-3 live = %+v", card.Live)
 		}
 	}
 }
