@@ -19,9 +19,9 @@ function total(counts: ProjectSummary["counts"]) {
   return COLUMNS.reduce((sum, column) => sum + counts[column.id], 0);
 }
 
-// ProjectRail is the black signage column beside the board: every project as
-// a station code (its ticket key) with its route bar and trouble counts, most
-// recently active first (PRJ-6).
+// ProjectRail is the frame's column beside the view: every project with its
+// key badge, route bar and trouble counts, most recently active first
+// (PRJ-6, ui-layout.md §1).
 export function ProjectRail({
   projects,
   runs,
@@ -43,7 +43,7 @@ export function ProjectRail({
   return (
     <nav
       aria-label="Projects"
-      className="flex h-full flex-col overflow-y-auto bg-band text-on-band"
+      className="flex h-full flex-col overflow-y-auto bg-rail text-on-rail"
     >
       <ul className="flex flex-col gap-0.5 p-2">
         <li>
@@ -61,7 +61,7 @@ export function ProjectRail({
         </li>
         <li
           aria-hidden="true"
-          className="mx-2 my-1.5 border-t border-band-track"
+          className="mx-2 my-1.5 border-t border-rail-rule"
         />
         {projects.map((project) => (
           <li key={project.name}>
@@ -120,16 +120,18 @@ function RailItem({
       onClick={onClick}
       title={`${subtitle ? `${title} (${subtitle})` : title}${runs.needsYou > 0 ? ` — ${runs.needsYou} need${runs.needsYou === 1 ? "s" : ""} you` : ""}`}
       aria-current={active ? "page" : undefined}
-      className={`flex w-full items-start gap-2.5 rounded-control px-2 py-2.5 text-left transition-colors focus-visible:outline-on-band max-[90rem]:group-data-[panel=open]/work:justify-center max-[90rem]:group-data-[panel=open]/work:px-0 ${
-        active ? "bg-band-field" : "hover:bg-band-field/60"
+      className={`flex w-full items-start gap-3 rounded-card border px-2.5 py-2.5 text-left transition-colors max-[90rem]:group-data-[panel=open]/work:justify-center max-[90rem]:group-data-[panel=open]/work:px-0 ${
+        active
+          ? "border-rail-rule bg-rail-active text-on-rail-active shadow-card"
+          : "border-transparent hover:bg-on-rail/6"
       }`}
     >
       <span
         aria-hidden="true"
-        className={`grid h-6 min-w-8 shrink-0 place-items-center rounded-[3px] px-1 text-xs leading-none font-bold station-sign ${
+        className={`grid h-8 min-w-9 shrink-0 place-items-center rounded-control px-1.5 text-sm leading-none display-cut ${
           active
-            ? "bg-on-band text-band"
-            : "text-on-band shadow-[inset_0_0_0_1.5px_var(--fh-on-band-muted)]"
+            ? "bg-rail-active-mark text-on-rail-active-mark"
+            : "bg-on-rail/8"
         }`}
       >
         {code}
@@ -141,12 +143,20 @@ function RailItem({
           >
             {title}
           </span>
-          <span className="text-xs text-on-band-muted">{tickets}</span>
+          <span className="text-xs">{tickets}</span>
         </span>
-        <RouteBar counts={counts} label={title} />
-        <span className="flex items-center gap-3 text-2xs whitespace-nowrap text-on-band-muted">
+        <span
+          className={
+            active ? "text-on-rail-active-muted" : "text-on-rail-muted"
+          }
+        >
+          <RouteBar counts={counts} label={title} />
+        </span>
+        <span
+          className={`flex items-center gap-3 text-2xs whitespace-nowrap ${active ? "text-on-rail-active-muted" : "text-on-rail-muted"}`}
+        >
           {runs.needsYou > 0 ? (
-            <span className="flex items-center gap-1 rounded-[3px] bg-on-band px-1 font-semibold text-band">
+            <span className="flex items-center gap-1 rounded-full bg-attention px-1.5 font-semibold text-on-attention">
               <RunStateMark state="needs-you" size={8} />
               {runs.needsYou}
               <span className="sr-only">
@@ -167,7 +177,7 @@ function RailItem({
           ) : null}
           {repair > 0 ? (
             <span
-              className="flex items-center gap-1 font-semibold text-on-band"
+              className={`flex items-center gap-1 font-semibold ${active ? "text-on-rail-active" : "text-on-rail"}`}
               title={`${repair} need repair`}
             >
               <Icon name="repair" size={10} />

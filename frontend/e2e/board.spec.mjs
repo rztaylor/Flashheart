@@ -351,13 +351,28 @@ test("table sorts and opens tickets", async () => {
   await expect(
     page.getByRole("columnheader", { name: "Priority" }),
   ).toHaveAttribute("aria-sort", "ascending");
-  await expect(page.getByRole("row").nth(1)).toContainText("high");
+  await expect(page.getByRole("row").nth(1)).toContainText("High");
   await page
     .getByRole("button", { name: "Locked atomic ticket writes" })
     .click();
   await expect(
     page.getByRole("complementary", { name: "Ticket FH-14" }),
   ).toBeVisible();
+});
+
+test("every view names its scope in the page header, not the band", async () => {
+  const page = shared;
+  for (const view of ["board", "agents", "workstreams", "table"]) {
+    await open(page, `#/p/flashheart/${view}`);
+    await expect(
+      page.getByRole("main").getByRole("heading", { level: 1 }),
+    ).toHaveText(/Flashheart/);
+    await expect(page.getByRole("banner").getByRole("heading")).toHaveCount(0);
+  }
+  await open(page, "#/all/board");
+  await expect(
+    page.getByRole("main").getByRole("heading", { level: 1 }),
+  ).toHaveText(/All projects/);
 });
 
 for (const theme of ["light", "dark"]) {
@@ -433,6 +448,20 @@ for (const theme of ["light", "dark"]) {
       .boundingBox();
     expect(column?.width ?? 0).toBeGreaterThan(300);
     await shot(page, `board-narrow-${theme}`);
+    // Every view and the ticket panel fit a phone without sideways scroll.
+    for (const [name, hash] of [
+      ["workstreams", "#/p/flashheart/workstreams"],
+      ["table", "#/p/flashheart/table"],
+      ["agents", "#/all/agents"],
+      ["panel", "#/p/flashheart/board?t=FH-11"],
+    ]) {
+      await open(page, hash, { width: 390, height: 844, theme });
+      const sideways = await page.evaluate(
+        () => document.scrollingElement.scrollWidth - window.innerWidth,
+      );
+      expect(sideways, name).toBeLessThanOrEqual(0);
+      await shot(page, `${name}-narrow-${theme}`);
+    }
   });
 }
 

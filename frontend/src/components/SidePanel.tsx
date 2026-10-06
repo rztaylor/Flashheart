@@ -29,14 +29,14 @@ export function SidePanel({ label, onClose, children }: SidePanelProps) {
       ref={ref}
       tabIndex={-1}
       aria-label={label}
-      className="panel-enter relative flex min-h-0 flex-col border-l border-rule bg-card shadow-panel outline-none max-md:fixed max-md:inset-x-0 max-md:top-12 max-md:bottom-0 max-md:z-30 md:w-[clamp(26rem,32vw,35rem)]"
+      className="panel-enter relative flex min-h-0 flex-col border-l border-rule bg-panel shadow-panel outline-none max-md:fixed max-md:inset-x-0 max-md:top-14 max-md:bottom-0 max-md:z-30 md:w-[clamp(26rem,32vw,35rem)]"
     >
       <button
         type="button"
         onClick={onClose}
         aria-label="Close ticket"
         title="Close (Esc)"
-        className="absolute top-3 right-3 z-10 grid size-8 place-items-center rounded-control text-ink-muted transition-colors hover:bg-well hover:text-ink"
+        className="absolute top-4 right-4 z-10 grid size-9 place-items-center rounded-full text-ink-muted transition-colors hover:bg-well hover:text-ink"
       >
         <Icon name="close" />
       </button>

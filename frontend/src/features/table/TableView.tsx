@@ -9,7 +9,10 @@ import {
 } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
+import { Pill, StatusPill, Tag } from "../../components/Pill";
+import { RunStateLabel } from "../../components/RunState";
 import type { Line } from "../../model/lines";
+import { priorityLabel } from "../../model/status";
 import { runningTime } from "../../model/time";
 
 type SortKey =
@@ -64,7 +67,9 @@ function compare(a: Card, b: Card, key: SortKey): number {
   }
 }
 
-// TableView lists tickets in a sortable table (VIEW-5); rows open the card panel.
+// TableView lists tickets in a sortable table (VIEW-5, ui-layout.md §6):
+// status pills, type and priority tags, blockers and live runs; rows open
+// the card panel.
 export function TableView({
   cards,
   lines,
@@ -88,7 +93,7 @@ export function TableView({
   const columns: { key: SortKey; label: string; className?: string }[] = [
     { key: "title", label: "Ticket" },
     ...(projectNames ? [{ key: "project" as const, label: "Project" }] : []),
-    { key: "column", label: "Column" },
+    { key: "column", label: "Status" },
     { key: "type", label: "Type" },
     { key: "priority", label: "Priority" },
     { key: "workstream", label: "Workstream" },
@@ -98,9 +103,9 @@ export function TableView({
   ];
   const now = new Date();
   return (
-    <div className="h-full overflow-auto px-4 pb-10">
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10 bg-ground">
+    <div className="h-full overflow-auto px-4 pt-1 pb-10 md:px-6">
+      <table className="w-full border-separate border-spacing-0 overflow-hidden rounded-panel border border-rule bg-card text-sm shadow-card">
+        <thead className="sticky top-0 z-10 bg-column">
           <tr>
             {columns.map((column) => {
               const active = sort.key === column.key;
@@ -115,7 +120,7 @@ export function TableView({
                         : "ascending"
                       : "none"
                   }
-                  className={`border-b-3 border-rule-strong px-2 pt-3 pb-1.5 text-left text-xs station-sign ${column.className ?? ""}`}
+                  className={`border-b border-rule px-3 py-2.5 text-left text-sm heading-cut ${column.className ?? ""}`}
                 >
                   <button
                     type="button"
@@ -152,15 +157,15 @@ export function TableView({
             return (
               <tr
                 key={`${card.project}/${card.id}/${card.column}`}
-                className={`border-b border-rule ${isSelected ? "bg-well" : "hover:bg-well/60"}`}
+                className={`[&>td]:border-b [&>td]:border-rule last:[&>td]:border-b-0 ${isSelected ? "bg-select-surface" : "hover:bg-well"}`}
               >
-                <td className="max-w-[28rem] px-2 py-1.5">
+                <td className="max-w-[28rem] px-3 py-2">
                   <button
                     type="button"
                     onClick={() => onOpen({ id: card.id })}
                     className="flex flex-col text-left"
                   >
-                    <span className="font-medium text-ink hover:underline">
+                    <span className="font-semibold text-ink hover:underline">
                       {card.title}
                     </span>
                     <span className="text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
@@ -169,20 +174,24 @@ export function TableView({
                   </button>
                 </td>
                 {projectNames ? (
-                  <td className="px-2 py-1.5 text-ink-muted">
+                  <td className="px-3 py-2 text-ink-muted">
                     {projectNames.get(card.project) ?? card.project}
                   </td>
                 ) : null}
-                <td className="px-2 py-1.5 whitespace-nowrap">
-                  {COLUMNS.find((item) => item.id === card.column)?.title}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <StatusPill column={card.column} />
                 </td>
-                <td className="px-2 py-1.5 text-ink-muted">{card.type}</td>
-                <td
-                  className={`px-2 py-1.5 ${card.priority === "high" ? "font-semibold" : "text-ink-muted"}`}
-                >
-                  {card.priority}
+                <td className="px-3 py-2">
+                  {card.type ? <Tag>{card.type}</Tag> : null}
                 </td>
-                <td className="px-2 py-1.5">
+                <td className="px-3 py-2">
+                  {card.priority ? (
+                    <Tag strong={card.priority === "high"}>
+                      {priorityLabel(card.priority)}
+                    </Tag>
+                  ) : null}
+                </td>
+                <td className="px-3 py-2">
                   {card.workstream ? (
                     <span className="flex items-center gap-1.5 whitespace-nowrap">
                       <LineBullet
@@ -193,41 +202,47 @@ export function TableView({
                     </span>
                   ) : null}
                 </td>
-                <td className="px-2 py-1.5 whitespace-nowrap">
-                  {card.needsRepair.length > 0 ? (
-                    <span className="flex items-center gap-1 font-semibold">
-                      <Icon name="repair" size={12} />
-                      Needs repair
-                    </span>
-                  ) : card.blocked &&
-                    splitReasons(card.blockedBy).blockers.length === 0 ? (
-                    <span
-                      className="text-ink-faint"
-                      title={card.blockedBy
-                        .map((reason) => reason.text)
-                        .join("\n")}
-                    >
-                      Waiting
-                    </span>
-                  ) : card.blocked ? (
-                    <span
-                      className="flex items-center gap-1"
-                      title={card.blockedBy
-                        .map((reason) => reason.text)
-                        .join("\n")}
-                    >
-                      <Icon name="diamond" size={12} />
-                      Blocked
-                    </span>
-                  ) : null}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className="flex items-center gap-2">
+                    {card.needsRepair.length > 0 ? (
+                      <span className="flex items-center gap-1 font-semibold">
+                        <Icon name="repair" size={12} />
+                        Needs repair
+                      </span>
+                    ) : card.blocked &&
+                      splitReasons(card.blockedBy).blockers.length === 0 ? (
+                      <span
+                        className="text-ink-faint"
+                        title={card.blockedBy
+                          .map((reason) => reason.text)
+                          .join("\n")}
+                      >
+                        Waiting
+                      </span>
+                    ) : card.blocked ? (
+                      <span
+                        title={card.blockedBy
+                          .map((reason) => reason.text)
+                          .join("\n")}
+                      >
+                        <Pill tone="blocked">Blocked</Pill>
+                      </span>
+                    ) : null}
+                    {card.live ? (
+                      <RunStateLabel
+                        state={card.live.state}
+                        className="text-2xs"
+                      />
+                    ) : null}
+                  </span>
                 </td>
-                <td className="px-2 py-1.5 text-right text-ink-muted">
+                <td className="px-3 py-2 text-right text-ink-muted">
                   {card.criteria.total > 0
                     ? `${card.criteria.done}/${card.criteria.total}`
                     : ""}
                 </td>
                 <td
-                  className="px-2 py-1.5 text-right text-ink-muted"
+                  className="px-3 py-2 text-right whitespace-nowrap text-ink-muted"
                   title={card.modified}
                 >
                   {runningTime(card.modified, now)}

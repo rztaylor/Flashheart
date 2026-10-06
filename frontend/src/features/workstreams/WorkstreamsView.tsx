@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import {
   fetchWorkstreams,
   type ProjectSummary,
@@ -9,6 +9,7 @@ import type { AuthenticatedFetch } from "../../api/client";
 import { reorderWorkstream } from "../../api/edit";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
+import { KeyBadge } from "../../components/KeyBadge";
 import { LineBullet } from "../../components/LineBullet";
 import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
@@ -27,8 +28,8 @@ interface WorkstreamsViewProps {
   onOpen(ticket: TicketRef): void;
 }
 
-// WorkstreamsView draws every workstream of the given projects as a transit
-// line, one section per project (VIEW-4).
+// WorkstreamsView draws every workstream of the given projects as a route
+// card, one section per project (VIEW-4, ui-layout.md §4).
 export function WorkstreamsView({
   projects,
   fetcher,
@@ -51,7 +52,7 @@ export function WorkstreamsView({
     );
   }
   return (
-    <div className="flex flex-col gap-10 overflow-y-auto px-6 py-5 pb-16">
+    <div className="flex flex-col gap-10 overflow-y-auto px-4 pt-1 pb-16 md:px-6">
       {withLines.map((project) => (
         <ProjectLines
           key={project.name}
@@ -129,15 +130,18 @@ function ProjectLines({
   return (
     <section
       aria-label={`${project.displayName} workstreams`}
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-4"
     >
       {showName ? (
-        <h2 className="text-lg station-sign">{project.displayName}</h2>
+        <h2 className="flex items-center gap-2.5 text-lg heading-cut">
+          <KeyBadge>{project.key}</KeyBadge>
+          {project.displayName}
+        </h2>
       ) : null}
       {resource.status === "loading" ? (
         <div
           aria-hidden="true"
-          className="h-28 animate-pulse rounded-panel bg-well"
+          className="h-44 animate-pulse rounded-panel border border-rule bg-card"
         />
       ) : null}
       {resource.status === "error" ? (
@@ -168,6 +172,12 @@ const statusLabel = {
   completed: "Completed",
 };
 
+const statusIcon = {
+  active: "half",
+  blocked: "diamond",
+  completed: "check",
+} as const;
+
 function WorkstreamLine({
   project,
   workstream,
@@ -184,29 +194,40 @@ function WorkstreamLine({
   onReorder?(ids: string[]): void;
 }) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
+  // The route card takes a wash of its line colour (none in dark), and its
+  // stations sit on that surface.
+  const colour = line ? `var(--fh-line-${line.colour})` : "var(--fh-ink-faint)";
+  const surface = {
+    "--route-surface": `color-mix(in srgb, ${colour} var(--fh-route-wash), var(--fh-card))`,
+    "--route-ink": line
+      ? `var(--fh-line-ink-${line.colour})`
+      : "var(--fh-card)",
+  } as CSSProperties;
   return (
     <article
       aria-labelledby={`ws-${project}-${workstream.slug}`}
-      className="border-t border-rule pt-5 first-of-type:border-t-0 first-of-type:pt-0"
+      style={surface}
+      className="rounded-panel border border-rule bg-(--route-surface) px-5 pt-5 pb-3 shadow-card"
     >
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <LineBullet line={line} size="lg" />
-        <Heading
-          id={`ws-${project}-${workstream.slug}`}
-          className="text-md station-sign"
-        >
-          {workstream.title}
-        </Heading>
-        <span
-          className={`flex items-center gap-1 text-xs ${workstream.status === "blocked" ? "font-semibold text-ink" : "text-ink-muted"}`}
-        >
-          {workstream.status === "blocked" ? (
-            <Icon name="diamond" size={11} />
-          ) : null}
-          {statusLabel[workstream.status]}
-        </span>
-        <span className="ml-auto text-xs text-ink-muted">
-          {workstream.done} of {workstream.total} stations served
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <LineBullet line={line} size="xl" />
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <Heading
+            id={`ws-${project}-${workstream.slug}`}
+            className="text-2xl leading-tight display-cut"
+          >
+            {workstream.title}
+          </Heading>
+          <span
+            className={`flex items-center gap-1 text-xs ${workstream.status === "blocked" ? "font-semibold text-ink" : "text-ink-muted"}`}
+          >
+            <Icon name={statusIcon[workstream.status]} size={12} />
+            {statusLabel[workstream.status]}
+          </span>
+        </div>
+        <span className="ml-auto text-sm text-ink-muted">
+          <span className="font-semibold text-ink">{workstream.done}</span> of{" "}
+          {workstream.total} served
         </span>
       </header>
       {workstream.blockedBy.length > 0 ||

@@ -131,7 +131,7 @@ by `net/http`, `--debug` summaries) to `<root>/.flashheart/serve.log`, created
 on first write and rotated at 1 MB; a crash that bypasses Go's logger is still
 lost, and `--foreground` shows everything.
 
-## 2026-10-04 — D14: Board visual direction: Transit Line Map
+## 2026-10-04 — D14: Board visual direction: Transit Line Map (superseded by D18)
 
 Options (impeccable decision page, code-led because no image generation is
 available locally): Transit Line Map (assigned by the concept roll), Flight
@@ -234,13 +234,12 @@ Garden Line and the original navy Night Service were considered but are
 not selected. Generated sample content and inconsistent state/colour details
 are not requirements; SPEC remains the functional authority.
 
-This supersedes D14's visual direction for the planned rollout, not the
-existing implementation. The current DESIGN.md tokens remain a record of
-shipped UI until the rollout updates them. Approved images, provenance,
+This supersedes D14's visual direction; the rollout (FH-10–FH-14) shipped
+it, and DESIGN.md records the built system. Approved images, provenance,
 dependencies and validation are linked from
-[`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md); FH-10 defines
-the shared contract before FH-11–FH-14 implement it. No protocol/storage
-change or cloud deployment is implied.
+[`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md); the shared
+contract is `docs/dev/specs/ui-layout.md`. No protocol/storage change or
+cloud deployment is implied.
 
 ## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker
 
@@ -279,3 +278,27 @@ tool's input without deciding its permission, so the hook stamps the run
 into Flashheart's own tool calls. Claude Code starts user-scope MCP servers
 in `~/.claude`, so the fallback reads the project from
 `CLAUDE_PROJECT_DIR`.
+
+## 2026-10-06 — D21: Theme rollout no longer waits for review-and-orchestration
+
+Decision (user): implement `metro-theme-rollout` (FH-11–FH-14) now, without
+waiting for `review-and-orchestration` (FH-6). The surfaces being styled
+exist: the card panel's Review tab shows the review and its attachments.
+
+Options: wait for FH-6 so every review surface exists before styling (the
+order D18 set), or theme now and have FH-6 build its new surfaces
+(Attachments tab, lightbox, *How to Verify* checklist, subagent tree) to
+the shared contract in `docs/dev/specs/ui-layout.md`. The second was
+chosen: the contract already specifies those surfaces, so the themes need
+no second pass, and FH-6's pieces are not built under the theme tickets.
+
+## 2026-10-06 — D22: Light theme on white with a raspberry bar
+
+Decision (user): the light palette drops the references' Metro-blue band and
+cream grounds, which read as old-school web, for a white background with a
+strong-coloured bar that is not blue ("everyone uses blue"). From rendered
+options (emerald, raspberry, violet) the user chose raspberry (#be185d). It
+is light's one accent: the bar, the primary action, the current project,
+selection and focus. Grounds are white and cool light greys. Night Service
+(dark) is unchanged. Structure is unchanged (D18, `ui-layout.md`); only light
+tokens moved, and the palette test still holds every pair to WCAG AA.

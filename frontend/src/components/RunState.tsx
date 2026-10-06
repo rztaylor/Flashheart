@@ -68,23 +68,23 @@ export function RunStateMark({
 }
 
 // RunStateLabel pairs the mark with its word. Needs you is the one state
-// set as an inverted plate, so it reads from across the room.
+// set as a plate in the attention colour, so it reads from across the room;
+// the others are ink marks with their words.
 export function RunStateLabel({
   state,
   tone = "map",
   className,
 }: {
   state: RunState;
-  // tone "band" draws on the black signage frame.
+  // tone "band" sits on the frame (band or rail).
   tone?: "map" | "band";
   className?: string;
 }) {
   if (state === "needs-you") {
     return (
       <span
-        className={`inline-flex items-center gap-1 rounded-[3px] px-1.5 leading-4 font-semibold whitespace-nowrap ${
-          tone === "band" ? "bg-on-band text-band" : "bg-ink text-ground"
-        } ${className ?? ""}`}
+        data-tone={tone}
+        className={`inline-flex items-center gap-1 rounded-full bg-attention px-2 leading-5 font-semibold whitespace-nowrap text-on-attention ${className ?? ""}`}
       >
         <RunStateMark state={state} size={9} />
         {STATE_LABEL[state]}

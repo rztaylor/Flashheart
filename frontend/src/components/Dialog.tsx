@@ -48,14 +48,11 @@ export function Dialog({
         event.stopPropagation();
         onClose();
       }}
-      className={`m-auto max-h-[min(44rem,90vh)] ${wide ? "w-[min(calc(100vw-2rem),60rem)]" : "w-[min(calc(100vw-2rem),32rem)]"} overflow-hidden rounded-panel border border-rule bg-card p-0 text-ink shadow-panel`}
+      className={`m-auto max-h-[min(44rem,90vh)] ${wide ? "w-[min(calc(100vw-2rem),60rem)]" : "w-[min(calc(100vw-2rem),32rem)]"} overflow-hidden rounded-panel border border-rule bg-panel p-0 text-ink shadow-card-hover`}
     >
       <div className="flex max-h-[inherit] flex-col">
         <header className="flex items-start justify-between gap-4 px-6 pt-5">
-          <h2
-            id={titleId}
-            className="border-t-[3px] border-rule-strong pt-1.5 text-md station-sign"
-          >
+          <h2 id={titleId} className="text-xl leading-tight display-cut">
             {title}
           </h2>
           <button

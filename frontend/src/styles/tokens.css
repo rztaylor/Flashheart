@@ -1,46 +1,112 @@
 /*
  * Design tokens: the only place raw colour, type, radius, focus and motion
- * values live. World: transit line map (Vignelli diagram, Unimark signage).
- * Line colours are ordered so neighbouring indices are far apart in hue
- * (red, blue, yellow, green, purple, orange, lime, brown, grey).
- * Line colours mean workstreams and nothing else; ticket state is ink, shape
- * and words. Paint colours (--fh-paint-*) show the board's "Colour by"
- * attribute (type, priority or age), always beside its name. They are muted
- * so full saturation always means a workstream, and features (the usual
- * case) are neutral grey so colour picks out the exceptions. Each has a
- * strong shade for tags, a tint for card headers and an ink for text on the
- * strong shade. Themes switch on <html data-theme>.
+ * values live. Two palettes on one structure (D18, docs/dev/specs/
+ * ui-layout.md): Metro Pop in light, Night Service in black and neutral
+ * charcoal in dark. A theme changes these values only, never layout.
+ *
+ * Roles (ui-layout.md §7), each used for its own job only:
+ * frame (band, rail), action (primary button, current view), attention
+ * (Needs you), line (workstreams: --fh-line-*), paint (the "Colour by"
+ * value: --fh-paint-*), state (status pills: --fh-state-*), blocked, danger
+ * (application errors), focus and selection. None is ever the only carrier
+ * of meaning. Dark neutrals carry no hue: no navy. tokens.test.ts checks
+ * contrast and neutrality. Themes switch on <html data-theme>.
  */
 :root {
+  /* Neutrals: a clean white ground, cool light-grey column wells, white
+     cards (D22). */
   --fh-ground: #ffffff;
-  --fh-well: #f2f3f5;
+  --fh-panel: #ffffff;
   --fh-card: #ffffff;
-  --fh-rule: #d7dadf;
-  --fh-rule-strong: #111111;
-  --fh-ink: #111111;
-  --fh-ink-muted: #565c66;
-  --fh-ink-faint: #6a6f78;
-  --fh-band: #111111;
-  --fh-on-band: #ffffff;
-  --fh-on-band-muted: #a9aeb6;
-  --fh-band-field: #26282c;
-  --fh-focus: #111111;
-  --fh-danger: #b3261e;
-  --fh-danger-surface: #fdf0ef;
-  --fh-hatch: rgb(17 17 17 / 0.12);
-  --fh-overlay: rgb(17 17 17 / 0.18);
-  --fh-selection: #fcd96a;
-  --fh-casing: rgb(17 17 17 / 0.22);
+  --fh-column: #f3f4f6;
+  --fh-well: #f6f7f9;
+  --fh-rule: #e3e5e9;
+  --fh-rule-strong: #18181b;
+  --fh-ink: #18181b;
+  --fh-ink-muted: #52525b;
+  --fh-ink-faint: #5f5f68;
 
-  --fh-line-0: #d52b1e;
-  --fh-line-1: #0039a6;
-  --fh-line-2: #fccc0a;
-  --fh-line-3: #00843d;
-  --fh-line-4: #a93aa0;
-  --fh-line-5: #ff6319;
-  --fh-line-6: #6cbe45;
-  --fh-line-7: #8a5a2b;
-  --fh-line-8: #8d8f92;
+  /* Frame: the raspberry band and a near-white rail. Raspberry is light's
+     one accent: action, current project, selection and focus (D22). */
+  --fh-band: #be185d;
+  --fh-on-band: #ffffff;
+  --fh-on-band-muted: #fde2ee;
+  --fh-band-field: #9d174d;
+  /* The current view tab is an inverted pill on the bar. */
+  --fh-band-tab-active: #ffffff;
+  --fh-on-band-tab-active: #9d174d;
+  --fh-band-rule: #fde2ee;
+  --fh-rail: #fafafa;
+  --fh-on-rail: #18181b;
+  --fh-on-rail-muted: #5b5b63;
+  /* The current project is a raised tile; its key badge (and the page
+     header's) is filled in the accent. */
+  --fh-rail-active: #ffffff;
+  --fh-on-rail-active: #18181b;
+  --fh-on-rail-active-muted: #52525b;
+  --fh-rail-active-mark: #be185d;
+  --fh-on-rail-active-mark: #ffffff;
+  --fh-rail-rule: #e7e7eb;
+
+  /* Action: the primary button and the current view. */
+  --fh-action: #be185d;
+  --fh-on-action: #ffffff;
+  --fh-action-hover: #9d174d;
+  /* Attention: Needs you, the one thing that must read across the room. */
+  --fh-attention: #ff9447;
+  --fh-on-attention: #111111;
+
+  --fh-focus: #be185d;
+  --fh-select: #be185d;
+  --fh-select-surface: #fdf0f6;
+  --fh-danger: #b42318;
+  --fh-danger-surface: #fdecea;
+  --fh-selection: #ffe08a;
+  --fh-flash: #ffd23f;
+
+  /* State: status pills, always with an icon and the column's word. */
+  --fh-state-neutral: #e6e8ee;
+  --fh-state-neutral-ink: #3d4555;
+  --fh-state-progress: #fff0c2;
+  --fh-state-progress-ink: #6e4a00;
+  --fh-state-review: #e3ebff;
+  --fh-state-review-ink: #1d47b8;
+  --fh-state-done: #dbf3e4;
+  --fh-state-done-ink: #0b6534;
+  --fh-state-blocked: #fde3df;
+  --fh-state-blocked-ink: #a1241a;
+
+  /* Callouts in the card panel: the handoff and a question for the user. */
+  --fh-callout-handoff: #fff4ec;
+  --fh-callout-handoff-edge: #ea580c;
+  --fh-callout-question: #fdf0f6;
+  --fh-callout-question-edge: #be185d;
+
+  /* How much of its line colour washes a workstream's route card. */
+  --fh-route-wash: 7%;
+
+  --fh-hatch: rgb(18 26 46 / 0.12);
+  --fh-overlay: rgb(18 26 46 / 0.18);
+  --fh-casing: rgb(18 26 46 / 0.2);
+  --fh-shadow-card:
+    0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  --fh-shadow-card-hover:
+    0 2px 4px rgb(16 24 40 / 0.06), 0 10px 20px -6px rgb(16 24 40 / 0.18);
+  --fh-shadow-panel:
+    -12px 0 32px -12px rgb(16 24 40 / 0.18), -1px 0 0 rgb(16 24 40 / 0.06);
+
+  /* Lines: workstreams only, all saturated hues (none grey, so a line
+     never reads as an inactive state). Neighbouring indices are far apart
+     in hue. */
+  --fh-line-0: #d42f25;
+  --fh-line-1: #1d5bd8;
+  --fh-line-2: #f5c400;
+  --fh-line-3: #0f7f4b;
+  --fh-line-4: #8b4fd1;
+  --fh-line-5: #f2701d;
+  --fh-line-6: #7cc242;
+  --fh-line-7: #9a6233;
+  --fh-line-8: #0b7a8a;
   --fh-line-ink-0: #ffffff;
   --fh-line-ink-1: #ffffff;
   --fh-line-ink-2: #111111;
@@ -49,93 +115,136 @@
   --fh-line-ink-5: #111111;
   --fh-line-ink-6: #111111;
   --fh-line-ink-7: #ffffff;
-  --fh-line-ink-8: #111111;
+  --fh-line-ink-8: #ffffff;
 
-  /* The board is a lit platform: cards lift off a dotted map ground. */
-  --fh-platform: #eceef1;
-  --fh-platform-dot: rgb(17 17 17 / 0.09);
-  --fh-shadow-card:
-    0 1px 1px rgb(17 24 39 / 0.06), 0 2px 6px -1px rgb(17 24 39 / 0.1);
-  --fh-shadow-card-hover:
-    0 2px 3px rgb(17 24 39 / 0.07), 0 10px 22px -6px rgb(17 24 39 / 0.22);
-  --fh-band-track: #3a3d43;
-  --fh-flash: #ffd23f;
-
-  --fh-paint-type-feature: #5b6170;
-  --fh-paint-type-feature-tint: #f1f2f4;
+  /* Paint: the "Colour by" value. The tint washes the card header and
+     fills the tag, whose word is set in the strong shade, so paint stays
+     softer than the saturated line colours; -ink is text on the strong
+     shade (the colour key's swatch). */
+  --fh-paint-type-feature: #6247c4;
+  --fh-paint-type-feature-tint: #f0ecfd;
   --fh-paint-type-feature-ink: #ffffff;
-  --fh-paint-type-bug: #a2453a;
-  --fh-paint-type-bug-tint: #f6e6e3;
+  --fh-paint-type-bug: #b3362b;
+  --fh-paint-type-bug-tint: #fde9e6;
   --fh-paint-type-bug-ink: #ffffff;
-  --fh-paint-type-infra: #2f6b68;
-  --fh-paint-type-infra-tint: #e1eeed;
+  --fh-paint-type-infra: #0f6f68;
+  --fh-paint-type-infra-tint: #def3f0;
   --fh-paint-type-infra-ink: #ffffff;
-  --fh-paint-type-test: #4a7050;
-  --fh-paint-type-test-tint: #e5eee6;
+  --fh-paint-type-test: #4b5563;
+  --fh-paint-type-test-tint: #eceef1;
   --fh-paint-type-test-ink: #ffffff;
-  --fh-paint-type-refactor: #66548c;
-  --fh-paint-type-refactor-tint: #ece8f3;
+  --fh-paint-type-refactor: #2f55b0;
+  --fh-paint-type-refactor-tint: #e6ecfb;
   --fh-paint-type-refactor-ink: #ffffff;
-  --fh-paint-type-docs: #6b6628;
-  --fh-paint-type-docs-tint: #efeedd;
+  --fh-paint-type-docs: #7a5c00;
+  --fh-paint-type-docs-tint: #fbf1d3;
   --fh-paint-type-docs-ink: #ffffff;
-  --fh-paint-type-spike: #8c4870;
-  --fh-paint-type-spike-tint: #f3e6ee;
+  --fh-paint-type-spike: #a3367a;
+  --fh-paint-type-spike-tint: #fbe7f2;
   --fh-paint-type-spike-ink: #ffffff;
-  --fh-paint-type-other: #5b6170;
-  --fh-paint-type-other-tint: #eceef1;
+  --fh-paint-type-other: #4b5563;
+  --fh-paint-type-other-tint: #eef0f3;
   --fh-paint-type-other-ink: #ffffff;
-  --fh-paint-priority-high: #a3472a;
-  --fh-paint-priority-high-tint: #f6e7e0;
+  --fh-paint-priority-high: #b3362b;
+  --fh-paint-priority-high-tint: #fde9e6;
   --fh-paint-priority-high-ink: #ffffff;
-  --fh-paint-priority-medium: #80651f;
-  --fh-paint-priority-medium-tint: #f2ecdb;
+  --fh-paint-priority-medium: #845700;
+  --fh-paint-priority-medium-tint: #fdf0cf;
   --fh-paint-priority-medium-ink: #ffffff;
-  --fh-paint-priority-low: #52667a;
-  --fh-paint-priority-low-tint: #e7ecf1;
+  --fh-paint-priority-low: #2b7346;
+  --fh-paint-priority-low-tint: #e2f4e8;
   --fh-paint-priority-low-ink: #ffffff;
-  --fh-paint-age-today: #4a7050;
-  --fh-paint-age-today-tint: #e5eee6;
+  --fh-paint-age-today: #2b7346;
+  --fh-paint-age-today-tint: #e2f4e8;
   --fh-paint-age-today-ink: #ffffff;
-  --fh-paint-age-week: #80651f;
-  --fh-paint-age-week-tint: #f2ecdb;
+  --fh-paint-age-week: #845700;
+  --fh-paint-age-week-tint: #fdf0cf;
   --fh-paint-age-week-ink: #ffffff;
-  --fh-paint-age-older: #8c4a3c;
-  --fh-paint-age-older-tint: #f3e6e2;
+  --fh-paint-age-older: #9a4426;
+  --fh-paint-age-older-tint: #f8e7df;
   --fh-paint-age-older-ink: #ffffff;
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --fh-ground: #121315;
-  --fh-well: #1b1c1f;
-  --fh-card: #24262b;
-  --fh-rule: #33363c;
-  --fh-rule-strong: #f1f2f4;
-  --fh-ink: #f1f2f4;
-  --fh-ink-muted: #a3a8b1;
-  --fh-ink-faint: #8f949d;
-  --fh-band: #000000;
-  --fh-on-band: #ffffff;
-  --fh-on-band-muted: #9ea3ab;
-  --fh-band-field: #1d1f23;
-  --fh-focus: #ffffff;
-  --fh-danger: #ff8a80;
-  --fh-danger-surface: #2a1517;
-  --fh-hatch: rgb(241 242 244 / 0.12);
-  --fh-overlay: rgb(0 0 0 / 0.45);
-  --fh-selection: #6b5a12;
-  --fh-casing: rgb(255 255 255 / 0.18);
+  /* Neutrals: black and charcoal with no hue. */
+  --fh-ground: #0c0c0d;
+  --fh-panel: #141415;
+  --fh-card: #1e1e20;
+  --fh-column: #161617;
+  --fh-well: #252527;
+  --fh-rule: #303033;
+  --fh-rule-strong: #f2f2f3;
+  --fh-ink: #f2f2f3;
+  --fh-ink-muted: #ababb0;
+  --fh-ink-faint: #98989e;
 
-  --fh-line-0: #ee4b3f;
-  --fh-line-1: #4a86f0;
-  --fh-line-2: #fccc0a;
-  --fh-line-3: #22a65a;
-  --fh-line-4: #cc5fc2;
-  --fh-line-5: #ff7a3d;
-  --fh-line-6: #7acb52;
-  --fh-line-7: #b8854f;
-  --fh-line-8: #a2a4a8;
+  --fh-band: #070708;
+  --fh-on-band: #f2f2f3;
+  --fh-on-band-muted: #a3a3a9;
+  --fh-band-field: #1b1b1d;
+  --fh-band-tab-active: #f2f2f3;
+  --fh-on-band-tab-active: #111111;
+  --fh-band-rule: #2a2a2d;
+  --fh-rail: #111112;
+  --fh-on-rail: #f2f2f3;
+  --fh-on-rail-muted: #a3a3a9;
+  --fh-rail-active: #1e1e20;
+  --fh-on-rail-active: #ffffff;
+  --fh-on-rail-active-muted: #b3b3b8;
+  --fh-rail-active-mark: #c6f432;
+  --fh-on-rail-active-mark: #111111;
+  --fh-rail-rule: #262628;
+
+  --fh-action: #c6f432;
+  --fh-on-action: #111111;
+  --fh-action-hover: #d4f760;
+  --fh-attention: #ff7a5c;
+  --fh-on-attention: #111111;
+
+  --fh-focus: #c6f432;
+  --fh-select: #c6f432;
+  --fh-select-surface: #2a2a2d;
+  --fh-danger: #ff8a80;
+  --fh-danger-surface: #2b1513;
+  --fh-selection: #5a4a12;
+
+  --fh-state-neutral: #2a2a2d;
+  --fh-state-neutral-ink: #cacacf;
+  --fh-state-progress: #3a2e0c;
+  --fh-state-progress-ink: #ffd666;
+  --fh-state-review: #1f2738;
+  --fh-state-review-ink: #a3c1ff;
+  --fh-state-done: #13301f;
+  --fh-state-done-ink: #72e3a2;
+  --fh-state-blocked: #3b1714;
+  --fh-state-blocked-ink: #ff9a90;
+
+  --fh-callout-handoff: #1c1c1e;
+  --fh-callout-handoff-edge: #ff9a52;
+  --fh-callout-question: #1c1c1e;
+  --fh-callout-question-edge: #ff7a5c;
+
+  --fh-route-wash: 0%;
+
+  --fh-hatch: rgb(242 242 243 / 0.12);
+  --fh-overlay: rgb(0 0 0 / 0.5);
+  --fh-casing: rgb(255 255 255 / 0.16);
+  --fh-shadow-card:
+    0 0 0 1px rgb(255 255 255 / 0.05), 0 2px 8px -2px rgb(0 0 0 / 0.6);
+  --fh-shadow-card-hover:
+    0 0 0 1px rgb(255 255 255 / 0.09), 0 12px 26px -8px rgb(0 0 0 / 0.85);
+  --fh-shadow-panel: -1px 0 0 rgb(255 255 255 / 0.06);
+
+  --fh-line-0: #ff5a4f;
+  --fh-line-1: #4d8dff;
+  --fh-line-2: #ffd23f;
+  --fh-line-3: #3ccf7a;
+  --fh-line-4: #b07cff;
+  --fh-line-5: #ff8c3a;
+  --fh-line-6: #a3e04a;
+  --fh-line-7: #c8925a;
+  --fh-line-8: #3ccfe0;
   --fh-line-ink-0: #111111;
   --fh-line-ink-1: #111111;
   --fh-line-ink-2: #111111;
@@ -146,64 +255,57 @@
   --fh-line-ink-7: #111111;
   --fh-line-ink-8: #111111;
 
-  --fh-platform: #17181b;
-  --fh-platform-dot: rgb(255 255 255 / 0.06);
-  --fh-shadow-card:
-    0 0 0 1px rgb(255 255 255 / 0.06), 0 4px 14px -2px rgb(0 0 0 / 0.7);
-  --fh-shadow-card-hover:
-    0 0 0 1px rgb(255 255 255 / 0.1), 0 14px 30px -6px rgb(0 0 0 / 0.85);
-  --fh-band-track: #34373d;
-  --fh-flash: #ffd23f;
-
-  --fh-paint-type-feature: #a9aeb8;
-  --fh-paint-type-feature-tint: #2a2c31;
+  --fh-paint-type-feature: #b9a3ff;
+  --fh-paint-type-feature-tint: #262033;
   --fh-paint-type-feature-ink: #111111;
-  --fh-paint-type-bug: #dc8f84;
-  --fh-paint-type-bug-tint: #33211f;
+  --fh-paint-type-bug: #ff9187;
+  --fh-paint-type-bug-tint: #33201e;
   --fh-paint-type-bug-ink: #111111;
-  --fh-paint-type-infra: #83bdb8;
-  --fh-paint-type-infra-tint: #1b2c2b;
+  --fh-paint-type-infra: #5fd4c4;
+  --fh-paint-type-infra-tint: #15302c;
   --fh-paint-type-infra-ink: #111111;
-  --fh-paint-type-test: #98c09d;
-  --fh-paint-type-test-tint: #1e2a20;
+  --fh-paint-type-test: #b8bec8;
+  --fh-paint-type-test-tint: #27282b;
   --fh-paint-type-test-ink: #111111;
-  --fh-paint-type-refactor: #b5a6d8;
-  --fh-paint-type-refactor-tint: #282537;
+  --fh-paint-type-refactor: #9db4ff;
+  --fh-paint-type-refactor-tint: #1f2536;
   --fh-paint-type-refactor-ink: #111111;
-  --fh-paint-type-docs: #c9c27e;
-  --fh-paint-type-docs-tint: #2b2a1c;
+  --fh-paint-type-docs: #e8c460;
+  --fh-paint-type-docs-tint: #2e2814;
   --fh-paint-type-docs-ink: #111111;
-  --fh-paint-type-spike: #d699bc;
-  --fh-paint-type-spike-tint: #30222a;
+  --fh-paint-type-spike: #f29ad0;
+  --fh-paint-type-spike-tint: #33202c;
   --fh-paint-type-spike-ink: #111111;
-  --fh-paint-type-other: #a9aeb8;
-  --fh-paint-type-other-tint: #272a30;
+  --fh-paint-type-other: #b8bec8;
+  --fh-paint-type-other-tint: #27282b;
   --fh-paint-type-other-ink: #111111;
-  --fh-paint-priority-high: #e19c7e;
-  --fh-paint-priority-high-tint: #33241d;
+  --fh-paint-priority-high: #ff9187;
+  --fh-paint-priority-high-tint: #33201e;
   --fh-paint-priority-high-ink: #111111;
-  --fh-paint-priority-medium: #d6b56c;
-  --fh-paint-priority-medium-tint: #2e2818;
+  --fh-paint-priority-medium: #e8c460;
+  --fh-paint-priority-medium-tint: #2e2814;
   --fh-paint-priority-medium-ink: #111111;
-  --fh-paint-priority-low: #a5b6c6;
-  --fh-paint-priority-low-tint: #232931;
+  --fh-paint-priority-low: #7fdc9e;
+  --fh-paint-priority-low-tint: #16301f;
   --fh-paint-priority-low-ink: #111111;
-  --fh-paint-age-today: #98c09d;
-  --fh-paint-age-today-tint: #1e2a20;
+  --fh-paint-age-today: #7fdc9e;
+  --fh-paint-age-today-tint: #16301f;
   --fh-paint-age-today-ink: #111111;
-  --fh-paint-age-week: #d6b56c;
-  --fh-paint-age-week-tint: #2e2818;
+  --fh-paint-age-week: #e8c460;
+  --fh-paint-age-week-tint: #2e2814;
   --fh-paint-age-week-ink: #111111;
-  --fh-paint-age-older: #d39a86;
-  --fh-paint-age-older-tint: #32231f;
+  --fh-paint-age-older: #f0a585;
+  --fh-paint-age-older-tint: #33231c;
   --fh-paint-age-older-ink: #111111;
   color-scheme: dark;
 }
 
 @theme inline {
   --color-ground: var(--fh-ground);
-  --color-well: var(--fh-well);
+  --color-panel: var(--fh-panel);
   --color-card: var(--fh-card);
+  --color-column: var(--fh-column);
+  --color-well: var(--fh-well);
   --color-rule: var(--fh-rule);
   --color-rule-strong: var(--fh-rule-strong);
   --color-ink: var(--fh-ink);
@@ -213,15 +315,37 @@
   --color-on-band: var(--fh-on-band);
   --color-on-band-muted: var(--fh-on-band-muted);
   --color-band-field: var(--fh-band-field);
+  --color-band-tab-active: var(--fh-band-tab-active);
+  --color-on-band-tab-active: var(--fh-on-band-tab-active);
+  --color-band-rule: var(--fh-band-rule);
+  --color-rail: var(--fh-rail);
+  --color-on-rail: var(--fh-on-rail);
+  --color-on-rail-muted: var(--fh-on-rail-muted);
+  --color-rail-active: var(--fh-rail-active);
+  --color-on-rail-active: var(--fh-on-rail-active);
+  --color-on-rail-active-muted: var(--fh-on-rail-active-muted);
+  --color-rail-active-mark: var(--fh-rail-active-mark);
+  --color-on-rail-active-mark: var(--fh-on-rail-active-mark);
+  --color-rail-rule: var(--fh-rail-rule);
+  --color-action: var(--fh-action);
+  --color-on-action: var(--fh-on-action);
+  --color-action-hover: var(--fh-action-hover);
+  --color-attention: var(--fh-attention);
+  --color-on-attention: var(--fh-on-attention);
   --color-focus: var(--fh-focus);
+  --color-select: var(--fh-select);
+  --color-select-surface: var(--fh-select-surface);
   --color-danger: var(--fh-danger);
   --color-danger-surface: var(--fh-danger-surface);
   --color-overlay: var(--fh-overlay);
-  --color-platform: var(--fh-platform);
-  --color-band-track: var(--fh-band-track);
   --color-flash: var(--fh-flash);
+  --color-callout-handoff: var(--fh-callout-handoff);
+  --color-callout-handoff-edge: var(--fh-callout-handoff-edge);
+  --color-callout-question: var(--fh-callout-question);
+  --color-callout-question-edge: var(--fh-callout-question-edge);
   --shadow-card: var(--fh-shadow-card);
   --shadow-card-hover: var(--fh-shadow-card-hover);
+  --shadow-panel: var(--fh-shadow-panel);
 }
 
 @theme {
@@ -242,12 +366,19 @@
   --text-lg--line-height: 1.5rem;
   --text-xl: 1.375rem;
   --text-xl--line-height: 1.75rem;
-  --radius-control: 0.25rem;
-  --radius-card: 0.125rem;
-  --radius-panel: 0.125rem;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 2.125rem;
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 2.625rem;
+  /* Rounded and friendly: small marks (checkboxes, inline code, key tags),
+     segments inside a control, controls, cards, then the column and route
+     surfaces; pills and bullets are fully round. */
+  --radius-mark: 0.25rem;
+  --radius-inner: 0.375rem;
+  --radius-control: 0.5rem;
+  --radius-card: 0.625rem;
+  --radius-panel: 0.875rem;
   --spacing: 0.25rem;
   --default-transition-duration: 160ms;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --shadow-panel:
-    -12px 0 32px -8px rgb(0 0 0 / 0.22), -1px 0 0 rgb(0 0 0 / 0.06);
 }

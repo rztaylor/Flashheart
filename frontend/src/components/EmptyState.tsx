@@ -10,7 +10,7 @@ export function EmptyState({
 }) {
   return (
     <div className="mx-auto max-w-md py-16 text-center">
-      <p className="text-md station-sign">{title}</p>
+      <p className="text-xl display-cut">{title}</p>
       {children ? (
         <div className="mt-2 text-sm text-ink-muted">{children}</div>
       ) : null}

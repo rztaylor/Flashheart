@@ -1,4 +1,5 @@
 import type { Card } from "../api/board";
+import { priorityLabel } from "./status";
 
 // Paint is the board's "Colour by" option: a ticket attribute shown as a
 // tinted card header and a named tag (VIEW-6). Workstreams keep the line
@@ -28,11 +29,7 @@ const types = [
   "docs",
   "spike",
 ] as const;
-const priorities = [
-  ["high", "High"],
-  ["medium", "Medium"],
-  ["low", "Low"],
-] as const;
+const priorities = ["high", "medium", "low"] as const;
 const ages = [
   ["today", "Today"],
   ["week", "This week"],
@@ -65,9 +62,9 @@ export function paintFor(
       };
     }
     case "priority": {
-      const match = priorities.find(([value]) => value === card.priority);
+      const match = priorities.find((value) => value === card.priority);
       return match
-        ? { token: `priority-${match[0]}`, label: match[1] }
+        ? { token: `priority-${match}`, label: priorityLabel(match) }
         : undefined;
     }
     case "age": {
@@ -93,7 +90,7 @@ export function paintKey(cards: Card[], mode: PaintMode, now: Date): Paint[] {
     mode === "type"
       ? [...types]
       : mode === "priority"
-        ? priorities.map(([, label]) => label)
+        ? priorities.map(priorityLabel)
         : ages.map(([, label]) => label);
   const rank = (paint: Paint) => {
     const index = order.indexOf(paint.label);

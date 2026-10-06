@@ -43,7 +43,7 @@ export function ConflictDialog({
           { label: "Now on disk", text: current },
         ].map((side) => (
           <section key={side.label} aria-label={side.label} className="min-w-0">
-            <h3 className="mb-1 text-sm station-sign">{side.label}</h3>
+            <h3 className="mb-1 text-sm heading-cut">{side.label}</h3>
             {/* Focusable so keyboard users can scroll a long file. */}
             <pre
               // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be reachable by keyboard.

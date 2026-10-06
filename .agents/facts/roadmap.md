@@ -4,9 +4,9 @@
 - IDs are short kebab-case text. Statuses: `Pending`, `Partial`, `Blocked`.
 - Order: `agent-runs` → `mcp-protocol` →
   ((`mcp-runs` → `codex-support`) ∥ `review-and-orchestration`).
-- `metro-theme-rollout` follows `review-and-orchestration`; its shared
-  layout contract may be prepared beforehand. Brief and approved image
-  references: `docs/dev/roadmap-items/metro-theme-rollout.md`.
+- `metro-theme-rollout` runs alongside `review-and-orchestration` (D21);
+  new UI from either follows `docs/dev/specs/ui-layout.md`. Brief and
+  approved image references: `docs/dev/roadmap-items/metro-theme-rollout.md`.
 - Visible UI changes follow `DESIGN.md`; new surfaces or a changed visual
   world go through the `impeccable` skill first.
 - Remove completed items once outcomes are in the spec, decisions, changelog

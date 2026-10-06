@@ -5,46 +5,40 @@ interface RouteBarProps {
   label: string;
 }
 
-// The bar is drawn in on-band white for the black project rail.
-const colours = {
-  lit: "border-on-band bg-on-band",
-  unlit: "border-on-band-muted bg-band",
-  track: "bg-band-track",
-  served: "bg-on-band",
-  working: "hatched-band",
-};
-
 // RouteBar draws a project's progress as a stretch of track between two
-// terminal stations: served (review and done) in solid ink, the stretch being
-// worked hatched, the rest faint, in on-band white for the black rail.
-// Monochrome so it never competes with line colours.
+// terminal stations: served (review and done) solid, the stretch being
+// worked hatched, the rest faint. It draws in the surrounding text colour,
+// so it reads on the rail and on its current tile in both themes, and never
+// competes with line colours.
 export function RouteBar({ counts, label }: RouteBarProps) {
   const served = counts.review + counts.done;
   const working = counts["in-progress"];
   const total = served + working + counts.backlog + counts["up-next"];
   const percent = (value: number) => (total === 0 ? 0 : (value / total) * 100);
+  const terminal = (lit: boolean) =>
+    `size-2 shrink-0 rounded-full border-2 border-current ${lit ? "bg-current" : ""}`;
   return (
     <div
       role="img"
       aria-label={`${label}: ${served} of ${total} in review or done, ${working} in progress`}
       className="flex items-center"
     >
-      <span
-        className={`size-2 shrink-0 rounded-full border-2 ${served > 0 ? colours.lit : colours.unlit}`}
-      />
-      <span className={`flex h-1 flex-1 overflow-hidden ${colours.track}`}>
+      <span className={terminal(served > 0)} />
+      <span className="relative flex h-1 flex-1 overflow-hidden">
         <span
-          className={`h-full ${colours.served}`}
+          aria-hidden="true"
+          className="absolute inset-0 bg-current opacity-25"
+        />
+        <span
+          className="relative h-full bg-current"
           style={{ width: `${percent(served)}%` }}
         />
         <span
-          className={`h-full ${colours.working}`}
+          className="relative h-full hatched-current"
           style={{ width: `${percent(working)}%` }}
         />
       </span>
-      <span
-        className={`size-2 shrink-0 rounded-full border-2 ${total > 0 && served === total ? colours.lit : colours.unlit}`}
-      />
+      <span className={terminal(total > 0 && served === total)} />
     </div>
   );
 }

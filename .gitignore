@@ -1,7 +1,7 @@
 .cache/
 build/
 dist/
-frontend/node_modules/
+node_modules/
 frontend/test-results/
 frontend/playwright-report/
 internal/webui/assets/generated/

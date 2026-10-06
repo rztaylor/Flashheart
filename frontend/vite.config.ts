@@ -20,5 +20,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
+    // The palette test reads tokens.css as text (?raw); other CSS stays
+    // stubbed.
+    css: { include: [/tokens\.css/] },
   },
 });

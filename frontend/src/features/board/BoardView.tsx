@@ -30,8 +30,8 @@ import {
 } from "../../api/board";
 import type { VirtualColumn } from "../../api/preferences";
 import { Button } from "../../components/Button";
+import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
-import { RunStateMark } from "../../components/RunState";
 import { shownVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
@@ -80,8 +80,8 @@ const columnTitle = (id: string) =>
 const instructions =
   "Press Shift with the left or right arrow to move this ticket to the next column, or drag it with the pointer. Enter opens it.";
 
-// BoardView shows real columns in workflow order (VIEW-1) on the platform
-// ground. Arrow keys move between cards; Shift with an arrow moves the
+// BoardView shows real columns in workflow order (VIEW-1) as rounded wells
+// (ui-layout.md §2). Arrow keys move between cards; Shift with an arrow moves the
 // ticket to the next column, as dragging does (EDIT-1); Enter opens it. When
 // a card opens and the panel narrows the board, its column scrolls back into
 // view.
@@ -284,9 +284,9 @@ export function BoardView(props: BoardViewProps) {
         },
       }}
     >
-      <div className="platform-ground flex h-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-col">
         {(legend && legend.workstreams.length > 0) || paints.length > 0 ? (
-          <div className="flex items-center justify-between gap-x-6 overflow-x-auto px-4 pt-3 pb-1 [&>*]:shrink-0">
+          <div className="flex items-center justify-between gap-x-6 overflow-x-auto border-t border-rule px-4 py-2.5 md:px-6 [&>*]:shrink-0">
             {legend ? (
               <LineLegend
                 workstreams={legend.workstreams}
@@ -307,7 +307,7 @@ export function BoardView(props: BoardViewProps) {
           }}
           // The column count is a variable, not an inline template, so the
           // narrow-width rule in index.css (one chosen column) still wins.
-          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-5 overflow-x-auto px-4 pt-4"
+          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-x-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
           style={{ "--board-columns": columns.length } as CSSProperties}
         >
           {columns.map((column, columnIndex) => (
@@ -317,34 +317,26 @@ export function BoardView(props: BoardViewProps) {
               enabled={!!onMove && !column.virtual}
               virtual={column.virtual}
             >
-              <h2
-                id={`column-${column.id}`}
-                className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-3 text-md station-sign"
-              >
-                <span className="flex items-center gap-2">
-                  {column.virtual ? (
-                    <RunStateMark
-                      state={
-                        column.id === "needs-you" ? "needs-you" : "working"
-                      }
-                      size={12}
-                      className="translate-y-[1px]"
-                      still
-                    />
-                  ) : null}
-                  {column.title}
-                </span>
-                <span className="text-sm font-semibold text-ink">
-                  {column.id === "done" && doneTotal > column.cards.length
+              {/* The title alone names the column region. */}
+              <WellHead
+                titleId={`column-${column.id}`}
+                title={column.title}
+                count={
+                  column.id === "done" && doneTotal > column.cards.length
                     ? `${column.cards.length} of ${doneTotal}`
-                    : column.cards.length}
-                </span>
-              </h2>
-              <div className="-mx-2 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2 pt-0.5 pb-6">
+                    : column.cards.length
+                }
+                mark={
+                  column.virtual
+                    ? column.id === "needs-you"
+                      ? "needs-you"
+                      : "working"
+                    : undefined
+                }
+              />
+              <div className="-mx-1.5 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1.5 pt-0.5 pb-3">
                 {column.cards.length === 0 ? (
-                  <p className="px-2 py-6 text-center text-xs text-ink-muted">
-                    {column.empty}
-                  </p>
+                  <EmptySlot>{column.empty}</EmptySlot>
                 ) : null}
                 {column.cards.map((card, rowIndex) => {
                   // One tab stop per column (the cursor's card, or the first
@@ -444,10 +436,10 @@ function DropColumn({
       data-column={id}
       data-virtual={virtual ? "" : undefined}
       aria-labelledby={`column-${id}`}
-      className={`-mx-2 flex min-h-0 snap-start flex-col rounded-card px-2 transition-[background-color,box-shadow] ${
+      className={`${wellSurface} snap-start transition-[border-color,box-shadow] ${
         isOver
-          ? "bg-card/60 shadow-[inset_0_0_0_2px_var(--fh-rule-strong)]"
-          : ""
+          ? "border-select shadow-[inset_0_0_0_1px_var(--fh-select)]"
+          : "border-rule"
       }`}
     >
       {children}

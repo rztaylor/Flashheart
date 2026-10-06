@@ -4,10 +4,11 @@ import type { ProjectSummary, TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { fetchRun, fetchRuns, type Run, type RunState } from "../../api/runs";
 import { Button } from "../../components/Button";
+import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { PlanRoute } from "../../components/PlanRoute";
-import { RunStateLabel, RunStateMark } from "../../components/RunState";
+import { RunStateLabel } from "../../components/RunState";
 import {
   agentName,
   counted,
@@ -94,7 +95,7 @@ export function AgentsView({
   const lanes = laneRuns(list);
   return (
     <div className="relative min-h-0 flex-1 overflow-y-auto">
-      <div className="px-4 pb-12">
+      <div className="px-4 pb-12 md:px-6">
         {runs.error ? (
           <p role="status" className="mt-3 text-xs text-ink-muted">
             Showing the last good copy: {runs.error}
@@ -165,31 +166,20 @@ function LaneSection({
     <section
       aria-labelledby={headingId}
       data-lane={state}
-      className="mt-6 first:mt-4"
+      className={`${wellSurface} mt-4 border-rule first:mt-1`}
     >
-      <h2
+      <WellHead
         id={headingId}
-        className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-1.5 text-md station-sign"
-      >
-        <span className="flex items-center gap-2">
-          <RunStateMark
-            state={state}
-            size={12}
-            className="translate-y-[1px]"
-            still
-          />
-          {STATE_LABEL[state]}
-        </span>
-        <span className="text-sm font-semibold text-ink">{runs.length}</span>
-      </h2>
+        title={STATE_LABEL[state]}
+        count={runs.length}
+        mark={state}
+      />
       {runs.length === 0 ? (
-        <p className="border-t border-rule py-2.5 text-xs text-ink-muted">
-          {emptyLane[state]}
-        </p>
+        <EmptySlot>{emptyLane[state]}</EmptySlot>
       ) : (
-        <ul className="border-t border-rule">
+        <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
           {runs.map((entry) => (
-            <li key={entry.run.id} className="border-b border-rule">
+            <li key={entry.run.id}>
               <RunRow
                 run={entry.run}
                 subagents={entry.children}
@@ -319,7 +309,7 @@ function RunRow({
           {projectKey && !subagent ? (
             <span
               title={run.project}
-              className="shrink-0 rounded-[3px] px-1 text-2xs leading-4 font-bold station-sign shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
+              className="shrink-0 rounded-mark px-1 text-2xs leading-4 font-bold heading-cut shadow-[inset_0_0_0_1.25px_var(--fh-ink-muted)]"
             >
               {projectKey}
             </span>
@@ -439,7 +429,7 @@ function AgentsSkeleton() {
     <div aria-hidden="true" className="flex flex-col gap-6 p-4">
       {[0, 1, 2].map((lane) => (
         <div key={lane} className="flex flex-col gap-2">
-          <div className="h-6 border-t-[5px] border-rule" />
+          <div className="h-7 w-1/4 rounded-full bg-well" />
           <div className="h-9 animate-pulse rounded-card bg-well" />
           <div className="h-9 animate-pulse rounded-card bg-well" />
         </div>

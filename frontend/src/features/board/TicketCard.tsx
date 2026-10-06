@@ -9,11 +9,13 @@ import { type Card, COLUMNS, splitReasons } from "../../api/board";
 import type { Live } from "../../api/runs";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
+import { Pill, Tag } from "../../components/Pill";
 import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
 import { type Paint, paintVars } from "../../model/paint";
 import { agentName, liveReason, STATE_LABEL } from "../../model/runs";
+import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import type { Density } from "../filters/FilterBar";
 
@@ -41,18 +43,16 @@ interface TicketCardProps {
   mirrored?: boolean;
 }
 
-const priorityLabel: Record<string, string> = {
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-};
-
-// TicketCard is one ticket on the board (VIEW-6). The workstream's line runs
-// down its left edge; the header takes a tint of the board's "Colour by"
-// attribute, named in a tag of the strong shade. Compact: title, id, type and
-// priority. Normal adds the blocked proof and criteria. Detailed adds the
-// excerpt, handoff "next" and attachments. Real blockers are marked; waits on
-// an earlier station of the line are quiet.
+// TicketCard is one ticket on the board (VIEW-6), in the one anatomy of
+// docs/dev/specs/ui-layout.md §2: header (id, project, running time), title
+// (three lines at most, the rest in its tooltip),
+// tags, state, live run, then by density the excerpt and next step, and a
+// footer with criteria and priority. The workstream's line runs down its
+// left edge; the header takes the tint of the board's "Colour by" value,
+// whose tag is filled and named. Compact: id, title, type and priority.
+// Normal adds the blocker, live run and criteria. Detailed adds the
+// excerpt, handoff "next", attachments and review. Real blockers are pills;
+// waits on an earlier station of the line are quiet.
 export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
   function TicketCard(
     {
@@ -84,10 +84,14 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     const wait = waits[0];
     const more = card.blockedBy.length - 1;
     const painted = paint && !repair ? paint : undefined;
+    const paintedAs = (kind: string) =>
+      painted?.token.startsWith(`${kind}-`) ? painted : undefined;
     const inset = line ? "pl-4" : "pl-3";
-    const priority = card.priority
-      ? (priorityLabel[card.priority] ?? card.priority)
-      : "";
+    const priority = priorityLabel(card.priority);
+    const compact = density === "compact";
+    const detailed = density === "detailed";
+    const showCriteria = !compact && card.criteria.total > 0;
+    const showFiles = detailed && (card.attachments > 0 || card.hasReview);
     return (
       <button
         {...dragProps}
@@ -105,12 +109,12 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
         aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
         data-paint={painted?.token}
         style={paintVars(painted) as CSSProperties | undefined}
-        className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px ${
+        className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
           selected
-            ? "border-rule-strong shadow-[0_0_0_1px_var(--fh-rule-strong),var(--fh-shadow-card-hover)]"
+            ? "border-select shadow-[0_0_0_1px_var(--fh-select),var(--fh-shadow-card-hover)]"
             : repair
               ? "border-dashed border-ink-muted shadow-card"
-              : "border-rule/70 shadow-card hover:shadow-card-hover"
+              : "border-rule shadow-card hover:shadow-card-hover"
         } ${dimmed ? "opacity-35" : ""} ${ghost ? "opacity-30" : ""} ${lifted ? "rotate-[1.2deg] cursor-grabbing shadow-card-hover" : ""}`}
       >
         {line ? (
@@ -126,59 +130,55 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             className="hatched-strong absolute inset-x-0 top-0 h-1.5"
           />
         ) : null}
+
+        {/* Rows 1 and 2: the header (id, project, running time) and the
+            title, tinted with the Colour by paint. */}
         <span
-          className={`flex items-start gap-2 pr-3 ${inset} ${repair ? "pt-3.5" : "pt-2.5"} ${
+          className={`flex flex-col gap-1 pr-3 ${inset} ${repair ? "pt-3.5" : "pt-2.5"} pb-2 ${
             painted
-              ? `pb-2 ${done ? "bg-[color-mix(in_srgb,var(--paint-tint)_55%,var(--fh-card))]" : "bg-(--paint-tint)"}`
-              : "pb-1.5"
+              ? done
+                ? "bg-[color-mix(in_srgb,var(--paint-tint)_55%,var(--fh-card))]"
+                : "bg-(--paint-tint)"
+              : ""
           }`}
         >
-          <LineBullet line={line} size="sm" label={workstreamTitle} />
-          <span
-            className={`min-w-0 flex-1 text-sm leading-snug font-medium ${done ? "text-ink-muted" : "text-ink"}`}
-          >
-            {card.title}
-          </span>
-          {age ? (
-            <span
-              className="shrink-0 text-2xs text-ink-muted"
-              title={`Last changed ${card.modified}`}
-            >
-              {age}
-            </span>
-          ) : null}
-        </span>
-
-        <span
-          className={`flex flex-col gap-1.5 pr-3 pb-2.5 ${inset} ${painted ? "pt-2" : ""}`}
-        >
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-2xs text-ink-muted">
-            {showProject ? (
-              <span className="font-medium text-ink">{showProject}</span>
-            ) : null}
+          <span className="flex items-center gap-2 text-2xs text-ink-muted">
             <span className="shrink-0 font-semibold tracking-[0.02em] tabular-nums text-ink">
               {card.id}
             </span>
-            {painted ? (
-              <span className="rounded-[3px] bg-(--paint) px-1.5 leading-4 font-semibold text-(--paint-ink)">
-                {painted.label}
-              </span>
+            {showProject ? (
+              <span className="truncate font-medium">{showProject}</span>
             ) : null}
-            {card.type && painted?.token.startsWith("type-") !== true ? (
-              <span>{card.type}</span>
-            ) : null}
-            {priority && painted?.token.startsWith("priority-") !== true ? (
+            {age ? (
               <span
-                className={
-                  card.priority === "high"
-                    ? "font-semibold text-ink"
-                    : undefined
-                }
+                className="ml-auto shrink-0"
+                title={`Last changed ${card.modified}`}
               >
-                {priority}
+                {age}
               </span>
             ) : null}
-            {density === "compact" && card.live ? (
+          </span>
+          <span
+            title={card.title}
+            className={`line-clamp-3 text-base leading-snug font-semibold ${done ? "text-ink-muted" : "text-ink"}`}
+          >
+            {card.title}
+          </span>
+        </span>
+
+        <span className={`flex flex-col gap-2 pr-3 pb-2.5 ${inset} pt-1`}>
+          {/* Row 3: workstream, type (and age) tags, mirror note; Compact
+              also carries the short blocked pill and the run mark here. */}
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-2xs text-ink-muted">
+            <LineBullet line={line} size="sm" label={workstreamTitle} />
+            {card.type ? (
+              <Tag paint={paintedAs("type")}>{card.type}</Tag>
+            ) : null}
+            {paintedAs("age") ? (
+              <Tag paint={paintedAs("age")}>{paintedAs("age")?.label}</Tag>
+            ) : null}
+            {compact && blocker ? <Pill tone="blocked">Blocked</Pill> : null}
+            {compact && card.live ? (
               card.live.state === "needs-you" ? (
                 <RunStateLabel state="needs-you" />
               ) : (
@@ -194,20 +194,31 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
                 in {columnName(card.column)}
               </span>
             ) : null}
-            {density === "compact" && blocker ? (
-              <span className="flex items-center gap-0.5 font-semibold text-ink">
-                <Icon name="diamond" size={10} />
-                Blocked
-              </span>
-            ) : null}
           </span>
 
-          {density !== "compact" && card.live ? (
+          {repair ? (
+            <StateNote kind="repair" compact>
+              {card.needsRepair[0] ?? "Needs repair"}
+            </StateNote>
+          ) : null}
+
+          {!compact && blocker ? (
+            <StateNote kind="blocked" compact>
+              {more > 0 ? `${blocker.text} (+${more} more)` : blocker.text}
+            </StateNote>
+          ) : null}
+          {!compact && !blocker && wait ? (
+            <StateNote kind="waiting" compact>
+              {wait.text}
+            </StateNote>
+          ) : null}
+
+          {!compact && card.live ? (
             <LiveBadge live={card.live} now={now} />
           ) : null}
           {/* Another session's question about the ticket needs you even
               while its own run is not waiting on you. */}
-          {density !== "compact" &&
+          {!compact &&
           card.openQuestions > 0 &&
           card.live?.state !== "needs-you" ? (
             <span className="flex min-w-0 items-center gap-2 text-2xs">
@@ -218,30 +229,13 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             </span>
           ) : null}
 
-          {repair ? (
-            <StateNote kind="repair" compact>
-              {card.needsRepair[0] ?? "Needs repair"}
-            </StateNote>
-          ) : null}
-
-          {density !== "compact" && blocker ? (
-            <StateNote kind="blocked" compact>
-              {more > 0 ? `${blocker.text} (+${more} more)` : blocker.text}
-            </StateNote>
-          ) : null}
-          {density !== "compact" && !blocker && wait ? (
-            <StateNote kind="waiting" compact>
-              {wait.text}
-            </StateNote>
-          ) : null}
-
-          {density === "detailed" && card.excerpt ? (
+          {detailed && card.excerpt ? (
             <span className="line-clamp-3 text-xs text-ink-muted">
               {card.excerpt}
             </span>
           ) : null}
 
-          {density === "detailed" && card.handoffNext ? (
+          {detailed && card.handoffNext ? (
             <span className="flex items-start gap-1.5 text-xs text-ink">
               <Icon name="next" size={12} className="mt-[0.2em]" />
               <span className="line-clamp-2">
@@ -251,30 +245,41 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             </span>
           ) : null}
 
-          {density !== "compact" &&
-          (card.criteria.total > 0 ||
-            (density === "detailed" &&
-              (card.attachments > 0 || card.hasReview))) ? (
-            <span className="flex items-center gap-3 text-2xs text-ink-muted">
-              {card.criteria.total > 0 ? (
+          {/* Row 10: criteria, files and review left; priority right. */}
+          {showCriteria || showFiles || priority ? (
+            <span
+              data-row="footer"
+              className="flex items-center gap-3 text-2xs text-ink-muted"
+            >
+              {showCriteria ? (
                 <span
                   className="flex items-center gap-1"
                   title="Acceptance criteria ticked"
                 >
-                  <Icon name="criteria" size={12} />
+                  <Icon name="criteria" size={13} />
                   {card.criteria.done}/{card.criteria.total}
                 </span>
               ) : null}
-              {density === "detailed" && card.attachments > 0 ? (
+              {detailed && card.attachments > 0 ? (
                 <span className="flex items-center gap-1" title="Attachments">
-                  <Icon name="attachment" size={12} />
+                  <Icon name="attachment" size={13} />
                   {card.attachments}
                 </span>
               ) : null}
-              {density === "detailed" && card.hasReview ? (
+              {detailed && card.hasReview ? (
                 <span className="flex items-center gap-1">
-                  <Icon name="review" size={12} />
+                  <Icon name="review" size={13} />
                   Review
+                </span>
+              ) : null}
+              {priority ? (
+                <span className="ml-auto">
+                  <Tag
+                    paint={paintedAs("priority")}
+                    strong={card.priority === "high"}
+                  >
+                    {priority}
+                  </Tag>
                 </span>
               ) : null}
             </span>
@@ -317,20 +322,16 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
   const agent = (
     <span className="shrink-0 text-ink-muted">{agentName(live.agent)}</span>
   );
-  // Line 1 is the state and, when it needs you, what it needs in words;
-  // line 2 is the agent and its plan step.
+  // Line 1 is the state, the agent and the last activity; when it needs
+  // you, line 2 says what it needs in words; the last line is its plan step.
   return (
     <span
-      className="flex min-w-0 flex-col gap-0.5 text-2xs"
+      className="flex min-w-0 flex-col gap-1 text-2xs"
       data-live={live.state}
     >
       <span className="flex min-w-0 items-center gap-2">
         <RunStateLabel state={live.state} />
-        {needsYou ? (
-          <span className="font-semibold text-ink">{liveReason(live)}</span>
-        ) : (
-          agent
-        )}
+        {agent}
         <span
           className="ml-auto shrink-0 text-ink-muted"
           title={`Last activity ${absoluteTime(live.lastActivity)}`}
@@ -338,14 +339,12 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
           {runningTime(live.lastActivity, now)}
         </span>
       </span>
-      {needsYou || step ? (
-        <span className="flex min-w-0 items-center gap-2">
-          {needsYou ? agent : null}
-          {step ? (
-            <span className="truncate text-ink" title={live.step}>
-              {step}
-            </span>
-          ) : null}
+      {needsYou ? (
+        <span className="font-semibold text-ink">{liveReason(live)}</span>
+      ) : null}
+      {step ? (
+        <span className="truncate text-ink" title={live.step}>
+          {step}
         </span>
       ) : null}
     </span>

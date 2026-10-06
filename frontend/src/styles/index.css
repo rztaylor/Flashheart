@@ -41,21 +41,30 @@
   }
 }
 
-/* Station-sign label: the condensed signage cut used for column and section heads. */
-@utility station-sign {
+/* Heading cut: the condensed bold of column, lane, section and tab heads. */
+@utility heading-cut {
   font-stretch: 87.5%;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
-@utility wordmark {
-  font-stretch: 112.5%;
+/* Display cut: the heavy condensed face of page titles, the panel title and
+   workstream names. */
+@utility display-cut {
+  font-stretch: 80%;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
-/* Hatching: monochrome, never a line colour. hatched-strong marks the
-   needs-repair edge band and the in-progress stretch of a route bar. */
+@utility wordmark {
+  font-stretch: 87.5%;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+/* Hatching: ink, never a line colour. hatched-strong marks the needs-repair
+   edge band; hatched-current draws in the surrounding text colour, for the
+   in-progress stretch of a route bar. */
 @utility hatched-strong {
   background-image: repeating-linear-gradient(
     -45deg,
@@ -65,26 +74,13 @@
   opacity: 0.55;
 }
 
-/* The same hatch drawn in on-band white, for route bars on the black rail. */
-@utility hatched-band {
+@utility hatched-current {
   background-image: repeating-linear-gradient(
     -45deg,
-    var(--fh-on-band) 0 3px,
+    currentColor 0 3px,
     transparent 3px 7px
   );
   opacity: 0.7;
-}
-
-/* The board's platform: a dotted map ground that cards lift off. */
-@utility platform-ground {
-  background-color: var(--fh-platform);
-  background-image: radial-gradient(
-    circle,
-    var(--fh-platform-dot) 1px,
-    transparent 1.25px
-  );
-  background-size: 16px 16px;
-  background-position: 8px 8px;
 }
 
 @utility hatched {
@@ -106,21 +102,21 @@
   }
   /* A document's own H1 sits below the panel title in the hierarchy. */
   .markdown h1 {
-    @apply text-md station-sign;
+    @apply text-lg heading-cut;
   }
   .markdown h2 {
-    @apply mt-6 border-t-2 border-rule-strong pt-2 text-sm station-sign;
+    @apply mt-6 border-t border-rule pt-3 text-md heading-cut;
   }
   .markdown h3,
   .markdown h4 {
-    @apply mt-4 text-sm station-sign;
+    @apply mt-4 text-sm heading-cut;
   }
   .markdown ul,
   .markdown ol {
     @apply space-y-1 pl-5;
   }
   .markdown ul {
-    list-style: square;
+    list-style: disc;
   }
   .markdown ol {
     list-style: decimal;
@@ -133,10 +129,10 @@
   }
   .markdown input[type="checkbox"] {
     @apply mr-2 size-3.5 align-[-0.15em];
-    accent-color: var(--fh-ink);
+    accent-color: var(--fh-select);
   }
   .markdown code {
-    @apply rounded-[3px] bg-well px-1 py-px font-mono text-[0.8125em];
+    @apply rounded-mark bg-well px-1 py-px font-mono text-[0.8125em];
   }
   .markdown pre {
     @apply overflow-x-auto rounded-card border border-rule bg-well p-3 text-sm;
@@ -145,7 +141,7 @@
     @apply bg-transparent p-0;
   }
   .markdown blockquote {
-    @apply border-l border-rule-strong pl-3 text-ink-muted;
+    @apply border-l-3 border-rule pl-3 text-ink-muted;
   }
   .markdown table {
     @apply block w-full overflow-x-auto text-sm;
@@ -156,7 +152,7 @@
     @apply border-b border-rule px-2 py-1 text-left;
   }
   .markdown th {
-    @apply station-sign;
+    @apply heading-cut;
   }
   .markdown hr {
     @apply border-rule;

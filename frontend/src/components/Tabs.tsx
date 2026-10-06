@@ -68,9 +68,9 @@ export function Tabs({
             tabIndex={active ? 0 : -1}
             onClick={() => onSelect(item.id)}
             onKeyDown={(event) => onKey(event, index)}
-            className={`-mb-px border-b-3 py-2 text-sm station-sign transition-colors ${
+            className={`-mb-px border-b-3 py-2.5 text-sm heading-cut transition-colors ${
               active
-                ? "border-rule-strong text-ink"
+                ? "border-select text-ink"
                 : "border-transparent text-ink-muted hover:text-ink"
             }`}
           >

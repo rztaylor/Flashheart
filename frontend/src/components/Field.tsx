@@ -10,6 +10,9 @@ import { Icon } from "./Icon";
 
 interface SelectFieldProps {
   label: string;
+  // plain drops the "applied" ring, for settings (Colour by) that always
+  // have a value, as opposed to filters.
+  plain?: boolean;
   value: string;
   onChange(value: string): void;
   children: ReactNode;
@@ -18,6 +21,7 @@ interface SelectFieldProps {
 // SelectField is a labelled native select in the board's control style.
 export function SelectField({
   label,
+  plain,
   value,
   onChange,
   children,
@@ -30,8 +34,8 @@ export function SelectField({
         onChange={(event: ChangeEvent<HTMLSelectElement>) =>
           onChange(event.target.value)
         }
-        className={`h-7 appearance-none rounded-control border bg-card py-0 pr-7 pl-2 text-xs text-ink transition-colors hover:border-ink-muted ${
-          value ? "border-rule-strong" : "border-rule"
+        className={`h-8 appearance-none rounded-control border bg-card py-0 pr-7 pl-2.5 text-xs font-medium text-ink transition-colors hover:border-ink-muted ${
+          value && !plain ? "border-select ring-1 ring-select" : "border-rule"
         }`}
       >
         {children}
@@ -59,7 +63,7 @@ const searchTones = {
   band: {
     icon: "text-on-band-muted",
     input:
-      "w-64 border-transparent bg-band-field text-on-band placeholder:text-on-band-muted focus-visible:border-on-band-muted focus-visible:outline-on-band",
+      "w-72 border-band-rule bg-band-field text-on-band placeholder:text-on-band-muted focus-visible:border-on-band-muted focus-visible:outline-on-band",
   },
   plain: {
     icon: "text-ink-muted",
@@ -89,7 +93,7 @@ export function SearchField({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className={`h-8 rounded-control border pr-2 pl-8 text-sm ${style.input}`}
+        className={`h-9 rounded-control border pr-2 pl-8 text-sm ${style.input}`}
       />
     </label>
   );
@@ -115,7 +119,7 @@ export function CheckboxField({
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="size-3.5 accent-[var(--fh-ink)]"
+        className="size-3.5 accent-[var(--fh-select)]"
       />
       {label}
     </label>

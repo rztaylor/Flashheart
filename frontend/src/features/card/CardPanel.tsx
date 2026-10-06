@@ -16,6 +16,7 @@ import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Markdown } from "../../components/Markdown";
+import { BlockerPill, Pill, StatusPill, Tag } from "../../components/Pill";
 import { QuestionCard } from "../../components/QuestionCard";
 import { SidePanel } from "../../components/SidePanel";
 import { StateNote } from "../../components/StateNote";
@@ -23,6 +24,7 @@ import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
 import { counted, sessionsOf, shortRun } from "../../model/runs";
+import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
@@ -250,7 +252,9 @@ function PanelActions({
   );
 }
 
-function PanelHeader({
+// PanelHeader: the id and project, the title, a pill row (column, blocker,
+// priority, type), a meta row and the actions (ui-layout.md §3).
+export function PanelHeader({
   detail,
   line,
   workstreamTitle,
@@ -261,36 +265,43 @@ function PanelHeader({
   workstreamTitle: string;
   actions?: ReactNode;
 }) {
-  const column =
-    COLUMNS.find((item) => item.id === detail.column)?.title ?? detail.column;
-  const facts = [
-    detail.type,
-    detail.priority ? `${detail.priority} priority` : "",
-    detail.created ? `created ${detail.created}` : "",
-  ].filter(Boolean);
+  const priority = detail.priority
+    ? `${priorityLabel(detail.priority)} priority`
+    : "";
   return (
-    <header className="px-6 pt-5 pb-4 pr-14">
-      <h2 className="text-xl leading-tight font-semibold tracking-[-0.01em]">
-        {detail.title}
-      </h2>
-      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
+    <header className="px-6 pt-5 pb-4 pr-16">
+      <p className="flex items-center gap-2 text-sm text-ink-muted">
         <span className="font-semibold tracking-[0.02em] tabular-nums text-ink">
           {detail.id}
         </span>
-        <span className="font-semibold text-ink">{column}</span>
+        <span>{detail.project}</span>
+      </p>
+      <h2 className="mt-1 text-2xl leading-tight display-cut">
+        {detail.title}
+      </h2>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <StatusPill column={detail.column} />
+        {/* Only a real blocker, never a wait on the line's own order. */}
+        {splitReasons(detail.blockedBy).blockers.length > 0 ? (
+          <Pill tone="blocked">Blocked</Pill>
+        ) : null}
+        {priority ? (
+          <Tag strong={detail.priority === "high"}>{priority}</Tag>
+        ) : null}
+        {detail.type ? <Tag>{detail.type}</Tag> : null}
+      </div>
+      <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
         {detail.workstream ? (
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 font-medium text-ink">
             <LineBullet line={line} size="sm" />
             {workstreamTitle}
           </span>
         ) : null}
-        {facts.map((fact) => (
-          <span key={fact}>{fact}</span>
-        ))}
+        {detail.created ? <span>created {detail.created}</span> : null}
         {detail.branch ? (
-          <span className="flex items-center gap-1 font-mono">
+          <span className="flex min-w-0 items-center gap-1 font-mono">
             <Icon name="branch" size={12} />
-            {detail.branch}
+            <span className="truncate">{detail.branch}</span>
           </span>
         ) : null}
         <span title={absoluteTime(detail.modified)}>
@@ -303,7 +314,7 @@ function PanelHeader({
 }
 
 // ReasonList explains why a ticket cannot start (CARD-4). Real blockers are
-// marked with the diamond; waits on an earlier station of the line are not.
+// blocked pills; waits on an earlier station of the line are quiet words.
 function ReasonList({
   id,
   title,
@@ -322,9 +333,15 @@ function ReasonList({
     <section aria-labelledby={id}>
       <h3
         id={id}
-        className={`mb-2 flex items-center gap-1.5 border-t-2 pt-1.5 text-sm station-sign ${marked ? "border-rule-strong text-ink" : "border-rule text-ink-muted"}`}
+        className={`mb-2 flex items-center gap-1.5 text-md heading-cut ${marked ? "text-ink" : "text-ink-muted"}`}
       >
-        {marked ? <Icon name="diamond" size={14} /> : null}
+        {marked ? (
+          <Icon
+            name="diamond"
+            size={15}
+            className="text-(--fh-state-blocked-ink)"
+          />
+        ) : null}
         {title}
       </h3>
       <ul className="flex flex-col gap-1.5">
@@ -333,11 +350,11 @@ function ReasonList({
             key={reason.text}
             className="flex items-start justify-between gap-3 text-sm"
           >
-            <span
-              className={marked ? "font-medium text-ink" : "text-ink-muted"}
-            >
-              {reason.text}
-            </span>
+            {marked ? (
+              <BlockerPill>{reason.text}</BlockerPill>
+            ) : (
+              <span className="text-ink-muted">{reason.text}</span>
+            )}
             {reason.ticket && !reason.missing ? (
               <button
                 type="button"
@@ -345,7 +362,7 @@ function ReasonList({
                   reason.ticket && onOpen({ id: reason.ticket.id })
                 }
                 aria-label={`Open ${reason.ticket.id}`}
-                className="shrink-0 text-xs text-ink-muted underline decoration-ink-faint hover:text-ink"
+                className="mt-1 shrink-0 text-xs font-medium text-ink-muted underline decoration-ink-faint hover:text-ink"
               >
                 Open
               </button>
@@ -372,7 +389,7 @@ function Criterion({
   const [checked, setChecked] = useState(done);
   useEffect(() => setChecked(done), [done]);
   return (
-    <label className="flex cursor-pointer items-start gap-2 text-sm">
+    <label className="flex cursor-pointer items-start gap-2.5 px-3 py-2 text-sm">
       <input
         type="checkbox"
         checked={checked}
@@ -383,14 +400,17 @@ function Criterion({
             if (!ok) setChecked(done);
           });
         }}
-        className="mt-[0.2em] size-3.5 shrink-0 accent-[var(--fh-ink)]"
+        className="mt-[0.15em] size-4 shrink-0 accent-[var(--fh-select)]"
       />
       <span className={checked ? "text-ink-muted" : "text-ink"}>{text}</span>
     </label>
   );
 }
 
-function TicketTab({
+// TicketTab, in the order of ui-layout.md §3: needs repair, questions for
+// the user, the handoff, blockers and waits, criteria, format warnings and
+// the ticket's own markdown.
+export function TicketTab({
   detail,
   keys,
   onOpen,
@@ -415,6 +435,7 @@ function TicketTab({
     key: `${index}:${item.text}`,
   }));
   const { blockers, waits } = splitReasons(detail.blockedBy);
+  const stale = staleHandoff(detail);
   return (
     <div className="flex flex-col gap-6">
       {detail.needsRepair.length > 0 ? (
@@ -426,7 +447,7 @@ function TicketTab({
             aria-hidden="true"
             className="hatched-strong absolute inset-x-0 top-0 h-1.5"
           />
-          <h3 id="repair-heading" className="mb-1.5 text-sm station-sign">
+          <h3 id="repair-heading" className="mb-1.5 text-md heading-cut">
             Needs repair
           </h3>
           {detail.needsRepair.map((problem) => (
@@ -439,33 +460,25 @@ function TicketTab({
             board updates when it parses.
           </p>
           {detail.frontmatter ? (
-            <pre className="mt-2 overflow-x-auto rounded-card bg-card p-2 font-mono text-xs">
+            <pre className="mt-2 overflow-x-auto rounded-card bg-well p-2 font-mono text-xs">
               {detail.frontmatter}
             </pre>
           ) : null}
         </section>
       ) : null}
 
-      <ReasonList
-        id="blocked-heading"
-        title="Blocked by"
-        marked
-        reasons={blockers}
-        onOpen={onOpen}
-      />
-      <ReasonList
-        id="waits-heading"
-        title="Waits for"
-        reasons={waits}
-        onOpen={onOpen}
-      />
-
       {detail.questions.length > 0 ? (
         <section
           aria-labelledby="questions-heading"
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-3 rounded-card border border-callout-question-edge/30 bg-callout-question p-4"
         >
-          <h3 id="questions-heading" className="text-sm station-sign">
+          <h3
+            id="questions-heading"
+            className="flex items-center gap-2 text-md heading-cut"
+          >
+            <span className="grid size-5 place-items-center rounded-full bg-attention text-on-attention">
+              <Icon name="warning" size={12} />
+            </span>
             {detail.questions.length === 1
               ? "Question for you"
               : `${detail.questions.length} questions for you`}
@@ -487,14 +500,18 @@ function TicketTab({
       {detail.handoff ? (
         <section
           aria-labelledby="handoff-heading"
-          className="rounded-panel bg-well p-4"
+          className="rounded-card border border-callout-handoff-edge/30 bg-callout-handoff p-4"
         >
-          <h3 id="handoff-heading" className="mb-2 text-sm station-sign">
+          <h3
+            id="handoff-heading"
+            className="mb-2 flex items-center gap-2 text-md heading-cut"
+          >
+            <Icon name="next" size={16} className="text-callout-handoff-edge" />
             Handoff
           </h3>
-          {staleHandoff(detail) ? (
+          {stale ? (
             <div className="mb-3">
-              <StateNote kind="warning">{staleHandoff(detail)}</StateNote>
+              <StateNote kind="warning">{stale}</StateNote>
             </div>
           ) : null}
           {detail.handoff.next.length > 0 ? (
@@ -504,9 +521,8 @@ function TicketTab({
                 {detail.handoff.next.map((item) => (
                   <li
                     key={item}
-                    className="flex items-start gap-1.5 text-md font-medium"
+                    className="text-lg leading-snug font-semibold text-ink"
                   >
-                    <Icon name="next" size={14} className="mt-[0.3em]" />
                     {item}
                   </li>
                 ))}
@@ -514,7 +530,7 @@ function TicketTab({
             </div>
           ) : null}
           <details className="group text-sm">
-            <summary className="flex cursor-pointer list-none items-center gap-1 text-xs text-ink-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-ink-muted hover:text-ink [&::-webkit-details-marker]:hidden">
               <Icon
                 name="chevronDown"
                 size={12}
@@ -535,18 +551,32 @@ function TicketTab({
         </section>
       ) : null}
 
+      <ReasonList
+        id="blocked-heading"
+        title="Blocked by"
+        marked
+        reasons={blockers}
+        onOpen={onOpen}
+      />
+      <ReasonList
+        id="waits-heading"
+        title="Waits for"
+        reasons={waits}
+        onOpen={onOpen}
+      />
+
       {detail.criteriaItems.length > 0 ? (
         <section aria-labelledby="criteria-heading">
           <h3
             id="criteria-heading"
-            className="mb-2 flex items-baseline justify-between border-t-2 border-rule-strong pt-1.5 text-sm station-sign"
+            className="mb-2 flex items-baseline justify-between text-md heading-cut"
           >
             Acceptance criteria
-            <span className="text-xs font-normal text-ink-muted">
+            <span className="text-sm font-normal text-ink-muted">
               {done} of {detail.criteriaItems.length}
             </span>
           </h3>
-          <ul className="flex flex-col gap-1">
+          <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
             {criteria.map((item) =>
               onToggle ? (
                 <li key={item.key}>
@@ -557,12 +587,15 @@ function TicketTab({
                   />
                 </li>
               ) : (
-                <li key={item.key} className="flex items-start gap-2 text-sm">
+                <li
+                  key={item.key}
+                  className="flex items-start gap-2.5 px-3 py-2 text-sm"
+                >
                   <span
                     aria-hidden="true"
-                    className={`mt-[0.2em] grid size-3.5 shrink-0 place-items-center rounded-[2px] border ${item.done ? "border-ink bg-ink text-ground" : "border-ink-muted"}`}
+                    className={`mt-[0.15em] grid size-4 shrink-0 place-items-center rounded-mark border ${item.done ? "border-select bg-select text-card" : "border-ink-muted"}`}
                   >
-                    {item.done ? <Icon name="criteria" size={10} /> : null}
+                    {item.done ? <Icon name="check" size={11} /> : null}
                   </span>
                   <span className={item.done ? "text-ink-muted" : "text-ink"}>
                     <span className="sr-only">
@@ -613,10 +646,7 @@ function ReviewTab({
     <div className="flex flex-col gap-6">
       {detail.attachmentFiles.length > 0 ? (
         <section aria-labelledby="attachments-heading">
-          <h3
-            id="attachments-heading"
-            className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm station-sign"
-          >
+          <h3 id="attachments-heading" className="mb-2 text-md heading-cut">
             Attachments
           </h3>
           <ul className="grid grid-cols-2 gap-3">
@@ -626,7 +656,7 @@ function ReviewTab({
                   href={attachment.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group block"
+                  className="group block rounded-card"
                 >
                   {attachment.kind === "screenshot" ||
                   /\.(png|jpe?g|gif|webp)$/i.test(attachment.file) ? (
@@ -641,7 +671,7 @@ function ReviewTab({
                       <Icon name="attachment" size={20} />
                     </span>
                   )}
-                  <span className="mt-1 block text-xs text-ink">
+                  <span className="mt-1.5 block text-xs font-medium text-ink">
                     {attachment.caption || attachment.file}
                   </span>
                   <span className="block truncate font-mono text-2xs text-ink-faint">

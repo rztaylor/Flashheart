@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The project follows
 
 ## Unreleased
 
+### Changed
+
+- New look for the board: Metro Pop in light (a raspberry bar and accent on
+  a clean white background) and Night Service in black and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
+  Views open with the project's name as a page header; columns are rounded
+  wells; cards show id and time, title, workstream and type tags, blocker
+  pills, the live run and a footer with criteria and priority at every
+  density; tickets' status shows as coloured pills with an icon and words;
+  workstreams are colour-washed route cards whose stations check off only
+  finished work; the card panel leads with status, blocker and priority
+  pills and sets questions and the handoff as callouts. Both palettes meet
+  WCAG 2.2 AA, checked by a palette test.
+
 ### Added
 
 - `flashheart` binary: `serve` (default) opens a private, authenticated board
@@ -20,17 +33,16 @@ All notable changes to this project are documented here. The project follows
 - Browser shell with quiet backend status and health check, guarded Quit that
   explains a refusal, and stopped and connection-lost screens that explain how
   to close the tab. Light and dark themes follow the system setting.
-- Board UI in the Transit Line Map style: every project in a rail with
+- Board UI: every project in a rail with
   route bars, a Board in three densities, a card panel with the ticket,
   blocked-by explanations, handoff, criteria and review, Workstreams drawn as
-  transit lines, a sortable Table, filters and search, light and dark themes
+  routes of stations, a sortable Table, filters and search, light and dark themes
   and full keyboard movement.
 - Board refresh: the card panel sits beside the board, which narrows and
-  keeps the card's column in view; a black project rail with project-key
-  badges; cards lift off a dotted platform with the workstream's line down
-  their left edge; **Colour by** type (default), priority, age or none tints
-  card headers and names the value, with a colour key; features stay
-  neutral grey so colour picks out the other types. Below 1440px an open
+  keeps the card's column in view; a project rail with project-key badges;
+  cards carry the workstream's line down their left edge; **Colour by** type
+  (default), priority, age or none tints card headers and names the value,
+  with a colour key. Below 1440px an open
   panel shrinks the rail to its key badges, keeping three whole columns.
 - Board editing: move tickets by drag, Shift with an arrow, or the panel's
   Move to menu, with Undo; a reason is required to start a blocked ticket

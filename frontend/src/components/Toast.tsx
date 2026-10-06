@@ -41,7 +41,7 @@ export function Toast({
       {message ? (
         <div
           key={message.id}
-          className="toast-enter pointer-events-auto flex max-w-xl items-start gap-3 rounded-panel bg-band px-4 py-3 text-sm text-on-band shadow-panel"
+          className="toast-enter pointer-events-auto flex max-w-xl items-start gap-3 rounded-panel border border-band-rule bg-band px-4 py-3 text-sm text-on-band shadow-card-hover"
         >
           <div className="min-w-0">
             <p>{message.text}</p>

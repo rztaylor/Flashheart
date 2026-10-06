@@ -1,11 +1,5 @@
 # Frontend UI facts
 
-- Approved next visual direction (planned, not implemented): Metro Pop light
-  and Night Service black/neutral charcoal dark. Metro Pop is the shared
-  layout/content authority for both; dark mode changes palette only. See
-  `docs/dev/roadmap-items/metro-theme-rollout.md` and D18. The Transit Line
-  Map details below describe the current implementation until rollout.
-
 - Framework: React with strict TypeScript, built by Vite into static assets
   embedded in the Go binary. Root `frontend/`, source `frontend/src/`.
 - Styling: Tailwind CSS v4. Design tokens (colour, spacing, type, radius,
@@ -14,9 +8,9 @@
   use token-backed utilities, never raw hex values. Light and dark themes via
   a `data-theme` attribute set from the saved preference (system for now).
 - Layers and dependency direction: `styles/` (tokens) and `model/` (pure
-  view models: line assignment, filters, paint, remembered scopes, times,
+  view models: line assignment, filters, paint, status, remembered scopes, times,
   markdown links, grid movement) → `components/` (primitives and shared
-  patterns: Button, Icon, LineBullet, StateNote, Tabs, SidePanel,
+  patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
   RouteBar, EmptyState, RunState, PlanRoute, QuestionCard) → `features/<feature>/` (board,
   card, editing, agents, workstreams, table, projects, filters; later
@@ -46,20 +40,23 @@
   alternative. Markdown: `react-markdown` + `remark-gfm`.
 - Desktop first (1280 px and up); narrow widths show one column with a column
   picker. Healthy connection state is visually quiet.
-- Visual direction (approved 2026-10-04 with the `impeccable` skill, D14):
-  **Transit Line Map**, Vignelli diagram and Unimark signage. Black signage
-  band; white map ground (charcoal at night); Archivo Variable self-hosted,
-  tabular numerals; columns and sections as station signs (heavy top rule);
-  round line bullets and a card-edge stripe in the MTA palette always mean a
-  workstream; a muted paint palette shows the board's "Colour by" attribute
-  (type, priority, age or none) as a tinted card header plus a named tag;
-  black band and black project rail frame a dotted platform ground with
-  shadowed cards (board-refresh, 2026-10-05); ticket state is ink, shape and words (diamond = blocked by a
-  dependency, quiet text = waiting on the line's order, dashed border plus
-  hatched band = needs repair); run state is ink and shape too (Needs you is
-  the one inverted plate; a Working run's dot beats slowly, the board's only
-  motion, off under reduced motion); Workstreams drawn as transit lines. The
-  contract lives in `.impeccable/surfaces/`; `DESIGN.md` records the built
-  system. Icons are an authored SVG set in `components/Icon.tsx`.
+- Visual direction (D18, D22, 2026-10-06): **Metro Pop** in light (a
+  strong raspberry band and accent on a clean white ground, cool light-grey
+  column wells, white cards; never blue, never cream) and **Night Service**
+  in dark (black band,
+  neutral charcoal surfaces with no navy, lime primary action). Both follow
+  one layout and content contract, `docs/dev/specs/ui-layout.md`: a theme
+  changes tokens only, never structure. Colour roles are fixed there (§7):
+  line colours mean workstreams (bullet, card stripe, route); paint shows
+  the Colour by value as a header tint plus a named tag; status pills
+  (neutral, amber, blue, green) and the blocked pill always carry an icon
+  and words; Needs you is the one attention plate; dashes mean suspended
+  service, a missing station or needs repair; the Working dot is the only
+  looping motion and stops under reduced motion. Archivo Variable,
+  self-hosted, tabular numerals, sentence case; rounded controls, cards and
+  wells. `tokens.test.ts` holds every text pair to WCAG AA in both palettes.
+  The approved references live in `.impeccable/mocks/metro-theme-rollout/`;
+  `DESIGN.md` records the built system. Icons are an authored SVG set in
+  `components/Icon.tsx`.
 - Validation: Vitest for view-models and components; Playwright screenshots
   at 1280 and 1920 in light and dark with axe-core for visible changes.
