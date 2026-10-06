@@ -27,5 +27,12 @@
 - The Playwright Agents spec creates runs by running `flashheart hook claude`
   against the sandbox (`frontend/e2e/agent-runs.mjs`).
 - Run-state and blocking logic are table tests with a fake clock.
-- MCP tools are tested through the Go SDK's in-memory transport.
+- MCP tools are tested through the Go SDK's in-memory transport; the
+  protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
+  `internal/cli`, which drives the real `hook` and `mcp` commands and runs
+  with `go test`.
+- Setup is tested against `testdata/setup/claude/` in a temporary home with
+  a fake `claude` CLI; tests never touch the real `~/.claude`.
+- The Agents e2e asks a question through the real `flashheart mcp` and
+  answers it in the browser (`frontend/e2e/agent-runs.mjs`).
 - Concurrency: multi-process write tests for locks and preconditions.
