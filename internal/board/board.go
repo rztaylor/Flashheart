@@ -205,7 +205,7 @@ func ParseTicket(folder string, data []byte) (ticket Ticket) {
 		}
 	}
 	if section, ok := mdfile.FindSection(doc.Body, "Handoff"); ok {
-		ticket.Handoff = &Handoff{Markdown: strings.TrimSpace(section.Content), Next: handoffList(section.Content, "Next")}
+		ticket.Handoff = &Handoff{Markdown: strings.TrimSpace(section.Content), Next: HandoffList(section.Content, "Next")}
 	}
 	defer func() {
 		if ticket.Title == "" {
@@ -343,8 +343,8 @@ func excerpt(body string) string {
 
 var boldLabel = regexp.MustCompile(`^\*\*([^*]+)\*\*\s*$`)
 
-// handoffList returns the bullet items under a **Label** line in a handoff.
-func handoffList(content, label string) []string {
+// HandoffList returns the bullet items under a **Label** line in a handoff.
+func HandoffList(content, label string) []string {
 	var items []string
 	inList := false
 	for _, line := range strings.Split(content, "\n") {

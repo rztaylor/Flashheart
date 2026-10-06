@@ -24,9 +24,6 @@ import (
 // MaxPayloadBytes bounds the payload read from stdin (agent-protocol §5.1).
 const MaxPayloadBytes = 1 << 20
 
-// cacheFile is the cwd cache, relative to the root (agent-protocol §2).
-const cacheFile = ".flashheart/cache/cwd.json"
-
 // Pending is an event an adapter wants recorded; hooks adds the time,
 // agent and project.
 type Pending struct {
@@ -129,7 +126,7 @@ func handle(options Options) error {
 	}
 	defer s.Close()
 
-	info := resolve(s, input.Cwd, now())
+	info := s.Where(input.Cwd, now())
 	project, err := s.ProjectFor(info.Project, info.Repo, settings.AutoCreateProjects)
 	switch {
 	case errors.Is(err, store.ErrNotFound):
@@ -164,18 +161,6 @@ func handle(options Options) error {
 		return err
 	}
 	return nil
-}
-
-// resolve finds the working directory's repository through the cwd cache,
-// writing the cache back only when it changed.
-func resolve(s *store.Store, cwd string, now time.Time) gitinfo.Info {
-	data, _ := s.ReadFile(cacheFile)
-	cache := gitinfo.ParseCache(data)
-	info, _ := cache.Resolve(cwd, now)
-	if cache.Changed() {
-		_ = s.WriteFileAtomic(cacheFile, cache.Marshal())
-	}
-	return info
 }
 
 // clean scrubs and bounds the agent-written strings in event data (SEC-3,

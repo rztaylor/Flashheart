@@ -293,6 +293,8 @@ type NewTicket struct {
 	DependsOn   []string
 	Tags        []string
 	Session     string
+	// PlanOrRepro fills the Test Plan section, or Reproduction for a bug.
+	PlanOrRepro string
 	// Key is used only when the project has no key yet (KEY-5).
 	Key string
 }
@@ -423,6 +425,9 @@ func (s *Store) ticketTemplate(id string, t NewTicket) ([]byte, error) {
 		body = append(body, "## Reproduction", "")
 	} else {
 		body = append(body, "## Test Plan", "")
+	}
+	if plan := strings.TrimSpace(t.PlanOrRepro); plan != "" {
+		body = append(body, plan, "")
 	}
 	body = append(body, "## Context", "", "## Notes", "", "None.", "")
 	data := []byte("---\n---\n" + strings.Join(body, "\n"))
