@@ -39,6 +39,14 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 		input.Events = []Pending{{Run: run, Kind: events.ToolUsed, Data: events.ToolData{Tool: "Edit", OK: true, Path: filepath.Join(cwd, "src", "a.ts")}}}
 	case "Plan":
 		input.Events = []Pending{{Run: run, Kind: events.PlanUpdated, Data: events.PlanData{Items: []events.PlanItem{{Text: "Rotate token=abcdef123456\nnow", Status: "pending"}}}}}
+	case "Prompt":
+		input.Answers = run
+		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{}}}
+	case "Stop", "StopActive":
+		input.Stop, input.StopActive = true, event == "StopActive"
+		input.Events = []Pending{{Run: run, Kind: events.TurnEnd, Data: events.TurnEndData{}}}
+	case "Stamp":
+		input.Reply = &Output{Context: "stamped " + run}
 	case "Nothing":
 	default:
 		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{}}}
@@ -47,7 +55,10 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 }
 
 func (f fake) Render(event string, out Output) []byte {
-	if out.Context == "" {
+	switch {
+	case out.Block != "":
+		return []byte("block:" + out.Block)
+	case out.Context == "":
 		return nil
 	}
 	return []byte("context:" + out.Context)

@@ -7,8 +7,9 @@
 // root lock (KEY-5), archives ticket folders (EDIT-8), copies allow-listed local
 // files into a ticket's files/ with their index (REV-1, REV-5), writes
 // review.md (REV-4), finds or creates a
-// repository's project (PRJ-2–PRJ-5), and appends, lists and expires event
-// files; confined primitives also serve migration.
+// repository's project (PRJ-2–PRJ-5), resolves a working directory
+// through the cwd cache, appends, lists and expires event files, and
+// queues and takes answers inboxes; confined primitives also serve migration.
 //
 // Every access goes through an os.Root with validated names (SEC-2).
 // Parsing and blocking belong to board, text edits to mdfile, the event

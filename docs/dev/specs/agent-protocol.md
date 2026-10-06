@@ -106,6 +106,15 @@ Flags:
 - **linked**: `claim` (explicit) or branch match (provisional, `RUN-5`);
   subagents inherit the parent's link.
 
+Answers reach a run through its session's **answers inbox**,
+`<project>/.flashheart/answers/<agent>--<session>.jsonl`: answering a
+question in the UI appends `question.answered` and queues the answer there,
+and whoever hands it to the model (the prompt hook, the recovery note or
+`board_context`) empties the inbox and appends `question.delivered`. The
+inbox is a delivery queue derived from the log, so the prompt hook costs one
+`stat` when nothing is waiting; the answer itself lives in the log and the
+ticket's `## Notes`.
+
 ## 5. Hooks
 
 ### 5.1 Common behaviour
@@ -122,8 +131,8 @@ Flags:
 | Hook event | Flashheart action | Output |
 |---|---|---|
 | `SessionStart` (`source`: startup, resume, clear, compact) | `run.start` | Recovery note as `hookSpecificOutput.additionalContext` (§8) |
-| `UserPromptSubmit` | `turn.start` (resolves a pending permission) | Answered questions as `additionalContext` (`HOOK-5`) |
-| `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping via `updatedInput` adding `run` (§7.1), where supported |
+| `UserPromptSubmit` | `turn.start` (resolves a pending permission); `question.delivered` for each answer handed over | Answered questions as `additionalContext` (`HOOK-5`), from the session's answers inbox |
+| `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping: `hookSpecificOutput.updatedInput` is the tool input with `run` set to the calling run (the subagent's when `agent_id` is present), and no permission decision (§7.1) |
 | `PostToolUse` | `tool.used`; `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`). A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
 | `PostToolUseFailure` | `tool.used` with `ok: false` | — |
 | `PermissionRequest` | `permission.requested` | — (never decides the permission) |

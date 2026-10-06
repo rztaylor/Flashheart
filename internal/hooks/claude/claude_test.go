@@ -61,7 +61,7 @@ func TestGoldenPayloads(t *testing.T) {
 	}
 	covered := map[string]bool{}
 	for _, payloadFile := range cases {
-		if strings.HasSuffix(payloadFile, ".events.json") {
+		if strings.HasSuffix(payloadFile, ".events.json") || strings.HasSuffix(payloadFile, ".output.json") {
 			continue
 		}
 		event := filepath.Base(filepath.Dir(payloadFile))
@@ -91,7 +91,18 @@ func TestGoldenPayloads(t *testing.T) {
 			if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); len(data) > 0 {
 				t.Fatalf("hook-errors.log: %s", data)
 			}
-			if stdout.Len() > 0 {
+			// A case may expect output (<case>.output.json); otherwise a hook on
+			// an empty board prints nothing.
+			if wantOut, err := os.ReadFile(strings.TrimSuffix(payloadFile, ".json") + ".output.json"); err == nil {
+				var gotJSON, wantJSON any
+				if err := json.Unmarshal(stdout.Bytes(), &gotJSON); err != nil {
+					t.Fatalf("output %q: %v", stdout.String(), err)
+				}
+				_ = json.Unmarshal(wantOut, &wantJSON)
+				if !reflect.DeepEqual(gotJSON, wantJSON) {
+					t.Fatalf("output =\n%s\nwant\n%s", stdout.String(), wantOut)
+				}
+			} else if stdout.Len() > 0 {
 				t.Fatalf("stdout on an empty board = %s", stdout.String())
 			}
 			var got []expected
@@ -182,5 +193,58 @@ func TestParseRejectsBadPayloads(t *testing.T) {
 	}
 	if !slices.Contains(mapped, "SessionEnd") {
 		t.Fatal("mapped list is incomplete")
+	}
+}
+
+func TestStampingAddsTheFullRunToFlashheartTools(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name, payload, want string
+	}{
+		{"session, keeping the input", `{"session_id":"s1","cwd":"/x","tool_name":"mcp__flashheart__claim","tool_input":{"ticket":"FH-1","run":"claude:short"}}`,
+			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{"run":"claude:s1","ticket":"FH-1"}}}`},
+		{"subagent", `{"session_id":"s1","agent_id":"a7","cwd":"/x","tool_name":"mcp__flashheart__checkpoint","tool_input":{"ticket":"FH-1"}}`,
+			`{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{"run":"claude:s1/a7","ticket":"FH-1"}}}`},
+		{"another server's tool", `{"session_id":"s1","cwd":"/x","tool_name":"mcp__other__claim","tool_input":{}}`, ""},
+		{"a built-in tool", `{"session_id":"s1","cwd":"/x","tool_name":"Bash","tool_input":{"command":"ls"}}`, ""},
+		{"input that is not an object", `{"session_id":"s1","cwd":"/x","tool_name":"mcp__flashheart__claim","tool_input":"FH-1"}`, ""},
+	}
+	for _, tc := range cases {
+		input, err := Adapter{}.Parse("PreToolUse", []byte(tc.payload))
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		if len(input.Events) > 0 || input.Recovery {
+			t.Fatalf("%s: stamping recorded %+v", tc.name, input)
+		}
+		got := ""
+		if input.Reply != nil {
+			got = strings.TrimSpace(string(Adapter{}.Render("PreToolUse", *input.Reply)))
+		}
+		if got != tc.want {
+			t.Errorf("%s: output = %s, want %s", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestStopAndPromptAskForTheirChecks(t *testing.T) {
+	t.Parallel()
+
+	stop, err := Adapter{}.Parse("Stop", []byte(`{"session_id":"s1","cwd":"/x","stop_hook_active":true}`))
+	if err != nil || !stop.Stop || !stop.StopActive {
+		t.Fatalf("Stop input = %+v, %v", stop, err)
+	}
+	prompt, err := Adapter{}.Parse("UserPromptSubmit", []byte(`{"session_id":"s1","cwd":"/x","prompt":"go"}`))
+	if err != nil || prompt.Answers != "claude:s1" {
+		t.Fatalf("prompt input = %+v, %v", prompt, err)
+	}
+	out := Adapter{}.Render("Stop", hooks.Output{Block: "record a checkpoint"})
+	if strings.TrimSpace(string(out)) != `{"decision":"block","reason":"record a checkpoint"}` {
+		t.Fatalf("block output = %s", out)
+	}
+	out = Adapter{}.Render("UserPromptSubmit", hooks.Output{Context: "answers"})
+	if !strings.Contains(string(out), `"hookEventName":"UserPromptSubmit","additionalContext":"answers"`) && !strings.Contains(string(out), `"additionalContext":"answers","hookEventName":"UserPromptSubmit"`) {
+		t.Fatalf("prompt output = %s", out)
 	}
 }

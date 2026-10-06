@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/store"
@@ -407,4 +408,42 @@ func (l *Log) Prune(project string, now time.Time, days int) (int, error) {
 		removed++
 	}
 	return removed, nil
+}
+
+// Delivery is one answer waiting in a session's inbox for its next prompt
+// (HOOK-5). Run is the asking run (the session or one of its subagents).
+type Delivery struct {
+	ID       string `json:"id"`
+	Run      string `json:"run"`
+	Ticket   string `json:"ticket,omitempty"`
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
+	By       string `json:"by"`
+}
+
+// QueueAnswer puts an answer in the inbox of the asking run's session.
+func (l *Log) QueueAnswer(project, run string, d Delivery) error {
+	session, _, _ := strings.Cut(run, "/")
+	line, err := json.Marshal(d)
+	if err != nil {
+		return err
+	}
+	return l.store.AppendInbox(project, session, append(line, '\n'))
+}
+
+// TakeAnswers empties a session's inbox and returns its answers, skipping
+// malformed lines.
+func (l *Log) TakeAnswers(project, session string) ([]Delivery, error) {
+	data, err := l.store.TakeInbox(project, session)
+	if err != nil || len(data) == 0 {
+		return nil, err
+	}
+	var list []Delivery
+	for _, line := range strings.Split(string(data), "\n") {
+		var d Delivery
+		if json.Unmarshal([]byte(line), &d) == nil && d.ID != "" {
+			list = append(list, d)
+		}
+	}
+	return list, nil
 }

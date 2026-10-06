@@ -99,7 +99,10 @@ type Run struct {
 	Permission string
 	// Questions are the run's own questions, oldest first.
 	Questions []Question
-	Timeline  []Entry
+	// BlockedForHandoff is set when handoff enforcement blocked a stop in
+	// the current turn (HOOK-6).
+	BlockedForHandoff bool
+	Timeline          []Entry
 
 	turnOpen bool
 	ended    bool
@@ -258,13 +261,16 @@ func (s *Set) Apply(e events.Event) {
 	case events.TurnStart:
 		var data events.TurnStartData
 		_ = e.Decode(&data)
-		r.turnOpen, r.Permission = true, ""
+		r.turnOpen, r.Permission, r.BlockedForHandoff = true, "", false
 		s.settleChildren(r)
 		r.Cwd = first(data.Cwd, r.Cwd)
 		r.Branch = first(data.Branch, r.Branch)
 		r.Worktree = first(data.Worktree, r.Worktree)
 	case events.TurnEnd:
+		var data events.TurnEndData
+		_ = e.Decode(&data)
 		r.turnOpen, r.Permission = false, ""
+		r.BlockedForHandoff = r.BlockedForHandoff || data.BlockedForHandoff
 		s.settleChildren(r)
 	case events.ToolUsed:
 		var data events.ToolData

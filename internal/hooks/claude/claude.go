@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/hooks"
@@ -33,7 +34,11 @@ type payload struct {
 	NotificationType string          `json:"notification_type"`
 	TaskID           flexibleID      `json:"task_id"`
 	TaskSubject      string          `json:"task_subject"`
+	StopHookActive   bool            `json:"stop_hook_active"`
 }
+
+// toolPrefix names Flashheart's own MCP tools in Claude Code.
+const toolPrefix = "mcp__flashheart__"
 
 // flexibleID accepts a string or a number.
 type flexibleID string
@@ -83,6 +88,9 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		input.Recovery = true
 	case "UserPromptSubmit":
 		add(session, events.TurnStart, events.TurnStartData{})
+		input.Answers = session
+	case "PreToolUse":
+		input.Reply = stamp(p.ToolName, p.ToolInput, actor)
 	case "PostToolUse", "PostToolUseFailure":
 		ok := event == "PostToolUse"
 		add(actor, events.ToolUsed, events.ToolData{Tool: p.ToolName, OK: ok, Path: editPath(p.ToolName, p.ToolInput)})
@@ -123,12 +131,34 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		add(session, events.Compact, events.CompactData{Phase: "post"})
 	case "Stop":
 		add(session, events.TurnEnd, events.TurnEndData{})
+		input.Stop, input.StopActive = true, p.StopHookActive
 	case "SessionEnd":
 		add(session, events.RunEnd, events.RunEndData{Reason: p.Reason})
 	}
-	// PreToolUse (Flashheart's own MCP tools) stamps the run in mcp-protocol;
-	// other events are not mapped.
 	return input, nil
+}
+
+// stamp adds the calling run to a Flashheart tool's input, so the MCP
+// server knows who called (agent-protocol §7.1). Claude Code applies
+// updatedInput without a permission decision; other tools are untouched.
+func stamp(tool string, input json.RawMessage, run string) *hooks.Output {
+	if !strings.HasPrefix(tool, toolPrefix) {
+		return nil
+	}
+	fields := map[string]json.RawMessage{}
+	if len(input) > 0 && json.Unmarshal(input, &fields) != nil {
+		return nil
+	}
+	if fields == nil {
+		fields = map[string]json.RawMessage{}
+	}
+	encoded, _ := json.Marshal(run)
+	fields["run"] = encoded
+	updated, err := json.Marshal(fields)
+	if err != nil {
+		return nil
+	}
+	return &hooks.Output{UpdatedInput: updated}
 }
 
 var knownNotification = regexp.MustCompile(`^[a-z_]{1,40}$`)
@@ -223,18 +253,27 @@ func planUpdate(tool string, input, response json.RawMessage) (events.PlanData, 
 	return events.PlanData{}, false
 }
 
-// Render returns Claude Code's hook output: additional context for the
-// model as hookSpecificOutput, or nothing.
+// Render returns Claude Code's hook output: a stop decision, a tool's
+// updated input or additional context as hookSpecificOutput, or nothing.
 func (Adapter) Render(event string, out hooks.Output) []byte {
-	if out.Context == "" {
-		return nil
-	}
-	data, err := json.Marshal(map[string]any{
-		"hookSpecificOutput": map[string]string{
+	var value any
+	switch {
+	case out.Block != "":
+		value = map[string]string{"decision": "block", "reason": out.Block}
+	case len(out.UpdatedInput) > 0:
+		value = map[string]any{"hookSpecificOutput": map[string]any{
+			"hookEventName": event,
+			"updatedInput":  json.RawMessage(out.UpdatedInput),
+		}}
+	case out.Context != "":
+		value = map[string]any{"hookSpecificOutput": map[string]string{
 			"hookEventName":     event,
 			"additionalContext": out.Context,
-		},
-	})
+		}}
+	default:
+		return nil
+	}
+	data, err := json.Marshal(value)
 	if err != nil {
 		return nil
 	}

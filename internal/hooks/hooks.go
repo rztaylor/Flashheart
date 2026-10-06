@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime/debug"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -41,12 +42,25 @@ type Input struct {
 	Events []Pending
 	// Recovery asks for the recovery note (session start, HOOK-3).
 	Recovery bool
+	// Answers names the session whose waiting answers go with this prompt
+	// (HOOK-5).
+	Answers string
+	// Stop marks a turn end that handoff enforcement may block (HOOK-6);
+	// StopActive is the agent saying a stop hook already kept it going.
+	Stop, StopActive bool
+	// Reply is output the adapter worked out alone (run stamping); it is
+	// printed without opening the board.
+	Reply *Output
 }
 
 // Output is what hooks wants said back to the agent.
 type Output struct {
 	// Context is additional context for the model, such as the recovery note.
 	Context string
+	// Block is the reason to refuse a stop (HOOK-6).
+	Block string
+	// UpdatedInput replaces a tool call's input (run stamping, §7.1).
+	UpdatedInput []byte
 }
 
 // Adapter knows one agent's payloads and outputs (HOOK-7).
@@ -109,6 +123,9 @@ func handle(options Options) error {
 	if err != nil {
 		return err
 	}
+	if input.Reply != nil {
+		return write(options, *input.Reply)
+	}
 	if len(input.Events) == 0 && !input.Recovery {
 		return nil
 	}
@@ -146,21 +163,100 @@ func handle(options Options) error {
 		})
 	}
 	log := events.New(s)
+	var out Output
+	if input.Stop && !input.StopActive {
+		if out.Block, err = enforce(s, log, project, list, at, settings); err != nil {
+			return err
+		}
+	}
 	if err := log.Append(list...); err != nil {
 		return err
 	}
-	if !input.Recovery {
-		return nil
+	switch {
+	case input.Recovery:
+		if out.Context, err = recovery(s, log, project, info, list, at, settings); err != nil {
+			return err
+		}
+	case input.Answers != "":
+		if out.Context, err = answers(log, project, input.Answers, at); err != nil {
+			return err
+		}
 	}
-	note, err := recovery(s, log, project, info, list, at, settings)
-	if err != nil {
-		return err
-	}
-	if out := options.Adapter.Render(options.Event, Output{Context: note}); len(out) > 0 && options.Stdout != nil {
-		_, err = options.Stdout.Write(out)
+	return write(options, out)
+}
+
+func write(options Options, out Output) error {
+	if data := options.Adapter.Render(options.Event, out); len(data) > 0 && options.Stdout != nil {
+		_, err := options.Stdout.Write(data)
 		return err
 	}
 	return nil
+}
+
+// answers takes the answers waiting for a session, marks them delivered
+// and renders them for its prompt (HOOK-5).
+func answers(log *events.Log, project, session string, at time.Time) (string, error) {
+	waiting, err := log.TakeAnswers(project, session)
+	if err != nil || len(waiting) == 0 {
+		return "", err
+	}
+	if err := log.Append(deliveredEvents(project, waiting, at)...); err != nil {
+		return "", err
+	}
+	return protocol.AnswersNote(toAnswers(waiting)), nil
+}
+
+func deliveredEvents(project string, list []events.Delivery, at time.Time) []events.Event {
+	out := make([]events.Event, 0, len(list))
+	for _, d := range list {
+		agent, _, _ := strings.Cut(d.Run, ":")
+		out = append(out, events.Event{Time: at, Run: d.Run, Agent: agent, Kind: events.QuestionDelivered, Project: project, Data: events.DeliveredData{ID: d.ID}})
+	}
+	return out
+}
+
+func toAnswers(list []events.Delivery) []protocol.Answer {
+	out := make([]protocol.Answer, 0, len(list))
+	for _, d := range list {
+		out = append(out, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
+	}
+	return out
+}
+
+// enforce decides whether to block a stop for a checkpoint (HOOK-6, §9)
+// and marks the turn end when it does. The log is read only when the
+// project enforces handoffs.
+func enforce(s *store.Store, log *events.Log, project string, list []events.Event, now time.Time, settings config.Config) (string, error) {
+	index := slices.IndexFunc(list, func(e events.Event) bool { return e.Kind == events.TurnEnd })
+	if index < 0 {
+		return "", nil
+	}
+	details, err := s.ReadProject(project)
+	if err != nil {
+		return "", err
+	}
+	enabled := settings.EnforceHandoff
+	if details.EnforceHandoff != nil {
+		enabled = *details.EnforceHandoff
+	}
+	if !enabled {
+		return "", nil
+	}
+	set := runs.NewSet()
+	if err := log.Read(project, now.Add(-recoveryWindow), set.Apply); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return "", err
+	}
+	run := list[index].Run
+	r := set.Get(run)
+	if r == nil || !r.Dirty() || r.BlockedForHandoff {
+		return "", nil
+	}
+	link := set.Link(run, func(_, branch string) []string { return details.InProgressOnBranch(branch) })
+	if link.Ticket == "" {
+		return "", nil
+	}
+	list[index].Data = events.TurnEndData{BlockedForHandoff: true}
+	return fmt.Sprintf("Flashheart: record a checkpoint on %s (done, next, files) before stopping.", link.Ticket), nil
 }
 
 // clean scrubs and bounds the agent-written strings in event data (SEC-3,
@@ -272,5 +368,36 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 		}
 		note.Previous = p
 	}
+	// Answers waiting for this session or the previous one in this worktree
+	// go in the note and count as delivered (HOOK-5).
+	waiting, err := log.TakeAnswers(project, current)
+	if err != nil {
+		return "", err
+	}
+	seen := map[string]bool{}
+	for _, d := range waiting {
+		seen[d.ID] = true
+	}
+	for _, id := range []string{current, previousID(previous)} {
+		for _, q := range set.PendingAnswers(id) {
+			if !seen[q.ID] {
+				seen[q.ID] = true
+				waiting = append(waiting, events.Delivery{ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Answer: q.Answer, By: q.AnsweredBy})
+			}
+		}
+	}
+	if len(waiting) > 0 {
+		if err := log.Append(deliveredEvents(project, waiting, now)...); err != nil {
+			return "", err
+		}
+		note.Answered = toAnswers(waiting)
+	}
 	return protocol.RecoveryNote(note), nil
+}
+
+func previousID(r *runs.Run) string {
+	if r == nil {
+		return ""
+	}
+	return r.ID
 }
