@@ -4,11 +4,15 @@ import type { Run, TimelineEntry } from "../api/runs";
 import {
   agentName,
   compactTimeline,
+  counted,
   describeEntry,
   laneRuns,
+  liveReason,
   needsReason,
   permissionReason,
   planStations,
+  sessionsOf,
+  shortID,
 } from "./runs";
 
 function run(id: string, patch: Partial<Run> = {}): Run {
@@ -217,4 +221,45 @@ it("names the subagent a session is waiting on", () => {
   expect(
     needsReason(session, [{ ...explore, agentType: "", permission: "?" }]),
   ).toBe("Subagent needs permission");
+});
+
+it("gives a card's live run the same reason as the Agents view", () => {
+  const live = {
+    run: "claude:s",
+    short: "claude:s",
+    agent: "claude",
+    state: "needs-you" as const,
+    done: 0,
+    total: 0,
+    step: "",
+    permission: "Bash",
+    waitingOn: "Explore",
+    lastActivity: "",
+  };
+  expect(liveReason(live)).toBe("Explore needs permission for Bash");
+  expect(liveReason({ ...live, waitingOn: "" })).toBe("Permission for Bash");
+});
+
+it("shortens run ids and counts things in words", () => {
+  expect(shortID("claude:3f2a9c1e-7b44-4d0e")).toBe("3f2a9c1e");
+  expect(shortID("claude:3f2a9c1e-7b44/ae8ecef8da6a4664f")).toBe("ae8ecef8");
+  expect(counted(1, "tool")).toBe("1 tool");
+  expect(counted(3, "edit")).toBe("3 edits");
+});
+
+it("treats a subagent whose session is missing as a session", () => {
+  const runs = [run("claude:a"), run("claude:a/x"), run("claude:gone/y")];
+  expect(sessionsOf(runs).map((item) => item.id)).toEqual([
+    "claude:a",
+    "claude:gone/y",
+  ]);
+});
+
+it("plans with every step completed have no current stop", () => {
+  expect(
+    planStations([
+      { text: "a", status: "completed" },
+      { text: "b", status: "completed" },
+    ]),
+  ).toEqual(["served", "served"]);
 });

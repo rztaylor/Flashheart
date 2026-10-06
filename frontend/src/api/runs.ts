@@ -39,6 +39,9 @@ export interface Live {
   total: number;
   step: string;
   permission: string;
+  // waitingOn names the subagent (by type) whose permission prompt the run
+  // is waiting on; empty when it is the session's own.
+  waitingOn: string;
   lastActivity: string;
 }
 
@@ -125,6 +128,7 @@ export function isLive(value: unknown): value is Live {
     isNumber(value.total) &&
     isString(value.step) &&
     isString(value.permission) &&
+    isString(value.waitingOn) &&
     isString(value.lastActivity)
   );
 }

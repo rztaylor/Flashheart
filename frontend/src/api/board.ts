@@ -4,7 +4,6 @@ import {
   isRun,
   isRunCounts,
   type Live,
-  noRuns,
   type Run,
   type RunCounts,
 } from "./runs";
@@ -381,19 +380,4 @@ export function splitReasons(reasons: Reason[]): {
     blockers: reasons.filter((reason) => reason.kind !== "order"),
     waits: reasons.filter((reason) => reason.kind === "order"),
   };
-}
-
-// summedRuns adds up projects' run counts.
-export function summedRuns(projects: ProjectSummary[]): RunCounts {
-  return projects.reduce(
-    (sum, project) => ({
-      working: sum.working + project.runs.working,
-      needsYou: sum.needsYou + project.runs.needsYou,
-      waiting: sum.waiting + project.runs.waiting,
-      quiet: sum.quiet + project.runs.quiet,
-      ended: sum.ended + project.runs.ended,
-      live: sum.live + project.runs.live,
-    }),
-    noRuns,
-  );
 }

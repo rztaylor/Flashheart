@@ -1,6 +1,7 @@
 // Pure view models for agent runs: lanes for the Agents view (VIEW-3),
 // timeline wording and plan stations.
 import {
+  type Live,
   type PlanItem,
   RUN_STATES,
   type Run,
@@ -23,16 +24,46 @@ export function permissionReason(tool: string): string {
     : "Waiting for permission";
 }
 
-// needsReason says why a session needs you: its own permission prompt, or
-// the subagent that is waiting on one.
+// reasonFor says why a run needs you: its own permission prompt, or that
+// of the subagent (by type) it is waiting on.
+function reasonFor(permission: string, subagent: string): string {
+  if (!subagent) return permissionReason(permission);
+  return permission && permission !== "?"
+    ? `${subagent} needs permission for ${permission}`
+    : `${subagent} needs permission`;
+}
+
+// needsReason says why a session needs you, from it and its subagents.
 export function needsReason(run: Run, children: Run[]): string {
   if (run.permission) return permissionReason(run.permission);
   const child = children.find((item) => item.state === "needs-you");
   if (!child) return permissionReason("");
-  const name = child.agentType || "Subagent";
-  return child.permission && child.permission !== "?"
-    ? `${name} needs permission for ${child.permission}`
-    : `${name} needs permission`;
+  return reasonFor(child.permission, child.agentType || "Subagent");
+}
+
+// liveReason is needsReason for a card's live run.
+export function liveReason(live: Live): string {
+  return reasonFor(live.permission, live.waitingOn);
+}
+
+// shortID is a run's short id: the first 8 characters of its session id, or
+// of its own id for a subagent (agent-protocol §2).
+export function shortID(id: string): string {
+  const [, rest = id] = id.split(":");
+  const parts = rest.split("/");
+  return (parts[parts.length - 1] ?? "").slice(0, 8);
+}
+
+// counted puts a count before a noun, plural unless it is one.
+export function counted(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+// sessionsOf lists the runs shown as sessions: sessions, and subagents whose
+// session is not in the list.
+export function sessionsOf(runs: Run[]): Run[] {
+  const ids = new Set(runs.map((run) => run.id));
+  return runs.filter((run) => !run.parent || !ids.has(run.parent));
 }
 
 export function agentName(agent: string): string {

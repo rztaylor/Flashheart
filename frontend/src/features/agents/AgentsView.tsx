@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 
 import type { ProjectSummary, TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
@@ -10,12 +10,15 @@ import { PlanRoute } from "../../components/PlanRoute";
 import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import {
   agentName,
+  counted,
   type LaneRun,
   laneRuns,
   needsReason,
   STATE_LABEL,
+  shortID,
 } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
+import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
 import { BranchLabel, RunDetail } from "./RunDetail";
 
@@ -129,17 +132,6 @@ export function AgentsView({
   );
 }
 
-// useNow ticks every 30 seconds so running times stay current between
-// board revisions.
-function useNow(): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return now;
-}
-
 interface LaneSectionProps {
   state: RunState;
   runs: LaneRun[];
@@ -177,7 +169,12 @@ function LaneSection({
         className="flex items-baseline justify-between border-t-[5px] border-rule-strong pt-2 pb-1.5 text-md station-sign"
       >
         <span className="flex items-center gap-2">
-          <RunStateMark state={state} size={12} className="translate-y-[1px]" />
+          <RunStateMark
+            state={state}
+            size={12}
+            className="translate-y-[1px]"
+            still
+          />
           {STATE_LABEL[state]}
         </span>
         <span className="text-sm font-semibold text-ink">{runs.length}</span>
@@ -308,10 +305,7 @@ function RunRow({
           </span>
           <span className="shrink-0 text-2xs text-ink-muted">
             {/* A subagent by its own id; a session by its session id. */}
-            {(subagent ? run.id.split("/")[1] : run.short.split(":")[1])?.slice(
-              0,
-              8,
-            )}
+            {shortID(run.id)}
           </span>
         </button>
         <div className="flex min-w-0 items-center gap-2 text-sm max-lg:col-span-2">
@@ -343,10 +337,8 @@ function RunRow({
             </button>
           ) : subagent ? (
             <span className="text-xs text-ink-muted">
-              {run.tools} {run.tools === 1 ? "tool" : "tools"}
-              {run.edits > 0
-                ? `, ${run.edits} ${run.edits === 1 ? "edit" : "edits"}`
-                : ""}
+              {counted(run.tools, "tool")}
+              {run.edits > 0 ? `, ${counted(run.edits, "edit")}` : ""}
             </span>
           ) : (
             <span className="text-xs text-ink-muted">Unassigned</span>

@@ -21,6 +21,7 @@ import { StateNote } from "../../components/StateNote";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
+import { counted, sessionsOf } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
@@ -81,7 +82,7 @@ export function CardPanel({
     {
       id: "runs",
       label: detail?.runs.length
-        ? `Runs ${detail.runs.filter((run) => !run.parent).length || detail.runs.length}`
+        ? `Runs ${sessionsOf(detail.runs).length}`
         : "Runs",
     },
     ...(detail?.review ? [{ id: "review" as const, label: "Review" }] : []),
@@ -650,7 +651,7 @@ function changedLabel(modified: string): string {
 function staleHandoff(detail: TicketDetail): string {
   const run = detail.runs.find((item) => !item.parent && item.dirty);
   if (!run) return "";
-  const edits = `${run.edits} ${run.edits === 1 ? "edit" : "edits"}`;
+  const edits = counted(run.edits, "edit");
   return run.state === "ended"
     ? `Run ${run.short} ended after ${edits} without updating this handoff.`
     : `Run ${run.short} has made ${edits} since this handoff.`;

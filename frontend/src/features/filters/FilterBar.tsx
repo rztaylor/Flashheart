@@ -1,6 +1,7 @@
 import { Button } from "../../components/Button";
 import { CheckboxField, SelectField } from "../../components/Field";
 import { SegmentedControl } from "../../components/SegmentedControl";
+import { toggleVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
 import {
   type Filters,
   isFiltered,
@@ -145,25 +146,15 @@ export function FilterBar({
               <span aria-hidden="true" className="text-xs text-ink-muted">
                 Show
               </span>
-              {(
-                [
-                  ["needs-you", "Needs you"],
-                  ["agent-working", "Agent working"],
-                ] as const
-              ).map(([id, label]) => (
+              {VIRTUAL_COLUMNS.map((column) => (
                 <CheckboxField
-                  key={id}
-                  label={label}
-                  title={`Show a ${label} column that mirrors tickets from their real columns`}
-                  checked={virtualColumns.includes(id)}
+                  key={column.id}
+                  label={column.title}
+                  title={`Show a ${column.title} column that mirrors tickets from their real columns`}
+                  checked={virtualColumns.includes(column.id)}
                   onChange={(checked) =>
                     onVirtualColumns(
-                      checked
-                        ? (["needs-you", "agent-working"] as const).filter(
-                            (column) =>
-                              column === id || virtualColumns.includes(column),
-                          )
-                        : virtualColumns.filter((column) => column !== id),
+                      toggleVirtual(virtualColumns, column.id, checked),
                     )
                   }
                 />

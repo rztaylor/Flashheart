@@ -1,20 +1,26 @@
+import { useId } from "react";
+
 import type { TicketDetail } from "../../api/board";
 import type { Run } from "../../api/runs";
 import { RunStateLabel } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
-import { agentName, permissionReason } from "../../model/runs";
+import {
+  agentName,
+  counted,
+  needsReason,
+  sessionsOf,
+  shortID,
+} from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
+import { useNow } from "../../state/useNow";
 import { BranchLabel, RunDetail } from "../agents/RunDetail";
 
 // RunsTab lists the agent runs linked to a ticket, most recent first (CARD-1):
 // each session with its state, plan, edited files and activity, and its
 // subagents beneath it.
 export function RunsTab({ detail }: { detail: TicketDetail }) {
-  const now = new Date();
-  const ids = new Set(detail.runs.map((run) => run.id));
-  const sessions = detail.runs.filter(
-    (run) => !run.parent || !ids.has(run.parent),
-  );
+  const now = useNow();
+  const sessions = sessionsOf(detail.runs);
   if (sessions.length === 0) {
     return (
       <p className="text-sm text-ink-muted">
@@ -54,22 +60,23 @@ function RunCard({
   subagents: Run[];
   now: Date;
 }) {
+  const headingId = useId();
+  const subagentsId = useId();
   return (
-    <article
-      aria-label={`${agentName(run.agent)} run ${run.short}`}
-      className="flex flex-col gap-3"
-    >
+    <article aria-labelledby={headingId} className="flex flex-col gap-3">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t-2 border-rule-strong pt-2 text-xs">
         <RunStateLabel state={run.state} />
         {run.state === "needs-you" ? (
           <span className="font-semibold text-ink">
-            {permissionReason(run.permission)}
+            {needsReason(run, subagents)}
           </span>
         ) : null}
-        <span className="font-medium text-ink">{agentName(run.agent)}</span>
-        <span className="text-ink-muted" title={run.id}>
-          {run.short}
-        </span>
+        <h3 id={headingId} className="flex items-baseline gap-1.5">
+          <span className="font-medium text-ink">{agentName(run.agent)}</span>
+          <span className="font-normal text-ink-muted" title={run.id}>
+            {shortID(run.id)}
+          </span>
+        </h3>
         <span className="text-ink-muted">
           {run.linkedBy === "claim" ? "claimed" : "linked by branch"}
         </span>
@@ -84,16 +91,23 @@ function RunCard({
       </header>
       {run.noHandoff ? (
         <StateNote kind="warning">
-          {`Ended without a handoff: ${run.edits} ${run.edits === 1 ? "edit" : "edits"} since its last checkpoint.`}
+          {`Ended without a handoff: ${counted(run.edits, "edit")} since its last checkpoint.`}
         </StateNote>
       ) : null}
-      <RunDetail run={run} timeline={run.timeline ?? []} now={now} />
+      <RunDetail
+        run={run}
+        timeline={run.timeline ?? []}
+        now={now}
+        headingLevel={4}
+      />
       {subagents.length > 0 ? (
         <section
-          aria-label="Subagents"
+          aria-labelledby={subagentsId}
           className="border-l border-ink/40 pl-4 text-xs"
         >
-          <h3 className="mb-1.5 text-sm station-sign">Subagents</h3>
+          <h4 id={subagentsId} className="mb-1.5 text-sm station-sign">
+            Subagents
+          </h4>
           <ul className="flex flex-col gap-1">
             {subagents.map((child) => (
               <li key={child.id} className="flex items-center gap-3">
@@ -102,10 +116,8 @@ function RunCard({
                   {child.agentType || "Subagent"}
                 </span>
                 <span className="text-ink-muted">
-                  {child.tools} {child.tools === 1 ? "tool" : "tools"}
-                  {child.edits > 0
-                    ? `, ${child.edits} ${child.edits === 1 ? "edit" : "edits"}`
-                    : ""}
+                  {counted(child.tools, "tool")}
+                  {child.edits > 0 ? `, ${counted(child.edits, "edit")}` : ""}
                 </span>
                 <span className="ml-auto text-2xs text-ink-muted">
                   {runningTime(child.lastActivity, now)}

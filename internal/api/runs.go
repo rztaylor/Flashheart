@@ -35,14 +35,17 @@ func countsJSON(c index.RunCounts) RunCountsJSON {
 // LiveJSON is a card's live badge (VIEW-8): the linked run that most needs
 // attention.
 type LiveJSON struct {
-	Run          string `json:"run"`
-	Short        string `json:"short"`
-	Agent        string `json:"agent"`
-	State        string `json:"state"`
-	Done         int    `json:"done"`
-	Total        int    `json:"total"`
-	Step         string `json:"step"`
-	Permission   string `json:"permission"`
+	Run        string `json:"run"`
+	Short      string `json:"short"`
+	Agent      string `json:"agent"`
+	State      string `json:"state"`
+	Done       int    `json:"done"`
+	Total      int    `json:"total"`
+	Step       string `json:"step"`
+	Permission string `json:"permission"`
+	// WaitingOn names the subagent (by type) whose permission prompt holds
+	// the run; empty when the prompt is the run's own.
+	WaitingOn    string `json:"waitingOn"`
 	LastActivity string `json:"lastActivity"`
 }
 
@@ -178,6 +181,17 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 		Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(v.State),
 		Done: v.Progress.Done, Total: v.Progress.Total, Step: v.Progress.Current,
 		Permission: v.Permission, LastActivity: timestamp(v.LastActivity),
+	}
+	if v.State == runs.NeedsYou && v.Permission == "" {
+		for _, child := range snapshot.Runs {
+			if child.Parent == v.ID && child.State == runs.NeedsYou && child.Permission != "" {
+				card.Live.Permission, card.Live.WaitingOn = child.Permission, child.AgentType
+				if card.Live.WaitingOn == "" {
+					card.Live.WaitingOn = "Subagent"
+				}
+				break
+			}
+		}
 	}
 	card.NeedsYou = v.State == runs.NeedsYou
 	card.AgentWorking = v.State == runs.Working || v.State == runs.Quiet

@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,9 +16,22 @@ import (
 
 // runsAPI serves the sample board, whose alpha event log has a session that
 // claimed AL-3, edited files, ran a subagent and is waiting on permission.
-func runsAPI(t *testing.T, now time.Time) http.Handler {
+func runsAPI(t *testing.T, now time.Time, extra ...string) http.Handler {
 	t.Helper()
 	root := copyBoard(t, "sample")
+	if len(extra) > 0 {
+		log := filepath.Join(root, "alpha", ".flashheart", "events", "2026-10-04.jsonl")
+		file, err := os.OpenFile(log, os.O_APPEND|os.O_WRONLY, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, line := range extra {
+			if _, err := file.WriteString(line + "\n"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		file.Close()
+	}
 	files := store.New(root)
 	t.Cleanup(func() { files.Close() })
 	clock := func() time.Time { return now }
@@ -116,5 +131,24 @@ func TestCardsAndProjectsCarryLiveRuns(t *testing.T) {
 	getJSON(t, handler, "/api/tickets/AL-3", http.StatusOK, &ticket)
 	if len(ticket.Ticket.Runs) != 2 || len(ticket.Ticket.Runs[0].Timeline) == 0 {
 		t.Fatalf("ticket runs = %+v", ticket.Ticket.Runs)
+	}
+}
+
+// A session held up by its subagent's prompt says which subagent and tool
+// on the card, as the Agents view does.
+func TestLiveBadgeNamesTheSubagentItWaitsOn(t *testing.T) {
+	t.Parallel()
+
+	child := sampleSession + "/e1"
+	handler := runsAPI(t, time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC),
+		`{"v":1,"ts":"2026-10-04T13:27:00.000Z","run":"`+sampleSession+`","agent":"claude","kind":"tool.used","project":"alpha","data":{"tool":"Bash","ok":true}}`,
+		`{"v":1,"ts":"2026-10-04T13:28:00.000Z","run":"`+child+`","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"subagent","parent":"`+sampleSession+`","agent_type":"Explore"}}`,
+		`{"v":1,"ts":"2026-10-04T13:29:00.000Z","run":"`+child+`","agent":"claude","kind":"permission.requested","project":"alpha","data":{"tool":"Bash"}}`,
+	)
+	var board BoardResponse
+	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+	live := cardByID(t, board.Cards, "AL-3").Live
+	if live == nil || live.State != "needs-you" || live.Permission != "Bash" || live.WaitingOn != "Explore" {
+		t.Fatalf("live = %+v", live)
 	}
 }

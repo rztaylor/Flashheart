@@ -18,11 +18,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { RunStateMark } from "../components/RunState";
 import { Toast } from "../components/Toast";
 import { AgentsView } from "../features/agents/AgentsView";
-import {
-  BoardView,
-  NoTickets,
-  shownVirtual as shownVirtualColumns,
-} from "../features/board/BoardView";
+import { BoardView, NoTickets } from "../features/board/BoardView";
 import { CardPanel } from "../features/card/CardPanel";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
@@ -32,6 +28,7 @@ import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
+import { shownVirtual as shownVirtualColumns } from "../model/columns";
 import {
   applyFilters,
   emptyFilters,
@@ -196,6 +193,14 @@ export function Shell({
     [allCards, filters],
   );
   const options = useMemo(() => filterOptions(allCards), [allCards]);
+  // The phone column picker falls back to In progress when the virtual
+  // column it showed has emptied and gone.
+  const narrowVirtual = shownVirtualColumns(visible, shownVirtual);
+  const narrowShown =
+    COLUMNS.some((column) => column.id === narrowColumn) ||
+    narrowVirtual.some((column) => column.id === narrowColumn)
+      ? narrowColumn
+      : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
   const selectScope = (scope: Scope) => {
@@ -223,7 +228,9 @@ export function Shell({
       if (element?.isConnected) element.focus();
       else if (id)
         document
-          .querySelector<HTMLElement>(`[data-ticket="${CSS.escape(id)}"]`)
+          .querySelector<HTMLElement>(
+            `[data-ticket="${CSS.escape(id)}"]:not([data-mirrored])`,
+          )
           ?.focus();
     }, 0);
   }, [navigate, route]);
@@ -304,10 +311,10 @@ export function Shell({
             >
               <RunStateMark state="needs-you" size={10} />
               {needsYou}
-              <span className="max-sm:sr-only">
+              <span className="hidden sm:inline">
                 {needsYou === 1 ? " needs you" : " need you"}
               </span>
-              <span className="sm:sr-only">
+              <span className="sm:hidden">
                 {needsYou === 1 ? " agent needs you" : " agents need you"}
               </span>
             </button>
@@ -378,6 +385,9 @@ export function Shell({
           <div className="min-h-0 flex-1">
             <ProjectRail
               projects={summaries}
+              runs={
+                projects.status === "ready" ? projects.data.runs : undefined
+              }
               scope={route.scope}
               onSelect={selectScope}
             />
@@ -427,10 +437,10 @@ export function Shell({
             {route.view === "board" ? (
               <SelectField
                 label="Column"
-                value={narrowColumn}
+                value={narrowShown}
                 onChange={setNarrowColumn}
               >
-                {shownVirtualColumns(visible, shownVirtual).map((column) => (
+                {narrowVirtual.map((column) => (
                   <option key={column.id} value={column.id}>
                     {column.title}
                   </option>
@@ -554,7 +564,7 @@ export function Shell({
               route.view === "board" ? (
                 <div
                   className="min-h-0 flex-1"
-                  data-narrow-column={narrowColumn}
+                  data-narrow-column={narrowShown}
                 >
                   <BoardView
                     cards={visible}

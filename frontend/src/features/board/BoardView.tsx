@@ -11,6 +11,7 @@ import {
 } from "@dnd-kit/core";
 import {
   type ComponentProps,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   useEffect,
@@ -31,9 +32,11 @@ import type { VirtualColumn } from "../../api/preferences";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import { RunStateMark } from "../../components/RunState";
+import { shownVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
 import { type PaintMode, paintFor, paintKey } from "../../model/paint";
+import { useNow } from "../../state/useNow";
 import type { Density } from "../filters/FilterBar";
 import { ColourKey } from "./ColourKey";
 import { LineLegend } from "./LineLegend";
@@ -69,33 +72,6 @@ const keyMoves: Record<string, GridMove> = {
   End: "end",
 };
 
-export const VIRTUAL_COLUMNS: {
-  id: VirtualColumn;
-  title: string;
-  empty: string;
-  holds(card: Card): boolean;
-}[] = [
-  {
-    id: "needs-you",
-    title: "Needs you",
-    empty: "Nothing needs you",
-    holds: (card) => card.needsYou,
-  },
-  {
-    id: "agent-working",
-    title: "Agent working",
-    empty: "No agent at work",
-    holds: (card) => card.agentWorking,
-  },
-];
-
-// shownVirtual lists the chosen virtual columns that hold tickets.
-export function shownVirtual(cards: Card[], chosen: VirtualColumn[]) {
-  return VIRTUAL_COLUMNS.filter(
-    (column) => chosen.includes(column.id) && cards.some(column.holds),
-  );
-}
-
 const columnTitle = (id: string) =>
   COLUMNS.find((column) => column.id === id)?.title ??
   VIRTUAL_COLUMNS.find((column) => column.id === id)?.title ??
@@ -128,13 +104,18 @@ export function BoardView(props: BoardViewProps) {
     onMove,
   } = props;
   const [focusedLine, setFocusedLine] = useState("");
-  const [cursor, setCursor] = useState({ column: 0, row: 0 });
+  // The cursor names its column, so a virtual column appearing or leaving
+  // does not move it to a neighbour.
+  const [cursor, setCursor] = useState<{ column: string; row: number }>({
+    column: "",
+    row: 0,
+  });
   const [dragging, setDragging] = useState<Card | null>(null);
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const refocus = useRef("");
   const grid = useRef<HTMLDivElement>(null);
   const atStart = useRef(true);
-  const now = new Date();
+  const now = useNow();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -170,9 +151,18 @@ export function BoardView(props: BoardViewProps) {
     0,
     sizes.findIndex((size) => size > 0),
   );
-  const active = sizes[cursor.column]
-    ? cursor
-    : { column: firstNonEmpty, row: 0 };
+  const cursorColumn = columns.findIndex(
+    (column) => column.id === cursor.column,
+  );
+  const active =
+    cursorColumn >= 0 && sizes[cursorColumn]
+      ? {
+          column: cursorColumn,
+          row: Math.min(cursor.row, (sizes[cursorColumn] ?? 1) - 1),
+        }
+      : { column: firstNonEmpty, row: 0 };
+  const moveCursor = (column: number, row: number) =>
+    setCursor({ column: columns[column]?.id ?? "", row });
 
   const keyOf = (column: number, row: number) => `${column}:${row}`;
   const paints = useMemo(
@@ -201,8 +191,12 @@ export function BoardView(props: BoardViewProps) {
   // to the left, because scroll snapping keeps the current column in place.
   // A board that was at its start stays at its start, so Needs you shows.
   const mirrorCount = columns.filter((column) => column.virtual).length;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the number of virtual columns changes.
+  // It acts only on a change, not on first render, so a deep link that
+  // scrolls to its selected card keeps that scroll.
+  const shownMirrors = useRef(mirrorCount);
   useLayoutEffect(() => {
+    if (shownMirrors.current === mirrorCount) return;
+    shownMirrors.current = mirrorCount;
     if (grid.current && atStart.current) grid.current.scrollLeft = 0;
   }, [mirrorCount]);
 
@@ -239,7 +233,7 @@ export function BoardView(props: BoardViewProps) {
       if (!move) return;
       event.preventDefault();
       const next = moveInGrid(sizes, active, move);
-      setCursor(next);
+      moveCursor(next.column, next.row);
       refs.current.get(keyOf(next.column, next.row))?.focus();
     };
 
@@ -311,10 +305,10 @@ export function BoardView(props: BoardViewProps) {
           onScroll={(event) => {
             atStart.current = event.currentTarget.scrollLeft < 8;
           }}
-          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 gap-x-5 overflow-x-auto px-4 pt-4"
-          style={{
-            gridTemplateColumns: `repeat(${columns.length}, minmax(15rem, 1fr))`,
-          }}
+          // The column count is a variable, not an inline template, so the
+          // narrow-width rule in index.css (one chosen column) still wins.
+          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-5 overflow-x-auto px-4 pt-4"
+          style={{ "--board-columns": columns.length } as CSSProperties}
         >
           {columns.map((column, columnIndex) => (
             <DropColumn
@@ -335,6 +329,7 @@ export function BoardView(props: BoardViewProps) {
                       }
                       size={12}
                       className="translate-y-[1px]"
+                      still
                     />
                   ) : null}
                   {column.title}
@@ -378,9 +373,7 @@ export function BoardView(props: BoardViewProps) {
                         tabIndex={isActive ? 0 : -1}
                         onOpen={() => onOpen({ id: card.id })}
                         onKeyDown={onKey(card, true)}
-                        onFocus={() =>
-                          setCursor({ column: columnIndex, row: rowIndex })
-                        }
+                        onFocus={() => moveCursor(columnIndex, rowIndex)}
                       />
                     );
                   }
@@ -398,9 +391,7 @@ export function BoardView(props: BoardViewProps) {
                       tabIndex={isActive ? 0 : -1}
                       onOpen={() => onOpen({ id: card.id })}
                       onKeyDown={onKey(card)}
-                      onFocus={() =>
-                        setCursor({ column: columnIndex, row: rowIndex })
-                      }
+                      onFocus={() => moveCursor(columnIndex, rowIndex)}
                     />
                   );
                 })}

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
-import { COLUMNS, type ProjectSummary, summedRuns } from "../../api/board";
-import type { RunCounts } from "../../api/runs";
+import { COLUMNS, type ProjectSummary } from "../../api/board";
+import { noRuns, type RunCounts } from "../../api/runs";
 import type { Scope } from "../../app/route";
 import { Icon } from "../../components/Icon";
 import { RouteBar } from "../../components/RouteBar";
@@ -9,6 +9,8 @@ import { RunStateMark } from "../../components/RunState";
 
 interface ProjectRailProps {
   projects: ProjectSummary[];
+  // runs are every project's run counts, from the server (All projects).
+  runs?: RunCounts;
   scope: Scope;
   onSelect(scope: Scope): void;
 }
@@ -20,7 +22,12 @@ function total(counts: ProjectSummary["counts"]) {
 // ProjectRail is the black signage column beside the board: every project as
 // a station code (its ticket key) with its route bar and trouble counts, most
 // recently active first (PRJ-6).
-export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
+export function ProjectRail({
+  projects,
+  runs,
+  scope,
+  onSelect,
+}: ProjectRailProps) {
   const counts = Object.fromEntries(
     COLUMNS.map((column) => [
       column.id,
@@ -31,7 +38,7 @@ export function ProjectRail({ projects, scope, onSelect }: ProjectRailProps) {
     counts,
     blocked: projects.reduce((sum, project) => sum + project.stuck, 0),
     repair: projects.reduce((sum, project) => sum + project.needsRepair, 0),
-    runs: summedRuns(projects),
+    runs: runs ?? noRuns,
   };
   return (
     <nav

@@ -94,8 +94,10 @@ test("the Agents view lists runs by state, Needs you first", async () => {
     lane("Ended 1").getByText("No handoff since its edits"),
   ).toBeVisible();
 
-  // The band shows Needs you from any view.
-  await expect(page.getByRole("button", { name: /1 needs you/ })).toBeVisible();
+  // The band shows Needs you from any view, with one accessible name.
+  await expect(
+    page.getByRole("button", { name: "1 needs you", exact: true }),
+  ).toBeVisible();
 
   // A row opens to what the run did.
   await needsYou.getByRole("button", { name: /Claude/ }).click();
@@ -125,6 +127,16 @@ test("the Agents view lists runs by state, Needs you first", async () => {
   await shot("agents-390-light");
 });
 
+test("the band plate opens the Agents view from any project", async () => {
+  await open("#/p/beta/board");
+  await page.getByRole("button", { name: "1 needs you", exact: true }).click();
+  await expect(page).toHaveURL(/#\/all\/agents$/);
+  await expect(page.locator("[data-lane]").first()).toHaveAttribute(
+    "data-lane",
+    "needs-you",
+  );
+});
+
 test("cards carry live runs and the Needs you column mirrors them", async () => {
   await open("#/p/alpha/board");
   const needsColumn = page.getByRole("region", { name: /^Needs you/ });
@@ -139,6 +151,20 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   // The live badge says what the run needs and keeps its plan step.
   await expect(real.getByText("Permission for Bash")).toBeVisible();
   await expect(real.getByText("2/5 · Runs tab timeline")).toBeVisible();
+
+  // A mirrored card takes arrow keys but not moves: Shift with an arrow on
+  // it changes nothing.
+  await mirror.focus();
+  await page.keyboard.press("Shift+ArrowRight");
+  await expect(mirror).toBeVisible();
+  await expect(real).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    page
+      .getByRole("region", { name: /^Backlog/ })
+      .getByRole("button")
+      .first(),
+  ).toBeFocused();
 
   // Virtual columns appear only while they hold tickets, and can be hidden.
   await expect(

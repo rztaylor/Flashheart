@@ -12,11 +12,14 @@ export function RunDetail({
   run,
   timeline,
   now,
+  headingLevel = 3,
 }: {
   run: Run;
   // timeline is the run's activity, when it has been loaded.
   timeline?: TimelineEntry[];
   now: Date;
+  // headingLevel places the section heads under the caller's heading.
+  headingLevel?: 3 | 4;
 }) {
   const activity = timeline
     ? compactTimeline(timeline).slice(0, MAX_TIMELINE)
@@ -25,7 +28,7 @@ export function RunDetail({
     <div className="@container">
       <div className="grid gap-x-8 gap-y-5 text-xs @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="flex min-w-0 flex-col gap-5">
-          <DetailSection title="Plan">
+          <DetailSection level={headingLevel} title="Plan">
             {run.plan.length === 0 ? (
               <p className="text-ink-muted">No plan recorded.</p>
             ) : (
@@ -33,6 +36,7 @@ export function RunDetail({
             )}
           </DetailSection>
           <DetailSection
+            level={headingLevel}
             title={
               run.dirty
                 ? `Edited since the last checkpoint (${run.edits})`
@@ -78,7 +82,7 @@ export function RunDetail({
             <dd>{run.tools}</dd>
           </dl>
         </div>
-        <DetailSection title="Activity">
+        <DetailSection level={headingLevel} title="Activity">
           {!timeline ? (
             <p className="text-ink-muted">Loading activity…</p>
           ) : activity.length === 0 ? (
@@ -87,7 +91,7 @@ export function RunDetail({
             <ol className="relative flex flex-col">
               {activity.map(({ entry, count }, index) => (
                 <li
-                  // biome-ignore lint/suspicious/noArrayIndexKey: the timeline is append-only and shown in order.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: entries are folded and newest first, but hold no state, so index keys are harmless.
                   key={`${entry.time}-${index}`}
                   className="relative flex items-baseline gap-3 py-[3px] pl-4 before:absolute before:top-0 before:bottom-0 before:left-[3px] before:w-px before:bg-rule last:before:bottom-1/2 first:before:top-1/2"
                 >
@@ -147,16 +151,19 @@ function TailText({
 
 function DetailSection({
   title,
+  level,
   children,
 }: {
   title: string;
+  level: 3 | 4;
   children: React.ReactNode;
 }) {
+  const Heading = level === 3 ? "h3" : "h4";
   return (
     <section className="min-w-0">
-      <h3 className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm station-sign">
+      <Heading className="mb-2 border-t-2 border-rule-strong pt-1.5 text-sm station-sign">
         {title}
-      </h3>
+      </Heading>
       {children}
     </section>
   );
