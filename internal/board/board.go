@@ -417,6 +417,9 @@ type Project struct {
 	Reviews map[string]bool
 	// Attachments maps ticket ids to their files index.
 	Attachments map[string][]Attachment
+	// EnforceHandoff is project.yaml's settings.enforce_handoff; nil means
+	// the global setting applies (HOOK-6).
+	EnforceHandoff *bool
 	// Warnings are problems with project-level files (project.yaml, keys).
 	Warnings []string
 	// LastModified is the newest modification time among the project's files.

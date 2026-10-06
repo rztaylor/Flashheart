@@ -452,6 +452,10 @@ type projectFile struct {
 	Key    string   `yaml:"key"`
 	NextID int      `yaml:"next_id"`
 	Repos  []string `yaml:"repos"`
+	// Settings are per-project overrides of config.yaml (CFG-1).
+	Settings struct {
+		EnforceHandoff *bool `yaml:"enforce_handoff"`
+	} `yaml:"settings"`
 }
 
 func (r *reader) readProjectFile(project *board.Project) {
@@ -474,6 +478,7 @@ func (r *reader) readProjectFile(project *board.Project) {
 		project.DisplayName = display
 	}
 	project.Repos = parsed.Repos
+	project.EnforceHandoff = parsed.Settings.EnforceHandoff
 	switch key := strings.TrimSpace(parsed.Key); {
 	case key == "":
 	case board.ValidKey(key):

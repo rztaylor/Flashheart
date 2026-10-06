@@ -272,7 +272,7 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 			note.Ticket = linked
 		}
 	}
-	thresholds := runs.Settings{Quiet: time.Duration(settings.QuietMinutes) * time.Minute, Stale: runs.DefaultSettings().Stale}
+	thresholds := runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes)
 	var previous *runs.Run
 	for _, r := range set.Runs() {
 		if r.ID == current || r.Kind != events.KindSession || r.Worktree == "" || r.Worktree != info.Worktree {

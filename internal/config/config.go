@@ -49,9 +49,14 @@ var (
 
 // Config is the global configuration (CFG-1, CFG-2).
 type Config struct {
-	Version            int         `yaml:"version"`
-	AutoCreateProjects bool        `yaml:"auto_create_projects"`
-	QuietMinutes       int         `yaml:"quiet_minutes"`
+	Version            int  `yaml:"version"`
+	AutoCreateProjects bool `yaml:"auto_create_projects"`
+	QuietMinutes       int  `yaml:"quiet_minutes"`
+	// LeaseMinutes is how long a claim outlives its run's activity.
+	LeaseMinutes int `yaml:"lease_minutes"`
+	// EnforceHandoff blocks a stop once for a checkpoint (HOOK-6); a
+	// project's settings.enforce_handoff overrides it.
+	EnforceHandoff     bool        `yaml:"enforce_handoff"`
 	EventRetentionDays int         `yaml:"event_retention_days"`
 	DoneColumnLimit    int         `yaml:"done_column_limit"`
 	Attachments        Attachments `yaml:"attachments"`
@@ -90,6 +95,7 @@ func Defaults() Config {
 		Version:            FormatVersion,
 		AutoCreateProjects: true,
 		QuietMinutes:       10,
+		LeaseMinutes:       30,
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
@@ -161,6 +167,7 @@ func (c Config) validate() error {
 		}
 	}
 	atLeastOne("quiet_minutes", int64(c.QuietMinutes))
+	atLeastOne("lease_minutes", int64(c.LeaseMinutes))
 	atLeastOne("event_retention_days", int64(c.EventRetentionDays))
 	atLeastOne("done_column_limit", int64(c.DoneColumnLimit))
 	atLeastOne("attachments.max_bytes", c.Attachments.MaxBytes)

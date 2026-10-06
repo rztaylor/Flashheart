@@ -24,6 +24,11 @@ const (
 	MaxSummary    = 120
 	MaxNameLength = 200
 	MaxReasonText = 200
+	// MaxQuestionText bounds question.asked text; MaxAnswerText an answer.
+	MaxQuestionText = 1000
+	MaxAnswerText   = 1000
+	MaxOptions      = 10
+	MaxOptionText   = 200
 )
 
 // Event kinds (agent-protocol §3).
@@ -150,11 +155,50 @@ type CompactData struct {
 }
 
 // TicketData carries the ticket of claim, release, review.written and the
-// ticket.* kinds.
+// ticket.* kinds. By names who acted when it was not the event's run
+// (`human` for the UI); From and To are a move's columns, Fields an
+// update's changed fields.
 type TicketData struct {
-	Ticket string `json:"ticket"`
-	Force  bool   `json:"force,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	Ticket string   `json:"ticket"`
+	Force  bool     `json:"force,omitempty"`
+	Reason string   `json:"reason,omitempty"`
+	By     string   `json:"by,omitempty"`
+	From   string   `json:"from,omitempty"`
+	To     string   `json:"to,omitempty"`
+	Fields []string `json:"fields,omitempty"`
+}
+
+// Question kinds (RUN-8).
+const (
+	QuestionKindQuestion = "question"
+	QuestionKindDecision = "decision"
+	QuestionKindReview   = "review"
+	QuestionKindBlocked  = "blocked"
+)
+
+// QuestionKinds lists the kinds ask_human accepts.
+var QuestionKinds = []string{QuestionKindQuestion, QuestionKindDecision, QuestionKindReview, QuestionKindBlocked}
+
+// QuestionData is question.asked's data. Ticket is empty for a question
+// about no ticket.
+type QuestionData struct {
+	ID      string   `json:"id"`
+	Ticket  string   `json:"ticket,omitempty"`
+	Kind    string   `json:"kind"`
+	Text    string   `json:"text"`
+	Options []string `json:"options,omitempty"`
+}
+
+// AnswerData is question.answered's data, recorded on the asking run.
+type AnswerData struct {
+	ID     string `json:"id"`
+	Answer string `json:"answer"`
+	By     string `json:"by"`
+}
+
+// DeliveredData is question.delivered's data: the answer reached the run.
+type DeliveredData struct {
+	ID string `json:"id"`
 }
 
 // CheckpointData is checkpoint's data.
