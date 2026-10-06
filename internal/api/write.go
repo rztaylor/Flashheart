@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/config"
@@ -183,7 +181,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
 			return next, err
 		}
-		return mdfile.AppendToSection(next, "Notes", "Started while blocked: "+oneLine(reason, 500))
+		return mdfile.AppendToSection(next, "Notes", board.BlockedStartNote(reason))
 	})
 	if err != nil {
 		writeStoreError(w, err)
@@ -191,36 +189,9 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 	}
 	var warnings []string
 	if to == board.Review && ticket.Column != board.Review {
-		if !project.Reviews[ticket.ID] {
-			warnings = append(warnings, "There is no review file yet.")
-		}
-		open := 0
-		for _, criterion := range ticket.Criteria {
-			if !criterion.Done {
-				open++
-			}
-		}
-		if open > 0 {
-			warnings = append(warnings, fmt.Sprintf("%d acceptance %s not ticked.", open, plural(open, "criterion is", "criteria are")))
-		}
+		warnings = board.ReviewWarnings(ticket, project.Reviews[ticket.ID])
 	}
 	b.saved(w, http.StatusOK, hash, warnings)
-}
-
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return many
-}
-
-// oneLine joins whitespace and keeps at most limit characters.
-func oneLine(value string, limit int) string {
-	value = strings.Join(strings.Fields(value), " ")
-	if runes := []rune(value); len(runes) > limit {
-		value = string(runes[:limit])
-	}
-	return value
 }
 
 // requireBase refuses an edit without the hash it was based on (STO-3).
@@ -237,51 +208,6 @@ func requireBase(w http.ResponseWriter, base string) bool {
 type PatchRequest struct {
 	Base   string                     `json:"base"`
 	Fields map[string]json.RawMessage `json:"fields"`
-}
-
-var (
-	listFields   = []string{"depends-on", "depends-on-workstreams", "tags"}
-	scalarFields = []string{"title", "status", "type", "priority", "created", "branch", "workstream"}
-	datePattern  = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
-	slugPattern  = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,99}$`)
-)
-
-func validateField(key, value string) error {
-	switch key {
-	case "title":
-		if strings.TrimSpace(value) == "" || utf8.RuneCountInString(value) > 300 {
-			return errors.New("title must be 1 to 300 characters")
-		}
-	case "status":
-		if _, ok := board.ParseColumn(value); !ok {
-			return fmt.Errorf("%q is not a column", value)
-		}
-	case "type":
-		if !slices.Contains(board.TicketTypes, value) {
-			return fmt.Errorf("type must be one of %s", strings.Join(board.TicketTypes, ", "))
-		}
-	case "priority":
-		if !slices.Contains(board.Priorities, value) {
-			return fmt.Errorf("priority must be one of %s", strings.Join(board.Priorities, ", "))
-		}
-	case "created":
-		if !datePattern.MatchString(value) {
-			return errors.New("created must be a date like 2026-10-05")
-		}
-	case "workstream", "depends-on-workstreams":
-		if value != "" && !slugPattern.MatchString(value) {
-			return fmt.Errorf("%q is not a workstream slug", value)
-		}
-	case "depends-on":
-		if _, _, ok := board.ParseID(value); !ok {
-			return fmt.Errorf("%q is not a ticket id like FH-42", value)
-		}
-	case "branch", "tags":
-		if strings.ContainsAny(value, "\n\r") || utf8.RuneCountInString(value) > 200 {
-			return fmt.Errorf("%s must be one line of at most 200 characters", key)
-		}
-	}
-	return nil
 }
 
 func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
@@ -301,7 +227,7 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 	}
 	var changes []change
 	for key, raw := range request.Fields {
-		c := change{key: key, isList: slices.Contains(listFields, key)}
+		c := change{key: key, isList: slices.Contains(board.ListFields, key)}
 		switch {
 		case c.isList:
 			if err := json.Unmarshal(raw, &c.list); err != nil {
@@ -310,19 +236,19 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 			}
 			for index, item := range c.list {
 				c.list[index] = strings.TrimSpace(item)
-				if err := validateField(key, c.list[index]); err != nil {
+				if err := board.ValidateField(key, c.list[index]); err != nil {
 					writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
 					return
 				}
 			}
 			c.list = slices.DeleteFunc(c.list, func(item string) bool { return item == "" })
-		case slices.Contains(scalarFields, key):
+		case slices.Contains(board.ScalarFields, key):
 			if err := json.Unmarshal(raw, &c.value); err != nil {
 				writeError(w, http.StatusBadRequest, "invalid_input", key+" must be a string")
 				return
 			}
 			c.value = strings.TrimSpace(c.value)
-			if err := validateField(key, c.value); err != nil {
+			if err := board.ValidateField(key, c.value); err != nil {
 				writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
 				return
 			}
@@ -509,7 +435,7 @@ func (b boardAPI) createTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	created, err := writer.CreateTicket(r.PathValue("project"), store.NewTicket{
-		Title: oneLine(request.Title, 300), Type: request.Type, Priority: request.Priority,
+		Title: board.OneLine(request.Title, 300), Type: request.Type, Priority: request.Priority,
 		Status: board.Column(request.Status), Workstream: request.Workstream,
 		Description: request.Description, Criteria: request.Criteria,
 		DependsOn: request.DependsOn, Tags: request.Tags, Session: "flashheart-ui", Key: request.Key,

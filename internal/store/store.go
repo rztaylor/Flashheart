@@ -498,6 +498,7 @@ type attachmentEntry struct {
 	Source  string `yaml:"source"`
 	Run     string `yaml:"run"`
 	Added   string `yaml:"added"`
+	SHA256  string `yaml:"sha256,omitempty"`
 }
 
 func (r *reader) readFilesIndex(project *board.Project, id, name string) {
@@ -519,7 +520,7 @@ func (r *reader) readFilesIndex(project *board.Project, id, name string) {
 			continue
 		}
 		project.Attachments[id] = append(project.Attachments[id], board.Attachment{
-			File: item.File, Caption: item.Caption, Kind: item.Kind, Source: item.Source, Run: item.Run, Added: item.Added,
+			File: item.File, Caption: item.Caption, Kind: item.Kind, Source: item.Source, Run: item.Run, Added: item.Added, SHA256: item.SHA256,
 		})
 	}
 }

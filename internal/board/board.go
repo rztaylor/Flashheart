@@ -397,7 +397,7 @@ func ParseWorkstream(slug string, data []byte) Workstream {
 
 // Attachment is one entry of a ticket's files/index.yaml.
 type Attachment struct {
-	File, Caption, Kind, Source, Run, Added string
+	File, Caption, Kind, Source, Run, Added, SHA256 string
 }
 
 // Project is one project directory's parsed contents.

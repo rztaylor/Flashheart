@@ -4,7 +4,9 @@
 // what it read. Its write side edits tickets and workstreams under a
 // per-project lock with a content-hash precondition and atomic replace
 // (STO-3), creates tickets with the next id (KEY-2), chooses keys under a
-// root lock (KEY-5), archives ticket folders (EDIT-8), finds or creates a
+// root lock (KEY-5), archives ticket folders (EDIT-8), copies allow-listed local
+// files into a ticket's files/ with their index (REV-1, REV-5), writes
+// review.md (REV-4), finds or creates a
 // repository's project (PRJ-2–PRJ-5), and appends, lists and expires event
 // files; confined primitives also serve migration.
 //
