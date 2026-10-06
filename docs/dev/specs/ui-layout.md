@@ -88,6 +88,12 @@ load) sit as a full-width strip under the band, above the rail and Main.
   In progress).
 - Columns are at least 15rem, scroll horizontally with snap; under 48rem one
   column shows, chosen with the Column picker.
+- The board is one scrolling surface: columns grow with their cards and
+  scroll down together, from anywhere over the board, and every well
+  stretches to the tallest column (or the board's height). No column scrolls
+  on its own. Column heads stay pinned at the top while the board scrolls; a
+  drag held at an edge scrolls the board. The ticket panel scrolls
+  separately.
 - Dropping: the hovered column shows a drop outline. Keyboard: arrows move
   between cards, Shift with Left/Right moves the ticket (`EDIT-1`), Enter
   opens it.

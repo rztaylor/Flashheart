@@ -18,6 +18,9 @@ All notable changes to this project are documented here. The project follows
   finished work; the card panel leads with status, blocker and priority
   pills and sets questions and the handoff as callouts. Both palettes meet
   WCAG 2.2 AA, checked by a palette test.
+- Board columns scroll together on one surface, like a single page: a wheel
+  or trackpad anywhere over the board moves every column, column heads stay
+  in view, and no column has its own scrollbar (FH-24).
 
 ### Added
 

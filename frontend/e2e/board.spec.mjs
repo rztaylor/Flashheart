@@ -265,6 +265,163 @@ test("the panel sits beside the board and keeps the card's column in view", asyn
   await page.keyboard.press("Escape");
 });
 
+// innerScrollers counts elements inside board columns that scroll on their
+// own; the board is meant to be the only vertical scroller.
+function innerScrollers(page) {
+  return page.locator("section[data-column]").evaluateAll(
+    (sections) =>
+      sections
+        .flatMap((section) => [section, ...section.querySelectorAll("*")])
+        .filter((element) => {
+          const overflow = getComputedStyle(element).overflowY;
+          return (
+            (overflow === "auto" || overflow === "scroll") &&
+            element.scrollHeight > element.clientHeight + 1
+          );
+        }).length,
+  );
+}
+
+// columnTops reads the top edge of every visible column, to show they move
+// together.
+function columnTops(page) {
+  return page
+    .locator("section[data-column]")
+    .evaluateAll((sections) =>
+      sections
+        .filter((section) => section.offsetParent !== null)
+        .map((section) => Math.round(section.getBoundingClientRect().top)),
+    );
+}
+
+test("board columns scroll together on one vertical surface", async () => {
+  const page = shared;
+  await open(page, "#/p/flashheart/board", { width: 1280, height: 800 });
+  const board = page.locator(".board-grid");
+  await board.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await expect(
+    column(page, "Backlog").getByRole("button").first(),
+  ).toBeVisible();
+  expect(await innerScrollers(page)).toBe(0);
+  expect(
+    await board.evaluate(
+      (element) => element.scrollHeight - element.clientHeight,
+    ),
+  ).toBeGreaterThan(100);
+
+  // Points over a short column's card, the empty space below it, and the gap
+  // between two columns all scroll the one board.
+  const points = await page.evaluate(() => {
+    const grid = document.querySelector(".board-grid").getBoundingClientRect();
+    const sections = [...document.querySelectorAll("section[data-column]")]
+      .map((section) => ({
+        section,
+        box: section.getBoundingClientRect(),
+        cards: section.querySelectorAll("[data-ticket]").length,
+      }))
+      .filter(({ box }) => box.left >= grid.left && box.right <= grid.right);
+    const short = sections.reduce((a, b) => (b.cards < a.cards ? b : a));
+    const last = [...short.section.querySelectorAll("[data-ticket]")].at(-1);
+    const lastBox = last?.getBoundingClientRect();
+    const below = lastBox ? lastBox.bottom + 40 : short.box.top + 160;
+    return [
+      lastBox
+        ? { x: lastBox.left + 20, y: lastBox.top + 10, where: "short card" }
+        : null,
+      {
+        x: short.box.left + short.box.width / 2,
+        y: Math.min(below, grid.bottom - 20),
+        where: "below the short column",
+      },
+      {
+        x: sections[0].box.right + 6,
+        y: grid.top + 200,
+        where: "column gap",
+      },
+    ].filter(Boolean);
+  });
+  for (const point of points) {
+    await board.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.wheel(0, 300);
+    await expect
+      .poll(() => board.evaluate((element) => element.scrollTop), {
+        message: point.where,
+      })
+      .toBeGreaterThan(0);
+    expect(new Set(await columnTops(page)).size, point.where).toBe(1);
+  }
+
+  // The last card of the tallest column is reachable; headings stay usable.
+  await board.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const backlog = column(page, "Backlog");
+  await expect(backlog.getByRole("button").last()).toBeInViewport();
+  await expect(
+    backlog.getByRole("heading", { name: /Backlog/ }),
+  ).toBeInViewport();
+
+  // Opening a card deep in the column keeps it in view; closing the panel
+  // leaves the board scrolling.
+  await backlog.getByRole("button").last().click();
+  await expect(page.getByRole("complementary")).toBeVisible();
+  await expect(backlog.getByRole("button").last()).toBeInViewport();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("complementary")).toHaveCount(0);
+  await board.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await page.mouse.move(points[0].x, points[0].y);
+  await page.mouse.wheel(0, 300);
+  await expect
+    .poll(() => board.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  // Sideways scrolling still reaches the last column.
+  await board.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(
+    column(page, "Done").getByRole("heading", { name: /Done/ }),
+  ).toBeInViewport({ ratio: 1 });
+  await board.evaluate((element) => {
+    element.scrollLeft = 0;
+    element.scrollTop = 0;
+  });
+
+  // A drag held at the bottom edge scrolls the board; Escape puts it back.
+  const first = await backlog.getByRole("button").first().boundingBox();
+  const gridBox = await board.boundingBox();
+  await page.mouse.move(first.x + first.width / 2, first.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(first.x + first.width / 2 + 10, first.y + 30, {
+    steps: 4,
+  });
+  await page.mouse.move(
+    first.x + first.width / 2,
+    gridBox.y + gridBox.height - 8,
+    { steps: 10 },
+  );
+  await expect
+    .poll(() => board.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+
+  // The narrow layout scrolls its one column on the same surface.
+  await open(page, "#/p/flashheart/board", { width: 390, height: 844 });
+  await page.getByRole("combobox", { name: "Column" }).selectOption("backlog");
+  expect(await innerScrollers(page)).toBe(0);
+  await board.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(backlog.getByRole("button").last()).toBeInViewport();
+});
+
 test("cards are coloured by type, priority, age or not at all", async () => {
   const page = shared;
   await open(page, "#/p/flashheart/board");

@@ -106,7 +106,8 @@ test("dragging a card to another column moves it", async () => {
   await page.mouse.move(source.x + source.width / 2 + 20, source.y + 30, {
     steps: 4,
   });
-  await page.mouse.move(target.x + target.width / 2, target.y + 200, {
+  // Columns scroll together, so the target is level with the source card.
+  await page.mouse.move(target.x + target.width / 2, source.y + 20, {
     steps: 12,
   });
   await page.mouse.up();

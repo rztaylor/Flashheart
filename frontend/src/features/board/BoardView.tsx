@@ -307,7 +307,11 @@ export function BoardView(props: BoardViewProps) {
           }}
           // The column count is a variable, not an inline template, so the
           // narrow-width rule in index.css (one chosen column) still wins.
-          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-x-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
+          // The grid is the board's one scroller in both directions: columns
+          // grow with their cards and scroll down together, and the row
+          // stretches every well to the tallest, or to the board's height
+          // when every column is short (ui-layout.md §2).
+          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-px-4 auto-rows-[minmax(max-content,1fr)] grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
           style={{ "--board-columns": columns.length } as CSSProperties}
         >
           {columns.map((column, columnIndex) => (
@@ -319,6 +323,7 @@ export function BoardView(props: BoardViewProps) {
             >
               {/* The title alone names the column region. */}
               <WellHead
+                sticky
                 titleId={`column-${column.id}`}
                 title={column.title}
                 count={
@@ -334,13 +339,13 @@ export function BoardView(props: BoardViewProps) {
                     : undefined
                 }
               />
-              <div className="-mx-1.5 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1.5 pt-0.5 pb-3">
+              <div className="flex flex-1 flex-col gap-2.5 pt-0.5 pb-3">
                 {column.cards.length === 0 ? (
                   <EmptySlot>{column.empty}</EmptySlot>
                 ) : null}
                 {column.cards.map((card, rowIndex) => {
                   // One tab stop per column (the cursor's card, or the first
-                  // card elsewhere) so every scrolling column is reachable;
+                  // card elsewhere) so every column is reachable;
                   // arrow keys move freely across the grid.
                   const isActive =
                     active.column === columnIndex
