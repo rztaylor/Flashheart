@@ -78,6 +78,8 @@ In the session, please:
 EOF
 
 cd "$repo"
-"$claude_bin" --settings "$settings"
+# Ask before tools run, whatever the user's default mode, so permission
+# prompts (allow and deny) are recorded.
+"$claude_bin" --settings "$settings" --permission-mode default
 echo "Recorded:"
 find "$out" -type f | sort
