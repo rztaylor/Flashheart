@@ -8,8 +8,8 @@ Built (2026-10-06): `internal/mcpserver` with every tool below and contract
 tests over the in-memory transport; `flashheart mcp` (initialize in about
 6 ms); claim leases and questions in the run fold; checkpoints into
 `## Handoff`; referenced-file copies (`REV-5`); `PreToolUse` run stamping;
-answers delivered through the session's inbox (D19); handoff enforcement;
-`flashheart setup claude` (D18); the protocol skill; answering questions in
+answers delivered through the session's inbox (D20); handoff enforcement;
+`flashheart setup claude` (D19); the protocol skill; answering questions in
 the card panel and the Agents view; `TestProtocolSmoke`; a Playwright test
 that asks through the real MCP server and answers in the browser.
 

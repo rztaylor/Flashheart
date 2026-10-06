@@ -220,7 +220,7 @@ Dogfooding (user, 2026-10-05): Flashheart's own work is tracked on its board
 (project `Flashheart`, key `FH`) in the default root, outside the
 repository (D12).
 
-## 2026-10-06 — D18: Setup registers MCP through the claude CLI and retires kanban-tracker
+## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker
 
 Options for registering the user-scope MCP server: edit `~/.claude.json`
 directly; run `claude mcp add-json` / `claude mcp remove`; print the command
@@ -238,7 +238,7 @@ subcommand, and restores the backed-up file byte for byte on uninstall when
 nothing changed since. `--uninstall` previews like setup does and applies
 with `--write` (D9).
 
-## 2026-10-06 — D19: Answers reach a session through an inbox
+## 2026-10-06 — D20: Answers reach a session through an inbox
 
 The prompt hook must stay fast (`HOOK-1`) and never reads the event log
 (D17), but it must hand a session the answers to its questions (`HOOK-5`).
