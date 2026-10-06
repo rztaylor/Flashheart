@@ -211,3 +211,24 @@ func contains(t *testing.T, text string, parts ...string) {
 		}
 	}
 }
+
+func contains2(text, part string) bool { return strings.Contains(text, part) }
+
+func (e *env) readFile(name string) string {
+	e.t.Helper()
+	data, err := os.ReadFile(filepath.Join(e.root, name))
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return string(data)
+}
+
+func (e *env) exists(name string) bool {
+	_, err := os.Stat(filepath.Join(e.root, name))
+	return err == nil
+}
+
+func mdfileList(t *testing.T, file, key string) []string {
+	t.Helper()
+	return mdfile.Parse([]byte(file)).List(key)
+}

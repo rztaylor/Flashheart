@@ -42,6 +42,9 @@ type call struct {
 	project string
 	set     *runs.Set
 	folded  map[string]bool
+	// seen holds every folded event, so runs are folded in time order
+	// across projects.
+	seen []events.Event
 	// run is the caller's run id, "" when unknown; candidates lists the
 	// live runs that made it ambiguous.
 	run        string
@@ -63,8 +66,7 @@ func (srv *server) begin(runArg string) (*call, error) {
 		if errors.Is(err, fs.ErrNotExist) {
 			// No board root yet: an empty board until the first write.
 			c.analysis = board.Analyze(c.board)
-			c.attribute(runArg)
-			return c, nil
+			return c, c.attribute(runArg)
 		}
 		return nil, err
 	}
@@ -87,45 +89,70 @@ func (srv *server) begin(runArg string) (*call, error) {
 	if err := c.fold(c.project); err != nil {
 		return nil, err
 	}
-	c.attribute(runArg)
+	if err := c.attribute(runArg); err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 
-// fold adds a project's recent events to the call's runs.
+// fold adds a project's recent events to the call's runs. A run's events
+// can sit in several projects' logs (a claim on another project's ticket),
+// so the runs are refolded from every project read so far in time order.
 func (c *call) fold(project string) error {
 	if project == "" || c.folded[project] {
 		return nil
 	}
 	c.folded[project] = true
-	err := c.srv.log.Read(project, c.now.Add(-runWindow), c.set.Apply)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
+	err := c.srv.log.Read(project, c.now.Add(-runWindow), func(e events.Event) { c.seen = append(c.seen, e) })
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
 	}
-	return err
+	slices.SortStableFunc(c.seen, func(a, b events.Event) int { return a.Time.Compare(b.Time) })
+	c.set = runs.NewSet()
+	for _, e := range c.seen {
+		c.set.Apply(e)
+	}
+	return nil
 }
 
+// fullSession is the length from which a session id is taken as complete
+// rather than shortened (agent-protocol §2 shortens to 8 characters).
+const fullSession = 16
+
 // attribute resolves the caller's run (agent-protocol §7.1): the run
-// argument (in full or shortened as recovery notes show it), else the one
-// live session working in this worktree on this branch.
-func (c *call) attribute(runArg string) {
+// argument (in full, or shortened as recovery notes show it, which must
+// name one known run), else the one live session working in this worktree
+// on this branch.
+func (c *call) attribute(runArg string) error {
 	if runArg != "" {
-		c.run = runArg
+		session, agent, _ := strings.Cut(runArg, "/")
 		var matches []string
 		for _, r := range c.set.Runs() {
 			if r.ID == runArg {
-				return
+				c.run = r.ID
+				return nil
 			}
-			if strings.HasPrefix(r.ID, runArg) && !strings.Contains(r.ID[len(runArg):], "/") {
+			rSession, rAgent, _ := strings.Cut(r.ID, "/")
+			if strings.HasPrefix(rSession, session) && rAgent == agent {
 				matches = append(matches, r.ID)
 			}
 		}
-		if len(matches) == 1 {
+		_, sessionID, _ := strings.Cut(session, ":")
+		switch {
+		case len(matches) == 1:
 			c.run = matches[0]
+		case len(matches) > 1:
+			return fail("ambiguous_run", "pass your full run id, one of "+strings.Join(matches, ", "), "run %q names %d runs", runArg, len(matches))
+		case len(sessionID) < fullSession:
+			return fail("invalid_input", "pass the run id from your recovery note, or leave run out", "no run matches %q", runArg)
+		default:
+			// A full id not seen yet: a session whose hooks have not reported.
+			c.run = runArg
 		}
-		return
+		return nil
 	}
 	if c.where.Worktree == "" && c.where.Repo == "" && c.srv.options.Cwd == "" {
-		return
+		return nil
 	}
 	for _, r := range c.set.Runs() {
 		if r.Kind != events.KindSession || c.set.State(r.ID, c.now, c.runs) == runs.Ended {
@@ -139,6 +166,16 @@ func (c *call) attribute(runArg string) {
 	if len(c.candidates) == 1 {
 		c.run, c.candidates = c.candidates[0], nil
 	}
+	return nil
+}
+
+// guard refuses a write to a ticket held by another live session (one not
+// the caller's own session or subagent, agent-protocol §7.2).
+func (c *call) guard(id string) error {
+	if holder := c.holder(id); holder != nil && !related(holder.ID, c.run) {
+		return fail("claimed", "work on the ticket you hold, or claim this one first", "%s is held by %s (%s)", id, protocol.ShortRun(holder.ID), c.state(holder))
+	}
+	return nil
 }
 
 // here reports whether a run works where this server does.
@@ -310,4 +347,26 @@ func (c *call) keysInUse(except string) []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+// projectOf is the project of a ticket id, or fallback when no live ticket
+// has it.
+func (c *call) projectOf(id, fallback string) string {
+	key, _, _ := board.ParseID(id)
+	for _, project := range c.board.Projects {
+		if project.Key == key && slices.ContainsFunc(project.Tickets, func(t board.Ticket) bool { return t.ID == id }) {
+			return project.Name
+		}
+	}
+	return fallback
+}
+
+// projectsFor lists the ticket's project and, when different, the caller
+// run's own project.
+func (c *call) projectsFor(ticketProject string) []string {
+	list := []string{ticketProject}
+	if r := c.set.Get(c.run); r != nil && r.Project != "" && r.Project != ticketProject {
+		list = append(list, r.Project)
+	}
+	return list
 }

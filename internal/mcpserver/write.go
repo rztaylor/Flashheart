@@ -2,7 +2,6 @@ package mcpserver
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"regexp"
 	"slices"
@@ -93,6 +92,9 @@ func (srv *server) claim(input ClaimInput) (string, error) {
 	if ticket.NeedsRepair() {
 		return "", fail("needs_repair", "ask the human to repair it on the board", "%s needs repair: %s", ticket.ID, strings.Join(ticket.Repair, "; "))
 	}
+	if ticket.Column == board.Done {
+		return "", fail("invalid_input", "create a ticket for new work on it, or ask the human to reopen it", "%s is done", ticket.ID)
+	}
 	reason := scrub.Text(input.Reason, events.MaxReasonText)
 	if input.Force && reason == "" {
 		return "", fail("invalid_input", "say why in reason", "force needs a reason")
@@ -117,9 +119,13 @@ func (srv *server) claim(input ClaimInput) (string, error) {
 	}
 
 	var list []events.Event
-	// One explicit claim per run: claiming another releases the first.
+	// One explicit claim per run: claiming another releases the first, in
+	// the log of the released ticket's project, where its holder is read.
 	if current := c.set.Get(run); current != nil && current.Claim != "" && current.Claim != ticket.ID {
-		list = append(list, events.Event{Kind: events.Release, Data: events.TicketData{Ticket: current.Claim, Reason: "claimed " + ticket.ID}})
+		released := events.Event{Kind: events.Release, Data: events.TicketData{Ticket: current.Claim, Reason: "claimed " + ticket.ID}}
+		if err := c.record(c.projectOf(current.Claim, project.Name), released); err != nil {
+			return "", err
+		}
 	}
 	column := ticket.Column
 	moves := column == board.Backlog || column == board.UpNext
@@ -241,12 +247,14 @@ func (srv *server) checkpoint(input CheckpointInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if holder := c.holder(ticket.ID); holder != nil && !related(holder.ID, c.run) {
-		return "", fail("claimed", "checkpoint the ticket you hold, or claim this one first",
-			"%s is held by %s (%s)", ticket.ID, protocol.ShortRun(holder.ID), c.state(holder))
+	if err := c.guard(ticket.ID); err != nil {
+		return "", err
+	}
+	done, next, questions := items(input.Done), items(input.Next), items(input.OpenQuestions)
+	if len(done)+len(next) == 0 {
+		return "", fail("invalid_input", "say what is done and what is next", "a checkpoint needs done or next items")
 	}
 	copies := c.copier(project.Name, ticket.ID)
-	done, next, questions := items(input.Done), items(input.Next), items(input.OpenQuestions)
 	for _, list := range [][]string{done, next, questions} {
 		for index := range list {
 			list[index] = copies.markdown(list[index])
@@ -255,9 +263,6 @@ func (srv *server) checkpoint(input CheckpointInput) (string, error) {
 	var files []string
 	for _, entry := range items(input.Files) {
 		files = append(files, copies.file(entry))
-	}
-	if len(done)+len(next) == 0 {
-		return "", fail("invalid_input", "say what is done and what is next", "a checkpoint needs done or next items")
 	}
 	note := ""
 	if text := strings.TrimSpace(scrub.Secrets(input.Note)); text != "" {
@@ -289,8 +294,13 @@ func (srv *server) checkpoint(input CheckpointInput) (string, error) {
 			return "", err
 		}
 	}
-	if err := c.record(project.Name, events.Event{Kind: events.Checkpoint, Data: events.CheckpointData{Ticket: ticket.ID, Done: len(done), Next: len(next), Files: len(files), Questions: len(questions)}}); err != nil {
-		return "", err
+	// The checkpoint clears the run's edits where they are recorded (its own
+	// project) and where the ticket's runs are read (the ticket's project).
+	checkpointed := events.Event{Kind: events.Checkpoint, Data: events.CheckpointData{Ticket: ticket.ID, Done: len(done), Next: len(next), Files: len(files), Questions: len(questions)}}
+	for _, where := range c.projectsFor(project.Name) {
+		if err := c.record(where, checkpointed); err != nil {
+			return "", err
+		}
 	}
 	var lines []string
 	if same && note == "" {
@@ -359,6 +369,9 @@ func (srv *server) updateTicket(input UpdateTicketInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if err := c.guard(ticket.ID); err != nil {
+		return "", err
+	}
 	type change struct {
 		key    string
 		value  string
@@ -376,6 +389,7 @@ func (srv *server) updateTicket(input UpdateTicketInput) (string, error) {
 			if !ok {
 				return "", fail("invalid_input", "pass a list of strings", "%s must be a list of strings", key)
 			}
+			values = items(values)
 			for _, value := range values {
 				if err := board.ValidateField(key, value); err != nil {
 					return "", fail("invalid_input", "correct the value", "%v", err)
@@ -392,14 +406,21 @@ func (srv *server) updateTicket(input UpdateTicketInput) (string, error) {
 				return "", fail("invalid_input", "correct the value", "%v", err)
 			}
 		default:
-			return "", fail("invalid_input", "settable fields: "+strings.Join(append(slices.Clone(board.ScalarFields[:1]), append(board.ScalarFields[2:], board.ListFields...)...), ", "), "%q cannot be set", key)
+			return "", fail("invalid_input", "settable fields: "+strings.Join(settable, ", "), "%q cannot be set", key)
 		}
 		changes = append(changes, ch)
 	}
 	slices.SortFunc(changes, func(a, b change) int { return strings.Compare(a.key, b.key) })
+	// Criteria are found in the same bytes whose hash guards the write, so a
+	// reordering in between is a conflict, not a wrong tick (STO-3).
+	data, base, err := srv.store.ReadTicket(project.Name, ticket.ID)
+	if err != nil {
+		return "", err
+	}
+	current := board.ParseTicket(ticket.Folder, data)
 	var checks []int
 	for _, item := range input.Check {
-		index, err := criterionIndex(ticket.Criteria, item)
+		index, err := criterionIndex(current.Criteria, item)
 		if err != nil {
 			return "", err
 		}
@@ -411,10 +432,6 @@ func (srv *server) updateTicket(input UpdateTicketInput) (string, error) {
 	}
 	if len(changes) == 0 && len(checks) == 0 && note == "" {
 		return "", fail("invalid_input", "pass set, check or append_notes", "nothing to change")
-	}
-	_, base, err := srv.store.ReadTicket(project.Name, ticket.ID)
-	if err != nil {
-		return "", err
 	}
 	_, err = srv.store.UpdateTicket(project.Name, ticket.ID, base, func(data []byte) ([]byte, error) {
 		var err error
@@ -538,8 +555,8 @@ func (srv *server) move(input MoveInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if holder := c.holder(ticket.ID); holder != nil && !related(holder.ID, c.run) {
-		return "", fail("claimed", "leave it to the session that holds it", "%s is held by %s (%s)", ticket.ID, protocol.ShortRun(holder.ID), c.state(holder))
+	if err := c.guard(ticket.ID); err != nil {
+		return "", err
 	}
 	if to == board.InProgress && ticket.Column != board.InProgress {
 		if reasons := c.blocked(project, ticket); len(reasons) > 0 {
@@ -658,9 +675,9 @@ func (srv *server) createTicket(input CreateTicketInput) (string, error) {
 	}
 	created, err := srv.store.CreateTicket(project.Name, store.NewTicket{
 		Title: scrub.Text(input.Title, 300), Type: input.Type, Priority: input.Priority, Status: status,
-		Workstream: strings.TrimSpace(input.Workstream), Description: scrub.Secrets(input.Description),
+		Workstream: strings.TrimSpace(input.Workstream), Description: demoteHeadings(scrub.Secrets(input.Description)),
 		Criteria: items(input.Criteria), DependsOn: input.DependsOn, Tags: items(input.Tags),
-		Session: c.by(), PlanOrRepro: scrub.Secrets(input.PlanOrRepro), Key: key,
+		Session: c.by(), PlanOrRepro: demoteHeadings(scrub.Secrets(input.PlanOrRepro)), Key: key,
 	})
 	if err != nil {
 		return "", err
@@ -704,6 +721,9 @@ func (srv *server) writeReview(input WriteReviewInput) (string, error) {
 	}
 	project, ticket, err := c.find(input.Ticket)
 	if err != nil {
+		return "", err
+	}
+	if err := c.guard(ticket.ID); err != nil {
 		return "", err
 	}
 	copies := c.copier(project.Name, ticket.ID)
@@ -788,7 +808,34 @@ func (srv *server) askHuman(input AskHumanInput) (string, error) {
 }
 
 func questionID() string {
-	suffix := make([]byte, 4)
-	_, _ = rand.Read(suffix)
-	return "q-" + hex.EncodeToString(suffix)
+	return "q-" + rand.Text()[:16]
+}
+
+// settable lists the fields update_ticket sets (status changes with move).
+var settable = slices.DeleteFunc(append(slices.Clone(board.ScalarFields), board.ListFields...), func(field string) bool { return field == "status" })
+
+// demoteHeadings turns agent-written level-1 and level-2 headings outside
+// code fences into level 3, so text placed inside a ticket section cannot
+// start a section of its own (## Handoff, ## Notes) that later edits and
+// recovery notes would read.
+func demoteHeadings(text string) string {
+	lines := strings.Split(text, "\n")
+	fenced := false
+	for index, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
+			fenced = !fenced
+			continue
+		}
+		if fenced {
+			continue
+		}
+		for _, prefix := range []string{"## ", "# "} {
+			if strings.HasPrefix(line, prefix) {
+				lines[index] = "### " + strings.TrimPrefix(line, prefix)
+				break
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
 }

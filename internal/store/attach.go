@@ -18,6 +18,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/scrub"
 )
 
 // DefaultMaxFileCopy is the attachment size limit when the caller gives
@@ -109,34 +110,49 @@ func (s *Store) CopyIntoTicket(project, id string, input FileCopy) (StoredFile, 
 }
 
 // readSource reads an allow-listed, regular, bounded local file (SEC-2).
+// The file is judged by what it is, not only by the name given: a link's
+// target must be allow-listed too, and anything but a regular file (a
+// directory, a FIFO that would block) is refused before it is opened. Text
+// is scrubbed of likely secrets before it is stored (SEC-3).
 func readSource(input FileCopy) ([]byte, error) {
 	if !filepath.IsAbs(input.Source) {
 		return nil, fmt.Errorf("%w: %q is not an absolute path", ErrInvalidInput, input.Source)
 	}
-	if _, ok := board.AttachmentType(input.Source); !ok {
+	contentType, ok := board.AttachmentType(input.Source)
+	if !ok {
 		return nil, fmt.Errorf("%s: %w (allowed: png, jpeg, gif, webp, pdf, txt, log, md, json)", filepath.Base(input.Source), ErrTypeNotAllowed)
 	}
 	limit := input.MaxBytes
 	if limit <= 0 {
 		limit = DefaultMaxFileCopy
 	}
-	file, err := os.Open(input.Source)
+	info, err := os.Stat(input.Source)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("%s: %w", input.Source, ErrNotFound)
 	}
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s: %w", input.Source, ErrNotRegular)
 	}
+	target, err := filepath.EvalSymlinks(input.Source)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := board.AttachmentType(target); !ok {
+		return nil, fmt.Errorf("%s links to %s: %w", filepath.Base(input.Source), filepath.Base(target), ErrTypeNotAllowed)
+	}
 	if info.Size() > limit {
 		return nil, fmt.Errorf("%s is %d bytes; the limit is %d: %w", filepath.Base(input.Source), info.Size(), limit, ErrTooLarge)
+	}
+	file, err := os.Open(target)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	if opened, err := file.Stat(); err != nil || !os.SameFile(info, opened) {
+		return nil, fmt.Errorf("%s changed while it was being copied: %w", input.Source, ErrNotRegular)
 	}
 	data, err := io.ReadAll(io.LimitReader(file, limit+1))
 	if err != nil {
@@ -144,6 +160,9 @@ func readSource(input FileCopy) ([]byte, error) {
 	}
 	if int64(len(data)) > limit {
 		return nil, fmt.Errorf("%s grew past the limit of %d bytes: %w", filepath.Base(input.Source), limit, ErrTooLarge)
+	}
+	if strings.HasPrefix(contentType, "text/") || contentType == "application/json" {
+		data = []byte(scrub.Secrets(string(data)))
 	}
 	return data, nil
 }

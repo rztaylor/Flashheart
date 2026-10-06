@@ -20,18 +20,20 @@ criterion is ticked on FH-4 with a note of the session and date once it has
 been seen. Seen so far (2026-10-06): the server found the calling Claude
 session through `CLAUDE_PROJECT_DIR` with no `run` argument (FH-8, FH-15),
 and a Codex checkpoint copied six referenced files into FH-9's `files/`.
-Still to see:
+Still to see in ordinary work:
 
-- Asked for work in plain words ("tackle the top two bugs"), a session
-  lists, claims and works the highest-priority open tickets of its project.
-- A session in a project new to the board sets a key it chose before its
-  first ticket, and a taken key is refused with the keys in use (when
-  Flashheart is first used on another repository).
-- A session claims, checkpoints, asks a question and receives the answer on
-  its next prompt, a fresh session gets the recovery note, and
-  `PreToolUse` stamps the run into its tool calls.
-- A review that links a screenshot by absolute path renders after the
-  original is deleted.
+- A session asked for work in plain words or by id finds the ticket
+  (`list_tickets`, `get_ticket`) and claims it.
+- A session checkpoints its ticket, and the next session in that worktree
+  starts with the recovery note and the handoff.
+- A question a session asks is answered on the board and reaches it with
+  its next prompt.
+- `PreToolUse` stamps the run into a session's tool calls.
+- A review that links a screenshot by path shows the copy in the Review tab
+  after the original is gone.
+- When Flashheart is first used on another repository, the session chooses
+  the project's key before its first ticket. (A taken key being refused is
+  left to the contract tests.)
 
 ## Goal
 

@@ -74,22 +74,39 @@ func kindOf(path string) string {
 	return "other"
 }
 
-// markdown rewrites local links and images in text to copies in files/.
-// Links into the repository are left alone: they name code, not evidence.
+// markdown rewrites local links and images in text to copies in files/,
+// line by line outside code fences, so a review can show example markdown.
+// Links into the repository to files that are not attachment types (source
+// code) are left alone; repository screenshots and logs are copied like any
+// other evidence.
 func (k *copier) markdown(text string) string {
-	return markdownLink.ReplaceAllStringFunc(text, func(match string) string {
-		parts := markdownLink.FindStringSubmatch(match)
-		path := strings.TrimPrefix(parts[2]+parts[3], "file://")
-		if _, inside := k.inRepository(path); inside {
-			if _, allowed := board.AttachmentType(path); !allowed {
-				return match
-			}
+	lines := strings.Split(text, "\n")
+	fenced := false
+	for index, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
+			fenced = !fenced
+			continue
 		}
-		if stored := k.copy(path, kindOf(path)); stored != "" {
-			return parts[1] + stored + parts[4]
+		if !fenced {
+			lines[index] = markdownLink.ReplaceAllStringFunc(line, k.link)
 		}
-		return match
-	})
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (k *copier) link(match string) string {
+	parts := markdownLink.FindStringSubmatch(match)
+	path := strings.TrimPrefix(parts[2]+parts[3], "file://")
+	if _, inside := k.inRepository(path); inside {
+		if _, allowed := board.AttachmentType(path); !allowed {
+			return match
+		}
+	}
+	if stored := k.copy(path, kindOf(path)); stored != "" {
+		return parts[1] + stored + parts[4]
+	}
+	return match
 }
 
 // file handles one entry of checkpoint's files[]: repository paths become

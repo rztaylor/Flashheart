@@ -132,3 +132,30 @@ func TestWriteReviewReplacesTheReviewFile(t *testing.T) {
 		t.Fatalf("oversized review: err = %v", err)
 	}
 }
+
+func TestCopyIntoTicketJudgesTheLinkTargetAndScrubsText(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	dir := t.TempDir()
+	secret := filepath.Join(dir, "id_ed25519")
+	if err := os.WriteFile(secret, []byte("PRIVATE KEY"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "notes.txt")
+	if err := os.Symlink(secret, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CopyIntoTicket("alpha", "AL-4", FileCopy{Source: link}); !errors.Is(err, ErrTypeNotAllowed) {
+		t.Fatalf("link to a key: err = %v", err)
+	}
+	log := localFile(t, "build.log", []byte("ok\nGITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789\n"))
+	stored, err := s.CopyIntoTicket("alpha", "AL-4", FileCopy{Source: log, Kind: "log"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	copied, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-4-drag-and-drop", "files", stored.File))
+	if strings.Contains(string(copied), "ghp_") || !strings.Contains(string(copied), "ok\n") {
+		t.Fatalf("copied log = %q", copied)
+	}
+}
