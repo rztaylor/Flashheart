@@ -2,7 +2,7 @@
 # Record real Claude Code hook payloads for testdata/hooks/claude/.
 #
 # Creates a scratch git repository and a settings file whose hooks copy each
-# payload to <out>/<Event>/NNN.json, then starts an interactive Claude Code
+# payload to <out>/<Event>/<time>-<pid>.json, then starts an interactive Claude Code
 # session there. Your own ~/.claude configuration is not changed (the
 # hooks are added for this session only, with --settings).
 #
@@ -44,8 +44,9 @@ cat >"$recorder" <<'EOF'
 #!/bin/sh
 dir="$RECORD_OUT/$1"
 mkdir -p "$dir"
-n=$(ls "$dir" | wc -l | tr -d ' ')
-cat >"$dir/$(printf %03d "$n").json"
+# Unique per invocation, so parallel tool calls never overwrite each other;
+# names sort by time.
+cat >"$dir/$(date +%Y%m%dT%H%M%S)-$$.json"
 exit 0
 EOF
 chmod +x "$recorder"
@@ -56,7 +57,9 @@ settings="$work/settings.json"
   printf '{"hooks":{'
   sep=""
   for event in $events; do
-    printf '%s"%s":[{"hooks":[{"type":"command","command":"RECORD_OUT=%s %s %s","timeout":5}]}]' \
+    # Paths are single-quoted for the shell that runs the hook, so spaces
+    # in them are safe.
+    printf '%s"%s":[{"hooks":[{"type":"command","command":"RECORD_OUT='"'"'%s'"'"' '"'"'%s'"'"' %s","timeout":5}]}]' \
       "$sep" "$event" "$out" "$recorder" "$event"
     sep=","
   done

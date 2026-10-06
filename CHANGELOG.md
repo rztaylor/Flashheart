@@ -13,7 +13,7 @@ All notable changes to this project are documented here. The project follows
   background until Quit or the last tab closes; `--foreground` keeps it
   attached. The background server records later errors in
   `<root>/.flashheart/serve.log`. `version` prints the build and agent protocol version; `mcp`,
-  `hook`, `setup` and `doctor` report that they are not yet available.
+  `setup` and `doctor` report that they are not yet available.
 - Board root resolution from `--root`, `FLASHHEART_ROOT` or
   `~/reports/Kanban`, and read-only loading of `.flashheart/config.yaml` with
   documented defaults and validation.

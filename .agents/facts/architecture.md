@@ -9,7 +9,7 @@ Intended layout (packages are created when they get real content):
   startup handshake (D13).
 - `internal/buildinfo`: version, commit and build date set by linker flags.
 - `internal/logfile`: lazily created, size-rotated diagnostic logs under
-  `<root>/.flashheart/` (`serve.log`; later `hook-errors.log`).
+  `<root>/.flashheart/` (`serve.log`, `hook-errors.log`).
 - `internal/config`: global `config.yaml` and per-project `project.yaml`
   defaults, validation and atomic persistence.
 - `internal/mdfile`: pure markdown-with-frontmatter parsing and round-trip
