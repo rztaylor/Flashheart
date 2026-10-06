@@ -16,16 +16,17 @@ colors:
   on-band: "#ffffff"
   on-band-muted: "#fde2ee"
   band-field: "#9d174d"
-  band-tab-active: "#831843"
-  band-tab-line: "#ffffff"
+  band-tab-active: "#ffffff"
+  on-band-tab-active: "#9d174d"
   band-rule: "#fde2ee"
   rail: "#fafafa"
   on-rail: "#18181b"
   on-rail-muted: "#5b5b63"
-  rail-active: "#fdf0f6"
-  on-rail-active: "#831843"
-  on-rail-active-muted: "#831843"
+  rail-active: "#ffffff"
+  on-rail-active: "#18181b"
+  on-rail-active-muted: "#52525b"
   rail-active-mark: "#be185d"
+  on-rail-active-mark: "#ffffff"
   rail-rule: "#e7e7eb"
   action: "#be185d"
   on-action: "#ffffff"
@@ -127,16 +128,17 @@ colors:
   night-on-band: "#f2f2f3"
   night-on-band-muted: "#a3a3a9"
   night-band-field: "#1b1b1d"
-  night-band-tab-active: "#1b1b1d"
-  night-band-tab-line: "#c6f432"
+  night-band-tab-active: "#f2f2f3"
+  night-on-band-tab-active: "#111111"
   night-band-rule: "#2a2a2d"
   night-rail: "#111112"
   night-on-rail: "#f2f2f3"
   night-on-rail-muted: "#a3a3a9"
-  night-rail-active: "#232325"
+  night-rail-active: "#1e1e20"
   night-on-rail-active: "#ffffff"
   night-on-rail-active-muted: "#b3b3b8"
   night-rail-active-mark: "#c6f432"
+  night-on-rail-active-mark: "#111111"
   night-rail-rule: "#262628"
   night-action: "#c6f432"
   night-on-action: "#111111"
@@ -352,7 +354,7 @@ components:
     height: "{spacing.band-height}"
   view-tab-active:
     backgroundColor: "{colors.band-tab-active}"
-    textColor: "{colors.on-band}"
+    textColor: "{colors.on-band-tab-active}"
     rounded: "{rounded.control}"
     height: "36px"
   needs-you-plate:
@@ -441,9 +443,9 @@ Structure and content are fixed in [the UI layout contract](docs/dev/specs/ui-la
 Two palettes on the same roles (contract §7). Light values first; dark values are the `night-` keys.
 
 ### Primary
-- **Band** (`band` #be185d raspberry; `night-band` #070708 black): the top band. The current view tab sits on a deeper raspberry pill with a white underline (`band-tab-active`, `band-tab-line`); in dark it is a charcoal field with a lime underline.
+- **Band** (`band` #be185d raspberry; `night-band` #070708 black): the top band. The current view tab is an inverted pill: white with raspberry text on the light bar, near-white with black text on the dark bar (`band-tab-active`, `on-band-tab-active`).
 - **Ink** (`ink` #18181b; `night-ink` #f2f2f3): text and icons.
-- **Rail Active** (`rail-active` #fdf0f6 raspberry tint with a raspberry edge and #831843 text; `night-rail-active` #232325 with a lime edge): the current scope tile and the page header's key badge.
+- **Rail Active** (`rail-active` white; `night-rail-active` #1e1e20): the current project as a raised tile (card surface, hairline border, card shadow). Its key badge, and the page header's, is filled in the accent (`rail-active-mark` raspberry or lime, with `on-rail-active-mark`).
 
 ### Secondary
 - **Action** (`action` #be185d raspberry; `night-action` #c6f432 lime): the primary button only (New ticket, Send answer). Hover darkens or lifts it.
@@ -451,7 +453,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Lines** (`line-0`…`line-8`: red, blue, yellow, green, purple, orange, lime, brown, teal; lifted in dark): workstreams only. Each workstream takes one line stably, by a hash of its slug in creation order, so a newer workstream never recolours an older one. A bullet carries its paired initials ink (`line-ink-*`, AA on its fill). No line is grey: grey would read as an inactive state.
 - **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the card header and fills that value's tag; the strong shade sets the tag's word (always AA on the tint) and the colour key's swatch. Paint is softer than the lines on purpose, so a tag never reads as a workstream.
 - **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Blocked red with a diamond and its reason.
-- **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the left accent of the Handoff and questions-for-you callouts, as in the references.
+- **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
 - **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, lane head, panel, virtual column). Only Needs you uses it.
@@ -470,6 +472,8 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 **The One Attention Rule.** Needs you is the only attention plate and the loudest thing on any view.
 
 **The Checked Means Finished Rule.** A check mark means Done or Archived. Ready to review is served without a check.
+
+**The No Side-Stripe Rule.** Current and highlighted things are shown by fill, elevation or an inverted pill, never by a thick coloured edge on one side or an underline inside a pill. The workstream stripe on a card is the one exception: it is the workstream's line (VIEW-6).
 
 **The No Navy Rule.** Night Service grounds, surfaces and borders are neutral; colour lives in routes and deliberate accents.
 
@@ -537,13 +541,13 @@ White, 10px corners, rule border, card shadow, a 4px workstream stripe down the 
 Column well surface, rule border, 14px corners, 10px padding; head with a round count badge, the virtual column's mark (Needs you inside an attention disc), and the title in the display head cut. Agents lanes use the same well with run rows inside one card.
 
 ### Navigation
-- **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: band-tab-active, plus the lime underline in dark); right: Needs you plate, search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.
-- **Rail:** All projects, a divider, projects with key badge (8px, tinted), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile fills with rail active and a 3px edge mark. Footer: theme (System, Light, Dark), board root (cut from the start) and version.
+- **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate, search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.
+- **Rail:** All projects, a divider, projects with key badge (8px, tinted; filled in the accent when current), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile is raised: rail active surface, hairline border, card shadow. Footer: theme (System, Light, Dark), board root (cut from the start) and version.
 - **Page header:** key badge (or board icon) and the scope's name in the display page cut, with one muted summary line.
 - **Panel tabs:** heading-small labels over a rule, the current one underlined 3px in select.
 
 ### Card Panel
-Panel surface beside the view. Header: id and project, display title, pill row (status, blocker, priority, type), meta row (workstream, created, branch, changed), Move to and Archive. Ticket tab: repair, the questions callout (blue/coral edge, attention icon, question cards on card surface with option buttons), the Handoff callout (orange edge, next steps large, full handoff behind a disclosure), blockers as pills, criteria as a bordered checklist with a d of t count, warnings, then the markdown.
+Panel surface beside the view. Header: id and project, display title, pill row (status, blocker, priority, type), meta row (workstream, created, branch, changed), Move to and Archive. Ticket tab: repair, the questions callout (tinted, thin accent border, attention icon, question cards on card surface with option buttons), the Handoff callout (tinted, thin orange border, next steps large, full handoff behind a disclosure), blockers as pills, criteria as a bordered checklist with a d of t count, warnings, then the markdown.
 
 ### Route Card and Stations (signature)
 A rounded card washed with 7% of its line colour in light (plain card in dark), a 44px bullet, the name in the display panel cut, derived status with its icon, and "d of t served". Stations: Done or Archived a filled line-colour disc with a check; Ready to review filled with a centre dot; the next stop a larger 5px line-colour ring with a halo and centre dot; ahead an open ring; missing a dashed faint ring. Under each: title, id, status pill. Track travelled solid, ahead at 35%, suspended dashed.

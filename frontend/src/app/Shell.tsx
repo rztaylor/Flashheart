@@ -291,7 +291,7 @@ export function Shell({
                 }}
                 className={`flex h-9 items-center gap-2 rounded-control px-2 text-sm font-semibold transition-colors focus-visible:outline-on-band sm:px-3 ${
                   active
-                    ? "bg-band-tab-active text-on-band shadow-[inset_0_-3px_0_var(--fh-band-tab-line)]"
+                    ? "bg-band-tab-active text-on-band-tab-active shadow-card"
                     : "text-on-band-muted hover:bg-band-field hover:text-on-band"
                 }`}
               >
@@ -740,7 +740,7 @@ function RailFooter({
               key={option.value}
               className={`cursor-pointer rounded-inner px-2 py-0.5 text-xs transition-colors has-focus-visible:outline-2 has-focus-visible:outline-focus ${
                 theme === option.value
-                  ? "bg-rail-active font-semibold text-on-rail-active"
+                  ? "bg-rail-active font-semibold text-on-rail-active shadow-card"
                   : "text-on-rail-muted hover:text-on-rail"
               }`}
             >

@@ -32,16 +32,20 @@
   --fh-on-band: #ffffff;
   --fh-on-band-muted: #fde2ee;
   --fh-band-field: #9d174d;
-  --fh-band-tab-active: #831843;
-  --fh-band-tab-line: #ffffff;
+  /* The current view tab is an inverted pill on the bar. */
+  --fh-band-tab-active: #ffffff;
+  --fh-on-band-tab-active: #9d174d;
   --fh-band-rule: #fde2ee;
   --fh-rail: #fafafa;
   --fh-on-rail: #18181b;
   --fh-on-rail-muted: #5b5b63;
-  --fh-rail-active: #fdf0f6;
-  --fh-on-rail-active: #831843;
-  --fh-on-rail-active-muted: #831843;
+  /* The current project is a raised tile; its key badge (and the page
+     header's) is filled in the accent. */
+  --fh-rail-active: #ffffff;
+  --fh-on-rail-active: #18181b;
+  --fh-on-rail-active-muted: #52525b;
   --fh-rail-active-mark: #be185d;
+  --fh-on-rail-active-mark: #ffffff;
   --fh-rail-rule: #e7e7eb;
 
   /* Action: the primary button and the current view. */
@@ -179,16 +183,17 @@
   --fh-on-band: #f2f2f3;
   --fh-on-band-muted: #a3a3a9;
   --fh-band-field: #1b1b1d;
-  --fh-band-tab-active: #1b1b1d;
-  --fh-band-tab-line: #c6f432;
+  --fh-band-tab-active: #f2f2f3;
+  --fh-on-band-tab-active: #111111;
   --fh-band-rule: #2a2a2d;
   --fh-rail: #111112;
   --fh-on-rail: #f2f2f3;
   --fh-on-rail-muted: #a3a3a9;
-  --fh-rail-active: #232325;
+  --fh-rail-active: #1e1e20;
   --fh-on-rail-active: #ffffff;
   --fh-on-rail-active-muted: #b3b3b8;
   --fh-rail-active-mark: #c6f432;
+  --fh-on-rail-active-mark: #111111;
   --fh-rail-rule: #262628;
 
   --fh-action: #c6f432;
@@ -311,7 +316,7 @@
   --color-on-band-muted: var(--fh-on-band-muted);
   --color-band-field: var(--fh-band-field);
   --color-band-tab-active: var(--fh-band-tab-active);
-  --color-band-tab-line: var(--fh-band-tab-line);
+  --color-on-band-tab-active: var(--fh-on-band-tab-active);
   --color-band-rule: var(--fh-band-rule);
   --color-rail: var(--fh-rail);
   --color-on-rail: var(--fh-on-rail);
@@ -320,6 +325,7 @@
   --color-on-rail-active: var(--fh-on-rail-active);
   --color-on-rail-active-muted: var(--fh-on-rail-active-muted);
   --color-rail-active-mark: var(--fh-rail-active-mark);
+  --color-on-rail-active-mark: var(--fh-on-rail-active-mark);
   --color-rail-rule: var(--fh-rail-rule);
   --color-action: var(--fh-action);
   --color-on-action: var(--fh-on-action);

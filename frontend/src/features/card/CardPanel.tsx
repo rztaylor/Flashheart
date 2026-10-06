@@ -470,7 +470,7 @@ export function TicketTab({
       {detail.questions.length > 0 ? (
         <section
           aria-labelledby="questions-heading"
-          className="flex flex-col gap-3 rounded-card border-l-4 border-callout-question-edge bg-callout-question p-4"
+          className="flex flex-col gap-3 rounded-card border border-callout-question-edge/30 bg-callout-question p-4"
         >
           <h3
             id="questions-heading"
@@ -500,7 +500,7 @@ export function TicketTab({
       {detail.handoff ? (
         <section
           aria-labelledby="handoff-heading"
-          className="rounded-card border-l-4 border-callout-handoff-edge bg-callout-handoff p-4"
+          className="rounded-card border border-callout-handoff-edge/30 bg-callout-handoff p-4"
         >
           <h3
             id="handoff-heading"

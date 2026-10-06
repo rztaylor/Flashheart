@@ -120,16 +120,18 @@ function RailItem({
       onClick={onClick}
       title={`${subtitle ? `${title} (${subtitle})` : title}${runs.needsYou > 0 ? ` — ${runs.needsYou} need${runs.needsYou === 1 ? "s" : ""} you` : ""}`}
       aria-current={active ? "page" : undefined}
-      className={`flex w-full items-start gap-3 rounded-card px-2.5 py-2.5 text-left transition-colors max-[90rem]:group-data-[panel=open]/work:justify-center max-[90rem]:group-data-[panel=open]/work:px-0 ${
+      className={`flex w-full items-start gap-3 rounded-card border px-2.5 py-2.5 text-left transition-colors max-[90rem]:group-data-[panel=open]/work:justify-center max-[90rem]:group-data-[panel=open]/work:px-0 ${
         active
-          ? "bg-rail-active text-on-rail-active shadow-[inset_3px_0_0_var(--fh-rail-active-mark)]"
-          : "hover:bg-on-rail/6"
+          ? "border-rail-rule bg-rail-active text-on-rail-active shadow-card"
+          : "border-transparent hover:bg-on-rail/6"
       }`}
     >
       <span
         aria-hidden="true"
         className={`grid h-8 min-w-9 shrink-0 place-items-center rounded-control px-1.5 text-sm leading-none display-cut ${
-          active ? "bg-on-rail-active/15" : "bg-on-rail/8"
+          active
+            ? "bg-rail-active-mark text-on-rail-active-mark"
+            : "bg-on-rail/8"
         }`}
       >
         {code}

@@ -5,7 +5,7 @@ const sizes = {
   lg: "h-10 min-w-10 px-2 text-lg",
 };
 
-// KeyBadge is a project's key (FH) as a badge in the scope colour: the page
+// KeyBadge is a project's key (FH) as a badge filled in the accent: the page
 // header's identity and a project section's heading in Workstreams.
 // Decorative; the project's name is beside it.
 export function KeyBadge({
@@ -18,7 +18,7 @@ export function KeyBadge({
   return (
     <span
       aria-hidden="true"
-      className={`grid shrink-0 place-items-center rounded-control bg-rail-active text-on-rail-active shadow-[inset_0_0_0_1.5px_var(--fh-rail-active-mark)] ${sizes[size]}`}
+      className={`grid shrink-0 place-items-center rounded-control bg-rail-active-mark text-on-rail-active-mark ${sizes[size]}`}
     >
       {children}
     </span>

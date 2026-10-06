@@ -179,7 +179,7 @@
         "displayName": "Band",
         "canonical": "#be185d",
         "oklch": "oklch(52.5% 0.199 4.0)",
-        "purpose": "The top band: raspberry in light, black in dark.",
+        "purpose": "The top band: Metro blue in light, black in dark.",
         "tonalRamp": [
           "#2b0006",
           "#4e001a",
@@ -245,26 +245,9 @@
       "band-tab-active": {
         "role": "primary",
         "displayName": "Band Tab Active",
-        "canonical": "#831843",
-        "oklch": "oklch(40.8% 0.144 2.4)",
-        "purpose": "The current view tab.",
-        "tonalRamp": [
-          "#230008",
-          "#44011e",
-          "#661935",
-          "#8a314f",
-          "#bc5173",
-          "#e07997",
-          "#ffa4be",
-          "#ffcfe5"
-        ]
-      },
-      "band-tab-line": {
-        "role": "secondary",
-        "displayName": "Band Tab Line",
         "canonical": "#ffffff",
         "oklch": "oklch(100.0% 0.000 89.9)",
-        "purpose": "Underline of the current view tab (lime in dark).",
+        "purpose": "The current view tab.",
         "tonalRamp": [
           "#0b0b0b",
           "#222222",
@@ -274,6 +257,23 @@
           "#9e9e9e",
           "#c4c4c4",
           "#ebebeb"
+        ]
+      },
+      "on-band-tab-active": {
+        "role": "neutral",
+        "displayName": "on-band-tab-active",
+        "canonical": "#9d174d",
+        "oklch": "oklch(45.9% 0.170 3.8)",
+        "purpose": "",
+        "tonalRamp": [
+          "#270007",
+          "#49001b",
+          "#6d0a33",
+          "#92254c",
+          "#c6456f",
+          "#eb7194",
+          "#ff9dba",
+          "#ffcae2"
         ]
       },
       "band-rule": {
@@ -298,7 +298,7 @@
         "displayName": "Rail",
         "canonical": "#fafafa",
         "oklch": "oklch(98.5% 0.000 89.9)",
-        "purpose": "The project rail: near-white in light, charcoal in dark.",
+        "purpose": "The project rail: warm paper in light, charcoal in dark.",
         "tonalRamp": [
           "#0b0b0b",
           "#222222",
@@ -347,52 +347,52 @@
       "rail-active": {
         "role": "primary",
         "displayName": "Rail Active",
-        "canonical": "#fdf0f6",
-        "oklch": "oklch(96.7% 0.016 347.6)",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
         "purpose": "The current scope tile, page-header key badge.",
         "tonalRamp": [
-          "#0e0a0c",
-          "#262023",
-          "#40383c",
-          "#5b5257",
-          "#82777c",
-          "#a69ba0",
-          "#cbc1c5",
-          "#f1e8ec"
+          "#0b0b0b",
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#7a7a7a",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#ebebeb"
         ]
       },
       "on-rail-active": {
         "role": "neutral",
         "displayName": "On Rail Active",
-        "canonical": "#831843",
-        "oklch": "oklch(40.8% 0.144 2.4)",
+        "canonical": "#18181b",
+        "oklch": "oklch(21.0% 0.006 285.9)",
         "purpose": "Text on the current scope tile.",
         "tonalRamp": [
-          "#230008",
-          "#44011e",
-          "#661935",
-          "#8a314f",
-          "#bc5173",
-          "#e07997",
-          "#ffa4be",
-          "#ffcfe5"
+          "#0b0b0d",
+          "#212123",
+          "#3a3a3d",
+          "#555558",
+          "#7a7a7e",
+          "#9e9ea2",
+          "#c4c4c7",
+          "#ebebee"
         ]
       },
       "on-rail-active-muted": {
         "role": "neutral",
         "displayName": "On Rail Active Muted",
-        "canonical": "#831843",
-        "oklch": "oklch(40.8% 0.144 2.4)",
+        "canonical": "#52525b",
+        "oklch": "oklch(44.2% 0.015 285.8)",
         "purpose": "Sub-lines on the current scope tile.",
         "tonalRamp": [
-          "#230008",
-          "#44011e",
-          "#661935",
-          "#8a314f",
-          "#bc5173",
-          "#e07997",
-          "#ffa4be",
-          "#ffcfe5"
+          "#0b0b0f",
+          "#212126",
+          "#3a3a40",
+          "#54545c",
+          "#797983",
+          "#9d9da7",
+          "#c3c3cc",
+          "#eaeaf2"
         ]
       },
       "rail-active-mark": {
@@ -410,6 +410,23 @@
           "#f66591",
           "#ff95b8",
           "#ffc3e0"
+        ]
+      },
+      "on-rail-active-mark": {
+        "role": "neutral",
+        "displayName": "on-rail-active-mark",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "purpose": "",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#7a7a7a",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#ebebeb"
         ]
       },
       "rail-rule": {
@@ -434,7 +451,7 @@
         "displayName": "Action",
         "canonical": "#be185d",
         "oklch": "oklch(52.5% 0.199 4.0)",
-        "purpose": "Primary button: raspberry in light, lime in dark.",
+        "purpose": "Primary button: Metro orange in light, lime in dark.",
         "tonalRamp": [
           "#2b0006",
           "#4e001a",
@@ -2066,7 +2083,7 @@
         "displayName": "Night Band",
         "canonical": "#070708",
         "oklch": "oklch(12.9% 0.003 286.0)",
-        "purpose": "The top band: raspberry in light, black in dark. Dark theme.",
+        "purpose": "The top band: Metro blue in light, black in dark. Dark theme.",
         "tonalRamp": [
           "#0b0b0c",
           "#212122",
@@ -2132,35 +2149,35 @@
       "night-band-tab-active": {
         "role": "primary",
         "displayName": "Night Band Tab Active",
-        "canonical": "#1b1b1d",
-        "oklch": "oklch(22.3% 0.004 286.1)",
+        "canonical": "#f2f2f3",
+        "oklch": "oklch(96.1% 0.001 286.4)",
         "purpose": "The current view tab. Dark theme.",
         "tonalRamp": [
-          "#0b0b0c",
-          "#212123",
-          "#3a3a3c",
-          "#555557",
-          "#7a7a7c",
-          "#9e9ea0",
-          "#c4c4c6",
-          "#ebebed"
+          "#0b0b0b",
+          "#212122",
+          "#3a3a3b",
+          "#555556",
+          "#7a7a7b",
+          "#9e9e9f",
+          "#c4c4c5",
+          "#ebebec"
         ]
       },
-      "night-band-tab-line": {
-        "role": "secondary",
-        "displayName": "Night Band Tab Line",
-        "canonical": "#c6f432",
-        "oklch": "oklch(90.3% 0.208 122.9)",
-        "purpose": "Underline of the current view tab (lime in dark). Dark theme.",
+      "night-on-band-tab-active": {
+        "role": "neutral",
+        "displayName": "Night on-band-tab-active",
+        "canonical": "#111111",
+        "oklch": "oklch(17.8% 0.000 89.9)",
+        "purpose": " Dark theme.",
         "tonalRamp": [
-          "#040f00",
-          "#162900",
-          "#2c4400",
-          "#446200",
-          "#658a00",
-          "#89af00",
-          "#b0d54b",
-          "#d9fb8a"
+          "#0b0b0b",
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#7a7a7a",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#ebebeb"
         ]
       },
       "night-band-rule": {
@@ -2185,7 +2202,7 @@
         "displayName": "Night Rail",
         "canonical": "#111112",
         "oklch": "oklch(17.8% 0.002 286.2)",
-        "purpose": "The project rail: near-white in light, charcoal in dark. Dark theme.",
+        "purpose": "The project rail: warm paper in light, charcoal in dark. Dark theme.",
         "tonalRamp": [
           "#0b0b0c",
           "#212122",
@@ -2234,8 +2251,8 @@
       "night-rail-active": {
         "role": "primary",
         "displayName": "Night Rail Active",
-        "canonical": "#232325",
-        "oklch": "oklch(25.7% 0.004 286.1)",
+        "canonical": "#1e1e20",
+        "oklch": "oklch(23.6% 0.004 286.1)",
         "purpose": "The current scope tile, page-header key badge. Dark theme.",
         "tonalRamp": [
           "#0b0b0c",
@@ -2299,6 +2316,23 @@
           "#d9fb8a"
         ]
       },
+      "night-on-rail-active-mark": {
+        "role": "neutral",
+        "displayName": "Night on-rail-active-mark",
+        "canonical": "#111111",
+        "oklch": "oklch(17.8% 0.000 89.9)",
+        "purpose": " Dark theme.",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#7a7a7a",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#ebebeb"
+        ]
+      },
       "night-rail-rule": {
         "role": "neutral",
         "displayName": "Night Rail Rule",
@@ -2321,7 +2355,7 @@
         "displayName": "Night Action",
         "canonical": "#c6f432",
         "oklch": "oklch(90.3% 0.208 122.9)",
-        "purpose": "Primary button: raspberry in light, lime in dark. Dark theme.",
+        "purpose": "Primary button: Metro orange in light, lime in dark. Dark theme.",
         "tonalRamp": [
           "#040f00",
           "#162900",
@@ -3965,7 +3999,7 @@
       "refersTo": "band",
       "description": "Bolt, wordmark and view tabs.",
       "html": "<nav class=\"ds-band\"><b>⚡ Flashheart</b><a class=\"on\">Board</a><a>Agents</a><a>Workstreams</a><a>Table</a></nav>",
-      "css": ".ds-band{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px;height:56px;padding:0 20px;background:var(--fh-band,#be185d);color:var(--fh-on-band,#fff);} .ds-band b{font-size:1.375rem;font-weight:800;font-stretch:87.5%;margin-right:18px;} .ds-band a{padding:8px 12px;border-radius:8px;font-size:0.8125rem;font-weight:600;color:var(--fh-on-band-muted,#fde2ee);} .ds-band a.on{background:var(--fh-band-tab-active,#831843);color:var(--fh-on-band,#fff);box-shadow:inset 0 -3px 0 var(--fh-band-tab-line,#831843);}"
+      "css": ".ds-band{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px;height:56px;padding:0 20px;background:var(--fh-band,#be185d);color:var(--fh-on-band,#fff);} .ds-band b{font-size:1.375rem;font-weight:800;font-stretch:87.5%;margin-right:18px;} .ds-band a{padding:8px 12px;border-radius:8px;font-size:0.8125rem;font-weight:600;color:var(--fh-on-band-muted,#fde2ee);} .ds-band a.on{background:var(--fh-band-tab-active,#fff);color:var(--fh-on-band-tab-active,#9d174d);box-shadow:var(--fh-shadow-card);}"
     },
     {
       "name": "Handoff Callout",
@@ -3973,7 +4007,7 @@
       "refersTo": "handoff-callout",
       "description": "The handoff with next steps large.",
       "html": "<section class=\"ds-ho\"><h4>→ Handoff</h4><p>Verify the live session</p></section>",
-      "css": ".ds-ho{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:10px;border-left:4px solid var(--fh-callout-handoff-edge,#be185d);background:var(--fh-callout-handoff,#fff4ec);padding:16px;color:var(--fh-ink,#18181b);} .ds-ho h4{margin:0 0 8px;font-weight:700;font-stretch:87.5%;} .ds-ho p{margin:0;font-size:1.125rem;font-weight:600;}"
+      "css": ".ds-ho{font-family:'Archivo Variable','Helvetica Neue',Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums;border-radius:10px;border:1px solid color-mix(in srgb,var(--fh-callout-handoff-edge,#ea580c) 30%,transparent);background:var(--fh-callout-handoff,#fff4ec);padding:16px;color:var(--fh-ink,#18181b);} .ds-ho h4{margin:0 0 8px;font-weight:700;font-stretch:87.5%;} .ds-ho p{margin:0;font-size:1.125rem;font-weight:600;}"
     }
   ],
   "narrative": {
@@ -4003,6 +4037,10 @@
       {
         "name": "The Checked Means Finished Rule",
         "body": "A check mark means Done or Archived. Ready to review is served without a check."
+      },
+      {
+        "name": "The No Side-Stripe Rule",
+        "body": "Current and highlighted things are shown by fill, elevation or an inverted pill, never by a thick coloured edge on one side or an underline inside a pill. The workstream stripe on a card is the one exception: it is the workstream's line (VIEW-6)."
       },
       {
         "name": "The No Navy Rule",
