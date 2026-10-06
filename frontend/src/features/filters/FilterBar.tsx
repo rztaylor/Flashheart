@@ -153,6 +153,7 @@ export function FilterBar({
           ) : null}
           {paint && onPaint ? (
             <SelectField
+              plain
               label="Colour by"
               value={paint === "none" ? "" : paint}
               onChange={(value) => onPaint((value || "none") as PaintMode)}

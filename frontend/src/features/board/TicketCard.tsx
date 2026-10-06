@@ -115,7 +115,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
         aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
         data-paint={painted?.token}
         style={paintVars(painted) as CSSProperties | undefined}
-        className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px ${
+        className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
           selected
             ? "border-select shadow-[0_0_0_1px_var(--fh-select),var(--fh-shadow-card-hover)]"
             : repair
@@ -165,7 +165,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             ) : null}
           </span>
           <span
-            className={`line-clamp-4 text-base leading-snug font-semibold ${done ? "text-ink-muted" : "text-ink"}`}
+            className={`line-clamp-4 text-md leading-snug heading-cut ${done ? "text-ink-muted" : "text-ink"}`}
           >
             {card.title}
           </span>

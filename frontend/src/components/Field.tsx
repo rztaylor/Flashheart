@@ -10,6 +10,9 @@ import { Icon } from "./Icon";
 
 interface SelectFieldProps {
   label: string;
+  // plain drops the "applied" ring, for settings (Colour by) that always
+  // have a value, as opposed to filters.
+  plain?: boolean;
   value: string;
   onChange(value: string): void;
   children: ReactNode;
@@ -18,6 +21,7 @@ interface SelectFieldProps {
 // SelectField is a labelled native select in the board's control style.
 export function SelectField({
   label,
+  plain,
   value,
   onChange,
   children,
@@ -31,7 +35,7 @@ export function SelectField({
           onChange(event.target.value)
         }
         className={`h-8 appearance-none rounded-control border bg-card py-0 pr-7 pl-2.5 text-xs font-medium text-ink transition-colors hover:border-ink-muted ${
-          value ? "border-select ring-1 ring-select" : "border-rule"
+          value && !plain ? "border-select ring-1 ring-select" : "border-rule"
         }`}
       >
         {children}

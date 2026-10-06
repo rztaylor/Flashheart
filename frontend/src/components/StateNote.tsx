@@ -28,7 +28,10 @@ export function StateNote({
   children: string;
   compact?: boolean;
 }) {
-  if (kind === "blocked") return <BlockerPill>{children}</BlockerPill>;
+  // On a card the reason is one line; the full text is in its tooltip and
+  // the panel.
+  if (kind === "blocked")
+    return <BlockerPill lines={compact ? 1 : 3}>{children}</BlockerPill>;
   const icon = kind === "waiting" ? undefined : icons[kind];
   return (
     <p

@@ -100,6 +100,7 @@ const text: [string, string, number][] = [
     "age-older",
   ].flatMap((paint): [string, string, number][] => [
     [`paint-${paint}-ink`, `paint-${paint}`, 4.5],
+    [`paint-${paint}`, `paint-${paint}-tint`, 4.5],
     ["ink", `paint-${paint}-tint`, 4.5],
     ["ink-muted", `paint-${paint}-tint`, 4.5],
   ]),

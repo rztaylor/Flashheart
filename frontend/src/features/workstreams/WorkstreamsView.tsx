@@ -218,7 +218,7 @@ function WorkstreamLine({
         <div className="flex min-w-0 flex-col gap-0.5">
           <Heading
             id={`ws-${project}-${workstream.slug}`}
-            className="text-xl leading-tight display-cut"
+            className="text-2xl leading-tight display-cut"
           >
             {workstream.title}
           </Heading>

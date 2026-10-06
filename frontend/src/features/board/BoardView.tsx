@@ -319,7 +319,7 @@ export function BoardView(props: BoardViewProps) {
             >
               {/* The head: count badge, then the title (which alone names
                   the column region). */}
-              <h2 className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-lg leading-tight heading-cut">
+              <h2 className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-xl leading-tight display-cut">
                 <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-card px-2 text-sm font-semibold tabular-nums text-ink shadow-card">
                   {column.id === "done" && doneTotal > column.cards.length
                     ? `${column.cards.length} of ${doneTotal}`

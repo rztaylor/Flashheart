@@ -67,18 +67,23 @@ export function StatusPill({
 // reasons wrap within the pill rather than running off the card.
 export function BlockerPill({
   children,
+  lines = 3,
   className,
 }: {
   children: string;
+  // lines clamps a long reason; its full text stays in the tooltip.
+  lines?: 1 | 2 | 3;
   className?: string;
 }) {
+  const clamp = { 1: "line-clamp-1", 2: "line-clamp-2", 3: "line-clamp-3" };
   return (
     <span
       data-tone="blocked"
+      title={children}
       className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${toneClass.blocked} ${className ?? ""}`}
     >
       <Icon name="diamond" size={12} className="mt-[0.15em]" />
-      <span className="line-clamp-3">
+      <span className={clamp[lines]}>
         <span className="sr-only">Blocked: </span>
         {children}
       </span>
@@ -87,7 +92,8 @@ export function BlockerPill({
 }
 
 // Tag is a ticket attribute (type, priority, age). The one chosen in
-// "Colour by" is filled with its paint; the rest are neutral outlined chips.
+// "Colour by" takes its paint (tint fill, strong word); the rest are neutral
+// outlined chips.
 export function Tag({
   paint,
   strong,
@@ -103,7 +109,7 @@ export function Tag({
       <span
         data-paint={paint.token}
         style={paintVars(paint) as CSSProperties}
-        className="inline-flex items-center rounded-full bg-(--paint) px-2 text-2xs leading-5 font-semibold text-(--paint-ink)"
+        className="inline-flex items-center rounded-full bg-(--paint-tint) px-2 text-2xs leading-5 font-semibold text-(--paint) shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--paint)_35%,transparent)]"
       >
         {children}
       </span>

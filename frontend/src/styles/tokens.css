@@ -13,13 +13,13 @@
  * contrast and neutrality. Themes switch on <html data-theme>.
  */
 :root {
-  /* Neutrals: warm paper ground, cool grey column wells, white cards. */
-  --fh-ground: #f7f6f2;
+  /* Neutrals: warm paper ground, ivory column wells, white cards. */
+  --fh-ground: #f8f4e9;
   --fh-panel: #ffffff;
   --fh-card: #ffffff;
-  --fh-column: #eceef2;
-  --fh-well: #f1f2f5;
-  --fh-rule: #d9dce3;
+  --fh-column: #f2eee3;
+  --fh-well: #f5f1e7;
+  --fh-rule: #ddd6c9;
   --fh-rule-strong: #121a2e;
   --fh-ink: #121a2e;
   --fh-ink-muted: #4a5468;
@@ -89,7 +89,9 @@
   --fh-shadow-panel:
     -12px 0 32px -12px rgb(16 24 40 / 0.18), -1px 0 0 rgb(16 24 40 / 0.06);
 
-  /* Lines: workstreams only. Neighbouring indices are far apart in hue. */
+  /* Lines: workstreams only, all saturated hues (none grey, so a line
+     never reads as an inactive state). Neighbouring indices are far apart
+     in hue. */
   --fh-line-0: #d42f25;
   --fh-line-1: #1d5bd8;
   --fh-line-2: #f5c400;
@@ -98,7 +100,7 @@
   --fh-line-5: #f2701d;
   --fh-line-6: #7cc242;
   --fh-line-7: #9a6233;
-  --fh-line-8: #8d8f92;
+  --fh-line-8: #0b7a8a;
   --fh-line-ink-0: #ffffff;
   --fh-line-ink-1: #ffffff;
   --fh-line-ink-2: #111111;
@@ -107,10 +109,12 @@
   --fh-line-ink-5: #111111;
   --fh-line-ink-6: #111111;
   --fh-line-ink-7: #ffffff;
-  --fh-line-ink-8: #111111;
+  --fh-line-ink-8: #ffffff;
 
-  /* Paint: the "Colour by" value, a strong shade for the tag, a tint for
-     the card header and an ink for text on the strong shade. */
+  /* Paint: the "Colour by" value. The tint washes the card header and
+     fills the tag, whose word is set in the strong shade, so paint stays
+     softer than the saturated line colours; -ink is text on the strong
+     shade (the colour key's swatch). */
   --fh-paint-type-feature: #6247c4;
   --fh-paint-type-feature-tint: #f0ecfd;
   --fh-paint-type-feature-ink: #ffffff;
@@ -233,7 +237,7 @@
   --fh-line-5: #ff8c3a;
   --fh-line-6: #a3e04a;
   --fh-line-7: #c8925a;
-  --fh-line-8: #a3a6ab;
+  --fh-line-8: #3ccfe0;
   --fh-line-ink-0: #111111;
   --fh-line-ink-1: #111111;
   --fh-line-ink-2: #111111;
@@ -356,6 +360,8 @@
   --text-xl--line-height: 1.75rem;
   --text-2xl: 1.875rem;
   --text-2xl--line-height: 2.125rem;
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 2.625rem;
   /* Rounded and friendly: controls, cards, then the column and route
      surfaces; pills and bullets are fully round. */
   --radius-control: 0.5rem;

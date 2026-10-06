@@ -171,7 +171,7 @@ function LaneSection({
           badge comes first visually and last in the lane's name. */}
       <h2
         id={headingId}
-        className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-lg leading-tight heading-cut"
+        className="flex items-center gap-2.5 px-1 pt-1 pb-3 text-xl leading-tight display-cut"
       >
         <span
           className={
