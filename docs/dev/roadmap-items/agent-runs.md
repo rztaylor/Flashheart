@@ -17,11 +17,13 @@ its recovery note and branch link (FH-1). The session made no task list, so
 
 Remaining (needs a person at the keyboard):
 
-- Record raw payloads for the cases `testdata/hooks/claude/MANIFEST.md`
-  lists as documented-only with `scripts/record-claude-hooks.sh`, and fix
-  any differences the recordings show.
+- Payloads recorded 2026-10-06 cover every event Flashheart maps except
+  `Notification`, `PostCompact`, `PermissionDenied` and the task-list tools
+  (`TodoWrite`, `TaskCreate`, `TaskUpdate`, `TaskCreated`,
+  `TaskCompleted`); the adapter needed no change. Those remain documented
+  only (`testdata/hooks/claude/MANIFEST.md`).
 - A real session that keeps a task list, to see its plan in the Agents
-  view.
+  view and record the task-tool payloads.
 
 ## Goal
 

@@ -1,21 +1,30 @@
 {
-  "session_id": "5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
-  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13.jsonl",
+  "session_id": "340b083f-5d70-41b2-8cff-ec700908097a",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a.jsonl",
   "cwd": "/Users/example/src/demo",
-  "permission_mode": "default",
+  "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
+  "prompt_id": "8c3f8086-e891-41c9-bae4-85abfe352459",
+  "permission_mode": "auto",
+  "effort": {
+    "level": "medium"
+  },
   "hook_event_name": "PostToolUse",
   "tool_name": "Edit",
   "tool_input": {
-    "file_path": "/Users/example/src/demo/src/app.ts",
-    "old_string": "a",
-    "new_string": "b",
+    "file_path": "/Users/example/src/demo/README.md",
+    "old_string": "synthetic text\n",
+    "new_string": "synthetic text\n",
     "replace_all": false
   },
   "tool_response": {
-    "filePath": "/Users/example/src/demo/src/app.ts",
-    "oldString": "a",
-    "newString": "b",
-    "structuredPatch": []
+    "filePath": "/Users/example/src/demo/README.md",
+    "oldString": "synthetic text\n",
+    "newString": "synthetic text\n",
+    "originalFile": "synthetic text\n",
+    "structuredPatch": [],
+    "userModified": false,
+    "replaceAll": false
   },
-  "tool_use_id": "toolu_01B"
+  "tool_use_id": "toolu_01HRCV3djJZvdhk9oMfAmrhN",
+  "duration_ms": 9
 }

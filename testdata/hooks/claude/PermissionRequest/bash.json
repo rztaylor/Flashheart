@@ -1,12 +1,17 @@
 {
-  "session_id": "5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
-  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13.jsonl",
+  "session_id": "340b083f-5d70-41b2-8cff-ec700908097a",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a.jsonl",
   "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
+  "prompt_id": "ea155e2e-b660-4a53-a9f8-c6b53fd15ecb",
   "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
   "hook_event_name": "PermissionRequest",
   "tool_name": "Bash",
   "tool_input": {
-    "command": "rm -rf build",
+    "command": "ls",
     "description": "Remove the build directory"
   },
   "permission_suggestions": [
@@ -16,6 +21,10 @@
         {
           "toolName": "Bash",
           "ruleContent": "rm -rf build"
+        },
+        {
+          "toolName": "Bash",
+          "ruleContent": "echo \"exit: $?\""
         }
       ],
       "behavior": "allow",

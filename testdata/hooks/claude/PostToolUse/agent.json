@@ -1,0 +1,30 @@
+{
+  "session_id": "340b083f-5d70-41b2-8cff-ec700908097a",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
+  "prompt_id": "35488d28-060e-4bce-bebb-8ae438498d16",
+  "permission_mode": "default",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Agent",
+  "tool_input": {
+    "description": "List repository files",
+    "prompt": "List the files in this repository.",
+    "subagent_type": "Explore"
+  },
+  "tool_response": {
+    "isAsync": true,
+    "status": "async_launched",
+    "agentId": "ae8ecef8da6a4664f",
+    "description": "List repository files",
+    "resolvedModel": "claude-opus-5-5",
+    "prompt": "List the files in this repository.",
+    "outputFile": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/tasks/ae8ecef8da6a4664f.output",
+    "canReadOutputFile": true
+  },
+  "tool_use_id": "toolu_01NK67QLv8k4kXGXJV8TYryB",
+  "duration_ms": 4
+}

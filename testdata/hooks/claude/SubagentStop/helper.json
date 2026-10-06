@@ -5,16 +5,15 @@
   "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
   "prompt_id": "8c3f8086-e891-41c9-bae4-85abfe352459",
   "permission_mode": "auto",
+  "agent_id": "a96012ac652606bb2",
+  "agent_type": "",
   "effort": {
     "level": "medium"
   },
-  "hook_event_name": "PostToolUseFailure",
-  "tool_name": "Read",
-  "tool_input": {
-    "file_path": "/Users/example/src/demo/missing-file.txt"
-  },
-  "tool_use_id": "toolu_016bm25Gz7qztt5PN8vQXCYQ",
-  "error": "File does not exist. Note: your current working directory is /Users/example/src/demo.",
-  "is_interrupt": false,
-  "duration_ms": 2
+  "hook_event_name": "SubagentStop",
+  "stop_hook_active": false,
+  "agent_transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a/subagents/agent-a96012ac652606bb2.jsonl",
+  "last_assistant_message": "Done.",
+  "background_tasks": [],
+  "session_crons": []
 }

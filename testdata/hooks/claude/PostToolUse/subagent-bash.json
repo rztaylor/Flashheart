@@ -10,18 +10,19 @@
   "effort": {
     "level": "medium"
   },
-  "hook_event_name": "SubagentStop",
-  "stop_hook_active": false,
-  "agent_transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a/subagents/agent-ae8ecef8da6a4664f.jsonl",
-  "last_assistant_message": "Done.",
-  "background_tasks": [
-    {
-      "id": "ae8ecef8da6a4664f",
-      "type": "subagent",
-      "status": "running",
-      "description": "List repo files",
-      "agent_type": "Explore"
-    }
-  ],
-  "session_crons": []
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls",
+    "description": "List files, tracked files, and git status"
+  },
+  "tool_response": {
+    "stdout": "README.md\nnotes.txt\n",
+    "stderr": "",
+    "interrupted": false,
+    "isImage": false,
+    "noOutputExpected": false
+  },
+  "tool_use_id": "toolu_01TWbc7ptDQEjM8wcXpsaFCR",
+  "duration_ms": 44
 }

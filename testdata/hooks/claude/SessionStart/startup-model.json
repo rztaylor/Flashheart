@@ -3,14 +3,7 @@
   "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/340b083f-5d70-41b2-8cff-ec700908097a.jsonl",
   "cwd": "/Users/example/src/demo",
   "scratchpad_dir": "/Users/example/tmp/claude/340b083f-5d70-41b2-8cff-ec700908097a/scratchpad",
-  "prompt_id": "ea155e2e-b660-4a53-a9f8-c6b53fd15ecb",
-  "permission_mode": "default",
-  "effort": {
-    "level": "medium"
-  },
-  "hook_event_name": "Stop",
-  "stop_hook_active": false,
-  "last_assistant_message": "Done.",
-  "background_tasks": [],
-  "session_crons": []
+  "hook_event_name": "SessionStart",
+  "source": "startup",
+  "model": "claude-opus-5-5"
 }
