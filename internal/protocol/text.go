@@ -81,6 +81,10 @@ instructions.
   review or blocked, with options when there are clear choices). The board
   shows the user; the answer arrives in a later prompt. Carry on with other
   work if you can.
+- If your turn ends with a question for the user, ask it with
+  ` + "`ask_human`" + ` as well, even at the end of a status summary. A question
+  asked only in chat leaves your run in Waiting, not Needs you, and the
+  user may not see it.
 
 ## Finishing
 

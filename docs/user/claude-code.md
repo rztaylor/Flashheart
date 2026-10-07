@@ -91,6 +91,12 @@ to the ticket's notes and reaches the session with its next prompt, so send
 the session any prompt ("go on") to deliver it; a session that is resumed
 gets it in its recovery note.
 
+A question the model asks only in its chat reply, without `ask_human`,
+leaves the session in **Waiting**: Flashheart never reads what the model
+writes, so it cannot tell a question from a summary. The protocol skill
+tells the model to ask with `ask_human` whenever its turn ends on a
+question.
+
 ## Handoff enforcement (optional)
 
 To make sure a session never stops after editing files without updating its

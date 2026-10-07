@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The protocol skill and `ask_human` tell agents to ask any question that
+  ends their turn with `ask_human`, not only in chat, so the session shows
+  in Needs you instead of Waiting (FH-31). Guidance only; protocol 1.
 - New look for the board: Metro Pop in light (a raspberry bar and accent on
   a clean white background) and Night Service in black and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
   Views open with the project's name as a page header; columns are rounded

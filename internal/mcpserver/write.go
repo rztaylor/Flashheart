@@ -42,7 +42,7 @@ func (srv *server) registerWrites(server *mcp.Server) {
 	tool(server, "create_ticket", "Create a ticket in your project with the next id. Feature tickets carry a test plan and bugs a reproduction (plan_or_repro). Returns the new id.", srv.createTicket)
 	tool(server, "create_workstream", "Create a workstream in your project: an ordered group of tickets with a shared goal, where each ticket waits for the ones before it. Use one when work spans several dependent tickets; leave single tickets alone. The tickets you list join it in that order.", srv.createWorkstream)
 	tool(server, "write_review", "Create or replace a ticket's review (the human verification guide, in the review template). Screenshots and other local files linked by absolute path are copied into the ticket.", srv.writeReview)
-	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt.", srv.askHuman)
+	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt. Use it for any question that ends your turn too: a question asked only in chat leaves you in Waiting.", srv.askHuman)
 }
 
 // record appends events attributed to the caller's run; nothing is
