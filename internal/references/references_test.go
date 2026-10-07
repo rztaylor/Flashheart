@@ -154,3 +154,25 @@ func TestEditsMadeBeforeServeStartedAreLeftAlone(t *testing.T) {
 		t.Fatal("the first pass rewrote a ticket")
 	}
 }
+
+// Writes Flashheart makes itself, such as a raw edit sent from the browser,
+// are not acted on: the browser must not be able to pull local files in.
+func TestEditsThroughFlashheartAreLeftAlone(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture(t)
+	secret := f.save("statement.pdf", "%PDF synthetic")
+	_, hash, err := f.files.ReadTicket("alpha", "AL-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.files.UpdateTicket("alpha", "AL-2", hash, func(data []byte) ([]byte, error) {
+		return append(data, "\n[statement]("+secret+")\n"...), nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.pass()
+	if !strings.Contains(f.read(ticket), "[statement]("+secret+")") {
+		t.Fatal("a link written through Flashheart was copied")
+	}
+}

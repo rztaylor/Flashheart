@@ -4,7 +4,7 @@
 // (setup.Diagnose) and the hook errors logged in the last day, and renders
 // the findings as a report.
 //
-// It reads the root and the agent's configuration only; the one write is a
-// probe file it creates and removes in the root to prove it is writable.
+// It reads the root and the agent's configuration only (on systems without
+// access(2) it proves the root writable with a probe file it removes).
 // Flags and exit codes belong to cli.
 package doctor

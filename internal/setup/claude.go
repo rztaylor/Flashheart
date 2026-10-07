@@ -50,19 +50,45 @@ func ownsCommand(command string) bool {
 	return ok && ownBinary.MatchString(filepath.Base(program)) && len(fields) > 0 && fields[0] == "hook"
 }
 
-// splitProgram splits a hook command into its program (quoted or not) and
-// the rest.
+// splitProgram splits a hook command into its program, unquoted as a
+// shell would (single and double quotes, backslash escapes, so the
+// '\” that shellQuote writes reads back), and the rest.
 func splitProgram(command string) (program, rest string, ok bool) {
 	command = strings.TrimSpace(command)
-	if quote := command[:min(1, len(command))]; quote == "'" || quote == `"` {
-		end := strings.Index(command[1:], quote)
-		if end < 0 {
-			return "", "", false
+	var word strings.Builder
+	var quote rune
+	escaped := false
+	for index, r := range command {
+		switch {
+		case escaped:
+			word.WriteRune(r)
+			escaped = false
+		case quote == '\'':
+			if r == '\'' {
+				quote = 0
+			} else {
+				word.WriteRune(r)
+			}
+		case r == '\\' && quote != '\'':
+			escaped = true
+		case quote == '"':
+			if r == '"' {
+				quote = 0
+			} else {
+				word.WriteRune(r)
+			}
+		case r == '\'' || r == '"':
+			quote = r
+		case r == ' ' || r == '\t':
+			return word.String(), command[index+1:], true
+		default:
+			word.WriteRune(r)
 		}
-		return command[1 : end+1], command[end+2:], true
 	}
-	program, rest, _ = strings.Cut(command, " ")
-	return program, rest, true
+	if quote != 0 || escaped {
+		return "", "", false
+	}
+	return word.String(), "", true
 }
 
 // Options describe one machine's Claude Code configuration.

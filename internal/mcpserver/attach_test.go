@@ -45,6 +45,24 @@ func TestAttachCopiesAFileIntoTheTicket(t *testing.T) {
 		t.Fatal(err)
 	}
 	contains(t, e.ok("attach", map[string]any{"ticket": id, "path": logFile, "caption": "Test run", "kind": "log"}), "[Test run](files/")
+
+	// The event names the file and its kind (agent-protocol §3).
+	logs, _ := filepath.Glob(filepath.Join(e.root, "demo", ".flashheart", "events", "*.jsonl"))
+	var recorded string
+	for _, name := range logs {
+		data, _ := os.ReadFile(name)
+		recorded += string(data)
+	}
+	if !strings.Contains(recorded, `"kind":"attachment.added","project":"demo","data":{"ticket":"`+id+`","file":"`) || !strings.Contains(recorded, `"kind":"screenshot"}`) {
+		t.Errorf("events:\n%s", recorded)
+	}
+
+	// Brackets in a caption do not break the snippet.
+	other := filepath.Join(dir, "other.png")
+	if err := os.WriteFile(other, append(png, '1'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	contains(t, e.ok("attach", map[string]any{"ticket": id, "path": other, "caption": "Board [after]"}), `![Board \[after\]](files/`)
 }
 
 func TestAttachRefusals(t *testing.T) {

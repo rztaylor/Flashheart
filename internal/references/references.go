@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -80,8 +81,12 @@ func (c *Copier) changed(key string, modified time.Time) bool {
 }
 
 func (c *Copier) ticket(project, id string) {
-	data, hash, err := c.files.ReadTicket(project, id)
+	name, err := c.files.TicketFile(project, id)
 	if err != nil {
+		return
+	}
+	data, hash, err := c.files.ReadTicket(project, id)
+	if err != nil || c.files.WroteLast(name, data) {
 		return
 	}
 	if next := c.rewrite(project, id, string(data)); next != string(data) {
@@ -92,7 +97,7 @@ func (c *Copier) ticket(project, id string) {
 
 func (c *Copier) review(project, id, folder string) {
 	text, found, err := c.files.ReadReview(project, folder)
-	if err != nil || !found {
+	if err != nil || !found || c.files.WroteLast(path.Join(project, "tickets", folder, "review.md"), []byte(text)) {
 		return
 	}
 	if next := c.rewrite(project, id, text); next != text {

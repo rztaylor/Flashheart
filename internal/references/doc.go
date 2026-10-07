@@ -1,7 +1,9 @@
 // Package references keeps the files that tickets and reviews edited
 // directly (in a text editor rather than through Flashheart) link to
 // (REV-5): serve runs it after each new snapshot, and for every ticket or
-// review changed since the last one it copies the allow-listed local files
+// review changed since the last one, other than by this serve process's own
+// writes (so a raw edit sent from the browser cannot pull a local file into
+// the board), it copies the allow-listed local files
 // it links to from outside the board root into the ticket's files/
 // (store.CopyIntoTicket, REV-2) and points the links at the copies, under
 // the content-hash precondition. A link that cannot be copied stays as it

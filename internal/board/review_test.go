@@ -38,7 +38,7 @@ func TestParseReviewSplitsHowToVerify(t *testing.T) {
 	t.Parallel()
 
 	review := ParseReview(template)
-	if got := stepTexts(review.Steps); !slices.Equal(got, []string{"Open the board.", "Drag a card `down`.\nIt lands where dropped.", "Reload."}) {
+	if got := stepTexts(review.Steps); !slices.Equal(got, []string{"Open the board.", "Drag a card `down`. It lands where dropped.", "Reload."}) {
 		t.Fatalf("steps = %q", got)
 	}
 	if review.Steps[0].Done || review.Steps[1].Done || !review.Steps[2].Done {
@@ -47,7 +47,8 @@ func TestParseReviewSplitsHowToVerify(t *testing.T) {
 	if !strings.HasSuffix(review.Before, "## Summary\nDone.\n\n") || strings.Contains(review.Before, "How to Verify") {
 		t.Errorf("before = %q", review.Before)
 	}
-	if review.Intro != "### Prerequisites\nA board with tickets.\n### Steps\n" {
+	// The Steps heading is the checklist's own title, so it is left out.
+	if review.Intro != "### Prerequisites\nA board with tickets.\n" {
 		t.Errorf("intro = %q", review.Intro)
 	}
 	if review.Outro != "### Expected Results\nThe order holds.\n\n" {
@@ -55,9 +56,6 @@ func TestParseReviewSplitsHowToVerify(t *testing.T) {
 	}
 	if review.After != "## Risks / Things to Watch\n- None.\n" {
 		t.Errorf("after = %q", review.After)
-	}
-	if review.Before+"## How to Verify\n"+review.Intro+"1. Open the board.\n2. Drag a card `down`.\n   It lands where dropped.\n3. [x] Reload.\n"+review.Outro+review.After != template {
-		t.Error("the parts do not rebuild the review")
 	}
 }
 
@@ -101,8 +99,48 @@ func TestSetReviewStep(t *testing.T) {
 	if _, err := SetReviewStep(template, 3, true); err == nil {
 		t.Error("a step that does not exist should fail")
 	}
+	if _, err := SetReviewStep(template, -1, true); err == nil || !strings.Contains(err.Error(), "no step -1") && !strings.Contains(err.Error(), "no such step") {
+		t.Errorf("negative index: %v", err)
+	}
 	crlf := strings.ReplaceAll(template, "\n", "\r\n")
 	if got, _ := SetReviewStep(crlf, 0, true); !strings.Contains(got, "1. [x] Open the board.\r\n") {
 		t.Error("CRLF line endings were not kept")
+	}
+}
+
+// Lists as people write them: loose, with code, lazy lines and empty
+// boxes (CommonMark list rules, roughly).
+func TestParseReviewHandlesCommonListShapes(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name, markdown string
+		steps          []string
+		outro          string
+	}{
+		{"loose list", "## How to Verify\n1. one\n\n2. two\n\nDone.\n", []string{"one", "two"}, "\nDone.\n"},
+		{"fence in the intro", "## How to Verify\nRun:\n```\n- not a step\n```\n1. real\n", []string{"real"}, ""},
+		{"fence inside a step", "## How to Verify\n1. Run:\n\n   ```\n   go test\n\n   ```\n2. Look.\n", []string{"Run: ``` go test ```", "Look."}, ""},
+		{"lazy continuation", "## How to Verify\n1. Open the\nboard.\n2. Look.\n", []string{"Open the board.", "Look."}, ""},
+		{"empty box", "## How to Verify\n- [x]\n- [ ] two\n", []string{"", "two"}, ""},
+		{"H1 ends the section", "## How to Verify\n1. one\n\n# Appendix\n- not a step\n", []string{"one"}, "\n"},
+		{"fence after the list", "## How to Verify\n1. one\n```\n- code\n```\n", []string{"one"}, "```\n- code\n```\n"},
+	} {
+		review := ParseReview(tc.markdown)
+		if got := stepTexts(review.Steps); !slices.Equal(got, tc.steps) {
+			t.Errorf("%s: steps = %q, want %q", tc.name, got, tc.steps)
+		}
+		if review.Outro != tc.outro {
+			t.Errorf("%s: outro = %q, want %q", tc.name, review.Outro, tc.outro)
+		}
+	}
+
+	ticked, err := SetReviewStep("## How to Verify\nRun:\n```\n- not a step\n```\n1. real\n\n2. second\n", 1, true)
+	if err != nil || ticked != "## How to Verify\nRun:\n```\n- not a step\n```\n1. real\n\n2. [x] second\n" {
+		t.Errorf("ticked = %q, %v", ticked, err)
+	}
+	cleared, _ := SetReviewStep("## How to Verify\n- [x]\n", 0, false)
+	if cleared != "## How to Verify\n- [ ]\n" {
+		t.Errorf("cleared = %q", cleared)
 	}
 }

@@ -155,6 +155,14 @@ type CompactData struct {
 	Phase string `json:"phase"`
 }
 
+// AttachmentData is the data of attachment.added: the ticket and the
+// stored file (under files/) with its kind.
+type AttachmentData struct {
+	Ticket string `json:"ticket"`
+	File   string `json:"file"`
+	Kind   string `json:"kind"`
+}
+
 // TicketData carries the ticket of claim, release, review.written and the
 // ticket.* kinds. By names who acted when it was not the event's run
 // (`human` for the UI); From and To are a move's columns, Fields an

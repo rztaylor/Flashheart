@@ -65,11 +65,9 @@ func checkRoot(root string) Section {
 		add(setup.Problem, "is not a folder")
 		return section
 	}
-	if probe, err := os.CreateTemp(root, ".flashheart-doctor-*"); err != nil {
+	if err := writable(root); err != nil {
 		add(setup.Problem, fmt.Sprintf("is not writable: %v", err))
 	} else {
-		probe.Close()
-		os.Remove(probe.Name())
 		add(setup.OK, "exists and is writable")
 	}
 	// Agents read ticket text from the root, so other users must not

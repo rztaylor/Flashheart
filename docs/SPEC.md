@@ -434,6 +434,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   warning. `serve` does the same for a ticket or review edited directly (in
   a text editor) while it runs: links to allow-listed files outside the
   root are copied in and rewritten; a link it cannot copy is logged once.
+  Content Flashheart wrote itself, including raw edits sent from the
+  browser, is not acted on, so the browser cannot pull local files in.
 
 ### 6.12 Settings (`CFG`)
 

@@ -48,6 +48,10 @@ type Store struct {
 	mu    sync.Mutex
 	root  *os.Root
 	clock func() time.Time
+	// written maps each file this store wrote to the hash of what it last
+	// wrote there (WroteLast).
+	writtenMu sync.Mutex
+	written   map[string]string
 }
 
 // New returns a store that opens the root on first use and keeps trying

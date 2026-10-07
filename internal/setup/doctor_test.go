@@ -132,3 +132,32 @@ func TestDiagnoseAnOutdatedSkillAndUnreadableSettings(t *testing.T) {
 		t.Fatalf("problems = %q", problems)
 	}
 }
+
+func TestDiagnoseResolvesProgramsAsTheShellWould(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	// A home with a quote in it, as shellQuote writes it.
+	m.options.Binary = binary(t, m.home, "it's here/flashheart")
+	m.apply(true)
+	if problems, warnings, _ := diagnose(t, m.options); len(problems)+len(warnings) != 0 {
+		t.Fatalf("quoted path: problems %q, warnings %q", problems, warnings)
+	}
+	if got := m.options.resolve("~/bin/flashheart"); got != filepath.Join(m.home, "bin", "flashheart") {
+		t.Fatalf("resolve(~) = %q", got)
+	}
+	for command, want := range map[string]string{
+		`'/a b/flashheart' hook claude Stop`:     "/a b/flashheart",
+		`'/it'\''s/flashheart' hook claude Stop`: "/it's/flashheart",
+		`"/a \"b\"/flashheart" hook claude Stop`: `/a "b"/flashheart`,
+		`/a\ b/flashheart hook claude Stop`:      "/a b/flashheart",
+		`flashheart hook claude Stop`:            "flashheart",
+	} {
+		if program, rest, ok := splitProgram(command); !ok || program != want || rest != "hook claude Stop" {
+			t.Errorf("splitProgram(%q) = %q, %q, %v", command, program, rest, ok)
+		}
+	}
+	if _, _, ok := splitProgram(`'/unterminated hook`); ok {
+		t.Error("an unterminated quote parsed")
+	}
+}

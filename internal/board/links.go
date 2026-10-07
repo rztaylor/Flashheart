@@ -26,16 +26,62 @@ func RewriteLocalLinks(markdown string, target func(path, text string) string) s
 		if fenced {
 			continue
 		}
-		lines[index] = localLink.ReplaceAllStringFunc(line, func(match string) string {
-			parts := localLink.FindStringSubmatch(match)
-			text := strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(parts[1], "!"), "["), "](")
-			if to := target(strings.TrimPrefix(parts[2]+parts[3], "file://"), text); to != "" {
-				return parts[1] + to + parts[4]
-			}
-			return match
+		lines[index] = outsideCode(line, func(text string) string {
+			return localLink.ReplaceAllStringFunc(text, func(match string) string {
+				parts := localLink.FindStringSubmatch(match)
+				label := strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(parts[1], "!"), "["), "](")
+				if to := target(strings.TrimPrefix(parts[2]+parts[3], "file://"), label); to != "" {
+					return parts[1] + to + parts[4]
+				}
+				return match
+			})
 		})
 	}
 	return strings.Join(lines, "\n")
+}
+
+// outsideCode applies edit to the parts of line outside inline code spans:
+// a run of backticks up to the next run of the same length (CommonMark).
+func outsideCode(line string, edit func(string) string) string {
+	var out strings.Builder
+	plain := 0
+	for at := 0; at < len(line); {
+		if line[at] != '`' {
+			at++
+			continue
+		}
+		run := at
+		for run < len(line) && line[run] == '`' {
+			run++
+		}
+		ticks := line[at:run]
+		end := -1
+		for search := run; search < len(line); {
+			next := strings.Index(line[search:], ticks)
+			if next < 0 {
+				break
+			}
+			next += search
+			after := next + len(ticks)
+			if (next == 0 || line[next-1] != '`') && (after == len(line) || line[after] != '`') {
+				end = after
+				break
+			}
+			search = after
+			for search < len(line) && line[search] == '`' {
+				search++
+			}
+		}
+		if end < 0 {
+			at = run
+			continue
+		}
+		out.WriteString(edit(line[plain:at]))
+		out.WriteString(line[at:end])
+		plain, at = end, end
+	}
+	out.WriteString(edit(line[plain:]))
+	return out.String()
 }
 
 // LocalLinks lists the absolute local paths markdown links to, outside

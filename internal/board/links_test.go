@@ -33,3 +33,17 @@ func TestRewriteLocalLinks(t *testing.T) {
 		t.Fatalf("LocalLinks = %q", links)
 	}
 }
+
+func TestRewriteLocalLinksLeavesInlineCodeAlone(t *testing.T) {
+	t.Parallel()
+
+	line := "Write `![x](/tmp/a.png)` or ``![y](/tmp/b.png) ` `` but ![z](/tmp/c.png)"
+	got := RewriteLocalLinks(line, func(path, _ string) string { return "files/copy.png" })
+	if want := "Write `![x](/tmp/a.png)` or ``![y](/tmp/b.png) ` `` but ![z](files/copy.png)"; got != want {
+		t.Fatalf("got  %q\nwant %q", got, want)
+	}
+	// An unclosed backtick is literal text, not code.
+	if got := RewriteLocalLinks("a ` ![z](/tmp/c.png)", func(string, string) string { return "c" }); got != "a ` ![z](c)" {
+		t.Fatalf("unclosed: %q", got)
+	}
+}

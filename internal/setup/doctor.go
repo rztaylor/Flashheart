@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -66,6 +68,7 @@ func (o Options) diagnoseHooks() []Finding {
 					}
 					found = true
 					program, _, _ := splitProgram(command)
+					program = o.resolve(program)
 					if program != o.Binary && !slices.Contains(programs, program) {
 						programs = append(programs, program)
 					}
@@ -96,6 +99,20 @@ func (o Options) diagnoseHooks() []Finding {
 	return findings
 }
 
+// resolve finds the file a configured program names, as the shell would:
+// ~ is the home directory, a bare name is looked up on PATH.
+func (o Options) resolve(program string) string {
+	if rest, ok := strings.CutPrefix(program, "~/"); ok {
+		return filepath.Join(o.Home, rest)
+	}
+	if !strings.ContainsRune(program, filepath.Separator) {
+		if found, err := exec.LookPath(program); err == nil {
+			return found
+		}
+	}
+	return program
+}
+
 // diagnoseProgram reports a configured flashheart program other than this
 // binary: a problem when it is gone, else a warning.
 func (o Options) diagnoseProgram(what, program string) Finding {
@@ -107,6 +124,7 @@ func (o Options) diagnoseProgram(what, program string) Finding {
 
 func (o Options) diagnoseServer() []Finding {
 	command, args, found := o.registered()
+	command = o.resolve(command)
 	switch {
 	case !found:
 		return []Finding{{Problem, "MCP server: not registered; " + fix}}

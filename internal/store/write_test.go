@@ -462,3 +462,25 @@ func TestUpdateReviewChecksTheHash(t *testing.T) {
 		t.Errorf("no review: %v", err)
 	}
 }
+
+func TestWroteLastTellsOwnWritesFromOthers(t *testing.T) {
+	t.Parallel()
+
+	s := New(sampleCopy(t))
+	t.Cleanup(func() { s.Close() })
+	data, hash, err := s.ReadTicket("alpha", "AL-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	name, _ := s.TicketFile("alpha", "AL-2")
+	if s.WroteLast(name, data) {
+		t.Fatal("a file this store never wrote counts as its own")
+	}
+	if _, err := s.UpdateTicket("alpha", "AL-2", hash, func(data []byte) ([]byte, error) { return append(data, "More.\n"...), nil }); err != nil {
+		t.Fatal(err)
+	}
+	data, _, _ = s.ReadTicket("alpha", "AL-2")
+	if !s.WroteLast(name, data) || s.WroteLast(name, append(data, '!')) {
+		t.Fatal("WroteLast does not match the store's own write only")
+	}
+}

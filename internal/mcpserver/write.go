@@ -878,7 +878,7 @@ func (srv *server) attach(input AttachInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := c.record(project.Name, events.Event{Kind: events.AttachmentAdded, Data: events.TicketData{Ticket: ticket.ID}}); err != nil {
+	if err := c.record(project.Name, events.Event{Kind: events.AttachmentAdded, Data: events.AttachmentData{Ticket: ticket.ID, File: stored.File, Kind: kind}}); err != nil {
 		return "", err
 	}
 	name := "files/" + stored.File
@@ -886,6 +886,7 @@ func (srv *server) attach(input AttachInput) (string, error) {
 	if label == "" {
 		label = filepath.Base(path)
 	}
+	label = strings.NewReplacer(`[`, `\[`, `]`, `\]`).Replace(label)
 	snippet := fmt.Sprintf("[%s](%s)", label, name)
 	if contentType, _ := board.AttachmentType(path); strings.HasPrefix(contentType, "image/") {
 		snippet = "!" + snippet

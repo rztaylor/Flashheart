@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -236,5 +237,31 @@ func TestTicketRunsCarryTheSubagentTree(t *testing.T) {
 	getJSON(t, handler, "/api/tickets/AL-2", http.StatusOK, &panel)
 	if len(panel.Ticket.Runs) != 1 || panel.Ticket.Runs[0].ID != working || panel.Ticket.Runs[0].Parent != sampleSession {
 		t.Fatalf("AL-2 runs = %+v", panel.Ticket.Runs)
+	}
+}
+
+// A session's subagents on the Runs tab are bounded, most recent first.
+func TestTicketRunsBoundSubagentsPerSession(t *testing.T) {
+	t.Parallel()
+
+	var lines []string
+	for n := range maxSubagents + 5 {
+		ts := time.Date(2026, 10, 4, 13, 27, n, 0, time.UTC).Format("2006-01-02T15:04:05.000Z")
+		lines = append(lines, `{"v":1,"ts":"`+ts+`","run":"`+sampleSession+`/c`+strconv.Itoa(n)+`","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"subagent","parent":"`+sampleSession+`","agent_type":"Explore"}}`)
+	}
+	handler := runsAPI(t, time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC), lines...)
+	var panel TicketResponse
+	getJSON(t, handler, "/api/tickets/AL-3", http.StatusOK, &panel)
+	children := 0
+	for _, run := range panel.Ticket.Runs {
+		if run.Parent == sampleSession {
+			children++
+			if run.ID == sampleSession+"/c0" || run.ID == sampleSession+"/a1" {
+				t.Fatalf("an older subagent was kept: %s", run.ID)
+			}
+		}
+	}
+	if children != maxSubagents {
+		t.Fatalf("subagents = %d, want %d", children, maxSubagents)
 	}
 }
