@@ -1,5 +1,6 @@
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useId, useState } from "react";
 import {
+  type Attachment,
   COLUMNS,
   type Column,
   fetchTicket,
@@ -10,11 +11,17 @@ import {
   type WorkstreamBrief,
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import { conflictOf, type Saved, setCriterion } from "../../api/edit";
+import {
+  conflictOf,
+  type Saved,
+  setCriterion,
+  setReviewStep,
+} from "../../api/edit";
 import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
+import { Lightbox } from "../../components/Lightbox";
 import { LineBullet } from "../../components/LineBullet";
 import { Markdown } from "../../components/Markdown";
 import { BlockerPill, Pill, StatusPill, Tag } from "../../components/Pill";
@@ -31,6 +38,8 @@ import { absoluteTime, runningTime } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
+import { AttachmentGrid, isImage } from "./AttachmentGrid";
+import { Checklist } from "./Checklist";
 import { EditTab } from "./EditTab";
 import { RunsTab } from "./RunsTab";
 
@@ -59,7 +68,7 @@ interface CardPanelProps {
   workstreamsOf(project: string): WorkstreamBrief[];
 }
 
-type PanelTab = "ticket" | "edit" | "runs" | "review";
+type PanelTab = "ticket" | "edit" | "runs" | "attachments" | "review";
 
 // CardPanel shows one ticket beside the board (CARD-1): the Ticket tab with
 // blocked-by (CARD-4), handoff with a warning when a live run has edited
@@ -98,6 +107,14 @@ export function CardPanel({
         ? `Runs ${sessionsOf(detail.runs).length}`
         : "Runs",
     },
+    ...(detail?.attachmentFiles.length
+      ? [
+          {
+            id: "attachments" as const,
+            label: `Attachments ${detail.attachmentFiles.length}`,
+          },
+        ]
+      : []),
     ...(detail?.review ? [{ id: "review" as const, label: "Review" }] : []),
   ];
   const activeTab = items.some((item) => item.id === tab) ? tab : "ticket";
@@ -110,23 +127,40 @@ export function CardPanel({
         details: result.warnings,
       });
   };
+  // tick saves a tick and reloads; on failure it says why and resolves
+  // false so the box goes back.
+  const tick = (save: Promise<Saved>, what: string): Promise<boolean> =>
+    save
+      .then(() => {
+        resource.reload();
+        return true;
+      })
+      .catch((error: unknown) => {
+        resource.reload();
+        editing?.notify({
+          text: conflictOf(error)
+            ? `${ticket.id} changed on disk; showing the current ${what}.`
+            : `Not saved: ${error instanceof Error ? error.message : "unknown error"}`,
+        });
+        return false;
+      });
   const toggle =
     editable && detail && editing
-      ? (index: number, checked: boolean): Promise<boolean> =>
-          setCriterion(fetcher, detail.id, detail.hash, index, checked)
-            .then(() => {
-              resource.reload();
-              return true;
-            })
-            .catch((error: unknown) => {
-              resource.reload();
-              editing.notify({
-                text: conflictOf(error)
-                  ? `${detail.id} changed on disk; showing the current criteria.`
-                  : `Not saved: ${error instanceof Error ? error.message : "unknown error"}`,
-              });
-              return false;
-            })
+      ? (index: number, checked: boolean) =>
+          tick(
+            setCriterion(fetcher, detail.id, detail.hash, index, checked),
+            "criteria",
+          )
+      : undefined;
+  // verify ticks a review's How to Verify step (REV-3).
+  const review = detail?.review;
+  const verify =
+    editing && detail && review?.hash
+      ? (index: number, checked: boolean) =>
+          tick(
+            setReviewStep(fetcher, detail.id, review.hash, index, checked),
+            "review",
+          )
       : undefined;
   // answer sends an answer to an agent's question (CARD-6).
   const answer =
@@ -137,7 +171,16 @@ export function CardPanel({
   const body = (current: TicketDetail) => {
     switch (activeTab) {
       case "review":
-        return <ReviewTab detail={current} keys={keys} onOpen={onOpen} />;
+        return (
+          <ReviewTab
+            detail={current}
+            keys={keys}
+            onOpen={onOpen}
+            onVerify={verify}
+          />
+        );
+      case "attachments":
+        return <Attachments attachments={current.attachmentFiles} />;
       case "runs":
         return <RunsTab detail={current} />;
       case "edit":
@@ -418,39 +461,6 @@ function ReasonList({
   );
 }
 
-// Criterion is a tickable acceptance criterion (CARD-3). It shows the new
-// state at once and follows the file when it reloads.
-function Criterion({
-  text,
-  done,
-  onToggle,
-}: {
-  text: string;
-  done: boolean;
-  // onToggle resolves false when the change was not saved.
-  onToggle(checked: boolean): Promise<boolean>;
-}) {
-  const [checked, setChecked] = useState(done);
-  useEffect(() => setChecked(done), [done]);
-  return (
-    <label className="flex cursor-pointer items-start gap-2.5 px-3 py-2 text-sm">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => {
-          const next = event.target.checked;
-          setChecked(next);
-          void onToggle(next).then((ok) => {
-            if (!ok) setChecked(done);
-          });
-        }}
-        className="mt-[0.15em] size-4 shrink-0 accent-[var(--fh-select)]"
-      />
-      <span className={checked ? "text-ink-muted" : "text-ink"}>{text}</span>
-    </label>
-  );
-}
-
 // TicketTab, in the order of ui-layout.md §3: needs repair, questions for
 // the user, the handoff, blockers and waits, criteria, format warnings and
 // the ticket's own markdown.
@@ -470,14 +480,6 @@ export function TicketTab({
   onAnswer?(question: string, answer: string): Promise<string | undefined>;
 }) {
   const now = useNow();
-  const done = detail.criteriaItems.filter((item) => item.done).length;
-  // Criteria are addressed by position in the file, and their text may
-  // repeat, so the key is position and text.
-  const criteria = detail.criteriaItems.map((item, index) => ({
-    ...item,
-    index,
-    key: `${index}:${item.text}`,
-  }));
   const { blockers, waits } = splitReasons(detail.blockedBy);
   const stale = staleHandoff(detail);
   return (
@@ -615,48 +617,12 @@ export function TicketTab({
       />
 
       {detail.criteriaItems.length > 0 ? (
-        <section aria-labelledby="criteria-heading">
-          <h3
-            id="criteria-heading"
-            className="mb-2 flex items-baseline justify-between text-md heading-cut"
-          >
-            Acceptance criteria
-            <span className="text-sm font-normal text-ink-muted">
-              {done} of {detail.criteriaItems.length}
-            </span>
-          </h3>
-          <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
-            {criteria.map((item) =>
-              onToggle ? (
-                <li key={item.key}>
-                  <Criterion
-                    text={item.text}
-                    done={item.done}
-                    onToggle={(checked) => onToggle(item.index, checked)}
-                  />
-                </li>
-              ) : (
-                <li
-                  key={item.key}
-                  className="flex items-start gap-2.5 px-3 py-2 text-sm"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`mt-[0.15em] grid size-4 shrink-0 place-items-center rounded-mark border ${item.done ? "border-select bg-select text-card" : "border-ink-muted"}`}
-                  >
-                    {item.done ? <Icon name="check" size={11} /> : null}
-                  </span>
-                  <span className={item.done ? "text-ink-muted" : "text-ink"}>
-                    <span className="sr-only">
-                      {item.done ? "Done: " : "Not done: "}
-                    </span>
-                    {item.text}
-                  </span>
-                </li>
-              ),
-            )}
-          </ul>
-        </section>
+        <Checklist
+          id="criteria-heading"
+          title="Acceptance criteria"
+          items={detail.criteriaItems}
+          onToggle={onToggle}
+        />
       ) : null}
 
       {detail.warnings.length > 0 ? (
@@ -682,64 +648,91 @@ export function TicketTab({
   );
 }
 
-function ReviewTab({
+// Attachments shows a set of a ticket's files in the grid, opening
+// screenshots in the lightbox (REV-1, ui-layout.md §3).
+function Attachments({ attachments }: { attachments: Attachment[] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const images = attachments.filter(isImage);
+  return (
+    <>
+      <AttachmentGrid attachments={attachments} onOpen={setOpen} />
+      {open !== null ? (
+        <Lightbox
+          items={images.map((image) => ({
+            src: image.url,
+            caption: image.caption,
+            name: image.file,
+          }))}
+          index={open}
+          onIndex={setOpen}
+          onClose={() => setOpen(null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+// ReviewTab shows the ticket's screenshots above its review, with the How
+// to Verify steps as a checklist (REV-3).
+export function ReviewTab({
   detail,
   keys,
   onOpen,
+  onVerify,
 }: {
   detail: TicketDetail;
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
+  // onVerify ticks or clears a step; absent when read-only.
+  onVerify?(index: number, checked: boolean): Promise<boolean>;
 }) {
+  const screenshots = detail.attachmentFiles.filter(isImage);
+  const review = detail.review;
+  const markdown = (text: string, inline = false) =>
+    text.trim() ? (
+      <Markdown
+        context={{ project: detail.project, ticket: detail.id }}
+        keys={keys}
+        onOpenTicket={onOpen}
+        inline={inline}
+      >
+        {text}
+      </Markdown>
+    ) : null;
   return (
     <div className="flex flex-col gap-6">
-      {detail.attachmentFiles.length > 0 ? (
-        <section aria-labelledby="attachments-heading">
-          <h3 id="attachments-heading" className="mb-2 text-md heading-cut">
-            Attachments
+      {screenshots.length > 0 ? (
+        <section aria-labelledby="screenshots-heading">
+          <h3 id="screenshots-heading" className="mb-2 text-md heading-cut">
+            Screenshots
           </h3>
-          <ul className="grid grid-cols-2 gap-3">
-            {detail.attachmentFiles.map((attachment) => (
-              <li key={attachment.file}>
-                <a
-                  href={attachment.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block rounded-card"
-                >
-                  {attachment.kind === "screenshot" ||
-                  /\.(png|jpe?g|gif|webp)$/i.test(attachment.file) ? (
-                    <img
-                      src={attachment.url}
-                      alt={attachment.caption || attachment.file}
-                      loading="lazy"
-                      className="aspect-video w-full rounded-card border border-rule bg-well object-cover group-hover:border-ink-muted"
-                    />
-                  ) : (
-                    <span className="flex aspect-video items-center justify-center rounded-card border border-rule bg-well text-ink-muted">
-                      <Icon name="attachment" size={20} />
-                    </span>
-                  )}
-                  <span className="mt-1.5 block text-xs font-medium text-ink">
-                    {attachment.caption || attachment.file}
-                  </span>
-                  <span className="block truncate font-mono text-2xs text-ink-faint">
-                    {attachment.file}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
+          <Attachments attachments={screenshots} />
         </section>
       ) : null}
-      {detail.review ? (
-        <Markdown
-          context={{ project: detail.project, ticket: detail.id }}
-          keys={keys}
-          onOpenTicket={onOpen}
-        >
-          {detail.review.markdown}
-        </Markdown>
+      {review && review.steps.length > 0 ? (
+        <>
+          {markdown(review.before)}
+          <section
+            aria-labelledby="verify-heading"
+            className="flex flex-col gap-3"
+          >
+            <h2 id="verify-heading" className="text-lg heading-cut">
+              How to Verify
+            </h2>
+            {markdown(review.intro)}
+            <Checklist
+              id="steps-heading"
+              title="Steps"
+              items={review.steps}
+              render={(text) => markdown(text, true)}
+              onToggle={onVerify}
+            />
+            {markdown(review.outro)}
+          </section>
+          {markdown(review.after)}
+        </>
+      ) : review ? (
+        markdown(review.markdown)
       ) : null}
     </div>
   );

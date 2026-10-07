@@ -164,9 +164,17 @@ type HandoffJSON struct {
 	Next     []string `json:"next"`
 }
 
-// ReviewJSON is a ticket's review file.
+// ReviewJSON is a ticket's review file, split around its How to Verify
+// steps so they show as a checklist (REV-3); Hash guards ticking them and
+// is empty when read-only.
 type ReviewJSON struct {
-	Markdown string `json:"markdown"`
+	Markdown string             `json:"markdown"`
+	Hash     string             `json:"hash"`
+	Before   string             `json:"before"`
+	Intro    string             `json:"intro"`
+	Steps    []board.ReviewStep `json:"steps"`
+	Outro    string             `json:"outro"`
+	After    string             `json:"after"`
 }
 
 // AttachmentJSON is one attachment with the URL that serves it.
@@ -457,7 +465,14 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 	if project.Reviews[ticket.ID] && b.files != nil {
 		review, found, err := b.files.ReadReview(project.Name, ticket.Folder)
 		if err == nil && found {
-			detail.Review = &ReviewJSON{Markdown: review}
+			parts := board.ParseReview(review)
+			detail.Review = &ReviewJSON{
+				Markdown: review, Before: parts.Before, Intro: parts.Intro,
+				Steps: nonNil(parts.Steps), Outro: parts.Outro, After: parts.After,
+			}
+			if b.write != nil {
+				detail.Review.Hash = store.Hash([]byte(review))
+			}
 		}
 	}
 	for _, attachment := range project.Attachments[ticket.ID] {

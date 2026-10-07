@@ -136,6 +136,19 @@ export interface Attachment {
   url: string;
 }
 
+// Review is a ticket's review file (REV-3), split around its How to Verify
+// steps; with no steps only markdown matters. hash guards ticking a step
+// and is empty on a read-only server.
+export interface Review {
+  markdown: string;
+  hash: string;
+  before: string;
+  intro: string;
+  steps: { text: string; done: boolean }[];
+  outro: string;
+  after: string;
+}
+
 export interface TicketDetail extends Card {
   body: string;
   frontmatter: string;
@@ -144,7 +157,7 @@ export interface TicketDetail extends Card {
   dependsOnWorkstreams: string[];
   criteriaItems: { text: string; done: boolean }[];
   handoff: { markdown: string; next: string[] } | null;
-  review: { markdown: string } | null;
+  review: Review | null;
   attachmentFiles: Attachment[];
   // hash is sent back with every edit (STO-3); raw is the whole file for the
   // raw editor. Both are empty on a read-only server.
@@ -281,6 +294,20 @@ const isAllBoard = (value: unknown): value is AllBoardResponse =>
   value.cards.every(isCard) &&
   typeof value.doneTotal === "number";
 
+const isReview = (value: unknown): value is Review =>
+  isRecord(value) &&
+  isString(value.markdown) &&
+  isString(value.hash) &&
+  isString(value.before) &&
+  isString(value.intro) &&
+  isString(value.outro) &&
+  isString(value.after) &&
+  Array.isArray(value.steps) &&
+  value.steps.every(
+    (step) =>
+      isRecord(step) && isString(step.text) && typeof step.done === "boolean",
+  );
+
 const isTicket = (
   value: unknown,
 ): value is { revision: number; ticket: TicketDetail } =>
@@ -292,6 +319,7 @@ const isTicket = (
   Array.isArray(value.ticket.questions) &&
   value.ticket.questions.every(isQuestion) &&
   Array.isArray(value.ticket.attachmentFiles) &&
+  (value.ticket.review === null || isReview(value.ticket.review)) &&
   Array.isArray(value.ticket.runs) &&
   value.ticket.runs.every(isRun);
 

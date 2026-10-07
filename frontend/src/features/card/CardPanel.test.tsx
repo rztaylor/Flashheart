@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { TicketDetail } from "../../api/board";
-import { PanelHeader, TicketTab } from "./CardPanel";
+import { PanelHeader, ReviewTab, TicketTab } from "./CardPanel";
 
 // The card panel of docs/dev/specs/ui-layout.md §3.
 function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
@@ -147,5 +147,70 @@ describe("TicketTab", () => {
   it("offers the agent's options as answers", () => {
     expect(markup).toContain(">Claude<");
     expect(markup).toContain(">Codex<");
+  });
+});
+
+describe("ReviewTab", () => {
+  const review = {
+    markdown: "",
+    hash: "def",
+    before: "# Review\n\nThe summary.\n",
+    intro: "Start the server.\n",
+    steps: [
+      { text: "Open the board.", done: true },
+      { text: "Drag `FH-1` to Done.", done: false },
+    ],
+    outro: "Both themes.\n",
+    after: "## Risks\n\nNone.\n",
+  };
+  const render = (onVerify?: () => Promise<boolean>) =>
+    renderToStaticMarkup(
+      <ReviewTab
+        detail={detail({ review })}
+        keys={new Set(["FH"])}
+        onOpen={() => undefined}
+        onVerify={onVerify}
+      />,
+    );
+
+  it("shows How to Verify steps as a checklist between their prose", () => {
+    const markup = render(() => Promise.resolve(true));
+    const at = (text: string) => {
+      const index = markup.indexOf(text);
+      expect(index, text).toBeGreaterThanOrEqual(0);
+      return index;
+    };
+    expect(at("The summary.")).toBeLessThan(at(">How to Verify<"));
+    expect(at(">How to Verify<")).toBeLessThan(at("Start the server."));
+    expect(at("Start the server.")).toBeLessThan(at("Open the board."));
+    expect(at("Open the board.")).toBeLessThan(at("Both themes."));
+    expect(at("Both themes.")).toBeLessThan(at(">Risks<"));
+    expect(markup).toContain("1 of 2");
+    expect(markup).toContain("<code>FH-1</code>");
+    expect(markup.match(/type="checkbox"/g)).toHaveLength(2);
+  });
+
+  it("shows the steps without boxes to tick when read-only", () => {
+    const markup = render();
+    expect(markup).not.toContain('type="checkbox"');
+    expect(markup).toContain("Done: ");
+  });
+
+  it("renders a review without steps as markdown", () => {
+    const markup = renderToStaticMarkup(
+      <ReviewTab
+        detail={detail({
+          review: {
+            ...review,
+            markdown: "# Review\n\nJust prose.",
+            steps: [],
+          },
+        })}
+        keys={new Set(["FH"])}
+        onOpen={() => undefined}
+      />,
+    );
+    expect(markup).toContain("Just prose.");
+    expect(markup).not.toContain("How to Verify");
   });
 });

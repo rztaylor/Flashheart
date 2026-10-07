@@ -371,6 +371,55 @@ test("criteria tick in the panel and save to the file", async () => {
     .toContain("- [x] Behaviour implemented");
 });
 
+test("review steps tick and screenshots open in a lightbox", async () => {
+  await open("#/p/flashheart/board?t=FH-8");
+  const panel = page.getByRole("complementary", { name: "Ticket FH-8" });
+  await panel.getByRole("tab", { name: "Review" }).click();
+  const steps = panel.getByRole("region", { name: /Steps/ });
+  await expect(steps).toContainText("0 of 2");
+  await steps.getByRole("checkbox", { name: /Run scripts\/check\.sh/ }).check();
+  await expect(steps).toContainText("1 of 2");
+  const folder = (
+    await readdir(join(sandbox.root, "flashheart", "tickets"))
+  ).find((name) => name.startsWith("FH-8-"));
+  await expect
+    .poll(() =>
+      readFile(
+        join(sandbox.root, "flashheart", "tickets", folder, "review.md"),
+        "utf8",
+      ),
+    )
+    .toContain("1. [x] Run `scripts/check.sh`.");
+
+  await panel.getByRole("tab", { name: /Attachments/ }).click();
+  await panel
+    .getByRole("button", { name: "Open Store tests passing (synthetic)" })
+    .click();
+  const lightbox = page.getByRole("dialog", {
+    name: "Store tests passing (synthetic)",
+  });
+  await expect(lightbox.getByRole("img")).toBeVisible();
+  await expect(lightbox.getByRole("button", { name: "Next" })).toHaveCount(0);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`lightbox ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `lightbox-1440-${theme}.png`),
+    });
+  }
+  await page.keyboard.press("Escape");
+  await expect(lightbox).toHaveCount(0);
+  await panel.getByRole("tab", { name: "Review" }).click();
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`review steps ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `review-steps-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+});
+
 test("the Edit tab saves fields and shows conflicts side by side", async () => {
   await open("#/p/flashheart/board?t=FH-36");
   const panel = page.getByRole("complementary", { name: "Ticket FH-36" });
