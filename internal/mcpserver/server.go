@@ -30,6 +30,9 @@ type Options struct {
 	Cwd string
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
+	// Binary is this flashheart's absolute path, for the commands it gives
+	// agents; empty means flashheart on PATH.
+	Binary string
 }
 
 // server holds what lives as long as the agent's session.

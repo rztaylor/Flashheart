@@ -80,12 +80,18 @@ func Run(ctx context.Context, options Options) error {
 	if err != nil {
 		return fmt.Errorf("start local server: %w", err)
 	}
-	// External edits become new revisions within a second (STO-7).
+	// External edits become new revisions within a second (STO-7). The
+	// watcher and pruner use the store and stderr, so Run waits for them to
+	// finish before it closes the store and returns (FH-37).
 	watchCtx, stopWatching := context.WithCancel(context.Background())
-	defer stopWatching()
+	var background sync.WaitGroup
+	defer func() {
+		stopWatching()
+		background.Wait()
+	}()
 	if runtime.board != nil {
-		go runtime.board.Watch(watchCtx, options.Root, nil)
-		go keepEventsPruned(watchCtx, runtime.files, settings.EventRetentionDays, stderr)
+		background.Go(func() { runtime.board.Watch(watchCtx, options.Root, nil) })
+		background.Go(func() { keepEventsPruned(watchCtx, runtime.files, settings.EventRetentionDays, stderr) })
 	}
 	go func() {
 		select {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -356,5 +357,44 @@ func TestArchivedProjectsRepositoryIsQuiet(t *testing.T) {
 	}
 	if log := errorLog(t, root); log != "" {
 		t.Errorf("hook-errors.log = %q", log)
+	}
+}
+
+func TestSessionStartRefreshesTheSkill(t *testing.T) {
+	t.Parallel()
+
+	cwd := repo(t)
+	start := func(root string, refresh func() (bool, error)) string {
+		var stdout bytes.Buffer
+		Run(Options{Root: root, Event: "SessionStart", Stdin: strings.NewReader("s1 " + cwd), Stdout: &stdout, Now: func() time.Time { return now }, Adapter: fake{}, RefreshSkill: refresh})
+		return stdout.String()
+	}
+
+	root := t.TempDir()
+	calls := 0
+	refreshed := func() (bool, error) { calls++; return true, nil }
+	if out := start(root, refreshed); !strings.Contains(out, "context:"+protocol.SkillUpdatedNote) {
+		t.Fatalf("output = %q, want the skill note", out)
+	}
+	current := func() (bool, error) { calls++; return false, nil }
+	if out := start(root, current); out != "" {
+		t.Fatalf("output = %q, want nothing for a current skill", out)
+	}
+	// Only session start refreshes the skill.
+	run(t, root, "Prompt", "s1 "+cwd, fake{})
+	if calls != 2 {
+		t.Fatalf("refresh called %d times, want 2", calls)
+	}
+
+	// A failed refresh is logged and the session start goes on.
+	failed := func() (bool, error) { return false, errors.New("skill: permission denied") }
+	if out := start(root, failed); out != "" {
+		t.Fatalf("output = %q", out)
+	}
+	if log := errorLog(t, root); !strings.Contains(log, "skill: permission denied") {
+		t.Fatalf("hook-errors.log = %q", log)
+	}
+	if list := readEvents(t, root, "demo"); len(list) != 4 {
+		t.Fatalf("events = %d, want 4 (every session start recorded)", len(list))
 	}
 }

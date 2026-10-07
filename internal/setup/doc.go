@@ -9,7 +9,9 @@
 // endings (layout is otherwise normalised); a symlinked settings.json is
 // edited through to its target; settings in a shape it does not
 // understand, or changed since the plan, are refused. It owns only hooks
-// whose program is a flashheart binary run with hook.
+// whose program is a flashheart binary run with hook. RefreshSkill keeps an
+// installed protocol skill current for the session-start hook: it rewrites
+// only an existing skill with Flashheart's frontmatter, never creates one.
 //
 // Flags and output streams belong to cli; the skill's text to protocol.
 // It never touches the board root.

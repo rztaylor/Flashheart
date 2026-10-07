@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -276,6 +277,76 @@ func TestRunOpensTheBrowserQuietly(t *testing.T) {
 	if stdout.String() != "" || stderr.String() != "" {
 		t.Errorf("non-debug run printed stdout=%q stderr=%q (CLI-2)", stdout.String(), stderr.String())
 	}
+}
+
+// Run does not return while its background work is still running: here the
+// event pruner is stuck reporting a failure to Stderr (FH-37).
+func TestRunWaitsForItsBackgroundWork(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root can remove files from a read-only directory")
+	}
+
+	root := filepath.Join(t.TempDir(), "board")
+	if err := os.CopyFS(root, os.DirFS(sampleRoot(t))); err != nil {
+		t.Fatal(err)
+	}
+	// An expired event file the pruner cannot remove makes it report.
+	events := filepath.Join(root, "alpha", ".flashheart", "events")
+	if err := os.MkdirAll(events, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(events, "2000-01-01.jsonl"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(events, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(events, 0o755) })
+
+	stderr := &blockingWriter{writing: make(chan struct{}), release: make(chan struct{})}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{
+			Root:     root,
+			Stderr:   stderr,
+			Opener:   singleserve.BrowserOpenerFunc(func(context.Context, string) error { return nil }),
+			Launched: func(Launched) {},
+		})
+	}()
+	select {
+	case <-stderr.writing:
+	case err := <-done:
+		t.Fatalf("Run() = %v before the pruner reported", err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("the pruner never reported its failure")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		t.Fatalf("Run() = %v while the pruner was still writing", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+	close(stderr.release)
+	if err := <-done; err != nil {
+		t.Errorf("Run() = %v", err)
+	}
+}
+
+// blockingWriter signals its first write and holds every write until
+// release is closed.
+type blockingWriter struct {
+	once    sync.Once
+	writing chan struct{}
+	release chan struct{}
+}
+
+func (w *blockingWriter) Write(p []byte) (int, error) {
+	w.once.Do(func() { close(w.writing) })
+	<-w.release
+	return len(p), nil
 }
 
 func TestRunRejectsAnInvalidConfigBeforeListening(t *testing.T) {

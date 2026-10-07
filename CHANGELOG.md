@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The protocol skill and `ask_human` tell agents to ask any question that
+  ends their turn with `ask_human`, not only in chat, so the session shows
+  in Needs you instead of Waiting (FH-31). Guidance only; protocol 1.
 - `scripts/check.sh` runs the 5,000-ticket indexing time check (NFR-1) on
   its own after the other Go tests, so a busy CI runner no longer fails it;
   the one-second budget is unchanged (FH-30).
@@ -27,6 +30,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- The installed Flashheart skill keeps itself current: after you upgrade
+  the binary, the next Claude Code session start rewrites
+  `~/.claude/skills/flashheart/SKILL.md` to match and says so in one line,
+  so `setup` no longer has to be rerun. A missing skill is never
+  reinstalled; edits to the skill are overwritten, as setup overwrites
+  them (FH-33).
+- `flashheart await <question-id> --project NAME`: waits for the answer to
+  an agent's question and prints it. `ask_human` returns the command, and
+  Claude Code runs it in the background, so an answer given on the board
+  wakes the session instead of waiting for your next prompt (FH-31).
 - Manual card order: drag a card to any place in its column, or to a place
   in another column, and the order is saved in the ticket's new `rank`
   field, so it survives reloads and restarts. Shift with Up or Down and the
@@ -158,3 +171,16 @@ All notable changes to this project are documented here. The project follows
   suite.
 - Product specification, board format (v2) and agent protocol (v1), roadmap,
   decisions, contributor facts and the implementation kickoff prompt.
+
+### Fixed
+
+- An edit made in a new ticket folder just after the folder appeared could
+  take up to ten seconds to reach the board instead of under a second
+  (STO-7): the watcher now watches new folders before it publishes their
+  revision. This was also the most common cause of intermittent CI failures
+  (FH-36).
+- Stopping `flashheart serve` now waits for the board watcher and the
+  event-log pruner to finish before it closes the board, so they can no
+  longer touch a closed board or print a spurious "expire old events"
+  error at shutdown. This also removes an intermittent CI data race
+  (FH-37).

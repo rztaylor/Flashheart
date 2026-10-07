@@ -394,7 +394,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   skill: tickets are created, read and moved through Flashheart, never by
   writing board files directly. For Codex it
   adds the same protocol text to the user's global `AGENTS.md` between
-  Flashheart markers.
+  Flashheart markers. The installed Claude skill is kept current by the
+  session-start hook, which rewrites it when it differs from the binary's
+  (agent-protocol §5.4); it is never created there.
 - `SET-3` Configuration uses the absolute path of the running binary and
   passes `--root` only when it differs from the default.
 - `SET-4` `flashheart doctor` checks the root, permissions, the installed hook
@@ -445,8 +447,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 
 ### 6.14 CLI (`CLI`)
 
-- `CLI-1` Commands: `serve` (default), `mcp`, `hook`, `setup`, `doctor`,
-  `migrate`, `version`. Global `--root`. `--help` on every command.
+- `CLI-1` Commands: `serve` (default), `mcp`, `hook`, `await`, `setup`,
+  `doctor`, `migrate`, `version`. Global `--root`. `--help` on every command.
 - `CLI-2` Normal startup prints nothing but errors; `--debug` adds the
   listener address and (with `--foreground`) lifecycle summaries, never
   credentials.

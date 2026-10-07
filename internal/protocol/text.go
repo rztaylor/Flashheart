@@ -8,6 +8,10 @@ import (
 // SkillName is the Claude Code skill setup installs (SET-2).
 const SkillName = "flashheart"
 
+// SkillUpdatedNote opens the session-start context when the hook rewrote an
+// out-of-date installed skill (agent-protocol §5.4).
+const SkillUpdatedNote = "[Flashheart] The flashheart skill was updated to this version of Flashheart; use its current text."
+
 // Instructions is the MCP server's instructions field: a short pointer at
 // the protocol (agent-protocol §7).
 func Instructions() string {
@@ -81,6 +85,14 @@ instructions.
   review or blocked, with options when there are clear choices). The board
   shows the user; the answer arrives in a later prompt. Carry on with other
   work if you can.
+- ` + "`ask_human`" + ` also returns a ` + "`flashheart await`" + ` command. If you can run
+  a background command that wakes you when it exits (in Claude Code, Bash
+  with ` + "`run_in_background`" + `), run it: the answer then reaches you as soon
+  as it is given, not with the user's next prompt.
+- If your turn ends with a question for the user, ask it with
+  ` + "`ask_human`" + ` as well, even at the end of a status summary. A question
+  asked only in chat leaves your run in Waiting, not Needs you, and the
+  user may not see it.
 
 ## Finishing
 

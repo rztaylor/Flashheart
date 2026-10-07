@@ -16,6 +16,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/app"
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
+	"github.com/rztaylor/flashheart/internal/protocol"
 )
 
 type harness struct {
@@ -102,7 +103,7 @@ func TestHelpListsEveryCommand(t *testing.T) {
 		if code != 0 || stderr != "" {
 			t.Fatalf("%v: code=%d stderr=%q", args, code, stderr)
 		}
-		for _, want := range []string{"Usage: flashheart", "serve", "mcp", "hook", "setup", "doctor", "version", "--root", "--debug"} {
+		for _, want := range []string{"Usage: flashheart", "serve", "mcp", "hook", "await", "setup", "doctor", "version", "--root", "--debug"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("%v: help does not mention %q:\n%s", args, want, stdout)
 			}
@@ -113,7 +114,7 @@ func TestHelpListsEveryCommand(t *testing.T) {
 func TestEveryCommandHasHelp(t *testing.T) {
 	t.Parallel()
 
-	for _, command := range []string{"serve", "mcp", "hook", "setup", "doctor", "migrate", "version"} {
+	for _, command := range []string{"serve", "mcp", "hook", "await", "setup", "doctor", "migrate", "version"} {
 		h := newHarness(t)
 		code, stdout, stderr := h.run(command, "--help")
 		if code != 0 || stderr != "" {
@@ -734,5 +735,28 @@ func TestSetupUsage(t *testing.T) {
 	code, _, stderr := newHarness(t).run("setup", "codex")
 	if code != 2 || stderr != "flashheart: setup codex is not yet available\n" {
 		t.Errorf("codex: code %d, stderr %q", code, stderr)
+	}
+}
+
+func TestClaudeSessionStartRefreshesTheInstalledSkill(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	root := t.TempDir()
+	skill := filepath.Join(h.home, ".claude", "skills", "flashheart", "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(skill), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(skill, []byte("---\nname: flashheart\ndescription: old\nmetadata:\n  flashheart-protocol: 1\n---\n\nOld.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	outside, _ := filepath.EvalSymlinks(t.TempDir())
+	h.stdin = `{"session_id":"abc123","cwd":"` + outside + `","hook_event_name":"SessionStart","source":"startup"}`
+	code, stdout, stderr := h.run("hook", "claude", "SessionStart", "--root", root)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "flashheart skill was updated") {
+		t.Fatalf("hook = %d, %q, %q", code, stdout, stderr)
+	}
+	if got, _ := os.ReadFile(skill); string(got) != protocol.Skill() {
+		t.Fatalf("skill not refreshed:\n%s", got)
 	}
 }
