@@ -39,3 +39,8 @@
 - The Agents e2e asks a question through the real `flashheart mcp` and
   answers it in the browser (`frontend/e2e/agent-runs.mjs`).
 - Concurrency: multi-process write tests for locks and preconditions.
+  `store.LockWait` is a variable so a non-parallel test can shorten it (the
+  MCP `busy` contract test); restore it before returning.
+- MCP scale (NFR-1, developer tool, not in CI): `go test ./internal/mcpserver
+  -run '^$' -bench ToolsAtScale -benchtime 5x` times tools on 50 projects of
+  1,000 tickets (about 0.2 s a call on an M-series Mac, 2026-10-07).

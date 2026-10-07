@@ -38,6 +38,8 @@ func TestInfoDescribesTheRunningServer(t *testing.T) {
 	want := map[string]any{
 		"name": "Flashheart", "version": "v0.0.1", "commit": "abc1234", "buildDate": "2026-10-04",
 		"protocolVersion": float64(1), "root": "/srv/board", "theme": "dark",
+		// A server without a writer cannot record answers (FH-8).
+		"answers": false,
 	}
 	for key, value := range want {
 		if body[key] != value {

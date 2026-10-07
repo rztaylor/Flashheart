@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,8 @@ func TestEveryTicketWriteRespectsAnotherSessionsClaim(t *testing.T) {
 	e.fails("write_review", map[string]any{"ticket": id, "markdown": "# Review: A\n"}, "claimed")
 	e.fails("move", map[string]any{"ticket": id, "to": "review"}, "claimed")
 	e.fails("checkpoint", map[string]any{"ticket": id, "done": []string{"x"}}, "claimed")
+	e.fails("claim", map[string]any{"ticket": id}, "claimed")
+	e.fails("create_workstream", map[string]any{"title": "Line", "goal": "g", "tickets": []string{id}}, "claimed")
 }
 
 func TestRunArgumentsMustNameOneRun(t *testing.T) {
@@ -134,4 +137,35 @@ func TestCheckpointCopiesNothingWhenRefused(t *testing.T) {
 	if e.exists("demo/tickets/DM-1-a/files") {
 		t.Fatal("a refused checkpoint copied files")
 	}
+}
+
+// A claim on another project's ticket stays held while its session keeps
+// working at home, even for a caller that never reads that home's log.
+func TestAClaimElsewhereIsRenewedByWorkAtHome(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	write(t, e.root+"/other/project.yaml", "key: OT\n")
+	if _, err := e.store.CreateTicket("other", store.NewTicket{Title: "Elsewhere"}); err != nil {
+		t.Fatal(err)
+	}
+	e.startSession(session)
+	e.ok("claim", map[string]any{"ticket": "OT-1"})
+	// The holder keeps working in demo for an hour, past the 30-minute lease.
+	for range 6 {
+		e.now = e.now.Add(10 * time.Minute)
+		e.events(session, events.Event{Kind: events.ToolUsed, Data: events.ToolData{Tool: "Edit", OK: true}})
+	}
+	// A rival in its own checkout and project, whose server never reads
+	// demo's log, still sees the claim as live.
+	there := filepath.Join(filepath.Dir(e.cwd), "rival")
+	write(t, filepath.Join(there, ".git", "HEAD"), "ref: refs/heads/main\n")
+	write(t, filepath.Join(e.root, "rival", "project.yaml"), "key: RV\nrepos:\n  - "+there+"\n")
+	if err := events.New(e.store).Append(events.Event{Time: e.now, Run: rival, Agent: "claude", Kind: events.RunStart, Project: "rival", Data: events.RunStartData{Kind: events.KindSession, Cwd: there, Branch: "main", Worktree: there}}); err != nil {
+		t.Fatal(err)
+	}
+	away := *e
+	away.cwd, away.client = there, nil
+	away.fails("claim", map[string]any{"ticket": "OT-1", "run": rival}, "claimed")
+	contains(t, away.ok("get_ticket", map[string]any{"ticket": "OT-1", "run": rival}), "Held by claude:5b0c7e2a")
 }

@@ -177,3 +177,30 @@ func TestAnArchivedProjectIsNotRecreated(t *testing.T) {
 		t.Error("the archived project was recreated")
 	}
 }
+
+// Read tools change nothing on disk: no project is created or adopted and
+// the cwd cache is not written (FH-8). Writes still create the project.
+func TestReadToolsWriteNothing(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "")
+	if err := os.RemoveAll(e.root + "/demo"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(e.root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out := e.ok("board_context", nil)
+	contains(t, out, `project "demo" is not on the board yet`, "create_ticket")
+	e.fails("list_tickets", nil, "not_found")
+	e.fails("get_ticket", map[string]any{"ticket": "DE-1"}, "not_found")
+	for _, name := range []string{"demo", ".flashheart/cache/cwd.json"} {
+		if _, err := os.Stat(e.root + "/" + name); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("%s was written by a read tool: %v", name, err)
+		}
+	}
+	e.ok("create_ticket", map[string]any{"type": "bug", "title": "First", "description": "x", "criteria": []string{"y"}, "priority": "low", "project_key": "DM"})
+	if _, err := os.Stat(e.root + "/demo/project.yaml"); err != nil {
+		t.Errorf("a write should create the project: %v", err)
+	}
+}

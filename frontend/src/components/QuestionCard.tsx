@@ -10,7 +10,8 @@ import { StateNote } from "./StateNote";
 // QuestionCard is an agent's question to the human (CARD-6): what it asks,
 // who asked and when, and an answer box with the agent's options as
 // choices. The question is the agent's words, shown as data. Once
-// answered it says the answer is on its way to the session's next prompt.
+// answered it says the answer is on its way to the session's next prompt,
+// or, when the session has ended, to its resumption (RUN-8).
 // MAX_ANSWER matches the server's limit on an answer.
 const MAX_ANSWER = 1000;
 
@@ -39,6 +40,7 @@ export function QuestionCard({
   const status = useRef<HTMLParagraphElement>(null);
   const reason = questionReason(question);
   const answered = Boolean(question.answeredAt);
+  const ended = Boolean(question.sessionEnded);
   const options = [...new Set(question.options ?? [])];
   const Heading = headingLevel === 4 ? "h4" : "h5";
 
@@ -67,7 +69,7 @@ export function QuestionCard({
       data-question={question.id}
     >
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-        <RunStateLabel state="needs-you" />
+        <RunStateLabel state={ended ? "ended" : "needs-you"} />
         <Heading id={`${id}-heading`} className="font-semibold text-ink">
           {reason}
         </Heading>
@@ -84,6 +86,12 @@ export function QuestionCard({
       >
         {question.text}
       </p>
+      {ended && !answered ? (
+        <p className="text-xs text-ink-muted">
+          This session has ended. You can still answer; it gets your answer when
+          it resumes.
+        </p>
+      ) : null}
       {answered ? (
         <p
           ref={status}
@@ -92,8 +100,10 @@ export function QuestionCard({
           className="text-xs text-ink-muted"
         >
           Answered{" "}
-          <span className="font-semibold text-ink">“{question.answer}”</span>.
-          The session gets it with its next prompt.
+          <span className="font-semibold text-ink">“{question.answer}”</span>.{" "}
+          {ended
+            ? "The session gets it when it resumes."
+            : "The session gets it with its next prompt."}
         </p>
       ) : onAnswer ? (
         <form className="flex flex-col gap-2" onSubmit={submit}>

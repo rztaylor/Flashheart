@@ -127,7 +127,7 @@ export function CardPanel({
       : undefined;
   // answer sends an answer to an agent's question (CARD-6).
   const answer =
-    editing && detail
+    editing && detail && editable
       ? (id: string, text: string) =>
           editing.answer(id, text).finally(() => resource.reload())
       : undefined;

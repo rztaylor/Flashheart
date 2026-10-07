@@ -260,6 +260,8 @@ type boardAPI struct {
 	now       func() time.Time
 	// answering serialises answers, so a question is answered once.
 	answering *sync.Mutex
+	// answeredBy names who answers from the board (RUN-8).
+	answeredBy string
 }
 
 func (b boardAPI) register(mux *http.ServeMux) {

@@ -147,6 +147,19 @@ func TestStopEnforcesHandoffOnceWhenEnabled(t *testing.T) {
 			t.Fatalf("stop output = %q", out)
 		}
 	})
+	t.Run("a subagent's edits make its session due", func(t *testing.T) {
+		t.Parallel()
+		root, cwd := setup(t, "settings:\n  enforce_handoff: true\n")
+		s, _ := store.Open(root)
+		log := events.New(s)
+		_ = log.Append(events.Event{Time: now, Run: "fake:s1", Agent: "fake", Kind: events.Checkpoint, Project: "demo", Data: events.CheckpointData{Ticket: "DM-1"}})
+		_ = log.Append(events.Event{Time: now, Run: "fake:s1/a1", Agent: "fake", Kind: events.RunStart, Project: "demo", Data: events.RunStartData{Kind: events.KindSubagent, Parent: "fake:s1"}})
+		_ = log.Append(events.Event{Time: now, Run: "fake:s1/a1", Agent: "fake", Kind: events.ToolUsed, Project: "demo", Data: events.ToolData{Tool: "Edit", OK: true, Path: "src/b.ts"}})
+		s.Close()
+		if out := run(t, root, "Stop", "s1 "+cwd, fake{}); !strings.HasPrefix(out, "block:") {
+			t.Fatalf("stop output = %q, want a block", out)
+		}
+	})
 	t.Run("off by default", func(t *testing.T) {
 		t.Parallel()
 		root, cwd := setup(t, "")

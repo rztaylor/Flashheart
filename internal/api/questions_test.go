@@ -39,6 +39,8 @@ func questionsAPI(t *testing.T) (http.Handler, string, *events.Log) {
 		Files:  files,
 		Writer: files,
 		Events: log,
+		// Who answers: the configured name, else the account (FH-8).
+		AnsweredBy: "Robert",
 		// The answer is stamped with the time it was given, not the index's.
 		Now: func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) },
 	}), root, log
@@ -79,7 +81,7 @@ func TestAnsweringAQuestionRecordsAndQueuesIt(t *testing.T) {
 	send(t, handler, http.MethodPost, "/api/questions/q-1/answer", map[string]string{"answer": "  No  "}, http.StatusOK, nil)
 
 	ticket, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-1-project-skeleton", "AL-1-project-skeleton.md"))
-	if !strings.Contains(string(ticket), `- 2026-10-05 · Question from claude:3f2a9c1e — "Keep the old skeleton?" Answer (human): "No".`) {
+	if !strings.Contains(string(ticket), `- 2026-10-05 · Question from claude:3f2a9c1e — "Keep the old skeleton?" Answer (Robert): "No".`) {
 		t.Fatalf("ticket notes:\n%s", ticket)
 	}
 	waiting, err := log.TakeAnswers("alpha", sampleSession)
@@ -88,7 +90,7 @@ func TestAnsweringAQuestionRecordsAndQueuesIt(t *testing.T) {
 	}
 	var response RunsResponse
 	getJSON(t, handler, "/api/runs", http.StatusOK, &response)
-	if q := response.Runs[0].Questions[0]; q.Answer != "No" || q.AnsweredBy != "human" || q.Delivered {
+	if q := response.Runs[0].Questions[0]; q.Answer != "No" || q.AnsweredBy != "Robert" || q.Delivered {
 		t.Fatalf("question after answer = %+v", q)
 	}
 
@@ -131,4 +133,27 @@ func TestOnlyOneOfTwoConcurrentAnswersIsAccepted(t *testing.T) {
 	if accepted != 1 || len(waiting) != 1 {
 		t.Fatalf("accepted %d answers, inbox holds %d", accepted, len(waiting))
 	}
+}
+
+// A question of an ended session is shown and answerable on its ticket but
+// does not put the ticket in Needs you (FH-8).
+func TestQuestionsOfEndedSessionsDoNotNeedYou(t *testing.T) {
+	t.Parallel()
+
+	handler, _, log := questionsAPI(t)
+	if err := log.Append(events.Event{Time: time.Date(2026, 10, 4, 13, 29, 0, 0, time.UTC), Run: sampleSession, Agent: "claude", Kind: events.RunEnd, Project: "alpha", Data: events.RunEndData{Reason: "other"}}); err != nil {
+		t.Fatal(err)
+	}
+	var board BoardResponse
+	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+	for _, card := range board.Cards {
+		if card.ID == "AL-1" && (card.NeedsYou || card.OpenQuestions != 0) {
+			t.Errorf("AL-1 card = needsYou %v, openQuestions %d", card.NeedsYou, card.OpenQuestions)
+		}
+	}
+	detail := ticketDetail(t, handler, "AL-1")
+	if len(detail.Questions) != 1 || !detail.Questions[0].SessionEnded {
+		t.Fatalf("AL-1 questions = %+v", detail.Questions)
+	}
+	send(t, handler, http.MethodPost, "/api/questions/q-1/answer", map[string]string{"answer": "No"}, http.StatusOK, nil)
 }

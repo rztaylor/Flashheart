@@ -14,10 +14,20 @@ const cwdCache = ".flashheart/cache/cwd.json"
 // cache that cannot be written is not an error: the next caller resolves
 // again.
 func (s *Store) Where(cwd string, now time.Time) gitinfo.Info {
+	return s.where(cwd, now, true)
+}
+
+// Locate is Where without writing the cache back, for callers that only
+// read (agent-protocol §7.1).
+func (s *Store) Locate(cwd string, now time.Time) gitinfo.Info {
+	return s.where(cwd, now, false)
+}
+
+func (s *Store) where(cwd string, now time.Time, write bool) gitinfo.Info {
 	data, _ := s.ReadFile(cwdCache)
 	cache := gitinfo.ParseCache(data)
 	info, _ := cache.Resolve(cwd, now)
-	if cache.Changed() {
+	if write && cache.Changed() {
 		_ = s.WriteFileAtomic(cwdCache, cache.Marshal())
 	}
 	return info

@@ -23,7 +23,7 @@ const session = "claude:5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13"
 // env is a board root with a project "demo" for a git checkout on branch
 // feature/demo, and a client connected to a server working there.
 type env struct {
-	t      *testing.T
+	t      testing.TB
 	root   string
 	cwd    string
 	store  *store.Store
@@ -31,7 +31,7 @@ type env struct {
 	client *mcp.ClientSession
 }
 
-func newEnv(t *testing.T, key string) *env {
+func newEnv(t testing.TB, key string) *env {
 	t.Helper()
 	base, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -60,7 +60,7 @@ func newEnv(t *testing.T, key string) *env {
 	return e
 }
 
-func write(t *testing.T, name, data string) {
+func write(t testing.TB, name, data string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
 		t.Fatal(err)
@@ -203,7 +203,7 @@ func (e *env) kinds(run string) []string {
 	return kinds
 }
 
-func contains(t *testing.T, text string, parts ...string) {
+func contains(t testing.TB, text string, parts ...string) {
 	t.Helper()
 	for _, part := range parts {
 		if !strings.Contains(text, part) {
@@ -228,7 +228,7 @@ func (e *env) exists(name string) bool {
 	return err == nil
 }
 
-func mdfileList(t *testing.T, file, key string) []string {
+func mdfileList(t testing.TB, file, key string) []string {
 	t.Helper()
 	return mdfile.Parse([]byte(file)).List(key)
 }

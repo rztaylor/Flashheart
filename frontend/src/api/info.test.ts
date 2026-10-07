@@ -11,6 +11,7 @@ const valid = {
   protocolVersion: 1,
   root: "/Users/example/reports/Kanban",
   theme: "system",
+  answers: true,
 };
 
 describe("fetchInfo", () => {

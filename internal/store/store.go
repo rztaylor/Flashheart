@@ -185,6 +185,47 @@ func (s *Store) ReadProject(name string) (board.Project, error) {
 	return project, err
 }
 
+// ReadHeads reads every project's identity without reading its tickets:
+// name, key, repositories and settings from project.yaml, the ids its
+// ticket and archive folders name (tickets carry only ID, Folder and Slug),
+// and retired ids; with the archived projects and retired keys. A caller
+// that needs a few projects at NFR-1 scale starts here and reads those with
+// ReadProject.
+func (s *Store) ReadHeads() (board.Board, error) {
+	root, fsys, err := s.handle()
+	if err != nil {
+		return board.Board{}, err
+	}
+	names, err := projects(fsys)
+	if err != nil {
+		return board.Board{}, err
+	}
+	b := board.Board{Projects: make([]board.Project, 0, len(names))}
+	for _, name := range names {
+		r := &reader{root: root, fsys: fsys}
+		project := board.Project{
+			Name: name, DisplayName: name, NextID: 1,
+			Reviews: map[string]bool{}, Attachments: map[string][]board.Attachment{},
+		}
+		r.readProjectFile(&project)
+		for _, folder := range r.dirs(path.Join(name, "tickets")) {
+			if id, slug, ok := board.ParseFolder(folder); ok {
+				project.Tickets = append(project.Tickets, board.Ticket{ID: id, Folder: folder, Slug: slug})
+			}
+		}
+		for _, folder := range r.dirs(path.Join(name, ".archive", "tickets")) {
+			if id, _, ok := board.ParseFolder(folder); ok {
+				project.Archived = append(project.Archived, id)
+			}
+		}
+		b.Projects = append(b.Projects, project)
+	}
+	b.ArchivedProjects = archivedProjects(root, fsys)
+	b.RetiredKeys = s.retiredKeys()
+	board.CheckKeys(&b)
+	return b, nil
+}
+
 // ReadBoard reads every project and returns a fingerprint of the files read
 // (paths, sizes and modification times) that changes when any of them does.
 func (s *Store) ReadBoard() (board.Board, string, error) {

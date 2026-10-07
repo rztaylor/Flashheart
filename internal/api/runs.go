@@ -120,6 +120,9 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files), Plan: nonNil(v.Plan), Progress: v.Progress,
 		Questions: nonNil(v.Questions),
 	}
+	for index := range result.Questions {
+		result.Questions[index].SessionEnded = v.State == runs.Ended
+	}
 	if v.Link.Ticket != "" {
 		if _, ticket, ok := snapshot.FindTicket(v.Link.Ticket); ok {
 			result.TicketTitle = ticket.Title
@@ -181,8 +184,13 @@ func (b boardAPI) run(w http.ResponseWriter, r *http.Request) {
 
 // liveBadge fills a card's live run and virtual-column flags (VIEW-2, VIEW-8).
 func liveBadge(snapshot *index.Snapshot, card *Card) {
-	// An open question about the ticket needs you whoever asked it.
-	card.OpenQuestions = len(snapshot.Questions(card.ID))
+	// An open question about the ticket needs you whoever asked it, while
+	// the asking session is live (VIEW-2).
+	for _, question := range snapshot.Questions(card.ID) {
+		if !question.SessionEnded {
+			card.OpenQuestions++
+		}
+	}
 	card.NeedsYou = card.OpenQuestions > 0
 	v, ok := snapshot.TicketRun(card.ID)
 	if !ok {

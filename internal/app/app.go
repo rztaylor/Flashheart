@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/user"
 	"sync"
 	"time"
 
@@ -160,12 +161,13 @@ func newRuntime(options Options, settings config.Config, apiOverride http.Handle
 				Root:            options.Root,
 				Theme:           settings.UI.Theme,
 			},
-			Board:     board,
-			Files:     files,
-			Writer:    files,
-			Events:    events.New(files),
-			DoneLimit: settings.DoneColumnLimit,
-			Stopping:  stopping.ch,
+			Board:      board,
+			Files:      files,
+			Writer:     files,
+			Events:     events.New(files),
+			DoneLimit:  settings.DoneColumnLimit,
+			Stopping:   stopping.ch,
+			AnsweredBy: settings.Answerer(user.Current),
 		})
 	}
 	mux := http.NewServeMux()

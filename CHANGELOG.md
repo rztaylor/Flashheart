@@ -19,6 +19,22 @@ All notable changes to this project are documented here. The project follows
   reason, in a new Evidence section of the review template, and moving a
   ticket to Ready to review warns when the review has neither. Re-run
   `flashheart setup claude` to install the new skill text (FH-29).
+- Agent tools stay fast at full scale: an MCP call reads only the projects it
+  touches (about 0.2 s instead of 3.5 s on 50 projects of 1,000 tickets),
+  and read-only tools no longer create projects or write the cwd cache
+  (FH-8).
+- A claim on another project's ticket stays held while its session works at
+  home, and a subagent claiming its session's ticket no longer takes it from
+  the session. A subagent's edits now count toward its session's handoff
+  (FH-8).
+- Answers record who gave them: the new `user_name` setting, else the
+  computer account's name, instead of "human". Questions from a session that
+  has ended can still be answered and wait for it to resume, without
+  showing as Needs you; a read-only board shows questions without an answer
+  form (FH-8).
+- `flashheart setup claude` reads the MCP registration through `claude mcp
+  get` instead of parsing `~/.claude.json`, and says when it cannot tell
+  (FH-8).
 - New look for the board: Metro Pop in light (a raspberry bar and accent on
   a clean white background) and Night Service in black and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
   Views open with the project's name as a page header; columns are rounded

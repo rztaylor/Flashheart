@@ -18,6 +18,9 @@ type Info struct {
 	ProtocolVersion int    `json:"protocolVersion"`
 	Root            string `json:"root"`
 	Theme           string `json:"theme"`
+	// Answers reports whether this server records answers to agents'
+	// questions; without it the board shows questions read-only (RUN-8).
+	Answers bool `json:"answers"`
 }
 
 // Options configures the API handler. Board endpoints are served when Board
@@ -41,12 +44,16 @@ type Options struct {
 	Stopping <-chan struct{}
 	// LongPoll bounds how long GET /api/changes waits (default 20s).
 	LongPoll time.Duration
+	// AnsweredBy names who answers agents' questions from the board
+	// (config.Answerer); empty means "the user".
+	AnsweredBy string
 }
 
 // New returns the handler for every /api/ route.
 func New(options Options) http.Handler {
 	info := options.Info
 	info.Name = "Flashheart"
+	info.Answers = options.Writer != nil && options.Events != nil
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/info", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -63,7 +70,7 @@ func New(options Options) http.Handler {
 		boardAPI{
 			board: options.Board, files: options.Files, root: info.Root, doneLimit: options.DoneLimit,
 			stopping: options.Stopping, longPoll: options.LongPoll, write: options.Writer, events: options.Events,
-			now: options.Now, answering: &sync.Mutex{},
+			now: options.Now, answering: &sync.Mutex{}, answeredBy: answerer(options.AnsweredBy),
 		}.register(mux)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
@@ -85,4 +92,11 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 		Message string `json:"message"`
 	}
 	writeJSON(w, status, map[string]body{"error": {Code: code, Message: message}})
+}
+
+func answerer(name string) string {
+	if name == "" {
+		return "the user"
+	}
+	return name
 }

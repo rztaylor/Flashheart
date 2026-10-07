@@ -205,7 +205,7 @@ Full format: `docs/dev/specs/board-format.md`.
   next, In progress, Ready to review, Done), each in its manual order
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
 - `VIEW-2` **Virtual columns**: *Needs you* (tickets with a run in Needs you or
-  an open question) and *Agent working* (tickets linked to a Working or Quiet
+  an open question from a live session) and *Agent working* (tickets linked to a Working or Quiet
   run). They sit before Backlog and appear while they hold tickets. Each
   can be shown or hidden (Needs you shown by default); a ticket in a virtual
   column also stays in its real column, marked as mirrored.
@@ -323,8 +323,12 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   recovery.
 - `RUN-8` A question (`ask_human`) has a kind (question, decision, review,
   blocked), text, and optional options. Answering it in the UI records the
-  answer in the ticket and delivers it to the run at its next prompt or start
-  (`HOOK-5`).
+  answer, under the configured `user_name` (else the computer account's
+  name), in the ticket and delivers it to the run at its next prompt or start
+  (`HOOK-5`). A question from a run that has ended stays open and
+  answerable, marked as waiting for the session to resume; it does not
+  need you (`VIEW-2`). A board that cannot record answers shows questions
+  without an answer form.
 
 ### 6.8 Hooks (`HOOK`)
 
@@ -348,7 +352,8 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
 - `HOOK-5` On prompt submit, the hook adds answers to the run's questions that
   arrived since its last turn.
 - `HOOK-6` Optional, per project (`enforce_handoff`): at turn end, if the run
-  edited files since its last checkpoint and is linked to a ticket, the hook
+  (with its subagents) edited files since its last checkpoint (by it or any
+  of them) and is linked to a ticket, the hook
   blocks the stop once with a reason asking for a checkpoint. It never blocks
   twice in a row.
 - `HOOK-7` Claude Code (CLI, IDE and desktop Code tab) and Codex (CLI, IDE and

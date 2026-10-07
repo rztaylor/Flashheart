@@ -677,9 +677,22 @@ func TestSetupClaudeShowsThenWritesThenUninstalls(t *testing.T) {
 		t.Fatal(err)
 	}
 	var ran [][]string
+	registered := false
 	deps := h.deps()
 	deps.FindClaude = func(string) string { return "/usr/bin/claude" }
 	deps.RunCommand = func(name string, args ...string) ([]byte, error) {
+		// A claude CLI with a user-scope MCP registry: get reads it.
+		switch args[1] {
+		case "get":
+			if !registered {
+				return []byte(`No MCP server named "flashheart".`), errors.New("exit status 1")
+			}
+			return []byte("flashheart:\n  Command: /opt/bin/flashheart\n  Args: mcp\n"), nil
+		case "add-json":
+			registered = true
+		case "remove":
+			registered = false
+		}
 		ran = append(ran, append([]string{name}, args...))
 		return nil, nil
 	}
