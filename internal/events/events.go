@@ -431,6 +431,17 @@ func (l *Log) QueueAnswer(project, run string, d Delivery) error {
 	return l.store.AppendInbox(project, session, append(line, '\n'))
 }
 
+// MarkDelivered records that answers taken from an inbox reached their
+// runs (question.delivered on each asking run).
+func (l *Log) MarkDelivered(project string, list []Delivery, at time.Time) error {
+	out := make([]Event, 0, len(list))
+	for _, d := range list {
+		agent, _, _ := strings.Cut(d.Run, ":")
+		out = append(out, Event{Time: at, Run: d.Run, Agent: agent, Kind: QuestionDelivered, Project: project, Data: DeliveredData{ID: d.ID}})
+	}
+	return l.Append(out...)
+}
+
 // TakeAnswers empties a session's inbox and returns its answers, skipping
 // malformed lines.
 func (l *Log) TakeAnswers(project, session string) ([]Delivery, error) {

@@ -178,15 +178,11 @@ func (c *call) deliverAnswers() ([]protocol.Answer, error) {
 		}
 	}
 	var answers []protocol.Answer
-	var delivered []events.Event
 	for _, d := range waiting {
 		answers = append(answers, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
-		delivered = append(delivered, events.Event{Time: c.now, Run: d.Run, Agent: agentOf(d.Run), Kind: events.QuestionDelivered, Project: c.project, Data: events.DeliveredData{ID: d.ID}})
 	}
-	if len(delivered) > 0 {
-		if err := c.srv.log.Append(delivered...); err != nil {
-			return nil, err
-		}
+	if err := c.srv.log.MarkDelivered(c.project, waiting, c.now); err != nil {
+		return nil, err
 	}
 	return answers, nil
 }

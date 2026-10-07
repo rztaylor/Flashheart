@@ -269,6 +269,9 @@ func TestAskHumanPutsTheRunInNeedsYou(t *testing.T) {
 	e.startSession(session)
 	out := e.ok("ask_human", map[string]any{"ticket": id, "kind": "decision", "text": "Which schema?", "options": []string{"v1", "v2"}})
 	contains(t, out, "the answer will arrive in a later prompt", "ok question=q-")
+	question := strings.TrimSpace(out[strings.Index(out, "question=")+len("question="):])
+	// The await command wakes the session when the answer arrives (§7.5).
+	contains(t, out, "run_in_background", "\nflashheart await "+question+" --project demo --root "+e.root+"\n")
 	set := runs.NewSet()
 	for _, ev := range e.log() {
 		set.Apply(ev)

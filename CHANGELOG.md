@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The protocol skill and `ask_human` tell agents to ask any question that
+  ends their turn with `ask_human`, not only in chat, so the session shows
+  in Needs you instead of Waiting (FH-31). Guidance only; protocol 1.
 - New look for the board: Metro Pop in light (a raspberry bar and accent on
   a clean white background) and Night Service in black and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
   Views open with the project's name as a page header; columns are rounded
@@ -24,6 +27,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- The installed Flashheart skill keeps itself current: after you upgrade
+  the binary, the next Claude Code session start rewrites
+  `~/.claude/skills/flashheart/SKILL.md` to match and says so in one line,
+  so `setup` no longer has to be rerun. A missing skill is never
+  reinstalled; edits to the skill are overwritten, as setup overwrites
+  them (FH-33).
+- `flashheart await <question-id> --project NAME`: waits for the answer to
+  an agent's question and prints it. `ask_human` returns the command, and
+  Claude Code runs it in the background, so an answer given on the board
+  wakes the session instead of waiting for your next prompt (FH-31).
 - Manual card order: drag a card to any place in its column, or to a place
   in another column, and the order is saved in the ticket's new `rank`
   field, so it survives reloads and restarts. Shift with Up or Down and the

@@ -42,7 +42,7 @@ func (srv *server) registerWrites(server *mcp.Server) {
 	tool(server, "create_ticket", "Create a ticket in your project with the next id. Feature tickets carry a test plan and bugs a reproduction (plan_or_repro). Returns the new id.", srv.createTicket)
 	tool(server, "create_workstream", "Create a workstream in your project: an ordered group of tickets with a shared goal, where each ticket waits for the ones before it. Use one when work spans several dependent tickets; leave single tickets alone. The tickets you list join it in that order.", srv.createWorkstream)
 	tool(server, "write_review", "Create or replace a ticket's review (the human verification guide, in the review template). Screenshots and other local files linked by absolute path are copied into the ticket.", srv.writeReview)
-	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt.", srv.askHuman)
+	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt. Use it for any question that ends your turn too: a question asked only in chat leaves you in Waiting.", srv.askHuman)
 }
 
 // record appends events attributed to the caller's run; nothing is
@@ -889,7 +889,11 @@ func (srv *server) askHuman(input AskHumanInput) (string, error) {
 	if err := c.record(project, events.Event{Kind: events.QuestionAsked, Data: events.QuestionData{ID: id, Ticket: ticketID, Kind: kind, Text: text, Options: options}}); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; the answer will arrive in a later prompt. Carry on with other work if you can.\nok question=%s\n", kind, id), nil
+	// The await command wakes an agent that can run background commands
+	// as soon as the answer is given (agent-protocol §7.5).
+	command := protocol.AwaitCommand(srv.options.Binary, srv.options.Root, project, id)
+	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; the answer will arrive in a later prompt. Carry on with other work if you can.\n"+
+		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits (Claude Code: Bash with run_in_background):\n%s\nok question=%s\n", kind, command, id), nil
 }
 
 func questionID() string {

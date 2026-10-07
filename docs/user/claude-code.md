@@ -32,7 +32,11 @@ flashheart setup claude --write    # apply it, with backups
 - the MCP server it registers for every project, by running
   `claude mcp add-json --scope user flashheart …` (when no `claude` command
   is found it prints the command for you to run);
-- the Flashheart skill it installs as `~/.claude/skills/flashheart/SKILL.md`;
+- the Flashheart skill it installs as `~/.claude/skills/flashheart/SKILL.md`.
+  After that Flashheart keeps it current itself: when you upgrade the
+  binary, the next session start rewrites the skill to match. It is
+  Flashheart's own file, so edits to it are overwritten; put your own agent
+  rules in your own skill or `CLAUDE.md`;
 - moving the `kanban-tracker` skill, if you have it, into the backup: the
   Flashheart skill replaces it, and agents should not have two sets of
   ticket rules.
@@ -87,9 +91,18 @@ When the model needs a decision it calls `ask_human`. The session shows as
 **Needs you** with its question, on the ticket's card and in the Agents
 view. Answer in the card panel or in the run's detail: pick one of the
 model's choices or write your own, then **Send answer**. The answer is added
-to the ticket's notes and reaches the session with its next prompt, so send
-the session any prompt ("go on") to deliver it; a session that is resumed
-gets it in its recovery note.
+to the ticket's notes and wakes the session: `ask_human` gives the model a
+`flashheart await` command, which it runs in the background, and when you
+send your answer that command prints it and exits, so Claude Code resumes
+the session with it. If the model did not run it, the answer reaches the
+session with its next prompt (send any prompt, such as "go on"); a session
+that is resumed gets it in its recovery note.
+
+A question the model asks only in its chat reply, without `ask_human`,
+leaves the session in **Waiting**: Flashheart never reads what the model
+writes, so it cannot tell a question from a summary. The protocol skill
+tells the model to ask with `ask_human` whenever its turn ends on a
+question.
 
 ## Handoff enforcement (optional)
 
