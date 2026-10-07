@@ -206,7 +206,8 @@ Full format: `docs/dev/specs/board-format.md`.
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
 - `VIEW-2` **Virtual columns**: *Needs you* (tickets with a run in Needs you or
   an open question from a live session) and *Agent working* (tickets linked to a Working or Quiet
-  run). They sit before Backlog and appear while they hold tickets. Each
+  run). They sit between In progress and Ready to review and appear while
+  they hold tickets. Each
   can be shown or hidden (Needs you shown by default); a ticket in a virtual
   column also stays in its real column, marked as mirrored.
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state

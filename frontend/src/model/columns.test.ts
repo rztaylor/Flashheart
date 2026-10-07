@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { Card } from "../api/board";
-import { shownVirtual, toggleVirtual, VIRTUAL_COLUMNS } from "./columns";
+import {
+  placeVirtual,
+  shownVirtual,
+  toggleVirtual,
+  VIRTUAL_COLUMNS,
+} from "./columns";
 
 const card = (patch: Partial<Card>) =>
   ({ needsYou: false, agentWorking: false, ...patch }) as Card;
@@ -36,5 +41,22 @@ describe("virtual columns", () => {
       toggleVirtual(["needs-you", "agent-working"], "needs-you", false),
     ).toEqual(["agent-working"]);
     expect(toggleVirtual([], "needs-you", false)).toEqual([]);
+  });
+
+  it("stand between In progress and Ready to review", () => {
+    const real = ["backlog", "up-next", "in-progress", "review", "done"].map(
+      (id) => ({ id }),
+    );
+    const mirrors = [{ id: "needs-you" }, { id: "agent-working" }];
+    expect(placeVirtual(real, mirrors).map((column) => column.id)).toEqual([
+      "backlog",
+      "up-next",
+      "in-progress",
+      "needs-you",
+      "agent-working",
+      "review",
+      "done",
+    ]);
+    expect(placeVirtual(real, [])).toEqual(real);
   });
 });

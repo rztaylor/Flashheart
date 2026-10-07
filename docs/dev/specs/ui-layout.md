@@ -78,9 +78,9 @@ load) sit as a full-width strip under the band, above the rail and Main.
 ## 2. Board
 
 - Columns in workflow order: Backlog, Up next, In progress, Ready to review,
-  Done (`VIEW-1`). Needs you and Agent working stand before Backlog while
-  they hold tickets and are switched on (`VIEW-2`); they hold mirrored cards
-  and never accept a drop.
+  Done (`VIEW-1`). Needs you and Agent working stand between In progress and
+  Ready to review while they hold tickets and are switched on (`VIEW-2`);
+  they hold mirrored cards and never accept a drop.
 - A column is a rounded well. Its head: count badge, then the title in the
   display cut (virtual columns add their run mark). Done reads `n of N`
   while the done limit hides tickets, with *Show all N* / *Show recent only*

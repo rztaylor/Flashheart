@@ -37,7 +37,11 @@ import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
-import { shownVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
+import {
+  placeVirtual,
+  shownVirtual,
+  VIRTUAL_COLUMNS,
+} from "../../model/columns";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
 import {
@@ -63,7 +67,7 @@ interface BoardViewProps {
   projectNames?: Map<string, string>;
   density: Density;
   paint: PaintMode;
-  // virtualColumns are shown before Backlog while they hold tickets,
+  // virtualColumns are shown after In progress while they hold tickets,
   // mirroring tickets whose runs need you or are working (VIEW-2).
   virtualColumns?: VirtualColumn[];
   selected?: TicketRef;
@@ -161,7 +165,6 @@ export function BoardView(props: BoardViewProps) {
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const refocus = useRef("");
   const grid = useRef<HTMLDivElement>(null);
-  const atStart = useRef(true);
   const now = useNow();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -182,9 +185,8 @@ export function BoardView(props: BoardViewProps) {
       virtual: true,
       cards: cards.filter(column.holds),
     }));
-    return [
-      ...mirrors,
-      ...COLUMNS.map((column) => ({
+    return placeVirtual(
+      COLUMNS.map((column) => ({
         id: column.id as Column | VirtualColumn,
         title: column.title,
         empty:
@@ -192,7 +194,8 @@ export function BoardView(props: BoardViewProps) {
         virtual: false,
         cards: grouped.get(column.id) ?? [],
       })),
-    ];
+      mirrors,
+    );
   }, [cards, virtualColumns, sort]);
   const sizes = columns.map((column) => column.cards.length);
   const firstNonEmpty = Math.max(
@@ -234,19 +237,6 @@ export function BoardView(props: BoardViewProps) {
       inline: "nearest",
     });
   }, [selectedID]);
-
-  // A virtual column appearing before Backlog would otherwise open off-screen
-  // to the left, because scroll snapping keeps the current column in place.
-  // A board that was at its start stays at its start, so Needs you shows.
-  const mirrorCount = columns.filter((column) => column.virtual).length;
-  // It acts only on a change, not on first render, so a deep link that
-  // scrolls to its selected card keeps that scroll.
-  const shownMirrors = useRef(mirrorCount);
-  useLayoutEffect(() => {
-    if (shownMirrors.current === mirrorCount) return;
-    shownMirrors.current = mirrorCount;
-    if (grid.current && atStart.current) grid.current.scrollLeft = 0;
-  }, [mirrorCount]);
 
   // A ticket moved with the keyboard keeps focus in its new column.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs after each change of cards.
@@ -432,9 +422,6 @@ export function BoardView(props: BoardViewProps) {
         ) : null}
         <div
           ref={grid}
-          onScroll={(event) => {
-            atStart.current = event.currentTarget.scrollLeft < 8;
-          }}
           // The column count is a variable, not an inline template, so the
           // narrow-width rule in index.css (one chosen column) still wins.
           // The grid is the board's one scroller in both directions: columns

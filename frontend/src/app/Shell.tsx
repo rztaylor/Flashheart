@@ -32,7 +32,10 @@ import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
-import { shownVirtual as shownVirtualColumns } from "../model/columns";
+import {
+  placeVirtual,
+  shownVirtual as shownVirtualColumns,
+} from "../model/columns";
 import {
   applyFilters,
   emptyFilters,
@@ -578,12 +581,10 @@ export function Shell({
                   value={narrowShown}
                   onChange={setNarrowColumn}
                 >
-                  {narrowVirtual.map((column) => (
-                    <option key={column.id} value={column.id}>
-                      {column.title}
-                    </option>
-                  ))}
-                  {COLUMNS.map((column) => (
+                  {placeVirtual<{ id: string; title: string }>(
+                    COLUMNS,
+                    narrowVirtual,
+                  ).map((column) => (
                     <option key={column.id} value={column.id}>
                       {column.title}
                     </option>
