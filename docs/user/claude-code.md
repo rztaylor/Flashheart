@@ -87,9 +87,12 @@ When the model needs a decision it calls `ask_human`. The session shows as
 **Needs you** with its question, on the ticket's card and in the Agents
 view. Answer in the card panel or in the run's detail: pick one of the
 model's choices or write your own, then **Send answer**. The answer is added
-to the ticket's notes and reaches the session with its next prompt, so send
-the session any prompt ("go on") to deliver it; a session that is resumed
-gets it in its recovery note.
+to the ticket's notes and wakes the session: `ask_human` gives the model a
+`flashheart await` command, which it runs in the background, and when you
+send your answer that command prints it and exits, so Claude Code resumes
+the session with it. If the model did not run it, the answer reaches the
+session with its next prompt (send any prompt, such as "go on"); a session
+that is resumed gets it in its recovery note.
 
 A question the model asks only in its chat reply, without `ask_human`,
 leaves the session in **Waiting**: Flashheart never reads what the model

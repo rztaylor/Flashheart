@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime/debug"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -203,16 +202,7 @@ func answers(log *events.Log, project, session string, at time.Time) (string, er
 	if err != nil || len(waiting) == 0 {
 		return "", err
 	}
-	return protocol.AnswersNote(toAnswers(waiting)), log.Append(deliveredEvents(project, waiting, at)...)
-}
-
-func deliveredEvents(project string, list []events.Delivery, at time.Time) []events.Event {
-	out := make([]events.Event, 0, len(list))
-	for _, d := range list {
-		agent, _, _ := strings.Cut(d.Run, ":")
-		out = append(out, events.Event{Time: at, Run: d.Run, Agent: agent, Kind: events.QuestionDelivered, Project: project, Data: events.DeliveredData{ID: d.ID}})
-	}
-	return out
+	return protocol.AnswersNote(toAnswers(waiting)), log.MarkDelivered(project, waiting, at)
 }
 
 func toAnswers(list []events.Delivery) []protocol.Answer {
@@ -400,7 +390,7 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 		}
 	}
 	if len(waiting) > 0 {
-		if err := log.Append(deliveredEvents(project, waiting, now)...); err != nil {
+		if err := log.MarkDelivered(project, waiting, now); err != nil {
 			return "", err
 		}
 		note.Answered = toAnswers(waiting)

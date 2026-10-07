@@ -102,7 +102,7 @@ func TestHelpListsEveryCommand(t *testing.T) {
 		if code != 0 || stderr != "" {
 			t.Fatalf("%v: code=%d stderr=%q", args, code, stderr)
 		}
-		for _, want := range []string{"Usage: flashheart", "serve", "mcp", "hook", "setup", "doctor", "version", "--root", "--debug"} {
+		for _, want := range []string{"Usage: flashheart", "serve", "mcp", "hook", "await", "setup", "doctor", "version", "--root", "--debug"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("%v: help does not mention %q:\n%s", args, want, stdout)
 			}
@@ -113,7 +113,7 @@ func TestHelpListsEveryCommand(t *testing.T) {
 func TestEveryCommandHasHelp(t *testing.T) {
 	t.Parallel()
 
-	for _, command := range []string{"serve", "mcp", "hook", "setup", "doctor", "migrate", "version"} {
+	for _, command := range []string{"serve", "mcp", "hook", "await", "setup", "doctor", "migrate", "version"} {
 		h := newHarness(t)
 		code, stdout, stderr := h.run(command, "--help")
 		if code != 0 || stderr != "" {

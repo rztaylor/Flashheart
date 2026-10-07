@@ -33,6 +33,8 @@ Intended layout (packages are created when they get real content):
   `internal/hooks/claude` and `internal/hooks/codex` are the only places that
   know each agent's payload schema.
 - `internal/mcpserver`: MCP tools over store, events and runs.
+- `internal/await`: `flashheart await`: wait for one question's answer in
+  its session's inbox, deliver it, notice delivery elsewhere, time out.
 - `internal/setup`: agent configuration diff, write with backup, uninstall,
   skill/AGENTS.md rendering.
 - `internal/migrate`: one-time conversion of a v1 root to board format v2
@@ -46,7 +48,7 @@ Intended layout (packages are created when they get real content):
 - `internal/webui`: embedded compiled frontend assets.
 - `frontend/`: React UI; ownership in `.agents/facts/frontend-ui.md`.
 
-Dependency direction: `cli` → (`app` | `background` | `migrate` | `mcpserver` | `hooks` | `setup`) →
+Dependency direction: `cli` → (`app` | `background` | `migrate` | `mcpserver` | `hooks` | `setup` | `await`) →
 (`index`, `runs`, `protocol`) → (`store`, `events`) → (`board`, `mdfile`,
 `gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `scrub`)
 import no I/O packages; `runs` imports only `events`' types. Nothing below `app` imports HTTP or

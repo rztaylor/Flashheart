@@ -27,6 +27,10 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- `flashheart await <question-id> --project NAME`: waits for the answer to
+  an agent's question and prints it. `ask_human` returns the command, and
+  Claude Code runs it in the background, so an answer given on the board
+  wakes the session instead of waiting for your next prompt (FH-31).
 - Manual card order: drag a card to any place in its column, or to a place
   in another column, and the order is saved in the ticket's new `rank`
   field, so it survives reloads and restarts. Shift with Up or Down and the

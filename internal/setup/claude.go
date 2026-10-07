@@ -114,17 +114,10 @@ func (o Options) now() time.Time {
 	return time.Now().UTC()
 }
 
-func shellQuote(s string) string {
-	if s != "" && strings.Trim(s, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_/.-+=:@") == "" {
-		return s
-	}
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
-}
-
 func (o Options) hookCommand(event string) string {
-	command := shellQuote(o.Binary) + " hook claude " + event
+	command := protocol.ShellQuote(o.Binary) + " hook claude " + event
 	if o.Root != "" {
-		command += " --root " + shellQuote(o.Root)
+		command += " --root " + protocol.ShellQuote(o.Root)
 	}
 	return command
 }
@@ -494,7 +487,7 @@ func (p *Plan) display(path string) string {
 func (p *Plan) commandLine(args []string) string {
 	quoted := []string{"claude"}
 	for _, arg := range args {
-		quoted = append(quoted, shellQuote(arg))
+		quoted = append(quoted, protocol.ShellQuote(arg))
 	}
 	return strings.Join(quoted, " ")
 }

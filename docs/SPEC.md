@@ -445,8 +445,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 
 ### 6.14 CLI (`CLI`)
 
-- `CLI-1` Commands: `serve` (default), `mcp`, `hook`, `setup`, `doctor`,
-  `migrate`, `version`. Global `--root`. `--help` on every command.
+- `CLI-1` Commands: `serve` (default), `mcp`, `hook`, `await`, `setup`,
+  `doctor`, `migrate`, `version`. Global `--root`. `--help` on every command.
 - `CLI-2` Normal startup prints nothing but errors; `--debug` adds the
   listener address and (with `--foreground`) lifecycle summaries, never
   credentials.

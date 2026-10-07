@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/app"
+	"github.com/rztaylor/flashheart/internal/await"
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/hooks"
 	"github.com/rztaylor/flashheart/internal/hooks/claude"
 	"github.com/rztaylor/flashheart/internal/logfile"
@@ -83,11 +85,17 @@ type environment struct {
 	serve          *serveFlags
 	migrate        *migrateFlags
 	setup          *setupFlags
+	await          *awaitFlags
 }
 
 type serveFlags struct {
 	foreground      bool
 	backgroundChild bool
+}
+
+type awaitFlags struct {
+	project string
+	timeout time.Duration
 }
 
 type setupFlags struct {
@@ -146,6 +154,17 @@ func commands() []command {
 			run: runHook,
 		},
 		{
+			name:    "await",
+			summary: "wait for the answer to an agent's question",
+			usage:   "await <question-id> --project NAME [--timeout 12h] [--root DIR]",
+			detail: "Wait until the human answers the question on the board, then print the\n" +
+				"answer and exit 0, marking it delivered. ask_human prints this command;\n" +
+				"an agent runs it in the background so the answer wakes it. Exits 0\n" +
+				"with a short note if the answer reached the session another way, and 1\n" +
+				"after --timeout or for an unknown question.",
+			run: runAwait,
+		},
+		{
 			name:    "setup",
 			summary: "show or apply an agent's configuration for Flashheart",
 			usage:   "setup claude [--uninstall] [--write] [--root DIR]",
@@ -181,7 +200,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	if stderr == nil {
 		stderr = io.Discard
 	}
-	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}, migrate: &migrateFlags{keys: keyFlags{}}, setup: &setupFlags{}}
+	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}, migrate: &migrateFlags{keys: keyFlags{}}, setup: &setupFlags{}, await: &awaitFlags{}}
 
 	name, flagArgs := splitCommand(args)
 	if name == "" && wantsHelp(flagArgs) {
@@ -211,6 +230,9 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	case "migrate":
 		flags.BoolVar(&env.migrate.write, "write", false, "")
 		flags.Var(env.migrate.keys, "key", "")
+	case "await":
+		flags.StringVar(&env.await.project, "project", "", "")
+		flags.DurationVar(&env.await.timeout, "timeout", await.DefaultTimeout, "")
 	case "setup":
 		flags.BoolVar(&env.setup.write, "write", false, "")
 		flags.BoolVar(&env.setup.uninstall, "uninstall", false, "")
@@ -455,6 +477,48 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	return nil
 }
 
+// runAwait waits for a question's answer and prints it (agent-protocol
+// §7.5). Its stdout is what wakes the agent, so it holds only the answer.
+func runAwait(ctx context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
+	switch {
+	case flags.NArg() == 0:
+		return usageError{"await needs a question id: flashheart await q-… --project NAME"}
+	case flags.NArg() > 1:
+		return usageError{"await takes one question id"}
+	case strings.TrimSpace(env.await.project) == "":
+		return usageError{"await needs --project, the project the question was asked in"}
+	case env.await.timeout <= 0:
+		return usageError{"--timeout must be positive"}
+	}
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		return err
+	}
+	s, err := store.Open(root)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("board root %s does not exist", root)
+		}
+		return err
+	}
+	defer s.Close()
+	question := flags.Arg(0)
+	result, err := await.Wait(ctx, events.New(s), await.Options{Project: env.await.project, Question: question, Timeout: env.await.timeout})
+	switch {
+	case errors.Is(err, await.ErrTimeout):
+		return fmt.Errorf("%s: no answer yet; it is still on the board, so run this command again to keep waiting (waited %s)", question, env.await.timeout)
+	case err != nil && result.Note == "":
+		return err
+	case result.AlreadyDelivered:
+		_, err = fmt.Fprintf(env.stdout, "The answer to %s was already delivered to your session.\n", question)
+		return err
+	}
+	// An answer taken from the inbox is printed even if marking it
+	// delivered failed, so it is never lost.
+	_, writeErr := io.WriteString(env.stdout, result.Note)
+	return errors.Join(writeErr, err)
+}
+
 // projectDirEnv is where Claude Code says the session works; user-scope
 // MCP servers start in ~/.claude, not the project (agent-protocol §7.1).
 const projectDirEnv = "CLAUDE_PROJECT_DIR"
@@ -480,7 +544,11 @@ func runMCP(ctx context.Context, env *environment, flags *flag.FlagSet, globals 
 	if stdin == nil {
 		stdin = strings.NewReader("")
 	}
-	return mcpserver.Serve(ctx, mcpserver.Options{Root: root, Cwd: cwd}, stdin, env.stdout)
+	binary := ""
+	if env.deps.Executable != nil {
+		binary, _ = env.deps.Executable()
+	}
+	return mcpserver.Serve(ctx, mcpserver.Options{Root: root, Cwd: cwd, Binary: binary}, stdin, env.stdout)
 }
 
 // runSetup shows, or with --write applies, an agent's configuration
@@ -675,6 +743,12 @@ func writeCommandUsage(output io.Writer, command command) {
 		fmt.Fprintln(output, "Options:")
 		fmt.Fprintln(output, "  --write       apply the changes (otherwise only show them)")
 		fmt.Fprintln(output, "  --uninstall   show (with --write, apply) the reverse")
+		writeGlobalOptionLines(output)
+		return
+	case "await":
+		fmt.Fprintln(output, "Options:")
+		fmt.Fprintln(output, "  --project P   the project the question was asked in (required)")
+		fmt.Fprintln(output, "  --timeout T   give up after duration T (default 12h)")
 		writeGlobalOptionLines(output)
 		return
 	case "migrate":
