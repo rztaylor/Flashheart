@@ -168,3 +168,11 @@ All notable changes to this project are documented here. The project follows
   suite.
 - Product specification, board format (v2) and agent protocol (v1), roadmap,
   decisions, contributor facts and the implementation kickoff prompt.
+
+### Fixed
+
+- Stopping `flashheart serve` now waits for the board watcher and the
+  event-log pruner to finish before it closes the board, so they can no
+  longer touch a closed board or print a spurious "expire old events"
+  error at shutdown. This also removes an intermittent CI data race
+  (FH-37).
