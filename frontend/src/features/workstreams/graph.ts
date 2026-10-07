@@ -164,3 +164,22 @@ export function layoutGraph(tickets: GraphTicket[]): Layout {
   const layers = stations.reduce((max, s) => Math.max(max, s.layer + 1), 0);
   return { stations, edges, free, layers, lanes };
 }
+
+// moveFree moves the independent ticket at position from to position to
+// among the free tickets, which take each other's places in the full ticket
+// list, so tickets on the graph keep theirs (EDIT-4).
+export function moveFree(
+  all: string[],
+  free: string[],
+  from: number,
+  to: number,
+): string[] {
+  const moved = [...free];
+  const [item] = moved.splice(from, 1);
+  if (item === undefined) return all;
+  moved.splice(to, 0, item);
+  let next = 0;
+  return all.map((id) =>
+    free.includes(id) && next < moved.length ? (moved[next++] ?? id) : id,
+  );
+}

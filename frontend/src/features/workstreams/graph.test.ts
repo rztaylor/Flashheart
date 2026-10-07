@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { layoutGraph } from "./graph";
+import { layoutGraph, moveFree } from "./graph";
 
 const t = (id: string, ...dependsOn: string[]) => ({ id, dependsOn });
 
@@ -100,5 +100,23 @@ describe("layoutGraph", () => {
     expect(layout.stations).toHaveLength(2);
     expect(layout.edges).toHaveLength(1);
     expect(layout.free).toEqual([]);
+  });
+});
+
+describe("moveFree", () => {
+  it("moves an independent ticket among the others, leaving linked ones in place", () => {
+    // B and D are on the graph; A, C and E are independent.
+    expect(moveFree(["A", "B", "C", "D", "E"], ["A", "C", "E"], 2, 0)).toEqual([
+      "E",
+      "B",
+      "A",
+      "D",
+      "C",
+    ]);
+    expect(moveFree(["A", "B", "C"], ["A", "C"], 0, 1)).toEqual([
+      "C",
+      "B",
+      "A",
+    ]);
   });
 });

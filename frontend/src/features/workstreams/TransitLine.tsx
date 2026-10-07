@@ -6,7 +6,6 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   rectSortingStrategy,
   SortableContext,
   useSortable,
@@ -26,7 +25,7 @@ import { Icon } from "../../components/Icon";
 import { Pill, StatusPill } from "../../components/Pill";
 import type { Line } from "../../model/lines";
 import { statusOf } from "../../model/status";
-import { type Edge, layoutGraph } from "./graph";
+import { type Edge, layoutGraph, moveFree } from "./graph";
 
 interface TransitLineProps {
   workstream: Workstream;
@@ -364,18 +363,15 @@ function FreeStations({
     refocus.current = "";
   }, [workstream.tickets]);
 
-  // The free stations take each other's places in the full ticket list, so
-  // linked tickets keep theirs.
-  const save = (from: number, to: number) => {
-    if (!onReorder) return;
-    const moved = arrayMove(ids, from, to);
-    let next = 0;
-    onReorder(
-      workstream.tickets.map((ticket) =>
-        ids.includes(ticket.id) ? (moved[next++] ?? ticket.id) : ticket.id,
+  const save = (from: number, to: number) =>
+    onReorder?.(
+      moveFree(
+        workstream.tickets.map((ticket) => ticket.id),
+        ids,
+        from,
+        to,
       ),
     );
-  };
   const onKey = (index: number) => (event: KeyboardEvent<HTMLElement>) => {
     if (!onReorder || !event.shiftKey) return;
     const step =
