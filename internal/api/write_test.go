@@ -121,6 +121,30 @@ func TestMovingIntoReviewWarnsButMoves(t *testing.T) {
 	}
 }
 
+func TestMovingIntoReviewWarnsWithoutEvidence(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	review := filepath.Join(root, "alpha", "tickets", "AL-4-drag-and-drop", "review.md")
+	if err := os.WriteFile(review, []byte("# Review: Drag and drop\n\n## Summary\nDone.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var moved WriteResponse
+	send(t, handler, http.MethodPost, "/api/tickets/AL-4/move", MoveRequest{To: "review"}, http.StatusOK, &moved)
+	if !slices.ContainsFunc(moved.Warnings, func(w string) bool { return strings.Contains(w, "no evidence") }) {
+		t.Errorf("warnings = %q", moved.Warnings)
+	}
+	if ticketDetail(t, handler, "AL-4").Column != "review" {
+		t.Error("the move must still happen")
+	}
+	// The sample's AL-2 review shows a screenshot: no evidence warning.
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "in-progress"}, http.StatusOK, nil)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "review"}, http.StatusOK, &moved)
+	if slices.ContainsFunc(moved.Warnings, func(w string) bool { return strings.Contains(w, "no evidence") }) {
+		t.Errorf("AL-2 warnings = %q", moved.Warnings)
+	}
+}
+
 func TestPatchTicketFields(t *testing.T) {
 	t.Parallel()
 

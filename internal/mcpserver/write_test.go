@@ -182,6 +182,16 @@ func TestMove(t *testing.T) {
 	e.ok("move", map[string]any{"ticket": first, "to": "backlog"})
 	e.fails("move", map[string]any{"ticket": second, "to": "in-progress"}, "blocked")
 	e.ok("move", map[string]any{"ticket": second, "to": "up-next"})
+
+	// A review without a screenshot or a stated reason warns; one with
+	// either does not (FH-29).
+	e.ok("write_review", map[string]any{"ticket": second, "markdown": "# Review: Second\n\n## Summary\nDone.\n"})
+	contains(t, e.ok("move", map[string]any{"ticket": second, "to": "review"}), "warning: The review shows no evidence")
+	e.ok("move", map[string]any{"ticket": second, "to": "up-next"})
+	e.ok("write_review", map[string]any{"ticket": second, "markdown": "# Review: Second\n\n## Evidence\nNo visible change: an internal rename.\n"})
+	if out := e.ok("move", map[string]any{"ticket": second, "to": "review"}); strings.Contains(out, "no evidence") {
+		t.Errorf("move = %s", out)
+	}
 }
 
 func TestProjectKeys(t *testing.T) {

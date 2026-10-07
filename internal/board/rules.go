@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/rztaylor/flashheart/internal/mdfile"
 )
 
 // Editable ticket fields shared by the UI and the MCP tools (EDIT-6). The
@@ -59,12 +61,15 @@ func ValidateField(key, value string) error {
 }
 
 // ReviewWarnings are what a move into Ready to review warns about: a
-// missing review file and unticked criteria (EDIT-3). They never prevent
-// the move.
-func ReviewWarnings(ticket Ticket, hasReview bool) []string {
+// missing review file, a review with no evidence (agent-protocol §11) and
+// unticked criteria (EDIT-3). They never prevent the move.
+func ReviewWarnings(ticket Ticket, review string, hasReview bool) []string {
 	var warnings []string
-	if !hasReview {
+	switch {
+	case !hasReview:
 		warnings = append(warnings, "There is no review file yet.")
+	case !ReviewHasEvidence(review):
+		warnings = append(warnings, "The review shows no evidence: add screenshots of what changed, or say under ## Evidence why there are none.")
 	}
 	open := 0
 	for _, criterion := range ticket.Criteria {
@@ -94,4 +99,29 @@ func OneLine(value string, limit int) string {
 		value = string(runes[:limit])
 	}
 	return value
+}
+
+var (
+	reviewImage     = regexp.MustCompile(`!\[[^\]]*\]\([^)\s]+\)`)
+	reviewTemplated = regexp.MustCompile(`^<[^>]*>$`)
+)
+
+// ReviewHasEvidence reports whether a review shows what changed: an image
+// anywhere, or an ## Evidence section that says something beyond the
+// template's placeholder (such as why there is no visible change).
+func ReviewHasEvidence(review string) bool {
+	if reviewImage.MatchString(review) {
+		return true
+	}
+	section, ok := mdfile.FindSection(review, "Evidence")
+	if !ok {
+		return false
+	}
+	for _, line := range strings.Split(section.Content, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" && !reviewTemplated.MatchString(line) {
+			return true
+		}
+	}
+	return false
 }
