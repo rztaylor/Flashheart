@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -27,13 +28,19 @@ const runWindowDays = 2
 // tracker reads each project's recent event files, only lines appended
 // since the last rebuild, and folds all of them into one set in time order:
 // a run's events can sit in several projects' logs (a claim on another
-// project's ticket), and it is one run. It is used under the index's lock.
+// project's ticket), and it is one run. New events no older than the last
+// one applied are applied as they arrive; an older one, a removed project or
+// a new day refolds the window from the events kept. It is used under the
+// index's lock.
 type tracker struct {
 	source   EventSource
 	day      string
 	projects map[string]*projectEvents
 	set      *runs.Set
-	folded   string
+	// last is the time of the latest event applied to set.
+	last time.Time
+	// refolds counts full refolds, for tests.
+	refolds int
 }
 
 type projectEvents struct {
@@ -41,21 +48,24 @@ type projectEvents struct {
 	offsets map[string]int64
 }
 
-// update reads new events for the given projects, refolds the set when
-// anything was read, and returns a fingerprint of what has been read.
+// update reads new events for the given projects, folds them, and returns
+// a fingerprint of what has been read.
 func (t *tracker) update(projects []string, now time.Time) string {
+	refold := t.set == nil
 	if day := events.FileName(now); day != t.day {
 		// A new day: start again from the window, so old runs fall away.
-		t.day, t.projects, t.folded = day, map[string]*projectEvents{}, ""
+		t.day, t.projects, refold = day, map[string]*projectEvents{}, true
 	}
 	first := events.FileName(now.AddDate(0, 0, -runWindowDays))
 	var parts []string
 	for name := range t.projects {
 		if !slices.Contains(projects, name) {
 			delete(t.projects, name)
+			refold = true
 		}
 	}
-	for _, project := range projects {
+	var fresh []events.Event
+	for _, project := range slices.Sorted(slices.Values(projects)) {
 		files, err := t.source.Files(project)
 		if err != nil || len(files) == 0 {
 			continue
@@ -71,26 +81,34 @@ func (t *tracker) update(projects []string, now time.Time) string {
 			}
 			offset, _ := t.source.ReadFrom(project, file, state.offsets[file], func(e events.Event) {
 				state.events = append(state.events, e)
+				fresh = append(fresh, e)
 			})
 			state.offsets[file] = offset
 			parts = append(parts, fmt.Sprintf("%s/%s:%d", project, file, offset))
 		}
 	}
-	sort.Strings(parts)
-	read := strings.Join(parts, ",")
-	if t.set == nil || read != t.folded {
+	slices.SortStableFunc(fresh, func(a, b events.Event) int { return a.Time.Compare(b.Time) })
+	if len(fresh) > 0 && fresh[0].Time.Before(t.last) {
+		refold = true
+	}
+	if refold {
+		t.refolds++
 		var all []events.Event
-		for _, state := range t.projects {
-			all = append(all, state.events...)
+		for _, name := range slices.Sorted(maps.Keys(t.projects)) {
+			all = append(all, t.projects[name].events...)
 		}
 		slices.SortStableFunc(all, func(a, b events.Event) int { return a.Time.Compare(b.Time) })
-		t.set = runs.NewSet()
-		for _, e := range all {
-			t.set.Apply(e)
-		}
-		t.folded = read
+		t.set, t.last = runs.NewSet(), time.Time{}
+		fresh = all
 	}
-	return read
+	for _, e := range fresh {
+		t.set.Apply(e)
+		if e.Time.After(t.last) {
+			t.last = e.Time
+		}
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ",")
 }
 
 // views derives every tracked run at now, linking runs by branch to the

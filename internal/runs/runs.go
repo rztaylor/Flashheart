@@ -320,8 +320,13 @@ func (s *Set) Apply(e events.Event) {
 		var data events.CheckpointData
 		_ = e.Decode(&data)
 		// A session owns its ticket's handoff: a checkpoint by it or any of
-		// its subagents settles the edits of all of them (HOOK-6, §10).
-		for _, member := range s.family(r) {
+		// its subagents settles the edits of all of them (HOOK-6, §10). A
+		// subagent's checkpoint on a ticket of its own settles only its own.
+		members := s.family(r)
+		if root := members[0]; r != root && root.Claim != "" && data.Ticket != root.Claim {
+			members = []*Run{r}
+		}
+		for _, member := range members {
 			member.Edits, member.LastCheckpoint = 0, e.Time
 		}
 		entry.Ticket = data.Ticket

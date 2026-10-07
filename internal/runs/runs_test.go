@@ -447,3 +447,26 @@ func TestASessionIsDirtyWithItsSubagentsEdits(t *testing.T) {
 		}
 	}
 }
+
+// A subagent's checkpoint on a ticket of its own leaves its session's edits
+// for the session's ticket due (FH-8 review).
+func TestASubagentCheckpointElsewhereLeavesItsSessionDue(t *testing.T) {
+	t.Parallel()
+
+	child := session + "/a1"
+	s := NewSet()
+	for _, e := range []events.Event{
+		start(0), turn(1),
+		ev(2, session, events.Claim, events.TicketData{Ticket: "AL-3"}),
+		tool(3, "Edit", "a.go"),
+		ev(4, child, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}),
+		ev(5, child, events.Claim, events.TicketData{Ticket: "AL-9"}),
+		ev(6, child, events.ToolUsed, events.ToolData{Tool: "Edit", OK: true, Path: "b.go"}),
+		ev(7, child, events.Checkpoint, events.CheckpointData{Ticket: "AL-9"}),
+	} {
+		s.Apply(e)
+	}
+	if s.Dirty(child) || !s.Dirty(session) || s.Edits(session) != 1 {
+		t.Fatalf("child dirty %v, session dirty %v edits %d", s.Dirty(child), s.Dirty(session), s.Edits(session))
+	}
+}

@@ -316,15 +316,30 @@ func (o Options) registered() (command string, args []string, found bool, proble
 		}
 		return "", nil, false, fmt.Sprintf("Could not ask claude for the MCP registration (%v); setup registers the server again.", err)
 	}
+	scope := ""
 	for _, line := range strings.Split(text, "\n") {
 		key, value, ok := strings.Cut(strings.TrimSpace(line), ":")
+		value = strings.TrimSpace(value)
 		switch {
 		case !ok:
+		case key == "Scope":
+			scope = value
 		case key == "Command":
-			command, found = strings.TrimSpace(value), true
+			command, found = value, true
 		case key == "Args":
-			args = strings.Fields(value)
+			// The CLI prints the arguments joined by spaces, so ours are
+			// compared as printed: a root with spaces stays one argument.
+			if value == strings.Join(o.serverArgs(), " ") {
+				args = o.serverArgs()
+			} else {
+				args = strings.Fields(value)
+			}
 		}
+	}
+	// Only the user-scope registration is setup's; one in a project or
+	// local scope is the user's own and is left alone.
+	if !strings.HasPrefix(scope, "User") {
+		return "", nil, false, ""
 	}
 	return command, args, found, ""
 }

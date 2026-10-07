@@ -220,3 +220,29 @@ func TestQuestionsOfEndedRunsWaitForTheSession(t *testing.T) {
 		t.Fatalf("Question = %+v %+v %v", q, run, ok)
 	}
 }
+
+// New events in time order are applied to the folded runs as they arrive;
+// only an event older than the last applied one refolds the window (FH-8
+// review: a full refold per event stalls serve at NFR-1 volume).
+func TestNewEventsFoldIncrementally(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	now := clock.now
+	appendEvent(t, log, now.Add(-5*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSession})
+	if _, err := index.Rebuild(); err != nil {
+		t.Fatal(err)
+	}
+	base := index.events.refolds
+	appendEvent(t, log, now.Add(-4*time.Minute), events.TurnStart, events.TurnStartData{})
+	working, _ := index.Rebuild()
+	if index.events.refolds != base || working.Runs[0].State != runs.Working {
+		t.Fatalf("in-order append: refolds %d → %d, state %s", base, index.events.refolds, working.Runs[0].State)
+	}
+	// An event stamped before the last one (another writer's clock) refolds.
+	appendEvent(t, log, now.Add(-10*time.Minute), events.ToolUsed, events.ToolData{Tool: "Edit", OK: true, Path: "a.go"})
+	late, _ := index.Rebuild()
+	if index.events.refolds != base+1 || late.Runs[0].Edits != 1 || late.Runs[0].State != runs.Working {
+		t.Fatalf("late event: refolds %d, run %+v", index.events.refolds, late.Runs[0])
+	}
+}

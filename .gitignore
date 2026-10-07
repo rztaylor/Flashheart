@@ -9,6 +9,8 @@ coverage.out
 
 .DS_Store
 *.log
+# Editor swap files
+.*.sw?
 
 # Impeccable per-machine overrides and review captures
 .impeccable/config.local.json

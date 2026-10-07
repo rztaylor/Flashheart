@@ -687,7 +687,7 @@ func TestSetupClaudeShowsThenWritesThenUninstalls(t *testing.T) {
 			if !registered {
 				return []byte(`No MCP server named "flashheart".`), errors.New("exit status 1")
 			}
-			return []byte("flashheart:\n  Command: /opt/bin/flashheart\n  Args: mcp\n"), nil
+			return []byte("flashheart:\n  Scope: User config (available in all your projects)\n  Command: /opt/bin/flashheart\n  Args: mcp\n"), nil
 		case "add-json":
 			registered = true
 		case "remove":

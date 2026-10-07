@@ -27,6 +27,8 @@ type machine struct {
 	server string
 	// queried counts claude mcp get calls.
 	queried int
+	// scope is the Scope line claude mcp get prints; empty means user.
+	scope string
 }
 
 // newMachine is a home with the fixture settings, a kanban-tracker skill
@@ -75,7 +77,11 @@ func (m *machine) mcpGet() ([]byte, error) {
 	if err := json.Unmarshal([]byte(m.server), &config); err != nil {
 		m.t.Fatal(err)
 	}
-	return []byte("flashheart:\n  Scope: User config (available in all your projects)\n  Status: ✔ Connected\n  Type: stdio\n  Command: " + config.Command + "\n  Args: " + strings.Join(config.Args, " ") + "\n\nTo remove this server, run: claude mcp remove flashheart -s user\n"), nil
+	scope := m.scope
+	if scope == "" {
+		scope = "User config (available in all your projects)"
+	}
+	return []byte("flashheart:\n  Scope: " + scope + "\n  Status: ✔ Connected\n  Type: stdio\n  Command: " + config.Command + "\n  Args: " + strings.Join(config.Args, " ") + "\n\nTo remove this server, run: claude mcp remove flashheart -s user\n"), nil
 }
 
 func (m *machine) write(name, data string) {
@@ -454,5 +460,32 @@ func TestUninstallRestoresAUsersOwnFlashheartSkill(t *testing.T) {
 	m.apply(false)
 	if got := string(m.read(".claude/skills/flashheart/SKILL.md")); got != "---\nname: flashheart\n---\nmy own notes\n" {
 		t.Fatalf("skill after uninstall = %q", got)
+	}
+}
+
+// A root with spaces in its path is compared as the CLI prints it, so setup
+// stays idempotent (FH-8 review).
+func TestARootWithSpacesStaysRegistered(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.options.Root = "/Users/me/Library/Mobile Documents/board"
+	m.apply(true)
+	if plan := m.plan(true); len(plan.commands) != 0 {
+		t.Fatalf("second plan re-registers: %v", plan.commands)
+	}
+}
+
+// A flashheart server registered in another scope is not setup's user-scope
+// registration: setup adds its own and removes nothing.
+func TestAnotherScopesServerIsLeftAlone(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.server = `{"type": "stdio", "command": "/old/flashheart", "args": ["mcp"]}`
+	m.scope = "Local config (private to you in this project)"
+	plan := m.plan(true)
+	if len(plan.commands) != 1 || plan.commands[0][1] != "add-json" {
+		t.Fatalf("commands = %v", plan.commands)
 	}
 }

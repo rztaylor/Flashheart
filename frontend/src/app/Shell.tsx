@@ -796,6 +796,7 @@ export function Shell({
               revision={revision}
               editing={editing}
               onStep={stepTicket}
+              answers={answers}
               workstreamsOf={(project) => workstreams.get(project) ?? []}
             />
           ) : null}

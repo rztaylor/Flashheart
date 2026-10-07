@@ -1,7 +1,8 @@
 // Package index keeps serve's in-memory, revisioned snapshot of the board:
 // every project with its derived blocking analysis and the agent runs of the
-// last two days' event logs (read incrementally and folded across projects
-// in time order, so a run with a claim in another project is one run;
+// last two days' event logs (read and folded incrementally across projects
+// in time order, so a run with a claim in another project is one run, and
+// refolded only when an event arrives out of order;
 // linked to tickets by branch), rebuilt from store and events when a caller finds it older than
 // MaxAge or when file watching sees a change.
 //

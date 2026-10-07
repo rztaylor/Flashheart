@@ -97,8 +97,8 @@ func (srv *server) start(runArg string, write bool) (*call, error) {
 	} else {
 		c.where = srv.store.Locate(srv.options.Cwd, c.now)
 		project, err = srv.store.FindProject(c.where.Project, c.where.Repo)
-		if errors.Is(err, store.ErrNotFound) && settings.AutoCreateProjects {
-			c.missing = store.ProjectName(c.where.Project)
+		if errors.Is(err, store.ErrNotFound) && settings.AutoCreateProjects && project != "" {
+			c.missing, project = project, ""
 		}
 	}
 	switch {
@@ -262,7 +262,6 @@ func (c *call) session() string {
 	return session
 }
 
-// callerProject returns the caller's parsed project.
 // load reads projects in full, with the projects their tickets depend on
 // (one level, enough for every blocking reason they show), and analyses
 // the board again.
@@ -276,9 +275,16 @@ func (c *call) load(names ...string) error {
 	if len(wanted) == 0 {
 		return nil
 	}
-	keys := map[string]string{}
+	// A dependency's project is the one whose folders hold its id (heads
+	// carry ids); its key alone can mislead, since a project with no tickets
+	// may derive the same key and a ticket may sit under another key.
+	owner := map[string]string{}
 	for _, project := range c.board.Projects {
-		keys[project.Key] = project.Name
+		for _, ticket := range project.Tickets {
+			if _, taken := owner[ticket.ID]; !taken {
+				owner[ticket.ID] = project.Name
+			}
+		}
 	}
 	read := func(name string) error {
 		project, err := c.srv.store.ReadProject(name)
@@ -297,8 +303,7 @@ func (c *call) load(names ...string) error {
 	for _, name := range wanted {
 		for _, ticket := range c.projectNamed(name).Tickets {
 			for _, id := range ticket.DependsOn {
-				key, _, _ := board.ParseID(id)
-				if other, ok := keys[key]; ok && !c.loaded[other] {
+				if other, ok := owner[id]; ok && !c.loaded[other] {
 					if err := read(other); err != nil {
 						return err
 					}
@@ -310,6 +315,7 @@ func (c *call) load(names ...string) error {
 	return nil
 }
 
+// callerProject returns the caller's parsed project.
 func (c *call) callerProject() *board.Project {
 	return c.projectNamed(c.project)
 }

@@ -400,7 +400,8 @@ When `enforce_handoff` is on for the project, at `Stop`:
   and is attributed to the subagent run.
 - A session owns its ticket's handoff: its subagents' edits count toward its
   handoff enforcement (§9, `HOOK-6`), and a checkpoint by the session or any
-  of its subagents settles them all. A subagent's own claim on its
+  of its subagents on the session's ticket settles them all; a subagent's
+  checkpoint on a ticket of its own settles only its own edits. A subagent's own claim on its
   session's ticket leaves the session holding it (§6).
 
 ## 11. Screenshots and review

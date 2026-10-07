@@ -54,6 +54,8 @@ interface CardPanelProps {
   // onStep moves the ticket within its column (EDIT-9); absent when the
   // board does not show it.
   onStep?: (step: Step) => void;
+  // answers: the server records answers to agents' questions (RUN-8).
+  answers?: boolean;
   workstreamsOf(project: string): WorkstreamBrief[];
 }
 
@@ -75,6 +77,7 @@ export function CardPanel({
   revision,
   editing,
   onStep,
+  answers = false,
   workstreamsOf,
 }: CardPanelProps) {
   const load = useCallback(
@@ -127,7 +130,7 @@ export function CardPanel({
       : undefined;
   // answer sends an answer to an agent's question (CARD-6).
   const answer =
-    editing && detail && editable
+    editing && detail && answers
       ? (id: string, text: string) =>
           editing.answer(id, text).finally(() => resource.reload())
       : undefined;

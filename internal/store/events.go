@@ -162,7 +162,8 @@ func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 
 // FindProject is ProjectFor for callers that only read: it takes no lock and
 // writes nothing, so a project that records no repositories is found but
-// not given this one, and a missing project is ErrNotFound.
+// not given this one. A missing project is ErrNotFound with the name a
+// write would create.
 func (s *Store) FindProject(name, repo string) (string, error) {
 	candidates := projectCandidates(name, repo)
 	for _, candidate := range candidates {
@@ -182,7 +183,7 @@ func (s *Store) FindProject(name, repo string) (string, error) {
 			}
 			continue
 		}
-		return "", fmt.Errorf("project %q: %w", candidate, ErrNotFound)
+		return candidate, fmt.Errorf("project %q: %w", candidate, ErrNotFound)
 	}
 	return "", fmt.Errorf("project for %s: %w", repo, ErrNotFound)
 }
