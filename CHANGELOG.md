@@ -168,3 +168,11 @@ All notable changes to this project are documented here. The project follows
   suite.
 - Product specification, board format (v2) and agent protocol (v1), roadmap,
   decisions, contributor facts and the implementation kickoff prompt.
+
+### Fixed
+
+- An edit made in a new ticket folder just after the folder appeared could
+  take up to ten seconds to reach the board instead of under a second
+  (STO-7): the watcher now watches new folders before it publishes their
+  revision. This was also the most common cause of intermittent CI failures
+  (FH-36).
