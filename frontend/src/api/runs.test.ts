@@ -139,6 +139,9 @@ describe("run validators", () => {
       false,
     );
     expect(
+      isPreferences({ ...preferences, virtualColumns: ["agent-working"] }),
+    ).toBe(false);
+    expect(
       isPreferences({
         ...preferences,
         scopes: {
@@ -148,7 +151,7 @@ describe("run validators", () => {
             priority: { include: ["high"], exclude: [] },
             workstream: { include: [], exclude: ["board-ui"] },
             age: { include: [], exclude: [] },
-            state: "",
+            state: "working",
           },
         },
       }),

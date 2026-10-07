@@ -12,34 +12,24 @@ const card = (patch: Partial<Card>) =>
   ({ needsYou: false, agentWorking: false, ...patch }) as Card;
 
 describe("virtual columns", () => {
-  it("are Needs you then Agent working", () => {
-    expect(VIRTUAL_COLUMNS.map((column) => column.id)).toEqual([
-      "needs-you",
-      "agent-working",
-    ]);
+  it("are Needs you alone; Agent working is a State filter (FH-42)", () => {
+    expect(VIRTUAL_COLUMNS.map((column) => column.id)).toEqual(["needs-you"]);
   });
 
   it("show only when chosen and holding tickets", () => {
     const cards = [card({ needsYou: true }), card({})];
-    expect(
-      shownVirtual(cards, ["needs-you", "agent-working"]).map((c) => c.id),
-    ).toEqual(["needs-you"]);
-    expect(shownVirtual(cards, ["agent-working"])).toEqual([]);
-    expect(
-      shownVirtual([card({ agentWorking: true })], ["agent-working"]).map(
-        (c) => c.id,
-      ),
-    ).toEqual(["agent-working"]);
+    expect(shownVirtual(cards, ["needs-you"]).map((c) => c.id)).toEqual([
+      "needs-you",
+    ]);
+    expect(shownVirtual(cards, [])).toEqual([]);
+    expect(shownVirtual([card({ agentWorking: true })], ["needs-you"])).toEqual(
+      [],
+    );
   });
 
-  it("toggle in their fixed order", () => {
-    expect(toggleVirtual(["agent-working"], "needs-you", true)).toEqual([
-      "needs-you",
-      "agent-working",
-    ]);
-    expect(
-      toggleVirtual(["needs-you", "agent-working"], "needs-you", false),
-    ).toEqual(["agent-working"]);
+  it("toggle on and off", () => {
+    expect(toggleVirtual([], "needs-you", true)).toEqual(["needs-you"]);
+    expect(toggleVirtual(["needs-you"], "needs-you", false)).toEqual([]);
     expect(toggleVirtual([], "needs-you", false)).toEqual([]);
   });
 
@@ -47,13 +37,12 @@ describe("virtual columns", () => {
     const real = ["backlog", "up-next", "in-progress", "review", "done"].map(
       (id) => ({ id }),
     );
-    const mirrors = [{ id: "needs-you" }, { id: "agent-working" }];
+    const mirrors = [{ id: "needs-you" }];
     expect(placeVirtual(real, mirrors).map((column) => column.id)).toEqual([
       "backlog",
       "up-next",
       "in-progress",
       "needs-you",
-      "agent-working",
       "review",
       "done",
     ]);

@@ -129,7 +129,8 @@ type Card struct {
 	Warnings    []string     `json:"warnings"`
 	SearchText  string       `json:"searchText,omitempty"`
 	// Live is the linked run that most needs attention (VIEW-8); NeedsYou
-	// and AgentWorking place the card in the virtual columns (VIEW-2).
+	// places the card in the Needs you column (VIEW-2), and AgentWorking
+	// answers the Agent working State filter (FH-42).
 	Live         *LiveJSON `json:"live,omitempty"`
 	NeedsYou     bool      `json:"needsYou"`
 	AgentWorking bool      `json:"agentWorking"`

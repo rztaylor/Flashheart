@@ -50,7 +50,7 @@ Obsidian without Flashheart running.
 
 ## Capabilities and Constraints
 
-- Views: Board (real columns, virtual Needs you and Agent working columns),
+- Views: Board (real columns, a virtual Needs you column),
   Agents (run lanes), Workstreams (ordered swimlanes), Table; card panel with
   Ticket, Edit, Runs, Attachments and Review tabs; three card densities.
 - Blocking is explained (ticket dependency, workstream dependency, workstream

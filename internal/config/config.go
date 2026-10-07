@@ -44,10 +44,10 @@ const (
 var (
 	themes         = []string{ThemeSystem, ThemeLight, ThemeDark}
 	densities      = []string{DensityCompact, DensityNormal, DensityDetailed}
-	virtualColumns = []string{"needs-you", "agent-working"}
+	virtualColumns = []string{"needs-you"}
 	colourBys      = []string{"type", "priority", "age", "none"}
 	views          = []string{"", "board", "agents", "workstreams", "table"}
-	states         = []string{"", "all", "blocked", "unblocked", "repair"}
+	states         = []string{"", "all", "blocked", "unblocked", "repair", "working"}
 	ages           = []string{"today", "week", "older"}
 	scopeName      = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )
@@ -214,6 +214,11 @@ func Parse(data []byte) (Config, error) {
 	}
 	if err := document.Decode(&config); err != nil {
 		return Config{}, fmt.Errorf("parse config.yaml: %w", err)
+	}
+	// The Agent working column was retired for the State filter (FH-42); a
+	// saved one is dropped rather than refused.
+	if config.UI.VirtualColumns != nil {
+		config.UI.VirtualColumns = slices.DeleteFunc(config.UI.VirtualColumns, func(column string) bool { return column == "agent-working" })
 	}
 	return config, config.validate()
 }

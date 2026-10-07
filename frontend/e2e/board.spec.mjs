@@ -536,6 +536,17 @@ test("chips and filter menus show only or hide values (FH-39)", async () => {
     await page.getByRole("button", { name: "View options" }).click();
     await expect(page.getByRole("group", { name: "Colour by" })).toBeVisible();
     await shot(page, `board-view-options-${theme}`);
+    await expect(
+      page.getByRole("checkbox", { name: "Agent working" }),
+    ).toHaveCount(0);
+    await page.locator("h1").click();
+    const states = await filterMenu(page, "State");
+    await expect(
+      states.getByRole("button", { name: "Agent working" }),
+    ).toBeVisible();
+    await shot(page, `board-state-menu-${theme}`);
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "View options" }).click();
     // A click outside closes a menu.
     await page.locator("h1").click();
     await expect(page.getByRole("group", { name: "Colour by" })).toHaveCount(0);

@@ -128,6 +128,16 @@ describe("applyFilters", () => {
     ).toEqual(["AL-7"]);
   });
 
+  it("shows only tickets with an agent at work (FH-42)", () => {
+    const working = [
+      card({ id: "AL-1", agentWorking: true }),
+      card({ id: "AL-2" }),
+    ];
+    expect(
+      ids(applyFilters(working, { ...emptyFilters, state: "working" })),
+    ).toEqual(["AL-1"]);
+  });
+
   it("keeps a card matching any included value of a dimension", () => {
     expect(
       ids(applyFilters(cards, { ...emptyFilters, type: only("bug", "spike") })),

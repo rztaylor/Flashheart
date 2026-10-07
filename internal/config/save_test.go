@@ -25,7 +25,7 @@ ui:
 	ui.Density = DensityCompact
 	ui.ColourBy = "priority"
 	ui.Scopes = map[string]Scope{
-		"all":        {View: "board", State: "all"},
+		"all":        {View: "board", State: "working"},
 		"flashheart": {View: "table", Type: Choice{Include: []string{"bug", "spike"}}, Workstream: Choice{Exclude: []string{"board-ui"}}, Age: Choice{Include: []string{"today"}}, State: "blocked"},
 	}
 	got, err := SetUI(data, ui)

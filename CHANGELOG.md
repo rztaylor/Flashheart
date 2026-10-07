@@ -23,6 +23,9 @@ All notable changes to this project are documented here. The project follows
 ### Removed
 
 - The Hide later filter (FH-39); a remembered `hide_later` is ignored.
+- The Agent working column (FH-42, D27): a working ticket now shows once,
+  in its own column, with the Working mark; *State: Agent working* lists
+  them. A saved `agent-working` virtual column is ignored. Needs you stays.
 
 - Workstreams are epics: their tickets may be worked on in sequence or in
   parallel, and a ticket waits only for the tickets its `depends-on` names

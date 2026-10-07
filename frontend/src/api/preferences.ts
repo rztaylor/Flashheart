@@ -12,8 +12,14 @@ export interface FilterChoice {
 export type Density = "compact" | "normal" | "detailed";
 export type ColourBy = "type" | "priority" | "age" | "none";
 export type SavedView = "" | "board" | "agents" | "workstreams" | "table";
-export type VirtualColumn = "needs-you" | "agent-working";
-export type SavedState = "" | "all" | "blocked" | "unblocked" | "repair";
+export type VirtualColumn = "needs-you";
+export type SavedState =
+  | ""
+  | "all"
+  | "blocked"
+  | "unblocked"
+  | "repair"
+  | "working";
 
 // ScopePreferences is the remembered view and filters of one project, or of
 // All projects under the key "all".
@@ -58,13 +64,14 @@ const isView = oneOf<SavedView>([
   "workstreams",
   "table",
 ]);
-const isVirtualColumn = oneOf<VirtualColumn>(["needs-you", "agent-working"]);
+const isVirtualColumn = oneOf<VirtualColumn>(["needs-you"]);
 const isState = oneOf<SavedState>([
   "",
   "all",
   "blocked",
   "unblocked",
   "repair",
+  "working",
 ]);
 
 const isStrings = (value: unknown): value is string[] =>

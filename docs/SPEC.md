@@ -204,12 +204,12 @@ Full format: `docs/dev/specs/board-format.md`.
 - `VIEW-1` **Board**: one column per status in workflow order (Backlog, Up
   next, In progress, Ready to review, Done), each in its manual order
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
-- `VIEW-2` **Virtual columns**: *Needs you* (tickets with a run in Needs you or
-  an open question from a live session) and *Agent working* (tickets linked to a Working or Quiet
-  run). They sit between In progress and Ready to review and appear while
-  they hold tickets. Each
-  can be shown or hidden (Needs you shown by default); a ticket in a virtual
-  column also stays in its real column, marked as mirrored.
+- `VIEW-2` **Virtual column**: *Needs you* (tickets with a run in Needs you or
+  an open question from a live session). It sits between In progress and
+  Ready to review and appears while it holds tickets. It can be shown or
+  hidden (shown by default); a ticket in it also stays in its real column,
+  marked as mirrored. Tickets linked to a Working or Quiet run are found with
+  the State filter's *Agent working* option, not a column (D27, FH-42).
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
   (`RUN-3`), Needs you first: *Needs you*, *Working*, *Quiet*, *Waiting*,
   *Ended*. Subagents nest under their parent. Ended runs older than 24 hours

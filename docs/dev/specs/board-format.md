@@ -308,7 +308,7 @@ ui:
   theme: system           # system | light | dark
   density: normal         # compact | normal | detailed
   colour_by: type         # type | priority | age | none
-  virtual_columns: [needs-you]   # needs-you, agent-working; [] shows none
+  virtual_columns: [needs-you]   # needs-you; [] shows none (agent-working is ignored)
   scopes:                 # remembered view and filters, per project or "all"
     flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked}   # view: board, agents, workstreams or table
 ```

@@ -63,8 +63,9 @@ export interface Card {
   needsRepair: string[];
   warnings: string[];
   searchText?: string;
-  // live is the linked run that most needs attention (VIEW-8); needsYou and
-  // agentWorking place the card in the virtual columns (VIEW-2).
+  // live is the linked run that most needs attention (VIEW-8); needsYou
+  // places the card in the Needs you column (VIEW-2), and agentWorking
+  // answers the Agent working State filter (FH-42).
   live?: Live;
   needsYou: boolean;
   agentWorking: boolean;

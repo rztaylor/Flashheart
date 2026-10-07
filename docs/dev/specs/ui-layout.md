@@ -64,7 +64,7 @@ The header's far end holds *Archive* and, on Board and Table, **New ticket**
 button per filter, named for what it filters with no separate label, Type,
 Priority, Workstream and State, then *Clear filters* while any filter or chip
 applies; right-aligned, Board only, one icon button, *View options* (⋯),
-whose menu holds Show columns (Needs you, Agent working), Colour by and
+whose menu holds Show columns (Needs you), Colour by and
 Density (FH-39). An applied filter's button takes the select border and ring
 and a count badge (*State: Blocked* for the one-choice State). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
@@ -93,9 +93,10 @@ load) sit as a full-width strip under the band, above the rail and Main.
 ## 2. Board
 
 - Columns in workflow order: Backlog, Up next, In progress, Ready to review,
-  Done (`VIEW-1`). Needs you and Agent working stand between In progress and
-  Ready to review while they hold tickets and are switched on (`VIEW-2`);
-  they hold mirrored cards and never accept a drop.
+  Done (`VIEW-1`). Needs you stands between In progress and Ready to review
+  while it holds tickets and is switched on (`VIEW-2`); it holds mirrored
+  cards and never accepts a drop. Agent working is a State filter option
+  (*State: Agent working*), not a column (FH-42).
 - A column is a rounded well. Its head: count badge, then the title in the
   display cut (virtual columns add their run mark). Done reads `n of N`
   while the done limit hides tickets, with *Show all N* / *Show recent only*
