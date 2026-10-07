@@ -134,7 +134,7 @@ export function TransitLine({
         <FreeStations
           workstream={workstream}
           tickets={free}
-          captioned={layout.stations.length > 0}
+          separated={layout.stations.length > 0}
           station={station}
           onReorder={onReorder}
         />
@@ -336,13 +336,13 @@ export function trackPieces(
 function FreeStations({
   workstream,
   tickets,
-  captioned,
+  separated,
   station,
   onReorder,
 }: {
   workstream: Workstream;
   tickets: WorkstreamTicket[];
-  captioned: boolean;
+  separated: boolean;
   station(ticket: WorkstreamTicket, drag?: Record<string, unknown>): ReactNode;
   onReorder?(ids: string[]): void;
 }) {
@@ -390,11 +390,7 @@ function FreeStations({
 
   return (
     <div>
-      {captioned ? (
-        <p className="pt-1 text-2xs font-semibold tracking-[0.02em] text-ink-muted">
-          No dependencies on this line
-        </p>
-      ) : null}
+      {separated ? <hr className="mt-1 mb-3 border-rule" /> : null}
       <DndContext
         sensors={sensors}
         onDragEnd={onDragEnd}

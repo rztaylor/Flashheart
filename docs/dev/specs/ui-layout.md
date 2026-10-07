@@ -199,8 +199,8 @@ reorders them.
   colour at 35%; only suspended service is dashed (unmet workstream
   dependency, or a station held from outside the line), with dashes kept in
   step where tracks share a stretch.
-- Tickets with no links on the line follow below the graph, under *No
-  dependencies on this line* when there is a graph, wrapping onto rows.
+- Tickets with no links on the line follow below the graph, set off by a
+  faint rule when there is a graph, wrapping onto rows.
   Shift with Left/Right or drag reorders them (`EDIT-4`).
 
 ## 5. Agents
