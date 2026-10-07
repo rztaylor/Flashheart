@@ -42,8 +42,14 @@ type call struct {
 	// the caller's project when it is archived (PRJ-5).
 	project  string
 	archived string
-	set      *runs.Set
-	folded   map[string]bool
+	// missing names the caller's project that a write would create.
+	missing string
+	// loaded lists the projects read in full; the board holds every other
+	// project's head only (store.ReadHeads), so a call reads what it needs
+	// at NFR-1 scale.
+	loaded map[string]bool
+	set    *runs.Set
+	folded map[string]bool
 	// seen holds every folded event, so runs are folded in time order
 	// across projects.
 	seen []events.Event
@@ -53,8 +59,20 @@ type call struct {
 	candidates []string
 }
 
-// begin reads the board and works out who is calling.
+// begin reads the board and works out who is calling, for a tool that
+// writes: the caller's project is created (auto_create_projects) or given
+// this repository, and the cwd cache is kept.
 func (srv *server) begin(runArg string) (*call, error) {
+	return srv.start(runArg, true)
+}
+
+// read is begin for a tool that only reads: it changes nothing on disk, so
+// a project that does not exist yet is only named (c.missing).
+func (srv *server) read(runArg string) (*call, error) {
+	return srv.start(runArg, false)
+}
+
+func (srv *server) start(runArg string, write bool) (*call, error) {
 	runArg = strings.TrimSpace(runArg)
 	if runArg != "" && !runPattern.MatchString(runArg) {
 		return nil, fail("invalid_input", "pass the run id as the recovery note shows it, like claude:3f2a9c1e, or leave it out", "run %q is not a run id", runArg)
@@ -63,8 +81,8 @@ func (srv *server) begin(runArg string) (*call, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &call{srv: srv, now: srv.options.Now().UTC(), settings: settings, runs: runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes), set: runs.NewSet(), folded: map[string]bool{}}
-	if c.board, _, err = srv.store.ReadBoard(); err != nil {
+	c := &call{srv: srv, now: srv.options.Now().UTC(), settings: settings, runs: runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes), set: runs.NewSet(), folded: map[string]bool{}, loaded: map[string]bool{}}
+	if c.board, err = srv.store.ReadHeads(); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			// No board root yet: an empty board until the first write.
 			c.analysis = board.Analyze(c.board)
@@ -72,14 +90,23 @@ func (srv *server) begin(runArg string) (*call, error) {
 		}
 		return nil, err
 	}
-	c.where = srv.store.Where(srv.options.Cwd, c.now)
-	project, err := srv.store.ProjectFor(c.where.Project, c.where.Repo, settings.AutoCreateProjects)
+	var project string
+	if write {
+		c.where = srv.store.Where(srv.options.Cwd, c.now)
+		project, err = srv.store.ProjectFor(c.where.Project, c.where.Repo, settings.AutoCreateProjects)
+	} else {
+		c.where = srv.store.Locate(srv.options.Cwd, c.now)
+		project, err = srv.store.FindProject(c.where.Project, c.where.Repo)
+		if errors.Is(err, store.ErrNotFound) && settings.AutoCreateProjects && project != "" {
+			c.missing, project = project, ""
+		}
+	}
 	switch {
 	case err == nil:
 		c.project = project
 		if !slices.ContainsFunc(c.board.Projects, func(p board.Project) bool { return p.Name == project }) {
 			// Just created: read again so the project is in the board.
-			if c.board, _, err = srv.store.ReadBoard(); err != nil {
+			if c.board, err = srv.store.ReadHeads(); err != nil {
 				return nil, err
 			}
 		}
@@ -89,7 +116,9 @@ func (srv *server) begin(runArg string) (*call, error) {
 	default:
 		return nil, err
 	}
-	c.analysis = board.Analyze(c.board)
+	if err := c.load(c.project); err != nil {
+		return nil, err
+	}
 	if err := c.fold(c.project); err != nil {
 		return nil, err
 	}
@@ -233,6 +262,59 @@ func (c *call) session() string {
 	return session
 }
 
+// load reads projects in full, with the projects their tickets depend on
+// (one level, enough for every blocking reason they show), and analyses
+// the board again.
+func (c *call) load(names ...string) error {
+	var wanted []string
+	for _, name := range names {
+		if name != "" && !c.loaded[name] && c.projectNamed(name) != nil {
+			wanted = append(wanted, name)
+		}
+	}
+	if len(wanted) == 0 {
+		return nil
+	}
+	// A dependency's project is the one whose folders hold its id (heads
+	// carry ids); its key alone can mislead, since a project with no tickets
+	// may derive the same key and a ticket may sit under another key.
+	owner := map[string]string{}
+	for _, project := range c.board.Projects {
+		for _, ticket := range project.Tickets {
+			if _, taken := owner[ticket.ID]; !taken {
+				owner[ticket.ID] = project.Name
+			}
+		}
+	}
+	read := func(name string) error {
+		project, err := c.srv.store.ReadProject(name)
+		if err != nil {
+			return err
+		}
+		*c.projectNamed(name) = project
+		c.loaded[name] = true
+		return nil
+	}
+	for _, name := range wanted {
+		if err := read(name); err != nil {
+			return err
+		}
+	}
+	for _, name := range wanted {
+		for _, ticket := range c.projectNamed(name).Tickets {
+			for _, id := range ticket.DependsOn {
+				if other, ok := owner[id]; ok && !c.loaded[other] {
+					if err := read(other); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	c.analysis = board.Analyze(c.board)
+	return nil
+}
+
 // callerProject returns the caller's parsed project.
 func (c *call) callerProject() *board.Project {
 	return c.projectNamed(c.project)
@@ -263,7 +345,10 @@ func (c *call) projectArg(value string) (*board.Project, error) {
 	for index := range c.board.Projects {
 		project := &c.board.Projects[index]
 		if project.Name == value || strings.EqualFold(project.Key, value) && (!project.KeyDerived || project.OwnsIDs()) {
-			return project, nil
+			if err := c.load(project.Name); err != nil {
+				return nil, err
+			}
+			return &c.board.Projects[index], nil
 		}
 	}
 	return nil, fail("not_found", "pass one of: "+strings.Join(c.projectNames(), ", "), "no project %q", value)
@@ -285,10 +370,13 @@ func (c *call) find(id string) (*board.Project, board.Ticket, error) {
 		return nil, board.Ticket{}, fail("invalid_input", "pass a ticket id like FH-42", "%q is not a ticket id", id)
 	}
 	for index := range c.board.Projects {
-		project := &c.board.Projects[index]
-		if project.Key != key {
+		if c.board.Projects[index].Key != key {
 			continue
 		}
+		if err := c.load(c.board.Projects[index].Name); err != nil {
+			return nil, board.Ticket{}, err
+		}
+		project := &c.board.Projects[index]
 		for _, ticket := range project.Tickets {
 			if ticket.ID == id {
 				if err := c.fold(project.Name); err != nil {
@@ -324,8 +412,14 @@ func (c *call) blocked(project *board.Project, ticket board.Ticket) []string {
 	return reasons
 }
 
-// holder is the run holding a live claim on a ticket, or nil.
+// holder is the run holding a live claim on a ticket, or nil. A claim's
+// lease is renewed by the holder's activity wherever it works, so the
+// project the claim names as the holder's home is read too (agent-protocol
+// §6); if it cannot be read, the lease is judged on what has been.
 func (c *call) holder(id string) *runs.Run {
+	if r := c.set.Claimant(id); r != nil && r.Home != "" && !c.folded[r.Home] {
+		_ = c.fold(r.Home)
+	}
 	return c.set.Holder(id, c.now, c.runs)
 }
 

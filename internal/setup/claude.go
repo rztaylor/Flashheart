@@ -300,12 +300,59 @@ func (o Options) installedSettings(data []byte, tree *value) []byte {
 	return encodeLike(tree, data)
 }
 
-// registered reads the user-scope flashheart MCP server from ~/.claude.json
-// (read only: Claude Code owns that file).
-func (o Options) registered() (command string, args []string, found bool) {
+// registered reads the user-scope flashheart MCP server through the claude
+// CLI (claude mcp get), so setup never parses ~/.claude.json, which Claude
+// Code owns. Without the CLI it reads that file, read only; problem says
+// why the registration could not be read.
+func (o Options) registered() (command string, args []string, found bool, problem string) {
+	if o.Claude == "" {
+		return o.registeredInFile()
+	}
+	output, err := o.run(o.Claude, "mcp", "get", serverName)
+	text := string(output)
+	if err != nil {
+		if strings.Contains(text, "No MCP server named") {
+			return "", nil, false, ""
+		}
+		return "", nil, false, fmt.Sprintf("Could not ask claude for the MCP registration (%v); setup registers the server again.", err)
+	}
+	scope := ""
+	for _, line := range strings.Split(text, "\n") {
+		key, value, ok := strings.Cut(strings.TrimSpace(line), ":")
+		value = strings.TrimSpace(value)
+		switch {
+		case !ok:
+		case key == "Scope":
+			scope = value
+		case key == "Command":
+			command, found = value, true
+		case key == "Args":
+			// The CLI prints the arguments joined by spaces, so ours are
+			// compared as printed: a root with spaces stays one argument.
+			if value == strings.Join(o.serverArgs(), " ") {
+				args = o.serverArgs()
+			} else {
+				args = strings.Fields(value)
+			}
+		}
+	}
+	// Only the user-scope registration is setup's; one in a project or
+	// local scope is the user's own and is left alone.
+	if !strings.HasPrefix(scope, "User") {
+		return "", nil, false, ""
+	}
+	return command, args, found, ""
+}
+
+// registeredInFile reads the registration from ~/.claude.json when the
+// claude CLI is not available.
+func (o Options) registeredInFile() (command string, args []string, found bool, problem string) {
 	data, err := readFile(o.claudeJSONPath())
-	if err != nil || data == nil {
-		return "", nil, false
+	if err != nil {
+		return "", nil, false, fmt.Sprintf("Could not read ~/.claude.json (%v), so the MCP registration is unknown.", err)
+	}
+	if data == nil {
+		return "", nil, false, ""
 	}
 	var parsed struct {
 		MCPServers map[string]struct {
@@ -313,11 +360,19 @@ func (o Options) registered() (command string, args []string, found bool) {
 			Args    []string `json:"args"`
 		} `json:"mcpServers"`
 	}
-	if json.Unmarshal(data, &parsed) != nil {
-		return "", nil, false
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return "", nil, false, "Could not read ~/.claude.json (it is not valid JSON), so the MCP registration is unknown."
 	}
 	server, found := parsed.MCPServers[serverName]
-	return server.Command, server.Args, found
+	return server.Command, server.Args, found, ""
+}
+
+// run runs a command through Options.Run, or os/exec.
+func (o Options) run(name string, args ...string) ([]byte, error) {
+	if o.Run != nil {
+		return o.Run(name, args...)
+	}
+	return exec.Command(name, args...).CombinedOutput()
 }
 
 func (o Options) newPlan() *Plan {
@@ -350,7 +405,10 @@ func Install(o Options) (*Plan, error) {
 		p.notes = append(p.notes, "The Flashheart skill replaces kanban-tracker; --uninstall puts it back.")
 	}
 	config, _ := json.Marshal(map[string]any{"type": "stdio", "command": o.Binary, "args": o.serverArgs()})
-	command, args, found := o.registered()
+	command, args, found, problem := o.registered()
+	if problem != "" {
+		p.notes = append(p.notes, problem)
+	}
 	switch {
 	case found && command == o.Binary && slices.Equal(args, o.serverArgs()):
 	case found:
@@ -401,7 +459,11 @@ func Uninstall(o Options) (*Plan, error) {
 			p.moves = append(p.moves, move{from: saved, to: o.replacedPath()})
 		}
 	}
-	if _, _, found := o.registered(); found {
+	_, _, found, problem := o.registered()
+	if problem != "" {
+		p.notes = append(p.notes, problem)
+	}
+	if found {
 		p.commands = append(p.commands, []string{"mcp", "remove", "--scope", "user", serverName})
 	}
 	return p, nil
@@ -598,12 +660,8 @@ func (p *Plan) Apply(w io.Writer) error {
 		}
 		return nil
 	}
-	run := p.options.Run
-	if run == nil {
-		run = func(name string, args ...string) ([]byte, error) { return exec.Command(name, args...).CombinedOutput() }
-	}
 	for index, args := range p.commands {
-		if output, err := run(p.options.Claude, args...); err != nil {
+		if output, err := p.options.run(p.options.Claude, args...); err != nil {
 			var rest []string
 			for _, remaining := range p.commands[index:] {
 				rest = append(rest, "  "+p.commandLine(remaining))

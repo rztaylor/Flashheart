@@ -167,6 +167,9 @@ type TicketData struct {
 	From   string   `json:"from,omitempty"`
 	To     string   `json:"to,omitempty"`
 	Fields []string `json:"fields,omitempty"`
+	// Home is the claimant's own project on a claim, so a reader of the
+	// ticket's log knows where the holder's activity is recorded.
+	Home string `json:"home,omitempty"`
 }
 
 // Question kinds (RUN-8).

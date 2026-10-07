@@ -59,4 +59,19 @@ describe("QuestionCard", () => {
     expect(markup).toContain("read-only");
     expect(markup).not.toContain("<form");
   });
+
+  it("says a question from an ended session waits for it to resume", () => {
+    const markup = renderToStaticMarkup(
+      <QuestionCard
+        question={{ ...question, sessionEnded: true }}
+        asker="claude:5b0c7e2a"
+        now={now}
+        onAnswer={send}
+      />,
+    );
+    expect(markup).toContain("This session has ended");
+    expect(markup).toContain("when it resumes");
+    expect(markup).toContain(">Send answer</button>");
+    expect(markup).not.toContain("Needs you");
+  });
 });

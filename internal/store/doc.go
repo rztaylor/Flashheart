@@ -13,6 +13,10 @@
 // (PRJ-2–PRJ-5), resolves working directories through the cwd cache, and
 // keeps event files and answers inboxes.
 //
+// Callers that need a few projects at scale read every project's identity
+// with ReadHeads; read-only callers find a repository's project with
+// FindProject and its working directory with Locate, which write nothing.
+//
 // Every access goes through an os.Root with validated names (SEC-2).
 // Parsing and blocking belong to board, text edits to mdfile, the event
 // and inbox formats to events, revisions to index, and v1 conversion to

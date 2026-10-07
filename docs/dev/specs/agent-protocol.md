@@ -70,7 +70,7 @@ writing.
 | `permission.resolved` | permission denied | `outcome` (allowed/denied/unknown), optional `tool`. A pending request is also resolved, without an event, by the run's next tool result, prompt, turn end or end (§4) |
 | `notification` | notification hook | `type` (e.g. idle, permission), never the message body unless it is a known short status |
 | `compact` | pre/post compact | `phase` (pre/post) |
-| `claim` / `release` | MCP | `ticket`, `force`, `reason` |
+| `claim` / `release` | MCP | `ticket`, `force`, `reason`; a claim also records `home`, the claimant's own project, so a reader of the ticket's log knows where the holder's activity is recorded |
 | `checkpoint` | MCP | `ticket`, counts of done/next/files/questions |
 | `ticket.moved` | MCP or UI | `ticket`, `from`, `to`, `by` (run id or `human`) |
 | `ticket.updated` | MCP or UI | `ticket`, `fields` changed |
@@ -226,7 +226,13 @@ touches the user's other hooks.
 ## 6. Claims and linking
 
 - `claim` takes a lease of `lease_minutes` (default 30), renewed by any event
-  from the claiming run or its subagents.
+  from the claiming run or its subagents, in whichever project's log it is
+  recorded: a claim on another project's ticket is renewed by the session's
+  work at home. Readers fold a run's events from every log they read in
+  time order, and the MCP server also reads the claim's `home` project
+  before judging a lease.
+- A subagent claiming its session's ticket works under the session's claim;
+  the session keeps holding it.
 - A live lease held by another run → `claim` fails with the holder, its state
   and last activity. `force: true` with a `reason` takes it over; both are
   recorded in `## Notes`.
@@ -256,6 +262,13 @@ Every tool accepts an optional `run` argument. The server resolves the caller:
    not the project), else the process's directory;
 3. else error `ambiguous_run` listing candidates and saying to pass `run`.
 
+Read-only tools (`board_context`, `list_tickets`, `get_ticket`) change
+nothing on disk: they never create or adopt a project and never write the
+cwd cache. Where a write would create the caller's project,
+`board_context` says so and how to choose its key. A call reads every
+project's identity (`project.yaml` and folder names) and only the projects
+it touches in full, with those their tickets depend on.
+
 Calls with no resolvable run still work for read-only tools and record
 `by: "unknown"` for writes; `claim`, `release` and `ask_human` belong to a
 run and fail with `ambiguous_run`. A shortened run id (`claude:3f2a9c1e`, as
@@ -283,9 +296,14 @@ the recovery note shows it) is accepted when it names one run.
 Errors are `{code, message, fix}`, rendered as `error <code>: <message>`
 and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
 `blocked`, `ambiguous_run`, `invalid_input`, `key_taken`, `key_fixed`,
-`needs_repair`, `busy`, `outside_root`, `type_not_allowed`, `too_large`,
+`needs_repair`, `busy`, `type_not_allowed`, `too_large`,
 `project_archived` (the caller's project, or a ticket's, is archived; the
-fix asks the human to restore it) and `internal`. Writes to a ticket held by another live run (other than the
+fix asks the human to restore it), `unsupported` (the board uses a newer
+format than this binary) and `internal`. Every write tool answers `busy`
+when another writer holds its lock past the lock wait; every write to a
+ticket another live run holds answers `claimed`; `conflict` comes only
+from `update_ticket`, when the ticket changes between its read and its
+write. Writes to a ticket held by another live run (other than the
 caller's own session or subagents) fail with `claimed`.
 
 Every `ticket` argument is a ticket id (`FH-42`); the id's key names the
@@ -380,6 +398,11 @@ When `enforce_handoff` is on for the project, at `Stop`:
   subagents `claim` (as themselves) and `checkpoint` against that ticket.
 - A subagent's `checkpoint` on its parent's ticket is allowed without a claim
   and is attributed to the subagent run.
+- A session owns its ticket's handoff: its subagents' edits count toward its
+  handoff enforcement (§9, `HOOK-6`), and a checkpoint by the session or any
+  of its subagents on the session's ticket settles them all; a subagent's
+  checkpoint on a ticket of its own settles only its own edits. A subagent's own claim on its
+  session's ticket leaves the session holding it (§6).
 
 ## 11. Screenshots and review
 
@@ -463,5 +486,7 @@ membership kept in step by the ticket tools (§7.4), and `board_context`
 listing unfinished workstreams (2026-10-06); the `project_archived` error
 for archived projects (2026-10-06); required review evidence in the skill
 text and its review template, and the move-to-review warning for a review
-without evidence (2026-10-07). Re-running `setup` installs the updated
-skill text.
+without evidence (2026-10-07); a claim's `home` field, read tools that
+write nothing, subagent edits counting toward their session's handoff, the
+`unsupported` code listed and the never-emitted `outside_root` removed
+(2026-10-07). Re-running `setup` installs the updated skill text.

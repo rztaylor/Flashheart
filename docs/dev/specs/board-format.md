@@ -297,6 +297,7 @@ auto_create_projects: true
 quiet_minutes: 10
 lease_minutes: 30         # a claim outlives its run's last activity this long
 enforce_handoff: false    # HOOK-6; a project's settings.enforce_handoff overrides it
+user_name: ""             # who answers agents' questions (RUN-8); empty: the computer account's name
 event_retention_days: 90
 done_column_limit: 20
 attachments:

@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { appendFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
@@ -23,6 +24,11 @@ let page;
 
 test.beforeAll(async ({ browser }) => {
   sandbox = await makeSandbox();
+  // Answers are recorded under the configured name (FH-8).
+  await appendFile(
+    join(sandbox.root, ".flashheart", "config.yaml"),
+    "user_name: Robin\n",
+  );
   seeded = await seedRuns(sandbox.home, sandbox.root);
   server = launch(sandbox, ["serve", "--foreground"]);
   const url = await waitForManualURL(server.child, server.output);
@@ -252,7 +258,7 @@ test("a question from an agent is answered on the board and delivered with its n
   await expect(
     panel.getByRole("region", { name: "Answer waits for its next prompt" }),
   ).toContainText("“Keep it”");
-  await expect(panel.getByText(/Answer \(human\): "Keep it"/)).toBeVisible();
+  await expect(panel.getByText(/Answer \(Robin\): "Keep it"/)).toBeVisible();
 
   // The Agents view shows the session waiting for its next prompt.
   await open("#/all/agents");
@@ -265,9 +271,45 @@ test("a question from an agent is answered on the board and delivered with its n
   // The session's next prompt delivers the answer, once.
   const output = promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
   expect(output).toContain(
-    'AL-1: \\"Keep the old project skeleton, or start from the new template?\\" → \\"Keep it\\" (human)',
+    'AL-1: \\"Keep the old project skeleton, or start from the new template?\\" → \\"Keep it\\" (Robin)',
   );
   expect(promptHook(sandbox.root, IDLE_SESSION, seeded.gamma)).toBe("");
   await open("#/p/alpha/board");
   await expect(card).toHaveCount(0);
+});
+
+test("a question is answered from the Agents view, and fits a phone", async () => {
+  await callTool(sandbox.root, seeded.gamma, "ask_human", {
+    run: `claude:${IDLE_SESSION}`,
+    ticket: "AL-1",
+    kind: "question",
+    text: "Ship the offline spike behind a flag?",
+  });
+
+  // At phone width the question card fits without sideways scrolling.
+  await open("#/all/agents", { width: 390, height: 844 });
+  const needsYou = page.getByRole("region", { name: /^Needs you/ });
+  await needsYou.getByRole("button", { name: /e2d8f6a4/ }).click();
+  const question = needsYou.getByRole("region", { name: "Has a question" });
+  await expect(
+    question.getByText("Ship the offline spike behind a flag?"),
+  ).toBeVisible();
+  const sideways = await page.evaluate(
+    () => document.scrollingElement.scrollWidth - window.innerWidth,
+  );
+  expect(sideways).toBeLessThanOrEqual(0);
+  const box = await question.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  await expectNoAxeViolations("question card at phone width");
+  await shot("agents-question-390-light");
+
+  // Answering from the run's row records it like the panel does.
+  await question.getByRole("textbox", { name: "Your answer" }).fill("Yes");
+  await question.getByRole("button", { name: "Send answer" }).click();
+  await expect(
+    needsYou.getByRole("region", { name: "Answer waits for its next prompt" }),
+  ).toContainText("“Yes”");
+  const output = promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
+  expect(output).toContain('\\"Yes\\" (Robin)');
 });

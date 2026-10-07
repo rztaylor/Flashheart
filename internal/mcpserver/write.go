@@ -158,7 +158,7 @@ func (srv *server) claim(input ClaimInput) (string, error) {
 			return "", err
 		}
 	}
-	list = append(list, events.Event{Kind: events.Claim, Data: events.TicketData{Ticket: ticket.ID, Force: input.Force, Reason: reason}})
+	list = append(list, events.Event{Kind: events.Claim, Data: events.TicketData{Ticket: ticket.ID, Force: input.Force, Reason: reason, Home: c.project}})
 	if moves {
 		list = append(list, events.Event{Kind: events.TicketMoved, Data: events.TicketData{Ticket: ticket.ID, From: string(ticket.Column), To: string(column), By: run}})
 	}

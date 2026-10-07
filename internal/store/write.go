@@ -26,7 +26,7 @@ import (
 // stay unique across the root (KEY-5); locks are always taken root first.
 
 // LockWait bounds how long a write waits for a lock held by another writer.
-const LockWait = 5 * time.Second
+var LockWait = 5 * time.Second
 
 var (
 	// ErrConflict reports a file that changed since the caller read it; the

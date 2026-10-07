@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
 )
@@ -22,6 +23,7 @@ func TestStoreErrorsBecomeProtocolCodes(t *testing.T) {
 		"invalid_input":    store.ErrInvalidName,
 		"needs_repair":     mdfile.ErrBrokenFrontmatter,
 		"busy":             store.ErrBusy,
+		"unsupported":      config.ErrNewerVersion,
 		"internal":         errors.New("disk on fire"),
 	}
 	for code, err := range cases {

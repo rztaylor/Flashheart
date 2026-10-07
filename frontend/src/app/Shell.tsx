@@ -333,6 +333,8 @@ export function Shell({
       ? "All projects"
       : (current?.displayName ?? scopeProject);
   const rootMissing = projects.status === "ready" && projects.data.rootMissing;
+  // A read-only server shows agents' questions without an answer form.
+  const answers = info.status === "ready" && info.info.answers;
   const root =
     info.status === "ready"
       ? info.info.root
@@ -655,7 +657,7 @@ export function Shell({
                   projects={summaries}
                   revision={revision}
                   onOpen={openTicket}
-                  onAnswer={editing.answer}
+                  onAnswer={answers ? editing.answer : undefined}
                 />
               ) : (
                 <BoardSkeleton />
@@ -794,6 +796,7 @@ export function Shell({
               revision={revision}
               editing={editing}
               onStep={stepTicket}
+              answers={answers}
               workstreamsOf={(project) => workstreams.get(project) ?? []}
             />
           ) : null}

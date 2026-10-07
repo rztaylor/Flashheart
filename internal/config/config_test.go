@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -181,5 +182,35 @@ func TestLoadRefusesOversizedFile(t *testing.T) {
 	}
 	if _, err := Load(root); err == nil || !strings.Contains(err.Error(), "larger than") {
 		t.Errorf("Load() error = %v", err)
+	}
+}
+
+func TestAnswererIsTheConfiguredNameElseTheAccount(t *testing.T) {
+	t.Parallel()
+
+	account := func(name, login string) func() (*user.User, error) {
+		return func() (*user.User, error) { return &user.User{Name: name, Username: login}, nil }
+	}
+	config := Defaults()
+	if got := config.Answerer(account("Robert Taylor", "robert")); got != "Robert Taylor" {
+		t.Errorf("answerer = %q, want the account's name", got)
+	}
+	if got := config.Answerer(account("", "robert")); got != "robert" {
+		t.Errorf("answerer = %q, want the login", got)
+	}
+	if got := config.Answerer(func() (*user.User, error) { return nil, errors.New("no account") }); got != "the user" {
+		t.Errorf("answerer = %q", got)
+	}
+	parsed, err := Parse([]byte("user_name: Robert\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := parsed.Answerer(account("Robert Taylor", "robert")); got != "Robert" {
+		t.Errorf("answerer = %q, want the configured name", got)
+	}
+	for _, bad := range []string{"user_name: \"a\\nb\"\n", "user_name: " + strings.Repeat("x", 81) + "\n"} {
+		if _, err := Parse([]byte(bad)); err == nil {
+			t.Errorf("Parse(%q) should fail", bad)
+		}
 	}
 }

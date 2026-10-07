@@ -94,6 +94,8 @@ type Run struct {
 	Files          []string
 	LastCheckpoint time.Time
 	Claim          string
+	// Home is the project the run works in, as its last claim recorded it.
+	Home string
 	// Permission is the tool awaiting permission, or "?" when the agent did
 	// not say which; empty when nothing is pending.
 	Permission string
@@ -122,6 +124,10 @@ type Question struct {
 	AnsweredBy string    `json:"answeredBy,omitempty"`
 	AnsweredAt time.Time `json:"answeredAt,omitzero"`
 	Delivered  bool      `json:"delivered,omitempty"`
+	// SessionEnded is set by readers when the asking run has ended: the
+	// question can still be answered, and the answer waits for the session
+	// to resume (RUN-8), but it does not need you (VIEW-2).
+	SessionEnded bool `json:"sessionEnded,omitempty"`
 }
 
 // Answered reports whether a human answered the question.
@@ -131,7 +137,8 @@ func (q Question) Answered() bool { return !q.AnsweredAt.IsZero() }
 // answered but not yet delivered to the run (agent-protocol §4).
 func (q Question) Open() bool { return !q.Delivered }
 
-// Dirty reports edits since the run's last checkpoint.
+// Dirty reports the run's own edits since its last checkpoint; Set.Dirty
+// counts a session's subagents too.
 func (r *Run) Dirty() bool { return r.Edits > 0 }
 
 // Progress summarises a plan: done and total items, and the current step
@@ -312,15 +319,30 @@ func (s *Set) Apply(e events.Event) {
 	case events.Checkpoint:
 		var data events.CheckpointData
 		_ = e.Decode(&data)
-		r.Edits, r.LastCheckpoint = 0, e.Time
+		// A session owns its ticket's handoff: a checkpoint by it or any of
+		// its subagents settles the edits of all of them (HOOK-6, §10). A
+		// subagent's checkpoint on a ticket of its own settles only its own.
+		members := s.family(r)
+		if root := members[0]; r != root && root.Claim != "" && data.Ticket != root.Claim {
+			members = []*Run{r}
+		}
+		for _, member := range members {
+			member.Edits, member.LastCheckpoint = 0, e.Time
+		}
 		entry.Ticket = data.Ticket
 	case events.Claim, events.Release, events.TicketMoved, events.TicketUpdated, events.TicketCreated, events.ReviewWritten, events.AttachmentAdded:
 		var data events.TicketData
 		_ = e.Decode(&data)
 		entry.Ticket = data.Ticket
 		switch {
+		case e.Kind == events.Claim && r.Parent != "" && s.runs[r.Parent] != nil && s.runs[r.Parent].Claim == data.Ticket:
+			// A subagent works under its session's claim; the session keeps
+			// holding the ticket.
 		case e.Kind == events.Claim:
 			r.Claim = data.Ticket
+			if data.Home != "" {
+				r.Home = data.Home
+			}
 			// A ticket has one holder: a claim takes it from any other run.
 			for _, id := range s.order {
 				if other := s.runs[id]; other != r && other.Claim == data.Ticket {
@@ -492,6 +514,16 @@ func (s *Set) Holder(ticket string, now time.Time, settings Settings) *Run {
 	return nil
 }
 
+// Claimant is the run whose claim names a ticket, live or lapsed.
+func (s *Set) Claimant(ticket string) *Run {
+	for _, id := range s.order {
+		if r := s.runs[id]; r.Claim == ticket {
+			return r
+		}
+	}
+	return nil
+}
+
 // PendingAnswers lists the answered questions of a session and its
 // subagents that have not been delivered yet (HOOK-5), oldest first.
 func (s *Set) PendingAnswers(session string) []Question {
@@ -510,6 +542,36 @@ func (s *Set) PendingAnswers(session string) []Question {
 	slices.SortStableFunc(pending, func(a, b Question) int { return a.AnsweredAt.Compare(b.AnsweredAt) })
 	return pending
 }
+
+// family is a run's session and the session's subagents.
+func (s *Set) family(r *Run) []*Run {
+	root := r
+	if r.Parent != "" && s.runs[r.Parent] != nil {
+		root = s.runs[r.Parent]
+	}
+	return append([]*Run{root}, s.children(root)...)
+}
+
+// Edits counts a run's edits since the last checkpoint; a session's
+// include its subagents', whose work rolls up to it (§10).
+func (s *Set) Edits(id string) int {
+	r := s.runs[id]
+	if r == nil {
+		return 0
+	}
+	if r.Parent != "" {
+		return r.Edits
+	}
+	edits := 0
+	for _, member := range s.family(r) {
+		edits += member.Edits
+	}
+	return edits
+}
+
+// Dirty reports edits since the last checkpoint, a session's subagents'
+// included: its handoff is due (HOOK-6).
+func (s *Set) Dirty(id string) bool { return s.Edits(id) > 0 }
 
 func (s *Set) children(r *Run) []*Run {
 	var list []*Run
@@ -603,11 +665,11 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 			Children:   slices.Clone(r.Children),
 			State:      state,
 			Link:       link,
-			Dirty:      r.Dirty(),
-			NoHandoff:  r.Dirty() && state == Ended && link.Ticket != "",
+			Dirty:      s.Dirty(id),
+			NoHandoff:  s.Dirty(id) && state == Ended && link.Ticket != "",
 			Permission: r.Permission,
 			Started:    r.Started, LastActivity: s.lastActivity(r), EndedAt: r.EndedAt,
-			Tools: r.Tools, Edits: r.Edits,
+			Tools: r.Tools, Edits: s.Edits(id),
 			Files:     slices.Clone(r.Files),
 			Plan:      slices.Clone(r.Plan),
 			Progress:  r.Progress(),

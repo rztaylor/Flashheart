@@ -150,6 +150,47 @@ func repoSuffix(repo string) string {
 // migrate (ErrNeedsMigration). A repository whose project is archived gets
 // that project's name with ErrProjectArchived, and nothing is created.
 func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
+	candidates := projectCandidates(name, repo)
+	// Fast path without a lock: the project already records this repository.
+	for _, candidate := range candidates {
+		if repos, ok := s.projectRepos(candidate); ok && (repo == "" || slices.Contains(repos, repo)) {
+			return candidate, nil
+		}
+	}
+	return s.projectForLocked(candidates, repo, create)
+}
+
+// FindProject is ProjectFor for callers that only read: it takes no lock and
+// writes nothing, so a project that records no repositories is found but
+// not given this one. A missing project is ErrNotFound with the name a
+// write would create.
+func (s *Store) FindProject(name, repo string) (string, error) {
+	candidates := projectCandidates(name, repo)
+	for _, candidate := range candidates {
+		if s.IsV1Project(candidate) {
+			return "", fmt.Errorf("project %q: %w", candidate, ErrNeedsMigration)
+		}
+		repos, exists := s.projectRepos(candidate)
+		switch {
+		case exists && (repo == "" || len(repos) == 0 || slices.Contains(repos, repo)):
+			return candidate, nil
+		case exists:
+			continue
+		}
+		if archived, ok := s.archivedRepos(candidate); ok {
+			if repo == "" || len(archived) == 0 || slices.Contains(archived, repo) {
+				return candidate, fmt.Errorf("project %q: %w", candidate, ErrProjectArchived)
+			}
+			continue
+		}
+		return candidate, fmt.Errorf("project %q: %w", candidate, ErrNotFound)
+	}
+	return "", fmt.Errorf("project for %s: %w", repo, ErrNotFound)
+}
+
+// projectCandidates are the names a repository's project may have (PRJ-2,
+// PRJ-3, PRJ-4).
+func projectCandidates(name, repo string) []string {
 	candidates := []string{ScratchProject}
 	if repo != "" {
 		base := ProjectName(name)
@@ -158,12 +199,10 @@ func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 		}
 		candidates = []string{base, base + "-" + repoSuffix(repo)}
 	}
-	// Fast path without a lock: the project already records this repository.
-	for _, candidate := range candidates {
-		if repos, ok := s.projectRepos(candidate); ok && (repo == "" || slices.Contains(repos, repo)) {
-			return candidate, nil
-		}
-	}
+	return candidates
+}
+
+func (s *Store) projectForLocked(candidates []string, repo string, create bool) (string, error) {
 	release, err := s.lock(".")
 	if err != nil {
 		return "", err

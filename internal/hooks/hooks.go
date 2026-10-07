@@ -281,7 +281,7 @@ func enforce(s *store.Store, log *events.Log, project string, list []events.Even
 	}
 	run := list[index].Run
 	r := set.Get(run)
-	if r == nil || !r.Dirty() || r.BlockedForHandoff {
+	if r == nil || !set.Dirty(run) || r.BlockedForHandoff {
 		return "", nil
 	}
 	link := set.Link(run, func(_, branch string) []string { return details.InProgressOnBranch(branch) })

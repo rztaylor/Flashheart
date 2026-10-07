@@ -17,9 +17,6 @@ type AnswerRequest struct {
 	Answer string `json:"answer"`
 }
 
-// answeredBy names who answers in the UI; Flashheart has no accounts.
-const answeredBy = "human"
-
 func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 	if b.writer(w) == nil {
 		return
@@ -50,6 +47,7 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 	if b.now != nil {
 		now = b.now().UTC()
 	}
+	answeredBy := b.answeredBy
 	question, run, ok := snapshot.Question(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "not_found", "No such question in the last two days")

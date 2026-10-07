@@ -22,6 +22,13 @@ type machine struct {
 	options  Options
 	ran      [][]string
 	original []byte
+	// server is the flashheart MCP registration the fake claude CLI holds:
+	// its JSON config, or "" when none.
+	server string
+	// queried counts claude mcp get calls.
+	queried int
+	// scope is the Scope line claude mcp get prints; empty means user.
+	scope string
 }
 
 // newMachine is a home with the fixture settings, a kanban-tracker skill
@@ -41,18 +48,40 @@ func newMachine(t *testing.T) *machine {
 		Home: home, Binary: "/opt/Flash Heart/bin/flashheart", Claude: "/usr/local/bin/claude",
 		Now: func() time.Time { clock = clock.Add(time.Second); return clock },
 		Run: func(name string, args ...string) ([]byte, error) {
-			m.ran = append(m.ran, args)
-			// Mimic Claude Code recording the server in ~/.claude.json.
+			// Mimic the claude CLI's user-scope MCP registry.
 			switch args[1] {
+			case "get":
+				m.queried++
+				return m.mcpGet()
 			case "add-json":
-				m.write(".claude.json", `{"numStartups": 3, "mcpServers": {"flashheart": `+args[5]+`}}`)
+				m.server = args[5]
 			case "remove":
-				m.write(".claude.json", `{"numStartups": 3, "mcpServers": {}}`)
+				m.server = ""
 			}
+			m.ran = append(m.ran, args)
 			return nil, nil
 		},
 	}
 	return m
+}
+
+// mcpGet answers claude mcp get flashheart as the CLI does.
+func (m *machine) mcpGet() ([]byte, error) {
+	if m.server == "" {
+		return []byte(`No MCP server named "flashheart". Configured servers: other` + "\n"), errors.New("exit status 1")
+	}
+	var config struct {
+		Command string   `json:"command"`
+		Args    []string `json:"args"`
+	}
+	if err := json.Unmarshal([]byte(m.server), &config); err != nil {
+		m.t.Fatal(err)
+	}
+	scope := m.scope
+	if scope == "" {
+		scope = "User config (available in all your projects)"
+	}
+	return []byte("flashheart:\n  Scope: " + scope + "\n  Status: ✔ Connected\n  Type: stdio\n  Command: " + config.Command + "\n  Args: " + strings.Join(config.Args, " ") + "\n\nTo remove this server, run: claude mcp remove flashheart -s user\n"), nil
 }
 
 func (m *machine) write(name, data string) {
@@ -230,8 +259,8 @@ func TestInstallReplacesHandMadeFlashheartHooks(t *testing.T) {
 	if strings.Count(data, "hook claude Stop") != 1 || strings.Contains(data, "/Users/me/bin") || !strings.Contains(data, "echo hi") || !strings.Contains(data, "hook claude Stop --root /data/board") {
 		t.Fatalf("settings:\n%s", data)
 	}
-	if !strings.Contains(string(m.read(".claude.json")), `"args":["mcp","--root","/data/board"]`) {
-		t.Fatalf("mcp registration: %s", m.read(".claude.json"))
+	if !strings.Contains(m.server, `"args":["mcp","--root","/data/board"]`) {
+		t.Fatalf("mcp registration: %s", m.server)
 	}
 	// Uninstall takes Flashheart's hooks away, including the hand-made ones.
 	m.apply(false)
@@ -245,9 +274,43 @@ func TestInstallReregistersAMovedBinary(t *testing.T) {
 	t.Parallel()
 
 	m := newMachine(t)
-	m.write(".claude.json", `{"mcpServers": {"flashheart": {"type": "stdio", "command": "/old/flashheart", "args": ["mcp"]}}}`)
+	m.server = `{"type": "stdio", "command": "/old/flashheart", "args": ["mcp"]}`
 	plan := m.plan(true)
 	if len(plan.commands) != 2 || plan.commands[0][1] != "remove" || plan.commands[1][1] != "add-json" {
+		t.Fatalf("commands = %v", plan.commands)
+	}
+}
+
+// The registration is read from the claude CLI, never by parsing
+// ~/.claude.json, which Claude Code owns (FH-8).
+func TestTheRegistrationComesFromTheClaudeCLI(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.write(".claude.json", "{ not json")
+	m.server = `{"type": "stdio", "command": "/opt/Flash Heart/bin/flashheart", "args": ["mcp"]}`
+	plan := m.plan(true)
+	if m.queried == 0 || len(plan.commands) != 0 {
+		t.Fatalf("queried %d, commands %v", m.queried, plan.commands)
+	}
+	if strings.Contains(render(plan), ".claude.json") {
+		t.Errorf("plan mentions ~/.claude.json:\n%s", render(plan))
+	}
+}
+
+// Without the CLI, an unreadable ~/.claude.json is reported, not taken as
+// "not registered".
+func TestAnUnreadableClaudeJSONIsReported(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.options.Claude = ""
+	m.write(".claude.json", "{ not json")
+	if out := render(m.plan(true)); !strings.Contains(out, "Could not read ~/.claude.json") {
+		t.Fatalf("plan:\n%s", out)
+	}
+	m.write(".claude.json", `{"mcpServers": {"flashheart": {"type": "stdio", "command": "/opt/Flash Heart/bin/flashheart", "args": ["mcp"]}}}`)
+	if plan := m.plan(true); len(plan.commands) != 0 {
 		t.Fatalf("commands = %v", plan.commands)
 	}
 }
@@ -397,5 +460,32 @@ func TestUninstallRestoresAUsersOwnFlashheartSkill(t *testing.T) {
 	m.apply(false)
 	if got := string(m.read(".claude/skills/flashheart/SKILL.md")); got != "---\nname: flashheart\n---\nmy own notes\n" {
 		t.Fatalf("skill after uninstall = %q", got)
+	}
+}
+
+// A root with spaces in its path is compared as the CLI prints it, so setup
+// stays idempotent (FH-8 review).
+func TestARootWithSpacesStaysRegistered(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.options.Root = "/Users/me/Library/Mobile Documents/board"
+	m.apply(true)
+	if plan := m.plan(true); len(plan.commands) != 0 {
+		t.Fatalf("second plan re-registers: %v", plan.commands)
+	}
+}
+
+// A flashheart server registered in another scope is not setup's user-scope
+// registration: setup adds its own and removes nothing.
+func TestAnotherScopesServerIsLeftAlone(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.server = `{"type": "stdio", "command": "/old/flashheart", "args": ["mcp"]}`
+	m.scope = "Local config (private to you in this project)"
+	plan := m.plan(true)
+	if len(plan.commands) != 1 || plan.commands[0][1] != "add-json" {
+		t.Fatalf("commands = %v", plan.commands)
 	}
 }

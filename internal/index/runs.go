@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -24,50 +25,86 @@ type EventSource interface {
 // any live run (stale after 12 hours) and a day of ended runs (VIEW-3).
 const runWindowDays = 2
 
-// tracker folds each project's recent event files, reading only lines
-// appended since the last rebuild. It is used under the index's lock.
+// tracker reads each project's recent event files, only lines appended
+// since the last rebuild, and folds all of them into one set in time order:
+// a run's events can sit in several projects' logs (a claim on another
+// project's ticket), and it is one run. New events no older than the last
+// one applied are applied as they arrive; an older one, a removed project or
+// a new day refolds the window from the events kept. It is used under the
+// index's lock.
 type tracker struct {
 	source   EventSource
 	day      string
-	projects map[string]*projectRuns
+	projects map[string]*projectEvents
+	set      *runs.Set
+	// last is the time of the latest event applied to set.
+	last time.Time
+	// refolds counts full refolds, for tests.
+	refolds int
 }
 
-type projectRuns struct {
-	set     *runs.Set
+type projectEvents struct {
+	events  []events.Event
 	offsets map[string]int64
 }
 
-// update folds new events for the given projects and returns a fingerprint
-// of what has been read.
+// update reads new events for the given projects, folds them, and returns
+// a fingerprint of what has been read.
 func (t *tracker) update(projects []string, now time.Time) string {
+	refold := t.set == nil
 	if day := events.FileName(now); day != t.day {
 		// A new day: start again from the window, so old runs fall away.
-		t.day, t.projects = day, map[string]*projectRuns{}
+		t.day, t.projects, refold = day, map[string]*projectEvents{}, true
 	}
 	first := events.FileName(now.AddDate(0, 0, -runWindowDays))
 	var parts []string
 	for name := range t.projects {
 		if !slices.Contains(projects, name) {
 			delete(t.projects, name)
+			refold = true
 		}
 	}
-	for _, project := range projects {
+	var fresh []events.Event
+	for _, project := range slices.Sorted(slices.Values(projects)) {
 		files, err := t.source.Files(project)
 		if err != nil || len(files) == 0 {
 			continue
 		}
 		state := t.projects[project]
 		if state == nil {
-			state = &projectRuns{set: runs.NewSet(), offsets: map[string]int64{}}
+			state = &projectEvents{offsets: map[string]int64{}}
 			t.projects[project] = state
 		}
 		for _, file := range files {
 			if file < first {
 				continue
 			}
-			offset, _ := t.source.ReadFrom(project, file, state.offsets[file], state.set.Apply)
+			offset, _ := t.source.ReadFrom(project, file, state.offsets[file], func(e events.Event) {
+				state.events = append(state.events, e)
+				fresh = append(fresh, e)
+			})
 			state.offsets[file] = offset
 			parts = append(parts, fmt.Sprintf("%s/%s:%d", project, file, offset))
+		}
+	}
+	slices.SortStableFunc(fresh, func(a, b events.Event) int { return a.Time.Compare(b.Time) })
+	if len(fresh) > 0 && fresh[0].Time.Before(t.last) {
+		refold = true
+	}
+	if refold {
+		t.refolds++
+		var all []events.Event
+		for _, name := range slices.Sorted(maps.Keys(t.projects)) {
+			all = append(all, t.projects[name].events...)
+		}
+		slices.SortStableFunc(all, func(a, b events.Event) int { return a.Time.Compare(b.Time) })
+		t.set, t.last = runs.NewSet(), time.Time{}
+		fresh = all
+	}
+	for _, e := range fresh {
+		t.set.Apply(e)
+		if e.Time.After(t.last) {
+			t.last = e.Time
 		}
 	}
 	sort.Strings(parts)
@@ -87,16 +124,10 @@ func (t *tracker) views(b board.Board, now time.Time, settings runs.Settings) []
 		}
 		return nil
 	}
-	names := make([]string, 0, len(t.projects))
-	for name := range t.projects {
-		names = append(names, name)
+	if t.set == nil {
+		return nil
 	}
-	slices.Sort(names)
-	var all []runs.View
-	for _, name := range names {
-		all = append(all, t.projects[name].set.Views(now, settings, inProgress)...)
-	}
-	return all
+	return t.set.Views(now, settings, inProgress)
 }
 
 // signature summarises what the clock can change about runs, so a run
@@ -175,16 +206,17 @@ func (s *Snapshot) TicketRuns(id string) []runs.View {
 	return list
 }
 
-// Questions returns the open questions about a ticket (asked by any live
-// run, answered or not, until delivered), oldest first (CARD-6, VIEW-2).
+// Questions returns the open questions about a ticket (answered or not,
+// until delivered), oldest first (CARD-6). Questions of a run that has
+// ended are included and marked SessionEnded: they can still be answered,
+// and the answer waits for the session to resume, but they do not need you
+// (VIEW-2, RUN-8).
 func (s *Snapshot) Questions(ticket string) []runs.Question {
 	var list []runs.Question
 	for _, run := range s.Runs {
-		if run.State == runs.Ended {
-			continue
-		}
 		for _, q := range run.Questions {
 			if q.Ticket == ticket && q.Open() {
+				q.SessionEnded = run.State == runs.Ended
 				list = append(list, q)
 			}
 		}

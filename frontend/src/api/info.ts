@@ -10,6 +10,8 @@ export interface ServerInfo {
   protocolVersion: number;
   root: string;
   theme: ThemePreference;
+  // answers: this server records answers to agents' questions (RUN-8).
+  answers: boolean;
 }
 
 export function fetchInfo(
@@ -34,6 +36,7 @@ function isServerInfo(value: unknown): value is ServerInfo {
     typeof value.buildDate === "string" &&
     typeof value.protocolVersion === "number" &&
     typeof value.root === "string" &&
+    typeof value.answers === "boolean" &&
     (value.theme === "system" ||
       value.theme === "light" ||
       value.theme === "dark")

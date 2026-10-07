@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -61,6 +64,26 @@ type Config struct {
 	DoneColumnLimit    int         `yaml:"done_column_limit"`
 	Attachments        Attachments `yaml:"attachments"`
 	UI                 UI          `yaml:"ui"`
+	// UserName is who answers agents' questions from the board (RUN-8);
+	// empty means the computer account's name.
+	UserName string `yaml:"user_name"`
+}
+
+// Answerer is the name an answer from the board is recorded under: the
+// configured user_name, else the account's full name, else its login.
+func (c Config) Answerer(account func() (*user.User, error)) string {
+	if name := strings.TrimSpace(c.UserName); name != "" {
+		return name
+	}
+	if current, err := account(); err == nil && current != nil {
+		if name := strings.TrimSpace(current.Name); name != "" {
+			return name
+		}
+		if login := strings.TrimSpace(current.Username); login != "" {
+			return login
+		}
+	}
+	return "the user"
 }
 
 // Attachments holds attachment limits.
@@ -171,6 +194,9 @@ func (c Config) validate() error {
 	atLeastOne("event_retention_days", int64(c.EventRetentionDays))
 	atLeastOne("done_column_limit", int64(c.DoneColumnLimit))
 	atLeastOne("attachments.max_bytes", c.Attachments.MaxBytes)
+	if name := c.UserName; utf8.RuneCountInString(name) > 80 || strings.ContainsFunc(name, unicode.IsControl) {
+		problems = append(problems, "user_name must be one line of at most 80 characters")
+	}
 	problems = append(problems, c.UI.problems()...)
 	if len(problems) > 0 {
 		return errors.New("invalid config.yaml: " + strings.Join(problems, "; "))

@@ -161,3 +161,88 @@ func TestTrackerRollsOverAtMidnight(t *testing.T) {
 		t.Fatalf("after midnight runs = %+v", next.Runs)
 	}
 }
+
+// A session working in alpha that claims a ticket in beta is one run: its
+// activity at home keeps the beta ticket's live badge current (FH-8).
+func TestARunSpanningProjectsIsOneRun(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, root := runsBoard(t)
+	dir := filepath.Join(root, "beta", "tickets", "BE-1-hello")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beta", "project.yaml"), []byte("key: BE\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "BE-1-hello.md"), []byte("---\nid: BE-1\nstatus: in-progress\ntype: feature\npriority: low\ncreated: 2026-10-01\n---\n# Hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	now := clock.now
+	appendEvent(t, log, now.Add(-50*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSession, Worktree: "/src/alpha"})
+	if err := log.Append(events.Event{Time: now.Add(-45 * time.Minute), Run: "claude:s1", Agent: "claude", Kind: events.Claim, Project: "beta", Data: events.TicketData{Ticket: "BE-1"}}); err != nil {
+		t.Fatal(err)
+	}
+	appendEvent(t, log, now.Add(-time.Minute), events.TurnStart, events.TurnStartData{})
+	snapshot, err := index.Rebuild()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Runs) != 1 {
+		t.Fatalf("runs = %d, want the one session: %+v", len(snapshot.Runs), snapshot.Runs)
+	}
+	live, ok := snapshot.TicketRun("BE-1")
+	if !ok || live.State != runs.Working || live.Project != "alpha" || !live.LastActivity.Equal(now.Add(-time.Minute)) {
+		t.Fatalf("BE-1's run = %+v, %v", live, ok)
+	}
+}
+
+// A question from a run that has ended stays open and answerable on its
+// ticket, marked as waiting for the session to resume (FH-8, RUN-8).
+func TestQuestionsOfEndedRunsWaitForTheSession(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	now := clock.now
+	appendEvent(t, log, now.Add(-5*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSession})
+	appendEvent(t, log, now.Add(-4*time.Minute), events.QuestionAsked, events.QuestionData{ID: "q-1", Ticket: "AL-3", Kind: "question", Text: "Which?"})
+	live, _ := index.Rebuild()
+	if got := live.Questions("AL-3"); len(got) != 1 || got[0].SessionEnded {
+		t.Fatalf("live questions = %+v", got)
+	}
+	appendEvent(t, log, now.Add(-time.Minute), events.RunEnd, events.RunEndData{Reason: "other"})
+	ended, _ := index.Rebuild()
+	got := ended.Questions("AL-3")
+	if len(got) != 1 || !got[0].SessionEnded {
+		t.Fatalf("questions of an ended run = %+v", got)
+	}
+	if q, run, ok := ended.Question("q-1"); !ok || run.State != runs.Ended || q.ID != "q-1" {
+		t.Fatalf("Question = %+v %+v %v", q, run, ok)
+	}
+}
+
+// New events in time order are applied to the folded runs as they arrive;
+// only an event older than the last applied one refolds the window (FH-8
+// review: a full refold per event stalls serve at NFR-1 volume).
+func TestNewEventsFoldIncrementally(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	now := clock.now
+	appendEvent(t, log, now.Add(-5*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSession})
+	if _, err := index.Rebuild(); err != nil {
+		t.Fatal(err)
+	}
+	base := index.events.refolds
+	appendEvent(t, log, now.Add(-4*time.Minute), events.TurnStart, events.TurnStartData{})
+	working, _ := index.Rebuild()
+	if index.events.refolds != base || working.Runs[0].State != runs.Working {
+		t.Fatalf("in-order append: refolds %d → %d, state %s", base, index.events.refolds, working.Runs[0].State)
+	}
+	// An event stamped before the last one (another writer's clock) refolds.
+	appendEvent(t, log, now.Add(-10*time.Minute), events.ToolUsed, events.ToolData{Tool: "Edit", OK: true, Path: "a.go"})
+	late, _ := index.Rebuild()
+	if index.events.refolds != base+1 || late.Runs[0].Edits != 1 || late.Runs[0].State != runs.Working {
+		t.Fatalf("late event: refolds %d, run %+v", index.events.refolds, late.Runs[0])
+	}
+}

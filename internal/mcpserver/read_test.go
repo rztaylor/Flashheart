@@ -9,6 +9,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -176,4 +177,73 @@ func TestAnArchivedProjectIsNotRecreated(t *testing.T) {
 	if _, err := os.Stat(e.root + "/demo"); !errors.Is(err, os.ErrNotExist) {
 		t.Error("the archived project was recreated")
 	}
+}
+
+// Read tools change nothing on disk: no project is created or adopted and
+// the cwd cache is not written (FH-8). Writes still create the project.
+func TestReadToolsWriteNothing(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "")
+	if err := os.RemoveAll(e.root + "/demo"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(e.root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out := e.ok("board_context", nil)
+	contains(t, out, `project "demo" is not on the board yet`, "create_ticket")
+	e.fails("list_tickets", nil, "not_found")
+	e.fails("get_ticket", map[string]any{"ticket": "DE-1"}, "not_found")
+	for _, name := range []string{"demo", ".flashheart/cache/cwd.json"} {
+		if _, err := os.Stat(e.root + "/" + name); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("%s was written by a read tool: %v", name, err)
+		}
+	}
+	e.ok("create_ticket", map[string]any{"type": "bug", "title": "First", "description": "x", "criteria": []string{"y"}, "priority": "low", "project_key": "DM"})
+	if _, err := os.Stat(e.root + "/demo/project.yaml"); err != nil {
+		t.Errorf("a write should create the project: %v", err)
+	}
+}
+
+// A dependency's project is the one whose folders hold its id, not the last
+// project whose key matches: an empty project can derive the same key, and
+// a ticket can sit in a project with another key (FH-8 review).
+func TestDependenciesAreFoundByIDNotByKey(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	write(t, e.root+"/other/project.yaml", "key: OT\n")
+	done, err := e.store.CreateTicket("other", store.NewTicket{Title: "Done there", Status: board.UpNext})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.UpdateTicket("other", done.ID, "", func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "status", "done") }); err != nil {
+		t.Fatal(err)
+	}
+	// An empty project whose derived key (initials) is also OT, sorting
+	// after other.
+	if err := os.MkdirAll(e.root+"/out-take/tickets", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// A done ticket filed under a project with another key.
+	write(t, e.root+"/third/project.yaml", "key: TH\n")
+	write(t, e.root+"/third/tickets/XY-7-stray/XY-7-stray.md", "---\nid: XY-7\nstatus: done\ntype: feature\npriority: low\ncreated: 2026-10-01\n---\n# Stray\n")
+	mine := e.ticket(store.NewTicket{Title: "Mine", DependsOn: []string{done.ID, "XY-7"}})
+	e.startSession(session)
+	if out := e.ok("get_ticket", map[string]any{"ticket": mine}); strings.Contains(out, "Blocked") {
+		t.Fatalf("done dependencies block:\n%s", out)
+	}
+	e.ok("claim", map[string]any{"ticket": mine})
+}
+
+// A repository whose name is taken by another repository's project would
+// get a new name; board_context names that one and counts the taken key.
+func TestBoardContextNamesTheProjectAWriteWouldCreate(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	write(t, e.root+"/demo/project.yaml", "key: DM\nname: demo\nrepos:\n  - /elsewhere/demo\n")
+	out := e.ok("board_context", nil)
+	contains(t, out, `project "demo-`, "Keys in use: DM")
 }
