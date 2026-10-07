@@ -81,6 +81,8 @@ instructions.
   questions. The next session resumes from it.
 - ` + "`update_ticket`" + ` ticks acceptance criteria as they pass, edits fields and
   appends notes.
+- ` + "`attach`" + ` copies a screenshot or log, saved as a file, into a ticket with
+  a caption, and gives the markdown to link it from the review.
 - When you need a human decision, ` + "`ask_human`" + ` (kind question, decision,
   review or blocked, with options when there are clear choices). The board
   shows the user; the answer arrives in a later prompt. Carry on with other

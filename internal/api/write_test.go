@@ -370,3 +370,26 @@ func TestMoveWithAfterPlacesTheTicket(t *testing.T) {
 	path := "../x"
 	send(t, handler, http.MethodPost, "/api/tickets/AL-4/move", MoveRequest{To: "backlog", After: &path}, http.StatusBadRequest, nil)
 }
+
+func TestReviewStepsTickInTheReviewFile(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	name := filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "review.md")
+	detail := ticketDetail(t, handler, "AL-2")
+	if detail.Review == nil || len(detail.Review.Steps) != 2 || detail.Review.Steps[0].Text != "Open the board." || detail.Review.Hash == "" {
+		t.Fatalf("review = %+v", detail.Review)
+	}
+	var saved WriteResponse
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/review/steps", ReviewStepRequest{Base: detail.Review.Hash, Index: 1, Checked: true}, http.StatusOK, &saved)
+	data, _ := os.ReadFile(name)
+	if !strings.Contains(string(data), "2. [x] See four columns.") {
+		t.Fatalf("review.md:\n%s", data)
+	}
+	if after := ticketDetail(t, handler, "AL-2"); !after.Review.Steps[1].Done || after.Review.Hash != saved.Hash {
+		t.Errorf("after = %+v", after.Review)
+	}
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/review/steps", ReviewStepRequest{Base: detail.Review.Hash, Index: 0, Checked: true}, http.StatusConflict, nil)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/review/steps", ReviewStepRequest{Base: saved.Hash, Index: 9, Checked: true}, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-3/review/steps", ReviewStepRequest{Base: "x", Index: 0, Checked: true}, http.StatusNotFound, nil)
+}

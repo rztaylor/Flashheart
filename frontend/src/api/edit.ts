@@ -91,6 +91,22 @@ export function setCriterion(
   });
 }
 
+// setReviewStep ticks or clears a How to Verify step of a ticket's review
+// (REV-3); base is the review's hash.
+export function setReviewStep(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  base: string,
+  index: number,
+  checked: boolean,
+) {
+  return save(fetcher, "POST", `${ticketPath(id)}/review/steps`, {
+    base,
+    index,
+    checked,
+  });
+}
+
 // answerQuestion answers an agent's question (RUN-8); the answer reaches
 // the session with its next prompt.
 export function answerQuestion(

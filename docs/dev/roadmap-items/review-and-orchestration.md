@@ -1,6 +1,7 @@
 # review-and-orchestration
 
-Status: **Pending**. Depends on `mcp-protocol`.
+Status: **Partial**: built in FH-6, open for the user's review. Depends on
+`mcp-protocol`.
 
 ## Goal
 

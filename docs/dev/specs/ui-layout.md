@@ -154,14 +154,20 @@ reorders them.
 4. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
    dialog on save (`EDIT-7`).
 5. **Runs tab**: runs newest first, each a card with its state, agent,
-   short id, link, branch and time, then its detail and subagents.
-6. **Attachments tab** (planned, `review-and-orchestration`): a two-column
-   grid of thumbnails (screenshots) and file tiles, each with caption, file
-   name and kind; a thumbnail opens a lightbox dialog (Escape closes, arrows
-   step, focus returns to the thumbnail). Until it exists, attachments show
-   at the top of the Review tab as they do today.
-7. **Review tab**: screenshots above the review markdown; *How to Verify*
-   becomes a checklist when `review-and-orchestration` lands (`REV-3`).
+   short id, link, branch and time, then its detail and its subagents as a
+   tree on a spur: each row its state, type, the ticket it claimed when that
+   is another, and its plan step (or tool and edit counts), opening to its
+   own plan, files and activity (agent-protocol §10). A subagent listed on
+   its own ticket names the session it belongs to.
+6. **Attachments tab** (shown when the ticket has files): a two-column grid
+   of thumbnails (screenshots) and file tiles, each with caption, file name
+   and kind; a thumbnail opens a lightbox dialog (Escape closes, arrows and
+   Previous/Next step when there is more than one, focus returns to the
+   thumbnail); other files open in a new tab.
+7. **Review tab**: screenshots above the review markdown; the *How to
+   Verify* steps show as a checklist with `d of t`, between the section's
+   own text, and a tick is written into the step's line in `review.md`
+   (`REV-3`).
 
 ## 4. Workstreams
 

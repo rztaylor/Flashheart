@@ -178,22 +178,64 @@ func TestUsageErrorsExitTwoWithUsage(t *testing.T) {
 	}
 }
 
-func TestUnimplementedCommandsExitTwoQuietly(t *testing.T) {
+// doctor reports on stdout and exits 1 when it finds a problem (SET-4).
+func TestDoctorReportsAndExitsOneOnProblems(t *testing.T) {
 	t.Parallel()
 
-	for _, args := range [][]string{{"doctor"}} {
-		h := newHarness(t)
-		code, stdout, stderr := h.run(args...)
-		if code != 2 {
-			t.Errorf("%v: code = %d, want 2", args, code)
+	h := newHarness(t)
+	root := filepath.Join(h.home, "reports", "Kanban")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := h.run("doctor")
+	if code != 1 || stderr != "flashheart: doctor found 3 problems\n" {
+		t.Fatalf("code %d, stderr %q", code, stderr)
+	}
+	for _, want := range []string{"Board root " + root + "\n  ok       exists and is writable", "Claude Code\n  problem  Hooks: none installed", "Hook errors\n  ok       none"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("missing %q in:\n%s", want, stdout)
 		}
-		// CLI-3: hook and mcp never write anything but protocol output to stdout.
-		if stdout != "" {
-			t.Errorf("%v: stdout = %q, want empty", args, stdout)
+	}
+
+	// Set up with a binary that exists, and doctor is satisfied.
+	binary := filepath.Join(h.home, "bin", "flashheart")
+	if err := os.MkdirAll(filepath.Dir(binary), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	deps := h.deps()
+	deps.Executable = func() (string, error) { return binary, nil }
+	deps.FindClaude = func(string) string { return "/usr/bin/claude" }
+	registered := false
+	deps.RunCommand = func(_ string, args ...string) ([]byte, error) {
+		// A claude CLI with a user-scope MCP registry: get reads it.
+		switch args[1] {
+		case "get":
+			if !registered {
+				return []byte(`No MCP server named "flashheart".`), errors.New("exit status 1")
+			}
+			return []byte("flashheart:\n  Scope: User config (available in all your projects)\n  Command: " + binary + "\n  Args: mcp\n"), nil
+		case "add-json":
+			registered = true
 		}
-		if want := "flashheart: " + args[0] + " is not yet available\n"; stderr != want {
-			t.Errorf("%v: stderr = %q, want %q", args, stderr, want)
-		}
+		return nil, nil
+	}
+	run := func(args ...string) (int, string, string) {
+		var stdout, stderr bytes.Buffer
+		code := Run(context.Background(), args, &stdout, &stderr, deps)
+		return code, stdout.String(), stderr.String()
+	}
+	if code, _, stderr := run("setup", "claude", "--write"); code != 0 {
+		t.Fatalf("setup: %d %s", code, stderr)
+	}
+	code, stdout, stderr = run("doctor")
+	if code != 0 || stderr != "" || strings.Contains(stdout, "problem") {
+		t.Fatalf("after setup: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+	if code, _, stderr = run("doctor", "extra"); code != 2 || !strings.Contains(stderr, "doctor takes no arguments") {
+		t.Fatalf("arguments: code %d, stderr %q", code, stderr)
 	}
 }
 

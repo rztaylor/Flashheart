@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -15,8 +16,12 @@ import (
 // (VIEW-3).
 const endedVisible = 24 * time.Hour
 
-// maxTicketRuns bounds the runs sent with a ticket's Runs tab.
-const maxTicketRuns = 10
+// maxTicketRuns bounds the runs sent with a ticket's Runs tab, and
+// maxSubagents the subagents sent for each, most recent first.
+const (
+	maxTicketRuns = 10
+	maxSubagents  = 20
+)
 
 // RunCountsJSON counts runs by state; Live is every run not Ended.
 type RunCountsJSON struct {
@@ -235,14 +240,43 @@ func openQuestion(snapshot *index.Snapshot, v runs.View) (string, bool) {
 	return "", false
 }
 
-// ticketRuns lists a ticket's runs with timelines for its Runs tab.
+// ticketRuns lists a ticket's runs with timelines for its Runs tab, with
+// every subagent of a listed session, so the tab shows the whole tree
+// (agent-protocol §10) even where a subagent claimed another ticket.
+// maxTicketRuns bounds the runs linked to the ticket, maxSubagents each
+// session's subagents.
 func ticketRuns(snapshot *index.Snapshot, id string) []RunJSON {
+	linked := snapshot.TicketRuns(id)
+	isLinked := map[string]bool{}
+	for _, v := range linked {
+		isLinked[v.ID] = true
+	}
+	// Roots are the sessions, and subagents whose session is not linked to
+	// the ticket; subagents follow their root.
 	list := []RunJSON{}
-	for _, v := range snapshot.TicketRuns(id) {
-		if len(list) == maxTicketRuns {
+	listed := map[string]bool{}
+	for _, v := range linked {
+		if v.Parent != "" && isLinked[v.Parent] {
+			continue
+		}
+		if len(listed) == maxTicketRuns {
 			break
 		}
+		listed[v.ID] = true
 		list = append(list, runJSON(snapshot, v, true))
+	}
+	children := map[string][]runs.View{}
+	for _, v := range snapshot.Runs {
+		if v.Parent != "" && listed[v.Parent] {
+			children[v.Parent] = append(children[v.Parent], v)
+		}
+	}
+	for _, root := range list {
+		subagents := children[root.ID]
+		sort.SliceStable(subagents, func(a, b int) bool { return subagents[a].LastActivity.After(subagents[b].LastActivity) })
+		for _, child := range subagents[:min(len(subagents), maxSubagents)] {
+			list = append(list, runJSON(snapshot, child, true))
+		}
 	}
 	return list
 }

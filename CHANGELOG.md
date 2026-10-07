@@ -48,6 +48,8 @@ All notable changes to this project are documented here. The project follows
 - Board columns scroll together on one surface, like a single page: a wheel
   or trackpad anywhere over the board moves every column, column heads stay
   in view, and no column has its own scrollbar (FH-24).
+- In the Agents view, a subagent names a ticket only when it claimed one
+  other than its session's (FH-6).
 
 ### Added
 
@@ -61,6 +63,28 @@ All notable changes to this project are documented here. The project follows
   an agent's question and prints it. `ask_human` returns the command, and
   Claude Code runs it in the background, so an answer given on the board
   wakes the session instead of waiting for your next prompt (FH-31).
+- Agents can attach screenshots and logs to a ticket with the new `attach`
+  MCP tool, which copies the file in with a caption and returns the
+  markdown to link it from the review. SVG, HTML, oversized files and
+  anything that is not a regular file are refused (FH-6).
+- An Attachments tab on the card panel: screenshots as thumbnails that open
+  large in a lightbox (arrow keys step through them), other files as tiles
+  that open in a new tab. The Review tab shows the screenshots above the
+  review (FH-6).
+- A review's *How to Verify* steps show as a checklist you can tick; each
+  tick is saved into `review.md` (FH-6).
+- The Runs tab shows an orchestrated session's subagents as a tree: each
+  with its state, the ticket it claimed if that is another, and its plan
+  step, opening to its own plan, files and activity, including checkpoints
+  (FH-6).
+- `flashheart doctor` checks the board root and its permissions, Claude
+  Code's hooks, MCP server and skill against what `setup` writes (including
+  a configured binary that no longer exists), and the last day's hook
+  errors, with the fix for each; it changes nothing (FH-6).
+- While the board is open, a ticket or review edited in a text editor that
+  links to a screenshot or log outside the board gets a copy of that file,
+  and the link points at the copy, so the evidence survives the original
+  being cleaned up (FH-6).
 - Manual card order: drag a card to any place in its column, or to a place
   in another column, and the order is saved in the ticket's new `rank`
   field, so it survives reloads and restarts. Shift with Up or Down and the

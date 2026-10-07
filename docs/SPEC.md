@@ -407,7 +407,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `SET-3` Configuration uses the absolute path of the running binary and
   passes `--root` only when it differs from the default.
 - `SET-4` `flashheart doctor` checks the root, permissions, the installed hook
-  and MCP configuration for each agent, and recent hook errors.
+  and MCP configuration for each agent, and recent hook errors. It changes
+  nothing, reports each check as ok, warning or problem with the fix (a
+  missing hook, a configured binary that no longer exists, an out-of-date
+  skill, hook errors of the last day), and exits 1 when it finds a problem.
 
 ### 6.11 Review and attachments (`REV`)
 
@@ -416,7 +419,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `REV-2` Allowed types: PNG, JPEG, GIF, WebP, PDF, plain text, markdown,
   JSON and log files, at most 20 MB each. SVG and HTML are refused.
 - `REV-3` The Review tab shows the review file beside the ticket's
-  screenshots and the *How to Verify* steps as a checklist.
+  screenshots and the *How to Verify* steps as a checklist. A tick is
+  written into the step's own line in `review.md` as a task box, under the
+  content-hash precondition, so the file stays the record.
 - `REV-4` `write_review` creates or replaces the ticket's `review.md` in the
   review template, whose *Evidence* section holds captioned screenshots of
   every state a visible change touched, or "No visible change:" and why.
@@ -426,7 +431,11 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   markdown links or images written into a ticket or review, are copied into
   `files/` (allow-listed types, size limit, `REV-2`) and the references are
   rewritten to the copies. A path that cannot be copied stays as text with a
-  warning.
+  warning. `serve` does the same for a ticket or review edited directly (in
+  a text editor) while it runs: links to allow-listed files outside the
+  root are copied in and rewritten; a link it cannot copy is logged once.
+  Content Flashheart wrote itself, including raw edits sent from the
+  browser, is not acted on, so the browser cannot pull local files in.
 
 ### 6.12 Settings (`CFG`)
 

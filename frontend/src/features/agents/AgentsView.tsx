@@ -225,6 +225,7 @@ function LaneSection({
                         now={now}
                         onOpen={onOpen}
                         subagent
+                        parentTicket={entry.run.ticket}
                       />
                     </li>
                   ))}
@@ -250,6 +251,9 @@ interface RunRowProps {
   now: Date;
   onOpen(ticket: TicketRef): void;
   subagent?: boolean;
+  // parentTicket is a subagent's session's ticket: a subagent names its
+  // ticket only when it claimed another.
+  parentTicket?: string;
   // subagents are a session's subagents, to say which one needs you.
   subagents?: Run[];
 }
@@ -265,9 +269,11 @@ function RunRow({
   now,
   onOpen,
   subagent,
+  parentTicket,
   subagents = [],
 }: RunRowProps) {
   const detailId = useId();
+  const ticket = subagent && run.ticket === parentTicket ? "" : run.ticket;
   const name = subagent
     ? `${run.agentType || "Subagent"}`
     : agentName(run.agent);
@@ -327,10 +333,10 @@ function RunRow({
               {projectKey}
             </span>
           ) : null}
-          {run.ticket ? (
+          {ticket ? (
             <button
               type="button"
-              onClick={() => onOpen({ id: run.ticket })}
+              onClick={() => onOpen({ id: ticket })}
               className="flex min-w-0 items-baseline gap-2 rounded-control text-left hover:underline"
               title={
                 run.linkedBy === "branch"
@@ -339,7 +345,7 @@ function RunRow({
               }
             >
               <span className="shrink-0 text-2xs font-semibold tracking-[0.02em] text-ink">
-                {run.ticket}
+                {ticket}
               </span>
               <span className="truncate text-ink">
                 {run.ticketTitle || "Ticket not found"}

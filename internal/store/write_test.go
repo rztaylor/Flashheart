@@ -438,3 +438,49 @@ func TestCreateTicketWritesNothingWhenProjectFileIsBroken(t *testing.T) {
 		t.Errorf("tickets written: %d", len(entries))
 	}
 }
+
+func TestUpdateReviewChecksTheHash(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	name := filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "review.md")
+	before, _ := os.ReadFile(name)
+	tick := func(data []byte) ([]byte, error) { return append(data, "x\n"...), nil }
+	hash, err := s.UpdateReview("alpha", "AL-2", Hash(before), tick)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, _ := os.ReadFile(name)
+	if Hash(after) != hash || string(after) != string(before)+"x\n" {
+		t.Fatalf("review = %q", after)
+	}
+	var conflict *ConflictError
+	if _, err := s.UpdateReview("alpha", "AL-2", Hash(before), tick); !errors.As(err, &conflict) {
+		t.Errorf("stale hash: %v", err)
+	}
+	if _, err := s.UpdateReview("alpha", "AL-3", "", tick); !errors.Is(err, ErrNotFound) {
+		t.Errorf("no review: %v", err)
+	}
+}
+
+func TestWroteLastTellsOwnWritesFromOthers(t *testing.T) {
+	t.Parallel()
+
+	s := New(sampleCopy(t))
+	t.Cleanup(func() { s.Close() })
+	data, hash, err := s.ReadTicket("alpha", "AL-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	name, _ := s.TicketFile("alpha", "AL-2")
+	if s.WroteLast(name, data) {
+		t.Fatal("a file this store never wrote counts as its own")
+	}
+	if _, err := s.UpdateTicket("alpha", "AL-2", hash, func(data []byte) ([]byte, error) { return append(data, "More.\n"...), nil }); err != nil {
+		t.Fatal(err)
+	}
+	data, _, _ = s.ReadTicket("alpha", "AL-2")
+	if !s.WroteLast(name, data) || s.WroteLast(name, append(data, '!')) {
+		t.Fatal("WroteLast does not match the store's own write only")
+	}
+}

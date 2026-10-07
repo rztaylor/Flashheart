@@ -38,6 +38,14 @@ Intended layout (packages are created when they get real content):
 - `internal/setup`: agent configuration diff, write with backup, uninstall,
   skill/AGENTS.md rendering, and refreshing an installed Claude skill (called
   by the session-start hook through `cli`; `hooks` never imports `setup`).
+- `internal/doctor`: `flashheart doctor` (SET-4): root checks, each
+  agent's configuration through `setup.Diagnose`, recent hook errors, the
+  report. Reads only (a probe file proves the root writable only where
+  there is no access(2)).
+- `internal/references`: serve's copying of files that directly edited
+  tickets and reviews link to (REV-5), after each new snapshot, through
+  `store`; link syntax is `board.RewriteLocalLinks`, shared with the MCP
+  tools.
 - `internal/migrate`: one-time conversion of a v1 root to board format v2
   (`flashheart migrate`, MIG-1): plan, number, rewrite references, move v1
   files to `.flashheart/backup/`. Writes only through `store` primitives.

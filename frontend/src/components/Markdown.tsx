@@ -15,6 +15,8 @@ interface MarkdownProps {
   // Project keys whose ticket ids in text become links (KEY-3).
   keys: Set<string>;
   onOpenTicket(ticket: TicketRef): void;
+  // inline renders one line of markdown inside a span, without paragraphs.
+  inline?: boolean;
 }
 
 // Markdown renders GitHub-flavoured markdown without raw HTML (CARD-2,
@@ -25,6 +27,7 @@ export function Markdown({
   context,
   keys,
   onOpenTicket,
+  inline = false,
 }: MarkdownProps) {
   const components: Components = {
     a({ href = "", children: label }) {
@@ -98,15 +101,19 @@ export function Markdown({
       );
     },
   };
-  return (
-    <div className="markdown">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, () => linkTicketIds(keys)]}
-        skipHtml
-        components={components}
-      >
-        {children}
-      </ReactMarkdown>
-    </div>
+  if (inline) components.p = ({ children: text }) => <>{text}</>;
+  const rendered = (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, () => linkTicketIds(keys)]}
+      skipHtml
+      components={components}
+    >
+      {children}
+    </ReactMarkdown>
+  );
+  return inline ? (
+    <span className="markdown">{rendered}</span>
+  ) : (
+    <div className="markdown">{rendered}</div>
   );
 }

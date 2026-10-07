@@ -5,7 +5,8 @@ Owns shared, product-neutral UI primitives on the semantic roles of
 `Pill` (status, blocker and attribute tags), `ColumnWell` (the board column
 and Agents lane surface with its head), `KeyBadge`, `StateNote`, `Tabs`,
 `SidePanel`, `SegmentedControl`, fields and form fields, `Dialog`, `Toast`,
-`Markdown`, `RouteBar`, `EmptyState`, `RunState` (run state as a mark and
+`Markdown` (block or one inline line), `Lightbox` (one image of a set in a
+dialog), `RouteBar`, `EmptyState`, `RunState` (run state as a mark and
 words, Needs you as the attention plate),
 `PlanRoute` (an agent's plan as a monochrome route), `QuestionCard` (an
 agent's question with its answer box) and `Aside` (a marginal remark, at

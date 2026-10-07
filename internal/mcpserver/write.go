@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"crypto/rand"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -42,6 +43,7 @@ func (srv *server) registerWrites(server *mcp.Server) {
 	tool(server, "create_ticket", "Create a ticket in your project with the next id. Feature tickets carry a test plan and bugs a reproduction (plan_or_repro). Returns the new id.", srv.createTicket)
 	tool(server, "create_workstream", "Create a workstream in your project: an ordered group of tickets with a shared goal, where each ticket waits for the ones before it. Use one when work spans several dependent tickets; leave single tickets alone. The tickets you list join it in that order.", srv.createWorkstream)
 	tool(server, "write_review", "Create or replace a ticket's review (the human verification guide, in the review template). Screenshots and other local files linked by absolute path are copied into the ticket.", srv.writeReview)
+	tool(server, "attach", "Copy a local file (screenshot, log or other: PNG, JPEG, GIF, WebP, PDF, text, markdown, JSON or log) into a ticket's files with a caption. Returns the stored name and a markdown snippet for the review's Evidence.", srv.attach)
 	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt. Use it for any question that ends your turn too: a question asked only in chat leaves you in Waiting.", srv.askHuman)
 }
 
@@ -832,6 +834,68 @@ func (srv *server) writeReview(input WriteReviewInput) (string, error) {
 	}
 	lines = append(lines, fmt.Sprintf("ok ticket=%s review", ticket.ID))
 	return strings.Join(lines, "\n") + "\n", nil
+}
+
+// AttachInput is attach's input (REV-1, REV-2).
+type AttachInput struct {
+	Attribution
+	Ticket  string `json:"ticket" jsonschema:"the ticket id"`
+	Path    string `json:"path" jsonschema:"absolute path of a local file to copy into the ticket"`
+	Caption string `json:"caption" jsonschema:"what it shows, in a few words"`
+	Kind    string `json:"kind,omitempty" jsonschema:"screenshot, log or other; default: from the file type"`
+}
+
+// attachKinds are the kinds a copied file can have.
+var attachKinds = []string{"screenshot", "log", "other"}
+
+func (srv *server) attach(input AttachInput) (string, error) {
+	c, err := srv.begin(input.Run)
+	if err != nil {
+		return "", err
+	}
+	path := strings.TrimSpace(input.Path)
+	if !filepath.IsAbs(path) {
+		return "", fail("invalid_input", "pass the file's absolute path", "%q is not an absolute path", path)
+	}
+	kind := strings.TrimSpace(input.Kind)
+	if kind == "" {
+		kind = kindOf(path)
+	}
+	if !slices.Contains(attachKinds, kind) {
+		return "", fail("invalid_input", "use kind screenshot, log or other", "%q is not a kind", kind)
+	}
+	project, ticket, err := c.find(input.Ticket)
+	if err != nil {
+		return "", err
+	}
+	if err := c.guard(ticket.ID); err != nil {
+		return "", err
+	}
+	caption := scrub.Text(input.Caption, 200)
+	stored, err := srv.store.CopyIntoTicket(project.Name, ticket.ID, store.FileCopy{
+		Source: path, Caption: caption, Kind: kind, Run: c.by(), MaxBytes: c.settings.Attachments.MaxBytes,
+	})
+	if err != nil {
+		return "", err
+	}
+	if err := c.record(project.Name, events.Event{Kind: events.AttachmentAdded, Data: events.AttachmentData{Ticket: ticket.ID, File: stored.File, Kind: kind}}); err != nil {
+		return "", err
+	}
+	name := "files/" + stored.File
+	label := caption
+	if label == "" {
+		label = filepath.Base(path)
+	}
+	label = strings.NewReplacer(`[`, `\[`, `]`, `\]`).Replace(label)
+	snippet := fmt.Sprintf("[%s](%s)", label, name)
+	if contentType, _ := board.AttachmentType(path); strings.HasPrefix(contentType, "image/") {
+		snippet = "!" + snippet
+	}
+	verb := "Attached"
+	if stored.Reused {
+		verb = "Already attached (identical copy)"
+	}
+	return fmt.Sprintf("%s %s to %s.\nUse in the review: %s\nok ticket=%s file=%s\n", verb, name, ticket.ID, snippet, ticket.ID, name), nil
 }
 
 // AskHumanInput is ask_human's input (RUN-8).

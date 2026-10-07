@@ -25,8 +25,9 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    hook adapter, `setup codex`, AGENTS.md protocol text. Depends on
    `mcp-runs`.
 5. [`review-and-orchestration`](roadmap-items/review-and-orchestration.md) —
-   **Pending**. Attachments, review panel, subagent tree, `doctor`. Depends on
-   `mcp-protocol`; can run in parallel with `mcp-runs` and `codex-support`.
+   **Partial**. Attachments, review panel, subagent tree, `doctor`. Built:
+   all of it (FH-6); open: the user's review. Depends on `mcp-protocol`; can
+   run in parallel with `mcp-runs` and `codex-support`.
 6. [`metro-theme-rollout`](roadmap-items/metro-theme-rollout.md) — **Partial**.
    Built: Metro Pop light and black/charcoal Night Service dark on one
    layout contract (`docs/dev/specs/ui-layout.md`), FH-10–FH-14. Open: the

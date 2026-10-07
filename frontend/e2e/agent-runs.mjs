@@ -40,7 +40,7 @@ function session(root, id, cwd) {
 }
 
 // seedRuns records four sessions: one in alpha waiting on a permission (its
-// branch links it to AL-3), one in beta working with an Explore subagent,
+// branch links it to AL-3) with three subagents, one in beta working with an Explore subagent,
 // one in a new repository waiting for a prompt, and one in alpha that ended
 // after edits without a checkpoint.
 export async function seedRuns(home, root) {
@@ -79,6 +79,30 @@ export async function seedRuns(home, root) {
   asking.tool("Read", { file_path: join(alpha, "src/panel/CardPanel.tsx") });
   asking.tool("Read", { file_path: join(alpha, "src/panel/Tabs.tsx") });
   asking.tool("Edit", { file_path: join(alpha, "src/panel/RunsTab.tsx") });
+  // It orchestrates three subagents: one finished, two still working, one
+  // of them with its own plan (agent-protocol §10).
+  const sub = (id, type) => ({ agent_id: id, agent_type: type });
+  asking.send("SubagentStart", sub("c1a7e3b9", "Explore"));
+  asking.tool("Grep", {}, sub("c1a7e3b9", "Explore"));
+  asking.send("SubagentStop", sub("c1a7e3b9", "Explore"));
+  asking.send("SubagentStart", sub("c2b8f4ca", "general-purpose"));
+  asking.tool(
+    "TodoWrite",
+    {
+      todos: [
+        { content: "Read the tab", status: "completed" },
+        { content: "Write the timeline test", status: "in_progress" },
+      ],
+    },
+    sub("c2b8f4ca", "general-purpose"),
+  );
+  asking.tool(
+    "Edit",
+    { file_path: join(alpha, "src/panel/RunsTab.test.tsx") },
+    sub("c2b8f4ca", "general-purpose"),
+  );
+  asking.send("SubagentStart", sub("c3c9a5db", "Plan"));
+  asking.tool("Read", {}, sub("c3c9a5db", "Plan"));
   asking.send("PermissionRequest", {
     tool_name: "Bash",
     tool_input: { command: "synthetic" },

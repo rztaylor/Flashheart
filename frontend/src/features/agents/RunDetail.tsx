@@ -23,7 +23,7 @@ export function RunDetail({
   timeline?: TimelineEntry[];
   now: Date;
   // headingLevel places the section heads under the caller's heading.
-  headingLevel?: 3 | 4;
+  headingLevel?: 3 | 4 | 5;
   // onAnswer answers one of the run's questions (CARD-6); questions are
   // shown only where they can be answered.
   onAnswer?(question: string, answer: string): Promise<string | undefined>;
@@ -189,10 +189,10 @@ function DetailSection({
   children,
 }: {
   title: string;
-  level: 3 | 4;
+  level: 3 | 4 | 5;
   children: React.ReactNode;
 }) {
-  const Heading = level === 3 ? "h3" : "h4";
+  const Heading = level === 3 ? "h3" : level === 4 ? "h4" : "h5";
   return (
     <section className="min-w-0">
       <Heading className="mb-2 text-sm heading-cut">{title}</Heading>

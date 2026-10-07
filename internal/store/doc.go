@@ -1,6 +1,6 @@
 // Package store is the only package that touches the board root. It reads
-// v2 projects (PRJ-1) with their tickets, workstreams, reviews, files
-// indexes, keys and archived ids, detects v1 roots and fingerprints what it
+// v2 projects (PRJ-1) with their tickets, workstreams, reviews (and when
+// each last changed), files indexes, keys and archived ids, detects v1 roots and fingerprints what it
 // read. It writes tickets and workstreams under a per-project lock with a
 // content-hash precondition and atomic replace (STO-3), places tickets in
 // their column's manual order (EDIT-9), keeps a ticket's
@@ -9,7 +9,7 @@
 // lists them and deletes archived ones permanently with their references
 // (EDIT-8), archives, restores and permanently deletes projects with their
 // references and retired keys (PRJ-5), copies allow-listed local files into a ticket (REV-1, REV-5),
-// writes reviews (REV-4), finds or creates a repository's project
+// writes reviews (REV-4) and ticks their How to Verify steps (REV-3), finds or creates a repository's project
 // (PRJ-2–PRJ-5), resolves working directories through the cwd cache, and
 // keeps event files and answers inboxes.
 //

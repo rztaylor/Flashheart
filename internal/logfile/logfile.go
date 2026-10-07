@@ -1,9 +1,13 @@
 package logfile
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 )
@@ -102,4 +106,36 @@ func (w *Writer) rotate() error {
 		return fmt.Errorf("rotate log: %w", err)
 	}
 	return w.open()
+}
+
+// Entry is one logged entry: its time and text (continuation lines
+// included).
+type Entry struct {
+	Time time.Time
+	Text string
+}
+
+// Recent returns the entries of the log at path, its older generation
+// first, written at or after since. A missing log has none.
+func Recent(path string, since time.Time) ([]Entry, error) {
+	var entries []Entry
+	for _, name := range []string{path + ".1", path} {
+		data, err := os.ReadFile(name)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		first := len(entries)
+		for _, line := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
+			stamp, text, _ := strings.Cut(line, " ")
+			if at, err := time.Parse(time.RFC3339, stamp); err == nil {
+				entries = append(entries, Entry{Time: at, Text: text})
+			} else if len(entries) > first {
+				entries[len(entries)-1].Text += "\n" + line
+			}
+		}
+	}
+	return slices.DeleteFunc(entries, func(entry Entry) bool { return entry.Time.Before(since) }), nil
 }

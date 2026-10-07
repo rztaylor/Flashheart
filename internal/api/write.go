@@ -20,6 +20,7 @@ import (
 type Writer interface {
 	ReadTicket(project, id string) ([]byte, string, error)
 	UpdateTicket(project, id, base string, edit store.Edit) (string, error)
+	UpdateReview(project, id, base string, edit store.Edit) (string, error)
 	PlaceTicket(project, id, base, after string, edit store.Edit) (string, bool, error)
 	UpdateWorkstream(project, slug, base string, edit store.Edit) (string, error)
 	CreateTicket(project string, input store.NewTicket) (store.Created, error)
@@ -51,6 +52,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/tickets/{id}", b.patchTicket)
 	mux.HandleFunc("PUT /api/tickets/{id}/raw", b.putRaw)
 	mux.HandleFunc("POST /api/tickets/{id}/criteria", b.setCriterion)
+	mux.HandleFunc("POST /api/tickets/{id}/review/steps", b.setReviewStep)
 	mux.HandleFunc("POST /api/tickets/{id}/archive", b.archive)
 	mux.HandleFunc("POST /api/tickets/{id}/unarchive", b.unarchive)
 	mux.HandleFunc("POST /api/projects/{project}/tickets", b.createTicket)
@@ -606,4 +608,39 @@ func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReviewStepRequest is POST /api/tickets/{id}/review/steps: tick or clear
+// How to Verify step Index (from 0) of the review read at Base (REV-3).
+type ReviewStepRequest struct {
+	Base    string `json:"base"`
+	Index   int    `json:"index"`
+	Checked bool   `json:"checked"`
+}
+
+func (b boardAPI) setReviewStep(w http.ResponseWriter, r *http.Request) {
+	writer := b.writer(w)
+	if writer == nil {
+		return
+	}
+	var request ReviewStepRequest
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
+		return
+	}
+	_, project, ticket, ok := b.findTicket(w, r)
+	if !ok {
+		return
+	}
+	hash, err := writer.UpdateReview(project.Name, ticket.ID, request.Base, func(data []byte) ([]byte, error) {
+		next, err := board.SetReviewStep(string(data), request.Index, request.Checked)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", store.ErrInvalidInput, err)
+		}
+		return []byte(next), nil
+	})
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	b.saved(w, http.StatusOK, hash, nil)
 }
