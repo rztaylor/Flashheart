@@ -8,6 +8,10 @@ import (
 // SkillName is the Claude Code skill setup installs (SET-2).
 const SkillName = "flashheart"
 
+// SkillUpdatedNote opens the session-start context when the hook rewrote an
+// out-of-date installed skill (agent-protocol §5.4).
+const SkillUpdatedNote = "[Flashheart] The flashheart skill was updated to this version of Flashheart; use its current text."
+
 // Instructions is the MCP server's instructions field: a short pointer at
 // the protocol (agent-protocol §7).
 func Instructions() string {

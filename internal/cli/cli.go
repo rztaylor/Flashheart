@@ -473,8 +473,23 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	if stdin == nil {
 		stdin = strings.NewReader("")
 	}
-	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: adapter})
+	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: adapter, RefreshSkill: skillRefresher(args[0], env.deps)})
 	return nil
+}
+
+// skillRefresher keeps the agent's installed protocol skill current at
+// session start (agent-protocol §5.4); only Claude Code has one.
+func skillRefresher(agent string, deps Dependencies) func() (bool, error) {
+	if agent != claude.Agent || deps.HomeDir == nil {
+		return nil
+	}
+	return func() (bool, error) {
+		home, err := deps.HomeDir()
+		if err != nil {
+			return false, err
+		}
+		return setup.RefreshSkill(home)
+	}
 }
 
 // runAwait waits for a question's answer and prints it (agent-protocol

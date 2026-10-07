@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime/debug"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -78,6 +79,10 @@ type Options struct {
 	Stdout  io.Writer
 	Now     func() time.Time
 	Adapter Adapter
+	// RefreshSkill keeps the agent's installed protocol skill current at
+	// session start and reports whether it rewrote it (agent-protocol §5.4);
+	// nil for agents without one.
+	RefreshSkill func() (bool, error)
 }
 
 // Run handles one hook invocation. It never fails: errors and panics go to
@@ -127,6 +132,12 @@ func handle(options Options) error {
 	}
 	if len(input.Events) == 0 && !input.Recovery {
 		return nil
+	}
+	// A skill that cannot be refreshed is logged at once, whatever happens
+	// to the rest of the hook; the session start goes on.
+	skillNote, err := refreshSkill(options, input)
+	if err != nil {
+		logError(options, err)
 	}
 
 	settings, err := config.Load(options.Root)
@@ -178,6 +189,7 @@ func handle(options Options) error {
 		if out.Context, err = recovery(s, log, project, info, list, at, settings); err != nil {
 			return errors.Join(problem, err)
 		}
+		out.Context = joinNotes(skillNote, out.Context)
 	case input.Answers != "":
 		// Answers taken from the inbox are shown even if marking them
 		// delivered fails, so they are never lost.
@@ -185,6 +197,33 @@ func handle(options Options) error {
 		problem = errors.Join(problem, err)
 	}
 	return errors.Join(problem, write(options, out))
+}
+
+func refreshSkill(options Options, input Input) (string, error) {
+	if !input.Recovery || options.RefreshSkill == nil {
+		return "", nil
+	}
+	updated, err := options.RefreshSkill()
+	if err != nil {
+		return "", fmt.Errorf("refresh skill: %w", err)
+	}
+	if updated {
+		return protocol.SkillUpdatedNote, nil
+	}
+	return "", nil
+}
+
+func joinNotes(notes ...string) string {
+	var kept []string
+	for _, note := range notes {
+		if note = strings.TrimRight(note, "\n"); note != "" {
+			kept = append(kept, note)
+		}
+	}
+	if len(kept) == 0 {
+		return ""
+	}
+	return strings.Join(kept, "\n") + "\n"
 }
 
 func write(options Options, out Output) error {

@@ -36,7 +36,8 @@ Intended layout (packages are created when they get real content):
 - `internal/await`: `flashheart await`: wait for one question's answer in
   its session's inbox, deliver it, notice delivery elsewhere, time out.
 - `internal/setup`: agent configuration diff, write with backup, uninstall,
-  skill/AGENTS.md rendering.
+  skill/AGENTS.md rendering, and refreshing an installed Claude skill (called
+  by the session-start hook through `cli`; `hooks` never imports `setup`).
 - `internal/migrate`: one-time conversion of a v1 root to board format v2
   (`flashheart migrate`, MIG-1): plan, number, rewrite references, move v1
   files to `.flashheart/backup/`. Writes only through `store` primitives.

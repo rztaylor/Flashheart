@@ -27,6 +27,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- The installed Flashheart skill keeps itself current: after you upgrade
+  the binary, the next Claude Code session start rewrites
+  `~/.claude/skills/flashheart/SKILL.md` to match and says so in one line,
+  so `setup` no longer has to be rerun. A missing skill is never
+  reinstalled; edits to the skill are overwritten, as setup overwrites
+  them (FH-33).
 - `flashheart await <question-id> --project NAME`: waits for the answer to
   an agent's question and prints it. `ask_human` returns the command, and
   Claude Code runs it in the background, so an answer given on the board

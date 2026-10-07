@@ -2,7 +2,8 @@
 // agent's payload schema (HOOK-1–HOOK-4): it reads the payload, has the
 // agent's Adapter turn it into events, resolves the project, branch and
 // worktree from the working directory, scrubs and bounds what will be
-// stored, appends the events, renders the recovery note at session start,
+// stored, appends the events, renders the recovery note at session start
+// (after calling the caller's skill refresh and noting an update),
 // delivers waiting answers with a prompt (HOOK-5), blocks a stop once for a
 // checkpoint when the project enforces handoffs (HOOK-6), and prints
 // adapter-only replies such as run stamping without opening the board.

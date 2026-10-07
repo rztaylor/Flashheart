@@ -199,6 +199,22 @@ what it changes in `~/.claude/flashheart-backup/<UTC time>/`;
 `--uninstall --write` restores the backed-up `settings.json` byte for byte
 when nothing changed since, else removes only setup's own hooks.
 
+The protocol skill is Flashheart's own code, not user configuration, so it
+is kept current without setup: at every `SessionStart` (startup, resume,
+clear, compact) the hook compares the installed `SKILL.md` with the
+binary's skill and, when they differ, rewrites it atomically and opens the
+returned context with one line saying the skill was updated. It only
+updates a `SKILL.md` that exists and has Flashheart's frontmatter
+(`name: flashheart` and `flashheart-protocol:` in its metadata); a missing
+skill is never created, so `--uninstall` sticks. Edits to it are
+overwritten, as setup overwrites them; customisations belong in the user's
+own skills or `CLAUDE.md`. Only the hook, which runs the binary setup
+registered, writes it; the MCP server and other commands never do. A
+failure is logged to `hook-errors.log` and the session goes on. Claude Code
+reads a skill's body from disk when the skill is invoked, so the new text
+applies in the same session; when it reads skill descriptions is not
+documented, so a changed description may only show from the next session.
+
 Codex: `[mcp_servers.flashheart]` with `command = "/usr/local/bin/flashheart"`
 and `args = ["mcp"]` in `~/.codex/config.toml`, and the hooks in
 `~/.codex/hooks.json`.
@@ -381,7 +397,8 @@ When `enforce_handoff` is on for the project, at `Stop`:
 
 ## 12. Protocol skill and instructions
 
-`SET-2` installs one text, rendered for each agent. It covers, briefly:
+`SET-2` installs one text, rendered for each agent; Claude Code's copy is
+kept current by the session-start hook (§5.4). It covers, briefly:
 
 - at start: read the recovery note; if none, call `board_context`, which
   names your project and its ticket key;

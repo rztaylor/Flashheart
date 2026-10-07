@@ -32,7 +32,11 @@ flashheart setup claude --write    # apply it, with backups
 - the MCP server it registers for every project, by running
   `claude mcp add-json --scope user flashheart …` (when no `claude` command
   is found it prints the command for you to run);
-- the Flashheart skill it installs as `~/.claude/skills/flashheart/SKILL.md`;
+- the Flashheart skill it installs as `~/.claude/skills/flashheart/SKILL.md`.
+  After that Flashheart keeps it current itself: when you upgrade the
+  binary, the next session start rewrites the skill to match. It is
+  Flashheart's own file, so edits to it are overwritten; put your own agent
+  rules in your own skill or `CLAUDE.md`;
 - moving the `kanban-tracker` skill, if you have it, into the backup: the
   Flashheart skill replaces it, and agents should not have two sets of
   ticket rules.
