@@ -23,8 +23,8 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 	if !strings.HasPrefix(skill, "---\nname: flashheart\ndescription: ") || !strings.Contains(skill, "flashheart-protocol: 1\n---\n\n# Flashheart board") {
 		t.Fatalf("skill frontmatter:\n%s", skill[:min(len(skill), 400)])
 	}
-	// Every MCP tool of mcp-protocol is explained (attach arrives later).
-	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human", "create_workstream"} {
+	// Every MCP tool is explained.
+	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human", "create_workstream", "attach"} {
 		if !strings.Contains(skill, "`"+tool) {
 			t.Errorf("skill does not mention %s", tool)
 		}
