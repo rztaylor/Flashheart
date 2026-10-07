@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -47,6 +48,7 @@ var (
 	colourBys      = []string{"type", "priority", "age", "none"}
 	views          = []string{"", "board", "agents", "workstreams", "table"}
 	states         = []string{"", "all", "blocked", "unblocked", "repair"}
+	ages           = []string{"today", "week", "older"}
 	scopeName      = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )
 
@@ -103,13 +105,53 @@ type UI struct {
 }
 
 // Scope is the remembered view and filters of one project or All projects.
+// The hide_later flag of earlier versions is ignored (FH-39).
 type Scope struct {
 	View       string `yaml:"view,omitempty" json:"view"`
-	Type       string `yaml:"type,omitempty" json:"type"`
-	Priority   string `yaml:"priority,omitempty" json:"priority"`
-	Workstream string `yaml:"workstream,omitempty" json:"workstream"`
+	Type       Choice `yaml:"type,omitempty" json:"type"`
+	Priority   Choice `yaml:"priority,omitempty" json:"priority"`
+	Workstream Choice `yaml:"workstream,omitempty" json:"workstream"`
+	Age        Choice `yaml:"age,omitempty" json:"age"`
 	State      string `yaml:"state,omitempty" json:"state"`
-	HideLater  bool   `yaml:"hide_later,omitempty" json:"hideLater"`
+}
+
+// Choice is one filter dimension: the values shown only (Include) and the
+// values hidden (Exclude).
+type Choice struct {
+	Include []string `yaml:"include,flow,omitempty" json:"include"`
+	Exclude []string `yaml:"exclude,flow,omitempty" json:"exclude"`
+}
+
+// UnmarshalYAML also reads the single value of earlier versions as one
+// included value.
+func (c *Choice) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		var value string
+		if err := node.Decode(&value); err != nil {
+			return err
+		}
+		*c = Choice{}
+		if value != "" {
+			c.Include = []string{value}
+		}
+		return nil
+	}
+	type plain Choice
+	return node.Decode((*plain)(c))
+}
+
+// MarshalJSON writes empty lists rather than null, so the browser always
+// reads two lists.
+func (c Choice) MarshalJSON() ([]byte, error) {
+	type plain Choice
+	return json.Marshal(plain{Include: orEmpty(c.Include), Exclude: orEmpty(c.Exclude)})
+}
+
+func orEmpty(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 // Defaults returns the documented defaults.
@@ -204,6 +246,13 @@ func (c Config) validate() error {
 	return nil
 }
 
+// maxChoiceValues bounds each list of a remembered filter.
+const maxChoiceValues = 100
+
+func (c Choice) values() []string {
+	return append(slices.Clone(c.Include), c.Exclude...)
+}
+
 func (u UI) problems() []string {
 	var problems []string
 	oneOf := func(name, value string, allowed []string) {
@@ -224,9 +273,17 @@ func (u UI) problems() []string {
 		}
 		oneOf("ui.scopes."+name+".view", scope.View, views)
 		oneOf("ui.scopes."+name+".state", scope.State, states)
-		for _, value := range []string{scope.Type, scope.Priority, scope.Workstream} {
-			if len(value) > 200 {
-				problems = append(problems, "ui.scopes."+name+" has a filter longer than 200 characters")
+		for _, value := range scope.Age.values() {
+			oneOf("ui.scopes."+name+".age", value, ages)
+		}
+		for _, choice := range []Choice{scope.Type, scope.Priority, scope.Workstream, scope.Age} {
+			if len(choice.Include) > maxChoiceValues || len(choice.Exclude) > maxChoiceValues {
+				problems = append(problems, fmt.Sprintf("ui.scopes.%s has a filter of more than %d values", name, maxChoiceValues))
+			}
+			for _, value := range choice.values() {
+				if len(value) > 200 {
+					problems = append(problems, "ui.scopes."+name+" has a filter longer than 200 characters")
+				}
 			}
 		}
 	}

@@ -52,18 +52,15 @@ import {
   displayOrder,
   predecessor,
 } from "../../model/order";
-import { type PaintMode, paintFor, paintKey } from "../../model/paint";
+import { type PaintMode, paintFor } from "../../model/paint";
 import { useNow } from "../../state/useNow";
 import type { Density } from "../filters/FilterBar";
-import { ColourKey } from "./ColourKey";
-import { LineLegend } from "./LineLegend";
 import { TicketCard } from "./TicketCard";
 
 interface BoardViewProps {
   cards: Card[];
   lines: Map<string, Map<string, Line>>;
   workstreams: Map<string, WorkstreamBrief[]>;
-  legend?: { project: string; workstreams: WorkstreamBrief[] };
   projectNames?: Map<string, string>;
   density: Density;
   paint: PaintMode;
@@ -125,7 +122,6 @@ export function BoardView(props: BoardViewProps) {
     cards,
     lines,
     workstreams,
-    legend,
     projectNames,
     density,
     paint,
@@ -140,7 +136,6 @@ export function BoardView(props: BoardViewProps) {
     sort = null,
   } = props;
   const reorderable = canReorder(sort);
-  const [focusedLine, setFocusedLine] = useState("");
   // The cursor names its column, so a virtual column appearing or leaving
   // does not move it to a neighbour.
   const [cursor, setCursor] = useState<{ column: string; row: number }>({
@@ -216,10 +211,6 @@ export function BoardView(props: BoardViewProps) {
     setCursor({ column: columns[column]?.id ?? "", row });
 
   const keyOf = (column: number, row: number) => `${column}:${row}`;
-  const paints = useMemo(
-    () => paintKey(cards, paint, new Date()),
-    [cards, paint],
-  );
   const findCard = (id: string) =>
     [...refs.current.values()].find(
       (element) =>
@@ -405,21 +396,6 @@ export function BoardView(props: BoardViewProps) {
       }}
     >
       <div className="flex h-full min-h-0 flex-col">
-        {(legend && legend.workstreams.length > 0) || paints.length > 0 ? (
-          <div className="flex items-center justify-between gap-x-6 overflow-x-auto border-t border-rule px-4 py-2.5 md:px-6 [&>*]:shrink-0">
-            {legend ? (
-              <LineLegend
-                workstreams={legend.workstreams}
-                lines={lines.get(legend.project) ?? new Map()}
-                focused={focusedLine}
-                onFocus={setFocusedLine}
-              />
-            ) : (
-              <span />
-            )}
-            <ColourKey mode={paint} paints={paints} />
-          </div>
-        ) : null}
         <div
           ref={grid}
           // The column count is a variable, not an inline template, so the
@@ -495,9 +471,6 @@ export function BoardView(props: BoardViewProps) {
                         ref={ref}
                         {...cardProps(card)}
                         mirrored
-                        dimmed={
-                          focusedLine !== "" && card.workstream !== focusedLine
-                        }
                         selected={selected?.id === card.id}
                         tabIndex={isActive ? 0 : -1}
                         onOpen={() => onOpen({ id: card.id })}
@@ -516,9 +489,6 @@ export function BoardView(props: BoardViewProps) {
                         enabled={!!onMove}
                         cardRef={ref}
                         {...cardProps(card)}
-                        dimmed={
-                          focusedLine !== "" && card.workstream !== focusedLine
-                        }
                         selected={selected?.id === card.id}
                         ghost={dragging?.id === card.id}
                         tabIndex={isActive ? 0 : -1}

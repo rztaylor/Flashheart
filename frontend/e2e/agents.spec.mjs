@@ -178,9 +178,11 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   await expect(
     page.getByRole("region", { name: /^Agent working/ }),
   ).toHaveCount(0);
+  await page.getByRole("button", { name: "View options" }).click();
   await page.getByRole("checkbox", { name: "Needs you" }).uncheck();
   await expect(needsColumn).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Needs you" }).check();
+  await page.keyboard.press("Escape");
   await expect(mirror).toBeVisible();
   // Turning it back on shows it again.
   await expect(needsColumn.getByRole("heading")).toBeInViewport();

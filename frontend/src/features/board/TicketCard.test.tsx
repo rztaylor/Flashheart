@@ -48,7 +48,7 @@ const blocker = {
 function render(
   overrides: Partial<Card> = {},
   density: Density = "normal",
-  paint?: { token: string; label: string },
+  paint?: { token: string; label: string; value: string },
 ) {
   return renderToStaticMarkup(
     <TicketCard
@@ -134,6 +134,7 @@ describe("TicketCard", () => {
     const markup = render({}, "normal", {
       token: "type-feature",
       label: "feature",
+      value: "feature",
     });
     expect(markup).toContain('data-paint="type-feature"');
     expect(markup).toContain("bg-(--paint-tint)");

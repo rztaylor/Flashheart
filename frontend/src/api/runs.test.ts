@@ -144,14 +144,22 @@ describe("run validators", () => {
         scopes: {
           alpha: {
             view: "agents",
-            type: "",
-            priority: "",
-            workstream: "",
+            type: { include: [], exclude: [] },
+            priority: { include: ["high"], exclude: [] },
+            workstream: { include: [], exclude: ["board-ui"] },
+            age: { include: [], exclude: [] },
             state: "",
-            hideLater: false,
           },
         },
       }),
     ).toBe(true);
+    // Filters are lists since FH-39; the single-value form is read only by
+    // the server.
+    expect(
+      isPreferences({
+        ...preferences,
+        scopes: { alpha: { view: "board", type: "bug", state: "" } },
+      }),
+    ).toBe(false);
   });
 });

@@ -6,7 +6,7 @@ import { KeyBadge } from "../components/KeyBadge";
 // PageHeader opens every view with its scope's identity, the project's key
 // badge and name as the page title (All projects in the all scope), one
 // quiet summary line for the view (ui-layout.md §1) and, at the far end, a
-// quiet way into the archive.
+// quiet way into the archive and New ticket (FH-39).
 export function PageHeader({
   projectKey,
   title,
@@ -42,7 +42,9 @@ export function PageHeader({
         </p>
       ) : null}
       {aside ? (
-        <div className="ml-auto md:self-start md:pt-1">{aside}</div>
+        <div className="ml-auto flex items-center gap-3 md:self-start">
+          {aside}
+        </div>
       ) : null}
     </header>
   );

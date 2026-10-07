@@ -223,11 +223,13 @@ Full format: `docs/dev/specs/board-format.md`.
   description excerpt, handoff "next", attachments count). Every card shows
   its id and its workstream's line as a stripe and bullet. **Colour by**
   (type by default, priority, age or none) tints the card header and names
-  the value in a tag, with a colour key on the board; the colour is never the
+  the value in a tag, with colour chips on the board that also filter; the colour is never the
   only carrier of meaning and never uses the workstream line colours.
 - `VIEW-7` Filters and search across title, slug, body, tags, type, priority,
-  workstream, blocked/unblocked, has-run, has-question, `later-possibility`.
-  Filters and view choices are remembered per project (`CFG-2`).
+  workstream, blocked/unblocked, has-run, has-question. Type, priority,
+  workstream and the Colour by value can each show only some values or hide
+  some (FH-39). Filters and view choices are remembered per project
+  (`CFG-2`).
 - `VIEW-8` Live badge on a card with a live run: agent (Claude/Codex),
   current plan step ("3/7 · Fix header"), state, and time since last activity.
 

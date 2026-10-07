@@ -20,6 +20,8 @@
   --fh-card: #ffffff;
   --fh-column: #f3f4f6;
   --fh-well: #f6f7f9;
+  /* Popover: menus that open over the board, lifted by shadow and edge. */
+  --fh-popover: #ffffff;
   --fh-rule: #e3e5e9;
   --fh-rule-strong: #18181b;
   --fh-ink: #18181b;
@@ -97,6 +99,8 @@
     0 2px 4px rgb(16 24 40 / 0.06), 0 10px 20px -6px rgb(16 24 40 / 0.18);
   --fh-shadow-panel:
     -12px 0 32px -12px rgb(16 24 40 / 0.18), -1px 0 0 rgb(16 24 40 / 0.06);
+  --fh-shadow-popover:
+    0 0 0 1px rgb(16 24 40 / 0.1), 0 18px 40px -10px rgb(16 24 40 / 0.32);
 
   /* Lines: workstreams only, all saturated hues (none grey, so a line
      never reads as an inactive state). Neighbouring indices are far apart
@@ -176,6 +180,7 @@
   --fh-card: #1e1e20;
   --fh-column: #161617;
   --fh-well: #252527;
+  --fh-popover: #2c2c2f;
   --fh-rule: #303033;
   --fh-rule-strong: #f2f2f3;
   --fh-ink: #f2f2f3;
@@ -240,6 +245,8 @@
   --fh-shadow-card-hover:
     0 0 0 1px rgb(255 255 255 / 0.09), 0 12px 26px -8px rgb(0 0 0 / 0.85);
   --fh-shadow-panel: -1px 0 0 rgb(255 255 255 / 0.06);
+  --fh-shadow-popover:
+    0 0 0 1px rgb(255 255 255 / 0.14), 0 20px 44px -8px rgb(0 0 0 / 0.95);
 
   --fh-line-0: #ff5a4f;
   --fh-line-1: #4d8dff;
@@ -309,6 +316,7 @@
   --color-ground: var(--fh-ground);
   --color-panel: var(--fh-panel);
   --color-card: var(--fh-card);
+  --color-popover: var(--fh-popover);
   --color-column: var(--fh-column);
   --color-well: var(--fh-well);
   --color-rule: var(--fh-rule);
@@ -353,6 +361,7 @@
   --shadow-card: var(--fh-shadow-card);
   --shadow-card-hover: var(--fh-shadow-card-hover);
   --shadow-panel: var(--fh-shadow-panel);
+  --shadow-popover: var(--fh-shadow-popover);
 }
 
 @theme {

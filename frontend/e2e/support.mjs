@@ -142,3 +142,30 @@ export async function killDetached(port) {
     // Nothing is listening any more.
   }
 }
+
+// filterButton is a toolbar filter's button (FH-39), whose name is the
+// filter's and, while it applies, what it holds ("Type: 2 chosen").
+export function filterButton(page, name) {
+  return page
+    .getByRole("button", { name: new RegExp(`^${name}(:|$)`) })
+    .and(page.locator("[aria-expanded]"));
+}
+
+// filterMenu opens a toolbar filter (FH-39), named "Type", "Priority",
+// "Workstream" or "State", and returns its open panel.
+export async function filterMenu(page, name) {
+  const button = filterButton(page, name);
+  await button.click();
+  return page.locator(`[id="${await button.getAttribute("aria-controls")}"]`);
+}
+
+// viewOption picks an option in the Board's View options menu ("Colour by"
+// or "Density") and closes the menu.
+export async function viewOption(page, group, option) {
+  await page.getByRole("button", { name: "View options" }).click();
+  await page
+    .getByRole("group", { name: group })
+    .getByText(option, { exact: true })
+    .click();
+  await page.keyboard.press("Escape");
+}

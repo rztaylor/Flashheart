@@ -28,6 +28,7 @@ import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { type Movable, useEditing } from "../features/editing/useEditing";
 import { FilterBar } from "../features/filters/FilterBar";
+import { FilterChips } from "../features/filters/FilterChips";
 import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
@@ -38,18 +39,21 @@ import {
 } from "../model/columns";
 import {
   applyFilters,
+  choiceCount,
   emptyFilters,
   type Filters,
   filterOptions,
   isFiltered,
+  noChoice,
 } from "../model/filters";
-import { linesByProject } from "../model/lines";
+import { type Line, linesByProject } from "../model/lines";
 import {
   afterForStep,
   placeCard,
   predecessor,
   type Step,
 } from "../model/order";
+import { type PaintMode, paintKey } from "../model/paint";
 import { completesWorkstream, nextRemark, progressDue } from "../model/remarks";
 import { filtersFor, rememberScope, sameScope } from "../model/scopes";
 import { viewSummary } from "../model/summary";
@@ -240,7 +244,33 @@ export function Shell({
     () => applyFilters(allCards, filters),
     [allCards, filters],
   );
-  const options = useMemo(() => filterOptions(allCards), [allCards]);
+  const options = useMemo(() => {
+    const found = filterOptions(allCards);
+    const titles = new Map(
+      summaries.flatMap((project) =>
+        project.workstreams.map((line) => [line.slug, line.title] as const),
+      ),
+    );
+    return {
+      ...found,
+      workstreams: found.workstreams.map((slug) => ({
+        value: slug,
+        label: titles.get(slug) ?? slug,
+      })),
+    };
+  }, [allCards, summaries]);
+  // paints are the colour key's values before filtering, so a chip stays to
+  // restore once it filters the others away (FH-39).
+  const paints = useMemo(
+    () => paintKey(allCards, paint, new Date()),
+    [allCards, paint],
+  );
+  // The age filter has chips only while cards are coloured by age.
+  const choosePaint = (value: PaintMode) => {
+    updatePreferences((current) => ({ ...current, colourBy: value }));
+    if (value !== "age" && choiceCount(filters.age) > 0)
+      setFilters({ ...filters, age: noChoice });
+  };
   // place moves a ticket (to a place in a column when after is given;
   // EDIT-9), remembering where it was for Undo.
   const place = (card: Card, to: Column, after?: string) =>
@@ -521,30 +551,43 @@ export function Shell({
               summary={summary}
               live={route.view === "board" || route.view === "table"}
               aside={
-                route.view !== "archive" &&
-                projects.status === "ready" &&
-                (current || route.scope.kind === "all") ? (
-                  <a
-                    href={formatRoute({
-                      ...route,
-                      view: "archive",
-                      ticket: undefined,
-                    })}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      go({ view: "archive", ticket: undefined });
-                    }}
-                    className="flex items-center gap-1.5 rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-well hover:text-ink"
-                  >
-                    <Icon name="archive" size={14} />
-                    Archive
-                    <span className="tabular-nums">
-                      {current
-                        ? current.archived
-                        : projects.data.archivedProjects}
-                    </span>
-                  </a>
-                ) : undefined
+                <>
+                  {route.view !== "archive" &&
+                  projects.status === "ready" &&
+                  (current || route.scope.kind === "all") ? (
+                    <a
+                      href={formatRoute({
+                        ...route,
+                        view: "archive",
+                        ticket: undefined,
+                      })}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        go({ view: "archive", ticket: undefined });
+                      }}
+                      className="flex items-center gap-1.5 rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-well hover:text-ink"
+                    >
+                      <Icon name="archive" size={14} />
+                      Archive
+                      <span className="tabular-nums">
+                        {current
+                          ? current.archived
+                          : projects.data.archivedProjects}
+                      </span>
+                    </a>
+                  ) : null}
+                  {(route.view === "board" || route.view === "table") &&
+                  summaries.length > 0 ? (
+                    <Button
+                      variant="primary"
+                      className="h-9 py-0"
+                      onClick={() => setNewTicket(true)}
+                    >
+                      <Icon name="plus" size={16} />
+                      New ticket
+                    </Button>
+                  ) : null}
+                </>
               }
             />
             <div className="flex flex-wrap items-center gap-3 border-b border-rule px-4 py-2 md:hidden">
@@ -682,42 +725,41 @@ export function Shell({
                   filters={filters}
                   options={options}
                   onChange={setFilters}
-                  density={route.view === "board" ? density : undefined}
-                  onDensity={
+                  view={
                     route.view === "board"
-                      ? (value) =>
-                          updatePreferences((current) => ({
-                            ...current,
-                            density: value,
-                          }))
+                      ? {
+                          density,
+                          onDensity: (value) =>
+                            updatePreferences((current) => ({
+                              ...current,
+                              density: value,
+                            })),
+                          virtualColumns: shownVirtual,
+                          onVirtualColumns: (virtualColumns) =>
+                            updatePreferences((current) => ({
+                              ...current,
+                              virtualColumns,
+                            })),
+                          paint,
+                          onPaint: choosePaint,
+                        }
                       : undefined
-                  }
-                  virtualColumns={
-                    route.view === "board" ? shownVirtual : undefined
-                  }
-                  onVirtualColumns={
-                    route.view === "board"
-                      ? (virtualColumns) =>
-                          updatePreferences((current) => ({
-                            ...current,
-                            virtualColumns,
-                          }))
-                      : undefined
-                  }
-                  paint={route.view === "board" ? paint : undefined}
-                  onPaint={
-                    route.view === "board"
-                      ? (value) =>
-                          updatePreferences((current) => ({
-                            ...current,
-                            colourBy: value,
-                          }))
-                      : undefined
-                  }
-                  onNewTicket={
-                    summaries.length > 0 ? () => setNewTicket(true) : undefined
                   }
                 />
+                {route.view === "board" && board.status === "ready" ? (
+                  <FilterChips
+                    workstreams={current?.workstreams}
+                    lines={
+                      (current && lines.get(current.name)) ??
+                      new Map<string, Line>()
+                    }
+                    cards={allCards}
+                    paint={paint}
+                    paints={paints}
+                    filters={filters}
+                    onChange={setFilters}
+                  />
+                ) : null}
                 {board.status === "loading" ? <BoardSkeleton /> : null}
                 {board.status === "error" ? (
                   <div className="m-4 flex items-center gap-3 text-sm">
@@ -744,14 +786,6 @@ export function Shell({
                       cards={visible}
                       lines={lines}
                       workstreams={workstreams}
-                      legend={
-                        current
-                          ? {
-                              project: current.name,
-                              workstreams: current.workstreams,
-                            }
-                          : undefined
-                      }
                       projectNames={projectNames}
                       density={density}
                       paint={paint}

@@ -13,11 +13,13 @@ export const PAINT_MODES: { value: PaintMode; label: string }[] = [
   { value: "none", label: "None" },
 ];
 
-// Paint names a colour token (--fh-paint-<token>, -tint, -ink) and the words
-// that always accompany it.
+// Paint names a colour token (--fh-paint-<token>, -tint, -ink), the words
+// that always accompany it and the value it stands for, which filters by it
+// (FH-39).
 export interface Paint {
   token: string;
   label: string;
+  value: string;
 }
 
 const types = [
@@ -47,6 +49,11 @@ function ageBucket(iso: string, now: Date) {
   return ages[2];
 }
 
+// ageOf is the age bucket of a card's last change: today, week or older.
+export function ageOf(card: Card, now: Date): string | undefined {
+  return ageBucket(card.modified, now)?.[0];
+}
+
 export function paintFor(
   card: Card,
   mode: PaintMode,
@@ -59,18 +66,23 @@ export function paintFor(
       return {
         token: `type-${known ? card.type : "other"}`,
         label: card.type,
+        value: card.type,
       };
     }
     case "priority": {
       const match = priorities.find((value) => value === card.priority);
       return match
-        ? { token: `priority-${match}`, label: priorityLabel(match) }
+        ? {
+            token: `priority-${match}`,
+            label: priorityLabel(match),
+            value: match,
+          }
         : undefined;
     }
     case "age": {
       const bucket = ageBucket(card.modified, now);
       return bucket
-        ? { token: `age-${bucket[0]}`, label: bucket[1] }
+        ? { token: `age-${bucket[0]}`, label: bucket[1], value: bucket[0] }
         : undefined;
     }
     default:

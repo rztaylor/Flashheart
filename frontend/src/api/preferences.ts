@@ -3,6 +3,12 @@
 import { type AuthenticatedFetch, getJSON, isRecord, sendJSON } from "./client";
 import type { ThemePreference } from "./info";
 
+// FilterChoice is one remembered filter dimension (model/filters Choice).
+export interface FilterChoice {
+  include: string[];
+  exclude: string[];
+}
+
 export type Density = "compact" | "normal" | "detailed";
 export type ColourBy = "type" | "priority" | "age" | "none";
 export type SavedView = "" | "board" | "agents" | "workstreams" | "table";
@@ -13,11 +19,11 @@ export type SavedState = "" | "all" | "blocked" | "unblocked" | "repair";
 // All projects under the key "all".
 export interface ScopePreferences {
   view: SavedView;
-  type: string;
-  priority: string;
-  workstream: string;
+  type: FilterChoice;
+  priority: FilterChoice;
+  workstream: FilterChoice;
+  age: FilterChoice;
   state: SavedState;
-  hideLater: boolean;
 }
 
 export interface Preferences {
@@ -61,15 +67,24 @@ const isState = oneOf<SavedState>([
   "repair",
 ]);
 
+const isStrings = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+function isChoice(value: unknown): value is FilterChoice {
+  return (
+    isRecord(value) && isStrings(value.include) && isStrings(value.exclude)
+  );
+}
+
 function isScope(value: unknown): value is ScopePreferences {
   return (
     isRecord(value) &&
     isView(value.view) &&
-    typeof value.type === "string" &&
-    typeof value.priority === "string" &&
-    typeof value.workstream === "string" &&
-    isState(value.state) &&
-    typeof value.hideLater === "boolean"
+    isChoice(value.type) &&
+    isChoice(value.priority) &&
+    isChoice(value.workstream) &&
+    isChoice(value.age) &&
+    isState(value.state)
   );
 }
 

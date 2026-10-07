@@ -25,7 +25,6 @@ interface TicketCardProps {
   workstreamTitle?: string;
   density: Density;
   paint?: Paint;
-  dimmed?: boolean;
   showProject?: string;
   selected?: boolean;
   tabIndex: number;
@@ -60,7 +59,6 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
       workstreamTitle,
       density,
       paint,
-      dimmed,
       showProject,
       selected,
       tabIndex,
@@ -112,7 +110,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             : repair
               ? "border-dashed border-ink-muted shadow-card"
               : "border-rule shadow-card hover:shadow-card-hover"
-        } ${dimmed ? "opacity-35" : ""} ${ghost ? "opacity-30" : ""} ${lifted ? "rotate-[1.2deg] cursor-grabbing shadow-card-hover" : ""}`}
+        } ${ghost ? "opacity-30" : ""} ${lifted ? "rotate-[1.2deg] cursor-grabbing shadow-card-hover" : ""}`}
       >
         {line ? (
           <span

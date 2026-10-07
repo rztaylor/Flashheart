@@ -8,6 +8,22 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The Board toolbar is decluttered (FH-39). Filters are buttons named for
+  what they filter (Type, Priority, Workstream, State) with a count badge
+  while applied, each opening a list of values; View options (⋯) holds the
+  virtual columns, Colour by and density; New ticket sits at the top right.
+  The workstream chips and the colour key are filter chips: a click shows
+  only that value, Cmd-click (Ctrl-click off macOS) hides it, and a click on
+  a chosen chip restores it; they hide tickets rather than dimming them.
+  Workstream chips are ordered by open tickets and finished workstreams are
+  left out; the chip row keeps to one line. Several values of one filter can
+  be chosen at once. Remembered filters in `config.yaml` become
+  `include`/`exclude` lists; earlier single values still load.
+
+### Removed
+
+- The Hide later filter (FH-39); a remembered `hide_later` is ignored.
+
 - Workstreams are epics: their tickets may be worked on in sequence or in
   parallel, and a ticket waits only for the tickets its `depends-on` names
   (one or several) and for workstream dependencies. A workstream's ticket
