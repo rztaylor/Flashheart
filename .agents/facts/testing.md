@@ -35,7 +35,12 @@
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
   with `go test`.
 - Setup is tested against `testdata/setup/claude/` in a temporary home with
-  a fake `claude` CLI; tests never touch the real `~/.claude`.
+  a fake `claude` CLI; tests never touch the real `~/.claude`. `doctor` is
+  tested the same way, with fixture homes and board roots (a missing hook, a
+  moved binary, a hook-errors log).
+- The Runs tab tree is tested from the golden hook payloads' events
+  (`TestTicketRunsCarryTheSubagentTree` in `internal/api`), and in the
+  browser from subagents the Agents e2e starts through the real hook.
 - The Agents e2e asks a question through the real `flashheart mcp` and
   answers it in the browser (`frontend/e2e/agent-runs.mjs`).
 - Concurrency: multi-process write tests for locks and preconditions.

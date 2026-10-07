@@ -489,4 +489,6 @@ text and its review template, and the move-to-review warning for a review
 without evidence (2026-10-07); a claim's `home` field, read tools that
 write nothing, subagent edits counting toward their session's handoff, the
 `unsupported` code listed and the never-emitted `outside_root` removed
-(2026-10-07). Re-running `setup` installs the updated skill text.
+(2026-10-07); `attach` (§7.2) and the skill's line about it (2026-10-07).
+The session-start hook keeps an installed skill's text current (re-running
+`setup` installs it); `flashheart doctor` says when it is out of date.

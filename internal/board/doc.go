@@ -4,7 +4,9 @@
 // format warnings and needs-repair reasons (STO-4), board order with manual
 // ranks and placement plans (EDIT-9), and the editing rules
 // the UI and the MCP tools share (editable fields, review warnings, the
-// blocked-start note; EDIT-2, EDIT-3, EDIT-6).
+// blocked-start note; EDIT-2, EDIT-3, EDIT-6), a review's How to Verify
+// steps (REV-3), and local links in markdown with attachment kinds, for
+// copying the files they name (REV-5).
 //
 // It performs no I/O and knows nothing about HTTP or the index: store reads
 // files and hands their bytes here, and index composes the results.

@@ -25,8 +25,12 @@
 - Normal `serve` startup is quiet. Browser-open failure prints the short-lived
   manual URL once to stderr. `--debug` adds the listener address (and, in the
   foreground, the stop reason) and never prints credentials.
-- Commands that are not implemented yet exit 2 with `<command> is not yet
-  available` on stderr.
+- Commands that are not implemented yet (`setup codex`) exit 2 with
+  `<command> is not yet available` on stderr.
+- `doctor` prints its report to stdout (sections Board root, Claude Code,
+  Hook errors; each line ok, warning or problem with the fix), changes
+  nothing, and exits 1 with `doctor found N problems` on stderr when it
+  finds one; warnings alone exit 0.
 - `setup` writes nothing without `--write`; it prints a diff. `--uninstall`
   previews the reverse and applies it with `--write`. Backups go to
   `~/.claude/flashheart-backup/<UTC time>/`; the MCP server is registered

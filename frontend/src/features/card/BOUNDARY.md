@@ -8,10 +8,14 @@ Ticket tab (needs repair, agents' questions about the ticket with their
 answers (CARD-6), the handoff callout with a warning when a run has edited
 since it (CARD-5) and its marginal remark, blocked by with links, tickable acceptance criteria,
 warnings and the rendered markdown), the Edit tab (typed fields and the raw file, EDIT-6),
-the Runs tab (the ticket's linked runs, reusing the agents run detail) and
-the Review tab (attachments and the review file).
+the Runs tab (the ticket's linked runs with their subagents as a tree,
+reusing the agents run detail), the Attachments tab (a grid of thumbnails
+and file tiles, opening screenshots in the lightbox) and the Review tab
+(screenshots, then the review file with its How to Verify steps as a
+`Checklist`, REV-3; the same checklist shows acceptance criteria).
 
 Does not own the side-panel shell, dialogs or markdown rendering
 (`components/`), the move, archive and conflict flows (`editing/`),
-routing (`app/`), run state (backend), or attachment upload, which
-arrives in a later roadmap item.
+routing (`app/`), run state (backend), or attaching files, which agents do
+through `attach` and serve does for files a directly edited ticket links
+to (REV-5).
