@@ -216,7 +216,11 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if to == board.Review && ticket.Column != board.Review {
-		warnings = append(warnings, board.ReviewWarnings(ticket, project.Reviews[ticket.ID])...)
+		review := ""
+		if project.Reviews[ticket.ID] && b.files != nil {
+			review, _, _ = b.files.ReadReview(project.Name, ticket.Folder)
+		}
+		warnings = append(warnings, board.ReviewWarnings(ticket, review, project.Reviews[ticket.ID])...)
 	}
 	b.saved(w, http.StatusOK, hash, warnings)
 }

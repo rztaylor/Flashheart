@@ -257,7 +257,9 @@ Full format: `docs/dev/specs/board-format.md`.
 - `EDIT-2` Moving a blocked ticket into *in-progress* asks for confirmation
   and records the override reason in `## Notes`.
 - `EDIT-3` Moving into *Ready to review* warns when the review file is
-  missing or criteria are unticked; it does not prevent the move.
+  missing, when the review shows no evidence (no screenshot and no stated
+  reason in its *Evidence* section, `REV-4`), or when criteria are unticked;
+  it does not prevent the move.
 - `EDIT-4` Reordering tickets inside a workstream swimlane rewrites the
   workstream's `tickets:` list.
 - `EDIT-5` **New ticket** creates a ticket folder from the template with the
@@ -411,7 +413,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `REV-3` The Review tab shows the review file beside the ticket's
   screenshots and the *How to Verify* steps as a checklist.
 - `REV-4` `write_review` creates or replaces the ticket's `review.md` in the
-  review template.
+  review template, whose *Evidence* section holds captioned screenshots of
+  every state a visible change touched, or "No visible change:" and why.
 - `REV-5` Files an agent refers to are copied into the ticket before they
   are recorded, because agents and their tools clean up their own files:
   local paths in `write_review`, `checkpoint` and `attach` input, and in

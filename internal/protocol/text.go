@@ -97,8 +97,14 @@ instructions.
 ## Finishing
 
 1. Tick the criteria that pass (` + "`update_ticket`" + `).
-2. For visible changes, save screenshots as files and link them in the
-   review by absolute path; Flashheart copies them into the ticket.
+2. Show the evidence. A change with a visible effect (UI, rendered output,
+   an image, terminal output someone would otherwise reproduce) needs
+   screenshots saved as files, one for every state the change touched
+   (each theme, narrow widths, empty and error states), each with a caption,
+   linked in the review's Evidence section by absolute path; Flashheart
+   copies them into the ticket. Screenshots that only reached your context
+   do not count. With nothing visible, say so instead:
+   "No visible change: <why>". Moving to review warns when neither is there.
 3. ` + "`write_review`" + ` using the template below.
 4. ` + "`checkpoint`" + `, then ` + "`move`" + ` the ticket to ` + "`review`" + `. Never move a ticket to
    ` + "`done`" + `; the human does that after verifying.
@@ -136,6 +142,9 @@ instructions.
 ## Key Files
 | File | What changed |
 |------|--------------|
+
+## Evidence
+<captioned screenshots linked by absolute path, or "No visible change: why">
 
 ## How to Verify
 ### Prerequisites

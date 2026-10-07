@@ -580,7 +580,11 @@ func (srv *server) move(input MoveInput) (string, error) {
 	}
 	var warnings []string
 	if to == board.Review && ticket.Column != board.Review {
-		warnings = board.ReviewWarnings(ticket, project.Reviews[ticket.ID])
+		review := ""
+		if project.Reviews[ticket.ID] {
+			review, _, _ = srv.store.ReadReview(project.Name, ticket.Folder)
+		}
+		warnings = board.ReviewWarnings(ticket, review, project.Reviews[ticket.ID])
 	}
 	if ticket.Column != to {
 		if err := c.record(project.Name, events.Event{Kind: events.TicketMoved, Data: events.TicketData{Ticket: ticket.ID, From: string(ticket.Column), To: string(to), By: c.by()}}); err != nil {

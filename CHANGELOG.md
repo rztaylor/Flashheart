@@ -14,6 +14,11 @@ All notable changes to this project are documented here. The project follows
 - `scripts/check.sh` runs the 5,000-ticket indexing time check (NFR-1) on
   its own after the other Go tests, so a busy CI runner no longer fails it;
   the one-second budget is unchanged (FH-30).
+- Reviews need evidence. The agent skill now requires captioned screenshots
+  of every state a visible change touched, or a stated "No visible change"
+  reason, in a new Evidence section of the review template, and moving a
+  ticket to Ready to review warns when the review has neither. Re-run
+  `flashheart setup claude` to install the new skill text (FH-29).
 - New look for the board: Metro Pop in light (a raspberry bar and accent on
   a clean white background) and Night Service in black and charcoal in dark, on one shared layout (`docs/dev/specs/ui-layout.md`).
   Views open with the project's name as a page header; columns are rounded
