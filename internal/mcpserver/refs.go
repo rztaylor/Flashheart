@@ -4,17 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/store"
 )
-
-// markdownLink matches a link or image whose target is an absolute local
-// path or a file:// URL, bare or in angle brackets (for paths with spaces):
-// [text](/abs/path.png "title"), ![shot](</abs/my shot.png>).
-var markdownLink = regexp.MustCompile(`(!?\[[^\]\n]*\]\()(?:<((?:file://)?/[^>\n]+)>|((?:file://)?/[^)\s]+))((?:\s+"[^"\n]*")?\))`)
 
 // copier copies the local files a write refers to into a ticket (REV-5):
 // agents and their tools clean up their own files, so the ticket keeps
@@ -63,50 +57,21 @@ func (k *copier) copy(path, kind string) string {
 }
 
 // kindOf guesses an attachment kind from a file name.
-func kindOf(path string) string {
-	contentType, _ := board.AttachmentType(path)
-	switch {
-	case strings.HasPrefix(contentType, "image/"):
-		return "screenshot"
-	case strings.HasPrefix(contentType, "text/plain"):
-		return "log"
-	}
-	return "other"
-}
+func kindOf(path string) string { return board.AttachmentKind(path) }
 
-// markdown rewrites local links and images in text to copies in files/,
-// line by line outside code fences, so a review can show example markdown.
-// Links into the repository to files that are not attachment types (source
-// code) are left alone; repository screenshots and logs are copied like any
-// other evidence.
+// markdown rewrites local links and images in text to copies in files/
+// (board.RewriteLocalLinks). Links into the repository to files that are
+// not attachment types (source code) are left alone; repository
+// screenshots and logs are copied like any other evidence.
 func (k *copier) markdown(text string) string {
-	lines := strings.Split(text, "\n")
-	fenced := false
-	for index, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
-			fenced = !fenced
-			continue
+	return board.RewriteLocalLinks(text, func(path, _ string) string {
+		if _, inside := k.inRepository(path); inside {
+			if _, allowed := board.AttachmentType(path); !allowed {
+				return ""
+			}
 		}
-		if !fenced {
-			lines[index] = markdownLink.ReplaceAllStringFunc(line, k.link)
-		}
-	}
-	return strings.Join(lines, "\n")
-}
-
-func (k *copier) link(match string) string {
-	parts := markdownLink.FindStringSubmatch(match)
-	path := strings.TrimPrefix(parts[2]+parts[3], "file://")
-	if _, inside := k.inRepository(path); inside {
-		if _, allowed := board.AttachmentType(path); !allowed {
-			return match
-		}
-	}
-	if stored := k.copy(path, kindOf(path)); stored != "" {
-		return parts[1] + stored + parts[4]
-	}
-	return match
+		return k.copy(path, kindOf(path))
+	})
 }
 
 // file handles one entry of checkpoint's files[]: repository paths become

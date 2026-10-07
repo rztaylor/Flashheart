@@ -16,6 +16,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/references"
 	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
 	"github.com/rztaylor/flashheart/internal/webui"
@@ -82,8 +83,9 @@ func Run(ctx context.Context, options Options) error {
 		return fmt.Errorf("start local server: %w", err)
 	}
 	// External edits become new revisions within a second (STO-7). The
-	// watcher and pruner use the store and stderr, so Run waits for them to
-	// finish before it closes the store and returns (FH-37).
+	// watcher, pruner and reference copier use the store and stderr, so Run
+	// waits for them to finish before it closes the store and returns
+	// (FH-37).
 	watchCtx, stopWatching := context.WithCancel(context.Background())
 	var background sync.WaitGroup
 	defer func() {
@@ -93,6 +95,10 @@ func Run(ctx context.Context, options Options) error {
 	if runtime.board != nil {
 		background.Go(func() { runtime.board.Watch(watchCtx, options.Root, nil) })
 		background.Go(func() { keepEventsPruned(watchCtx, runtime.files, settings.EventRetentionDays, stderr) })
+		// Files that directly edited tickets link to are copied in (REV-5).
+		background.Go(func() {
+			references.New(runtime.files, options.Root, settings.Attachments.MaxBytes, stderr).Run(watchCtx, runtime.board)
+		})
 	}
 	go func() {
 		select {

@@ -20,6 +20,19 @@ var attachmentTypes = map[string]string{
 	".json": "application/json",
 }
 
+// AttachmentKind guesses an attachment's kind from its file name:
+// screenshot for images, log for plain text, else other.
+func AttachmentKind(name string) string {
+	contentType, _ := AttachmentType(name)
+	switch {
+	case strings.HasPrefix(contentType, "image/"):
+		return "screenshot"
+	case strings.HasPrefix(contentType, "text/plain"):
+		return "log"
+	}
+	return "other"
+}
+
 // AttachmentType returns the content type for an allowed attachment file
 // name, judged by extension only (REV-2, SEC-4).
 func AttachmentType(name string) (string, bool) {

@@ -426,8 +426,10 @@ type Project struct {
 	// Retired lists ids of permanently deleted tickets (project.yaml
 	// `retired`); they are never reused (KEY-2).
 	Retired []string
-	// Reviews holds the ids that have a review file.
-	Reviews map[string]bool
+	// Reviews holds the ids that have a review file; ReviewModified when
+	// each was last changed, set by the reader.
+	Reviews        map[string]bool
+	ReviewModified map[string]time.Time
 	// Attachments maps ticket ids to their files index.
 	Attachments map[string][]Attachment
 	// EnforceHandoff is project.yaml's settings.enforce_handoff; nil means

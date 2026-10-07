@@ -382,7 +382,7 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 	r := &reader{root: root, fsys: fsys, parts: []string{"project " + name + "\n"}}
 	project := board.Project{
 		Name: name, DisplayName: name, NextID: 1,
-		Reviews: map[string]bool{}, Attachments: map[string][]board.Attachment{},
+		Reviews: map[string]bool{}, ReviewModified: map[string]time.Time{}, Attachments: map[string][]board.Attachment{},
 	}
 	r.readProjectFile(&project)
 
@@ -429,6 +429,7 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 			if info, err := entry.Info(); err == nil {
 				r.note(path.Join(tickets, folder, "review.md"), info)
 				project.Reviews[ticket.ID] = true
+				project.ReviewModified[ticket.ID] = info.ModTime()
 			}
 		}
 		if present["files"] != nil {

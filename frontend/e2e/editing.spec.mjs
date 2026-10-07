@@ -1,5 +1,5 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
@@ -496,6 +496,24 @@ test("an edit made in a text editor appears within a second", async () => {
   await expect(card("Measure hook latency, edited outside")).toBeVisible({
     timeout: 1_500,
   });
+});
+
+test("a screenshot linked in a text editor is copied into the ticket", async () => {
+  await open("#/p/flashheart/board");
+  const shot = join(sandbox.home, "Desktop", "latency chart.png");
+  await mkdir(dirname(shot), { recursive: true });
+  // The first bytes of a PNG are enough: the copy is checked by type, not
+  // decoded.
+  await writeFile(shot, Buffer.from("89504e470d0a1a0a", "hex"));
+  const name = ticketFile("FH-28-hook-latency");
+  const data = await readFile(name, "utf8");
+  await writeFile(name, `${data}\n![Latency chart](<${shot}>)\n`);
+  await expect
+    .poll(() => readFile(name, "utf8"), { timeout: 3_000 })
+    .toMatch(/!\[Latency chart\]\(files\/[^)]*-latency-chart\.png\)/);
+  await open("#/p/flashheart/board?t=FH-28");
+  const panel = page.getByRole("complementary", { name: "Ticket FH-28" });
+  await expect(panel.getByRole("tab", { name: "Attachments 1" })).toBeVisible();
 });
 
 test("New ticket creates the next id and opens it", async () => {
