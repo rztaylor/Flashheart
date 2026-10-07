@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"os"
@@ -150,5 +152,89 @@ func TestLiveBadgeNamesTheSubagentItWaitsOn(t *testing.T) {
 	live := cardByID(t, board.Cards, "AL-3").Live
 	if live == nil || live.State != "needs-you" || live.Permission != "Bash" || live.WaitingOn != "Explore" {
 		t.Fatalf("live = %+v", live)
+	}
+}
+
+// golden returns the events a recorded Claude Code hook payload yields
+// (testdata/hooks/claude), as event-log lines for run at ts.
+func golden(t *testing.T, payload, run, ts string) []string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "hooks", "claude", payload+".events.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var list []struct {
+		Kind string          `json:"kind"`
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(bytes.ReplaceAll(data, []byte("claude:340b083f-5d70-41b2-8cff-ec700908097a"), []byte(sampleSession)), &list); err != nil {
+		t.Fatal(err)
+	}
+	lines := make([]string, 0, len(list))
+	for _, event := range list {
+		var compact bytes.Buffer
+		if err := json.Compact(&compact, event.Data); err != nil {
+			t.Fatal(err)
+		}
+		lines = append(lines, `{"v":1,"ts":"`+ts+`","run":"`+run+`","agent":"claude","kind":"`+event.Kind+`","project":"alpha","data":`+compact.String()+`}`)
+	}
+	return lines
+}
+
+// An orchestrated run with three subagents shows as a tree on its ticket's
+// Runs tab (agent-protocol §10): every subagent under its session with its
+// own state, plan and checkpoints, including one that claimed another
+// ticket.
+func TestTicketRunsCarryTheSubagentTree(t *testing.T) {
+	t.Parallel()
+
+	done, working, waiting := sampleSession+"/b1", sampleSession+"/b2", sampleSession+"/b3"
+	var lines []string
+	for _, child := range []string{done, working, waiting} {
+		lines = append(lines, golden(t, "SubagentStart/explore", child, "2026-10-04T13:27:00.000Z")...)
+	}
+	lines = append(lines, golden(t, "SubagentStop/explore", done, "2026-10-04T13:28:00.000Z")...)
+	lines = append(lines,
+		`{"v":1,"ts":"2026-10-04T13:28:10.000Z","run":"`+working+`","agent":"claude","kind":"claim","project":"alpha","data":{"ticket":"AL-2","force":false}}`,
+		`{"v":1,"ts":"2026-10-04T13:28:20.000Z","run":"`+working+`","agent":"claude","kind":"plan.updated","project":"alpha","data":{"items":[{"text":"Read the board","status":"completed"},{"text":"Write the tests","status":"in_progress"}]}}`,
+		`{"v":1,"ts":"2026-10-04T13:28:30.000Z","run":"`+working+`","agent":"claude","kind":"checkpoint","project":"alpha","data":{"ticket":"AL-2","done":1,"next":1,"files":0,"questions":0}}`,
+	)
+	lines = append(lines, golden(t, "PostToolUse/subagent-bash", working, "2026-10-04T13:29:00.000Z")...)
+	lines = append(lines, golden(t, "PermissionRequest/bash", waiting, "2026-10-04T13:29:30.000Z")...)
+	handler := runsAPI(t, time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC), lines...)
+
+	var panel TicketResponse
+	getJSON(t, handler, "/api/tickets/AL-3", http.StatusOK, &panel)
+	byID := map[string]RunJSON{}
+	for _, run := range panel.Ticket.Runs {
+		byID[run.ID] = run
+	}
+	session, ok := byID[sampleSession]
+	if !ok || len(session.Children) != 4 {
+		t.Fatalf("session = %+v", session)
+	}
+	want := map[string]string{done: "ended", working: "working", waiting: "needs-you"}
+	for id, state := range want {
+		child, ok := byID[id]
+		if !ok || child.Parent != sampleSession || child.State != state || child.AgentType != "Explore" || child.Timeline == nil {
+			t.Fatalf("%s = %+v, want %s under the session", id, child, state)
+		}
+	}
+	child := byID[working]
+	if child.Ticket != "AL-2" || child.TicketTitle == "" || child.Progress.Current != "Write the tests" {
+		t.Fatalf("working child = %+v", child)
+	}
+	checkpointed := false
+	for _, entry := range child.Timeline {
+		checkpointed = checkpointed || entry.Kind == "checkpoint" && entry.Ticket == "AL-2"
+	}
+	if !checkpointed {
+		t.Fatalf("working child's timeline lacks its checkpoint: %+v", child.Timeline)
+	}
+
+	// On its own ticket the subagent is listed, still naming its session.
+	getJSON(t, handler, "/api/tickets/AL-2", http.StatusOK, &panel)
+	if len(panel.Ticket.Runs) != 1 || panel.Ticket.Runs[0].ID != working || panel.Ticket.Runs[0].Parent != sampleSession {
+		t.Fatalf("AL-2 runs = %+v", panel.Ticket.Runs)
 	}
 }

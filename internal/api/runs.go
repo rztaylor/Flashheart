@@ -235,14 +235,24 @@ func openQuestion(snapshot *index.Snapshot, v runs.View) (string, bool) {
 	return "", false
 }
 
-// ticketRuns lists a ticket's runs with timelines for its Runs tab.
+// ticketRuns lists a ticket's runs with timelines for its Runs tab, with
+// every subagent of a listed session, so the tab shows the whole tree
+// (agent-protocol §10) even where a subagent claimed another ticket.
+// maxTicketRuns bounds the runs linked to the ticket.
 func ticketRuns(snapshot *index.Snapshot, id string) []RunJSON {
 	list := []RunJSON{}
+	listed := map[string]bool{}
 	for _, v := range snapshot.TicketRuns(id) {
-		if len(list) == maxTicketRuns {
+		if len(listed) == maxTicketRuns {
 			break
 		}
+		listed[v.ID] = true
 		list = append(list, runJSON(snapshot, v, true))
+	}
+	for _, v := range snapshot.Runs {
+		if v.Parent != "" && listed[v.Parent] && !listed[v.ID] {
+			list = append(list, runJSON(snapshot, v, true))
+		}
 	}
 	return list
 }

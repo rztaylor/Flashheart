@@ -182,7 +182,7 @@ export function CardPanel({
       case "attachments":
         return <Attachments attachments={current.attachmentFiles} />;
       case "runs":
-        return <RunsTab detail={current} />;
+        return <RunsTab detail={current} onOpen={onOpen} />;
       case "edit":
         return (
           <EditTab

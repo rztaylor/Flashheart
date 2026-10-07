@@ -209,11 +209,36 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
     () => document.scrollingElement?.scrollTop ?? 0,
   );
   expect(scrolled).toBe(0);
+  // Its three subagents hang beneath it; one opens to its own plan.
+  const tree = panel.getByRole("list", { name: /^Subagents of/ });
+  await expect(tree.getByRole("listitem")).toHaveCount(3);
+  await expect(tree.getByRole("listitem").first()).toContainText("Ended");
+  await expect(tree).toContainText("1/2 · Write the timeline test");
+  const helper = tree.getByRole("button", { name: "general-purpose" });
+  await helper.click();
+  await expect(helper).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    tree.getByRole("heading", { name: "Plan", level: 5 }),
+  ).toBeVisible();
+  await expect(
+    tree.getByRole("heading", { name: /^Edited/, level: 5 }),
+  ).toBeVisible();
+  await expect(tree.getByText(/RunsTab\.test\.tsx$/).first()).toBeVisible();
   await expectNoAxeViolations("runs tab");
   await shot("runs-tab-1440-light");
+  await helper.scrollIntoViewIfNeeded();
+  await shot("runs-tab-subagents-1440-light");
   await open("#/p/alpha/board?t=AL-3", { theme: "dark" });
   await page.getByRole("tab", { name: /^Runs/ }).click();
+  const darkHelper = panel
+    .getByRole("list", { name: /^Subagents of/ })
+    .getByRole("button", { name: "general-purpose" });
+  // The row stays open across the theme change.
+  await expect(darkHelper).toHaveAttribute("aria-expanded", "true");
+  await expectNoAxeViolations("runs tab dark");
   await shot("runs-tab-1440-dark");
+  await darkHelper.scrollIntoViewIfNeeded();
+  await shot("runs-tab-subagents-1440-dark");
 });
 
 test("a question from an agent is answered on the board and delivered with its next prompt", async () => {
