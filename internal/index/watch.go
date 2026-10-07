@@ -87,8 +87,12 @@ func (i *Index) Watch(ctx context.Context, root string, ready chan<- struct{}) {
 			}
 		}
 	}
-	_, _ = i.Rebuild()
+	// Watches go in before each rebuild: an edit after a watch is added raises
+	// an event, and one before it is in the rebuild. Rebuilding first would
+	// publish a new folder's revision before the folder is watched, and an
+	// edit in that gap would wait for the sweep (FH-36).
 	sync()
+	_, _ = i.Rebuild()
 	signal()
 
 	timer := time.NewTimer(time.Hour)
@@ -110,11 +114,11 @@ func (i *Index) Watch(ctx context.Context, root string, ready chan<- struct{}) {
 		case <-watcher.Errors:
 			timer.Reset(debounce)
 		case <-timer.C:
-			_, _ = i.Rebuild()
 			sync()
+			_, _ = i.Rebuild()
 		case <-ticker.C:
-			_, _ = i.Rebuild()
 			sync()
+			_, _ = i.Rebuild()
 		}
 	}
 }

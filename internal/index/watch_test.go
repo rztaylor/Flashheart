@@ -2,6 +2,7 @@ package index
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -108,4 +109,51 @@ func TestWatchSeesExternalEdits(t *testing.T) {
 		data, _ := os.ReadFile(name)
 		_ = os.WriteFile(name, append(data, []byte("\nMore.\n")...), 0o644)
 	})
+}
+
+// An edit made the moment a new ticket folder's revision appears is still
+// seen: the folder is watched before that revision is published (FH-36).
+func TestWatchSeesAnEditRightAfterANewFolderAppears(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "board")
+	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "boards", "sample"))); err != nil {
+		t.Fatal(err)
+	}
+	files, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer files.Close()
+	index := New(files, Options{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ready := make(chan struct{})
+	go index.Watch(ctx, root, ready)
+	<-ready
+
+	waitPast := func(revision uint64) uint64 {
+		t.Helper()
+		wait, stop := context.WithTimeout(context.Background(), time.Second)
+		defer stop()
+		return index.Wait(wait, revision)
+	}
+	for n := range 10 {
+		snapshot, err := index.Current()
+		if err != nil {
+			t.Fatal(err)
+		}
+		folder := filepath.Join(root, "beta", "tickets", fmt.Sprintf("BE-%d-new", n+10))
+		file := filepath.Join(folder, filepath.Base(folder)+".md")
+		_ = os.MkdirAll(folder, 0o755)
+		_ = os.WriteFile(file, []byte(fmt.Sprintf("---\nid: BE-%d\nstatus: backlog\n---\n# New\n", n+10)), 0o644)
+		created := waitPast(snapshot.Revision)
+		if created <= snapshot.Revision {
+			t.Fatalf("folder %d: no revision for the new ticket", n)
+		}
+		_ = os.WriteFile(file, []byte(fmt.Sprintf("---\nid: BE-%d\nstatus: done\n---\n# New\n", n+10)), 0o644)
+		if got := waitPast(created); got <= created {
+			t.Fatalf("folder %d: the edit right after creation was missed", n)
+		}
+	}
 }
