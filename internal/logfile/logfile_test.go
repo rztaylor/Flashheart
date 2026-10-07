@@ -103,3 +103,26 @@ func TestWriteFailureIsReturnedNotPanicked(t *testing.T) {
 		t.Fatal("Write succeeded under a regular file")
 	}
 }
+
+func TestRecentReadsBothGenerationsSince(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "hook-errors.log")
+	if entries, err := Recent(path, fixed); err != nil || len(entries) != 0 {
+		t.Fatalf("missing log: %v, %v", entries, err)
+	}
+	write := func(name, data string) {
+		if err := os.WriteFile(name, []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(path+".1", "2026-10-02T09:00:00Z claude Stop: old\n2026-10-04T10:00:00Z claude Stop: rotated\n")
+	write(path, "2026-10-04T12:00:00Z claude PostToolUse: first line\nsecond line\nnot a timestamp line\n2026-10-04T13:00:00Z codex Stop: last\n")
+	entries, err := Recent(path, fixed.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 3 || entries[0].Text != "claude Stop: rotated" || entries[1].Text != "claude PostToolUse: first line\nsecond line\nnot a timestamp line" || !entries[2].Time.Equal(time.Date(2026, 10, 4, 13, 0, 0, 0, time.UTC)) {
+		t.Fatalf("entries = %+v", entries)
+	}
+}

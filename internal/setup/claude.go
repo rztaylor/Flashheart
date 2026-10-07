@@ -45,19 +45,24 @@ var ownBinary = regexp.MustCompile(`^flashheart[-_.A-Za-z0-9]*$`)
 // (the first word, quoted or not) is a flashheart binary and its first
 // argument is hook (§5.4). Everything else is the user's.
 func ownsCommand(command string) bool {
+	program, rest, ok := splitProgram(command)
+	fields := strings.Fields(rest)
+	return ok && ownBinary.MatchString(filepath.Base(program)) && len(fields) > 0 && fields[0] == "hook"
+}
+
+// splitProgram splits a hook command into its program (quoted or not) and
+// the rest.
+func splitProgram(command string) (program, rest string, ok bool) {
 	command = strings.TrimSpace(command)
-	var program, rest string
 	if quote := command[:min(1, len(command))]; quote == "'" || quote == `"` {
 		end := strings.Index(command[1:], quote)
 		if end < 0 {
-			return false
+			return "", "", false
 		}
-		program, rest = command[1:end+1], command[end+2:]
-	} else {
-		program, rest, _ = strings.Cut(command, " ")
+		return command[1 : end+1], command[end+2:], true
 	}
-	fields := strings.Fields(rest)
-	return ownBinary.MatchString(filepath.Base(program)) && len(fields) > 0 && fields[0] == "hook"
+	program, rest, _ = strings.Cut(command, " ")
+	return program, rest, true
 }
 
 // Options describe one machine's Claude Code configuration.

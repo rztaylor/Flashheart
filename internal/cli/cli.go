@@ -16,6 +16,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/await"
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
+	"github.com/rztaylor/flashheart/internal/doctor"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/hooks"
 	"github.com/rztaylor/flashheart/internal/hooks/claude"
@@ -124,7 +125,6 @@ func (k keyFlags) Set(value string) error {
 var errNotYetAvailable = errors.New("not yet available")
 
 func commands() []command {
-	notYet := func(context.Context, *environment, *flag.FlagSet, *globalFlags) error { return errNotYetAvailable }
 	return []command{
 		{
 			name:    "serve",
@@ -175,7 +175,15 @@ func commands() []command {
 				"--write applies, the reverse.",
 			run: runSetup,
 		},
-		{name: "doctor", summary: "check the board root and agent configuration (not yet available)", usage: "doctor [--root DIR]", detail: "Check the board root, permissions, agent configuration and recent hook errors.", run: notYet},
+		{
+			name:    "doctor",
+			summary: "check the board root and agent configuration",
+			usage:   "doctor [--root DIR]",
+			detail: "Check the board root and its permissions, Claude Code's hooks, MCP server\n" +
+				"and skill against what setup writes, and the hook errors of the last day.\n" +
+				"Changes nothing; exits 1 when it finds a problem.",
+			run: runDoctor,
+		},
 		{
 			name:    "migrate",
 			summary: "convert a board from format v1 to v2",
@@ -583,23 +591,9 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 	if err != nil {
 		return err
 	}
-	if env.deps.HomeDir == nil || env.deps.Executable == nil {
-		return errors.New("setup needs the home directory and the flashheart binary's path")
-	}
-	home, err := env.deps.HomeDir()
+	options, err := claudeOptions(env, root)
 	if err != nil {
-		return fmt.Errorf("find the home directory: %w", err)
-	}
-	binary, err := env.deps.Executable()
-	if err != nil {
-		return fmt.Errorf("find the flashheart binary: %w", err)
-	}
-	options := setup.Options{Home: home, Binary: binary, Run: env.deps.RunCommand}
-	if root != filepath.Join(home, "reports", "Kanban") {
-		options.Root = root
-	}
-	if env.deps.FindClaude != nil {
-		options.Claude = env.deps.FindClaude(home)
+		return err
 	}
 	plan := setup.Install
 	if env.setup.uninstall {
@@ -621,6 +615,52 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 		fmt.Fprintf(env.stdout, "\nNothing was changed. Run flashheart setup claude %s to apply these changes.\n", again)
 	}
 	return nil
+}
+
+// claudeOptions describe this machine's Claude Code configuration for the
+// running binary and root (SET-3).
+func claudeOptions(env *environment, root string) (setup.Options, error) {
+	if env.deps.HomeDir == nil || env.deps.Executable == nil {
+		return setup.Options{}, errors.New("setup needs the home directory and the flashheart binary's path")
+	}
+	home, err := env.deps.HomeDir()
+	if err != nil {
+		return setup.Options{}, fmt.Errorf("find the home directory: %w", err)
+	}
+	binary, err := env.deps.Executable()
+	if err != nil {
+		return setup.Options{}, fmt.Errorf("find the flashheart binary: %w", err)
+	}
+	options := setup.Options{Home: home, Binary: binary, Run: env.deps.RunCommand}
+	if root != filepath.Join(home, "reports", "Kanban") {
+		options.Root = root
+	}
+	if env.deps.FindClaude != nil {
+		options.Claude = env.deps.FindClaude(home)
+	}
+	return options, nil
+}
+
+func runDoctor(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
+	if flags.NArg() > 0 {
+		return usageError{"doctor takes no arguments"}
+	}
+	root, err := resolveRoot(globals, env.deps)
+	if err != nil {
+		return err
+	}
+	options, err := claudeOptions(env, root)
+	if err != nil {
+		return err
+	}
+	switch problems := doctor.Render(env.stdout, doctor.Check(doctor.Options{Root: root, Claude: options})); problems {
+	case 0:
+		return nil
+	case 1:
+		return errors.New("doctor found 1 problem")
+	default:
+		return fmt.Errorf("doctor found %d problems", problems)
+	}
 }
 
 // rootArgument finds --root DIR or --root=DIR without parsing other flags.
