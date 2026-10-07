@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -159,5 +160,16 @@ func TestDiagnoseResolvesProgramsAsTheShellWould(t *testing.T) {
 	}
 	if _, _, ok := splitProgram(`'/unterminated hook`); ok {
 		t.Error("an unterminated quote parsed")
+	}
+}
+
+func TestDiagnoseAnUnknownRegistration(t *testing.T) {
+	t.Parallel()
+
+	m := installed(t)
+	m.options.Run = func(string, ...string) ([]byte, error) { return nil, errors.New("claude: not logged in") }
+	problems, warnings, _ := diagnose(t, m.options)
+	if len(problems) != 0 || len(warnings) != 1 || !strings.HasPrefix(warnings[0], "MCP server: unknown. Could not ask claude") {
+		t.Fatalf("problems %q, warnings %q", problems, warnings)
 	}
 }

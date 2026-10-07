@@ -208,9 +208,17 @@ func TestDoctorReportsAndExitsOneOnProblems(t *testing.T) {
 	deps := h.deps()
 	deps.Executable = func() (string, error) { return binary, nil }
 	deps.FindClaude = func(string) string { return "/usr/bin/claude" }
+	registered := false
 	deps.RunCommand = func(_ string, args ...string) ([]byte, error) {
-		if args[1] == "add-json" {
-			return nil, os.WriteFile(filepath.Join(h.home, ".claude.json"), []byte(`{"mcpServers": {"flashheart": `+args[5]+`}}`), 0o600)
+		// A claude CLI with a user-scope MCP registry: get reads it.
+		switch args[1] {
+		case "get":
+			if !registered {
+				return []byte(`No MCP server named "flashheart".`), errors.New("exit status 1")
+			}
+			return []byte("flashheart:\n  Scope: User config (available in all your projects)\n  Command: " + binary + "\n  Args: mcp\n"), nil
+		case "add-json":
+			registered = true
 		}
 		return nil, nil
 	}

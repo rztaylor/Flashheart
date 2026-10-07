@@ -123,9 +123,11 @@ func (o Options) diagnoseProgram(what, program string) Finding {
 }
 
 func (o Options) diagnoseServer() []Finding {
-	command, args, found := o.registered()
+	command, args, found, problem := o.registered()
 	command = o.resolve(command)
 	switch {
+	case problem != "":
+		return []Finding{{Warning, "MCP server: unknown. " + problem}}
 	case !found:
 		return []Finding{{Problem, "MCP server: not registered; " + fix}}
 	case command != o.Binary:
