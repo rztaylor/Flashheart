@@ -176,3 +176,8 @@ All notable changes to this project are documented here. The project follows
   (STO-7): the watcher now watches new folders before it publishes their
   revision. This was also the most common cause of intermittent CI failures
   (FH-36).
+- Stopping `flashheart serve` now waits for the board watcher and the
+  event-log pruner to finish before it closes the board, so they can no
+  longer touch a closed board or print a spurious "expire old events"
+  error at shutdown. This also removes an intermittent CI data race
+  (FH-37).
