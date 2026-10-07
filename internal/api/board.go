@@ -51,17 +51,14 @@ type WorkstreamBrief struct {
 
 // ProjectSummary describes one project in the rail (PRJ-6).
 type ProjectSummary struct {
-	Name        string         `json:"name"`
-	DisplayName string         `json:"displayName"`
-	Key         string         `json:"key"`
-	KeyDerived  bool           `json:"keyDerived"`
-	Repos       []string       `json:"repos"`
-	Counts      map[string]int `json:"counts"`
-	NeedsRepair int            `json:"needsRepair"`
-	Blocked     int            `json:"blocked"`
-	// Stuck counts blocked tickets held by more than the order of a line:
-	// a dependency, a depended-on workstream, or a missing reference.
-	Stuck        int               `json:"stuck"`
+	Name         string            `json:"name"`
+	DisplayName  string            `json:"displayName"`
+	Key          string            `json:"key"`
+	KeyDerived   bool              `json:"keyDerived"`
+	Repos        []string          `json:"repos"`
+	Counts       map[string]int    `json:"counts"`
+	NeedsRepair  int               `json:"needsRepair"`
+	Blocked      int               `json:"blocked"`
 	Warnings     []string          `json:"warnings"`
 	LastModified string            `json:"lastModified"`
 	Workstreams  []WorkstreamBrief `json:"workstreams"`
@@ -222,10 +219,15 @@ type WorkstreamTicket struct {
 	Title   string `json:"title"`
 	Column  string `json:"column"`
 	Blocked bool   `json:"blocked"`
-	// Held means blocked by something other than this line's own order or
+	// Held means blocked by something other than a ticket on this line or
 	// its workstream-level dependencies.
 	Held    bool `json:"held"`
 	Missing bool `json:"missing"`
+	// DependsOn are the tickets on this line it depends on, in its
+	// depends-on order: the graph's edges into this station (VIEW-4).
+	DependsOn []string `json:"dependsOn"`
+	// Outside are its unfinished depends-on tickets not on this line.
+	Outside []string `json:"outside"`
 }
 
 // WorkstreamJSON is one workstream with derived status (VIEW-4).
@@ -507,16 +509,28 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 			Tickets:              []WorkstreamTicket{},
 		}
 		for _, id := range workstream.Tickets {
-			entry := WorkstreamTicket{ID: id, Title: id, Missing: true}
+			entry := WorkstreamTicket{ID: id, Title: id, Missing: true, DependsOn: []string{}, Outside: []string{}}
 			if owner, ticket, ok := snapshot.FindTicket(id); ok {
 				ref := board.Ref{Project: owner.Name, ID: id}
 				reasons := snapshot.Analysis.Blocked[ref]
 				entry = WorkstreamTicket{
 					ID: id, Title: ticket.Title, Column: string(ticket.Column),
-					Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream.Slug),
+					Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream),
+					DependsOn: []string{}, Outside: []string{},
+				}
+				for _, dependency := range ticket.DependsOn {
+					switch {
+					case dependency == id || slices.Contains(entry.DependsOn, dependency):
+					case slices.Contains(workstream.Tickets, dependency):
+						entry.DependsOn = append(entry.DependsOn, dependency)
+					case slices.ContainsFunc(reasons, func(reason board.Reason) bool {
+						return reason.Kind == board.TicketDependency && reason.Ticket.ID == dependency
+					}):
+						entry.Outside = append(entry.Outside, dependency)
+					}
 				}
 			} else if snapshot.Archived(id) {
-				entry = WorkstreamTicket{ID: id, Title: id, Column: "archived"}
+				entry = WorkstreamTicket{ID: id, Title: id, Column: "archived", DependsOn: []string{}, Outside: []string{}}
 			}
 			item.Tickets = append(item.Tickets, entry)
 		}
@@ -688,9 +702,6 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 		if len(reasons) > 0 {
 			result.Blocked++
 		}
-		if slices.ContainsFunc(reasons, func(reason board.Reason) bool { return reason.Kind != board.WorkstreamOrder }) {
-			result.Stuck++
-		}
 	}
 	return result
 }
@@ -709,14 +720,15 @@ func nonNil[T any](items []T) []T {
 	return items
 }
 
-// heldOutsideLine reports whether any reason comes from outside the given
-// workstream's own order and workstream-level dependencies.
-func heldOutsideLine(reasons []board.Reason, workstream string) bool {
+// heldOutsideLine reports whether any reason comes from outside the
+// workstream: not a ticket on the line, nor its workstream-level
+// dependencies. A dependency on a ticket on the line is drawn as track.
+func heldOutsideLine(reasons []board.Reason, workstream board.Workstream) bool {
 	return slices.ContainsFunc(reasons, func(reason board.Reason) bool {
 		switch {
-		case reason.Kind == board.WorkstreamOrder && reason.Workstream == workstream:
+		case reason.Kind == board.TicketDependency && slices.Contains(workstream.Tickets, reason.Ticket.ID):
 			return false
-		case reason.Kind == board.WorkstreamDependency && reason.Via == workstream && reason.Workstream != workstream:
+		case reason.Kind == board.WorkstreamDependency && reason.Via == workstream.Slug && reason.Workstream != workstream.Slug:
 			return false
 		}
 		return true

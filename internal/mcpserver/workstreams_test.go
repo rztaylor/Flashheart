@@ -102,7 +102,7 @@ func TestCreateWorkstream(t *testing.T) {
 
 	out := e.ok("create_workstream", map[string]any{"title": "Card panel", "goal": "Open tickets beside the board.", "priority": "high",
 		"tickets": []string{b, a}, "depends_on_workstreams": []string{"old"}, "tags": []string{"ui"}})
-	contains(t, out, `Created workstream card-panel "Card panel" with DM-2, DM-1.`, "ok workstream=card-panel")
+	contains(t, out, `Created workstream card-panel "Card panel" with DM-2, DM-1.`, "in any order", "ok workstream=card-panel")
 	file := e.readFile("demo/workstreams/card-panel.md")
 	contains(t, file, "slug: card-panel", "priority: high", "depends-on-workstreams: [old]", "tags: [ui]", "# Card panel", "## Goal\n\nOpen tickets beside the board.")
 	if got := e.members("card-panel"); !slices.Equal(got, []string{b, a}) {
@@ -146,5 +146,27 @@ func TestBoardContextListsActiveWorkstreams(t *testing.T) {
 	contains(t, out, `Workstreams: panel "panel" (0 of 2 done, next DM-1).`)
 	if contains2(out, "shipped") {
 		t.Fatalf("completed workstream listed:\n%s", out)
+	}
+}
+
+func TestWorkstreamOrderDoesNotBlock(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	a := e.ticket(store.NewTicket{Title: "First"})
+	b := e.ticket(store.NewTicket{Title: "Second"})
+	c := e.ticket(store.NewTicket{Title: "Third", DependsOn: []string{a, b}})
+	e.workstream("epic", a, b, c)
+	e.startSession(session)
+
+	contains(t, e.ok("board_context", nil), `epic "epic" (0 of 3 done, next DM-1)`)
+	if out := e.ok("get_ticket", map[string]any{"ticket": b}); contains2(out, "Blocked") {
+		t.Fatalf("a later ticket in a workstream is blocked by order:\n%s", out)
+	}
+	contains(t, e.ok("get_ticket", map[string]any{"ticket": c}), "Depends on DM-1", "Depends on DM-2")
+	blocked := e.ok("list_tickets", map[string]any{"blocked": true})
+	contains(t, blocked, c)
+	if contains2(blocked, b+" feature") {
+		t.Fatalf("list_tickets shows a workstream ticket blocked by order:\n%s", blocked)
 	}
 }

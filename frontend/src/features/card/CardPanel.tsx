@@ -5,7 +5,6 @@ import {
   type Column,
   fetchTicket,
   type Reason,
-  splitReasons,
   type TicketDetail,
   type TicketRef,
   type WorkstreamBrief,
@@ -368,8 +367,7 @@ export function PanelHeader({
       </h2>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <StatusPill column={detail.column} />
-        {/* Only a real blocker, never a wait on the line's own order. */}
-        {splitReasons(detail.blockedBy).blockers.length > 0 ? (
+        {detail.blockedBy.length > 0 ? (
           <Pill tone="blocked">Blocked</Pill>
         ) : null}
         {priority ? (
@@ -400,18 +398,16 @@ export function PanelHeader({
   );
 }
 
-// ReasonList explains why a ticket cannot start (CARD-4). Real blockers are
-// blocked pills; waits on an earlier station of the line are quiet words.
+// ReasonList explains why a ticket cannot start (CARD-4), each reason a
+// blocked pill.
 function ReasonList({
   id,
   title,
-  marked,
   reasons,
   onOpen,
 }: {
   id: string;
   title: string;
-  marked?: boolean;
   reasons: Reason[];
   onOpen(ticket: TicketRef): void;
 }) {
@@ -420,15 +416,13 @@ function ReasonList({
     <section aria-labelledby={id}>
       <h3
         id={id}
-        className={`mb-2 flex items-center gap-1.5 text-md heading-cut ${marked ? "text-ink" : "text-ink-muted"}`}
+        className="mb-2 flex items-center gap-1.5 text-md heading-cut text-ink"
       >
-        {marked ? (
-          <Icon
-            name="diamond"
-            size={15}
-            className="text-(--fh-state-blocked-ink)"
-          />
-        ) : null}
+        <Icon
+          name="diamond"
+          size={15}
+          className="text-(--fh-state-blocked-ink)"
+        />
         {title}
       </h3>
       <ul className="flex flex-col gap-1.5">
@@ -437,11 +431,7 @@ function ReasonList({
             key={reason.text}
             className="flex items-start justify-between gap-3 text-sm"
           >
-            {marked ? (
-              <BlockerPill>{reason.text}</BlockerPill>
-            ) : (
-              <span className="text-ink-muted">{reason.text}</span>
-            )}
+            <BlockerPill>{reason.text}</BlockerPill>
             {reason.ticket && !reason.missing ? (
               <button
                 type="button"
@@ -462,7 +452,7 @@ function ReasonList({
 }
 
 // TicketTab, in the order of ui-layout.md §3: needs repair, questions for
-// the user, the handoff, blockers and waits, criteria, format warnings and
+// the user, the handoff, blockers, criteria, format warnings and
 // the ticket's own markdown.
 export function TicketTab({
   detail,
@@ -480,7 +470,6 @@ export function TicketTab({
   onAnswer?(question: string, answer: string): Promise<string | undefined>;
 }) {
   const now = useNow();
-  const { blockers, waits } = splitReasons(detail.blockedBy);
   const stale = staleHandoff(detail);
   return (
     <div className="flex flex-col gap-6">
@@ -605,14 +594,7 @@ export function TicketTab({
       <ReasonList
         id="blocked-heading"
         title="Blocked by"
-        marked
-        reasons={blockers}
-        onOpen={onOpen}
-      />
-      <ReasonList
-        id="waits-heading"
-        title="Waits for"
-        reasons={waits}
+        reasons={detail.blockedBy}
         onOpen={onOpen}
       />
 

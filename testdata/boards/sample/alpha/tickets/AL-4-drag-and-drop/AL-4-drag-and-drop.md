@@ -9,7 +9,7 @@ session: fixture
 git-ref: 0000000
 branch: 
 workstream: board-ui
-depends-on: []
+depends-on: [AL-3]
 depends-on-workstreams: []
 tags: [ui]
 ---

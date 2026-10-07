@@ -78,7 +78,7 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Ticket** | One unit of work with a stable id such as `FH-42`: a folder `tickets/FH-42-<slug>/` holding the ticket file `FH-42-<slug>.md`, its review and copied files. |
 | **Ticket id** | `<project key>-<number>`, unique across the root; how humans and agents refer to tickets (`KEY`). |
 | **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. |
-| **Workstream** | An ordered group of tickets with a shared goal; order implies blocking. |
+| **Workstream** | A group of tickets with a shared goal, like an epic, worked on in sequence or in parallel; only `depends-on` orders its tickets (D26). |
 | **Review** | A human verification guide for a ticket in `reviews/`. |
 | **Attachment** | A file (screenshot, log, PDF) copied into the ticket's `files/` folder. |
 | **Run** | One agent session or subagent, from start to end. Runs live in the event log, not in tickets. |
@@ -206,7 +206,8 @@ Full format: `docs/dev/specs/board-format.md`.
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
 - `VIEW-2` **Virtual columns**: *Needs you* (tickets with a run in Needs you or
   an open question from a live session) and *Agent working* (tickets linked to a Working or Quiet
-  run). They sit before Backlog and appear while they hold tickets. Each
+  run). They sit between In progress and Ready to review and appear while
+  they hold tickets. Each
   can be shown or hidden (Needs you shown by default); a ticket in a virtual
   column also stays in its real column, marked as mirrored.
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
@@ -214,7 +215,8 @@ Full format: `docs/dev/specs/board-format.md`.
   *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
   are hidden by default.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
-  tickets in ticket order with status, blocked state and progress.
+  tickets as a railway graph of their `depends-on` links, with status,
+  blocked state and progress.
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
 - `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
   workstream, blocked, live badge, criteria progress), *Detailed* (+
@@ -242,7 +244,7 @@ Full format: `docs/dev/specs/board-format.md`.
 - `CARD-3` Acceptance-criteria checkboxes can be ticked in the rendered view
   and are saved to the file.
 - `CARD-4` A **Blocked by** section explains each blocking reason: ticket
-  dependency, workstream dependency, or earlier ticket in the workstream.
+  dependency or workstream dependency.
 - `CARD-5` The **Handoff** section is shown prominently with its author run
   and time, and a warning when the claimed run has edited files since.
 - `CARD-6` Open questions show with an answer box or option buttons
@@ -260,8 +262,9 @@ Full format: `docs/dev/specs/board-format.md`.
   missing, when the review shows no evidence (no screenshot and no stated
   reason in its *Evidence* section, `REV-4`), or when criteria are unticked;
   it does not prevent the move.
-- `EDIT-4` Reordering tickets inside a workstream swimlane rewrites the
-  workstream's `tickets:` list.
+- `EDIT-4` Reordering a workstream's tickets that have no dependencies on
+  the line rewrites the workstream's `tickets:` list; tickets on the graph
+  are placed by their dependencies.
 - `EDIT-5` **New ticket** creates a ticket folder from the template with the
   next id (`KEY-2`), a slug from the title, `created`, a chosen column
   (default Backlog) and optional workstream.

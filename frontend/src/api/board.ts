@@ -28,7 +28,7 @@ export interface TicketRef {
 export const TICKET_ID = /^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]*$/;
 
 export interface Reason {
-  kind: "ticket" | "workstream" | "order";
+  kind: "ticket" | "workstream";
   text: string;
   ticket?: { project: string; id: string };
   workstream?: string;
@@ -90,7 +90,6 @@ export interface ProjectSummary {
   counts: Record<Column, number>;
   needsRepair: number;
   blocked: number;
-  stuck: number;
   warnings: string[];
   lastModified: string;
   workstreams: WorkstreamBrief[];
@@ -176,6 +175,10 @@ export interface WorkstreamTicket {
   blocked: boolean;
   held: boolean;
   missing: boolean;
+  // dependsOn: tickets on this workstream it depends on (the graph's edges);
+  // outside: its unfinished dependencies on tickets elsewhere.
+  dependsOn: string[];
+  outside: string[];
 }
 
 export interface Workstream {
@@ -206,9 +209,7 @@ const isColumn = (value: unknown): value is Column =>
 function isReason(value: unknown): value is Reason {
   return (
     isRecord(value) &&
-    (value.kind === "ticket" ||
-      value.kind === "workstream" ||
-      value.kind === "order") &&
+    (value.kind === "ticket" || value.kind === "workstream") &&
     isString(value.text) &&
     typeof value.missing === "boolean"
   );
@@ -410,17 +411,4 @@ export async function fetchWorkstreams(
     signal,
   );
   return response.workstreams;
-}
-
-// splitReasons separates real blockers (a dependency, a depended-on
-// workstream, a missing reference) from waits on an earlier station of a
-// line, which the board shows quietly.
-export function splitReasons(reasons: Reason[]): {
-  blockers: Reason[];
-  waits: Reason[];
-} {
-  return {
-    blockers: reasons.filter((reason) => reason.kind !== "order"),
-    waits: reasons.filter((reason) => reason.kind === "order"),
-  };
 }

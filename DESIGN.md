@@ -534,7 +534,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 
 ## Shapes
 
-8px controls (buttons, fields, segmented controls, tabs in the band, key badges); 10px cards, rail tiles, criteria lists and callouts; 14px column wells, lanes, route cards, the table and dialogs; full rounds for pills, tags, count badges, bullets, stations and the Needs you plate. Dashes have three meanings only: a dashed card border with a hatched top band means needs repair; dashed track means suspended service; a dashed ring means a missing station. Empty columns and lanes use a dashed outline as an empty slot.
+8px controls (buttons, fields, segmented controls, tabs in the band, key badges); 10px cards, rail tiles, criteria lists and callouts; 14px column wells, lanes, route cards, the table and dialogs; full rounds for pills, tags, count badges, bullets, stations and the Needs you plate. Dashes have three meanings only: a dashed card border with a hatched top band means needs repair; dashed track or a dashed line-colour ring means suspended service; a faint dashed ring means a missing station. Empty columns and lanes use a dashed outline as an empty slot.
 
 ## Components
 
@@ -567,7 +567,7 @@ Column well surface, rule border, 14px corners, 10px padding; head with a round 
 Panel surface beside the view. Header: id and project, display title, pill row (status, blocker, priority, type), meta row (workstream, created, branch, changed), Move to and Archive. Ticket tab: repair, the questions callout (tinted, thin accent border, attention icon, question cards on card surface with option buttons), the Handoff callout (tinted, thin orange border, next steps large, full handoff behind a disclosure), blockers as pills, criteria as a bordered checklist with a d of t count, warnings, then the markdown.
 
 ### Route Card and Stations (signature)
-A rounded card washed with 7% of its line colour in light (plain card in dark), a 44px bullet, the name in the display panel cut, derived status with its icon, and "d of t served". Stations: Done or Archived a filled line-colour disc with a check; Ready to review filled with a centre dot; the next stop a larger 5px line-colour ring with a halo and centre dot; ahead an open ring; missing a dashed faint ring. Under each: title, id, status pill. Track travelled solid, ahead at 35%, suspended dashed.
+A rounded card washed with 7% of its line colour in light (plain card in dark), a 44px bullet, the name in the display panel cut, derived status with its icon, and "d of t served". Stations sit on a railway graph of the tickets' dependencies: track bends at right angles with rounded corners between columns, parallel work runs on tracks below, and tracks join at a ticket that needs several. Stations: Done or Archived a filled line-colour disc with a check; Ready to review filled with a centre dot; a next stop (any ticket that can start) a larger 5px line-colour ring with a halo and centre dot; ahead an open ring; held a dashed line-colour ring; missing a dashed faint ring. Under each: title, id, status pill; above, a blocked pill for a dependency outside the line. Track travelled solid, ahead at 35%, suspended dashed.
 
 ### Run State Marks
 Twelve-unit SVG marks in currentColor beside their words: Needs you a disc (on the attention plate), Working a ring around a beating dot, Quiet a ring with a still dot, Waiting an open ring, Ended a terminus bar. The Working dot beats (1.8s) only on the map and never under reduced motion.

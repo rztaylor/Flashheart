@@ -360,3 +360,32 @@ permanently only once archived, the same two steps as tickets (D24).
   the repository is unknown again, so activity there starts a new project,
   with a new key because the old one is retired.
 
+
+## 2026-10-07 — D26: Workstreams are epics; only depends-on orders tickets
+
+Decision (FH-38, user): a workstream groups tickets toward a shared goal,
+like an epic, and its tickets may be worked on in sequence or in parallel.
+Its `tickets:` list sets membership and display order and never blocks
+(board-format §Blocking lost the old rule 3, "an earlier ticket in the
+workstream"). Sequence is expressed only by `depends-on`, which may name
+several tickets, and by `depends-on-workstreams`. A workstream is blocked
+only when its own workstream dependencies are unmet or every unfinished
+ticket is blocked, and its next ticket is the first unfinished one that is
+not blocked. The Workstreams view draws each workstream as a railway graph
+of its tickets' depends-on links (ui-layout.md §4).
+
+Options: ordered by default with an opt-out (the 2026-10-06 plan in FH-17);
+unordered by default with an `ordered: true` opt-in (built first in FH-38);
+no ordering at all. The user chose the last: "an ordered workstream isn't
+really a thing - it's just that each ticket has a depends_on for another
+ticket." List order made every grouped ticket wait for the one before it,
+even when the work was independent, and an opt-in would keep two ways to
+say the same thing. Drawing depends-on as track shows real sequence,
+parallel work and joins, which a line in list order could not.
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1. No field is
+added or removed; tool inputs and outputs keep their shape, and blocked
+reasons lose the "Comes after … in workstream …" text, which no tool
+contract names. Existing workstreams change meaning, which the user
+accepted: a chain that relied on list order needs `depends-on` on its
+tickets.

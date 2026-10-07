@@ -165,10 +165,11 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   await page.keyboard.press("Shift+ArrowRight");
   await expect(mirror).toBeVisible();
   await expect(real).toBeVisible();
+  // Needs you stands between In progress and Ready to review.
   await page.keyboard.press("ArrowRight");
   await expect(
     page
-      .getByRole("region", { name: /^Backlog/ })
+      .getByRole("region", { name: /^Ready to review/ })
       .getByRole("button")
       .first(),
   ).toBeFocused();
@@ -181,7 +182,7 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   await expect(needsColumn).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Needs you" }).check();
   await expect(mirror).toBeVisible();
-  // Turning it back on keeps it in view rather than off to the left.
+  // Turning it back on shows it again.
   await expect(needsColumn.getByRole("heading")).toBeInViewport();
   await expectNoAxeViolations("board with runs");
   for (const theme of ["light", "dark"]) {

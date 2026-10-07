@@ -5,7 +5,7 @@ import {
   type KeyboardEvent,
 } from "react";
 
-import { type Card, COLUMNS, splitReasons } from "../../api/board";
+import { type Card, COLUMNS } from "../../api/board";
 import type { Live } from "../../api/runs";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
@@ -51,8 +51,7 @@ interface TicketCardProps {
 // left edge; the header takes the tint of the board's "Colour by" value,
 // whose tag is filled and named. Compact: id, title, type and priority.
 // Normal adds the blocker, live run and criteria. Detailed adds the
-// excerpt, handoff "next", attachments and review. Real blockers are pills;
-// waits on an earlier station of the line are quiet.
+// excerpt, handoff "next", attachments and review.
 export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
   function TicketCard(
     {
@@ -79,9 +78,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     const repair = card.needsRepair.length > 0;
     const done = card.column === "done";
     const age = runningTime(card.modified, now);
-    const { blockers, waits } = splitReasons(card.blockedBy);
-    const blocker = blockers[0];
-    const wait = waits[0];
+    const blocker = card.blockedBy[0];
     const more = card.blockedBy.length - 1;
     const painted = paint && !repair ? paint : undefined;
     const paintedAs = (kind: string) =>
@@ -205,11 +202,6 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           {!compact && blocker ? (
             <StateNote kind="blocked" compact>
               {more > 0 ? `${blocker.text} (+${more} more)` : blocker.text}
-            </StateNote>
-          ) : null}
-          {!compact && !blocker && wait ? (
-            <StateNote kind="waiting" compact>
-              {wait.text}
             </StateNote>
           ) : null}
 

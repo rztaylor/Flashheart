@@ -1,7 +1,7 @@
 import { Icon } from "./Icon";
 import { BlockerPill } from "./Pill";
 
-type Kind = "blocked" | "waiting" | "repair" | "warning";
+type Kind = "blocked" | "repair" | "warning";
 
 const icons = {
   blocked: "diamond",
@@ -10,15 +10,13 @@ const icons = {
 } as const;
 const labels = {
   blocked: "Blocked",
-  waiting: "Waiting",
   repair: "Needs repair",
   warning: "Warning",
 };
 
 // StateNote pairs a ticket state with its proof ("Blocked: Depends on …").
-// A real blocker is the blocked pill; repair and warnings are ink, shape and
-// words. A wait on an earlier station of the ticket's own line is quiet: no
-// mark, muted words.
+// A blocker is the blocked pill; repair and warnings are ink, shape and
+// words.
 export function StateNote({
   kind,
   children,
@@ -32,15 +30,11 @@ export function StateNote({
   // the panel.
   if (kind === "blocked")
     return <BlockerPill lines={compact ? 1 : 3}>{children}</BlockerPill>;
-  const icon = kind === "waiting" ? undefined : icons[kind];
+  const icon = icons[kind];
   return (
     <p
       className={`flex items-start gap-1.5 ${compact ? "text-xs" : "text-sm"} ${
-        kind === "waiting"
-          ? "text-ink-faint"
-          : kind === "warning"
-            ? "text-ink-muted"
-            : "text-ink"
+        kind === "warning" ? "text-ink-muted" : "text-ink"
       }`}
     >
       {icon ? (

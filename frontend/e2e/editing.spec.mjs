@@ -327,7 +327,7 @@ test("starting a blocked ticket asks for a reason and records it", async () => {
     name: "Start FH-12 while it is blocked?",
   });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Comes after FH-10");
+  await expect(dialog).toContainText("Depends on FH-11");
   await expect(
     dialog.getByRole("button", { name: "Start anyway" }),
   ).toBeDisabled();
@@ -766,28 +766,30 @@ test("finishing a workstream earns a remark; progress remarks are rare", async (
   await expect(toast).toHaveCount(0);
 });
 
-test("stations reorder along their line with Shift and an arrow", async () => {
-  await open("#/p/flashheart/workstreams");
-  const line = page.getByRole("article", { name: "Board editing" });
+test("independent stations reorder with Shift and an arrow", async () => {
+  await open("#/p/ngplus/workstreams");
+  const line = page.getByRole("article", { name: "Study UI" });
   await line
-    .getByRole("button", { name: /^Drag cards between columns,/ })
+    .getByRole("button", { name: /^Flashcards from past papers,/ })
     .focus();
   await page.keyboard.press("Shift+ArrowLeft");
   const stations = line
-    .getByRole("list", { name: "Board editing stations" })
+    .getByRole("list", {
+      name: "Study UI stations with no dependencies on the line",
+    })
     .getByRole("listitem");
-  await expect(stations.first()).toContainText("Drag cards between columns");
+  await expect(stations.first()).toContainText("Flashcards from past papers");
   await expect(
-    line.getByRole("button", { name: /^Drag cards between columns,/ }),
+    line.getByRole("button", { name: /^Flashcards from past papers,/ }),
   ).toBeFocused();
   await expect
     .poll(() =>
       readFile(
-        join(sandbox.root, "flashheart", "workstreams", "board-editing.md"),
+        join(sandbox.root, "ngplus", "workstreams", "study-ui.md"),
         "utf8",
       ),
     )
-    .toContain("tickets:\n  - FH-15\n  - FH-14\n");
+    .toContain("tickets:\n  - NG-5\n  - NG-4\n");
 });
 
 test("preferences are saved through the backend and survive a reload", async () => {

@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import {
   type Card,
   COLUMNS,
-  splitReasons,
   type TicketRef,
   type WorkstreamBrief,
 } from "../../api/board";
@@ -39,13 +38,7 @@ const priorityRank: Record<string, number> = { high: 0, medium: 1, low: 2 };
 const columnRank = (column: string) =>
   COLUMNS.findIndex((item) => item.id === column);
 const stateRank = (card: Card) =>
-  card.needsRepair.length > 0
-    ? 0
-    : splitReasons(card.blockedBy).blockers.length > 0
-      ? 1
-      : card.blocked
-        ? 2
-        : 3;
+  card.needsRepair.length > 0 ? 0 : card.blocked ? 1 : 2;
 
 function compare(a: Card, b: Card, key: SortKey): number {
   switch (key) {
@@ -208,16 +201,6 @@ export function TableView({
                       <span className="flex items-center gap-1 font-semibold">
                         <Icon name="repair" size={12} />
                         Needs repair
-                      </span>
-                    ) : card.blocked &&
-                      splitReasons(card.blockedBy).blockers.length === 0 ? (
-                      <span
-                        className="text-ink-faint"
-                        title={card.blockedBy
-                          .map((reason) => reason.text)
-                          .join("\n")}
-                      >
-                        Waiting
                       </span>
                     ) : card.blocked ? (
                       <span

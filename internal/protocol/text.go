@@ -124,14 +124,16 @@ instructions.
 - Test tickets add coverage; bugs they find become new bug tickets.
 - Spikes produce a written recommendation and follow-up tickets, not
   production code.
-- Workstreams order their tickets: a ticket waits for the ones before it,
-  and ` + "`depends_on`" + ` names tickets it needs first. A blocked ticket needs
-  ` + "`force`" + ` and a reason to claim.
-- Work that spans several dependent tickets with a shared goal belongs in a
+- A workstream groups tickets with a shared goal, like an epic: they may be
+  worked on in sequence or in parallel. Its order never blocks; a ticket
+  waits only for the tickets its ` + "`depends_on`" + ` names and for workstreams it
+  or its workstream depends on. Give each ticket the dependencies it really
+  needs, naming several tickets in ` + "`depends_on`" + ` when it needs them all.
+  A blocked ticket needs ` + "`force`" + ` and a reason to claim.
+- Work that spans several tickets with a shared goal belongs in a
   workstream. Join one ` + "`board_context`" + ` lists by passing ` + "`workstream`" + ` to
   ` + "`create_ticket`" + ` or ` + "`update_ticket`" + `, or make one with
-  ` + "`create_workstream`" + `, listing its tickets in order.
-  Leave single tickets out of workstreams.
+  ` + "`create_workstream`" + `. Leave single tickets out of workstreams.
 
 ## Review template
 

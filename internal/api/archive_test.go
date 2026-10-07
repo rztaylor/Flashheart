@@ -45,7 +45,7 @@ func TestDeleteArchivedTicket(t *testing.T) {
 	if !slices.Contains(plan.Files, "AL-3-card-panel.md") || plan.Token == "" {
 		t.Errorf("plan = %+v", plan)
 	}
-	if len(plan.Tickets) != 1 || plan.Tickets[0].ID != "BE-1" || plan.Tickets[0].Project != "beta" {
+	if len(plan.Tickets) != 2 || plan.Tickets[0].ID != "AL-4" || plan.Tickets[1].ID != "BE-1" || plan.Tickets[1].Project != "beta" {
 		t.Errorf("plan tickets = %+v", plan.Tickets)
 	}
 	if len(plan.Workstreams) != 1 || plan.Workstreams[0].Slug != "board-ui" || plan.Workstreams[0].Title == "" {

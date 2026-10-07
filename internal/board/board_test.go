@@ -233,9 +233,15 @@ func TestBlockingRules(t *testing.T) {
 			tk("AL-12", Backlog, "workstream: three\n"),
 			tk("AL-13", Backlog, "workstream: nowhere\n"),
 			tk("AL-14", Done, "depends-on: [AL-3]\n"),
+			tk("AL-15", InProgress, "workstream: epic\n"),
+			tk("AL-16", Backlog, "workstream: epic\n"),
+			tk("AL-17", UpNext, "workstream: epic\ndepends-on: [AL-15]\n"),
+			tk("AL-18", Backlog, "workstream: later\n"),
 		},
 		Workstreams: []Workstream{
 			ws("one", []string{"AL-8", "AL-9", "AL-10"}),
+			ws("epic", []string{"AL-15", "AL-16", "AL-17"}),
+			ws("later", []string{"AL-18"}, "epic"),
 			ws("two", []string{"AL-1", "AL-2"}),
 			ws("three", []string{"AL-12"}, "one"),
 		},
@@ -244,7 +250,9 @@ func TestBlockingRules(t *testing.T) {
 	beta := Project{Name: "beta", Key: "BE", Tickets: []Ticket{tk("BE-1", InProgress, ""), tk("BE-2", Done, "")}}
 	analysis := Analyze(Board{Projects: []Project{alpha, beta}})
 
-	for _, free := range []string{"AL-4", "AL-9", "AL-1", "AL-14"} {
+	// A workstream's later tickets do not wait for earlier ones; only
+	// depends-on orders them.
+	for _, free := range []string{"AL-4", "AL-9", "AL-10", "AL-1", "AL-14", "AL-15", "AL-16"} {
 		if reasons := reasonsOf(analysis, "alpha", free); len(reasons) != 0 {
 			t.Errorf("%s reasons = %+v, want none", free, reasons)
 		}
@@ -259,13 +267,14 @@ func TestBlockingRules(t *testing.T) {
 			{Kind: TicketDependency, Ticket: Ref{"beta", "BE-1"}, Column: InProgress},
 			{Kind: TicketDependency, Ticket: Ref{"", "GA-1"}, Missing: true},
 		}},
-		{"AL-10", []Reason{{Kind: WorkstreamOrder, Workstream: "one", Ticket: Ref{"alpha", "AL-9"}, Column: InProgress}}},
 		{"AL-11", []Reason{
 			{Kind: WorkstreamDependency, Workstream: "one", Pending: 2},
 			{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true},
 		}},
 		{"AL-12", []Reason{{Kind: WorkstreamDependency, Workstream: "one", Pending: 2, Via: "three"}}},
 		{"AL-13", []Reason{{Kind: WorkstreamDependency, Workstream: "nowhere", Missing: true, Via: "nowhere"}}},
+		{"AL-17", []Reason{{Kind: TicketDependency, Ticket: Ref{"alpha", "AL-15"}, Column: InProgress}}},
+		{"AL-18", []Reason{{Kind: WorkstreamDependency, Workstream: "epic", Pending: 3, Via: "later"}}},
 	}
 	for _, test := range tests {
 		if got := reasonsOf(analysis, "alpha", test.id); !reflect.DeepEqual(got, test.want) {
@@ -298,11 +307,14 @@ func TestWorkstreamStatus(t *testing.T) {
 			tk("PP-1", Done, ""), tk("PP-2", Review, ""),
 			tk("PP-3", InProgress, ""), tk("PP-4", UpNext, "depends-on: [PP-3]\n"),
 			tk("PP-5", Backlog, ""),
+			tk("PP-6", Backlog, "depends-on: [PP-3]\n"),
+			tk("PP-7", Backlog, ""),
 		},
 		Workstreams: []Workstream{
 			ws("complete", []string{"PP-1", "PP-2"}),
 			ws("moving", []string{"PP-1", "PP-3", "PP-5"}),
-			ws("stuck", []string{"PP-4", "PP-5"}),
+			ws("epic", []string{"PP-4", "PP-7"}),
+			ws("epic-stuck", []string{"PP-2", "PP-4", "PP-6"}),
 			ws("waiting", []string{"PP-5"}, "moving"),
 			ws("empty", nil),
 			ws("broken-ref", []string{"PP-404"}),
@@ -310,9 +322,12 @@ func TestWorkstreamStatus(t *testing.T) {
 	}
 	analysis := Analyze(Board{Projects: []Project{project}})
 	tests := map[string]WorkstreamState{
-		"complete":   {Status: StatusCompleted, Done: 2, Total: 2},
-		"moving":     {Status: StatusActive, Done: 1, Total: 3, Next: "PP-3"},
-		"stuck":      {Status: StatusBlocked, Done: 0, Total: 2, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
+		"complete": {Status: StatusCompleted, Done: 2, Total: 2},
+		"moving":   {Status: StatusActive, Done: 1, Total: 3, Next: "PP-3"},
+		// Next is the first unfinished ticket that is not blocked, and a
+		// workstream is blocked only when every unfinished ticket is.
+		"epic":       {Status: StatusActive, Done: 0, Total: 2, Next: "PP-7"},
+		"epic-stuck": {Status: StatusBlocked, Done: 1, Total: 3, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
 		"waiting":    {Status: StatusBlocked, Done: 0, Total: 1, Next: "PP-5", Reasons: []Reason{{Kind: WorkstreamDependency, Workstream: "moving", Pending: 2}}},
 		"empty":      {Status: StatusActive},
 		"broken-ref": {Status: StatusBlocked, Done: 0, Total: 1, Next: "PP-404", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"", "PP-404"}, Missing: true}}},
@@ -356,7 +371,6 @@ func TestReasonDescriptions(t *testing.T) {
 		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 3, Via: "ui"}, "Its workstream ui depends on workstream core, which has 3 tickets not yet in review or done"},
 		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true}, "Depends on workstream ghost, which does not exist"},
 		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true, Via: "ghost"}, "Belongs to workstream ghost, which does not exist"},
-		{Reason{Kind: WorkstreamOrder, Workstream: "ui", Ticket: Ref{"alpha", "AL-1"}, Column: InProgress}, "Comes after AL-1 in workstream ui, which is In progress"},
 	}
 	for _, test := range tests {
 		if got := test.reason.Describe(); got != test.want {

@@ -1,5 +1,6 @@
 // Virtual columns (VIEW-2): computed columns that mirror tickets from their
-// real columns while an agent run needs the user or is working on them.
+// real columns while an agent run needs the user or is working on them. They
+// stand between In progress and Ready to review.
 import type { Card } from "../api/board";
 import type { VirtualColumn } from "../api/preferences";
 
@@ -40,4 +41,14 @@ export function toggleVirtual(
   return VIRTUAL_COLUMNS.map((column) => column.id).filter((column) =>
     column === id ? on : chosen.includes(column),
   );
+}
+
+// placeVirtual puts the shown virtual columns after In progress, before Ready
+// to review, where the work they mirror sits in the flow.
+export function placeVirtual<T extends { id: string }>(
+  real: T[],
+  mirrors: T[],
+): T[] {
+  const at = real.findIndex((column) => column.id === "in-progress") + 1;
+  return [...real.slice(0, at), ...mirrors, ...real.slice(at)];
 }

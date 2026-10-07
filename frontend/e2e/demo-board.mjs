@@ -83,6 +83,7 @@ const flashheart = [
     "high",
     "done",
     "foundation",
+    ["go-module"],
   ],
   [
     "check-script",
@@ -91,6 +92,7 @@ const flashheart = [
     "medium",
     "done",
     "foundation",
+    ["go-module"],
   ],
   [
     "detached-serve",
@@ -99,6 +101,7 @@ const flashheart = [
     "high",
     "done",
     "foundation",
+    ["singleserve-shell"],
   ],
   [
     "serve-log",
@@ -107,6 +110,7 @@ const flashheart = [
     "medium",
     "done",
     "foundation",
+    ["detached-serve"],
   ],
   [
     "markdown-parser",
@@ -123,6 +127,7 @@ const flashheart = [
     "high",
     "done",
     "board-core",
+    ["markdown-parser"],
   ],
   [
     "store-read",
@@ -131,6 +136,7 @@ const flashheart = [
     "high",
     "review",
     "board-core",
+    ["markdown-parser"],
   ],
   [
     "board-index",
@@ -139,6 +145,7 @@ const flashheart = [
     "high",
     "review",
     "board-core",
+    ["store-read", "blocking-rules"],
   ],
   [
     "read-api",
@@ -147,6 +154,7 @@ const flashheart = [
     "high",
     "in-progress",
     "board-core",
+    ["board-index"],
   ],
   [
     "transit-ui",
@@ -155,6 +163,7 @@ const flashheart = [
     "high",
     "in-progress",
     "board-core",
+    ["read-api"],
   ],
   [
     "workstream-diagram",
@@ -163,6 +172,7 @@ const flashheart = [
     "medium",
     "up-next",
     "board-core",
+    ["transit-ui"],
   ],
   [
     "table-view",
@@ -171,6 +181,7 @@ const flashheart = [
     "medium",
     "up-next",
     "board-core",
+    ["read-api"],
   ],
   [
     "locked-writes",
@@ -188,6 +199,7 @@ const flashheart = [
     "high",
     "backlog",
     "board-editing",
+    ["locked-writes"],
   ],
   [
     "conflict-dialog",
@@ -196,6 +208,7 @@ const flashheart = [
     "medium",
     "backlog",
     "board-editing",
+    ["locked-writes"],
   ],
   [
     "new-ticket",
@@ -212,6 +225,7 @@ const flashheart = [
     "high",
     "backlog",
     "board-editing",
+    ["drag-and-drop", "conflict-dialog"],
   ],
   [
     "event-log",
@@ -230,6 +244,7 @@ const flashheart = [
     "high",
     "backlog",
     "agent-runs",
+    ["event-log"],
   ],
   [
     "claude-hooks",
@@ -238,6 +253,7 @@ const flashheart = [
     "high",
     "backlog",
     "agent-runs",
+    ["event-log"],
   ],
   [
     "agents-view",
@@ -246,6 +262,7 @@ const flashheart = [
     "medium",
     "backlog",
     "agent-runs",
+    ["run-state"],
   ],
   [
     "recovery-note",
@@ -254,6 +271,7 @@ const flashheart = [
     "high",
     "backlog",
     "agent-runs",
+    ["run-state", "claude-hooks"],
   ],
   [
     "column-overflow",

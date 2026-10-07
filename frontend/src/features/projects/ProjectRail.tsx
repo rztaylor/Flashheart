@@ -36,7 +36,7 @@ export function ProjectRail({
   ) as ProjectSummary["counts"];
   const all = {
     counts,
-    blocked: projects.reduce((sum, project) => sum + project.stuck, 0),
+    blocked: projects.reduce((sum, project) => sum + project.blocked, 0),
     repair: projects.reduce((sum, project) => sum + project.needsRepair, 0),
     runs: runs ?? noRuns,
   };
@@ -75,7 +75,7 @@ export function ProjectRail({
                 project.displayName !== project.name ? project.name : undefined
               }
               counts={project.counts}
-              blocked={project.stuck}
+              blocked={project.blocked}
               repair={project.needsRepair}
               runs={project.runs}
               onClick={() =>
