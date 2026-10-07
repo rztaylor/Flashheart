@@ -1,7 +1,10 @@
 # Testing facts
 
 - Full local validation: `scripts/check.sh` (strict: frontend `npm ci`, lint,
-  unit tests and build, then gofmt, vet, Go tests, `-race`, binary build). Go
+  unit tests and build, then gofmt, vet, Go tests, `-race`, binary build).
+  The NFR-1 timing test (`TestIndexesFiveThousandTicketsQuickly`, 5,000
+  tickets in under 1 s) is skipped in the parallel passes and run alone
+  afterwards, so CPU contention on small CI runners cannot fail it. Go
   tests need the compiled frontend, so the frontend build runs first.
 - Backend: `GOCACHE=$PWD/.cache/go-build go test ./...`, the same with
   `-race`, `go vet ./...`, and `gofmt -l cmd internal` must be empty.

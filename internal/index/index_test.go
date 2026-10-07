@@ -178,7 +178,9 @@ func TestV1ProjectsAreReported(t *testing.T) {
 }
 
 // TestIndexesFiveThousandTicketsQuickly is NFR-1: 5,000 tickets across 10
-// projects index in under a second.
+// projects index in under a second. scripts/check.sh runs it alone, after
+// the parallel test passes, because on a small CI runner the other packages'
+// tests compete for the CPU and decide its time (FH-30).
 func TestIndexesFiveThousandTicketsQuickly(t *testing.T) {
 	if testing.Short() {
 		t.Skip("generates 5,000 files")
