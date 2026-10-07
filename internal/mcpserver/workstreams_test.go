@@ -13,17 +13,6 @@ import (
 // workstream writes a minimal workstream file in demo.
 func (e *env) workstream(slug string, tickets ...string) {
 	e.t.Helper()
-	e.workstreamFile(slug, "", tickets)
-}
-
-// chain writes an ordered workstream (ordered: true).
-func (e *env) chain(slug string, tickets ...string) {
-	e.t.Helper()
-	e.workstreamFile(slug, "ordered: true\n", tickets)
-}
-
-func (e *env) workstreamFile(slug, extra string, tickets []string) {
-	e.t.Helper()
 	list := "[]"
 	if len(tickets) > 0 {
 		list = ""
@@ -31,7 +20,7 @@ func (e *env) workstreamFile(slug, extra string, tickets []string) {
 			list += "\n  - " + id
 		}
 	}
-	write(e.t, e.root+"/demo/workstreams/"+slug+".md", "---\nslug: "+slug+"\nstatus: active\npriority: medium\n"+extra+"tickets: "+list+"\ndepends-on-workstreams: []\ntags: []\n---\n\n# "+slug+"\n")
+	write(e.t, e.root+"/demo/workstreams/"+slug+".md", "---\nslug: "+slug+"\nstatus: active\npriority: medium\ntickets: "+list+"\ndepends-on-workstreams: []\ntags: []\n---\n\n# "+slug+"\n")
 }
 
 func (e *env) members(slug string) []string {
@@ -115,9 +104,6 @@ func TestCreateWorkstream(t *testing.T) {
 		"tickets": []string{b, a}, "depends_on_workstreams": []string{"old"}, "tags": []string{"ui"}})
 	contains(t, out, `Created workstream card-panel "Card panel" with DM-2, DM-1.`, "in any order", "ok workstream=card-panel")
 	file := e.readFile("demo/workstreams/card-panel.md")
-	if contains2(file, "ordered") {
-		t.Fatalf("unordered workstream writes the ordered field:\n%s", file)
-	}
 	contains(t, file, "slug: card-panel", "priority: high", "depends-on-workstreams: [old]", "tags: [ui]", "# Card panel", "## Goal\n\nOpen tickets beside the board.")
 	if got := e.members("card-panel"); !slices.Equal(got, []string{b, a}) {
 		t.Fatalf("card-panel tickets = %v", got)
@@ -135,9 +121,6 @@ func TestCreateWorkstream(t *testing.T) {
 	}
 
 	contains(t, e.ok("create_workstream", map[string]any{"title": "Card panel", "goal": "Again."}), "ok workstream=card-panel-2")
-	chained := e.ok("create_workstream", map[string]any{"title": "Release", "goal": "Ship in order.", "ordered": true})
-	contains(t, chained, "each waits for the ones before it", "ok workstream=release")
-	contains(t, e.readFile("demo/workstreams/release.md"), "ordered: true")
 	e.fails("create_workstream", map[string]any{"title": "X", "goal": "g", "tickets": []string{"DM-99"}}, "not_found")
 	e.fails("create_workstream", map[string]any{"title": "X", "goal": "g", "priority": "urgent"}, "invalid_input")
 	e.fails("create_workstream", map[string]any{"title": "", "goal": "g"}, "invalid_input")
@@ -161,34 +144,29 @@ func TestBoardContextListsActiveWorkstreams(t *testing.T) {
 
 	out := e.ok("board_context", nil)
 	contains(t, out, `Workstreams: panel "panel" (0 of 2 done, next DM-1).`)
-	if contains2(out, "ordered") {
-		t.Fatalf("unordered workstream marked ordered:\n%s", out)
-	}
 	if contains2(out, "shipped") {
 		t.Fatalf("completed workstream listed:\n%s", out)
 	}
 }
 
-func TestOnlyOrderedWorkstreamsBlockByOrder(t *testing.T) {
+func TestWorkstreamOrderDoesNotBlock(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t, "DM")
-	a := e.ticket(store.NewTicket{Title: "Epic first"})
-	b := e.ticket(store.NewTicket{Title: "Epic second"})
-	c := e.ticket(store.NewTicket{Title: "Chain first"})
-	d := e.ticket(store.NewTicket{Title: "Chain second"})
-	e.workstream("epic", a, b)
-	e.chain("train", c, d)
+	a := e.ticket(store.NewTicket{Title: "First"})
+	b := e.ticket(store.NewTicket{Title: "Second"})
+	c := e.ticket(store.NewTicket{Title: "Third", DependsOn: []string{a, b}})
+	e.workstream("epic", a, b, c)
 	e.startSession(session)
 
-	contains(t, e.ok("board_context", nil), `epic "epic" (0 of 2 done, next DM-1)`, `train "train" (0 of 2 done, next DM-3, ordered)`)
+	contains(t, e.ok("board_context", nil), `epic "epic" (0 of 3 done, next DM-1)`)
 	if out := e.ok("get_ticket", map[string]any{"ticket": b}); contains2(out, "Blocked") {
-		t.Fatalf("a later ticket in an unordered workstream is blocked:\n%s", out)
+		t.Fatalf("a later ticket in a workstream is blocked by order:\n%s", out)
 	}
-	contains(t, e.ok("get_ticket", map[string]any{"ticket": d}), "Comes after DM-3 in workstream train")
+	contains(t, e.ok("get_ticket", map[string]any{"ticket": c}), "Depends on DM-1", "Depends on DM-2")
 	blocked := e.ok("list_tickets", map[string]any{"blocked": true})
-	contains(t, blocked, d)
-	if contains2(blocked, b) {
-		t.Fatalf("list_tickets shows an unordered member as blocked:\n%s", blocked)
+	contains(t, blocked, c)
+	if contains2(blocked, b+" feature") {
+		t.Fatalf("list_tickets shows a workstream ticket blocked by order:\n%s", blocked)
 	}
 }

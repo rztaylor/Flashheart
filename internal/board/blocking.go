@@ -46,9 +46,6 @@ const (
 	// Via names the ticket's own workstream when the dependency is declared
 	// there; Via == Workstream with Missing means that workstream is missing.
 	WorkstreamDependency ReasonKind = "workstream"
-	// WorkstreamOrder: an earlier ticket in an ordered workstream is not
-	// finished.
-	WorkstreamOrder ReasonKind = "order"
 )
 
 // Reason is one explanation of a blocked ticket.
@@ -73,9 +70,8 @@ const (
 type WorkstreamState struct {
 	Status      string
 	Done, Total int
-	// Next is the first ticket id in order not yet in review or done; in an
-	// unordered workstream, the first such ticket that is not blocked, when
-	// there is one.
+	// Next is the first ticket in order not yet in review or done and not
+	// blocked, else the first one not yet in review or done.
 	Next    string
 	Reasons []Reason
 }
@@ -246,17 +242,6 @@ func (a analyzer) reasons(project string, ticket Ticket) []Reason {
 				reasons = append(reasons, reason)
 			}
 		}
-		if !workstream.Ordered {
-			continue
-		}
-		for _, earlier := range workstream.Tickets {
-			if earlier == ticket.ID {
-				break
-			}
-			if reason, blocked := a.ticketReason(WorkstreamOrder, earlier, ref.ID); blocked {
-				reasons = append(reasons, reason)
-			}
-		}
 	}
 	return reasons
 }
@@ -271,7 +256,7 @@ func (a analyzer) membershipWarnings(project string, ticket Ticket) []string {
 	}
 	if ticket.Workstream != "" {
 		if _, exists := a.workstreams[Ref{project, ticket.Workstream}]; exists && !slices.Contains(listedBy, ticket.Workstream) {
-			warnings = append(warnings, fmt.Sprintf("not listed in workstream %s's tickets, so its order does not apply", ticket.Workstream))
+			warnings = append(warnings, fmt.Sprintf("not listed in workstream %s's tickets, so it does not count toward that workstream", ticket.Workstream))
 		}
 	}
 	for _, name := range listedBy {
@@ -305,8 +290,8 @@ func (a analyzer) workstreamState(project string, workstream Workstream, blocked
 			}
 		}
 	}
-	// An unordered workstream moves while any unfinished ticket can.
-	if !workstream.Ordered && free != "" {
+	// A workstream is an epic: it moves while any unfinished ticket can.
+	if free != "" {
 		state.Next, state.Reasons = free, nil
 	}
 	if state.Total > 0 && state.Done == state.Total {
@@ -364,8 +349,6 @@ func (r Reason) Describe() string {
 	switch r.Kind {
 	case TicketDependency:
 		return fmt.Sprintf("Depends on %s, which %s", r.Ticket.ID, state())
-	case WorkstreamOrder:
-		return fmt.Sprintf("Comes after %s in workstream %s, which %s", r.Ticket.ID, r.Workstream, state())
 	case WorkstreamDependency:
 		pending := "does not exist"
 		if !r.Missing {

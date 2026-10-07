@@ -205,16 +205,14 @@ A ticket is **blocked** when any of these holds:
 1. a `depends-on` ticket is not in `review` or `done`;
 2. a `depends-on-workstreams` workstream has a ticket not in `review` or
    `done`;
-3. it belongs to an **ordered** workstream (`ordered: true`) and an earlier
-   ticket in that workstream's `tickets:` list is not in `review` or `done`;
-4. a workstream that lists it has a `depends-on-workstreams` workstream with a
+3. a workstream that lists it has a `depends-on-workstreams` workstream with a
    ticket not in `review` or `done`.
 
-A workstream is unordered unless its frontmatter says `ordered: true`
-(D26): its tickets are an epic's, worked on in sequence or in parallel, and
-rule 3 does not apply; rules 1, 2 and 4 apply to every workstream.
+A workstream's order never blocks (D26): its tickets are an epic's, worked on
+in sequence or in parallel, and `depends-on` (one ticket or several) is the
+only way to say one must wait for another.
 
-A workstream's `tickets:` list defines membership and order; a ticket whose
+A workstream's `tickets:` list defines membership and display order; a ticket whose
 `workstream:` field disagrees with the lists gets a warning. Flashheart's own
 writes (ticket creation and the agent tools) change the field and the lists
 together, appending a joining ticket to the end of its list. A reference to a
@@ -223,8 +221,7 @@ warning and counts as blocking. Archived tickets count as done, and so do
 permanently deleted ids (a project's `retired`) and every id of a deleted
 project's key (`retired.yaml`), wherever a reference to them survives. A duplicated
 id counts as done only when every copy does. Only tickets in `backlog`,
-`up-next` and `in-progress` are shown as blocked; waits on rule 3 alone are
-shown quietly as waiting (D14).
+`up-next` and `in-progress` are shown as blocked.
 
 ## Workstream
 
@@ -236,8 +233,7 @@ slug: board-ui
 status: active            # informational; the UI derives status
 priority: high
 created: 2026-10-04
-ordered: true             # optional; only then does order imply blocking
-tickets:                  # ticket ids, in order
+tickets:                  # ticket ids, in display order; order never blocks
   - FH-12
   - FH-13
 depends-on-workstreams: []
@@ -251,16 +247,11 @@ tags: []
 ## Notes
 ```
 
-`ordered` is optional: absent or `false`, the workstream is unordered; any
-other value than `true` or `false` is a warning and counts as unordered.
-
 The UI derives status (`completed` when every ticket is in review or done,
-`blocked` when its own `depends-on-workstreams` are incomplete or, in an
-ordered workstream, its next ticket in order is blocked, or, in an unordered
-one, every unfinished ticket is blocked; otherwise `active`) and does not
-rewrite the `status` field unless the user edits it. The next ticket is the
-first unfinished one in order; in an unordered workstream, the first
-unfinished one that is not blocked, when there is one.
+`blocked` when its own `depends-on-workstreams` are incomplete or every
+unfinished ticket is blocked, otherwise `active`) and does not rewrite the
+`status` field unless the user edits it. The next ticket is the first
+unfinished one in order that is not blocked, else the first unfinished one.
 
 ## Review
 

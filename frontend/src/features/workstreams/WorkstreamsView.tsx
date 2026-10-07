@@ -45,10 +45,10 @@ export function WorkstreamsView({
   if (withLines.length === 0) {
     return (
       <EmptyState title="No workstreams yet">
-        A workstream is an ordered run of tickets toward one goal. Add one as{" "}
+        A workstream is a group of tickets toward one goal. Add one as{" "}
         <code className="font-mono">workstreams/&lt;slug&gt;.md</code> with a{" "}
         <code className="font-mono">tickets:</code> list, and it appears here as
-        a line.
+        a line, with track wherever one ticket depends on another.
         <Aside placement="workstreams-none" className="mt-3" />
       </EmptyState>
     );
@@ -225,11 +225,6 @@ function WorkstreamLine({
           >
             <Icon name={statusIcon[workstream.status]} size={12} />
             {statusLabel[workstream.status]}
-            {/* An unordered workstream is an epic: say its tickets have no
-                set sequence, since its stations are not on a route. */}
-            {workstream.ordered ? null : (
-              <span className="font-normal text-ink-muted">· Any order</span>
-            )}
           </span>
         </div>
         <span className="ml-auto text-sm text-ink-muted">

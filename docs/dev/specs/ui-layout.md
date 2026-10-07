@@ -177,24 +177,31 @@ reorders them.
 - Route card head: large bullet, name in the display cut, derived status in
   words with its mark (*Running*, *Blocked* with diamond, *Completed* with
   check), and `d of t served` right. Repair, blocker and warning notes follow.
-- Stations left to right in ticket order, scrolling with an edge fade and a
-  *more* hint. Each station: mark, title (two lines), id, status pill.
+- Stations form a railway graph of the tickets' `depends-on` links on the
+  line (D26), left to right, scrolling with an edge fade and a *more* hint.
+  A ticket's column is one past the longest chain it depends on; a chain
+  runs along one track, independent work runs on parallel tracks below, and
+  a ticket that depends on several others is where their tracks join. Track
+  bends at right angles with rounded corners in the gaps between columns;
+  the trunk keeps to the top track. Each station: mark, title (two lines),
+  id, status pill, with a *Needs FH-n* blocked pill above it for an
+  unfinished dependency outside the line.
   - **Done or archived**: filled line-colour station with a check.
   - **Ready to review**: filled line-colour station with a ground dot (served,
     not finished; never a check).
-  - **Next stop**: the larger interchange ring in the line colour with a halo;
-    a blocked next stop carries a *Blocked* pill above it.
-  - **Ahead**: open ring in the line colour.
+  - **Next stop**: the larger interchange ring in the line colour with a
+    halo, on every unfinished ticket that can start.
+  - **Ahead**: open ring in the line colour (waits for a station on the line).
+  - **Held**: dashed ring in the line colour (held from outside the line, or
+    the line is suspended).
   - **Missing**: dashed faint ring, *Does not exist*.
-- Track travelled is solid line colour; the route ahead is the same colour at
-  35%; only suspended service is dashed (unmet workstream dependency, or a
-  station held from outside the line).
-- Shift with Left/Right or drag reorders stations (`EDIT-4`).
-- **Unordered workstreams** (the default, D26) are not routes. The status
-  line adds *· Any order*; stations wrap onto rows instead of scrolling, with
-  no track between them and no next stop. Each keeps its mark (check, served,
-  open ring, missing), and a blocked station is a dashed ring in the line
-  colour (held). Reordering only changes display order.
+- Track into a served station is solid line colour; track ahead is the same
+  colour at 35%; only suspended service is dashed (unmet workstream
+  dependency, or a station held from outside the line), with dashes kept in
+  step where tracks share a stretch.
+- Tickets with no links on the line follow below the graph, under *No
+  dependencies on this line* when there is a graph, wrapping onto rows.
+  Shift with Left/Right or drag reorders them (`EDIT-4`).
 
 ## 5. Agents
 

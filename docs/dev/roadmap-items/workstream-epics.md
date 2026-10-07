@@ -5,35 +5,37 @@
 ## Goal
 
 Workstreams work like epics: tickets that make up a larger goal and may be
-worked on in sequence or in parallel. Order blocks only in a workstream that
-asks for it.
+worked on in sequence or in parallel. Only `depends-on` orders them, and the
+Workstreams view shows those dependencies as a railway graph.
 
 ## Scope
 
-- Board format: optional `ordered` in workstream frontmatter; blocking
-  rule 3 only for `ordered: true`; derived status and next ticket for
-  unordered workstreams (`docs/dev/specs/board-format.md` §Blocking,
-  §Workstream).
-- Store and MCP: `create_workstream`'s optional `ordered`; `board_context`
-  marks ordered workstreams; blocked reasons follow the field.
-- Protocol skill text and `docs/dev/specs/agent-protocol.md` §7.2, §7.4,
-  §12, §14 (version stays 1).
-- API `ordered` on workstreams; the unordered presentation in the
-  Workstreams view (`docs/dev/specs/ui-layout.md` §4, `VIEW-4`).
+- Board format: workstream order never blocks (the old blocking rule 3 is
+  gone); derived status and next ticket for epics
+  (`docs/dev/specs/board-format.md` §Blocking, §Workstream).
+- MCP: `create_workstream` and the skill text describe workstreams as epics
+  ordered by `depends_on`; blocked reasons follow.
+- API: each workstream ticket's dependencies on the line (`dependsOn`) and
+  unfinished ones elsewhere (`outside`).
+- Workstreams view: the railway graph (`docs/dev/specs/ui-layout.md` §4,
+  `VIEW-4`), independent stations below it, `EDIT-4` for those only.
 
 ## Acceptance criteria
 
-- Unordered (absent or `false`) workstreams add no order blocking; ordered
-  ones block as before (`CARD-4`, board-format rule 3).
-- Unordered derived status, progress and next ticket (`VIEW-4`).
+- No workstream blocks by order; depends-on, depends-on-workstreams and a
+  workstream's own dependencies still block (`CARD-4`).
+- Epic derived status, progress and next ticket (`VIEW-4`).
 - MCP contract tests for `create_workstream`, `board_context`,
   `list_tickets` and `get_ticket`.
-- The user approves the unordered presentation in both themes.
+- The graph draws chains, parallel tracks, joins for several dependencies
+  and dependencies outside the line, in both themes and at phone width, and
+  the user approves it.
 
 ## Exclusions
 
 The New workstream dialog, the membership picker and the follow-through after
-New ticket stay with FH-17. No migration rewrites existing workstreams.
+New ticket stay with FH-17. No migration adds depends-on to existing
+workstreams.
 
 ## Dependencies
 

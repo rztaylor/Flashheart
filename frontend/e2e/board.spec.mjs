@@ -112,7 +112,7 @@ test("sample tickets land in the right columns with blocked reasons and repairs"
     }
   }
   await expect(card(page, "Drag and drop")).toContainText(
-    "Comes after AL-3 in workstream board-ui, which is In progress",
+    "Depends on AL-3, which is In progress",
   );
   await expect(card(page, "Long titles overflow the column")).toContainText(
     "Depends on AL-4, which is Up next",
@@ -126,7 +126,7 @@ test("sample tickets land in the right columns with blocked reasons and repairs"
   await expect(card(page, "Broken frontmatter")).toContainText(
     "frontmatter does not parse",
   );
-  await expect(card(page, "Card panel")).not.toContainText("Comes after");
+  await expect(card(page, "Card panel")).not.toContainText("Depends on");
 });
 
 test("the card panel explains, links and renders without raw HTML", async () => {
@@ -495,17 +495,26 @@ test("workstreams draw as lines with stations", async () => {
   await expect(page.getByRole("article", { name: "Agent runs" })).toContainText(
     "Depends on workstream board-editing",
   );
-  // An unordered workstream is an epic: its stations are not on a route, so
-  // none is the next stop and none waits for the one before it.
+  // Track follows depends-on: Table view and Transit map UI both branch off
+  // the read API, so both lead out of it in parallel.
+  await expect(
+    boardCore.getByRole("button", {
+      name: /^Sortable table view, Up next, blocked, needs Read API/,
+    }),
+  ).toBeVisible();
+  await expect(boardCore.locator("[data-track]")).toHaveCount(8);
+  // A ticket with no links on its line waits below the graph.
   const editing = page.getByRole("article", { name: "Board editing" });
-  await expect(editing).toContainText("Any order");
-  await expect(boardCore).not.toContainText("Any order");
-  const epic = editing.getByRole("list", {
-    name: "Board editing stations, in any order",
-  });
-  await expect(epic.getByRole("listitem")).toHaveCount(5);
-  await expect(epic.getByRole("button", { name: /next stop/ })).toHaveCount(0);
-  await boardCore.getByRole("button", { name: /Transit map board UI/ }).click();
+  await expect(
+    editing
+      .getByRole("list", {
+        name: "Board editing stations with no dependencies on the line",
+      })
+      .getByRole("listitem"),
+  ).toHaveCount(1);
+  await boardCore
+    .getByRole("button", { name: /^Transit map board UI,/ })
+    .click();
   await expect(
     page.getByRole("complementary", { name: "Ticket FH-11" }),
   ).toBeVisible();

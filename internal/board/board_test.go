@@ -160,35 +160,6 @@ func TestParseWorkstream(t *testing.T) {
 	}
 }
 
-func TestParseWorkstreamOrdered(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		front   string
-		ordered bool
-		warning string
-	}{
-		{"", false, ""},
-		{"ordered: false\n", false, ""},
-		{"ordered: true\n", true, ""},
-		{"ordered: True\n", true, ""},
-		{"ordered:\n", false, ""},
-		{"ordered: sometimes\n", false, `ordered "sometimes" is not true or false`},
-	}
-	for _, test := range tests {
-		got := ParseWorkstream("w", []byte("---\n"+test.front+"---\n# W\n"))
-		if got.Ordered != test.ordered {
-			t.Errorf("%q: Ordered = %v, want %v", test.front, got.Ordered, test.ordered)
-		}
-		if test.warning == "" && len(got.Warnings) > 0 {
-			t.Errorf("%q: unexpected warnings %q", test.front, got.Warnings)
-		}
-		if test.warning != "" && !slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, test.warning) }) {
-			t.Errorf("%q: warnings = %q, want %q", test.front, got.Warnings, test.warning)
-		}
-	}
-}
-
 func TestCheckProjectMarksDuplicatesAndForeignKeys(t *testing.T) {
 	t.Parallel()
 
@@ -230,18 +201,8 @@ func tk(id string, column Column, extra string) Ticket {
 	return ParseTicket(id+"-x", ticketMD("id: "+id+"\nstatus: "+string(column)+"\ntype: feature\npriority: high\ncreated: 2026-10-02\n"+extra, "# "+id+"\n"))
 }
 
-// ws builds an unordered workstream (the default) for blocking tables.
 func ws(slug string, tickets []string, deps ...string) Workstream {
-	return workstreamOf("", slug, tickets, deps)
-}
-
-// chain builds an ordered workstream (ordered: true).
-func chain(slug string, tickets []string, deps ...string) Workstream {
-	return workstreamOf("ordered: true\n", slug, tickets, deps)
-}
-
-func workstreamOf(extra, slug string, tickets, deps []string) Workstream {
-	front := extra + "tickets: [" + strings.Join(tickets, ", ") + "]\n"
+	front := "tickets: [" + strings.Join(tickets, ", ") + "]\n"
 	if len(deps) > 0 {
 		front += "depends-on-workstreams: [" + strings.Join(deps, ", ") + "]\n"
 	}
@@ -278,7 +239,7 @@ func TestBlockingRules(t *testing.T) {
 			tk("AL-18", Backlog, "workstream: later\n"),
 		},
 		Workstreams: []Workstream{
-			chain("one", []string{"AL-8", "AL-9", "AL-10"}),
+			ws("one", []string{"AL-8", "AL-9", "AL-10"}),
 			ws("epic", []string{"AL-15", "AL-16", "AL-17"}),
 			ws("later", []string{"AL-18"}, "epic"),
 			ws("two", []string{"AL-1", "AL-2"}),
@@ -289,8 +250,9 @@ func TestBlockingRules(t *testing.T) {
 	beta := Project{Name: "beta", Key: "BE", Tickets: []Ticket{tk("BE-1", InProgress, ""), tk("BE-2", Done, "")}}
 	analysis := Analyze(Board{Projects: []Project{alpha, beta}})
 
-	// An unordered workstream's later tickets do not wait for earlier ones.
-	for _, free := range []string{"AL-4", "AL-9", "AL-1", "AL-14", "AL-15", "AL-16"} {
+	// A workstream's later tickets do not wait for earlier ones; only
+	// depends-on orders them.
+	for _, free := range []string{"AL-4", "AL-9", "AL-10", "AL-1", "AL-14", "AL-15", "AL-16"} {
 		if reasons := reasonsOf(analysis, "alpha", free); len(reasons) != 0 {
 			t.Errorf("%s reasons = %+v, want none", free, reasons)
 		}
@@ -305,7 +267,6 @@ func TestBlockingRules(t *testing.T) {
 			{Kind: TicketDependency, Ticket: Ref{"beta", "BE-1"}, Column: InProgress},
 			{Kind: TicketDependency, Ticket: Ref{"", "GA-1"}, Missing: true},
 		}},
-		{"AL-10", []Reason{{Kind: WorkstreamOrder, Workstream: "one", Ticket: Ref{"alpha", "AL-9"}, Column: InProgress}}},
 		{"AL-11", []Reason{
 			{Kind: WorkstreamDependency, Workstream: "one", Pending: 2},
 			{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true},
@@ -352,7 +313,6 @@ func TestWorkstreamStatus(t *testing.T) {
 		Workstreams: []Workstream{
 			ws("complete", []string{"PP-1", "PP-2"}),
 			ws("moving", []string{"PP-1", "PP-3", "PP-5"}),
-			chain("stuck", []string{"PP-4", "PP-5"}),
 			ws("epic", []string{"PP-4", "PP-7"}),
 			ws("epic-stuck", []string{"PP-2", "PP-4", "PP-6"}),
 			ws("waiting", []string{"PP-5"}, "moving"),
@@ -364,9 +324,8 @@ func TestWorkstreamStatus(t *testing.T) {
 	tests := map[string]WorkstreamState{
 		"complete": {Status: StatusCompleted, Done: 2, Total: 2},
 		"moving":   {Status: StatusActive, Done: 1, Total: 3, Next: "PP-3"},
-		"stuck":    {Status: StatusBlocked, Done: 0, Total: 2, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
-		// Unordered: next is the first unfinished member that is not blocked,
-		// and the workstream is blocked only when every unfinished one is.
+		// Next is the first unfinished ticket that is not blocked, and a
+		// workstream is blocked only when every unfinished ticket is.
 		"epic":       {Status: StatusActive, Done: 0, Total: 2, Next: "PP-7"},
 		"epic-stuck": {Status: StatusBlocked, Done: 1, Total: 3, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
 		"waiting":    {Status: StatusBlocked, Done: 0, Total: 1, Next: "PP-5", Reasons: []Reason{{Kind: WorkstreamDependency, Workstream: "moving", Pending: 2}}},
@@ -412,7 +371,6 @@ func TestReasonDescriptions(t *testing.T) {
 		{Reason{Kind: WorkstreamDependency, Workstream: "core", Pending: 3, Via: "ui"}, "Its workstream ui depends on workstream core, which has 3 tickets not yet in review or done"},
 		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true}, "Depends on workstream ghost, which does not exist"},
 		{Reason{Kind: WorkstreamDependency, Workstream: "ghost", Missing: true, Via: "ghost"}, "Belongs to workstream ghost, which does not exist"},
-		{Reason{Kind: WorkstreamOrder, Workstream: "ui", Ticket: Ref{"alpha", "AL-1"}, Column: InProgress}, "Comes after AL-1 in workstream ui, which is In progress"},
 	}
 	for _, test := range tests {
 		if got := test.reason.Describe(); got != test.want {

@@ -41,7 +41,7 @@ func (srv *server) registerWrites(server *mcp.Server) {
 	tool(server, "move", "Move a ticket to another column: backlog, up-next, in-progress or review. Moving to review warns about a missing review or unticked criteria. Agents never move tickets to done.", srv.move)
 	tool(server, "set_project_key", "Choose your project's ticket key (2–5 capital letters or digits, starting with a letter) before its first ticket. Pick what people call the project: FH for Flashheart.", srv.setProjectKey)
 	tool(server, "create_ticket", "Create a ticket in your project with the next id. Feature tickets carry a test plan and bugs a reproduction (plan_or_repro). Returns the new id.", srv.createTicket)
-	tool(server, "create_workstream", "Create a workstream in your project: a group of tickets with a shared goal, like an epic, worked on in sequence or in parallel. Its tickets wait only for their depends_on, unless ordered is set, when each waits for the ones before it. Use one when work spans several tickets with a shared goal; leave single tickets alone. The tickets you list join it in that order.", srv.createWorkstream)
+	tool(server, "create_workstream", "Create a workstream in your project: a group of tickets with a shared goal, like an epic, worked on in sequence or in parallel. Its tickets wait only for the tickets their depends_on names, so give each ticket the depends_on it needs. Use one when work spans several tickets with a shared goal; leave single tickets alone.", srv.createWorkstream)
 	tool(server, "write_review", "Create or replace a ticket's review (the human verification guide, in the review template). Screenshots and other local files linked by absolute path are copied into the ticket.", srv.writeReview)
 	tool(server, "attach", "Copy a local file (screenshot, log or other: PNG, JPEG, GIF, WebP, PDF, text, markdown, JSON or log) into a ticket's files with a caption. Returns the stored name and a markdown snippet for the review's Evidence.", srv.attach)
 	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt. Use it for any question that ends your turn too: a question asked only in chat leaves you in Waiting.", srv.askHuman)
@@ -718,8 +718,7 @@ type CreateWorkstreamInput struct {
 	Title                string   `json:"title" jsonschema:"what the line of work is called; its slug is made from it"`
 	Goal                 string   `json:"goal" jsonschema:"the shared outcome the tickets deliver"`
 	Priority             string   `json:"priority,omitempty" jsonschema:"high, medium (default) or low"`
-	Tickets              []string `json:"tickets,omitempty" jsonschema:"ids of your project's tickets, in display order (or the order they must be done, when ordered)"`
-	Ordered              bool     `json:"ordered,omitempty" jsonschema:"true only when every ticket must wait for the ones before it; default false: tickets wait only for their depends_on"`
+	Tickets              []string `json:"tickets,omitempty" jsonschema:"ids of your project's tickets; order is for display only, depends_on orders the work"`
 	DependsOnWorkstreams []string `json:"depends_on_workstreams,omitempty" jsonschema:"slugs of workstreams that must finish first"`
 	Tags                 []string `json:"tags,omitempty"`
 }
@@ -765,7 +764,7 @@ func (srv *server) createWorkstream(input CreateWorkstreamInput) (string, error)
 	title := scrub.Text(input.Title, 300)
 	created, err := srv.store.CreateWorkstream(project.Name, store.NewWorkstream{
 		Title: title, Goal: demoteHeadings(scrub.Secrets(input.Goal)), Priority: strings.TrimSpace(input.Priority),
-		Tickets: tickets, DependsOnWorkstreams: dependencies, Tags: items(input.Tags), Ordered: input.Ordered,
+		Tickets: tickets, DependsOnWorkstreams: dependencies, Tags: items(input.Tags),
 	})
 	if err != nil {
 		return "", err
@@ -781,12 +780,7 @@ func (srv *server) createWorkstream(input CreateWorkstreamInput) (string, error)
 	if len(tickets) > 0 {
 		text += " with " + strings.Join(tickets, ", ")
 	}
-	text += fmt.Sprintf(". Add tickets with create_ticket or update_ticket workstream=%s; ", created.Slug)
-	if input.Ordered {
-		text += "each waits for the ones before it."
-	} else {
-		text += "they can be worked on in any order, so give a ticket depends_on when it needs another first."
-	}
+	text += fmt.Sprintf(". Add tickets with create_ticket or update_ticket workstream=%s; they can be worked on in any order, so give a ticket depends_on when it needs others first.", created.Slug)
 	return text + fmt.Sprintf("\nok workstream=%s\n", created.Slug), nil
 }
 

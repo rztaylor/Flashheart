@@ -92,27 +92,6 @@ describe("PanelHeader", () => {
   });
 });
 
-describe("PanelHeader for a ticket waiting on its line", () => {
-  it("does not call an in-line wait blocked", () => {
-    const markup = renderToStaticMarkup(
-      <PanelHeader
-        detail={detail({
-          blocked: true,
-          blockedBy: [
-            {
-              kind: "order",
-              text: "Comes after FH-3 in workstream agent-protocol",
-              missing: false,
-            },
-          ],
-        })}
-        workstreamTitle="Agent protocol"
-      />,
-    );
-    expect(markup).not.toContain('data-tone="blocked"');
-  });
-});
-
 describe("TicketTab", () => {
   const markup = renderToStaticMarkup(
     <TicketTab

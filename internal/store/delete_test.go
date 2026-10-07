@@ -54,7 +54,8 @@ func TestDeleteArchivedRemovesTheFolderAndEveryReference(t *testing.T) {
 	if !slices.Contains(plan.Files, "AL-3-card-panel.md") || plan.Token == "" {
 		t.Errorf("plan files = %v token = %q", plan.Files, plan.Token)
 	}
-	if len(plan.Tickets) != 1 || plan.Tickets[0].Project != "beta" || plan.Tickets[0].ID != "BE-1" {
+	// AL-4 depends on AL-3; BE-1 refers to it.
+	if len(plan.Tickets) != 2 || plan.Tickets[0].ID != "AL-4" || plan.Tickets[1].Project != "beta" || plan.Tickets[1].ID != "BE-1" {
 		t.Errorf("plan tickets = %+v", plan.Tickets)
 	}
 	if !slices.Equal(plan.Workstreams, []string{"board-ui"}) {

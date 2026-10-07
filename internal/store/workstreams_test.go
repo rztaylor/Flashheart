@@ -218,18 +218,6 @@ func TestCreateWorkstreamWritesTheTemplate(t *testing.T) {
 	if err != nil || again.Slug != "offline-mode-2" {
 		t.Fatalf("second create = %+v, %v", again, err)
 	}
-	// Only an ordered workstream says so; unordered is the default.
-	ordered, err := s.CreateWorkstream("alpha", NewWorkstream{Title: "Release train", Ordered: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	chain := mustRead(t, filepath.Join(root, "alpha", "workstreams", ordered.Slug+".md"))
-	if !strings.Contains(string(chain), "created: 2026-10-05\nordered: true\ntickets:") || !board.ParseWorkstream(ordered.Slug, chain).Ordered {
-		t.Fatalf("ordered workstream file:\n%s", chain)
-	}
-	if strings.Contains(string(data), "ordered") {
-		t.Fatalf("unordered workstream writes the ordered field:\n%s", data)
-	}
 	if other, err := s.CreateWorkstream("alpha", NewWorkstream{Title: "日本"}); err != nil || other.Slug != "workstream" {
 		t.Fatalf("title without ASCII words = %+v, %v", other, err)
 	}

@@ -99,10 +99,10 @@ func TestProjectsListsKeysCountsAndActivity(t *testing.T) {
 		t.Fatalf("projects not sorted by activity: %+v", body.Projects)
 	}
 	alpha, beta := body.Projects[1], body.Projects[0]
-	if alpha.DisplayName != "Alpha" || alpha.Key != "AL" || alpha.KeyDerived || alpha.NeedsRepair != 1 || alpha.Blocked != 3 || alpha.Stuck != 2 {
+	if alpha.DisplayName != "Alpha" || alpha.Key != "AL" || alpha.KeyDerived || alpha.NeedsRepair != 1 || alpha.Blocked != 3 {
 		t.Errorf("alpha = %+v", alpha)
 	}
-	if beta.Key != "BE" || beta.Blocked != 1 || beta.Stuck != 1 {
+	if beta.Key != "BE" || beta.Blocked != 1 {
 		t.Errorf("beta = %+v", beta)
 	}
 	want := map[string]int{"backlog": 3, "up-next": 1, "in-progress": 1, "review": 1, "done": 1}
@@ -138,7 +138,7 @@ func TestProjectBoardPlacesAndExplainsEveryTicket(t *testing.T) {
 	}
 
 	drag := cardByID(t, body.Cards, "AL-4")
-	if !drag.Blocked || len(drag.BlockedBy) != 1 || drag.BlockedBy[0].Text != "Comes after AL-3 in workstream board-ui, which is In progress" || drag.Slug != "drag-and-drop" {
+	if !drag.Blocked || len(drag.BlockedBy) != 1 || drag.BlockedBy[0].Text != "Depends on AL-3, which is In progress" || drag.Slug != "drag-and-drop" {
 		t.Errorf("AL-4 = %+v", drag)
 	}
 	overflow := cardByID(t, body.Cards, "AL-5")
@@ -258,6 +258,10 @@ func TestWorkstreams(t *testing.T) {
 	if !ws.Tickets[2].Blocked || ws.Tickets[1].Blocked || ws.Tickets[2].Held {
 		t.Errorf("blocked flags = %+v", ws.Tickets)
 	}
+	// The graph's edges: AL-4 depends on AL-3, a station on the same line.
+	if got := ws.Tickets[2].DependsOn; !slices.Equal(got, []string{"AL-3"}) || len(ws.Tickets[1].DependsOn) != 0 || len(ws.Tickets[2].Outside) != 0 {
+		t.Errorf("AL-4 dependsOn = %q, outside = %q", got, ws.Tickets[2].Outside)
+	}
 }
 
 func TestHeldStationsAreBlockedFromOutsideTheirLine(t *testing.T) {
@@ -269,12 +273,13 @@ func TestHeldStationsAreBlockedFromOutsideTheirLine(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		writeFile(t, path, strings.Replace(string(data), "depends-on: []", "depends-on: [AL-6]", 1))
+		writeFile(t, path, strings.Replace(string(data), "depends-on: [AL-3]", "depends-on: [AL-3, AL-6, AL-1]", 1))
 	})
 	var body WorkstreamsResponse
 	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
-	if drag := body.Workstreams[0].Tickets[2]; !drag.Held || !drag.Blocked {
-		t.Errorf("AL-4 = %+v, want held by its ticket dependency", drag)
+	// AL-6 is outside the line and unfinished; AL-1 is outside but done.
+	if drag := body.Workstreams[0].Tickets[2]; !drag.Held || !drag.Blocked || !slices.Equal(drag.DependsOn, []string{"AL-3"}) || !slices.Equal(drag.Outside, []string{"AL-6"}) {
+		t.Errorf("AL-4 = %+v, want held by AL-6 from outside its line", drag)
 	}
 }
 
@@ -293,23 +298,6 @@ func TestSuspendedLinesWaitOnTheirOwnWorkstreamDependencies(t *testing.T) {
 	}
 	if !suspended["later"] || suspended["free"] || suspended["board-ui"] {
 		t.Errorf("suspended = %v, want only later", suspended)
-	}
-}
-
-func TestWorkstreamsSayWhetherTheyAreOrdered(t *testing.T) {
-	t.Parallel()
-
-	handler, _ := sampleAPI(t, func(root string) {
-		writeFile(t, filepath.Join(root, "alpha", "workstreams", "free.md"), "---\ntickets: [AL-5, AL-6]\n---\n# Free\n")
-	})
-	var body WorkstreamsResponse
-	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
-	ordered := map[string]bool{}
-	for _, workstream := range body.Workstreams {
-		ordered[workstream.Slug] = workstream.Ordered
-	}
-	if !ordered["board-ui"] || ordered["free"] {
-		t.Errorf("ordered = %v, want only board-ui", ordered)
 	}
 }
 

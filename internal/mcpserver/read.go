@@ -148,9 +148,6 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 		if state.Next != "" {
 			item += ", next " + state.Next
 		}
-		if workstream.Ordered {
-			item += ", ordered"
-		}
 		if state.Status == board.StatusBlocked {
 			item += ", blocked"
 		}

@@ -40,10 +40,10 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    humour in secondary copy (FH-22). Built: all five; open: the user's
    review of each ticket.
 8. [`workstream-epics`](roadmap-items/workstream-epics.md) — **Partial**.
-   Workstreams are epics: unordered by default, `ordered: true` to chain
-   (D26, FH-38). Built: blocking, board format, MCP tools, skill, API and
-   the unordered Workstreams presentation; open: the user's review. No
-   roadmap dependencies; FH-17's workstream UI follows it.
+   Workstreams are epics: order never blocks, only `depends-on` does, and
+   the Workstreams view draws dependencies as a railway graph (D26, FH-38).
+   Built: all of it; open: the user's review. No roadmap dependencies;
+   FH-17's workstream UI follows it.
 
 ## Later possibilities (not scheduled)
 
