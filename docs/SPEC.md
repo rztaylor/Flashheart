@@ -78,7 +78,7 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Ticket** | One unit of work with a stable id such as `FH-42`: a folder `tickets/FH-42-<slug>/` holding the ticket file `FH-42-<slug>.md`, its review and copied files. |
 | **Ticket id** | `<project key>-<number>`, unique across the root; how humans and agents refer to tickets (`KEY`). |
 | **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. |
-| **Workstream** | An ordered group of tickets with a shared goal; order implies blocking. |
+| **Workstream** | A group of tickets with a shared goal, like an epic, worked on in sequence or in parallel; its order blocks only when it is marked `ordered` (D26). |
 | **Review** | A human verification guide for a ticket in `reviews/`. |
 | **Attachment** | A file (screenshot, log, PDF) copied into the ticket's `files/` folder. |
 | **Run** | One agent session or subagent, from start to end. Runs live in the event log, not in tickets. |
@@ -215,7 +215,9 @@ Full format: `docs/dev/specs/board-format.md`.
   *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
   are hidden by default.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
-  tickets in ticket order with status, blocked state and progress.
+  tickets in ticket order with status, blocked state and progress. An
+  ordered workstream is drawn as a route; an unordered one (the default)
+  shows its tickets without a sequence.
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
 - `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
   workstream, blocked, live badge, criteria progress), *Detailed* (+
@@ -243,7 +245,8 @@ Full format: `docs/dev/specs/board-format.md`.
 - `CARD-3` Acceptance-criteria checkboxes can be ticked in the rendered view
   and are saved to the file.
 - `CARD-4` A **Blocked by** section explains each blocking reason: ticket
-  dependency, workstream dependency, or earlier ticket in the workstream.
+  dependency, workstream dependency, or earlier ticket in an ordered
+  workstream.
 - `CARD-5` The **Handoff** section is shown prominently with its author run
   and time, and a warning when the claimed run has edited files since.
 - `CARD-6` Open questions show with an answer box or option buttons

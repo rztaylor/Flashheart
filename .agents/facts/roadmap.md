@@ -9,6 +9,8 @@
   approved image references: `docs/dev/roadmap-items/metro-theme-rollout.md`.
 - `ui-features` (board UI requests, the `ui-features` workstream FH-24,
   FH-23, FH-20, FH-21, FH-22) has no roadmap dependencies.
+- `workstream-epics` (FH-38, D26: workstreams unordered by default) has no
+  roadmap dependencies; FH-17's New workstream dialog builds on it.
 - Visible UI changes follow `DESIGN.md`; new surfaces or a changed visual
   world go through the `impeccable` skill first.
 - Remove completed items once outcomes are in the spec, decisions, changelog

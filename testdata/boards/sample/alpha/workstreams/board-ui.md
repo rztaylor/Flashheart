@@ -3,6 +3,7 @@ slug: board-ui
 status: active
 priority: high
 created: 2026-10-01
+ordered: true
 tickets:
   - AL-2
   - AL-3

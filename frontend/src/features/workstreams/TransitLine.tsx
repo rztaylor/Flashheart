@@ -8,6 +8,7 @@ import {
 import {
   arrayMove,
   horizontalListSortingStrategy,
+  rectSortingStrategy,
   SortableContext,
   useSortable,
 } from "@dnd-kit/sortable";
@@ -41,11 +42,17 @@ const served = (ticket: WorkstreamTicket) =>
   ticket.column === "archived";
 
 // A check means finished (Done or Archived); Ready to review is served but
-// never checked (ui-layout.md §4).
-function stationState(ticket: WorkstreamTicket, next: string) {
+// never checked (ui-layout.md §4). An unordered workstream has no next stop:
+// a blocked station there is held instead.
+function stationState(
+  ticket: WorkstreamTicket,
+  next: string,
+  ordered: boolean,
+) {
   if (ticket.missing) return "missing";
   if (ticket.column === "done" || ticket.column === "archived") return "done";
   if (served(ticket)) return "served";
+  if (!ordered) return ticket.blocked ? "held" : "ahead";
   if (ticket.id === next) return "next";
   return "ahead";
 }
@@ -61,7 +68,9 @@ type Track = "served" | "ahead" | "suspended";
 // only suspended service is dashed: the whole line when its own workstream
 // dependencies are unmet, or the track into a station held by something
 // outside the line. The next stop is the larger interchange ring. Stations
-// sit on the route card's surface (--route-surface).
+// sit on the route card's surface (--route-surface). An unordered workstream
+// (an epic) has no route: its stations wrap without track or a next stop,
+// and a blocked one is a dashed, held ring.
 export function TransitLine({
   workstream,
   line,
@@ -69,7 +78,9 @@ export function TransitLine({
   onReorder,
 }: TransitLineProps) {
   const colour = line ? `var(--fh-line-${line.colour})` : "var(--fh-ink-faint)";
-  const scroller = useRef<HTMLOListElement>(null);
+  const ordered = workstream.ordered;
+  const List = ordered ? "ol" : "ul";
+  const scroller = useRef<HTMLOListElement & HTMLUListElement>(null);
   const [more, setMore] = useState(false);
   const refocus = useRef("");
   const sensors = useSensors(
@@ -164,24 +175,30 @@ export function TransitLine({
       onDragEnd={onDragEnd}
       accessibility={{
         screenReaderInstructions: {
-          draggable:
-            "Press Shift with the left or right arrow to move this station earlier or later on the line, or drag it with the pointer.",
+          draggable: ordered
+            ? "Press Shift with the left or right arrow to move this station earlier or later on the line, or drag it with the pointer."
+            : "Press Shift with the left or right arrow to move this station earlier or later in the list, or drag it with the pointer.",
         },
       }}
     >
       <SortableContext
         items={ids}
-        strategy={horizontalListSortingStrategy}
+        strategy={ordered ? horizontalListSortingStrategy : rectSortingStrategy}
         disabled={!onReorder}
       >
         <div className="relative">
-          <ol
+          <List
             ref={scroller}
-            className="flex overflow-x-auto pt-8 pb-2"
-            aria-label={`${workstream.title} stations`}
+            data-layout={ordered ? undefined : "any-order"}
+            className={
+              ordered
+                ? "flex overflow-x-auto pt-8 pb-2"
+                : "flex flex-wrap gap-y-5 pt-3 pb-2"
+            }
+            aria-label={`${workstream.title} stations${ordered ? "" : ", in any order"}`}
           >
             {workstream.tickets.map((ticket, index) => {
-              const state = stationState(ticket, workstream.next);
+              const state = stationState(ticket, workstream.next, ordered);
               const first = index === 0;
               const last = index === workstream.tickets.length - 1;
               return (
@@ -193,24 +210,30 @@ export function TransitLine({
                 >
                   {(drag) => (
                     <>
-                      <span
-                        aria-hidden="true"
-                        className="absolute top-[15px] left-0 h-1.5 w-1/2"
-                        style={
-                          first ? undefined : trackStyle(trackInto(ticket))
-                        }
-                      />
-                      <span
-                        aria-hidden="true"
-                        className="absolute top-[15px] right-0 h-1.5 w-1/2"
-                        style={
-                          last
-                            ? undefined
-                            : trackStyle(
-                                trackInto(workstream.tickets[index + 1]),
-                              )
-                        }
-                      />
+                      {ordered ? (
+                        <>
+                          <span
+                            aria-hidden="true"
+                            data-track=""
+                            className="absolute top-[15px] left-0 h-1.5 w-1/2"
+                            style={
+                              first ? undefined : trackStyle(trackInto(ticket))
+                            }
+                          />
+                          <span
+                            aria-hidden="true"
+                            data-track=""
+                            className="absolute top-[15px] right-0 h-1.5 w-1/2"
+                            style={
+                              last
+                                ? undefined
+                                : trackStyle(
+                                    trackInto(workstream.tickets[index + 1]),
+                                  )
+                            }
+                          />
+                        </>
+                      ) : null}
                       {state === "next" && ticket.blocked ? (
                         <span className="absolute -top-7">
                           <Pill tone="blocked">Blocked</Pill>
@@ -251,7 +274,7 @@ export function TransitLine({
                 </SortableStation>
               );
             })}
-          </ol>
+          </List>
           {more ? (
             <div
               aria-hidden="true"
@@ -349,6 +372,13 @@ function Station({
             style={{ background: colour }}
           />
         </span>
+      );
+    case "held":
+      return (
+        <span
+          className="size-7 rounded-full border-4 border-dashed bg-(--route-surface)"
+          style={{ borderColor: colour }}
+        />
       );
     case "missing":
       return (

@@ -225,6 +225,11 @@ function WorkstreamLine({
           >
             <Icon name={statusIcon[workstream.status]} size={12} />
             {statusLabel[workstream.status]}
+            {/* An unordered workstream is an epic: say its tickets have no
+                set sequence, since its stations are not on a route. */}
+            {workstream.ordered ? null : (
+              <span className="font-normal text-ink-muted">· Any order</span>
+            )}
           </span>
         </div>
         <span className="ml-auto text-sm text-ink-muted">

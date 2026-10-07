@@ -235,7 +235,10 @@ type WorkstreamJSON struct {
 	Status string `json:"status"`
 	// Suspended means the workstream's own depends-on-workstreams are not
 	// complete, so the whole line waits.
-	Suspended            bool               `json:"suspended"`
+	Suspended bool `json:"suspended"`
+	// Ordered means each ticket waits for the ones before it; unordered
+	// workstreams group tickets like an epic.
+	Ordered              bool               `json:"ordered"`
 	DeclaredStatus       string             `json:"declaredStatus"`
 	Priority             string             `json:"priority"`
 	Created              string             `json:"created"`
@@ -497,6 +500,7 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 		item := WorkstreamJSON{
 			Slug: workstream.Slug, Title: workstream.Title, Status: state.Status,
 			Suspended:      suspended(snapshot, project.Name, workstream.DependsOnWorkstreams),
+			Ordered:        workstream.Ordered,
 			DeclaredStatus: workstream.Status, Priority: workstream.Priority, Created: workstream.Created,
 			Done: state.Done, Total: state.Total, Next: state.Next,
 			BlockedBy:            reasons(project.Name, state.Reasons),

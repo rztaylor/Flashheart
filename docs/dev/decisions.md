@@ -360,3 +360,31 @@ permanently only once archived, the same two steps as tickets (D24).
   the repository is unknown again, so activity there starts a new project,
   with a new key because the old one is retired.
 
+
+## 2026-10-07 — D26: Workstreams are epics; order blocks only when asked
+
+Decision (FH-38, user): a workstream groups tickets toward a shared goal,
+like an epic, and its tickets may be worked on in sequence or in parallel.
+List order blocks (board-format §Blocking rule 3) only in a workstream whose
+frontmatter says `ordered: true`; without the field, or with `false`, the
+`tickets:` list sets membership and display order and nothing else. Real
+sequence is expressed by `depends-on` and `depends-on-workstreams`, which
+block in every workstream. An unordered workstream is blocked only when its
+own workstream dependencies are unmet or every unfinished ticket is blocked,
+and its next ticket is the first unfinished one that is not blocked.
+
+Options: ordered by default with an opt-out `ordered: false` (the
+2026-10-06 plan in FH-17), which keeps existing boards' meaning; unordered
+by default with `ordered: true` to chain; no ordering at all. The user chose
+unordered by default: chained order made every grouped ticket wait for the
+one before it, even when the work was independent, and `depends-on` already
+says when it is not. Keeping `ordered: true` costs one field and covers
+genuinely sequential lines.
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1. The field is
+optional; tool inputs and outputs keep their shape (`create_workstream`
+gains an optional `ordered`, `board_context` marks ordered workstreams), and
+blocked reasons keep their kinds. Existing workstreams change meaning, which
+the user accepted: a board that relied on order adds `ordered: true` to
+those workstream files. The Workstreams view draws an unordered workstream
+without track or a next stop (ui-layout.md §4).

@@ -183,6 +183,9 @@ export interface Workstream {
   title: string;
   status: "active" | "blocked" | "completed";
   suspended: boolean;
+  // ordered: each ticket waits for the ones before it; otherwise the
+  // workstream is an epic whose tickets may be done in any order.
+  ordered: boolean;
   declaredStatus: string;
   priority: string;
   created: string;

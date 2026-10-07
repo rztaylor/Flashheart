@@ -160,6 +160,35 @@ func TestParseWorkstream(t *testing.T) {
 	}
 }
 
+func TestParseWorkstreamOrdered(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		front   string
+		ordered bool
+		warning string
+	}{
+		{"", false, ""},
+		{"ordered: false\n", false, ""},
+		{"ordered: true\n", true, ""},
+		{"ordered: True\n", true, ""},
+		{"ordered:\n", false, ""},
+		{"ordered: sometimes\n", false, `ordered "sometimes" is not true or false`},
+	}
+	for _, test := range tests {
+		got := ParseWorkstream("w", []byte("---\n"+test.front+"---\n# W\n"))
+		if got.Ordered != test.ordered {
+			t.Errorf("%q: Ordered = %v, want %v", test.front, got.Ordered, test.ordered)
+		}
+		if test.warning == "" && len(got.Warnings) > 0 {
+			t.Errorf("%q: unexpected warnings %q", test.front, got.Warnings)
+		}
+		if test.warning != "" && !slices.ContainsFunc(got.Warnings, func(w string) bool { return strings.Contains(w, test.warning) }) {
+			t.Errorf("%q: warnings = %q, want %q", test.front, got.Warnings, test.warning)
+		}
+	}
+}
+
 func TestCheckProjectMarksDuplicatesAndForeignKeys(t *testing.T) {
 	t.Parallel()
 
@@ -201,8 +230,18 @@ func tk(id string, column Column, extra string) Ticket {
 	return ParseTicket(id+"-x", ticketMD("id: "+id+"\nstatus: "+string(column)+"\ntype: feature\npriority: high\ncreated: 2026-10-02\n"+extra, "# "+id+"\n"))
 }
 
+// ws builds an unordered workstream (the default) for blocking tables.
 func ws(slug string, tickets []string, deps ...string) Workstream {
-	front := "tickets: [" + strings.Join(tickets, ", ") + "]\n"
+	return workstreamOf("", slug, tickets, deps)
+}
+
+// chain builds an ordered workstream (ordered: true).
+func chain(slug string, tickets []string, deps ...string) Workstream {
+	return workstreamOf("ordered: true\n", slug, tickets, deps)
+}
+
+func workstreamOf(extra, slug string, tickets, deps []string) Workstream {
+	front := extra + "tickets: [" + strings.Join(tickets, ", ") + "]\n"
 	if len(deps) > 0 {
 		front += "depends-on-workstreams: [" + strings.Join(deps, ", ") + "]\n"
 	}
@@ -233,9 +272,15 @@ func TestBlockingRules(t *testing.T) {
 			tk("AL-12", Backlog, "workstream: three\n"),
 			tk("AL-13", Backlog, "workstream: nowhere\n"),
 			tk("AL-14", Done, "depends-on: [AL-3]\n"),
+			tk("AL-15", InProgress, "workstream: epic\n"),
+			tk("AL-16", Backlog, "workstream: epic\n"),
+			tk("AL-17", UpNext, "workstream: epic\ndepends-on: [AL-15]\n"),
+			tk("AL-18", Backlog, "workstream: later\n"),
 		},
 		Workstreams: []Workstream{
-			ws("one", []string{"AL-8", "AL-9", "AL-10"}),
+			chain("one", []string{"AL-8", "AL-9", "AL-10"}),
+			ws("epic", []string{"AL-15", "AL-16", "AL-17"}),
+			ws("later", []string{"AL-18"}, "epic"),
 			ws("two", []string{"AL-1", "AL-2"}),
 			ws("three", []string{"AL-12"}, "one"),
 		},
@@ -244,7 +289,8 @@ func TestBlockingRules(t *testing.T) {
 	beta := Project{Name: "beta", Key: "BE", Tickets: []Ticket{tk("BE-1", InProgress, ""), tk("BE-2", Done, "")}}
 	analysis := Analyze(Board{Projects: []Project{alpha, beta}})
 
-	for _, free := range []string{"AL-4", "AL-9", "AL-1", "AL-14"} {
+	// An unordered workstream's later tickets do not wait for earlier ones.
+	for _, free := range []string{"AL-4", "AL-9", "AL-1", "AL-14", "AL-15", "AL-16"} {
 		if reasons := reasonsOf(analysis, "alpha", free); len(reasons) != 0 {
 			t.Errorf("%s reasons = %+v, want none", free, reasons)
 		}
@@ -266,6 +312,8 @@ func TestBlockingRules(t *testing.T) {
 		}},
 		{"AL-12", []Reason{{Kind: WorkstreamDependency, Workstream: "one", Pending: 2, Via: "three"}}},
 		{"AL-13", []Reason{{Kind: WorkstreamDependency, Workstream: "nowhere", Missing: true, Via: "nowhere"}}},
+		{"AL-17", []Reason{{Kind: TicketDependency, Ticket: Ref{"alpha", "AL-15"}, Column: InProgress}}},
+		{"AL-18", []Reason{{Kind: WorkstreamDependency, Workstream: "epic", Pending: 3, Via: "later"}}},
 	}
 	for _, test := range tests {
 		if got := reasonsOf(analysis, "alpha", test.id); !reflect.DeepEqual(got, test.want) {
@@ -298,11 +346,15 @@ func TestWorkstreamStatus(t *testing.T) {
 			tk("PP-1", Done, ""), tk("PP-2", Review, ""),
 			tk("PP-3", InProgress, ""), tk("PP-4", UpNext, "depends-on: [PP-3]\n"),
 			tk("PP-5", Backlog, ""),
+			tk("PP-6", Backlog, "depends-on: [PP-3]\n"),
+			tk("PP-7", Backlog, ""),
 		},
 		Workstreams: []Workstream{
 			ws("complete", []string{"PP-1", "PP-2"}),
 			ws("moving", []string{"PP-1", "PP-3", "PP-5"}),
-			ws("stuck", []string{"PP-4", "PP-5"}),
+			chain("stuck", []string{"PP-4", "PP-5"}),
+			ws("epic", []string{"PP-4", "PP-7"}),
+			ws("epic-stuck", []string{"PP-2", "PP-4", "PP-6"}),
 			ws("waiting", []string{"PP-5"}, "moving"),
 			ws("empty", nil),
 			ws("broken-ref", []string{"PP-404"}),
@@ -310,9 +362,13 @@ func TestWorkstreamStatus(t *testing.T) {
 	}
 	analysis := Analyze(Board{Projects: []Project{project}})
 	tests := map[string]WorkstreamState{
-		"complete":   {Status: StatusCompleted, Done: 2, Total: 2},
-		"moving":     {Status: StatusActive, Done: 1, Total: 3, Next: "PP-3"},
-		"stuck":      {Status: StatusBlocked, Done: 0, Total: 2, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
+		"complete": {Status: StatusCompleted, Done: 2, Total: 2},
+		"moving":   {Status: StatusActive, Done: 1, Total: 3, Next: "PP-3"},
+		"stuck":    {Status: StatusBlocked, Done: 0, Total: 2, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
+		// Unordered: next is the first unfinished member that is not blocked,
+		// and the workstream is blocked only when every unfinished one is.
+		"epic":       {Status: StatusActive, Done: 0, Total: 2, Next: "PP-7"},
+		"epic-stuck": {Status: StatusBlocked, Done: 1, Total: 3, Next: "PP-4", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"p", "PP-3"}, Column: InProgress}}},
 		"waiting":    {Status: StatusBlocked, Done: 0, Total: 1, Next: "PP-5", Reasons: []Reason{{Kind: WorkstreamDependency, Workstream: "moving", Pending: 2}}},
 		"empty":      {Status: StatusActive},
 		"broken-ref": {Status: StatusBlocked, Done: 0, Total: 1, Next: "PP-404", Reasons: []Reason{{Kind: TicketDependency, Ticket: Ref{"", "PP-404"}, Missing: true}}},

@@ -8,6 +8,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Workstreams are epics: their tickets may be worked on in sequence or in
+  parallel, and a ticket waits only for its `depends-on` tickets and
+  workstream dependencies. Only a workstream marked `ordered: true` makes
+  each ticket wait for the ones before it. Existing workstreams become
+  unordered; add `ordered: true` to a workstream file to keep its chain.
+  `create_workstream` takes an optional `ordered`, `board_context` marks
+  ordered workstreams, and the Workstreams view shows an unordered
+  workstream's tickets without track or a next stop. Re-run
+  `flashheart setup claude` for the new skill text; protocol 1 (FH-38, D26).
+- The Needs you and Agent working columns stand between In progress and
+  Ready to review instead of before Backlog (FH-40).
+
 - The protocol skill and `ask_human` tell agents to ask any question that
   ends their turn with `ask_human`, not only in chat, so the session shows
   in Needs you instead of Waiting (FH-31). Guidance only; protocol 1.

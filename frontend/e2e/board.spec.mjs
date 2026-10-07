@@ -495,6 +495,16 @@ test("workstreams draw as lines with stations", async () => {
   await expect(page.getByRole("article", { name: "Agent runs" })).toContainText(
     "Depends on workstream board-editing",
   );
+  // An unordered workstream is an epic: its stations are not on a route, so
+  // none is the next stop and none waits for the one before it.
+  const editing = page.getByRole("article", { name: "Board editing" });
+  await expect(editing).toContainText("Any order");
+  await expect(boardCore).not.toContainText("Any order");
+  const epic = editing.getByRole("list", {
+    name: "Board editing stations, in any order",
+  });
+  await expect(epic.getByRole("listitem")).toHaveCount(5);
+  await expect(epic.getByRole("button", { name: /next stop/ })).toHaveCount(0);
   await boardCore.getByRole("button", { name: /Transit map board UI/ }).click();
   await expect(
     page.getByRole("complementary", { name: "Ticket FH-11" }),

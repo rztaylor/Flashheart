@@ -46,7 +46,8 @@ const (
 	// Via names the ticket's own workstream when the dependency is declared
 	// there; Via == Workstream with Missing means that workstream is missing.
 	WorkstreamDependency ReasonKind = "workstream"
-	// WorkstreamOrder: an earlier ticket in the workstream is not finished.
+	// WorkstreamOrder: an earlier ticket in an ordered workstream is not
+	// finished.
 	WorkstreamOrder ReasonKind = "order"
 )
 
@@ -72,7 +73,9 @@ const (
 type WorkstreamState struct {
 	Status      string
 	Done, Total int
-	// Next is the first ticket id in order not yet in review or done.
+	// Next is the first ticket id in order not yet in review or done; in an
+	// unordered workstream, the first such ticket that is not blocked, when
+	// there is one.
 	Next    string
 	Reasons []Reason
 }
@@ -243,6 +246,9 @@ func (a analyzer) reasons(project string, ticket Ticket) []Reason {
 				reasons = append(reasons, reason)
 			}
 		}
+		if !workstream.Ordered {
+			continue
+		}
 		for _, earlier := range workstream.Tickets {
 			if earlier == ticket.ID {
 				break
@@ -282,11 +288,15 @@ func (a analyzer) membershipWarnings(project string, ticket Ticket) []string {
 
 func (a analyzer) workstreamState(project string, workstream Workstream, blocked map[Ref][]Reason) WorkstreamState {
 	state := WorkstreamState{Status: StatusActive, Total: len(workstream.Tickets)}
+	free := ""
 	for _, id := range workstream.Tickets {
 		_, satisfied, exists := a.ticketColumn(id)
 		if satisfied {
 			state.Done++
 			continue
+		}
+		if free == "" && exists && len(blocked[a.ref(id)]) == 0 {
+			free = id
 		}
 		if state.Next == "" {
 			state.Next = id
@@ -294,6 +304,10 @@ func (a analyzer) workstreamState(project string, workstream Workstream, blocked
 				state.Reasons = []Reason{{Kind: TicketDependency, Ticket: a.ref(id), Missing: true}}
 			}
 		}
+	}
+	// An unordered workstream moves while any unfinished ticket can.
+	if !workstream.Ordered && free != "" {
+		state.Next, state.Reasons = free, nil
 	}
 	if state.Total > 0 && state.Done == state.Total {
 		state.Status = StatusCompleted

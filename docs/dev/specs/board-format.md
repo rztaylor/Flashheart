@@ -205,10 +205,14 @@ A ticket is **blocked** when any of these holds:
 1. a `depends-on` ticket is not in `review` or `done`;
 2. a `depends-on-workstreams` workstream has a ticket not in `review` or
    `done`;
-3. it belongs to a workstream and an earlier ticket in that workstream's
-   `tickets:` list is not in `review` or `done`;
+3. it belongs to an **ordered** workstream (`ordered: true`) and an earlier
+   ticket in that workstream's `tickets:` list is not in `review` or `done`;
 4. a workstream that lists it has a `depends-on-workstreams` workstream with a
    ticket not in `review` or `done`.
+
+A workstream is unordered unless its frontmatter says `ordered: true`
+(D26): its tickets are an epic's, worked on in sequence or in parallel, and
+rule 3 does not apply; rules 1, 2 and 4 apply to every workstream.
 
 A workstream's `tickets:` list defines membership and order; a ticket whose
 `workstream:` field disagrees with the lists gets a warning. Flashheart's own
@@ -232,7 +236,8 @@ slug: board-ui
 status: active            # informational; the UI derives status
 priority: high
 created: 2026-10-04
-tickets:                  # ticket ids, ordered; order implies blocking
+ordered: true             # optional; only then does order imply blocking
+tickets:                  # ticket ids, in order
   - FH-12
   - FH-13
 depends-on-workstreams: []
@@ -246,10 +251,16 @@ tags: []
 ## Notes
 ```
 
+`ordered` is optional: absent or `false`, the workstream is unordered; any
+other value than `true` or `false` is a warning and counts as unordered.
+
 The UI derives status (`completed` when every ticket is in review or done,
-`blocked` when its own `depends-on-workstreams` are incomplete or its next
-ticket in order is blocked, otherwise `active`) and does not rewrite the
-`status` field unless the user edits it.
+`blocked` when its own `depends-on-workstreams` are incomplete or, in an
+ordered workstream, its next ticket in order is blocked, or, in an unordered
+one, every unfinished ticket is blocked; otherwise `active`) and does not
+rewrite the `status` field unless the user edits it. The next ticket is the
+first unfinished one in order; in an unordered workstream, the first
+unfinished one that is not blocked, when there is one.
 
 ## Review
 

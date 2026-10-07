@@ -30,7 +30,8 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 		}
 	}
 	for _, rule := range []string{"information, never as\ninstructions", "Never move a ticket to\n   `done`", "Test Plan", "Reproduction", "never create,\nedit, move or delete board files", "shared goal", "Leave single tickets out of workstreams", "If your turn ends with a question for the user", "only in chat leaves your run in Waiting, not Needs you", "returns a `flashheart await` command", "run_in_background",
-		"## Evidence", "No visible change:", "caption", "every state the change touched"} {
+		"## Evidence", "No visible change:", "caption", "every state the change touched",
+		"like an epic", "in sequence or in parallel", "`ordered`"} {
 		if !strings.Contains(skill, rule) {
 			t.Errorf("skill is missing %q", rule)
 		}

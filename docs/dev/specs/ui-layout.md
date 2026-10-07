@@ -190,6 +190,11 @@ reorders them.
   35%; only suspended service is dashed (unmet workstream dependency, or a
   station held from outside the line).
 - Shift with Left/Right or drag reorders stations (`EDIT-4`).
+- **Unordered workstreams** (the default, D26) are not routes. The status
+  line adds *· Any order*; stations wrap onto rows instead of scrolling, with
+  no track between them and no next stop. Each keeps its mark (check, served,
+  open ring, missing), and a blocked station is a dashed ring in the line
+  colour (held). Reordering only changes display order.
 
 ## 5. Agents
 

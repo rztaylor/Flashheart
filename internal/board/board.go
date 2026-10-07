@@ -373,10 +373,14 @@ func HandoffList(content, label string) []string {
 // Workstream is one parsed workstream file.
 type Workstream struct {
 	Slug, Title, Status, Priority, Created string
-	Tickets, DependsOnWorkstreams, Tags    []string
-	Body                                   string
-	Repair                                 []string
-	Warnings                               []string
+	// Ordered chains the tickets: each waits for the ones before it in
+	// Tickets (blocking rule 3). Unordered, the default, groups them under a
+	// shared goal like an epic.
+	Ordered                             bool
+	Tickets, DependsOnWorkstreams, Tags []string
+	Body                                string
+	Repair                              []string
+	Warnings                            []string
 }
 
 // NeedsRepair reports whether the workstream file must be repaired.
@@ -399,6 +403,15 @@ func ParseWorkstream(slug string, data []byte) Workstream {
 	workstream.Tickets = doc.List("tickets")
 	workstream.DependsOnWorkstreams = doc.List("depends-on-workstreams")
 	workstream.Tags = doc.List("tags")
+	if ordered, ok := doc.String("ordered"); ok && ordered != "" {
+		switch strings.ToLower(ordered) {
+		case "true":
+			workstream.Ordered = true
+		case "false":
+		default:
+			workstream.Warnings = append(workstream.Warnings, fmt.Sprintf("ordered %q is not true or false, so the workstream is unordered", ordered))
+		}
+	}
 	if declared, ok := doc.String("slug"); ok && declared != "" && declared != slug {
 		workstream.Warnings = append(workstream.Warnings, fmt.Sprintf("slug %q does not match the filename %s.md", declared, slug))
 	}

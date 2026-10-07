@@ -462,15 +462,17 @@ const flashheart = [
   ],
 ];
 
+// [slug, title, created, depends-on-workstreams, ordered]: ordered lines
+// chain their tickets; the rest are epics whose tickets go in any order.
 const workstreams = {
   flashheart: [
-    ["foundation", "Foundation", "2026-09-20"],
-    ["board-core", "Board core", "2026-10-01"],
+    ["foundation", "Foundation", "2026-09-20", [], true],
+    ["board-core", "Board core", "2026-10-01", [], true],
     ["board-editing", "Board editing", "2026-10-03", ["board-core"]],
     ["agent-runs", "Agent runs", "2026-10-04", ["board-editing"]],
   ],
   ngplus: [
-    ["ofqual-layer", "Ofqual regulatory layer", "2026-09-12"],
+    ["ofqual-layer", "Ofqual regulatory layer", "2026-09-12", [], true],
     ["study-ui", "Study UI", "2026-09-25"],
   ],
 };
@@ -626,7 +628,9 @@ async function writeProject(root, project, display, rows) {
     join(root, project, "project.yaml"),
     `key: ${key}\nnext_id: ${rows.length + 1}\nname: ${display}\nrepos:\n  - /Users/example/src/${project}\n`,
   );
-  for (const [slug, title, created, deps = []] of workstreams[project] ?? []) {
+  for (const [slug, title, created, deps = [], ordered = false] of workstreams[
+    project
+  ] ?? []) {
     const members = tickets
       .filter((item) => item.workstream === slug)
       .map((item) => item.id);
@@ -636,6 +640,7 @@ async function writeProject(root, project, display, rows) {
       "status: active",
       "priority: high",
       `created: ${created}`,
+      ...(ordered ? ["ordered: true"] : []),
       "tickets:",
       ...members.map((member) => `  - ${member}`),
       `depends-on-workstreams: [${deps.join(", ")}]`,

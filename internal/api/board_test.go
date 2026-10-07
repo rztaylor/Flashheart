@@ -296,6 +296,23 @@ func TestSuspendedLinesWaitOnTheirOwnWorkstreamDependencies(t *testing.T) {
 	}
 }
 
+func TestWorkstreamsSayWhetherTheyAreOrdered(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := sampleAPI(t, func(root string) {
+		writeFile(t, filepath.Join(root, "alpha", "workstreams", "free.md"), "---\ntickets: [AL-5, AL-6]\n---\n# Free\n")
+	})
+	var body WorkstreamsResponse
+	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &body)
+	ordered := map[string]bool{}
+	for _, workstream := range body.Workstreams {
+		ordered[workstream.Slug] = workstream.Ordered
+	}
+	if !ordered["board-ui"] || ordered["free"] {
+		t.Errorf("ordered = %v, want only board-ui", ordered)
+	}
+}
+
 func TestAllProjectsBoard(t *testing.T) {
 	t.Parallel()
 

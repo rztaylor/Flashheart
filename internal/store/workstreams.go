@@ -191,6 +191,9 @@ func (s *Store) SetTicketWorkstream(project, id, base, workstream string, edit E
 // NewWorkstream is the content of a workstream created from the template.
 type NewWorkstream struct {
 	Title, Goal, Priority string
+	// Ordered writes ordered: true, chaining the tickets; unordered, the
+	// default, writes no field.
+	Ordered bool
 	// Tickets are live ticket ids of the project, in order; each joins the
 	// new workstream and leaves any other.
 	Tickets              []string
@@ -309,6 +312,9 @@ func (s *Store) workstreamTemplate(slug string, w NewWorkstream) ([]byte, error)
 		if err != nil {
 			return nil, err
 		}
+	}
+	if w.Ordered {
+		data = []byte(strings.Replace(string(data), "\ntickets:", "\nordered: true\ntickets:", 1))
 	}
 	return data, nil
 }

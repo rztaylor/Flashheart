@@ -26,6 +26,7 @@ const workstream: Workstream = {
   title: "Board core",
   status: "active",
   suspended: false,
+  ordered: true,
   declaredStatus: "active",
   priority: "high",
   created: "2026-10-01",
@@ -84,5 +85,51 @@ describe("TransitLine stations", () => {
 
   it("flags a blocked next stop with the blocked pill", () => {
     expect(markup).toContain('data-tone="blocked"');
+  });
+});
+
+// An unordered workstream (an epic) has no sequence to draw: no track joins
+// its stations, there is no next stop, and a blocked station is held.
+describe("TransitLine for an unordered workstream", () => {
+  const epic = renderToStaticMarkup(
+    <TransitLine
+      workstream={{
+        ...workstream,
+        ordered: false,
+        next: "FH-4",
+        tickets: [
+          ticket("FH-1", "done"),
+          ticket("FH-3", "in-progress", { blocked: true }),
+          ticket("FH-4", "backlog"),
+        ],
+      }}
+      line={{ colour: 1, initials: "BC" }}
+      onOpen={() => undefined}
+    />,
+  );
+  const at = (id: string) => {
+    const from = epic.indexOf(`data-station="${id}"`);
+    const next = epic.indexOf("data-station=", from + 1);
+    return epic.slice(from, next < 0 ? undefined : next);
+  };
+
+  it("draws stations without track or a next stop", () => {
+    expect(epic).toContain('data-layout="any-order"');
+    expect(epic).toContain("stations, in any order");
+    expect(epic).not.toContain("data-track");
+    expect(epic).not.toContain('data-station-state="next"');
+    expect(at("FH-4")).toContain('data-station-state="ahead"');
+    expect(at("FH-1")).toContain('data-station-state="done"');
+  });
+
+  it("holds a blocked station instead of flagging a next stop", () => {
+    expect(at("FH-3")).toContain('data-station-state="held"');
+    expect(at("FH-3")).toContain(", blocked");
+    expect(epic).not.toContain('data-tone="blocked"');
+  });
+
+  it("keeps the ordered line's track", () => {
+    expect(markup).toContain("data-track");
+    expect(markup).not.toContain('data-layout="any-order"');
   });
 });
