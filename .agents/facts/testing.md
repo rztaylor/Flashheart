@@ -42,7 +42,11 @@
   (`TestTicketRunsCarryTheSubagentTree` in `internal/api`), and in the
   browser from subagents the Agents e2e starts through the real hook.
 - The Agents e2e asks a question through the real `flashheart mcp` and
-  answers it in the browser (`frontend/e2e/agent-runs.mjs`).
+  answers it in the browser (`frontend/e2e/agent-runs.mjs`), and drives a
+  hookless Codex session through it (`connectMCP`) to its answer and end.
+- Runs the MCP server starts (D30) are tested over the in-memory transport
+  with several client connections (`env.dial`), and over stdio by
+  `TestHooklessSessionOverStdio` in `internal/cli`.
 - Concurrency: multi-process write tests for locks and preconditions.
   `store.LockWait` is a variable so a non-parallel test can shorten it (the
   MCP `busy` contract test); restore it before returning.

@@ -1,7 +1,18 @@
 # mcp-runs
 
-Status: **Pending**. Tracked on the dogfood board as FH-15. Depends on
+Status: **Partial**. Tracked on the dogfood board as FH-15. Depends on
 `mcp-protocol`; `codex-support` depends on it.
+
+Built (2026-10-08, D30): the server starts runs for hookless connections,
+tool calls as activity, `run.end` on disconnect, answers in the next tool
+result, the agent from `clientInfo`, "MCP only" in the Agents view, spec,
+protocol and skill text. Evidence: the MCP contract tests
+(`internal/mcpserver/mcpruns_test.go`), the run-fold table
+(`internal/runs/mcp_test.go`), the stdio test through the real `mcp`
+command (`TestHooklessSessionOverStdio`) and the Agents e2e driving a
+hookless `codex-mcp-client` session. Open: a real Codex session without
+Flashheart hooks (the last criterion), met by dogfooding; it also confirms
+that Codex starts one MCP server per session and closes it at the end.
 
 ## Goal
 

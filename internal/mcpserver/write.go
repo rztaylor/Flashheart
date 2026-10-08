@@ -34,17 +34,17 @@ const (
 var agentKey = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,4}$`)
 
 func (srv *server) registerWrites(server *mcp.Server) {
-	tool(server, "claim", "Claim a ticket before working on it: it moves to In progress, records your branch and holds the ticket for you while your session is active. Claiming another ticket releases this one. A ticket held by another live session, or blocked, needs force and a reason.", srv.claim)
-	tool(server, "release", "Stop holding a ticket without finishing it (checkpoint first). The ticket stays in its column.", srv.release)
-	tool(server, "checkpoint", "Record your handoff on a ticket: what is done, what is next, the files that matter and open questions. Rewrites the ticket's ## Handoff, which the next session resumes from. Do this at milestones and always before stopping after edits. Local files listed or linked outside the repository are copied into the ticket.", srv.checkpoint)
-	tool(server, "update_ticket", "Edit a ticket: set fields (title, type, priority, branch, workstream, tags, depends-on, created), tick acceptance criteria by number (1 is the first) or text, and append to its notes.", srv.updateTicket)
-	tool(server, "move", "Move a ticket to another column: backlog, up-next, in-progress or review. Moving to review warns about a missing review or unticked criteria. Agents never move tickets to done.", srv.move)
-	tool(server, "set_project_key", "Choose your project's ticket key (2–5 capital letters or digits, starting with a letter) before its first ticket. Pick what people call the project: FH for Flashheart.", srv.setProjectKey)
-	tool(server, "create_ticket", "Create a ticket in your project with the next id. Feature tickets carry a test plan and bugs a reproduction (plan_or_repro). Returns the new id.", srv.createTicket)
-	tool(server, "create_workstream", "Create a workstream in your project: a group of tickets with a shared goal, like an epic, worked on in sequence or in parallel. Its tickets wait only for the tickets their depends_on names, so give each ticket the depends_on it needs. Use one when work spans several tickets with a shared goal; leave single tickets alone.", srv.createWorkstream)
-	tool(server, "write_review", "Create or replace a ticket's review (the human verification guide, in the review template). Screenshots and other local files linked by absolute path are copied into the ticket.", srv.writeReview)
-	tool(server, "attach", "Copy a local file (screenshot, log or other: PNG, JPEG, GIF, WebP, PDF, text, markdown, JSON or log) into a ticket's files with a caption. Returns the stored name and a markdown snippet for the review's Evidence.", srv.attach)
-	tool(server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt. Use it for any question that ends your turn too: a question asked only in chat leaves you in Waiting.", srv.askHuman)
+	tool(srv, server, "claim", "Claim a ticket before working on it: it moves to In progress, records your branch and holds the ticket for you while your session is active. Claiming another ticket releases this one. A ticket held by another live session, or blocked, needs force and a reason.", srv.claim)
+	tool(srv, server, "release", "Stop holding a ticket without finishing it (checkpoint first). The ticket stays in its column.", srv.release)
+	tool(srv, server, "checkpoint", "Record your handoff on a ticket: what is done, what is next, the files that matter and open questions. Rewrites the ticket's ## Handoff, which the next session resumes from. Do this at milestones and always before stopping after edits. Local files listed or linked outside the repository are copied into the ticket.", srv.checkpoint)
+	tool(srv, server, "update_ticket", "Edit a ticket: set fields (title, type, priority, branch, workstream, tags, depends-on, created), tick acceptance criteria by number (1 is the first) or text, and append to its notes.", srv.updateTicket)
+	tool(srv, server, "move", "Move a ticket to another column: backlog, up-next, in-progress or review. Moving to review warns about a missing review or unticked criteria. Agents never move tickets to done.", srv.move)
+	tool(srv, server, "set_project_key", "Choose your project's ticket key (2–5 capital letters or digits, starting with a letter) before its first ticket. Pick what people call the project: FH for Flashheart.", srv.setProjectKey)
+	tool(srv, server, "create_ticket", "Create a ticket in your project with the next id. Feature tickets carry a test plan and bugs a reproduction (plan_or_repro). Returns the new id.", srv.createTicket)
+	tool(srv, server, "create_workstream", "Create a workstream in your project: a group of tickets with a shared goal, like an epic, worked on in sequence or in parallel. Its tickets wait only for the tickets their depends_on names, so give each ticket the depends_on it needs. Use one when work spans several tickets with a shared goal; leave single tickets alone.", srv.createWorkstream)
+	tool(srv, server, "write_review", "Create or replace a ticket's review (the human verification guide, in the review template). Screenshots and other local files linked by absolute path are copied into the ticket.", srv.writeReview)
+	tool(srv, server, "attach", "Copy a local file (screenshot, log or other: PNG, JPEG, GIF, WebP, PDF, text, markdown, JSON or log) into a ticket's files with a caption. Returns the stored name and a markdown snippet for the review's Evidence.", srv.attach)
+	tool(srv, server, "ask_human", "Ask the human a question, decision, review or blocker. Your session shows as Needs you on the board; the answer arrives in a later prompt. Use it for any question that ends your turn too: a question asked only in chat leaves you in Waiting.", srv.askHuman)
 }
 
 // record appends events attributed to the caller's run; nothing is
@@ -79,8 +79,8 @@ type ClaimInput struct {
 	Reason string `json:"reason,omitempty" jsonschema:"why force is right; recorded in the ticket's notes"`
 }
 
-func (srv *server) claim(input ClaimInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) claim(inv *invocation, input ClaimInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -193,8 +193,8 @@ type ReleaseInput struct {
 	Reason string `json:"reason,omitempty"`
 }
 
-func (srv *server) release(input ReleaseInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) release(inv *invocation, input ReleaseInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -236,8 +236,8 @@ func items(list []string) []string {
 	return out
 }
 
-func (srv *server) checkpoint(input CheckpointInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) checkpoint(inv *invocation, input CheckpointInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -358,8 +358,8 @@ type UpdateTicketInput struct {
 	AppendNotes string         `json:"append_notes,omitempty" jsonschema:"a paragraph appended to the ticket's notes"`
 }
 
-func (srv *server) updateTicket(input UpdateTicketInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) updateTicket(inv *invocation, input UpdateTicketInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -546,8 +546,8 @@ type MoveInput struct {
 	To     string `json:"to" jsonschema:"backlog, up-next, in-progress or review"`
 }
 
-func (srv *server) move(input MoveInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) move(inv *invocation, input MoveInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -616,8 +616,8 @@ func (c *call) checkKey(key string) (string, error) {
 	return key, nil
 }
 
-func (srv *server) setProjectKey(input SetProjectKeyInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) setProjectKey(inv *invocation, input SetProjectKeyInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -651,8 +651,8 @@ type CreateTicketInput struct {
 	ProjectKey  string   `json:"project_key,omitempty" jsonschema:"only for a project with no key yet: the key to record first"`
 }
 
-func (srv *server) createTicket(input CreateTicketInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) createTicket(inv *invocation, input CreateTicketInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -723,8 +723,8 @@ type CreateWorkstreamInput struct {
 	Tags                 []string `json:"tags,omitempty"`
 }
 
-func (srv *server) createWorkstream(input CreateWorkstreamInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) createWorkstream(inv *invocation, input CreateWorkstreamInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -791,8 +791,8 @@ type WriteReviewInput struct {
 	Markdown string `json:"markdown" jsonschema:"the whole review in the review template; link screenshots by absolute path"`
 }
 
-func (srv *server) writeReview(input WriteReviewInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) writeReview(inv *invocation, input WriteReviewInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -848,8 +848,8 @@ type AttachInput struct {
 // attachKinds are the kinds a copied file can have.
 var attachKinds = []string{"screenshot", "log", "other"}
 
-func (srv *server) attach(input AttachInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) attach(inv *invocation, input AttachInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -907,8 +907,8 @@ type AskHumanInput struct {
 	Options []string `json:"options,omitempty" jsonschema:"answers to choose from, when there are clear choices"`
 }
 
-func (srv *server) askHuman(input AskHumanInput) (string, error) {
-	c, err := srv.begin(input.Run)
+func (srv *server) askHuman(inv *invocation, input AskHumanInput) (string, error) {
+	c, err := srv.begin(inv, input.Run)
 	if err != nil {
 		return "", err
 	}
@@ -960,8 +960,13 @@ func (srv *server) askHuman(input AskHumanInput) (string, error) {
 	// The await command wakes an agent that can run background commands
 	// as soon as the answer is given (agent-protocol §7.5).
 	command := protocol.AwaitCommand(srv.options.Binary, srv.options.Root, project, id)
-	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; the answer will arrive in a later prompt, or the user replies in this chat, which settles it. Carry on with other work if you can.\n"+
-		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits (Claude Code: Bash with run_in_background):\n%s\nok question=%s\n", kind, command, id), nil
+	arrives := "in a later prompt"
+	if started, _ := inv.conn.current(); started == run {
+		// No prompt hook delivers to a run the server started (HOOK-5).
+		arrives = "with the result of your next flashheart tool call"
+	}
+	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; the answer will arrive %s, or the user replies in this chat, which settles it. Carry on with other work if you can.\n"+
+		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits (Claude Code: Bash with run_in_background):\n%s\nok question=%s\n", kind, arrives, command, id), nil
 }
 
 func questionID() string {

@@ -42,12 +42,28 @@ const QUESTION_REASON: Record<QuestionKind, string> = {
   blocked: "Is blocked",
 };
 
-// questionReason says what an agent's question asks for, or that its
-// answer is waiting for the session's next prompt (HOOK-5).
-const ANSWER_WAITING = "Answer waits for its next prompt";
+// startedByMCP reports a run id the MCP server minted for a session
+// without hooks, `<agent>:mcp-<random>` (agent-protocol §2): no prompt hook
+// delivers its answers; its next Flashheart tool call does (D30).
+export function startedByMCP(runID: string): boolean {
+  const [, session = ""] = runID.split(":");
+  return session.startsWith("mcp-") && !session.includes("/");
+}
 
+// answerWaiting says that an answer waits for the asking session: for its
+// next prompt (HOOK-5), or its next tool call without hooks.
+function answerWaiting(runID: string): string {
+  return startedByMCP(runID)
+    ? "Answer waits for its next tool call"
+    : "Answer waits for its next prompt";
+}
+
+// questionReason says what an agent's question asks for, or that its
+// answer is waiting for the session.
 export function questionReason(question: Question): string {
-  return question.answeredAt ? ANSWER_WAITING : QUESTION_REASON[question.kind];
+  return question.answeredAt
+    ? answerWaiting(question.run)
+    : QUESTION_REASON[question.kind];
 }
 
 // openQuestion is a run's first question still waiting on the human or on
@@ -76,7 +92,7 @@ export function needsReason(run: Run, children: Run[]): string {
 export function liveReason(live: Live): string {
   if (!live.permission && live.question)
     return live.questionAnswered
-      ? ANSWER_WAITING
+      ? answerWaiting(live.run)
       : QUESTION_REASON[live.question];
   return reasonFor(live.permission, live.waitingOn);
 }
@@ -110,6 +126,13 @@ export function agentName(agent: string): string {
   if (agent === "claude") return "Claude";
   if (agent === "codex") return "Codex";
   return agent;
+}
+
+// mcpOnly reports a run the MCP server started for an agent without
+// Flashheart's hooks: it reports tool calls, claims and questions only,
+// never a plan, edits or permission prompts (agent-protocol §7.1).
+export function mcpOnly(run: Run): boolean {
+  return run.source === "mcp";
 }
 
 export interface LaneRun {
@@ -163,6 +186,7 @@ const source: Record<string, string> = {
   resume: "Session resumed",
   clear: "Session cleared",
   compact: "Resumed after compaction",
+  mcp: "Connected without hooks (MCP only)",
 };
 
 const words = (value: string) => value.replaceAll("_", " ");

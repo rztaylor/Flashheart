@@ -105,6 +105,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- An agent that reaches Flashheart's MCP server without its hooks (Codex
+  today, or a user who declined hooks) gets a run of its own (FH-15, D30).
+  Its first write starts the run, so `claim`, `release` and `ask_human`
+  work and its tickets name it instead of "unknown". Each of its Flashheart
+  tool calls keeps its claim alive; closing the session ends the run.
+  Answers to its questions arrive with its next tool call. The Agents view
+  shows it, marked "MCP only", since without hooks it reports no plan,
+  edits or permission prompts. A session with hooks is attributed as
+  before, and a Codex session is no longer mistaken for a Claude Code
+  session in the same worktree.
 - The installed Flashheart skill keeps itself current: after you upgrade
   the binary, the next Claude Code session start rewrites
   `~/.claude/skills/flashheart/SKILL.md` to match and says so in one line,

@@ -52,6 +52,68 @@ describe("QuestionCard", () => {
     expect(markup).not.toContain("Send answer");
   });
 
+  it("says a run without hooks gets its answer with its next tool call", () => {
+    const asked = { ...question, run: "codex:mcp-0a1b2c3d4e5f" };
+    const open = renderToStaticMarkup(
+      <QuestionCard
+        question={asked}
+        asker="codex:mcp-0a1b"
+        now={now}
+        onAnswer={send}
+      />,
+    );
+    expect(open).toContain("with its next Flashheart tool call");
+    expect(open).not.toContain("next prompt");
+    const answered = renderToStaticMarkup(
+      <QuestionCard
+        question={{
+          ...asked,
+          answer: "No",
+          answeredAt: "2026-10-06T10:04:00Z",
+        }}
+        asker="codex:mcp-0a1b"
+        now={now}
+        onAnswer={send}
+      />,
+    );
+    expect(answered).toContain("Answer waits for its next tool call");
+    expect(answered).toContain("with its next Flashheart tool call");
+    expect(answered).not.toContain("next prompt");
+  });
+
+  it("does not promise a resumption to an ended run without hooks", () => {
+    const asked = {
+      ...question,
+      run: "codex:mcp-0a1b2c3d4e5f",
+      sessionEnded: true,
+    };
+    const open = renderToStaticMarkup(
+      <QuestionCard
+        question={asked}
+        asker="codex:mcp-0a1b"
+        now={now}
+        onAnswer={send}
+      />,
+    );
+    expect(open).toContain("This session has ended and will not resume");
+    expect(open).not.toContain("when it resumes");
+    const answered = renderToStaticMarkup(
+      <QuestionCard
+        question={{
+          ...asked,
+          answer: "No",
+          answeredAt: "2026-10-06T10:04:00Z",
+        }}
+        asker="codex:mcp-0a1b"
+        now={now}
+        onAnswer={send}
+      />,
+    );
+    expect(answered).toContain(
+      "The session has ended; the answer stays on the board.",
+    );
+  });
+
   it("explains a read-only board", () => {
     const markup = renderToStaticMarkup(
       <QuestionCard question={question} asker="claude:5b0c7e2a" now={now} />,

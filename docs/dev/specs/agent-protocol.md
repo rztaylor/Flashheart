@@ -21,13 +21,23 @@ user's agent configuration; change it deliberately and bump
 | **Protocol instructions** | When and how to use the tools | Guidance | Context once per session |
 | **Handoff enforcement** (opt-in) | Ensures a checkpoint after edits | Deterministic | One extra turn when triggered |
 
+Hooks are the deterministic layer. An agent that reaches the MCP server
+without them (Codex while its hooks are experimental, a user who declined
+hooks, a new agent) still gets a run, which the server starts for its
+connection (§7.1): it reports claims, checkpoints, questions and its
+Flashheart tool calls, never turns, plans, edits or permission prompts.
+
 ## 2. Identity
 
 - **Agent id**: `claude` (Claude Code in any surface) or `codex` (Codex CLI,
   IDE extension or app).
 - **Run id**: `<agent>:<session_id>` for a session;
-  `<agent>:<session_id>/<agent_id>` for a subagent. Displayed shortened to
-  the first 8 characters of the session id.
+  `<agent>:<session_id>/<agent_id>` for a subagent;
+  `<agent>:mcp-<12 hex digits>` for a session the MCP server started a run
+  for (§7.1), its agent named from the client's `clientInfo` name at
+  initialize (`claude-code` → `claude`, `codex-mcp-client` → `codex`, any
+  other name lowercased to letters, digits and hyphens). Displayed shortened
+  to the first 8 characters of the session id.
 - **Project**: from the hook payload's `cwd` (`PRJ-2`): find the git common
   directory, take its parent's basename; apply the collision rule (`PRJ-3`).
   A bare repository (`repo.git`) names itself (`repo`); a submodule, whose
@@ -60,11 +70,11 @@ writing.
 
 | Kind | Source | `data` |
 |---|---|---|
-| `run.start` | session start / subagent start hook | `kind` (session/subagent), `parent`, `cwd`, `branch`, `worktree`, `source` (startup/resume/clear/compact), `agent_type` for subagents |
-| `run.end` | session end / subagent stop | `reason` |
+| `run.start` | session start / subagent start hook; MCP server (§7.1) | `kind` (session/subagent), `parent`, `cwd`, `branch`, `worktree`, `source` (startup/resume/clear/compact; `mcp` for a run the MCP server started), `agent_type` for subagents |
+| `run.end` | session end / subagent stop; MCP server | `reason` (`disconnected` when a started run's connection closes) |
 | `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
 | `turn.end` | stop | `blocked_for_handoff` (bool) |
-| `tool.used` | post tool use | `tool`, `ok`, optional `path` (repo-relative, edits only; omitted outside the worktree), optional `summary` (≤120 chars, not written by the Claude adapter, which reads nothing else from tool inputs) |
+| `tool.used` | post tool use; MCP server, for each tool call of a run it started (`tool` is the Flashheart tool's name) | `tool`, `ok`, optional `path` (repo-relative, edits only; omitted outside the worktree), optional `summary` (≤120 chars, not written by the Claude adapter, which reads nothing else from tool inputs) |
 | `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
 | `permission.requested` | permission request / notification | `tool`, optional `summary` |
 | `permission.resolved` | permission denied | `outcome` (allowed/denied/unknown), optional `tool`. A pending request is also resolved, without an event, by the run's next tool result, prompt, turn end or end (§4) |
@@ -105,7 +115,11 @@ subagents' questions, never another session's; a question already answered
 on the board keeps waiting for its delivery, which the same prompt's hook
 makes. The board refuses a later board answer (`answered_in_session`), and
 the run's timeline and question keep the mark (D28). `run.start` after `run.end`
-(resume) reopens the run. A subagent first seen ending (the Claude desktop
+(resume) reopens the run. A run the MCP server started (`source: mcp`,
+§7.1) has no turn events: it is Waiting unless it needs you, never Working
+or Quiet; each of its Flashheart tool calls is activity; it ends when its
+connection closes (`run.end`, reason `disconnected`) or, when the server
+died, by the stale rule. A subagent first seen ending (the Claude desktop
 app stops internal helper agents it never reported starting) is not a run. Runs and timelines are derived from the last two
 days of event files.
 
@@ -120,8 +134,9 @@ Answers reach a run through its session's **answers inbox**,
 `<project>/.flashheart/answers/<agent>--<session>.jsonl`: answering a
 question in the UI appends `question.answered` and queues the answer there,
 and whoever hands it to the model (the prompt hook, the recovery note,
-`board_context` or `flashheart await`, §7.5) empties the inbox and appends
-`question.delivered`. The
+`board_context` or `flashheart await`, §7.5; for a run the MCP server
+started, which has no prompt hook, its connection's next tool result)
+empties the inbox and appends `question.delivered`. The
 inbox is a delivery queue derived from the log, so the prompt hook costs one
 `stat` when nothing is waiting; the answer itself lives in the log and the
 ticket's `## Notes`.
@@ -178,7 +193,8 @@ small.
 
 Codex has no session-end event in this list: Codex runs end by the
 `stale_hours` rule, or when a new session starts in the same worktree and the
-old one has been silent for `quiet_minutes`.
+old one has been silent for `quiet_minutes`. Without these hooks, a Codex
+session's first Flashheart write starts its run (§7.1).
 
 ### 5.4 Configuration written by setup
 
@@ -263,23 +279,55 @@ Every tool accepts an optional `run` argument. The server resolves the caller:
 
 1. `run` argument present (stamped by the `PreToolUse` hook where the agent
    supports input rewriting, or copied by the model from the recovery note);
-2. else the single session that is not Ended and works in the worktree and
+2. else the run this server started for the connection (below): one server
+   serves one session, so it stays the caller for the connection's life;
+3. else the single session of the caller's agent (named by the client at
+   initialize, §2; any agent's when the client gives no name) that is not
+   Ended, was not started by an MCP server, and works in the worktree and
    branch of the server's working directory: `CLAUDE_PROJECT_DIR` when the
    agent sets it (Claude Code starts user-scope MCP servers in `~/.claude`,
    not the project), else the process's directory;
-3. else error `ambiguous_run` listing candidates and saying to pass `run`.
+4. several such sessions, or none on this branch while one of the caller's
+   agent works in this worktree on another (its hooks have not yet seen a
+   branch switch) → error `ambiguous_run` listing them and saying to pass
+   `run`;
+5. else, for a write, a run the server starts for the connection now; a
+   read starts none.
+
+**Runs the server starts.** One MCP server process serves one agent
+session over stdio and is closed when the session ends, so a connection is
+a session. When a write finds no run, the server starts one for its
+connection: `run.start` with id `<agent>:mcp-<random>` (§2), `kind:
+session`, the working directory, branch and worktree above, and `source:
+mcp`, recorded in the caller's project. A run found from hooks, or named by
+`run`, always wins; a started run is never another connection's caller, so
+two connections in one worktree get two runs. When the connection's agent
+has switched branches since, the server records `run.start` again with the
+new branch, as a hook run's next prompt would, so the run's link and
+handoff follow it. Each tool call the
+connection's run makes, read or write, is recorded as `tool.used` (`tool`
+the Flashheart tool's name, `ok`), so its claim's lease is renewed (§6);
+answers waiting in its inbox are appended to that call's result as the
+answers note and marked delivered, standing in for the prompt hook
+(`HOOK-5`), and `board_context` stands in for the recovery note (`HOOK-3`).
+Closing the connection records `run.end` with reason `disconnected`; a
+server that dies leaves the run to the stale rule. A write with no project
+to record in (an archived project, or none created) starts no run.
 
 Read-only tools (`board_context`, `list_tickets`, `get_ticket`) change
-nothing on disk: they never create or adopt a project and never write the
-cwd cache. Where a write would create the caller's project,
+nothing on the board: they never create or adopt a project, never write the
+cwd cache and never start a run; a started run's read is still its
+activity in the event log. Where a write would create the caller's project,
 `board_context` says so and how to choose its key. A call reads every
 project's identity (`project.yaml` and folder names) and only the projects
 it touches in full, with those their tickets depend on.
 
-Calls with no resolvable run still work for read-only tools and record
-`by: "unknown"` for writes; `claim`, `release` and `ask_human` belong to a
-run and fail with `ambiguous_run`. A shortened run id (`claude:3f2a9c1e`, as
-the recovery note shows it) is accepted when it names one run.
+Read-only calls with no resolvable run still work and say `run=unknown`;
+writes are attributed to the run the server starts, or `by: "unknown"` when
+none can be started. `claim`, `release` and `ask_human` belong to a run and
+fail with `ambiguous_run` when there is none. A shortened run id
+(`claude:3f2a9c1e`, as the recovery note shows it) is accepted when it names
+one run.
 
 ### 7.2 Tools
 
@@ -298,7 +346,7 @@ the recovery note shows it) is accepted when it names one run.
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
-| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt"; the `flashheart await` command for it (§7.5) |
+| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call"); the `flashheart await` command for it (§7.5) |
 
 Errors are `{code, message, fix}`, rendered as `error <code>: <message>`
 and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
@@ -456,8 +504,9 @@ kept current by the session-start hook (§5.4). It covers, briefly:
   compaction risk, and always before stopping after edits;
 - use `ask_human` when blocked on a human decision instead of waiting in chat
   only, including a question that ends the turn: a question asked only in
-  chat leaves the run in Waiting, not Needs you (§4); where the agent can
-  run background commands that wake it, run the `flashheart await` command
+  chat leaves the run in Waiting, not Needs you (§4); without Flashheart's
+  hooks the answer comes with the next Flashheart tool result (§7.1); where
+  the agent can run background commands that wake it, run the `flashheart await` command
   `ask_human` returns (§7.5);
 - finishing: evidence in the review (§11): captioned screenshots of every
   state a visible change touched, or "No visible change: <why>";
@@ -509,6 +558,10 @@ stays 1. A prompt answering the session's open questions (§4), with
 refusal and `flashheart await`'s note for it (D28, FH-43, 2026-10-08):
 additive, because no event changes shape and older logs read the same (a
 `turn.start` without `background` was always a prompt), so the version
-stays 1.
+stays 1. Runs the MCP server starts for sessions without hooks (§7.1,
+D30, FH-15, 2026-10-08): `run.start` source `mcp`, `run.end` reason
+`disconnected`, `tool.used` from the server, answers in tool results, and
+the caller's agent from `clientInfo`: additive, because every event keeps
+its shape and hook-attributed calls are unchanged, so the version stays 1.
 The session-start hook keeps an installed skill's text current (re-running
 `setup` installs it); `flashheart doctor` says when it is out of date.

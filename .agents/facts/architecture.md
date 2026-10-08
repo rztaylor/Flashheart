@@ -32,7 +32,8 @@ Intended layout (packages are created when they get real content):
 - `internal/hooks`: agent-neutral hook handling and outputs;
   `internal/hooks/claude` and `internal/hooks/codex` are the only places that
   know each agent's payload schema.
-- `internal/mcpserver`: MCP tools over store, events and runs.
+- `internal/mcpserver`: MCP tools over store, events and runs; starts a
+  run for a connection without hooks and ends it on disconnect (D30).
 - `internal/await`: `flashheart await`: wait for one question's answer in
   its session's inbox, deliver it, notice delivery elsewhere or an answer
   in the session (from the `runs` fold), time out.

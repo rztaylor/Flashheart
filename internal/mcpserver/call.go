@@ -54,25 +54,39 @@ type call struct {
 	// across projects.
 	seen []events.Event
 	// run is the caller's run id, "" when unknown; candidates lists the
-	// live runs that made it ambiguous.
+	// live runs that made it ambiguous. nearby lists live sessions of the
+	// caller's agent in this worktree on another branch, which may be the
+	// caller after a branch switch its hooks have not reported yet.
 	run        string
 	candidates []string
+	nearby     []string
+	// started is set when the caller is the run the server started for its
+	// connection.
+	started bool
 }
 
 // begin reads the board and works out who is calling, for a tool that
 // writes: the caller's project is created (auto_create_projects) or given
-// this repository, and the cwd cache is kept.
-func (srv *server) begin(runArg string) (*call, error) {
-	return srv.start(runArg, true)
+// this repository, the cwd cache is kept, and a caller with no run gets
+// one started for its connection.
+func (srv *server) begin(inv *invocation, runArg string) (*call, error) {
+	return srv.start(inv, runArg, true)
 }
 
-// read is begin for a tool that only reads: it changes nothing on disk, so
-// a project that does not exist yet is only named (c.missing).
-func (srv *server) read(runArg string) (*call, error) {
-	return srv.start(runArg, false)
+// read is begin for a tool that only reads: it changes nothing on the
+// board, so a project that does not exist yet is only named (c.missing)
+// and no run is started.
+func (srv *server) read(inv *invocation, runArg string) (*call, error) {
+	return srv.start(inv, runArg, false)
 }
 
-func (srv *server) start(runArg string, write bool) (*call, error) {
+func (srv *server) start(inv *invocation, runArg string, write bool) (c *call, err error) {
+	// The wrapper reads which run the call was attributed to.
+	defer func() {
+		if c != nil && inv != nil {
+			inv.run = c.run
+		}
+	}()
 	runArg = strings.TrimSpace(runArg)
 	if runArg != "" && !runPattern.MatchString(runArg) {
 		return nil, fail("invalid_input", "pass the run id as the recovery note shows it, like claude:3f2a9c1e, or leave it out", "run %q is not a run id", runArg)
@@ -81,12 +95,12 @@ func (srv *server) start(runArg string, write bool) (*call, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &call{srv: srv, now: srv.options.Now().UTC(), settings: settings, runs: runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes), set: runs.NewSet(), folded: map[string]bool{}, loaded: map[string]bool{}}
+	c = &call{srv: srv, now: srv.options.Now().UTC(), settings: settings, runs: runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes), set: runs.NewSet(), folded: map[string]bool{}, loaded: map[string]bool{}}
 	if c.board, err = srv.store.ReadHeads(); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			// No board root yet: an empty board until the first write.
 			c.analysis = board.Analyze(c.board)
-			return c, c.attribute(runArg)
+			return c, c.attribute(inv, runArg)
 		}
 		return nil, err
 	}
@@ -122,7 +136,10 @@ func (srv *server) start(runArg string, write bool) (*call, error) {
 	if err := c.fold(c.project); err != nil {
 		return nil, err
 	}
-	if err := c.attribute(runArg); err != nil {
+	if err := c.attribute(inv, runArg); err != nil {
+		return nil, err
+	}
+	if err := c.own(inv, write); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -154,9 +171,11 @@ const fullSession = 16
 
 // attribute resolves the caller's run (agent-protocol §7.1): the run
 // argument (in full, or shortened as recovery notes show it, which must
-// name one known run), else the one live session working in this worktree
-// on this branch.
-func (c *call) attribute(runArg string) error {
+// name one known run), else the run the server started for this
+// connection, else the one live session of the caller's agent working in
+// this worktree on this branch. A run the server started is never another
+// connection's caller.
+func (c *call) attribute(inv *invocation, runArg string) error {
 	if runArg != "" {
 		session, agent, _ := strings.Cut(runArg, "/")
 		var matches []string
@@ -184,17 +203,30 @@ func (c *call) attribute(runArg string) error {
 		}
 		return nil
 	}
+	// One server serves one session, so a run it started is the caller's
+	// for the rest of the connection.
+	if inv != nil {
+		if run, _ := inv.conn.current(); run != "" {
+			c.run, c.started = run, true
+			return nil
+		}
+	}
 	if c.where.Worktree == "" && c.where.Repo == "" && c.srv.options.Cwd == "" {
 		return nil
 	}
 	for _, r := range c.set.Runs() {
-		if r.Kind != events.KindSession || c.set.State(r.ID, c.now, c.runs) == runs.Ended {
+		if r.Kind != events.KindSession || r.Source == events.SourceMCP || c.set.State(r.ID, c.now, c.runs) == runs.Ended {
 			continue
 		}
-		if !c.here(r) {
+		if inv != nil && inv.conn != nil && inv.conn.agent != "" && r.Agent != inv.conn.agent {
 			continue
 		}
-		c.candidates = append(c.candidates, r.ID)
+		switch {
+		case c.here(r):
+			c.candidates = append(c.candidates, r.ID)
+		case c.where.Worktree != "" && r.Worktree == c.where.Worktree:
+			c.nearby = append(c.nearby, r.ID)
+		}
 	}
 	if len(c.candidates) == 1 {
 		c.run, c.candidates = c.candidates[0], nil
@@ -229,15 +261,23 @@ func (c *call) requireRun() (string, error) {
 		return "", c.archivedError()
 	}
 	if len(c.candidates) > 1 {
-		short := make([]string, 0, len(c.candidates))
-		for _, id := range c.candidates {
-			short = append(short, protocol.ShortRun(id))
-		}
-		return "", fail("ambiguous_run", "pass run (your run id from the recovery note): one of "+strings.Join(short, ", "),
+		return "", fail("ambiguous_run", "pass run (your run id from the recovery note): one of "+shortRuns(c.candidates),
 			"%d sessions are working in this worktree, so the caller is ambiguous", len(c.candidates))
+	}
+	if len(c.nearby) > 0 {
+		return "", fail("ambiguous_run", "pass run (your run id from the recovery note): one of "+shortRuns(c.nearby),
+			"a session works in this worktree on another branch than %s, so the caller is ambiguous", c.where.Branch)
 	}
 	return "", fail("ambiguous_run", "pass run, your run id from the recovery note ([Flashheart] run=…)",
 		"no live session was found working in %s", c.srv.options.Cwd)
+}
+
+func shortRuns(ids []string) string {
+	short := make([]string, 0, len(ids))
+	for _, id := range ids {
+		short = append(short, protocol.ShortRun(id))
+	}
+	return strings.Join(short, ", ")
 }
 
 // by is who a write is attributed to.
