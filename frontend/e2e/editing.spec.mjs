@@ -1,4 +1,11 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -503,7 +510,20 @@ test("an edit made in a text editor appears within a second", async () => {
 
 test("a screenshot linked in a text editor is copied into the ticket", async () => {
   await open("#/p/flashheart/board");
-  const shot = join(sandbox.home, "Desktop", "latency chart.png");
+  // Serve copies only from a checkout of the project's repository (SEC-6),
+  // so the project records one.
+  const repo = join(await realpath(sandbox.home), "src", "flashheart");
+  await mkdir(repo, { recursive: true });
+  execFileSync("git", ["init", "-q"], { cwd: repo });
+  const project = join(sandbox.root, "flashheart", "project.yaml");
+  await writeFile(
+    project,
+    (await readFile(project, "utf8")).replace(
+      "/Users/example/src/flashheart",
+      repo,
+    ),
+  );
+  const shot = join(repo, "docs", "latency chart.png");
   await mkdir(dirname(shot), { recursive: true });
   // The first bytes of a PNG are enough: the copy is checked by type, not
   // decoded.

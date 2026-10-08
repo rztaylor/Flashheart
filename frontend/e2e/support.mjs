@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { execFileSync, spawn } from "node:child_process";
+import { cp, mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -14,12 +14,18 @@ const sampleBoard = resolve(projectRoot, "testdata/boards/sample");
 const manualURLPattern = /Open this URL within two minutes: (http:\/\/\S+)/g;
 
 // makeSandbox copies the sample board into a temporary HOME so tests never
-// touch the real board root or agent configuration.
+// touch the real board root or agent configuration. Its bin/ holds only git,
+// which serve asks whether a linked file is ignored (SEC-6).
 export async function makeSandbox() {
   const home = await mkdtemp(join(tmpdir(), "flashheart-e2e-"));
   const root = join(home, "board");
   await cp(sampleBoard, root, { recursive: true });
   await mkdir(screenshotDir, { recursive: true });
+  await mkdir(join(home, "bin"));
+  const git = execFileSync("sh", ["-c", "command -v git"], {
+    encoding: "utf8",
+  }).trim();
+  await symlink(git, join(home, "bin", "git"));
   return {
     home,
     root,
@@ -27,14 +33,14 @@ export async function makeSandbox() {
   };
 }
 
-// launch starts flashheart with an empty PATH so the browser opener fails and
-// the manual URL path is exercised; Playwright then opens that URL.
+// launch starts flashheart with a PATH holding only git so the browser opener
+// fails and the manual URL path is exercised; Playwright then opens that URL.
 export function launch(sandbox, args) {
   const env = {
     ...process.env,
     HOME: sandbox.home,
     XDG_CONFIG_HOME: join(sandbox.home, ".config"),
-    PATH: "/nonexistent",
+    PATH: join(sandbox.home, "bin"),
   };
   delete env.FLASHHEART_ROOT;
   const child = spawn(executable, [...args, "--root", sandbox.root], {
