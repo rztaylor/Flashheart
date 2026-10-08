@@ -407,6 +407,48 @@ Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
 `agentWorking` field is unchanged. A saved `virtual_columns` entry
 `agent-working` is dropped on load rather than refused.
 
+## 2026-10-08 — D29: Serve copies linked files only from the project's repository
+
+Decision (FH-34): `serve`'s REV-5 copying of files linked from directly
+edited tickets and reviews copies a file only when it is in a git checkout
+of the ticket's project's repository and git does not ignore it (SEC-6).
+A board shared through git, Dropbox or iCloud gets other people's edits,
+and serve cannot tell `git pull` from a text editor: both are an mtime
+change. Unrestricted, a collaborator's `[x](/Users/me/Documents/statement.pdf)`
+would be copied into the board and published by the next sync.
+
+The repository has to be verified on this machine. The MCP call does not
+help (serve acts on file changes, not calls), and `project.yaml`'s `repos`,
+`config.yaml` and the cwd cache are all inside the synced root, so a
+collaborator could widen any allowlist or switch kept there. Serve
+therefore resolves the linked file's own checkout with `gitinfo` and
+requires that the project records that main checkout and that its name maps
+to the project (PRJ-2, PRJ-3) through `store.FindProject`. A forged repos
+entry for a folder that is not a checkout, or for another repository, fails
+on disk. Gitignored files (local configs and credentials) and files inside
+`.git` are refused, because a repository holds private files git never
+shares. Checkouts on other machines have other paths, so a collaborator's
+links do not resolve here and stay as text; links the user's own serve and
+agents copy are rewritten to `files/` before they sync.
+
+Remaining risk: a collaborator who knows a local repository's path and
+creates a board project of the same name, listing that path, can pull its
+non-ignored files in. The MCP side (`attach`, `checkpoint`,
+`write_review`) is unchanged: its paths come from the user's own agent,
+whose screenshots often sit outside the repository (temporary folders), the
+case REV-5 exists for. Linking a temporary file from a text editor no
+longer copies it.
+
+Options: opt-in `copy_linked_files` (the switch lives in synced config);
+temporary or screenshot folders only (machine-specific, and the editor case
+rarely needs them); images only (a screenshot can be as private as a PDF,
+and any path stays reachable); asking in the UI (a prompt for something
+that can be safe by default); the project's repository (chosen).
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the agent
+protocol is unchanged. Serve now runs `git check-ignore`, the only place
+Flashheart runs git; hooks still run none.
+
 ## 2026-10-08 — D28: A prompt in the asking session answers its questions
 
 Decision (FH-43): when the user prompts the session that asked

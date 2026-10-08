@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The project follows
 
 ## Unreleased
 
+### Security
+
+- `serve` no longer copies any linked local file into a directly edited
+  ticket or review (FH-34, D29). A board synced through git or a sync
+  service could receive a link to a private file on this machine, which
+  the next sync would publish. Serve now copies only files in a git
+  checkout of the ticket's project's repository, verified on disk, that git
+  does not ignore. Links to other files stay as they are and are logged
+  once. Paths given to the MCP tools are copied as before.
+
 ### Fixed
 
 - A question answered in the agent's own chat no longer leaves the session
