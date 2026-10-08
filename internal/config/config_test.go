@@ -84,7 +84,8 @@ ui:
 	want := Defaults()
 	want.QuietMinutes = 5
 	want.UI.Theme = ThemeDark
-	want.UI.VirtualColumns = []string{"needs-you", "agent-working"}
+	// The Agent working column was retired (FH-42); a saved one is dropped.
+	want.UI.VirtualColumns = []string{"needs-you"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Parse() = %+v, want %+v", got, want)
 	}
@@ -116,7 +117,7 @@ func TestParseRejectsInvalidValues(t *testing.T) {
 		{"zero version", "version: 0", "version must be 1 or 2"},
 		{"theme", "ui: {theme: sepia}", `ui.theme "sepia" must be one of system, light, dark`},
 		{"density", "ui: {density: roomy}", `ui.density "roomy" must be one of compact, normal, detailed`},
-		{"virtual column", "ui: {virtual_columns: [blocked]}", `ui.virtual_columns "blocked" must be one of needs-you, agent-working`},
+		{"virtual column", "ui: {virtual_columns: [blocked]}", `ui.virtual_columns "blocked" must be one of needs-you`},
 		{"quiet minutes", "quiet_minutes: 0", "quiet_minutes must be at least 1"},
 		{"retention", "event_retention_days: -1", "event_retention_days must be at least 1"},
 		{"done limit", "done_column_limit: 0", "done_column_limit must be at least 1"},

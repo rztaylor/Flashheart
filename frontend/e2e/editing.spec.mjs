@@ -5,10 +5,13 @@ import { expect, test } from "@playwright/test";
 
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
+  filterButton,
+  filterMenu,
   launch,
   makeSandbox,
   screenshotDir,
   stopIfRunning,
+  viewOption,
   waitForManualURL,
 } from "./support.mjs";
 
@@ -794,20 +797,31 @@ test("independent stations reorder with Shift and an arrow", async () => {
 
 test("preferences are saved through the backend and survive a reload", async () => {
   await open("#/p/flashheart/board");
-  await page
-    .getByRole("combobox", { name: "Colour by" })
-    .selectOption({ label: "Priority" });
-  await page.getByRole("combobox", { name: "Type" }).selectOption("bug");
+  await viewOption(page, "Colour by", "Priority");
+  const types = await filterMenu(page, "Type");
+  await types.getByRole("button", { name: "bug", exact: true }).click();
+  await page.keyboard.press("Escape");
   await expect
     .poll(() =>
       readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
     )
     .toContain("colour_by: priority");
   await page.reload();
-  await expect(page.getByRole("combobox", { name: "Colour by" })).toHaveValue(
-    "priority",
+  await expect
+    .poll(() =>
+      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
+    )
+    .toMatch(/type:\n\s+include: \[bug\]/);
+  await page.getByRole("button", { name: "View options" }).click();
+  await expect(
+    page
+      .getByRole("group", { name: "Colour by" })
+      .getByRole("radio", { name: "Priority" }),
+  ).toBeChecked();
+  await page.keyboard.press("Escape");
+  await expect(filterButton(page, "Type")).toHaveAccessibleName(
+    "Type: 1 chosen",
   );
-  await expect(page.getByRole("combobox", { name: "Type" })).toHaveValue("bug");
   await page.getByRole("button", { name: "Clear filters" }).click();
 });
 
@@ -831,7 +845,9 @@ test("the theme choice is saved", async () => {
 
 test("switching theme keeps the view, filters, open ticket and scroll", async () => {
   await open("#/p/flashheart/table?t=FH-36");
-  await page.getByRole("combobox", { name: "Priority" }).selectOption("high");
+  const priorities = await filterMenu(page, "Priority");
+  await priorities.getByRole("button", { name: "High", exact: true }).click();
+  await page.keyboard.press("Escape");
   const scroller = page.locator("main .overflow-auto").first();
   await scroller.evaluate((element) => {
     element.scrollTop = 40;
@@ -848,8 +864,8 @@ test("switching theme keeps the view, filters, open ticket and scroll", async ()
   await theme.getByText("Dark", { exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   expect(page.url()).toBe(url);
-  await expect(page.getByRole("combobox", { name: "Priority" })).toHaveValue(
-    "high",
+  await expect(filterButton(page, "Priority")).toHaveAccessibleName(
+    "Priority: 1 chosen",
   );
   await expect(
     page.getByRole("complementary", { name: "Ticket FH-36" }),

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -24,8 +25,8 @@ ui:
 	ui.Density = DensityCompact
 	ui.ColourBy = "priority"
 	ui.Scopes = map[string]Scope{
-		"all":        {View: "board", State: "all"},
-		"flashheart": {View: "table", Type: "bug", State: "blocked", HideLater: true},
+		"all":        {View: "board", State: "working"},
+		"flashheart": {View: "table", Type: Choice{Include: []string{"bug", "spike"}}, Workstream: Choice{Exclude: []string{"board-ui"}}, Age: Choice{Include: []string{"today"}}, State: "blocked"},
 	}
 	got, err := SetUI(data, ui)
 	if err != nil {
@@ -69,9 +70,47 @@ func TestUIPreferencesAreValidated(t *testing.T) {
 		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"../x": {View: "board"}}},
 		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {View: "map"}}},
 		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {State: "weird"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Age: Choice{Include: []string{"decade"}}}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Type: Choice{Exclude: []string{strings.Repeat("x", 201)}}}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Priority: Choice{Include: make([]string, 101)}}}},
 	} {
 		if _, err := SetUI(nil, ui); err == nil {
 			t.Errorf("SetUI(%+v) accepted invalid preferences", ui)
 		}
+	}
+}
+
+func TestScopesReadTheSingleValueForm(t *testing.T) {
+	t.Parallel()
+
+	// Before FH-39 a filter was one value, and Hide later a flag.
+	parsed, err := Parse([]byte(`version: 2
+ui:
+  scopes:
+    alpha: {view: board, type: bug, priority: "", state: blocked, hide_later: true}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := Scope{View: "board", Type: Choice{Include: []string{"bug"}}, State: "blocked"}
+	if got := parsed.UI.Scopes["alpha"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("legacy scope = %+v, want %+v", got, want)
+	}
+}
+
+func TestChoiceJSONHasLists(t *testing.T) {
+	t.Parallel()
+
+	data, err := json.Marshal(Scope{View: "board", Type: Choice{Include: []string{"bug"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"type":{"include":["bug"],"exclude":[]}`, `"priority":{"include":[],"exclude":[]}`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("JSON %s lacks %s", data, want)
+		}
+	}
+	if strings.Contains(string(data), "hideLater") {
+		t.Errorf("JSON %s still carries hideLater", data)
 	}
 }

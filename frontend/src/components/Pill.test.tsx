@@ -31,7 +31,7 @@ describe("BlockerPill", () => {
 describe("Tag", () => {
   it("fills a painted tag with its paint and names the value", () => {
     const markup = renderToStaticMarkup(
-      <Tag paint={{ token: "type-bug", label: "bug" }}>bug</Tag>,
+      <Tag paint={{ token: "type-bug", label: "bug", value: "bug" }}>bug</Tag>,
     );
     expect(markup).toContain("--paint:var(--fh-paint-type-bug)");
     expect(markup).toContain(">bug</span>");

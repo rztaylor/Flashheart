@@ -4,10 +4,13 @@ import { expect, test } from "@playwright/test";
 
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
+  filterButton,
+  filterMenu,
   launch,
   makeSandbox,
   screenshotDir,
   stopIfRunning,
+  viewOption,
   waitForManualURL,
 } from "./support.mjs";
 
@@ -59,9 +62,7 @@ function column(page, name) {
 }
 
 async function colourBy(page, option) {
-  await page.getByRole("combobox", { name: "Colour by" }).selectOption({
-    label: option,
-  });
+  await viewOption(page, "Colour by", option);
 }
 
 function card(page, title) {
@@ -430,7 +431,7 @@ test("cards are coloured by type, priority, age or not at all", async () => {
   await expect(locked).toHaveAttribute("data-paint", "type-feature");
   await expect(focus).toHaveAttribute("data-paint", "type-bug");
   await expect(
-    page.getByRole("list", { name: "Card colours by type" }),
+    page.getByRole("group", { name: "Filter by type" }),
   ).toContainText("bug");
 
   await colourBy(page, "Priority");
@@ -440,7 +441,9 @@ test("cards are coloured by type, priority, age or not at all", async () => {
   await expect(locked).toHaveAttribute("data-paint", "age-today");
   await colourBy(page, "None");
   await expect(locked).not.toHaveAttribute("data-paint");
-  await expect(page.getByRole("list", { name: /Card colours/ })).toHaveCount(0);
+  await expect(
+    page.getByRole("group", { name: /^Filter by (type|priority|age)$/ }),
+  ).toHaveCount(0);
   await colourBy(page, "Type");
 });
 
@@ -465,17 +468,128 @@ test("arrow keys move between cards and filters narrow the board", async () => {
   await expect(page.getByText(/of 50 tickets/)).toBeVisible();
   await expect(card(page, "Opt-in handoff enforcement at Stop")).toBeVisible();
   await page.getByRole("searchbox", { name: "Search tickets" }).fill("");
-  await page.getByRole("combobox", { name: "State" }).selectOption("blocked");
+  const state = await filterMenu(page, "State");
+  await state.getByRole("button", { name: "Blocked", exact: true }).click();
+  await expect(state).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "State: Blocked" }),
+  ).toBeVisible();
   for (const button of await column(page, "Backlog")
     .getByRole("button")
     .all()) {
     await expect(button).toHaveAccessibleName(/blocked/);
   }
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await page.getByRole("button", { name: /Board core/ }).click();
-  await expect(card(page, "Locked atomic ticket writes")).toHaveClass(
-    /opacity-35/,
+});
+
+test("chips and filter menus show only or hide values (FH-39)", async () => {
+  const page = shared;
+  await open(page, "#/p/flashheart/board");
+  const locked = card(page, "Locked atomic ticket writes");
+  const focusRing = card(page, "Focus ring invisible on the dark signage band");
+  const lines = page.getByRole("group", { name: /^Filter by workstream/ });
+  const types = page.getByRole("group", { name: "Filter by type" });
+  const typeButton = filterButton(page, "Type");
+
+  // A workstream chip hides the other tickets, and a second click restores.
+  const boardCore = lines.getByRole("button", { name: /^Board core/ });
+  await boardCore.click();
+  await expect(boardCore).toHaveAttribute("aria-pressed", "true");
+  await expect(locked).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /^Workstream: 1 chosen/ }),
+  ).toBeVisible();
+  await boardCore.click();
+  await expect(locked).toBeVisible();
+
+  // Cmd or Ctrl click hides a value; a click restores it.
+  const editing = lines.getByRole("button", { name: /^Board editing/ });
+  await editing.click({ modifiers: ["ControlOrMeta"] });
+  await expect(editing).toHaveAccessibleName(/, hidden$/);
+  await expect(locked).toHaveCount(0);
+  await expect(focusRing).toBeVisible();
+
+  // The colour key filters too, and the Type menu shows the same choice.
+  const bug = types.getByRole("button", { name: "bug", exact: true });
+  await bug.click();
+  await expect(bug).toHaveAttribute("aria-pressed", "true");
+  await expect(typeButton).toHaveAccessibleName("Type: 1 chosen");
+  await expect(focusRing).toBeVisible();
+  for (const shown of await page.locator("[data-paint]").all())
+    await expect(shown).toHaveAttribute("data-paint", "type-bug");
+
+  for (const theme of ["light", "dark"]) {
+    await open(page, "#/p/flashheart/board", {
+      width: 1440,
+      height: 900,
+      theme,
+    });
+    await shot(page, `board-chips-${theme}`);
+    const menu = await filterMenu(page, "Type");
+    await expect(
+      menu.getByRole("button", { name: "bug", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await shot(page, `board-type-menu-${theme}`);
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+    await expect(typeButton).toBeFocused();
+    await page.getByRole("button", { name: "View options" }).click();
+    await expect(page.getByRole("group", { name: "Colour by" })).toBeVisible();
+    await shot(page, `board-view-options-${theme}`);
+    await expect(
+      page.getByRole("checkbox", { name: "Agent working" }),
+    ).toHaveCount(0);
+    await page.locator("h1").click();
+    const states = await filterMenu(page, "State");
+    await expect(
+      states.getByRole("button", { name: "Agent working" }),
+    ).toBeVisible();
+    await shot(page, `board-state-menu-${theme}`);
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "View options" }).click();
+    // A click outside closes a menu.
+    await page.locator("h1").click();
+    await expect(page.getByRole("group", { name: "Colour by" })).toHaveCount(0);
+  }
+
+  // A menu item toggles as its chip does, by mouse or by keyboard.
+  const menu = await filterMenu(page, "Type");
+  await menu.getByRole("button", { name: "bug", exact: true }).click();
+  await expect(bug).toHaveAttribute("aria-pressed", "false");
+  await menu.getByRole("button", { name: "feature", exact: true }).focus();
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(
+    types.getByRole("button", { name: "feature, hidden" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Clear filters resets chips and menus alike.
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(locked).toBeVisible();
+  await expect(typeButton).toHaveAccessibleName("Type");
+  await expect(lines.getByRole("button", { name: /, hidden$/ })).toHaveCount(0);
+
+  // The chip row never wraps: chips that do not fit leave the row, colour
+  // chips before workstreams.
+  await open(page, "#/p/flashheart/board", { width: 900, height: 900 });
+  const shownChips = (group) =>
+    group
+      .getByRole("button", { includeHidden: true })
+      .evaluateAll((nodes) =>
+        nodes
+          .filter((node) => getComputedStyle(node).visibility !== "hidden")
+          .map((node) => Math.round(node.getBoundingClientRect().top)),
+      );
+  const lineTops = await shownChips(lines);
+  const typeTops = await shownChips(types);
+  expect(lineTops.length).toBe(
+    await lines.getByRole("button", { includeHidden: true }).count(),
   );
+  expect(typeTops.length).toBeLessThan(
+    await types.getByRole("button", { includeHidden: true }).count(),
+  );
+  expect(new Set([...lineTops, ...typeTops]).size).toBe(1);
+  await expectNoAxeViolations(page, "board chips");
 });
 
 test("workstreams draw as lines with stations", async () => {
@@ -523,7 +637,10 @@ test("workstreams draw as lines with stations", async () => {
 test("table sorts and opens tickets", async () => {
   const page = shared;
   await open(page, "#/p/flashheart/table");
-  await page.getByRole("button", { name: "Priority" }).click();
+  await page
+    .getByRole("table")
+    .getByRole("button", { name: "Priority" })
+    .click();
   await expect(
     page.getByRole("columnheader", { name: "Priority" }),
   ).toHaveAttribute("aria-sort", "ascending");
@@ -602,10 +719,10 @@ for (const theme of ["light", "dark"]) {
       theme,
     });
     for (const density of ["Compact", "Detailed"]) {
-      await page.getByText(density, { exact: true }).click();
+      await viewOption(page, "Density", density);
       await shot(page, `board-${density.toLowerCase()}-${theme}`);
     }
-    await page.getByText("Normal", { exact: true }).click();
+    await viewOption(page, "Density", "Normal");
     await open(page, "#/p/flashheart/board", {
       width: 390,
       height: 844,
@@ -668,9 +785,9 @@ test("marginal remarks: one per screen, only in quiet states, and stable", async
   await expect(empty).toBeVisible();
   await expect(asides).toHaveCount(1);
   const first = await asides.textContent();
-  await page.getByText("Compact", { exact: true }).click();
+  await viewOption(page, "Density", "Compact");
   await page.waitForTimeout(1500);
-  await page.getByText("Normal", { exact: true }).click();
+  await viewOption(page, "Density", "Normal");
   expect(await asides.textContent()).toBe(first);
   // Remarks never sit in alerts, blockers or controls.
   await expect(page.locator("[role=alert] [data-aside]")).toHaveCount(0);

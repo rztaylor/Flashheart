@@ -42,10 +42,12 @@ describe("paintFor", () => {
     expect(paintFor(card({ type: "bug" }), "type", now)).toEqual({
       token: "type-bug",
       label: "bug",
+      value: "bug",
     });
     expect(paintFor(card({ type: "chore" }), "type", now)).toEqual({
       token: "type-other",
       label: "chore",
+      value: "chore",
     });
     expect(paintFor(card({ type: "" }), "type", now)).toBeUndefined();
   });
@@ -54,6 +56,7 @@ describe("paintFor", () => {
     expect(paintFor(card({ priority: "high" }), "priority", now)).toEqual({
       token: "priority-high",
       label: "High",
+      value: "high",
     });
     expect(paintFor(card({ priority: "" }), "priority", now)).toBeUndefined();
   });
@@ -61,6 +64,7 @@ describe("paintFor", () => {
   it("colours by age since the ticket last changed", () => {
     const at = (iso: string) => paintFor(card({ modified: iso }), "age", now);
     expect(at("2026-10-05T02:00:00Z")?.label).toBe("Today");
+    expect(at("2026-10-05T02:00:00Z")?.value).toBe("today");
     expect(at("2026-10-01T12:00:00Z")?.label).toBe("This week");
     expect(at("2026-09-20T12:00:00Z")?.label).toBe("Older");
     expect(at("")).toBeUndefined();

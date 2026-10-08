@@ -8,22 +8,31 @@ describe("remembered scopes", () => {
     const filters = {
       ...emptyFilters,
       query: "handoff",
-      type: "bug",
+      type: { include: ["bug", "spike"], exclude: [] },
+      workstream: { include: [], exclude: ["board-ui"] },
       state: "blocked" as const,
-      hideLater: true,
     };
     const saved = rememberScope(filters, "table");
     expect(saved).toEqual({
       view: "table",
-      type: "bug",
-      priority: "",
-      workstream: "",
+      type: { include: ["bug", "spike"], exclude: [] },
+      priority: { include: [], exclude: [] },
+      workstream: { include: [], exclude: ["board-ui"] },
+      age: { include: [], exclude: [] },
       state: "blocked",
-      hideLater: true,
     });
     expect(filtersFor(saved, "kept")).toEqual({ ...filters, query: "kept" });
     expect(filtersFor(undefined)).toEqual(emptyFilters);
     expect(sameScope(saved, rememberScope(filters, "table"))).toBe(true);
     expect(sameScope(saved, rememberScope(filters, "board"))).toBe(false);
+    expect(
+      sameScope(
+        saved,
+        rememberScope(
+          { ...filters, type: { include: ["bug"], exclude: [] } },
+          "table",
+        ),
+      ),
+    ).toBe(false);
   });
 });

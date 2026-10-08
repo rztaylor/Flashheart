@@ -389,3 +389,20 @@ reasons lose the "Comes after … in workstream …" text, which no tool
 contract names. Existing workstreams change meaning, which the user
 accepted: a chain that relied on list order needs `depends-on` on its
 tickets.
+
+## 2026-10-07 — D27: Agent working is a filter, not a column
+
+Decision (FH-42, user): the Agent working virtual column is retired. A
+ticket mirrored in Agent working while it sat in In progress read as being
+in two states at once. The card already carries the Working mark, and the
+State filter gains an *Agent working* option (tickets linked to a Working or
+Quiet run). Needs you stays the one mirrored column, because it is a to-do
+for the user rather than a status (VIEW-2).
+
+Options: keep both mirrored columns; drop both and filter instead; group
+working cards at the top of In progress. The user chose to drop Agent
+working only.
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
+`agentWorking` field is unchanged. A saved `virtual_columns` entry
+`agent-working` is dropped on load rather than refused.

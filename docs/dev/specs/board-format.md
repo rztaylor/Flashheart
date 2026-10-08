@@ -308,10 +308,15 @@ ui:
   theme: system           # system | light | dark
   density: normal         # compact | normal | detailed
   colour_by: type         # type | priority | age | none
-  virtual_columns: [needs-you]   # needs-you, agent-working; [] shows none
+  virtual_columns: [needs-you]   # needs-you; [] shows none (agent-working is ignored)
   scopes:                 # remembered view and filters, per project or "all"
-    flashheart: {view: board, type: bug, state: blocked, hide_later: true}   # view: board, agents, workstreams or table
+    flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked}   # view: board, agents, workstreams or table
 ```
+
+Each of a scope's `type`, `priority`, `workstream` and `age` (today, week or
+older) filters lists the values shown only (`include`, any of them) and the
+values hidden (`exclude`), at most 100 each. A bare value, the form before
+FH-39, reads as one included value; `hide_later` is ignored.
 
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
 other settings, unknown keys and comments.

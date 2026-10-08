@@ -529,6 +529,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 - **Card** (`--fh-shadow-card`): cards, chips, badges, secondary buttons, route cards, the table.
 - **Card hover** (`--fh-shadow-card-hover`): hovered and selected cards, dialogs, toasts.
 - **Panel** (`--fh-shadow-panel`): the card panel's left edge.
+- **Popover** (`--fh-shadow-popover`): filter and View options menus, on the `popover` surface (white in light, `#2c2c2f` in dark, a step above the cards) with a hairline edge ring, so they lift clear of the board.
 - **Selection ring** (`0 0 0 1px` select over card hover): the selected card.
 - **Station halo** (`0 0 0 3–4px` route surface): clears the track around stations.
 
@@ -573,7 +574,10 @@ A rounded card washed with 7% of its line colour in light (plain card in dark), 
 Twelve-unit SVG marks in currentColor beside their words: Needs you a disc (on the attention plate), Working a ring around a beating dot, Quiet a ring with a still dot, Waiting an open ring, Ended a terminus bar. The Working dot beats (1.8s) only on the map and never under reduced motion.
 
 ### Inputs
-Selects 32px, card surface, rule border, chevron; an applied filter gains a select border and ring; Colour by stays plain. Checkboxes take the select accent. Search in the band is a band-field well with a band-rule border.
+Selects 32px, card surface, rule border, chevron. Toolbar filters are 32px buttons of the same look named for their filter; an applied one gains a select border and ring and a count badge, and opens a popover list (check for shown only, a cross and strike for hidden). Checkboxes take the select accent. Search in the band is a band-field well with a band-rule border.
+
+### Filter Chips
+One chip for workstreams and Colour by values alike: a pill with a 20px round bullet (the line bullet, or the value's paint) and the name, card surface and shadow. Shown only takes the select border and ring; hidden is dashed, faint and struck through.
 
 ## Do's and Don'ts
 

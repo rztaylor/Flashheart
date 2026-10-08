@@ -128,16 +128,17 @@ describe("TransitLine track", () => {
     expect(graph.indexOf('data-station="FH-6"')).toBeGreaterThan(
       graph.indexOf('data-station="FH-5"'),
     );
-    expect(graph).toContain("No dependencies on this line");
+    expect(graph).not.toContain("No dependencies on this line");
+    expect(graph).toContain("<hr");
   });
 });
 
 describe("TransitLine with no links", () => {
   const markup = render([ticket("FH-1", "done"), ticket("FH-2", "backlog")]);
 
-  it("draws stations without track or a caption", () => {
+  it("draws stations without track or a separator", () => {
     expect(markup).not.toContain("data-track");
-    expect(markup).not.toContain("No dependencies on this line");
+    expect(markup).not.toContain("<hr");
     expect(stationIn(markup, "FH-2")).toContain('data-station-state="next"');
   });
 });

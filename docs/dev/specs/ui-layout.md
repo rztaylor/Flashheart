@@ -57,17 +57,32 @@ the board icon in the all scope), then one quiet summary line for the view:
 | Workstreams | `N workstreams` and `d of t stations served` |
 | Table | as Board |
 
-**View toolbar** (Board and Table), one wrapping row: New ticket (primary),
-then the filters Type, Priority, Workstream, State, Hide later and Clear
-filters (only while a filter is set); right-aligned, Board only: Show
-(Needs you, Agent working), Colour by and Density. Filters stay inline
-selects; there is no filter popover.
+The header's far end holds *Archive* and, on Board and Table, **New ticket**
+(primary) (FH-39).
 
-**Workstream strip** (Board, one project in scope): the label *Workstreams*,
-then one chip per workstream (bullet, name, done/total) that dims every other
-line's cards when pressed; the colour key for the current Colour by sits
-right-aligned on the same strip. Hidden when the project has no workstreams
-and Colour by is None.
+**View toolbar** (Board and Table), one row (wrapping only on a phone): one
+button per filter, named for what it filters with no separate label, Type,
+Priority, Workstream and State, then *Clear filters* while any filter or chip
+applies; right-aligned, Board only, one icon button, *View options* (⋯),
+whose menu holds Show columns (Needs you), Colour by and
+Density (FH-39). An applied filter's button takes the select border and ring
+and a count badge (*State: Blocked* for the one-choice State). Type,
+Priority and Workstream open a list of values that toggle as chips do: a
+click shows only that value (with any others shown), a Cmd click (Ctrl off
+macOS) or Cmd/Ctrl with Enter hides it, struck through, and a click on a
+chosen value restores it; values of one filter match any, filters combine.
+Menus open below their button on the lifted popover surface and close on
+Escape (focus returns to the button), a click outside or tabbing away.
+
+**Chip row** (Board): on the left the label *Workstreams* and one chip per
+workstream of the project in scope (bullet and name), busiest first (most
+tickets neither done nor in the backlog), finished workstreams left out
+unless chosen; right-aligned, one chip per Colour by value present (a round
+paint bullet and the value's word). Both are filters with the menus' click
+rules: a shown-only chip takes the selection ring, a hidden one is dashed and
+struck through. The row never wraps: chips that do not fit stay out of view,
+colour chips before workstreams; the menus list every value. Hidden when
+there are neither workstream chips nor colour chips.
 
 **Panel** beside the main view at clamp(26rem, 32vw, 35rem), narrowing it
 (`CARD-1`); it covers the view below the band under 48rem.
@@ -78,9 +93,10 @@ load) sit as a full-width strip under the band, above the rail and Main.
 ## 2. Board
 
 - Columns in workflow order: Backlog, Up next, In progress, Ready to review,
-  Done (`VIEW-1`). Needs you and Agent working stand between In progress and
-  Ready to review while they hold tickets and are switched on (`VIEW-2`);
-  they hold mirrored cards and never accept a drop.
+  Done (`VIEW-1`). Needs you stands between In progress and Ready to review
+  while it holds tickets and is switched on (`VIEW-2`); it holds mirrored
+  cards and never accepts a drop. Agent working is a State filter option
+  (*State: Agent working*), not a column (FH-42).
 - A column is a rounded well. Its head: count badge, then the title in the
   display cut (virtual columns add their run mark). Done reads `n of N`
   while the done limit hides tickets, with *Show all N* / *Show recent only*
@@ -199,8 +215,8 @@ reorders them.
   colour at 35%; only suspended service is dashed (unmet workstream
   dependency, or a station held from outside the line), with dashes kept in
   step where tracks share a stretch.
-- Tickets with no links on the line follow below the graph, under *No
-  dependencies on this line* when there is a graph, wrapping onto rows.
+- Tickets with no links on the line follow below the graph, set off by a
+  faint rule when there is a graph, wrapping onto rows.
   Shift with Left/Right or drag reorders them (`EDIT-4`).
 
 ## 5. Agents
@@ -216,7 +232,7 @@ activity. Older ended runs sit behind *Show older ended runs*.
 
 ## 6. Table
 
-Page header and view toolbar (no Colour by, Density or Show); then the table
+Page header and view toolbar (no View options or chip row); then the table
 on a rounded surface with a sticky head: Ticket (title over id), Project (all
 scope), Status (status pill), Type (tag), Priority (tag), Workstream (bullet
 and name), State (blocker pill, repair mark, live mark), Criteria, Changed.
@@ -233,7 +249,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | Action | The primary action | Primary button | Its label |
 | Attention | A run or question that needs the user | Needs you plate (band, rail, card, lane, panel) | Disc mark and words |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
-| Paint | The Colour by value | Card header tint, filled tag, colour key | The value's word |
+| Paint | The Colour by value | Card header tint, filled tag, colour chip bullet | The value's word |
 | State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green | Icon and column word |
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
@@ -306,11 +322,11 @@ other than the above, the above wins:
   them under it); the backend status stays in the band rather than the rail
   footer, so it shows at every width and with the rail collapsed.
 - **Omissions the references do not show but the product keeps**: project
-  route bars and counts in the rail, the filter selects, Hide later, the
-  ticket count, virtual columns and their toggles, the colour key, mirrored
+  route bars and counts in the rail, the filter buttons, the
+  ticket count, virtual columns and their toggles, the colour chips, mirrored
   cards, repair, wait notes, the project name on All-projects cards,
   attachments and review markers, Archive, the Edit and Runs tabs' content,
   the board root and version, Agents and Table.
 - **Additions the references show but the product does not have**: a card
-  overflow menu, a ⌘K search shortcut, a filters popover, workstream
+  overflow menu, a ⌘K search shortcut, a single filters popover, workstream
   descriptions and a ticket details list. None are added by this rollout.

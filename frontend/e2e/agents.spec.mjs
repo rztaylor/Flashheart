@@ -5,6 +5,8 @@ import { expect, test } from "@playwright/test";
 
 import { callTool, IDLE_SESSION, promptHook, seedRuns } from "./agent-runs.mjs";
 import {
+  filterButton,
+  filterMenu,
   launch,
   makeSandbox,
   screenshotDir,
@@ -174,13 +176,28 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
       .first(),
   ).toBeFocused();
 
-  // Virtual columns appear only while they hold tickets, and can be hidden.
+  // Needs you is the one virtual column, and can be hidden; Agent working is
+  // a State filter, never a column (FH-42).
   await expect(
     page.getByRole("region", { name: /^Agent working/ }),
+  ).toHaveCount(0);
+  const state = await filterMenu(page, "State");
+  await state.getByRole("button", { name: "Agent working" }).click();
+  await expect(filterButton(page, "State")).toHaveAccessibleName(
+    "State: Agent working",
+  );
+  // AL-3's run waits on a permission; it is not at work.
+  await expect(real).toHaveCount(0);
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(real).toBeVisible();
+  await page.getByRole("button", { name: "View options" }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "Agent working" }),
   ).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Needs you" }).uncheck();
   await expect(needsColumn).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Needs you" }).check();
+  await page.keyboard.press("Escape");
   await expect(mirror).toBeVisible();
   // Turning it back on shows it again.
   await expect(needsColumn.getByRole("heading")).toBeInViewport();

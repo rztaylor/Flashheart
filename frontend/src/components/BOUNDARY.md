@@ -4,7 +4,9 @@ Owns shared, product-neutral UI primitives on the semantic roles of
 `docs/dev/specs/ui-layout.md`: `Button`, `Icon` (authored set), `LineBullet`,
 `Pill` (status, blocker and attribute tags), `ColumnWell` (the board column
 and Agents lane surface with its head), `KeyBadge`, `StateNote`, `Tabs`,
-`SidePanel`, `SegmentedControl`, fields and form fields, `Dialog`, `Toast`,
+`SidePanel`, `SegmentedControl`, fields and form fields, `Popover` (a
+disclosure menu on the lifted popover surface), `FilterChip` (the one
+filter chip: show only, Cmd or Ctrl click to hide), `Dialog`, `Toast`,
 `Markdown` (block or one inline line), `Lightbox` (one image of a set in a
 dialog), `RouteBar`, `EmptyState`, `RunState` (run state as a mark and
 words, Needs you as the attention plate),

@@ -139,19 +139,30 @@ describe("run validators", () => {
       false,
     );
     expect(
+      isPreferences({ ...preferences, virtualColumns: ["agent-working"] }),
+    ).toBe(false);
+    expect(
       isPreferences({
         ...preferences,
         scopes: {
           alpha: {
             view: "agents",
-            type: "",
-            priority: "",
-            workstream: "",
-            state: "",
-            hideLater: false,
+            type: { include: [], exclude: [] },
+            priority: { include: ["high"], exclude: [] },
+            workstream: { include: [], exclude: ["board-ui"] },
+            age: { include: [], exclude: [] },
+            state: "working",
           },
         },
       }),
     ).toBe(true);
+    // Filters are lists since FH-39; the single-value form is read only by
+    // the server.
+    expect(
+      isPreferences({
+        ...preferences,
+        scopes: { alpha: { view: "board", type: "bug", state: "" } },
+      }),
+    ).toBe(false);
   });
 });

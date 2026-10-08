@@ -52,7 +52,7 @@ function chroma(hex: string): number {
   return Math.hypot(A, B);
 }
 
-const surfaces = ["ground", "card", "column", "well", "panel"];
+const surfaces = ["ground", "card", "column", "well", "panel", "popover"];
 const text: [string, string, number][] = [
   ...["ink", "ink-muted", "ink-faint"].flatMap((ink) =>
     surfaces.map((surface): [string, string, number] => [ink, surface, 4.5]),
@@ -131,6 +131,7 @@ describe("dark palette", () => {
     "column",
     "well",
     "panel",
+    "popover",
     "rule",
     "band",
     "band-field",

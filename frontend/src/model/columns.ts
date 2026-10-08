@@ -1,6 +1,7 @@
 // Virtual columns (VIEW-2): computed columns that mirror tickets from their
-// real columns while an agent run needs the user or is working on them. They
-// stand between In progress and Ready to review.
+// real columns while an agent run needs the user. They stand between In
+// progress and Ready to review. Agent working is a State filter instead, so
+// a working ticket shows once, in its own column (FH-42).
 import type { Card } from "../api/board";
 import type { VirtualColumn } from "../api/preferences";
 
@@ -15,12 +16,6 @@ export const VIRTUAL_COLUMNS: {
     title: "Needs you",
     empty: "Nothing needs you",
     holds: (card) => card.needsYou,
-  },
-  {
-    id: "agent-working",
-    title: "Agent working",
-    empty: "No agent at work",
-    holds: (card) => card.agentWorking,
   },
 ];
 
