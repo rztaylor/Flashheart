@@ -50,6 +50,16 @@ func (srv *server) connection(session *mcp.ServerSession) *conn {
 		cn.agent = agentName(params.ClientInfo.Name)
 	}
 	srv.conns[session] = cn
+	// Closing the connection ends the session, so it ends the run the
+	// server started for it, if any; a server that dies leaves that to the
+	// stale rule. The connection is first seen in a tool call, which ends
+	// before the session's Wait returns, so Serve waits for this too.
+	srv.ending.Add(1)
+	go func() {
+		defer srv.ending.Done()
+		_ = session.Wait()
+		srv.disconnected(cn)
+	}()
 	return cn
 }
 
@@ -91,22 +101,29 @@ func (cn *conn) current() (run, project string) {
 	return cn.run, cn.project
 }
 
-// own attributes a call no other run claims to its connection's run, and
-// for a write that finds none, starts one: `<agent>:mcp-<random>` in the
-// caller's project, with source mcp. A run found from hooks, or named by
-// the run argument, always wins (agent-protocol §7.1).
+// own starts a run for a write whose connection has none and finds no
+// hook run: `<agent>:mcp-<random>` in the caller's project, with source
+// mcp. A run found from hooks, or named by the run argument, always wins,
+// and a live hook session of the caller's agent in this worktree on
+// another branch keeps one from starting (agent-protocol §7.1). A started
+// run that finds its agent on another branch records it, as a hook run's
+// next prompt would.
 func (c *call) own(inv *invocation, write bool) error {
-	if inv == nil || inv.conn == nil || c.run != "" || len(c.candidates) > 0 {
+	if c.started {
+		return c.followBranch()
+	}
+	if inv == nil || inv.conn == nil || c.run != "" || len(c.candidates)+len(c.nearby) > 0 {
+		return nil
+	}
+	if !write || c.project == "" || c.archived != "" {
 		return nil
 	}
 	cn := inv.conn
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
 	if cn.run != "" {
-		c.run = cn.run
-		return nil
-	}
-	if !write || c.project == "" || c.archived != "" {
+		// Another call of this connection started it meanwhile.
+		c.run, c.started = cn.run, true
 		return nil
 	}
 	random := make([]byte, 6)
@@ -116,26 +133,36 @@ func (c *call) own(inv *invocation, write bool) error {
 		agent = "agent"
 	}
 	c.run = agent + ":mcp-" + hex.EncodeToString(random)
-	started := events.Event{Kind: events.RunStart, Data: events.RunStartData{
-		Kind: events.KindSession, Cwd: c.srv.options.Cwd, Branch: c.where.Branch, Worktree: c.where.Worktree, Source: events.SourceMCP,
-	}}
-	list := []events.Event{started}
-	if err := c.record(c.project, list...); err != nil {
+	if err := c.recordStart(c.project); err != nil {
 		c.run = ""
+		return err
+	}
+	c.started = true
+	cn.run, cn.project = c.run, c.project
+	return nil
+}
+
+// recordStart records the started run's run.start where it works now.
+func (c *call) recordStart(project string) error {
+	list := []events.Event{{Kind: events.RunStart, Data: events.RunStartData{
+		Kind: events.KindSession, Cwd: c.srv.options.Cwd, Branch: c.where.Branch, Worktree: c.where.Worktree, Source: events.SourceMCP,
+	}}}
+	if err := c.record(project, list...); err != nil {
 		return err
 	}
 	c.seen = append(c.seen, list[0])
 	c.set.Apply(list[0])
-	cn.run, cn.project = c.run, c.project
-	// Closing the connection ends the session, so it ends the run; a
-	// server that dies leaves it to the stale rule.
-	c.srv.ending.Add(1)
-	go func() {
-		defer c.srv.ending.Done()
-		_ = cn.session.Wait()
-		c.srv.disconnected(cn)
-	}()
 	return nil
+}
+
+// followBranch restates a started run's run.start when its agent has
+// switched branches, so its link (RUN-5), handoff and Agents row follow.
+func (c *call) followBranch() error {
+	r := c.set.Get(c.run)
+	if c.where.Branch == "" || r == nil || r.Branch == c.where.Branch || r.Project == "" {
+		return nil
+	}
+	return c.recordStart(r.Project)
 }
 
 // disconnected ends a closed connection's run (run.end, reason
@@ -163,7 +190,7 @@ func (srv *server) called(inv *invocation, ok bool) string {
 		return ""
 	}
 	run, project := inv.conn.current()
-	if run == "" || inv.run != "" && inv.run != run {
+	if run == "" || inv.run != run {
 		return ""
 	}
 	now := srv.options.Now().UTC()
@@ -175,12 +202,8 @@ func (srv *server) called(inv *invocation, ok bool) string {
 	if err != nil || len(waiting) == 0 {
 		return ""
 	}
-	answers := make([]protocol.Answer, 0, len(waiting))
-	for _, d := range waiting {
-		answers = append(answers, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
-	}
 	// Taken from the inbox, they are shown even if marking them fails;
 	// board_context would then show them again.
 	_ = srv.log.MarkDelivered(project, waiting, now)
-	return "\n" + protocol.AnswersNote(answers)
+	return "\n" + protocol.AnswersNote(answersOf(waiting))
 }

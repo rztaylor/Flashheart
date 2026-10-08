@@ -279,18 +279,20 @@ Every tool accepts an optional `run` argument. The server resolves the caller:
 
 1. `run` argument present (stamped by the `PreToolUse` hook where the agent
    supports input rewriting, or copied by the model from the recovery note);
-2. else the single session of the caller's agent (named by the client at
+2. else the run this server started for the connection (below): one server
+   serves one session, so it stays the caller for the connection's life;
+3. else the single session of the caller's agent (named by the client at
    initialize, §2; any agent's when the client gives no name) that is not
-   Ended, was not started by an MCP server, and
-   works in the worktree and branch of the server's working directory:
-   `CLAUDE_PROJECT_DIR` when the agent sets it (Claude Code starts
-   user-scope MCP servers in `~/.claude`, not the project), else the
-   process's directory;
-3. else the run this server started for the connection (below);
-4. else, for a write, a run the server starts for the connection now; a
-   read starts none;
-5. several sessions in step 2 → error `ambiguous_run` listing candidates and
-   saying to pass `run`.
+   Ended, was not started by an MCP server, and works in the worktree and
+   branch of the server's working directory: `CLAUDE_PROJECT_DIR` when the
+   agent sets it (Claude Code starts user-scope MCP servers in `~/.claude`,
+   not the project), else the process's directory;
+4. several such sessions, or none on this branch while one of the caller's
+   agent works in this worktree on another (its hooks have not yet seen a
+   branch switch) → error `ambiguous_run` listing them and saying to pass
+   `run`;
+5. else, for a write, a run the server starts for the connection now; a
+   read starts none.
 
 **Runs the server starts.** One MCP server process serves one agent
 session over stdio and is closed when the session ends, so a connection is
@@ -299,7 +301,10 @@ connection: `run.start` with id `<agent>:mcp-<random>` (§2), `kind:
 session`, the working directory, branch and worktree above, and `source:
 mcp`, recorded in the caller's project. A run found from hooks, or named by
 `run`, always wins; a started run is never another connection's caller, so
-two connections in one worktree get two runs. Each tool call the
+two connections in one worktree get two runs. When the connection's agent
+has switched branches since, the server records `run.start` again with the
+new branch, as a hook run's next prompt would, so the run's link and
+handoff follow it. Each tool call the
 connection's run makes, read or write, is recorded as `tool.used` (`tool`
 the Flashheart tool's name, `ok`), so its claim's lease is renewed (§6);
 answers waiting in its inbox are appended to that call's result as the

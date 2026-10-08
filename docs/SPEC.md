@@ -391,8 +391,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   the recovery note, else the unique live session of the same agent in the
   worktree and branch the agent works in (`CLAUDE_PROJECT_DIR` or the
   server's working directory), else a run the server starts for its
-  connection on the first write (`RUN-1`); answers to that run arrive with
-  its next tool result. Ambiguity is an error that names the fix.
+  connection on the first write (`RUN-1`), which stays the connection's
+  caller; answers to that run arrive with its next tool result. Ambiguity is an error that names the fix.
 - `MCP-5` Calls are idempotent where it makes sense (claiming a ticket you
   hold, writing the same checkpoint) and validate inputs with clear,
   actionable errors.

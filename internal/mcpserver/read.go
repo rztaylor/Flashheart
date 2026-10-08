@@ -183,14 +183,19 @@ func (c *call) deliverAnswers() ([]protocol.Answer, error) {
 			waiting = append(waiting, events.Delivery{ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Answer: q.Answer, By: q.AnsweredBy})
 		}
 	}
-	var answers []protocol.Answer
-	for _, d := range waiting {
-		answers = append(answers, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
-	}
 	if err := c.srv.log.MarkDelivered(c.project, waiting, c.now); err != nil {
 		return nil, err
 	}
-	return answers, nil
+	return answersOf(waiting), nil
+}
+
+// answersOf is what the model is shown of delivered answers.
+func answersOf(list []events.Delivery) []protocol.Answer {
+	answers := make([]protocol.Answer, 0, len(list))
+	for _, d := range list {
+		answers = append(answers, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
+	}
+	return answers
 }
 
 func handoffLines(markdown string, limit int, text func(string) string) []string {

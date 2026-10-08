@@ -501,8 +501,12 @@ Every Flashheart tool call it makes, reads included, is recorded as
 the stale rule. Answers waiting for it are appended to its next tool result
 and marked delivered, standing in for the prompt hook; `board_context`
 stands in for the recovery note. Hooks stay the deterministic layer: a run
-found from hooks, or named by `run`, always wins, and the server's own runs
-are never another connection's caller. The caller's agent comes from the
+found from hooks, or named by `run`, always wins: no run starts while a
+live hook session of the caller's agent works in the worktree, even on
+another branch (an unreported branch switch), and the call asks for `run`
+instead. Once started, the connection's run is its caller for the
+connection's life, never another connection's, and follows the agent's
+branch. The caller's agent comes from the
 client's `clientInfo` name, so a Codex session without hooks is not taken
 for a Claude Code session working in the same worktree.
 

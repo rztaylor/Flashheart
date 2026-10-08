@@ -30,6 +30,7 @@ type env struct {
 	now    time.Time
 	client *mcp.ClientSession
 	server *mcp.Server
+	srv    *server
 }
 
 func newEnv(t testing.TB, key string) *env {
@@ -87,7 +88,7 @@ func (e *env) dial(name string) *mcp.ClientSession {
 		if err != nil {
 			e.t.Fatal(err)
 		}
-		e.server = server
+		e.server, e.srv = server, srv
 		// Runs after the connections close: their runs' ends are written
 		// before the board's directory is removed.
 		e.t.Cleanup(srv.ending.Wait)

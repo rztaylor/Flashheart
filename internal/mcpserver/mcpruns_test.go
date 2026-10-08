@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -16,13 +17,15 @@ import (
 // codexClient is the name Codex gives its MCP client at initialize.
 const codexClient = "codex-mcp-client"
 
-// started lists the runs the server started (run.start with source mcp).
+// started lists the runs the server started by their first run.start
+// with source mcp.
 func (e *env) started() []events.Event {
 	e.t.Helper()
 	var list []events.Event
 	for _, ev := range e.log() {
 		var data events.RunStartData
-		if ev.Kind == events.RunStart && ev.Decode(&data) == nil && data.Source == events.SourceMCP {
+		if ev.Kind == events.RunStart && ev.Decode(&data) == nil && data.Source == events.SourceMCP &&
+			!slices.ContainsFunc(list, func(seen events.Event) bool { return seen.Run == ev.Run }) {
 			list = append(list, ev)
 		}
 	}
@@ -124,10 +127,83 @@ func TestAHookRunWinsOverStartingOne(t *testing.T) {
 	if r := e.fold().Get(session); r.Claim != first {
 		t.Fatalf("the hook run's claim = %q", r.Claim)
 	}
-	// The stamped run argument wins too.
+	// The stamped run argument wins too, and is not the started run's
+	// activity.
 	e.okOn(codex, "update_ticket", map[string]any{"ticket": first, "run": session, "append_notes": "Checked."})
 	if len(e.started()) != 1 {
 		t.Fatal("a call naming its run started another")
+	}
+	contains(t, e.file(first), "claude:5b0c7e2a: Checked.")
+	last := e.log()[len(e.log())-1]
+	if last.Run != session || last.Kind != events.TicketUpdated {
+		t.Fatalf("last event = %+v", last)
+	}
+}
+
+// codexSession records a live Codex session from hooks in the checkout,
+// on branch.
+func (e *env) codexSession(run, branch string) {
+	e.t.Helper()
+	data := events.RunStartData{Kind: events.KindSession, Cwd: e.cwd, Branch: branch, Worktree: e.cwd, Source: "startup"}
+	if err := events.New(e.store).Append(events.Event{Time: e.now, Run: run, Agent: "codex", Kind: events.RunStart, Project: "demo", Data: data}); err != nil {
+		e.t.Fatal(err)
+	}
+}
+
+// A connection keeps the run it started: a hook session that shows up in
+// the worktree later is another session (one server serves one session).
+func TestAConnectionKeepsItsRunWhenAHookSessionAppears(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel"})
+	codex := e.dial(codexClient)
+	e.okOn(codex, "claim", map[string]any{"ticket": id})
+	run := e.started()[0].Run
+	e.codexSession("codex:019a0000-hooks", "feature/demo")
+	contains(t, e.okOn(codex, "checkpoint", map[string]any{"ticket": id, "done": []string{"Panel"}, "next": []string{"Tests"}}), "by="+run[:len("codex:mcp-0123")])
+	if r := e.fold().Get(run); r.Claim != id {
+		t.Fatalf("the started run's claim = %q", r.Claim)
+	}
+}
+
+// A live hook session of the caller's agent in this worktree, on another
+// branch than the server reads (the agent switched branches mid-turn), is
+// the caller's run, not a reason to start one: the write asks for run.
+func TestNoRunStartsBesideAHookSessionOnAnotherBranch(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel"})
+	e.codexSession("codex:019a0000-hooks", "main")
+	codex := e.dial(codexClient)
+	out, failed := e.callOn(codex, "claim", map[string]any{"ticket": id})
+	if !failed || !strings.HasPrefix(out, "error ambiguous_run:") || !strings.Contains(out, "codex:019a0000") {
+		t.Fatalf("claim = %s", out)
+	}
+	if len(e.started()) != 0 {
+		t.Fatalf("started %v beside a hook session", e.started())
+	}
+	contains(t, e.okOn(codex, "claim", map[string]any{"ticket": id, "run": "codex:019a0000"}), "ok ticket=DM-1")
+}
+
+// A started run follows its agent to another branch, as a hook run does at
+// its next prompt.
+func TestAStartedRunFollowsABranchSwitch(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel"})
+	codex := e.dial(codexClient)
+	e.okOn(codex, "ask_human", map[string]any{"kind": "question", "text": "Which branch?"})
+	run := e.started()[0].Run
+	write(t, filepath.Join(e.cwd, ".git", "HEAD"), "ref: refs/heads/feature/next\n")
+	e.now = e.now.Add(time.Minute)
+	e.okOn(codex, "claim", map[string]any{"ticket": id})
+	e.okOn(codex, "checkpoint", map[string]any{"ticket": id, "done": []string{"Panel"}, "next": []string{"Tests"}})
+	contains(t, e.file(id), "branch: feature/next", "(run) on feature/next._")
+	if r := e.fold().Get(run); r.Branch != "feature/next" || len(e.started()) != 1 {
+		t.Fatalf("run branch = %q, started %d runs", r.Branch, len(e.started()))
 	}
 }
 
@@ -195,6 +271,12 @@ func TestToolCallsRenewAStartedRunsLease(t *testing.T) {
 	if state := e.fold().State(run, e.now, runs.DefaultSettings()); state != runs.Waiting {
 		t.Fatalf("state = %s", state)
 	}
+	// A call naming no run it can be is not the started run's activity.
+	before := len(e.log())
+	e.callOn(codex, "get_ticket", map[string]any{"ticket": id, "run": "codex:nope"})
+	if len(e.log()) != before {
+		t.Fatalf("a call with a wrong run recorded %+v", e.log()[before:])
+	}
 	// A failed call is activity too, marked failed.
 	e.callOn(codex, "claim", map[string]any{"ticket": "DM-99"})
 	last := e.log()[len(e.log())-1]
@@ -238,6 +320,24 @@ func TestClosingTheConnectionEndsItsRun(t *testing.T) {
 	}
 	if set.Holder(id, e.now, runs.DefaultSettings()) != nil {
 		t.Fatal("an ended run still holds its claim")
+	}
+	// A connection that only read is forgotten too.
+	reader := e.dial(codexClient)
+	e.okOn(reader, "list_tickets", nil)
+	if err := reader.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for {
+		e.srv.mu.Lock()
+		left := len(e.srv.conns)
+		e.srv.mu.Unlock()
+		if left == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("%d connections remembered after closing", left)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
