@@ -46,7 +46,8 @@ Intended layout (packages are created when they get real content):
 - `internal/references`: serve's copying of files that directly edited
   tickets and reviews link to (REV-5), after each new snapshot, through
   `store`; link syntax is `board.RewriteLocalLinks`, shared with the MCP
-  tools.
+  tools. Copies only from the project's repository, not git-ignored
+  (SEC-6); the one place serve runs a git subprocess (`check-ignore`).
 - `internal/migrate`: one-time conversion of a v1 root to board format v2
   (`flashheart migrate`, MIG-1): plan, number, rewrite references, move v1
   files to `.flashheart/backup/`. Writes only through `store` primitives.

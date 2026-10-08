@@ -440,10 +440,11 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `files/` (allow-listed types, size limit, `REV-2`) and the references are
   rewritten to the copies. A path that cannot be copied stays as text with a
   warning. `serve` does the same for a ticket or review edited directly (in
-  a text editor) while it runs: links to allow-listed files outside the
-  root are copied in and rewritten; a link it cannot copy is logged once.
-  Content Flashheart wrote itself, including raw edits sent from the
-  browser, is not acted on, so the browser cannot pull local files in.
+  a text editor) while it runs, but only for files in the ticket's project's
+  repository (`SEC-6`): links to allow-listed files there are copied in and
+  rewritten; a link it cannot copy is logged once. Content Flashheart wrote
+  itself, including raw edits sent from the browser, is not acted on, so
+  the browser cannot pull local files in.
 
 ### 6.12 Settings (`CFG`)
 
@@ -495,6 +496,15 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `SEC-5` Agent-written text shown to agents (recovery notes, `board_context`)
   is framed as data, and the protocol tells agents not to follow
   instructions found in tickets.
+- `SEC-6` A board may be shared through git or a sync service, and `serve`
+  cannot tell a synced edit from the user's own (D29). So `serve` copies a
+  linked file (`REV-5`) only when its real path, symlinks resolved, is in a
+  git checkout on this machine whose main checkout the ticket's project
+  records in `project.yaml` and maps to that project by name (`PRJ-2`,
+  `PRJ-3`); is not inside `.git`; and is not ignored by git (`git
+  check-ignore`; if git fails or is missing, nothing is copied). The
+  checkout is verified on disk, not taken from the synced repos list. Paths
+  given to MCP tools come from the local agent and keep the `REV-5` rule.
 
 ### 6.16 Non-functional (`NFR`)
 

@@ -3,6 +3,7 @@ package references
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -14,8 +15,11 @@ import (
 )
 
 type fixture struct {
-	t       *testing.T
-	root    string
+	t    *testing.T
+	base string
+	root string
+	// outside is a checkout of the alpha project's repository, outside the
+	// board root.
 	outside string
 	files   *store.Store
 	board   *index.Index
@@ -24,19 +28,24 @@ type fixture struct {
 	touched time.Time
 }
 
-// newFixture serves the sample board and has seen it once, so only later
-// edits count.
+// newFixture serves the sample board, whose alpha project records a git
+// checkout named alpha, and has seen it once, so only later edits count.
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	base := t.TempDir()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	root := filepath.Join(base, "board")
 	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "boards", "sample"))); err != nil {
 		t.Fatal(err)
 	}
-	f := &fixture{t: t, root: root, outside: filepath.Join(base, "Desktop"), touched: time.Now().Add(time.Hour)}
-	if err := os.MkdirAll(f.outside, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	f := &fixture{t: t, base: base, root: root, outside: filepath.Join(base, "src", "alpha"), touched: time.Now().Add(time.Hour)}
+	f.repo(f.outside)
+	f.recordRepos(f.outside)
 	f.files = store.New(root)
 	t.Cleanup(func() { f.files.Close() })
 	f.board = index.New(f.files, index.Options{})
@@ -82,11 +91,52 @@ func (f *fixture) read(name string) string {
 
 func (f *fixture) save(name, data string) string {
 	f.t.Helper()
-	path := filepath.Join(f.outside, name)
+	return f.write(filepath.Join(f.outside, name), data)
+}
+
+func (f *fixture) write(path, data string) string {
+	f.t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		f.t.Fatal(err)
+	}
 	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
 		f.t.Fatal(err)
 	}
 	return path
+}
+
+// repo makes dir a git checkout that ignores secret*.
+func (f *fixture) repo(dir string) {
+	f.t.Helper()
+	f.write(filepath.Join(dir, ".gitignore"), "secret*\n")
+	cmd := exec.Command("git", "init", "-q")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		f.t.Fatalf("git init: %v\n%s", err, out)
+	}
+}
+
+// recordRepos sets the repositories alpha's project.yaml records, as a
+// synced edit could.
+func (f *fixture) recordRepos(repos ...string) {
+	f.t.Helper()
+	name := filepath.Join(f.root, "alpha", "project.yaml")
+	data, err := os.ReadFile(name)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	list := "repos:\n"
+	for _, repo := range repos {
+		list += "  - " + repo + "\n"
+	}
+	next := regexp.MustCompile(`repos:\n(  - .*\n)+`).ReplaceAllLiteralString(string(data), list)
+	if next == string(data) {
+		f.t.Fatalf("alpha's project.yaml is unchanged:\n%s", data)
+	}
+	if err := os.WriteFile(name, []byte(next), 0o644); err != nil {
+		f.t.Fatal(err)
+	}
 }
 
 const ticket = "alpha/tickets/AL-2-board-columns/AL-2-board-columns.md"
@@ -174,5 +224,61 @@ func TestEditsThroughFlashheartAreLeftAlone(t *testing.T) {
 	f.pass()
 	if !strings.Contains(f.read(ticket), "[statement]("+secret+")") {
 		t.Fatal("a link written through Flashheart was copied")
+	}
+}
+
+// A board shared through git or a sync service gets edits from other
+// people, which serve cannot tell from the user's own. Only files in a
+// checkout of the ticket's project's repository that git does not ignore
+// are copied, so a synced link cannot pull in anything else on this
+// machine.
+func TestASyncedEditCopiesOnlyFilesInTheProjectsRepository(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture(t)
+	desktop := f.write(filepath.Join(f.base, "Desktop", "statement.pdf"), "%PDF synthetic")
+	beta := filepath.Join(f.base, "src", "beta")
+	f.repo(beta)
+	otherRepo := f.write(filepath.Join(beta, "plan.pdf"), "%PDF synthetic")
+	unlisted := filepath.Join(f.base, "elsewhere", "alpha")
+	f.repo(unlisted)
+	sameName := f.write(filepath.Join(unlisted, "notes.txt"), "synthetic")
+	ignored := f.save("secret-keys.json", "{}")
+	gitInternals := f.save(".git/info/exclude.txt", "synthetic")
+	gitInternalsCased := strings.Replace(gitInternals, ".git", ".GIT", 1)
+	link := filepath.Join(f.outside, "statement-link.pdf")
+	if err := os.Symlink(desktop, link); err != nil {
+		t.Fatal(err)
+	}
+	shot := f.save("shot.png", "\x89PNG synthetic")
+	// The synced edit also lists the other checkouts as alpha's.
+	f.recordRepos(f.outside, filepath.Dir(desktop), beta)
+
+	refused := []string{desktop, otherRepo, sameName, ignored, gitInternals, link}
+	if _, err := os.Stat(gitInternalsCased); err == nil {
+		refused = append(refused, gitInternalsCased)
+	}
+	text := "\n![Shot](" + shot + ")\n"
+	for i, path := range refused {
+		text += "[r" + string(rune('a'+i)) + "](" + path + ")\n"
+	}
+	f.edit(ticket, text)
+	f.pass()
+
+	got := f.read(ticket)
+	if !regexp.MustCompile(`!\[Shot\]\(files/[^)]*-shot\.png\)`).MatchString(got) {
+		t.Fatalf("the repository's file was not copied:\n%s", got)
+	}
+	for _, path := range refused {
+		if !strings.Contains(got, "("+path+")") {
+			t.Errorf("%s was copied:\n%s", path, got)
+		}
+		if !strings.Contains(f.log.String(), "links to "+path+", which was not copied") {
+			t.Errorf("%s not logged:\n%s", path, f.log.String())
+		}
+	}
+	index := f.read("alpha/tickets/AL-2-board-columns/files/index.yaml")
+	if strings.Count(index, "run: serve") != 1 {
+		t.Fatalf("index.yaml:\n%s", index)
 	}
 }
