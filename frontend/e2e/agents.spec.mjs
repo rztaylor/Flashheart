@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   callTool,
+  connectMCP,
   IDLE_SESSION,
   promptHook,
   seedRuns,
@@ -415,4 +416,90 @@ test("a question answered in the session's own chat leaves Needs you", async () 
       await expectNoAxeViolations("run answered in the session");
     await shot(`agents-answered-in-session-${width}-${theme}`);
   }
+});
+
+test("an agent without hooks gets a run from its first write, and its answers with its next call", async () => {
+  // Codex without Flashheart's hooks, in a real `flashheart mcp` session.
+  const codex = await connectMCP(sandbox.root, seeded.beta, "codex-mcp-client");
+  try {
+    expect(
+      await codex.call("claim", {
+        ticket: "BE-1",
+        force: true,
+        reason: "synthetic: its dependency is nearly done",
+      }),
+    ).toContain("ok ticket=BE-1 column=in-progress");
+    const asked = await codex.call("ask_human", {
+      ticket: "BE-1",
+      kind: "question",
+      text: "Greet in English only?",
+    });
+
+    // Asked without hooks, it is told the answer comes with a tool call.
+    expect(asked).toContain(
+      "with the result of your next flashheart tool call",
+    );
+    const needsYou = page.getByRole("region", { name: /^Needs you/ });
+    const row = needsYou.getByRole("button", { name: /^Codex mcp-/ });
+    for (const [width, theme] of [
+      [1440, "light"],
+      [1440, "dark"],
+      [390, "light"],
+    ]) {
+      await open("#/all/agents", { width, height: 900, theme });
+      await expect(row).toBeVisible();
+      const item = needsYou.locator("[data-run^='codex:mcp-']");
+      await expect(item.getByText("MCP only")).toBeVisible();
+      await expect(item.getByText(/BE-1/).first()).toBeVisible();
+      if (width === 1440 && theme === "light")
+        await expectNoAxeViolations("run started without hooks");
+      await item.scrollIntoViewIfNeeded();
+      await shot(`agents-mcp-only-${width}-${theme}`);
+    }
+
+    // The answer reaches the session with its next tool call, once.
+    await open("#/all/agents");
+    await row.click();
+    const question = needsYou.getByRole("region", { name: "Has a question" });
+    await expect(
+      needsYou.getByText("Connected without hooks (MCP only)"),
+    ).toBeVisible();
+    await expect(
+      question.getByText(
+        "It reaches the session with its next Flashheart tool call.",
+      ),
+    ).toBeVisible();
+    await shot("agents-mcp-only-detail-1440-light");
+    await question.getByRole("textbox", { name: "Your answer" }).fill("Yes");
+    await question.getByRole("button", { name: "Send answer" }).click();
+    await expect(
+      needsYou.getByRole("region", {
+        name: "Answer waits for its next tool call",
+      }),
+    ).toContainText("“Yes”");
+    expect(await codex.call("list_tickets", {})).toContain(
+      'BE-1: "Greet in English only?" → "Yes" (Robin)',
+    );
+    expect(await codex.call("list_tickets", {})).not.toContain(
+      "Greet in English",
+    );
+    await page.reload();
+    await open("#/all/agents");
+    await expect(row).toHaveCount(0);
+    await expect(
+      page.getByRole("region", { name: /^Waiting/ }).getByRole("button", {
+        name: /^Codex mcp-/,
+      }),
+    ).toBeVisible();
+  } finally {
+    await codex.close();
+  }
+  // Closing the session ends its run.
+  await page.reload();
+  await open("#/all/agents");
+  await expect(
+    page.getByRole("region", { name: /^Ended/ }).getByRole("button", {
+      name: /^Codex mcp-/,
+    }),
+  ).toBeVisible();
 });

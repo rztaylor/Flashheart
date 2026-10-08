@@ -8,12 +8,14 @@ import {
   describeEntry,
   laneRuns,
   liveReason,
+  mcpOnly,
   needsReason,
   permissionReason,
   planStations,
   questionReason,
   sessionsOf,
   shortID,
+  startedByMCP,
 } from "./runs";
 
 function run(id: string, patch: Partial<Run> = {}): Run {
@@ -213,6 +215,22 @@ describe("planStations", () => {
   });
 });
 
+it("marks runs the MCP server started for agents without hooks", () => {
+  const hookless = run("codex:mcp-0a1b2c3d4e5f", { source: "mcp" });
+  expect(mcpOnly(hookless)).toBe(true);
+  expect(mcpOnly(run("claude:s", { source: "startup" }))).toBe(false);
+  expect(startedByMCP("codex:mcp-0a1b2c3d4e5f")).toBe(true);
+  expect(startedByMCP("claude:5b0c7e2a-1f3d")).toBe(false);
+  expect(startedByMCP("claude:5b0c7e2a/mcp-1")).toBe(false);
+  const at = "2026-10-05T10:00:00Z";
+  expect(describeEntry({ time: at, kind: "run.start", detail: "mcp" })).toBe(
+    "Connected without hooks (MCP only)",
+  );
+  expect(
+    describeEntry({ time: at, kind: "run.end", detail: "disconnected" }),
+  ).toBe("Ended (disconnected)");
+});
+
 it("names agents", () => {
   expect(agentName("claude")).toBe("Claude");
   expect(agentName("codex")).toBe("Codex");
@@ -298,6 +316,15 @@ it("says what a question asks for, and when its answer is on its way", () => {
       answeredAt: "2026-10-05T10:01:00Z",
     }),
   ).toBe("Answer waits for its next prompt");
+  // A run without hooks gets its answer with its next tool call (D30).
+  expect(
+    questionReason({
+      ...asked,
+      run: "codex:mcp-0a1b2c3d4e5f",
+      answer: "Yes",
+      answeredAt: "2026-10-05T10:01:00Z",
+    }),
+  ).toBe("Answer waits for its next tool call");
   const session = run("claude:s", { state: "needs-you", questions: [asked] });
   expect(needsReason(session, [])).toBe("Asks for a review");
   // A permission prompt is named before a question.

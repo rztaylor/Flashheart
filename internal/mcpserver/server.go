@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -35,41 +36,54 @@ type Options struct {
 	Binary string
 }
 
-// server holds what lives as long as the agent's session.
+// server holds what lives as long as the process: one session over stdio,
+// or several connections in tests.
 type server struct {
 	options Options
 	store   *store.Store
 	log     *events.Log
+
+	mu    sync.Mutex
+	conns map[*mcp.ServerSession]*conn
+	// ending counts started runs whose end is not recorded yet.
+	ending sync.WaitGroup
 }
 
 // New returns the MCP server with every protocol tool registered.
 func New(options Options) (*mcp.Server, error) {
+	_, server, err := newServer(options)
+	return server, err
+}
+
+func newServer(options Options) (*server, *mcp.Server, error) {
 	if options.Root == "" {
-		return nil, errors.New("no board root")
+		return nil, nil, errors.New("no board root")
 	}
 	if options.Now == nil {
 		options.Now = time.Now
 	}
 	s := store.New(options.Root)
 	s.SetClock(options.Now)
-	srv := &server{options: options, store: s, log: events.New(s)}
+	srv := &server{options: options, store: s, log: events.New(s), conns: map[*mcp.ServerSession]*conn{}}
 	server := mcp.NewServer(&mcp.Implementation{Name: Name, Version: buildinfo.Version}, &mcp.ServerOptions{
 		Instructions: protocol.Instructions(),
 		Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{}},
 	})
 	srv.registerReads(server)
 	srv.registerWrites(server)
-	return server, nil
+	return srv, server, nil
 }
 
 // Serve speaks the protocol over in and out (stdin and stdout) until the
-// client closes its side.
+// client closes its side, then records the end of the run it started for
+// the session, if any.
 func Serve(ctx context.Context, options Options, in io.Reader, out io.Writer) error {
-	server, err := New(options)
+	srv, server, err := newServer(options)
 	if err != nil {
 		return err
 	}
 	err = server.Run(ctx, &mcp.IOTransport{Reader: io.NopCloser(in), Writer: nopWriteCloser{out}})
+	srv.ending.Wait()
 	if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
 		return nil
 	}
@@ -134,13 +148,16 @@ func asToolError(err error) *toolError {
 }
 
 // tool registers a handler that returns text, turning errors into tool
-// errors with a fix.
-func tool[In any](server *mcp.Server, name, description string, handle func(In) (string, error)) {
-	mcp.AddTool(server, &mcp.Tool{Name: name, Description: description}, func(_ context.Context, _ *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
-		text, err := handle(input)
+// errors with a fix. A call of a run the server started is that run's
+// activity, and its result carries the run's waiting answers.
+func tool[In any](srv *server, server *mcp.Server, name, description string, handle func(*invocation, In) (string, error)) {
+	mcp.AddTool(server, &mcp.Tool{Name: name, Description: description}, func(_ context.Context, req *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
+		inv := &invocation{conn: srv.connection(req.Session), tool: name}
+		text, err := handle(inv, input)
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: asToolError(err).Error()}}}, nil, nil
+			text = asToolError(err).Error()
 		}
-		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil, nil
+		text += srv.called(inv, err == nil)
+		return &mcp.CallToolResult{IsError: err != nil, Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil, nil
 	})
 }

@@ -15,6 +15,7 @@ import {
   counted,
   type LaneRun,
   laneRuns,
+  mcpOnly,
   needsReason,
   STATE_LABEL,
   shortID,
@@ -369,6 +370,13 @@ function RunRow({
           {run.progress.current ? (
             <span className="truncate text-ink" title={run.progress.current}>
               {run.progress.current}
+            </span>
+          ) : run.progress.total === 0 && mcpOnly(run) ? (
+            <span
+              className="text-ink-muted"
+              title="Started by Flashheart's MCP server: without hooks it reports tool calls, claims and questions, never a plan, edits or permission prompts"
+            >
+              MCP only
             </span>
           ) : run.progress.total === 0 ? (
             <span className="text-ink-faint">No plan</span>

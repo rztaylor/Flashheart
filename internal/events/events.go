@@ -79,6 +79,15 @@ const (
 	KindSubagent = "subagent"
 )
 
+// SourceMCP is run.start's source for a run the MCP server started for a
+// connection that reached it without hooks (agent-protocol §7.1); hook
+// sources are the agent's own (startup, resume, clear, compact).
+const SourceMCP = "mcp"
+
+// RunEndDisconnected is run.end's reason when an MCP-started run's
+// connection closes.
+const RunEndDisconnected = "disconnected"
+
 // RunStartData is run.start's data.
 type RunStartData struct {
 	Kind      string `json:"kind"`

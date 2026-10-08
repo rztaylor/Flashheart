@@ -134,7 +134,7 @@ export async function seedRuns(home, root) {
   idle.send("UserPromptSubmit", { prompt: "synthetic" });
   idle.tool("Read", {});
   idle.send("Stop");
-  return { gamma };
+  return { beta, gamma };
 }
 
 // TASK_NOTIFICATION is the prompt Claude Code submits when a background
@@ -200,4 +200,63 @@ export function callTool(root, cwd, name, args) {
     send({ method: "notifications/initialized" });
     send({ id: 2, method: "tools/call", params: { name, arguments: args } });
   });
+}
+
+// connectMCP opens one session with the real `flashheart mcp` server from a
+// client that names itself as client does, working in cwd, with no hooks:
+// call runs a tool and returns its text; close ends the session.
+export async function connectMCP(root, cwd, client) {
+  const child = spawn(executable, ["mcp", "--root", root], {
+    env: { ...process.env, PATH: "/nonexistent", CLAUDE_PROJECT_DIR: cwd },
+    stdio: ["pipe", "pipe", "inherit"],
+  });
+  const waiting = new Map();
+  let buffer = "";
+  let next = 1;
+  child.stdout.on("data", (chunk) => {
+    buffer += chunk;
+    for (const line of buffer.split("\n").slice(0, -1)) {
+      const message = JSON.parse(line);
+      waiting.get(message.id)?.(message);
+      waiting.delete(message.id);
+    }
+    buffer = buffer.slice(buffer.lastIndexOf("\n") + 1);
+  });
+  const request = (method, params) =>
+    new Promise((resolvePromise, reject) => {
+      const id = next++;
+      const timer = setTimeout(
+        () => reject(new Error(`flashheart mcp did not answer ${method}`)),
+        10_000,
+      );
+      waiting.set(id, (message) => {
+        clearTimeout(timer);
+        resolvePromise(message);
+      });
+      child.stdin.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`,
+      );
+    });
+  await request("initialize", {
+    protocolVersion: "2025-06-18",
+    capabilities: {},
+    clientInfo: { name: client, version: "1" },
+  });
+  child.stdin.write(
+    `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`,
+  );
+  return {
+    async call(name, args) {
+      const message = await request("tools/call", { name, arguments: args });
+      const text = message.result.content.map((c) => c.text).join("");
+      if (message.result.isError) throw new Error(text);
+      return text;
+    },
+    close() {
+      return new Promise((resolvePromise) => {
+        child.on("exit", resolvePromise);
+        child.stdin.end();
+      });
+    },
+  };
 }

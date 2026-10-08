@@ -85,8 +85,9 @@ instructions.
   a caption, and gives the markdown to link it from the review.
 - When you need a human decision, ` + "`ask_human`" + ` (kind question, decision,
   review or blocked, with options when there are clear choices). The board
-  shows the user; the answer arrives in a later prompt. Carry on with other
-  work if you can. If the user replies in this chat instead, that reply is
+  shows the user; the answer arrives in a later prompt, or, where
+  Flashheart's hooks are not installed, with your next flashheart tool
+  result. Carry on with other work if you can. If the user replies in this chat instead, that reply is
   the answer: the board stops showing the question.
 - ` + "`ask_human`" + ` also returns a ` + "`flashheart await`" + ` command. If you can run
   a background command that wakes you when it exits (in Claude Code, Bash

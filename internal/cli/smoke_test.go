@@ -6,8 +6,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/store"
 )
 
 // TestProtocolSmoke is the end-to-end smoke of agent-protocol §13: one
@@ -122,8 +127,15 @@ func mustWrite(t *testing.T, name, data string) {
 // mcpCall runs flashheart mcp for one tool call and returns its text.
 func mcpCall(t *testing.T, h *harness, root, name string, args map[string]any) string {
 	t.Helper()
+	return mcpCallAs(t, h, root, "smoke", name, args)
+}
+
+// mcpCallAs is mcpCall from a client with the given name, as one session:
+// the server's input ends after the call.
+func mcpCallAs(t *testing.T, h *harness, root, client, name string, args map[string]any) string {
+	t.Helper()
 	call, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": name, "arguments": args}})
-	requests := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}` + "\n" +
+	requests := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"` + client + `","version":"1"}}}` + "\n" +
 		`{"jsonrpc":"2.0","method":"notifications/initialized"}` + "\n" + string(call) + "\n"
 	out := &lockedBuffer{}
 	deps := h.deps()
@@ -152,4 +164,42 @@ func mcpCall(t *testing.T, h *harness, root, name string, args map[string]any) s
 		t.Fatalf("mcp %s failed: %s", name, text.String())
 	}
 	return text.String()
+}
+
+// TestHooklessSessionOverStdio drives the real mcp command as Codex without
+// Flashheart's hooks: its claim starts a run (agent-protocol §7.1), and
+// the end of its input, the session closing, ends the run before the
+// command returns.
+func TestHooklessSessionOverStdio(t *testing.T) {
+	t.Parallel()
+
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, repo := filepath.Join(base, "board"), filepath.Join(base, "src", "demo")
+	mustWrite(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
+	mustWrite(t, filepath.Join(root, "demo", "project.yaml"), "name: demo\nkey: DM\nrepos:\n  - "+repo+"\n")
+	mustWrite(t, filepath.Join(root, "demo", "tickets", "DM-1-panel", "DM-1-panel.md"), "---\nid: DM-1\nstatus: backlog\ntype: feature\npriority: high\n---\n# Panel\n")
+	h := newHarness(t)
+	h.env["CLAUDE_PROJECT_DIR"] = repo
+	if out := mcpCallAs(t, h, root, "codex-mcp-client", "claim", map[string]any{"ticket": "DM-1"}); !strings.Contains(out, "ok ticket=DM-1 column=in-progress") {
+		t.Fatalf("claim: %s", out)
+	}
+	var kinds []string
+	run := ""
+	if err := events.New(store.New(root)).Read("demo", time.Time{}, func(e events.Event) {
+		if run == "" {
+			run = e.Run
+		}
+		if e.Run == run {
+			kinds = append(kinds, e.Kind)
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{events.RunStart, events.Claim, events.TicketMoved, events.ToolUsed, events.RunEnd}
+	if !strings.HasPrefix(run, "codex:mcp-") || !slices.Equal(kinds, want) {
+		t.Fatalf("run %q events = %v, want %v", run, kinds, want)
+	}
 }

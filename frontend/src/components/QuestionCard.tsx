@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import type { Question } from "../api/runs";
-import { questionReason } from "../model/runs";
+import { questionReason, startedByMCP } from "../model/runs";
 import { absoluteTime, runningTime } from "../model/time";
 import { Button } from "./Button";
 import { TextArea } from "./Field";
@@ -10,8 +10,9 @@ import { StateNote } from "./StateNote";
 // QuestionCard is an agent's question to the human (CARD-6): what it asks,
 // who asked and when, and an answer box with the agent's options as
 // choices. The question is the agent's words, shown as data. Once
-// answered it says the answer is on its way to the session's next prompt,
-// or, when the session has ended, to its resumption (RUN-8).
+// answered it says the answer is on its way to the session's next prompt
+// (its next Flashheart tool call, for a session without hooks), or, when
+// the session has ended, to its resumption (RUN-8).
 // MAX_ANSWER matches the server's limit on an answer.
 const MAX_ANSWER = 1000;
 
@@ -41,6 +42,9 @@ export function QuestionCard({
   const reason = questionReason(question);
   const answered = Boolean(question.answeredAt);
   const ended = Boolean(question.sessionEnded);
+  const delivery = startedByMCP(question.run)
+    ? "with its next Flashheart tool call"
+    : "with its next prompt";
   const options = [...new Set(question.options ?? [])];
   const Heading = headingLevel === 4 ? "h4" : "h5";
 
@@ -103,7 +107,7 @@ export function QuestionCard({
           <span className="font-semibold text-ink">“{question.answer}”</span>.{" "}
           {ended
             ? "The session gets it when it resumes."
-            : "The session gets it with its next prompt."}
+            : `The session gets it ${delivery}.`}
         </p>
       ) : onAnswer ? (
         <form className="flex flex-col gap-2" onSubmit={submit}>
@@ -151,7 +155,7 @@ export function QuestionCard({
               {sending ? "Sending…" : "Send answer"}
             </Button>
             <span className="text-2xs text-ink-muted">
-              It reaches the session with its next prompt.
+              It reaches the session {delivery}.
             </span>
           </div>
           <div role="alert">

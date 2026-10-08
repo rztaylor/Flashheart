@@ -275,7 +275,6 @@ func TestAskHumanPutsTheRunInNeedsYou(t *testing.T) {
 
 	e := newEnv(t, "DM")
 	id := e.ticket(store.NewTicket{Title: "A"})
-	e.fails("ask_human", map[string]any{"kind": "question", "text": "Which schema?"}, "ambiguous_run")
 	e.startSession(session)
 	out := e.ok("ask_human", map[string]any{"ticket": id, "kind": "decision", "text": "Which schema?", "options": []string{"v1", "v2"}})
 	contains(t, out, "the answer will arrive in a later prompt", "ok question=q-")

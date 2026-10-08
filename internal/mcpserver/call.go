@@ -61,18 +61,26 @@ type call struct {
 
 // begin reads the board and works out who is calling, for a tool that
 // writes: the caller's project is created (auto_create_projects) or given
-// this repository, and the cwd cache is kept.
-func (srv *server) begin(runArg string) (*call, error) {
-	return srv.start(runArg, true)
+// this repository, the cwd cache is kept, and a caller with no run gets
+// one started for its connection.
+func (srv *server) begin(inv *invocation, runArg string) (*call, error) {
+	return srv.start(inv, runArg, true)
 }
 
-// read is begin for a tool that only reads: it changes nothing on disk, so
-// a project that does not exist yet is only named (c.missing).
-func (srv *server) read(runArg string) (*call, error) {
-	return srv.start(runArg, false)
+// read is begin for a tool that only reads: it changes nothing on the
+// board, so a project that does not exist yet is only named (c.missing)
+// and no run is started.
+func (srv *server) read(inv *invocation, runArg string) (*call, error) {
+	return srv.start(inv, runArg, false)
 }
 
-func (srv *server) start(runArg string, write bool) (*call, error) {
+func (srv *server) start(inv *invocation, runArg string, write bool) (c *call, err error) {
+	// The wrapper reads which run the call was attributed to.
+	defer func() {
+		if c != nil && inv != nil {
+			inv.run = c.run
+		}
+	}()
 	runArg = strings.TrimSpace(runArg)
 	if runArg != "" && !runPattern.MatchString(runArg) {
 		return nil, fail("invalid_input", "pass the run id as the recovery note shows it, like claude:3f2a9c1e, or leave it out", "run %q is not a run id", runArg)
@@ -81,12 +89,12 @@ func (srv *server) start(runArg string, write bool) (*call, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &call{srv: srv, now: srv.options.Now().UTC(), settings: settings, runs: runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes), set: runs.NewSet(), folded: map[string]bool{}, loaded: map[string]bool{}}
+	c = &call{srv: srv, now: srv.options.Now().UTC(), settings: settings, runs: runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes), set: runs.NewSet(), folded: map[string]bool{}, loaded: map[string]bool{}}
 	if c.board, err = srv.store.ReadHeads(); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			// No board root yet: an empty board until the first write.
 			c.analysis = board.Analyze(c.board)
-			return c, c.attribute(runArg)
+			return c, c.attribute(inv, runArg)
 		}
 		return nil, err
 	}
@@ -122,7 +130,10 @@ func (srv *server) start(runArg string, write bool) (*call, error) {
 	if err := c.fold(c.project); err != nil {
 		return nil, err
 	}
-	if err := c.attribute(runArg); err != nil {
+	if err := c.attribute(inv, runArg); err != nil {
+		return nil, err
+	}
+	if err := c.own(inv, write); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -154,9 +165,10 @@ const fullSession = 16
 
 // attribute resolves the caller's run (agent-protocol §7.1): the run
 // argument (in full, or shortened as recovery notes show it, which must
-// name one known run), else the one live session working in this worktree
-// on this branch.
-func (c *call) attribute(runArg string) error {
+// name one known run), else the one live session of the caller's agent
+// working in this worktree on this branch. Runs the server started are
+// their own connections' (own), never another's.
+func (c *call) attribute(inv *invocation, runArg string) error {
 	if runArg != "" {
 		session, agent, _ := strings.Cut(runArg, "/")
 		var matches []string
@@ -188,7 +200,10 @@ func (c *call) attribute(runArg string) error {
 		return nil
 	}
 	for _, r := range c.set.Runs() {
-		if r.Kind != events.KindSession || c.set.State(r.ID, c.now, c.runs) == runs.Ended {
+		if r.Kind != events.KindSession || r.Source == events.SourceMCP || c.set.State(r.ID, c.now, c.runs) == runs.Ended {
+			continue
+		}
+		if inv != nil && inv.conn != nil && inv.conn.agent != "" && r.Agent != inv.conn.agent {
 			continue
 		}
 		if !c.here(r) {

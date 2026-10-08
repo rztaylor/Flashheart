@@ -306,7 +306,11 @@ Full format: `docs/dev/specs/board-format.md`.
 Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
 
 - `RUN-1` A run is created from the first hook event of a session or
-  subagent, keyed `<agent>:<session-id>` or `<agent>:<session-id>/<agent-id>`.
+  subagent, keyed `<agent>:<session-id>` or `<agent>:<session-id>/<agent-id>`,
+  or, for a session that reaches the MCP server without hooks, from its first
+  MCP write, keyed `<agent>:mcp-<random>`; such a run lasts as long as its
+  MCP connection and reports claims, checkpoints, questions and tool calls,
+  not turns, plans or edits (D30).
 - `RUN-2` A run records agent, kind (session/subagent), parent, project, cwd,
   branch, worktree, linked ticket and how it was linked (claim or branch
   match), plan, start, last activity, end and end reason.
@@ -384,9 +388,11 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `board_context` stays under about 1,500 tokens.
 - `MCP-4` Each call is attributed to a run: from a run id stamped into the
   call by a hook where the agent supports it, else the `run` argument given in
-  the recovery note, else the unique live session in the worktree and
-  branch the agent works in (`CLAUDE_PROJECT_DIR` or the server's working
-  directory). Ambiguity is an error that names the fix.
+  the recovery note, else the unique live session of the same agent in the
+  worktree and branch the agent works in (`CLAUDE_PROJECT_DIR` or the
+  server's working directory), else a run the server starts for its
+  connection on the first write (`RUN-1`); answers to that run arrive with
+  its next tool result. Ambiguity is an error that names the fix.
 - `MCP-5` Calls are idempotent where it makes sense (claiming a ticket you
   hold, writing the same checkpoint) and validate inputs with clear,
   actionable errors.
