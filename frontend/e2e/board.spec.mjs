@@ -69,6 +69,12 @@ function card(page, title) {
   return page.getByRole("button", { name: new RegExp(`^${title},`) });
 }
 
+// cardFace is what a card shows: its button covers the drawing, which sits
+// beside it in the card (CARD-7).
+function cardFace(page, title) {
+  return card(page, title).locator("xpath=..");
+}
+
 async function expectNoAxeViolations(page, label) {
   const results = await new AxeBuilder({ page }).analyze();
   expect(
@@ -112,22 +118,22 @@ test("sample tickets land in the right columns with blocked reasons and repairs"
       ).toBeVisible();
     }
   }
-  await expect(card(page, "Drag and drop")).toContainText(
+  await expect(cardFace(page, "Drag and drop")).toContainText(
     "Depends on AL-3, which is In progress",
   );
-  await expect(card(page, "Long titles overflow the column")).toContainText(
+  await expect(cardFace(page, "Long titles overflow the column")).toContainText(
     "Depends on AL-4, which is Up next",
   );
-  await expect(card(page, "Offline mode")).toContainText(
+  await expect(cardFace(page, "Offline mode")).toContainText(
     "Depends on feat--does-not-exist, which does not exist",
   );
   await expect(card(page, "Broken frontmatter")).toHaveAccessibleName(
     /needs repair/,
   );
-  await expect(card(page, "Broken frontmatter")).toContainText(
+  await expect(cardFace(page, "Broken frontmatter")).toContainText(
     "frontmatter does not parse",
   );
-  await expect(card(page, "Card panel")).not.toContainText("Depends on");
+  await expect(cardFace(page, "Card panel")).not.toContainText("Depends on");
 });
 
 test("the card panel explains, links and renders without raw HTML", async () => {
@@ -176,8 +182,12 @@ test("the card panel explains, links and renders without raw HTML", async () => 
   await expect(
     review.getByRole("img", { name: "Board at desktop" }),
   ).toBeVisible();
-  await review.getByRole("link", { name: "AL-2", exact: true }).click();
-  await expect(page).toHaveURL(/t=AL-2/);
+  // A ticket id in markdown opens that ticket's full page in a new tab.
+  const own = review
+    .getByRole("tabpanel", { name: "Review" })
+    .getByRole("link", { name: "AL-2", exact: true });
+  await expect(own).toHaveAttribute("href", "#/ticket/AL-2");
+  await expect(own).toHaveAttribute("target", "_blank");
   await page.keyboard.press("Escape");
 
   // External links open in a new tab without opener or referrer; raw HTML never renders.
@@ -200,12 +210,84 @@ test("the card panel explains, links and renders without raw HTML", async () => 
   );
   expect(context.pages()).toHaveLength(1);
 
-  // A bare ticket id in markdown links to that ticket (KEY-3).
-  await storePanel.getByRole("link", { name: "FH-26", exact: true }).click();
-  await expect(page).toHaveURL(/t=FH-26/);
+  // A bare ticket id in markdown links to that ticket's full page (KEY-3).
+  const [linked] = await Promise.all([
+    context.waitForEvent("page"),
+    storePanel.getByRole("link", { name: "FH-26", exact: true }).click(),
+  ]);
+  await expect(linked).toHaveURL(/#\/ticket\/FH-26$/);
   await expect(
-    page.getByRole("complementary", { name: "Ticket FH-26" }),
+    linked.getByRole("main", { name: "Ticket FH-26" }),
   ).toBeVisible();
+  await linked.close();
+});
+
+test("a ticket id opens the ticket's full page in a new tab (CARD-7)", async () => {
+  const page = shared;
+  await open(page, "#/p/alpha/board");
+  // The id sits above the card's button, hidden from assistive technology
+  // (the panel header offers the same link).
+  const id = cardFace(page, "Long titles overflow the column").locator(
+    'a[href="#/ticket/AL-5"]',
+  );
+  await expect(id).toHaveAttribute("href", "#/ticket/AL-5");
+  const [full] = await Promise.all([context.waitForEvent("page"), id.click()]);
+  // The board stays as it was: the id does not open the panel.
+  await expect(page.getByRole("complementary")).toHaveCount(0);
+
+  const main = full.getByRole("main", { name: "Ticket AL-5" });
+  await expect(
+    main.getByRole("heading", {
+      level: 1,
+      name: "Long titles overflow the column",
+    }),
+  ).toBeVisible();
+  await expect(full).toHaveTitle(/^AL-5 · Long titles overflow the column/);
+  await expect(main.getByRole("tab", { name: "Ticket" })).toBeVisible();
+  // Ticket links on the full page stay in its tab.
+  const blocker = main
+    .getByRole("listitem")
+    .filter({ hasText: "AL-4" })
+    .getByRole("link", { name: "AL-4", exact: true });
+  await expect(blocker).not.toHaveAttribute("target", "_blank");
+  await blocker.click();
+  await expect(full).toHaveURL(/#\/ticket\/AL-4$/);
+  await expect(
+    full.getByRole("main", { name: "Ticket AL-4" }).getByRole("heading", {
+      level: 1,
+    }),
+  ).toBeVisible();
+  // Back to the ticket beside its board.
+  await full.getByRole("link", { name: /^Show on the .* board$/ }).click();
+  await expect(full).toHaveURL(/#\/p\/alpha\/board\?t=AL-4$/);
+  await expect(
+    full.getByRole("complementary", { name: "Ticket AL-4" }),
+  ).toBeVisible();
+  await full.close();
+
+  // Clicking the card itself still opens the panel, with a way to the page.
+  await card(page, "Long titles overflow the column").click();
+  const panel = page.getByRole("complementary", { name: "Ticket AL-5" });
+  await expect(
+    panel.getByRole("link", { name: "Open full page in a new tab" }),
+  ).toHaveAttribute("href", "#/ticket/AL-5");
+  await expect(
+    panel.getByRole("link", { name: "AL-5", exact: true }),
+  ).toHaveAttribute("target", "_blank");
+  await page.keyboard.press("Escape");
+
+  // Table rows and stations link their ids too.
+  await open(page, "#/p/flashheart/table");
+  await expect(
+    page.getByRole("table").getByRole("link", { name: "FH-14", exact: true }),
+  ).toHaveAttribute("href", "#/ticket/FH-14");
+  await open(page, "#/p/flashheart/workstreams");
+  await expect(
+    page
+      .getByRole("article", { name: "Board core" })
+      .locator('a[href="#/ticket/FH-11"]'),
+  ).toHaveCount(1);
+  expect(context.pages()).toHaveLength(1);
 });
 
 test("the panel sits beside the board and keeps the card's column in view", async () => {
@@ -426,8 +508,8 @@ test("board columns scroll together on one vertical surface", async () => {
 test("cards are coloured by type, priority, age or not at all", async () => {
   const page = shared;
   await open(page, "#/p/flashheart/board");
-  const locked = card(page, "Locked atomic ticket writes");
-  const focus = card(page, "Focus ring invisible on the dark signage band");
+  const locked = cardFace(page, "Locked atomic ticket writes");
+  const focus = cardFace(page, "Focus ring invisible on the dark signage band");
   await expect(locked).toHaveAttribute("data-paint", "type-feature");
   await expect(focus).toHaveAttribute("data-paint", "type-bug");
   await expect(
@@ -697,6 +779,14 @@ for (const theme of ["light", "dark"]) {
       await expectNoAxeViolations(page, `review ${theme} ${width}`);
       await shot(page, `review-${width}-${theme}`);
 
+      await open(page, "#/ticket/FH-8", size);
+      await page.getByRole("tab", { name: "Review" }).click();
+      await expect(
+        page.getByRole("img", { name: "Store tests passing" }).first(),
+      ).toBeVisible();
+      await expectNoAxeViolations(page, `full page ${theme} ${width}`);
+      await shot(page, `ticket-page-${width}-${theme}`);
+
       await open(page, "#/p/alpha/board?t=AL-7", size);
       await expect(
         page.getByRole("heading", { name: "Needs repair" }),
@@ -747,6 +837,7 @@ for (const theme of ["light", "dark"]) {
       ["table", "#/p/flashheart/table"],
       ["agents", "#/all/agents"],
       ["panel", "#/p/flashheart/board?t=FH-11"],
+      ["ticket-page", "#/ticket/FH-11"],
     ]) {
       await open(page, hash, { width: 390, height: 844, theme });
       const sideways = await page.evaluate(

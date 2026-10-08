@@ -152,11 +152,13 @@ reorders them.
 
 ## 3. Card panel
 
-1. **Header**: id and project name; the title in the display cut; a pill row
+1. **Header**: id (a link to the full page, `CARD-7`) and project name; the
+   title in the display cut; a pill row
    (status pill for its column, the blocker pill when blocked, priority tag,
    type tag); a meta row (workstream bullet and name, created date, branch in
-   monospace, changed time); actions (Move to, Archive) when editable. A close
-   button sits top right; Escape closes.
+   monospace, changed time); actions (Move to, Archive) when editable. Top
+   right, *Open full page in a new tab* (expand icon) and close; Escape
+   closes.
 2. **Tabs**: Ticket, Edit (editable only), Runs (with its session count),
    Attachments (once `review-and-orchestration` builds it), Review (when a
    review file exists). Hidden tabs never leave a gap.
@@ -164,7 +166,7 @@ reorders them.
    frontmatter) · questions for you, each with its answer box or option
    buttons (`CARD-6`) · Handoff, the accent callout with the next steps large
    and the full handoff behind a disclosure, with a warning when the run has
-   edited since (`CARD-5`) · Blocked by (diamond, reasons, Open) and Waits for
+   edited since (`CARD-5`) · Blocked by (diamond, reasons with ids linked, Open) and Waits for
    (`CARD-4`) · Acceptance criteria with `d of t` and tickable boxes
    (`CARD-3`) · format warnings · the ticket's markdown (`CARD-2`).
 4. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
@@ -184,6 +186,28 @@ reorders them.
    Verify* steps show as a checklist with `d of t`, between the section's
    own text, and a tick is written into the step's line in `review.md`
    (`REV-3`).
+
+### Ticket page
+
+A ticket's full page (`CARD-7`, `#/ticket/<id>`) is the panel at reading
+width: the band (no view current; its views leave the ticket), then a
+column of at most 64rem, centred, that scrolls as a whole. A quiet *Show on
+the <project> board* link (board icon) leads, then the panel's header with
+the title as the page's h1 (the id plain, being this page's own), the tabs
+and the tab's content, under a visually hidden h2 naming the tab. No close
+button and no Position buttons. Ticket links on the page stay in its tab;
+the browser tab reads `<id> · <title> · Flashheart`.
+
+### Ticket ids
+
+A ticket id shown anywhere is a link to the ticket's full page in a new tab
+(`KEY-3`): semibold, tabular, underlined on hover. A link never sits inside
+a button. Where the whole of a card or station opens the panel, one button
+covers its drawing (which is hidden from assistive technology, the button
+carrying the name) and the id link sits above the button, off the tab order:
+the card stays one keyboard stop, and the panel header's id link serves the
+keyboard. In table rows and the Agents view the title is the button and the
+id a separate link.
 
 ## 4. Workstreams
 

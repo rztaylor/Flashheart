@@ -13,7 +13,7 @@
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
   RouteBar, EmptyState, RunState, PlanRoute, QuestionCard, Aside, Popover,
-  FilterChip) → `features/<feature>/` (board,
+  FilterChip, TicketLink) → `features/<feature>/` (board,
   card, editing, agents, workstreams, table, projects, filters, archive; later
   settings) → `app/`
   (shell, hash routing, composition). Shared layers never import features
@@ -31,9 +31,15 @@
   sensors; the keyboard alternative is Shift with an arrow, and the panel's
   Move to menu.
 - Tickets are named by id (`FH-42`) everywhere: cards, panel, table,
-  search and the `?t=<id>` route parameter. Bare ids of known project keys in
-  markdown link to the ticket (`model/markdown.ts`, KEY-3). A board with v1
-  projects shows the migrate command instead of guessing.
+  search and the `?t=<id>` route parameter. Every shown id is a
+  `components/TicketLink` to the ticket's full page `#/ticket/<id>`
+  (`features/card/TicketPage`, CARD-7) in a new tab, the same tab inside
+  `TicketLinksInPlace` (the page). Bare ids of known project keys in
+  markdown and in plain text (`LinkedText`) link there too
+  (`model/markdown.ts`, KEY-3, D30). A link never sits inside a button:
+  cards and stations draw under one covering button with the id link above
+  it (ui-layout.md "Ticket ids"). A board with v1 projects shows the
+  migrate command instead of guessing.
 - Prohibited: raw `fetch` to the backend, credentials in JavaScript, Web
   Storage for anything, permissive CORS, routes under `/_singleserve/`, raw
   HTML in markdown.

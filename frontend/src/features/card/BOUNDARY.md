@@ -1,6 +1,8 @@
 # Card feature boundary
 
-Owns the card panel (CARD-1, `docs/dev/specs/ui-layout.md` §3): loading one
+Owns the card panel (CARD-1, `docs/dev/specs/ui-layout.md` §3) and the
+ticket's full page (`TicketPage`, CARD-7), both rendering one `TicketView`
+at panel or reading width: loading one
 ticket and reloading it when the board changes, its header (id, title,
 status, blocker, priority and type pills, meta, Move to, Position
 buttons (EDIT-9) and Archive), the
@@ -16,6 +18,6 @@ and file tiles, opening screenshots in the lightbox) and the Review tab
 
 Does not own the side-panel shell, dialogs or markdown rendering
 (`components/`), the move, archive and conflict flows (`editing/`),
-routing (`app/`), run state (backend), or attaching files, which agents do
+routing and the page's place in the shell (`app/`), run state (backend), or attaching files, which agents do
 through `attach` and serve does for files a directly edited ticket links
 to (REV-5).

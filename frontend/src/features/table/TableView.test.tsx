@@ -75,7 +75,21 @@ const markup = renderToStaticMarkup(
   />,
 );
 
+// idLink is the ticket id as a link to its full page in a new tab (KEY-3).
+const idLink = (id: string) =>
+  new RegExp(
+    `<a [^>]*href="#/ticket/${id}"[^>]*target="_blank"[^>]*>${id}</a>`,
+  );
+// insideButton finds a link nested in a button, which is not allowed.
+const linkInButton = /<button[^>]*>(?:(?!<\/button>)[\s\S])*<a /;
+
 describe("TableView", () => {
+  it("links each id to the ticket's full page, beside the row's button", () => {
+    expect(markup).toMatch(idLink("FH-1"));
+    expect(markup).toMatch(idLink("FH-3"));
+    expect(markup).not.toMatch(linkInButton);
+  });
+
   it("heads the column state as Status, shown as pills", () => {
     expect(markup).toContain(">Status<");
     expect(markup).toContain('data-tone="progress"');

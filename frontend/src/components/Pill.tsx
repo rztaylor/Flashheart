@@ -67,10 +67,14 @@ export function StatusPill({
 // reasons wrap within the pill rather than running off the card.
 export function BlockerPill({
   children,
+  title,
   lines = 3,
   className,
 }: {
-  children: string;
+  // children is the reason, as text or with its ticket ids linked; title
+  // carries it as text for the tooltip.
+  children: ReactNode;
+  title?: string;
   // lines clamps a long reason; its full text stays in the tooltip.
   lines?: 1 | 2 | 3;
   className?: string;
@@ -79,7 +83,7 @@ export function BlockerPill({
   return (
     <span
       data-tone="blocked"
-      title={children}
+      title={title ?? (typeof children === "string" ? children : undefined)}
       className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${toneClass.blocked} ${className ?? ""}`}
     >
       <Icon name="diamond" size={12} className="mt-[0.15em]" />

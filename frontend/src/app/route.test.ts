@@ -44,4 +44,30 @@ describe("routes", () => {
       view: "board",
     });
   });
+
+  it("routes a ticket's full page by id (KEY-3)", () => {
+    expect(parseRoute("#/ticket/FH-42")).toEqual({
+      scope: { kind: "all" },
+      view: "ticket",
+      ticket: { id: "FH-42" },
+    });
+    expect(
+      formatRoute({
+        scope: { kind: "project", project: "flashheart" },
+        view: "ticket",
+        ticket: { id: "FH-42" },
+      }),
+    ).toBe("#/ticket/FH-42");
+  });
+
+  it("falls back to the board for a full page without a valid id", () => {
+    expect(parseRoute("#/ticket/../x")).toEqual({
+      scope: { kind: "all" },
+      view: "board",
+    });
+    expect(parseRoute("#/ticket")).toEqual({
+      scope: { kind: "all" },
+      view: "board",
+    });
+  });
 });

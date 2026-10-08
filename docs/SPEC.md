@@ -181,8 +181,12 @@ Full format: `docs/dev/specs/board-format.md`.
   it is not reused even if `next_id` is lost.
 - `KEY-3` Ids are how tickets are named everywhere: cards, the card panel,
   search, URLs, events, recovery notes, MCP tool arguments and outputs, and
-  `depends-on` and workstream lists. A bare id in ticket or review markdown
-  links to that ticket.
+  `depends-on` and workstream lists. Wherever the board shows a ticket's id
+  (cards, table rows, workstream stations, the Agents view, the archive, the
+  card panel), the id is a link to the ticket's full page (`CARD-7`) that
+  opens in a new tab. A bare id of a known project key in ticket or review
+  markdown, and in criteria, handoff next steps and blocking reasons, links
+  there too (D30).
 - `KEY-4` Agents can be told "tackle the three top-priority bugs": the MCP
   server knows the caller's project (PRJ-2) and its key, and `list_tickets`
   returns open tickets filtered by type, status, priority or text, highest
@@ -242,7 +246,8 @@ Full format: `docs/dev/specs/board-format.md`.
   and subagent tree), **Attachments**, **Review** (when a review file exists).
 - `CARD-2` Markdown renders GitHub-flavoured markdown (tables, task lists,
   code). Raw HTML is not rendered. Ticket ids in text (`FH-42`) and relative
-  links into another ticket's folder open that ticket.
+  links into another ticket's folder open that ticket's full page
+  (`CARD-7`).
 - `CARD-3` Acceptance-criteria checkboxes can be ticked in the rendered view
   and are saved to the file.
 - `CARD-4` A **Blocked by** section explains each blocking reason: ticket
@@ -251,6 +256,12 @@ Full format: `docs/dev/specs/board-format.md`.
   and time, and a warning when the claimed run has edited files since.
 - `CARD-6` Open questions show with an answer box or option buttons
   (`RUN-8`).
+- `CARD-7` Every ticket has a full page, `#/ticket/<id>`, reachable by URL,
+  reload or a new tab: the panel's header, tabs and content at reading
+  width under the band, the browser tab named `<id> · <title>`, and a link
+  to the ticket beside its project's board. Clicking a card, row or station
+  opens the panel; clicking a ticket id opens the full page in a new tab
+  (`KEY-3`). Ticket links on a full page stay in its tab.
 
 ### 6.6 Editing (`EDIT`)
 

@@ -64,6 +64,14 @@ function render(
   );
 }
 
+// idLink is the ticket id as a link to its full page in a new tab (KEY-3).
+const idLink = (id: string) =>
+  new RegExp(
+    `<a [^>]*href="#/ticket/${id}"[^>]*target="_blank"[^>]*>${id}</a>`,
+  );
+// insideButton finds a link nested in a button, which is not allowed.
+const linkInButton = /<button[^>]*>(?:(?!<\/button>)[\s\S])*<a /;
+
 const order = (markup: string, ...parts: string[]) =>
   parts.map((part) => {
     const at = markup.indexOf(part);
@@ -72,6 +80,13 @@ const order = (markup: string, ...parts: string[]) =>
   });
 
 describe("TicketCard", () => {
+  it("links its id to the ticket's full page, outside the card's button", () => {
+    const markup = render();
+    expect(markup).toMatch(idLink("FH-7"));
+    expect(markup).not.toMatch(linkInButton);
+    expect(markup).toContain('data-ticket="FH-7"');
+  });
+
   it("opens with the id and running time, then the title, then the tags", () => {
     const markup = render();
     const [id, time, title, tag] = order(

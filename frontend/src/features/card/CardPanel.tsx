@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useId, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import {
   type Attachment,
   COLUMNS,
@@ -28,6 +28,7 @@ import { QuestionCard } from "../../components/QuestionCard";
 import { SidePanel } from "../../components/SidePanel";
 import { StateNote } from "../../components/StateNote";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
+import { idCut, LinkedText, TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { ticketBody } from "../../model/markdown";
 import type { Step } from "../../model/order";
@@ -45,7 +46,7 @@ import { RunsTab } from "./RunsTab";
 const panelBodyClass =
   "relative min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10";
 
-interface CardPanelProps {
+export interface CardPanelProps {
   ticket: TicketRef;
   fetcher: AuthenticatedFetch;
   lines: Map<string, Map<string, Line>>;
@@ -69,12 +70,38 @@ interface CardPanelProps {
 
 type PanelTab = "ticket" | "edit" | "runs" | "attachments" | "review";
 
-// CardPanel shows one ticket beside the board (CARD-1): the Ticket tab with
-// blocked-by (CARD-4), handoff with a warning when a live run has edited
-// since it (CARD-5), tickable criteria (CARD-3) and the rendered markdown;
-// the Edit tab (EDIT-6); the Runs tab (agent runs linked to the ticket); and
-// a Review tab when a review file exists (REV-3). Its header moves and archives the ticket (EDIT-1, EDIT-8).
-export function CardPanel({
+// CardPanel shows one ticket beside the board (CARD-1), with a way to its
+// full page in a new tab (CARD-7).
+export function CardPanel(props: CardPanelProps) {
+  const { ticket, onClose } = props;
+  return (
+    <SidePanel
+      label={`Ticket ${ticket.id}`}
+      onClose={onClose}
+      actions={
+        <TicketLink
+          id={ticket.id}
+          label="Open full page in a new tab"
+          className="grid size-9 place-items-center rounded-full text-ink-muted transition-colors hover:bg-well hover:text-ink"
+        >
+          <Icon name="expand" />
+        </TicketLink>
+      }
+    >
+      <TicketView {...props} layout="panel" />
+    </SidePanel>
+  );
+}
+
+// TicketView is one ticket in the panel or on its full page (CARD-1,
+// CARD-7): the Ticket tab with blocked-by (CARD-4), handoff with a warning
+// when a live run has edited since it (CARD-5), tickable criteria (CARD-3)
+// and the rendered markdown; the Edit tab (EDIT-6); the Runs tab (agent
+// runs linked to the ticket); and a Review tab when a review file exists
+// (REV-3). Its header moves and archives the ticket (EDIT-1, EDIT-8). The
+// panel scrolls its tabs under the header; the page scrolls as a whole.
+export function TicketView({
+  layout,
   ticket,
   fetcher,
   lines,
@@ -87,7 +114,12 @@ export function CardPanel({
   onStep,
   answers = false,
   workstreamsOf,
-}: CardPanelProps) {
+  onDetail,
+}: CardPanelProps & {
+  layout: "panel" | "page";
+  // onDetail hears each loaded copy of the ticket (the page's tab title).
+  onDetail?(detail: TicketDetail): void;
+}) {
   const load = useCallback(
     (signal: AbortSignal) => fetchTicket(fetcher, ticket.id, signal),
     [fetcher, ticket.id],
@@ -96,6 +128,9 @@ export function CardPanel({
   const [tab, setTab] = useState<PanelTab>("ticket");
   const tabsId = useId();
   const detail = resource.status === "ready" ? resource.data : undefined;
+  useEffect(() => {
+    if (detail) onDetail?.(detail);
+  }, [detail, onDetail]);
   const editable = !!editing && !!detail?.hash;
   const items: { id: PanelTab; label: string }[] = [
     { id: "ticket", label: "Ticket" },
@@ -117,6 +152,7 @@ export function CardPanel({
     ...(detail?.review ? [{ id: "review" as const, label: "Review" }] : []),
   ];
   const activeTab = items.some((item) => item.id === tab) ? tab : "ticket";
+  const page = layout === "page";
 
   const saved = (result: Saved | undefined, what: string) => {
     resource.reload();
@@ -167,17 +203,22 @@ export function CardPanel({
       ? (id: string, text: string) =>
           editing.answer(id, text).finally(() => resource.reload())
       : undefined;
-  const body = (current: TicketDetail) => {
+  // On the page the title is the h1, so the tab's own sections (h3) sit
+  // under a heading naming the tab, as they sit under the panel's h2.
+  const body = (current: TicketDetail) => (
+    <>
+      {page ? (
+        <h2 className="sr-only">
+          {items.find((item) => item.id === activeTab)?.label}
+        </h2>
+      ) : null}
+      {tabBody(current)}
+    </>
+  );
+  const tabBody = (current: TicketDetail) => {
     switch (activeTab) {
       case "review":
-        return (
-          <ReviewTab
-            detail={current}
-            keys={keys}
-            onOpen={onOpen}
-            onVerify={verify}
-          />
-        );
+        return <ReviewTab detail={current} keys={keys} onVerify={verify} />;
       case "attachments":
         return <Attachments attachments={current.attachmentFiles} />;
       case "runs":
@@ -204,11 +245,13 @@ export function CardPanel({
     }
   };
 
+  const inset = page ? "" : "px-6";
+  const bodyClass = page ? "pt-6 pb-16" : panelBodyClass;
   return (
-    <SidePanel label={`Ticket ${ticket.id}`} onClose={onClose}>
+    <>
       {resource.status === "loading" ? <PanelSkeleton /> : null}
       {resource.status === "error" ? (
-        <div className="p-6">
+        <div className={page ? "py-6" : "p-6"}>
           <p role="alert" className="text-sm text-danger">
             This ticket could not be loaded: {resource.error}
           </p>
@@ -218,6 +261,7 @@ export function CardPanel({
         <>
           <PanelHeader
             detail={detail}
+            page={page}
             line={lines.get(detail.project)?.get(detail.workstream)}
             workstreamTitle={workstreamTitle(detail.project, detail.workstream)}
             actions={
@@ -235,7 +279,7 @@ export function CardPanel({
             }
           />
           {items.length > 1 ? (
-            <div className="px-6">
+            <div className={inset}>
               <Tabs
                 idPrefix={tabsId}
                 label="Ticket views"
@@ -245,7 +289,10 @@ export function CardPanel({
               />
             </div>
           ) : (
-            <div aria-hidden="true" className="mx-6 border-b border-rule" />
+            <div
+              aria-hidden="true"
+              className={`border-b border-rule ${page ? "" : "mx-6"}`}
+            />
           )}
           {items.length > 1 ? (
             <div
@@ -256,16 +303,16 @@ export function CardPanel({
               tabIndex={0}
               id={panelId(tabsId, activeTab)}
               aria-labelledby={tabId(tabsId, activeTab)}
-              className={panelBodyClass}
+              className={bodyClass}
             >
               {body(detail)}
             </div>
           ) : (
-            <div className={panelBodyClass}>{body(detail)}</div>
+            <div className={bodyClass}>{body(detail)}</div>
           )}
         </>
       ) : null}
-    </SidePanel>
+    </>
   );
 }
 
@@ -339,32 +386,41 @@ function PanelActions({
 }
 
 // PanelHeader: the id and project, the title, a pill row (column, blocker,
-// priority, type), a meta row and the actions (ui-layout.md §3).
+// priority, type), a meta row and the actions (ui-layout.md §3). In the
+// panel the id links to the ticket's full page; on the page, whose own id
+// it is, the title is the page heading.
 export function PanelHeader({
   detail,
   line,
   workstreamTitle,
   actions,
+  page = false,
 }: {
   detail: TicketDetail;
   line?: Line;
   workstreamTitle: string;
   actions?: ReactNode;
+  page?: boolean;
 }) {
+  const Heading = page ? "h1" : "h2";
   const priority = detail.priority
     ? `${priorityLabel(detail.priority)} priority`
     : "";
   return (
-    <header className="px-6 pt-5 pb-4 pr-16">
+    <header className={page ? "pt-2 pb-4" : "px-6 pt-5 pb-4 pr-24"}>
       <p className="flex items-center gap-2 text-sm text-ink-muted">
-        <span className="font-semibold tracking-[0.02em] tabular-nums text-ink">
-          {detail.id}
-        </span>
+        {page ? (
+          <span className={`${idCut} text-ink`}>{detail.id}</span>
+        ) : (
+          <TicketLink id={detail.id} className="text-ink" />
+        )}
         <span>{detail.project}</span>
       </p>
-      <h2 className="mt-1 text-2xl leading-tight display-cut">
+      <Heading
+        className={`mt-1 leading-tight display-cut ${page ? "text-3xl" : "text-2xl"}`}
+      >
         {detail.title}
-      </h2>
+      </Heading>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <StatusPill column={detail.column} />
         {detail.blockedBy.length > 0 ? (
@@ -404,11 +460,13 @@ function ReasonList({
   id,
   title,
   reasons,
+  keys,
   onOpen,
 }: {
   id: string;
   title: string;
   reasons: Reason[];
+  keys: Set<string>;
   onOpen(ticket: TicketRef): void;
 }) {
   if (reasons.length === 0) return null;
@@ -431,7 +489,9 @@ function ReasonList({
             key={reason.text}
             className="flex items-start justify-between gap-3 text-sm"
           >
-            <BlockerPill>{reason.text}</BlockerPill>
+            <BlockerPill title={reason.text}>
+              <LinkedText text={reason.text} keys={keys} />
+            </BlockerPill>
             {reason.ticket && !reason.missing ? (
               <button
                 type="button"
@@ -558,7 +618,7 @@ export function TicketTab({
                     key={item}
                     className="text-lg leading-snug font-semibold text-ink"
                   >
-                    {item}
+                    <LinkedText text={item} keys={keys} />
                   </li>
                 ))}
               </ul>
@@ -577,7 +637,6 @@ export function TicketTab({
               <Markdown
                 context={{ project: detail.project, ticket: detail.id }}
                 keys={keys}
-                onOpenTicket={onOpen}
               >
                 {detail.handoff.markdown}
               </Markdown>
@@ -595,6 +654,7 @@ export function TicketTab({
         id="blocked-heading"
         title="Blocked by"
         reasons={detail.blockedBy}
+        keys={keys}
         onOpen={onOpen}
       />
 
@@ -603,6 +663,7 @@ export function TicketTab({
           id="criteria-heading"
           title="Acceptance criteria"
           items={detail.criteriaItems}
+          render={(text) => <LinkedText text={text} keys={keys} />}
           onToggle={onToggle}
         />
       ) : null}
@@ -621,7 +682,6 @@ export function TicketTab({
         <Markdown
           context={{ project: detail.project, ticket: detail.id }}
           keys={keys}
-          onOpenTicket={onOpen}
         >
           {ticketBody(detail.body)}
         </Markdown>
@@ -659,12 +719,10 @@ function Attachments({ attachments }: { attachments: Attachment[] }) {
 export function ReviewTab({
   detail,
   keys,
-  onOpen,
   onVerify,
 }: {
   detail: TicketDetail;
   keys: Set<string>;
-  onOpen(ticket: TicketRef): void;
   // onVerify ticks or clears a step; absent when read-only.
   onVerify?(index: number, checked: boolean): Promise<boolean>;
 }) {
@@ -675,7 +733,6 @@ export function ReviewTab({
       <Markdown
         context={{ project: detail.project, ticket: detail.id }}
         keys={keys}
-        onOpenTicket={onOpen}
         inline={inline}
       >
         {text}

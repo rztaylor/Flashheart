@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { TicketDetail } from "../../api/board";
+import { TicketLinksInPlace } from "../../components/TicketLink";
 import { PanelHeader, ReviewTab, TicketTab } from "./CardPanel";
 
 // The card panel of docs/dev/specs/ui-layout.md §3.
@@ -72,6 +73,12 @@ function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
   };
 }
 
+// idLink is the ticket id as a link to its full page in a new tab (KEY-3).
+const idLink = (id: string) =>
+  new RegExp(
+    `<a [^>]*href="#/ticket/${id}"[^>]*target="_blank"[^>]*>${id}</a>`,
+  );
+
 describe("PanelHeader", () => {
   const markup = renderToStaticMarkup(
     <PanelHeader detail={detail()} workstreamTitle="Agent protocol" />,
@@ -82,6 +89,10 @@ describe("PanelHeader", () => {
     const title = markup.indexOf("<h2");
     expect(id).toBeGreaterThanOrEqual(0);
     expect(id).toBeLessThan(title);
+  });
+
+  it("links the id to the ticket's full page", () => {
+    expect(markup).toMatch(idLink("FH-4"));
   });
 
   it("states the column, blocker and priority as pills and tags", () => {
@@ -123,6 +134,36 @@ describe("TicketTab", () => {
     expect(markup).toContain("bg-callout-question");
   });
 
+  it("links ticket ids in the text, criteria, handoff and blockers", () => {
+    const linked = renderToStaticMarkup(
+      <TicketTab
+        detail={detail({
+          body: "# T\n\n## Description\n\nFollows FH-2.",
+          criteriaItems: [{ text: "Works like FH-5", done: false }],
+          handoff: { markdown: "", next: ["Pair with FH-6"] },
+        })}
+        keys={new Set(["FH"])}
+        onOpen={() => undefined}
+      />,
+    );
+    for (const id of ["FH-2", "FH-5", "FH-6", "FH-3"])
+      expect(linked, id).toMatch(idLink(id));
+  });
+
+  it("keeps ticket links in the same tab on the full page", () => {
+    const inPlace = renderToStaticMarkup(
+      <TicketLinksInPlace>
+        <TicketTab
+          detail={detail({ body: "# T\n\nFollows FH-2." })}
+          keys={new Set(["FH"])}
+          onOpen={() => undefined}
+        />
+      </TicketLinksInPlace>,
+    );
+    expect(inPlace).toContain('href="#/ticket/FH-2"');
+    expect(inPlace).not.toContain('target="_blank"');
+  });
+
   it("offers the agent's options as answers", () => {
     expect(markup).toContain(">Claude<");
     expect(markup).toContain(">Codex<");
@@ -147,7 +188,6 @@ describe("ReviewTab", () => {
       <ReviewTab
         detail={detail({ review })}
         keys={new Set(["FH"])}
-        onOpen={() => undefined}
         onVerify={onVerify}
       />,
     );
@@ -186,7 +226,6 @@ describe("ReviewTab", () => {
           },
         })}
         keys={new Set(["FH"])}
-        onOpen={() => undefined}
       />,
     );
     expect(markup).toContain("Just prose.");

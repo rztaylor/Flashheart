@@ -23,6 +23,7 @@ import {
 import type { TicketRef, Workstream, WorkstreamTicket } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { Pill, StatusPill } from "../../components/Pill";
+import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { statusOf } from "../../model/status";
 import { type Edge, layoutGraph, moveFree } from "./graph";
@@ -502,31 +503,50 @@ function StationButton({
           </Pill>
         ) : null}
       </span>
-      <button
-        {...drag}
-        type="button"
-        data-station={ticket.id}
-        data-station-state={state}
-        disabled={ticket.missing}
-        onClick={() => !ticket.missing && onOpen({ id: ticket.id })}
-        aria-label={label}
-        className="group relative z-10 flex flex-col items-center gap-1.5 rounded-control px-1 pb-1 text-center disabled:cursor-default"
-      >
-        <span className="grid h-9 place-items-center">
+      {/* One button covers the station's drawing, as on a board card; only
+          the id, a link to the ticket's full page, sits above it. */}
+      <div className="group relative z-10 flex flex-col items-center gap-1.5 px-1 pb-1 text-center">
+        <button
+          {...drag}
+          type="button"
+          data-station={ticket.id}
+          data-station-state={state}
+          disabled={ticket.missing}
+          onClick={() => !ticket.missing && onOpen({ id: ticket.id })}
+          aria-label={label}
+          className="absolute inset-0 z-[1] rounded-control disabled:cursor-default"
+        />
+        <span aria-hidden="true" className="grid h-9 place-items-center">
           <Mark state={state} colour={colour} />
         </span>
-        <span className="line-clamp-2 text-sm leading-snug font-semibold text-ink group-enabled:group-hover:underline">
+        <span
+          aria-hidden="true"
+          className={`line-clamp-2 text-sm leading-snug font-semibold text-ink ${ticket.missing ? "" : "group-hover:underline"}`}
+        >
           {ticket.title}
         </span>
-        <span className="max-w-full truncate text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
-          {ticket.id}
+        <span
+          aria-hidden="true"
+          className="max-w-full truncate text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted"
+        >
+          {ticket.missing ? (
+            ticket.id
+          ) : (
+            <TicketLink
+              id={ticket.id}
+              tabIndex={-1}
+              className="relative z-[2] hover:text-ink"
+            />
+          )}
         </span>
-        {state === "missing" ? (
-          <span className="text-2xs text-ink-muted">Does not exist</span>
-        ) : (
-          <StatusPill column={ticket.column} />
-        )}
-      </button>
+        <span aria-hidden="true">
+          {state === "missing" ? (
+            <span className="text-2xs text-ink-muted">Does not exist</span>
+          ) : (
+            <StatusPill column={ticket.column} />
+          )}
+        </span>
+      </div>
     </>
   );
 }

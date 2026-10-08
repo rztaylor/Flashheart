@@ -480,3 +480,39 @@ even one about something else, since the user is talking to the session.
 Versions: `PROTOCOL_VERSION` stays 1 (additive: an optional `background`
 field and a derived state rule); board format stays 2. The protocol skill
 says a reply in the chat answers the question.
+
+## 2026-10-08 — D30: Ticket ids open a full page in a new tab
+
+Decision (FH-45): every ticket has a full page, `#/ticket/<id>` (CARD-7),
+and every ticket id the board shows is a link to it that opens a new tab:
+on cards, table rows, workstream stations, the Agents view, the archive,
+the card panel's header, and ids of known keys in ticket and review text
+(markdown, criteria, handoff next steps, blocking reasons). Clicking a
+card, row or station still opens the side panel. On a full page, ticket
+links stay in its tab. The user asked for a Jira-like page with room to
+read, review screenshots and, later, edit (FH-16).
+
+Ids in text used to open the side panel in place. They now follow the one
+rule, "an id opens the full page", so a reference in a ticket behaves like
+the id on a card; the blocked-by section keeps its Open button for the
+panel. Links are real links (`href`), so Cmd or middle click and copying
+the address work as anywhere else.
+
+A link inside a button is invalid HTML and an accessibility failure, and
+cards and stations are buttons that drag. They are now drawn under one
+button that covers them, hidden from assistive technology (the button
+carries the name, as before), with the id link above the button and off the
+tab order; the panel header's id link is the keyboard route. Table rows and
+the Agents view split the title button from the id link.
+
+New tabs authenticate with Singleserve's session cookie, as reloads do; no
+credential is in the URL. Each tab heartbeats; the server stops when the
+last tab closes, as before.
+
+Options: open the full page in the same tab (loses the board); a modal over
+the board (no room gained, no URL to keep); an "open full page" button only
+(ids would stay inert, which the user asked to change); ids open in new tabs
+(chosen).
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; no API
+change.
