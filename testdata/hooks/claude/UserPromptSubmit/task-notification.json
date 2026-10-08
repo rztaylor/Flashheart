@@ -1,0 +1,10 @@
+{
+  "session_id": "e8d9eb02-6534-4065-ae10-3e032e231c24",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/e8d9eb02-6534-4065-ae10-3e032e231c24.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/e8d9eb02-6534-4065-ae10-3e032e231c24/scratchpad",
+  "prompt_id": "5b1e3c0a-9d2f-4f6e-8a41-2c7d9e0f1a63",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<task-notification>\n<task-id>bxrj1ilqd</task-id>\n<tool-use-id>toolu_01WPJ2kEm4EMjJi8vjfYAeKF</tool-use-id>\n<output-file>/Users/example/tmp/claude/e8d9eb02-6534-4065-ae10-3e032e231c24/tasks/bxrj1ilqd.output</output-file>\n<status>completed</status>\n<summary>Background command \"Run the tests\" completed (exit code 0)</summary>\n</task-notification>"
+}

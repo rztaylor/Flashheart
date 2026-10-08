@@ -3,7 +3,13 @@ import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-import { callTool, IDLE_SESSION, promptHook, seedRuns } from "./agent-runs.mjs";
+import {
+  callTool,
+  IDLE_SESSION,
+  promptHook,
+  seedRuns,
+  TASK_NOTIFICATION,
+} from "./agent-runs.mjs";
 import {
   filterButton,
   filterMenu,
@@ -355,4 +361,58 @@ test("a question is answered from the Agents view, and fits a phone", async () =
   ).toContainText("“Yes”");
   const output = promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
   expect(output).toContain('\\"Yes\\" (Robin)');
+});
+
+test("a question answered in the session's own chat leaves Needs you", async () => {
+  await callTool(sandbox.root, seeded.gamma, "ask_human", {
+    run: `claude:${IDLE_SESSION}`,
+    ticket: "AL-1",
+    kind: "decision",
+    text: "Rename the skeleton package?",
+    options: ["Rename", "Keep"],
+  });
+  await open("#/p/alpha/board");
+  const card = page
+    .getByRole("region", { name: /^Needs you/ })
+    .getByRole("button", {
+      name: /^Project skeleton, AL-1, needs you: question waiting/,
+    });
+  await expect(card).toBeVisible();
+
+  // A background command finishing is not the user answering.
+  promptHook(sandbox.root, IDLE_SESSION, seeded.gamma, TASK_NOTIFICATION);
+  await page.reload();
+  await open("#/p/alpha/board");
+  await expect(card).toBeVisible();
+
+  // The user replies in the session's chat instead of on the board.
+  expect(promptHook(sandbox.root, IDLE_SESSION, seeded.gamma)).toBe("");
+  await expect(card).toHaveCount(0);
+  for (const theme of ["light", "dark"]) {
+    await open("#/p/alpha/board", { theme });
+    await expect(card).toHaveCount(0);
+    await shot(`board-answered-in-session-1440-${theme}`);
+  }
+
+  // The run keeps the question in its activity, marked.
+  for (const [width, theme] of [
+    [1440, "light"],
+    [1440, "dark"],
+    [390, "light"],
+  ]) {
+    await open("#/all/agents", { width, height: 900, theme });
+    const row = page.getByRole("button", { name: /e2d8f6a4/ }).first();
+    if ((await row.getAttribute("aria-expanded")) !== "true") await row.click();
+    const mark = page.getByText("Question on AL-1 answered in the session");
+    await expect(mark).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: /^Needs you/ }).getByRole("button", {
+        name: /e2d8f6a4/,
+      }),
+    ).toHaveCount(0);
+    await mark.scrollIntoViewIfNeeded();
+    if (width === 1440 && theme === "light")
+      await expectNoAxeViolations("run answered in the session");
+    await shot(`agents-answered-in-session-${width}-${theme}`);
+  }
 });

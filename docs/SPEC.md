@@ -330,7 +330,10 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   blocked), text, and optional options. Answering it in the UI records the
   answer, under the configured `user_name` (else the computer account's
   name), in the ticket and delivers it to the run at its next prompt or start
-  (`HOOK-5`). A question from a run that has ended stays open and
+  (`HOOK-5`). A prompt the user types in the asking session before
+  answering on the board answers it there: the question stops waiting and
+  stays in the run's history marked as answered in the session (D28). A
+  question from a run that has ended stays open and
   answerable, marked as waiting for the session to resume; it does not
   need you (`VIEW-2`). A board that cannot record answers shows questions
   without an answer form.

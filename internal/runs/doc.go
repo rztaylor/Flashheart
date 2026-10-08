@@ -2,7 +2,7 @@
 // §4): it folds a project's events into runs (start, end, turns, plan,
 // tools, edits since checkpoint, which a session counts with its
 // subagents', claims and the claimant's home project, questions and their
-// answers, subagents, a bounded timeline) and derives each run's state (Working,
+// answers, on the board or in the session, subagents, a bounded timeline) and derives each run's state (Working,
 // Needs you, Waiting, Quiet, Ended), its link to a ticket, a ticket's live
 // claim holder (lease, agent-protocol §6), undelivered answers and its flags
 // from the fold and a clock.

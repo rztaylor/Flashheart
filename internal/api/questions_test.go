@@ -157,3 +157,38 @@ func TestQuestionsOfEndedSessionsDoNotNeedYou(t *testing.T) {
 	}
 	send(t, handler, http.MethodPost, "/api/questions/q-1/answer", map[string]string{"answer": "No"}, http.StatusOK, nil)
 }
+
+func TestAQuestionAnsweredInTheSessionNoLongerNeedsYou(t *testing.T) {
+	t.Parallel()
+
+	handler, _, log := questionsAPI(t)
+	// The user replied in the session's chat instead of on the board.
+	if err := log.Append(events.Event{Time: time.Date(2026, 10, 4, 13, 29, 0, 0, time.UTC), Run: sampleSession, Agent: "claude", Kind: events.TurnStart, Project: "alpha", Data: events.TurnStartData{}}); err != nil {
+		t.Fatal(err)
+	}
+	var board BoardResponse
+	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+	for _, card := range board.Cards {
+		if card.ID == "AL-1" && (card.NeedsYou || card.OpenQuestions != 0) {
+			t.Errorf("AL-1 card = needsYou %v, openQuestions %d", card.NeedsYou, card.OpenQuestions)
+		}
+	}
+	if detail := ticketDetail(t, handler, "AL-1"); detail.NeedsYou || len(detail.Questions) != 0 {
+		t.Fatalf("AL-1 needsYou %v questions %+v", detail.NeedsYou, detail.Questions)
+	}
+	// The run keeps the question, marked as answered in the session.
+	var response RunsResponse
+	getJSON(t, handler, "/api/runs", http.StatusOK, &response)
+	if q := response.Runs[0].Questions[0]; q.ID != "q-1" || !q.AnsweredInSession || !q.Delivered {
+		t.Fatalf("question = %+v", q)
+	}
+	var refusal struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	send(t, handler, http.MethodPost, "/api/questions/q-1/answer", map[string]string{"answer": "No"}, http.StatusConflict, &refusal)
+	if refusal.Error.Code != "answered_in_session" {
+		t.Fatalf("refusal = %+v", refusal)
+	}
+}

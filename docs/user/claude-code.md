@@ -100,6 +100,12 @@ the session with it. If the model did not run it, the answer reaches the
 session with its next prompt (send any prompt, such as "go on"); a session
 that is resumed gets it in its recovery note.
 
+You can also just answer in the session's own chat. Any prompt you type
+there before answering on the board counts as your answer: the question
+leaves **Needs you** and stays in the run's timeline as answered in the
+session. A background task finishing (which Claude Code also delivers as a
+prompt) does not count.
+
 A question the model asks only in its chat reply, without `ask_human`,
 leaves the session in **Waiting**: Flashheart never reads what the model
 writes, so it cannot tell a question from a summary. The protocol skill

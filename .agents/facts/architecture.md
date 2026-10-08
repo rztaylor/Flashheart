@@ -34,7 +34,8 @@ Intended layout (packages are created when they get real content):
   know each agent's payload schema.
 - `internal/mcpserver`: MCP tools over store, events and runs.
 - `internal/await`: `flashheart await`: wait for one question's answer in
-  its session's inbox, deliver it, notice delivery elsewhere, time out.
+  its session's inbox, deliver it, notice delivery elsewhere or an answer
+  in the session (from the `runs` fold), time out.
 - `internal/setup`: agent configuration diff, write with backup, uninstall,
   skill/AGENTS.md rendering, and refreshing an installed Claude skill (called
   by the session-start hook through `cli`; `hooks` never imports `setup`).

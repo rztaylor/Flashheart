@@ -9,6 +9,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -50,6 +51,9 @@ type Result struct {
 	Note string
 	// AlreadyDelivered means the answer reached the session another way.
 	AlreadyDelivered bool
+	// AnsweredInSession means the user replied in the session's own chat
+	// before answering on the board (agent-protocol §4), so no answer comes.
+	AnsweredInSession bool
 }
 
 // Wait blocks until the question's answer is in its session's inbox, then
@@ -65,13 +69,16 @@ func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	if q.run == "" {
+	if q.Run == "" {
 		return Result{}, fmt.Errorf("%s: %w", o.Question, ErrUnknownQuestion)
 	}
-	session, _, _ := strings.Cut(q.run, "/")
+	session, _, _ := strings.Cut(q.Run, "/")
 	scanned := start
 	for {
-		if q.delivered {
+		if q.AnsweredInSession {
+			return Result{AnsweredInSession: true}, nil
+		}
+		if q.Delivered {
 			return Result{AlreadyDelivered: true}, nil
 		}
 		if err := ctx.Err(); err != nil {
@@ -131,29 +138,21 @@ func sleep(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// question is what the log says about one question.
-type question struct {
-	run       string
-	delivered bool
-}
-
-func find(log *events.Log, project, id string, since time.Time) (question, error) {
-	var q question
-	err := log.Read(project, since, func(e events.Event) {
-		switch e.Kind {
-		case events.QuestionAsked:
-			var data events.QuestionData
-			if e.Decode(&data) == nil && data.ID == id {
-				q.run = e.Run
-			}
-		case events.QuestionDelivered:
-			var data events.DeliveredData
-			if e.Decode(&data) == nil && data.ID == id {
-				q.delivered = true
+// find folds the project's recent events into runs, as the board does, and
+// returns what became of one question; a zero Question when it is not there.
+func find(log *events.Log, project, id string, since time.Time) (runs.Question, error) {
+	set := runs.NewSet()
+	if err := log.Read(project, since, set.Apply); err != nil {
+		return runs.Question{}, err
+	}
+	for _, run := range set.Runs() {
+		for _, q := range run.Questions {
+			if q.ID == id {
+				return q, nil
 			}
 		}
-	})
-	return q, err
+	}
+	return runs.Question{}, nil
 }
 
 func toAnswers(list []events.Delivery) []protocol.Answer {

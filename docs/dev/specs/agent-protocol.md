@@ -62,7 +62,7 @@ writing.
 |---|---|---|
 | `run.start` | session start / subagent start hook | `kind` (session/subagent), `parent`, `cwd`, `branch`, `worktree`, `source` (startup/resume/clear/compact), `agent_type` for subagents |
 | `run.end` | session end / subagent stop | `reason` |
-| `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); prompt text is never stored |
+| `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
 | `turn.end` | stop | `blocked_for_handoff` (bool) |
 | `tool.used` | post tool use | `tool`, `ok`, optional `path` (repo-relative, edits only; omitted outside the worktree), optional `summary` (≤120 chars, not written by the Claude adapter, which reads nothing else from tool inputs) |
 | `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
@@ -89,7 +89,7 @@ table):
 | State | Condition (first match wins) |
 |---|---|
 | **Ended** | `run.end` seen, or no event for `stale_hours` (default 12) |
-| **Needs you** | an unresolved `permission.requested`, an unanswered or undelivered `question.asked` of kind review/decision/question/blocked |
+| **Needs you** | an unresolved `permission.requested`, an unanswered or undelivered `question.asked` of kind review/decision/question/blocked, not answered in the session |
 | **Working** | `turn.start` after the last `turn.end` (a subagent works from its start), and last event within `quiet_minutes` |
 | **Quiet** | as Working, but last event older than `quiet_minutes` |
 | **Waiting** | otherwise (turn finished; the session is open, waiting for the user) |
@@ -97,7 +97,14 @@ table):
 A run's last event includes its subagents' events. A subagent ends with its
 session, and a session needs you while one of its live subagents does. A
 pending permission is cleared by the run's next `tool.used`, `turn.start`,
-`turn.end`, `permission.resolved` or `run.end`. `run.start` after `run.end`
+`turn.end`, `permission.resolved` or `run.end`. A question not yet answered
+on the board is **answered in the session**, without an event, by its
+session's next `turn.start` that is not `background`: the user replied in
+the session's own chat, so it no longer waits. This covers the session's
+subagents' questions, never another session's; a question already answered
+on the board keeps waiting for its delivery, which the same prompt's hook
+makes. The board refuses a later board answer (`answered_in_session`), and
+the run's timeline and question keep the mark (D28). `run.start` after `run.end`
 (resume) reopens the run. A subagent first seen ending (the Claude desktop
 app stops internal helper agents it never reported starting) is not a run. Runs and timelines are derived from the last two
 days of event files.
@@ -135,7 +142,7 @@ ticket's `## Notes`.
 | Hook event | Flashheart action | Output |
 |---|---|---|
 | `SessionStart` (`source`: startup, resume, clear, compact) | `run.start` | Recovery note as `hookSpecificOutput.additionalContext` (§8) |
-| `UserPromptSubmit` | `turn.start` (resolves a pending permission); `question.delivered` for each answer handed over | Answered questions as `additionalContext` (`HOOK-5`), from the session's answers inbox |
+| `UserPromptSubmit` | `turn.start` (resolves a pending permission and, unless `background`, answers open questions in the session, §4); `question.delivered` for each answer handed over | Answered questions as `additionalContext` (`HOOK-5`), from the session's answers inbox |
 | `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping: `hookSpecificOutput.updatedInput` is the tool input with `run` set to the calling run (the subagent's when `agent_id` is present), and no permission decision (§7.1) |
 | `PostToolUse` | `tool.used`; `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`). A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
 | `PostToolUseFailure` | `tool.used` with `ok: false` | — |
@@ -344,7 +351,9 @@ Code: Bash with `run_in_background`) runs it after asking:
   `question.delivered` for each and prints the answers note (§8, framed as
   information), then exits 0, which wakes the agent;
 - it re-reads the log every 15 s, and if the answer was delivered another
-  way (the user prompted first) it prints a one-line note and exits 0;
+  way (the user prompted after answering on the board) it prints a
+  one-line note and exits 0; if the user answered in the session's chat
+  instead (§4) it prints a one-line note saying so and exits 0;
 - after `--timeout` (default 12 h) it exits 1 saying the question is still
   on the board and the command can be run again.
 
@@ -495,6 +504,11 @@ write nothing, subagent edits counting toward their session's handoff, the
 (2026-10-07); `attach` (§7.2) and the skill's line about it (2026-10-07); workstream order
 no longer blocks and the skill describes workstreams as epics ordered by
 `depends_on` (D26, 2026-10-07): the tools keep their shape, so the version
+stays 1. A prompt answering the session's open questions (§4), with
+`turn.start`'s optional `background` field, the `answered_in_session`
+refusal and `flashheart await`'s note for it (D28, FH-43, 2026-10-08):
+additive, because no event changes shape and older logs read the same (a
+`turn.start` without `background` was always a prompt), so the version
 stays 1.
 The session-start hook keeps an installed skill's text current (re-running
 `setup` installs it); `flashheart doctor` says when it is out of date.

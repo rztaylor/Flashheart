@@ -49,6 +49,11 @@ func SettingsFor(quietMinutes, leaseMinutes int) Settings {
 	return settings
 }
 
+// QuestionAnsweredInSession is the timeline kind marking a question the
+// user answered in the session's own chat (derived from turn.start, not an
+// event of its own).
+const QuestionAnsweredInSession = "question.answered-in-session"
+
 // Bounds on what a run keeps in memory.
 const (
 	MaxTimeline  = 200
@@ -119,11 +124,16 @@ type Question struct {
 	Text    string    `json:"text"`
 	Options []string  `json:"options,omitempty"`
 	Asked   time.Time `json:"asked"`
-	// Answer is set once a human answered; Delivered once the run was told.
+	// Answer is set once a human answered on the board; Delivered once the
+	// run was told.
 	Answer     string    `json:"answer,omitempty"`
 	AnsweredBy string    `json:"answeredBy,omitempty"`
 	AnsweredAt time.Time `json:"answeredAt,omitzero"`
 	Delivered  bool      `json:"delivered,omitempty"`
+	// AnsweredInSession is set when the user prompted the asking session
+	// before answering on the board: the answer went into the session's own
+	// chat, so the question is delivered and no longer waits (§4).
+	AnsweredInSession bool `json:"answeredInSession,omitempty"`
 	// SessionEnded is set by readers when the asking run has ended: the
 	// question can still be answered, and the answer waits for the session
 	// to resume (RUN-8), but it does not need you (VIEW-2).
@@ -237,6 +247,9 @@ func (s *Set) Apply(e events.Event) {
 		r.LastActivity = e.Time
 	}
 	entry := Entry{Time: e.Time, Kind: e.Kind}
+	// answers is set by a prompt from the user, which answers the session's
+	// open questions after the prompt's own timeline entry.
+	answers := false
 	switch e.Kind {
 	case events.RunStart:
 		var data events.RunStartData
@@ -273,6 +286,10 @@ func (s *Set) Apply(e events.Event) {
 		r.Cwd = first(data.Cwd, r.Cwd)
 		r.Branch = first(data.Branch, r.Branch)
 		r.Worktree = first(data.Worktree, r.Worktree)
+		if data.Background {
+			entry.Detail = "background"
+		}
+		answers = !data.Background
 	case events.TurnEnd:
 		var data events.TurnEndData
 		_ = e.Decode(&data)
@@ -376,6 +393,9 @@ func (s *Set) Apply(e events.Event) {
 		}
 	}
 	r.Timeline = append(r.Timeline, entry)
+	if answers {
+		s.answerInSession(r, e.Time)
+	}
 	if len(r.Timeline) > MaxTimeline {
 		r.Timeline = slices.Delete(r.Timeline, 0, len(r.Timeline)-MaxTimeline)
 	}
@@ -398,6 +418,24 @@ func (r *Run) boundQuestions() {
 			index = 0
 		}
 		r.Questions = slices.Delete(r.Questions, index, index+1)
+	}
+}
+
+// answerInSession settles the unanswered questions of a session and its
+// subagents when the user prompts the session: whatever the prompt says,
+// the user is talking to the session, so the question no longer waits on
+// the board (agent-protocol §4). A question already answered on the board
+// keeps waiting for its delivery, which the same prompt's hook makes.
+func (s *Set) answerInSession(r *Run, at time.Time) {
+	for _, run := range append([]*Run{r}, s.children(r)...) {
+		for index := range run.Questions {
+			q := &run.Questions[index]
+			if q.Delivered || q.Answered() {
+				continue
+			}
+			q.Delivered, q.AnsweredInSession = true, true
+			run.Timeline = append(run.Timeline, Entry{Time: at, Kind: QuestionAnsweredInSession, Ticket: q.Ticket, Detail: q.Kind})
+		}
 	}
 }
 

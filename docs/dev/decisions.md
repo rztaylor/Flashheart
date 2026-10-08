@@ -406,3 +406,35 @@ working only.
 Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
 `agentWorking` field is unchanged. A saved `virtual_columns` entry
 `agent-working` is dropped on load rather than refused.
+
+## 2026-10-08 — D28: A prompt in the asking session answers its questions
+
+Decision (FH-43): when the user prompts the session that asked
+(`UserPromptSubmit`) before answering on the board, its unanswered
+questions, and its subagents', are answered in the session: they stop
+waiting, leave Needs you and are no longer shown as questions for you,
+while the run's question list and timeline keep them, marked. A question
+already answered on the board keeps waiting for delivery, which that same
+prompt's hook makes. Another session's questions are untouched. Users often
+answer in the chat, and the open question had kept the session, and every
+ticket it touched (including ones in Review and Done), in Needs you for up
+to twelve hours.
+
+The answer is derived in the run fold from `turn.start`, as a pending
+permission's resolution is, rather than recorded as a new event: the prompt
+hook stays at one `stat` when no answer is waiting, and older logs fold the
+same way. Claude Code also submits a prompt when a background command
+finishes (recorded: it starts `<task-notification>`), so its adapter marks
+that `turn.start` `background: true`, which answers nothing. A board answer
+to a question answered in the session is refused (`answered_in_session`),
+and `flashheart await` exits 0 saying the user answered in the chat.
+
+Options: a `question.answered` with `by: session` (an empty answer that
+recovery notes and `board_context` would try to deliver); a new
+`question.withdrawn` event written by the prompt hook (a log read on every
+prompt); deriving it from `turn.start` (chosen). Any later prompt counts,
+even one about something else, since the user is talking to the session.
+
+Versions: `PROTOCOL_VERSION` stays 1 (additive: an optional `background`
+field and a derived state rule); board format stays 2. The protocol skill
+says a reply in the chat answers the question.

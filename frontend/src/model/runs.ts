@@ -167,6 +167,15 @@ const source: Record<string, string> = {
 
 const words = (value: string) => value.replaceAll("_", " ");
 
+const asked: Record<string, string> = {
+  question: "Asked a question",
+  decision: "Asked for a decision",
+  review: "Asked for a review",
+  blocked: "Said it is blocked",
+};
+
+const on = (ticket?: string) => (ticket ? ` on ${ticket}` : "");
+
 // describeEntry says what one timeline entry was, in plain words.
 export function describeEntry(entry: TimelineEntry): string {
   switch (entry.kind) {
@@ -176,7 +185,9 @@ export function describeEntry(entry: TimelineEntry): string {
       return entry.path ? `${tool} ${entry.path}` : tool;
     }
     case "turn.start":
-      return "Prompt";
+      return entry.detail === "background"
+        ? "Background task finished"
+        : "Prompt";
     case "turn.end":
       return "Turn finished";
     case "permission.requested":
@@ -208,6 +219,14 @@ export function describeEntry(entry: TimelineEntry): string {
       return `Claimed ${entry.ticket ?? "a ticket"}`;
     case "release":
       return `Released ${entry.ticket ?? "a ticket"}`;
+    case "question.asked":
+      return `${asked[entry.detail ?? ""] ?? "Asked a question"}${on(entry.ticket)}`;
+    case "question.answered":
+      return "Answered on the board";
+    case "question.delivered":
+      return "Answer delivered";
+    case "question.answered-in-session":
+      return `Question${on(entry.ticket)} answered in the session`;
     default:
       return entry.ticket ? `${entry.kind} ${entry.ticket}` : entry.kind;
   }

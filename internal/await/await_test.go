@@ -167,6 +167,45 @@ func TestWaitStopsQuietlyWhenTheAnswerWasDeliveredElsewhere(t *testing.T) {
 	}
 }
 
+func TestWaitStopsWhenTheUserAnsweredInTheSession(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture(t)
+	f.ask(subagent, "q-6")
+	f.onSleep = func(call int) {
+		if call == 2 {
+			// The user replied in the session's chat instead of on the board.
+			f.append(session, events.TurnStart, events.TurnStartData{})
+		}
+	}
+	result, err := Wait(context.Background(), f.log, f.options("q-6"))
+	if err != nil || !result.AnsweredInSession || result.Note != "" {
+		t.Fatalf("result = %+v, %v", result, err)
+	}
+	if got := f.delivered(); len(got) != 0 {
+		t.Fatalf("delivered = %v, want none", got)
+	}
+}
+
+func TestWaitKeepsWaitingThroughABackgroundTasksNotice(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture(t)
+	f.ask(session, "q-7")
+	f.onSleep = func(call int) {
+		switch call {
+		case 2:
+			f.append(session, events.TurnStart, events.TurnStartData{Background: true})
+		case 25:
+			f.answer(session, "q-7")
+		}
+	}
+	result, err := Wait(context.Background(), f.log, f.options("q-7"))
+	if err != nil || result.AnsweredInSession || !strings.Contains(result.Note, `"Push"`) {
+		t.Fatalf("result = %+v, %v", result, err)
+	}
+}
+
 func TestWaitReturnsAtOnceForADeliveredQuestion(t *testing.T) {
 	t.Parallel()
 

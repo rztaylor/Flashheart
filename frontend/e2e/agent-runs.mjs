@@ -137,9 +137,14 @@ export async function seedRuns(home, root) {
   return { gamma };
 }
 
+// TASK_NOTIFICATION is the prompt Claude Code submits when a background
+// command finishes: not the user.
+export const TASK_NOTIFICATION =
+  "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n</task-notification>";
+
 // promptHook submits a prompt for a session and returns the hook's output,
 // which carries answers waiting for it (HOOK-5).
-export function promptHook(root, sessionID, cwd) {
+export function promptHook(root, sessionID, cwd, prompt = "synthetic") {
   return execFileSync(
     executable,
     ["hook", "claude", "UserPromptSubmit", "--root", root],
@@ -148,7 +153,7 @@ export function promptHook(root, sessionID, cwd) {
         hook_event_name: "UserPromptSubmit",
         session_id: sessionID,
         cwd,
-        prompt: "synthetic",
+        prompt,
       }),
       env: { ...process.env, PATH: "/nonexistent" },
     },

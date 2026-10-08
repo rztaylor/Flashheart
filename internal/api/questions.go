@@ -57,6 +57,10 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "already_answered", "This question has already been answered")
 		return
 	}
+	if question.AnsweredInSession {
+		writeError(w, http.StatusConflict, "answered_in_session", "This question was answered in the session's own chat")
+		return
+	}
 	// The inbox carries the answer to the run (HOOK-5) and the log records
 	// it; the ticket keeps it for whoever reads the ticket later (STO-6).
 	// Queueing first means a failure leaves the question unanswered, so it
