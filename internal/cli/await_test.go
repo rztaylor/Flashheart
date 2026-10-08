@@ -60,6 +60,25 @@ func TestAwaitPrintsTheAnswerAndExitsZero(t *testing.T) {
 	}
 }
 
+func TestAwaitSaysWhenTheQuestionWasAnsweredInTheSession(t *testing.T) {
+	t.Parallel()
+
+	root := askedBoard(t, false)
+	s, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = events.New(s).Append(events.Event{Time: time.Now(), Run: "claude:s1", Agent: "claude", Kind: events.TurnStart, Project: "alpha", Data: events.TurnStartData{}})
+	s.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := newHarness(t).run("await", "q-1", "--project", "alpha", "--root", root)
+	if code != 0 || stderr != "" || stdout != "The user answered q-1 in your session's chat, not on the board; there is no board answer to wait for.\n" {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
 func TestAwaitFailures(t *testing.T) {
 	t.Parallel()
 

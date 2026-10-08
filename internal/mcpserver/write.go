@@ -960,7 +960,7 @@ func (srv *server) askHuman(input AskHumanInput) (string, error) {
 	// The await command wakes an agent that can run background commands
 	// as soon as the answer is given (agent-protocol §7.5).
 	command := protocol.AwaitCommand(srv.options.Binary, srv.options.Root, project, id)
-	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; the answer will arrive in a later prompt. Carry on with other work if you can.\n"+
+	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; the answer will arrive in a later prompt, or the user replies in this chat, which settles it. Carry on with other work if you can.\n"+
 		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits (Claude Code: Bash with run_in_background):\n%s\nok question=%s\n", kind, command, id), nil
 }
 

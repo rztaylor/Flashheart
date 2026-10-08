@@ -66,6 +66,9 @@ export interface Question {
   answeredBy?: string;
   answeredAt?: string;
   delivered?: boolean;
+  // answeredInSession: the user replied in the session's own chat before
+  // answering on the board, so the question no longer waits (RUN-8).
+  answeredInSession?: boolean;
   // sessionEnded: the asking session has ended; an answer waits for it to
   // resume, and the question does not need you (RUN-8, VIEW-2).
   sessionEnded?: boolean;

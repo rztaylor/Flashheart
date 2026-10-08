@@ -114,6 +114,9 @@ describe("describeEntry", () => {
       "Read failed",
     );
     expect(describeEntry(entry({ kind: "turn.start" }))).toBe("Prompt");
+    expect(
+      describeEntry(entry({ kind: "turn.start", detail: "background" })),
+    ).toBe("Background task finished");
     expect(describeEntry(entry({ kind: "turn.end" }))).toBe("Turn finished");
     expect(
       describeEntry(entry({ kind: "permission.requested", tool: "Bash" })),
@@ -142,6 +145,22 @@ describe("describeEntry", () => {
     expect(describeEntry(entry({ kind: "checkpoint", ticket: "FH-1" }))).toBe(
       "Checkpoint on FH-1",
     );
+    expect(
+      describeEntry(
+        entry({ kind: "question.asked", detail: "decision", ticket: "FH-1" }),
+      ),
+    ).toBe("Asked for a decision on FH-1");
+    expect(describeEntry(entry({ kind: "question.answered" }))).toBe(
+      "Answered on the board",
+    );
+    expect(describeEntry(entry({ kind: "question.delivered" }))).toBe(
+      "Answer delivered",
+    );
+    expect(
+      describeEntry(
+        entry({ kind: "question.answered-in-session", ticket: "FH-1" }),
+      ),
+    ).toBe("Question on FH-1 answered in the session");
     expect(describeEntry(entry({ kind: "future.kind" }))).toBe("future.kind");
   });
 });

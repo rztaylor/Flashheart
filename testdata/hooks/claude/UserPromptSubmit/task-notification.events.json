@@ -1,0 +1,12 @@
+[
+  {
+    "run": "claude:e8d9eb02-6534-4065-ae10-3e032e231c24",
+    "kind": "turn.start",
+    "data": {
+      "background": true,
+      "cwd": "/Users/example/src/demo",
+      "branch": "feature/demo",
+      "worktree": "/Users/example/src/demo"
+    }
+  }
+]

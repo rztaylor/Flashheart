@@ -21,6 +21,7 @@ Checked 2026-10-05 against Claude Code 2.1.288.
 | Source | Cases |
 |---|---|
 | Recorded from Claude Code 2.1.288 (CLI, 2026-10-05 and 2026-10-06) | `SessionStart/startup`, `SessionStart/startup-model`, `UserPromptSubmit/prompt`, `PreToolUse/bash`, `PostToolUse/edit`, `PostToolUse/write`, `PostToolUse/read`, `PostToolUse/bash`, `PostToolUse/agent`, `PostToolUse/subagent-bash`, `PostToolUseFailure/read-missing`, `PermissionRequest/bash`, `PreCompact/manual`, `Stop/stop`, `SubagentStart/explore`, `SubagentStop/explore`, `SubagentStop/helper`, `SessionEnd/other`, `SessionEnd/prompt-input-exit` |
+| Recorded from Claude Code 2.1.291 (CLI `-p`, 2026-10-08): the prompt a finished background command submits | `UserPromptSubmit/task-notification` |
 | Recorded, then given a fake secret to prove commands are never stored | `PostToolUse/bash-secret` |
 | Documented schema, not yet recorded | `SessionStart/compact`, `SessionStart/resume`, `PreToolUse/flashheart-tool`, `PostToolUse/multiedit`, `PostToolUse/notebookedit`, `PostToolUse/edit-outside-repo`, `PostToolUse/subagent-edit`, `PostToolUse/todowrite`, `PostToolUse/taskcreate`, `PostToolUse/taskupdate`, `PostToolUse/taskupdate-deleted`, `PostToolUseFailure/edit-failed`, `PermissionDenied/bash`, `Notification/*`, `TaskCreated/created`, `TaskCompleted/completed`, `PostCompact/manual` |
 

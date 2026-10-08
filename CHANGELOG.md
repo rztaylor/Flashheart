@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The project follows
 
 ## Unreleased
 
+### Fixed
+
+- A question answered in the agent's own chat no longer leaves the session
+  and its ticket in Needs you (FH-43, D28). A prompt in the asking session
+  answers its open questions there (its subagents' too, never another
+  session's); a background task's completion notice does not. The question
+  stays in the run's timeline, marked as answered in the session; the board
+  refuses a later answer to it, and a waiting `flashheart await` exits
+  saying so. Tickets in Review or Done no longer show Needs you for
+  questions their sessions already settled in chat.
+
 ### Changed
 
 - The Board toolbar is decluttered (FH-39). Filters are buttons named for

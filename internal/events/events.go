@@ -97,11 +97,14 @@ type RunEndData struct {
 
 // TurnStartData is turn.start's data. The prompt is never stored; the
 // working directory and branch are repeated so a run first seen mid-session
-// still has them, and a branch switch is noticed.
+// still has them, and a branch switch is noticed. Background marks a turn
+// started by the agent's own background task finishing rather than by the
+// user, so it does not answer the session's questions (agent-protocol §4).
 type TurnStartData struct {
-	Cwd      string `json:"cwd,omitempty"`
-	Branch   string `json:"branch,omitempty"`
-	Worktree string `json:"worktree,omitempty"`
+	Background bool   `json:"background,omitempty"`
+	Cwd        string `json:"cwd,omitempty"`
+	Branch     string `json:"branch,omitempty"`
+	Worktree   string `json:"worktree,omitempty"`
 }
 
 // TurnEndData is turn.end's data.

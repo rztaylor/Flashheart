@@ -20,9 +20,11 @@ type Adapter struct{}
 var safeID = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
 
 // payload holds the fields Flashheart reads. Prompts, messages, tool
-// responses and transcripts are never decoded beyond what is listed here.
+// responses and transcripts are never decoded beyond what is listed here,
+// and a prompt is only checked for the background-task marker, never kept.
 type payload struct {
 	SessionID        string          `json:"session_id"`
+	Prompt           string          `json:"prompt"`
 	Cwd              string          `json:"cwd"`
 	Source           string          `json:"source"`
 	Reason           string          `json:"reason"`
@@ -39,6 +41,11 @@ type payload struct {
 
 // toolPrefix names Flashheart's own MCP tools in Claude Code.
 const toolPrefix = "mcp__flashheart__"
+
+// taskNotification starts the prompt Claude Code submits when one of the
+// agent's background commands finishes (recorded, Claude Code 2.1.291): a
+// turn the user did not start.
+const taskNotification = "<task-notification>"
 
 // flexibleID accepts a string or a number.
 type flexibleID string
@@ -87,7 +94,7 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		add(session, events.RunStart, events.RunStartData{Kind: events.KindSession, Source: p.Source})
 		input.Recovery = true
 	case "UserPromptSubmit":
-		add(session, events.TurnStart, events.TurnStartData{})
+		add(session, events.TurnStart, events.TurnStartData{Background: strings.HasPrefix(strings.TrimSpace(p.Prompt), taskNotification)})
 		input.Answers = session
 	case "PreToolUse":
 		input.Reply = stamp(p.ToolName, p.ToolInput, actor)

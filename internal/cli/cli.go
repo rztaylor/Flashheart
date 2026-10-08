@@ -532,6 +532,9 @@ func runAwait(ctx context.Context, env *environment, flags *flag.FlagSet, global
 		return fmt.Errorf("%s: no answer yet; it is still on the board, so run this command again to keep waiting (waited %s)", question, env.await.timeout)
 	case err != nil && result.Note == "":
 		return err
+	case result.AnsweredInSession:
+		_, err = fmt.Fprintf(env.stdout, "The user answered %s in your session's chat, not on the board; there is no board answer to wait for.\n", question)
+		return err
 	case result.AlreadyDelivered:
 		_, err = fmt.Fprintf(env.stdout, "The answer to %s was already delivered to your session.\n", question)
 		return err
