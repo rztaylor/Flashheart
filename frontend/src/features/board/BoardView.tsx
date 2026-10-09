@@ -32,13 +32,15 @@ import {
   type TicketRef,
   type WorkstreamBrief,
 } from "../../api/board";
-import type { VirtualColumn } from "../../api/preferences";
+import type { HideableColumn, VirtualColumn } from "../../api/preferences";
 import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
 import {
+  neighbourColumn,
   placeVirtual,
+  shownColumns,
   shownVirtual,
   VIRTUAL_COLUMNS,
 } from "../../model/columns";
@@ -67,6 +69,9 @@ interface BoardViewProps {
   // virtualColumns are shown after In progress while they hold tickets,
   // mirroring tickets whose runs need you or are working (VIEW-2).
   virtualColumns?: VirtualColumn[];
+  // hiddenColumns are real columns left off the board, and so never a move's
+  // target (FH-41).
+  hiddenColumns?: HideableColumn[];
   selected?: TicketRef;
   doneTotal: number;
   doneShown: number;
@@ -126,6 +131,7 @@ export function BoardView(props: BoardViewProps) {
     density,
     paint,
     virtualColumns = [],
+    hiddenColumns = [],
     selected,
     doneTotal,
     doneShown,
@@ -181,7 +187,7 @@ export function BoardView(props: BoardViewProps) {
       cards: cards.filter(column.holds),
     }));
     return placeVirtual(
-      COLUMNS.map((column) => ({
+      shownColumns(hiddenColumns).map((column) => ({
         id: column.id as Column | VirtualColumn,
         title: column.title,
         empty:
@@ -191,7 +197,7 @@ export function BoardView(props: BoardViewProps) {
       })),
       mirrors,
     );
-  }, [cards, virtualColumns, sort]);
+  }, [cards, virtualColumns, hiddenColumns, sort]);
   const sizes = columns.map((column) => column.cards.length);
   const firstNonEmpty = Math.max(
     0,
@@ -270,11 +276,14 @@ export function BoardView(props: BoardViewProps) {
         (event.key === "ArrowLeft" || event.key === "ArrowRight")
       ) {
         event.preventDefault();
-        const index = COLUMNS.findIndex((column) => column.id === card.column);
-        const target = COLUMNS[index + (event.key === "ArrowLeft" ? -1 : 1)];
+        const target = neighbourColumn(
+          hiddenColumns,
+          card.column,
+          event.key === "ArrowLeft" ? -1 : 1,
+        );
         if (target) {
           refocus.current = card.id;
-          onMove(card, target.id);
+          onMove(card, target);
         }
         return;
       }

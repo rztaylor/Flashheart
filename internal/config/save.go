@@ -38,11 +38,8 @@ func SetUI(data []byte, ui UI) ([]byte, error) {
 	set(uiNode, "theme", scalarNode(ui.Theme, "!!str"))
 	set(uiNode, "density", scalarNode(ui.Density, "!!str"))
 	set(uiNode, "colour_by", scalarNode(ui.ColourBy, "!!str"))
-	columns := &yaml.Node{Kind: yaml.SequenceNode, Style: yaml.FlowStyle}
-	for _, column := range ui.VirtualColumns {
-		columns.Content = append(columns.Content, scalarNode(column, "!!str"))
-	}
-	set(uiNode, "virtual_columns", columns)
+	set(uiNode, "virtual_columns", flowList(ui.VirtualColumns))
+	set(uiNode, "hidden_columns", flowList(ui.HiddenColumns))
 	if len(ui.Scopes) == 0 {
 		remove(uiNode, "scopes")
 	} else {
@@ -62,6 +59,15 @@ func SetUI(data []byte, ui UI) ([]byte, error) {
 		return nil, err
 	}
 	return out.Bytes(), nil
+}
+
+// flowList is a list of strings written on one line, [a, b].
+func flowList(values []string) *yaml.Node {
+	list := &yaml.Node{Kind: yaml.SequenceNode, Style: yaml.FlowStyle}
+	for _, value := range values {
+		list.Content = append(list.Content, scalarNode(value, "!!str"))
+	}
+	return list
 }
 
 func scalarNode(value, tag string) *yaml.Node {

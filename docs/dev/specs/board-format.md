@@ -309,6 +309,7 @@ ui:
   density: normal         # compact | normal | detailed
   colour_by: type         # type | priority | age | none
   virtual_columns: [needs-you]   # needs-you; [] shows none (agent-working is ignored)
+  hidden_columns: []      # real columns left off the Board: backlog (FH-41); absent shows all
   scopes:                 # remembered view and filters, per project or "all"
     flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked}   # view: board, agents, workstreams or table
 ```

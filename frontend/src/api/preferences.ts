@@ -13,6 +13,8 @@ export type Density = "compact" | "normal" | "detailed";
 export type ColourBy = "type" | "priority" | "age" | "none";
 export type SavedView = "" | "board" | "agents" | "workstreams" | "table";
 export type VirtualColumn = "needs-you";
+// HideableColumn is a real column the Board can hide (FH-41).
+export type HideableColumn = "backlog";
 export type SavedState =
   | ""
   | "all"
@@ -38,6 +40,8 @@ export interface Preferences {
   colourBy: ColourBy;
   // virtualColumns lists the virtual columns shown on the board (VIEW-2).
   virtualColumns: VirtualColumn[];
+  // hiddenColumns lists the real columns hidden from the board (FH-41).
+  hiddenColumns: HideableColumn[];
   scopes: Record<string, ScopePreferences>;
 }
 
@@ -46,6 +50,7 @@ export const defaultPreferences: Preferences = {
   density: "normal",
   colourBy: "type",
   virtualColumns: ["needs-you"],
+  hiddenColumns: [],
   scopes: {},
 };
 
@@ -65,6 +70,7 @@ const isView = oneOf<SavedView>([
   "table",
 ]);
 const isVirtualColumn = oneOf<VirtualColumn>(["needs-you"]);
+const isHideableColumn = oneOf<HideableColumn>(["backlog"]);
 const isState = oneOf<SavedState>([
   "",
   "all",
@@ -103,6 +109,8 @@ export function isPreferences(value: unknown): value is Preferences {
     isColourBy(value.colourBy) &&
     Array.isArray(value.virtualColumns) &&
     value.virtualColumns.every(isVirtualColumn) &&
+    Array.isArray(value.hiddenColumns) &&
+    value.hiddenColumns.every(isHideableColumn) &&
     isRecord(value.scopes) &&
     Object.values(value.scopes).every(isScope)
   );

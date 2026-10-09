@@ -132,9 +132,20 @@ describe("run validators", () => {
       density: "normal",
       colourBy: "type",
       virtualColumns: ["needs-you"],
+      hiddenColumns: [],
       scopes: {},
     };
     expect(isPreferences(preferences)).toBe(true);
+    // Only the Backlog can be hidden (FH-41).
+    expect(isPreferences({ ...preferences, hiddenColumns: ["backlog"] })).toBe(
+      true,
+    );
+    expect(isPreferences({ ...preferences, hiddenColumns: ["done"] })).toBe(
+      false,
+    );
+    expect(isPreferences({ ...preferences, hiddenColumns: undefined })).toBe(
+      false,
+    );
     expect(isPreferences({ ...preferences, virtualColumns: ["mystery"] })).toBe(
       false,
     );

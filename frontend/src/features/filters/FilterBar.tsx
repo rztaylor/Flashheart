@@ -5,7 +5,11 @@ import { CheckboxField } from "../../components/Field";
 import { filterHandlers, filterHint } from "../../components/FilterChip";
 import { Popover } from "../../components/Popover";
 import { SegmentedControl } from "../../components/SegmentedControl";
-import { toggleVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
+import {
+  setColumnShown,
+  toggleVirtual,
+  VIRTUAL_COLUMNS,
+} from "../../model/columns";
 import {
   type Choice,
   choiceCount,
@@ -22,7 +26,11 @@ import { priorityLabel } from "../../model/status";
 
 export type { Density } from "../../api/preferences";
 
-import type { Density, VirtualColumn } from "../../api/preferences";
+import type {
+  Density,
+  HideableColumn,
+  VirtualColumn,
+} from "../../api/preferences";
 import { Icon } from "../../components/Icon";
 
 interface Option {
@@ -40,6 +48,9 @@ interface ViewSettings {
   // virtualColumns are the virtual columns shown on the board (VIEW-2).
   virtualColumns: VirtualColumn[];
   onVirtualColumns(columns: VirtualColumn[]): void;
+  // hiddenColumns are the real columns hidden from the board (FH-41).
+  hiddenColumns: HideableColumn[];
+  onHiddenColumns(columns: HideableColumn[]): void;
 }
 
 interface FilterBarProps {
@@ -256,11 +267,21 @@ function ViewOptions({
   onPaint,
   virtualColumns,
   onVirtualColumns,
+  hiddenColumns,
+  onHiddenColumns,
 }: ViewSettings) {
   return (
     <div className="flex w-max flex-col gap-3 p-1.5 text-xs">
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 font-semibold text-ink">Show columns</legend>
+        <CheckboxField
+          label="Backlog"
+          title="Show the Backlog column; hidden, the other columns get its width"
+          checked={!hiddenColumns.includes("backlog")}
+          onChange={(checked) =>
+            onHiddenColumns(setColumnShown(hiddenColumns, "backlog", checked))
+          }
+        />
         {VIRTUAL_COLUMNS.map((column) => (
           <CheckboxField
             key={column.id}

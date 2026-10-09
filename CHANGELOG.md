@@ -105,6 +105,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- The Board can hide the Backlog column (FH-41): View options › Show
+  columns has a Backlog checkbox, checked by default. Hidden, the columns
+  being worked on get its width, the phone Column picker leaves it out, and
+  Shift with an arrow or a drag never moves a ticket into it. The choice is
+  saved as `ui.hidden_columns` in `config.yaml`; a config without it shows
+  the Backlog.
 - Every ticket has a full page with room to read and review screenshots
   (FH-45, D30). A ticket id anywhere on the board (cards, table rows,
   workstream stations, the Agents view, the archive and the card panel)

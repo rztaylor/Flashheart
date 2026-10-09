@@ -25,6 +25,8 @@ const render = (filters: Filters = emptyFilters, board = true) =>
               onPaint: () => undefined,
               virtualColumns: ["needs-you"],
               onVirtualColumns: () => undefined,
+              hiddenColumns: [],
+              onHiddenColumns: () => undefined,
             },
           }
         : {})}

@@ -277,6 +277,32 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	}
 }
 
+// The Backlog can be hidden from the Board (FH-41); a config without the
+// setting shows it.
+func TestPreferencesHideTheBacklog(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	var prefs Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
+	if prefs.HiddenColumns == nil || len(prefs.HiddenColumns) != 0 {
+		t.Fatalf("default hidden columns = %#v", prefs.HiddenColumns)
+	}
+	prefs.HiddenColumns = []string{"backlog"}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	var again Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
+	if !slices.Equal(again.HiddenColumns, []string{"backlog"}) {
+		t.Errorf("saved hidden columns = %#v", again.HiddenColumns)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
+	if !strings.Contains(string(data), "hidden_columns: [backlog]") {
+		t.Errorf("config.yaml lacks hidden_columns:\n%s", data)
+	}
+	prefs.HiddenColumns = []string{"done"}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+}
+
 func TestReadOnlyServerRefusesWrites(t *testing.T) {
 	t.Parallel()
 

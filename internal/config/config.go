@@ -45,6 +45,7 @@ var (
 	themes         = []string{ThemeSystem, ThemeLight, ThemeDark}
 	densities      = []string{DensityCompact, DensityNormal, DensityDetailed}
 	virtualColumns = []string{"needs-you"}
+	hiddenColumns  = []string{"backlog"}
 	colourBys      = []string{"type", "priority", "age", "none"}
 	views          = []string{"", "board", "agents", "workstreams", "table"}
 	states         = []string{"", "all", "blocked", "unblocked", "repair", "working"}
@@ -99,6 +100,9 @@ type UI struct {
 	Density        string   `yaml:"density"`
 	ColourBy       string   `yaml:"colour_by"`
 	VirtualColumns []string `yaml:"virtual_columns"`
+	// HiddenColumns lists the real columns hidden from the Board; only the
+	// Backlog can be hidden (FH-41).
+	HiddenColumns []string `yaml:"hidden_columns"`
 	// Scopes remembers the view and filters per project name, or "all" for
 	// All projects (VIEW-7).
 	Scopes map[string]Scope `yaml:"scopes,omitempty"`
@@ -164,7 +168,7 @@ func Defaults() Config {
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
-		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", VirtualColumns: []string{"needs-you"}},
+		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", VirtualColumns: []string{"needs-you"}, HiddenColumns: []string{}},
 	}
 }
 
@@ -270,6 +274,9 @@ func (u UI) problems() []string {
 	oneOf("ui.colour_by", u.ColourBy, colourBys)
 	for _, column := range u.VirtualColumns {
 		oneOf("ui.virtual_columns", column, virtualColumns)
+	}
+	for _, column := range u.HiddenColumns {
+		oneOf("ui.hidden_columns", column, hiddenColumns)
 	}
 	for name, scope := range u.Scopes {
 		if !scopeName.MatchString(name) || strings.Contains(name, "..") {

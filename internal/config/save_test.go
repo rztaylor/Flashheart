@@ -24,6 +24,7 @@ ui:
 	ui.Theme = ThemeDark
 	ui.Density = DensityCompact
 	ui.ColourBy = "priority"
+	ui.HiddenColumns = []string{"backlog"}
 	ui.Scopes = map[string]Scope{
 		"all":        {View: "board", State: "working"},
 		"flashheart": {View: "table", Type: Choice{Include: []string{"bug", "spike"}}, Workstream: Choice{Exclude: []string{"board-ui"}}, Age: Choice{Include: []string{"today"}}, State: "blocked"},
@@ -32,7 +33,7 @@ ui:
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  virtual_columns: [needs-you]\n"} {
+	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  virtual_columns: [needs-you]\n", "  hidden_columns: [backlog]\n"} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("SetUI lost %q:\n%s", want, got)
 		}

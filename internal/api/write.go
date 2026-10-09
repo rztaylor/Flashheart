@@ -548,8 +548,10 @@ type Preferences struct {
 	Density  string `json:"density"`
 	ColourBy string `json:"colourBy"`
 	// VirtualColumns lists the virtual columns shown (VIEW-2).
-	VirtualColumns []string                `json:"virtualColumns"`
-	Scopes         map[string]config.Scope `json:"scopes"`
+	VirtualColumns []string `json:"virtualColumns"`
+	// HiddenColumns lists the real columns hidden from the Board (FH-41).
+	HiddenColumns []string                `json:"hiddenColumns"`
+	Scopes        map[string]config.Scope `json:"scopes"`
 }
 
 func (b boardAPI) currentUI(w http.ResponseWriter) (config.UI, bool) {
@@ -576,7 +578,7 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	if scopes == nil {
 		scopes = map[string]config.Scope{}
 	}
-	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, VirtualColumns: nonNil(ui.VirtualColumns), Scopes: scopes})
+	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, VirtualColumns: nonNil(ui.VirtualColumns), HiddenColumns: nonNil(ui.HiddenColumns), Scopes: scopes})
 }
 
 func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
@@ -593,6 +595,7 @@ func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 	}
 	ui.Theme, ui.Density, ui.ColourBy, ui.Scopes = request.Theme, request.Density, request.ColourBy, request.Scopes
 	ui.VirtualColumns = nonNil(request.VirtualColumns)
+	ui.HiddenColumns = nonNil(request.HiddenColumns)
 	if len(ui.Scopes) > 500 {
 		writeError(w, http.StatusBadRequest, "invalid_input", "Too many remembered views")
 		return

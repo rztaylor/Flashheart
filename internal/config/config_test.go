@@ -22,7 +22,7 @@ func TestDefaultsMatchBoardFormat(t *testing.T) {
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
-		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", VirtualColumns: []string{"needs-you"}},
+		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", VirtualColumns: []string{"needs-you"}, HiddenColumns: []string{}},
 	}
 	if got := Defaults(); !reflect.DeepEqual(got, want) {
 		t.Errorf("Defaults() = %+v, want %+v", got, want)
@@ -77,6 +77,7 @@ unknown_key: kept for later writers
 ui:
   theme: dark
   virtual_columns: [needs-you, agent-working]
+  hidden_columns: [backlog]
 `))
 	if err != nil {
 		t.Fatalf("Parse(): %v", err)
@@ -86,6 +87,7 @@ ui:
 	want.UI.Theme = ThemeDark
 	// The Agent working column was retired (FH-42); a saved one is dropped.
 	want.UI.VirtualColumns = []string{"needs-you"}
+	want.UI.HiddenColumns = []string{"backlog"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Parse() = %+v, want %+v", got, want)
 	}
@@ -118,6 +120,7 @@ func TestParseRejectsInvalidValues(t *testing.T) {
 		{"theme", "ui: {theme: sepia}", `ui.theme "sepia" must be one of system, light, dark`},
 		{"density", "ui: {density: roomy}", `ui.density "roomy" must be one of compact, normal, detailed`},
 		{"virtual column", "ui: {virtual_columns: [blocked]}", `ui.virtual_columns "blocked" must be one of needs-you`},
+		{"hidden column", "ui: {hidden_columns: [done]}", `ui.hidden_columns "done" must be one of backlog`},
 		{"quiet minutes", "quiet_minutes: 0", "quiet_minutes must be at least 1"},
 		{"retention", "event_retention_days: -1", "event_retention_days must be at least 1"},
 		{"done limit", "done_column_limit: 0", "done_column_limit must be at least 1"},

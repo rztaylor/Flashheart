@@ -36,6 +36,7 @@ import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
 import {
   placeVirtual,
+  shownColumns,
   shownVirtual as shownVirtualColumns,
 } from "../model/columns";
 import {
@@ -224,6 +225,7 @@ export function Shell({
   const needsYou =
     projects.status === "ready" ? projects.data.runs.needsYou : 0;
   const shownVirtual = preferences.virtualColumns;
+  const hiddenColumns = preferences.hiddenColumns;
   const projectNames = useMemo(
     () =>
       route.scope.kind === "all"
@@ -304,10 +306,11 @@ export function Shell({
         }
       : undefined;
   // The phone column picker falls back to In progress when the virtual
-  // column it showed has emptied and gone.
+  // column it showed has emptied and gone, or its column was hidden.
   const narrowVirtual = shownVirtualColumns(visible, shownVirtual);
+  const narrowReal = shownColumns(hiddenColumns);
   const narrowShown =
-    COLUMNS.some((column) => column.id === narrowColumn) ||
+    narrowReal.some((column) => column.id === narrowColumn) ||
     narrowVirtual.some((column) => column.id === narrowColumn)
       ? narrowColumn
       : "in-progress";
@@ -674,7 +677,7 @@ export function Shell({
                     onChange={setNarrowColumn}
                   >
                     {placeVirtual<{ id: string; title: string }>(
-                      COLUMNS,
+                      narrowReal,
                       narrowVirtual,
                     ).map((column) => (
                       <option key={column.id} value={column.id}>
@@ -790,6 +793,12 @@ export function Shell({
                                 ...current,
                                 virtualColumns,
                               })),
+                            hiddenColumns,
+                            onHiddenColumns: (hiddenColumns) =>
+                              updatePreferences((current) => ({
+                                ...current,
+                                hiddenColumns,
+                              })),
                             paint,
                             onPaint: choosePaint,
                           }
@@ -840,6 +849,7 @@ export function Shell({
                         density={density}
                         paint={paint}
                         virtualColumns={shownVirtual}
+                        hiddenColumns={hiddenColumns}
                         selected={route.ticket}
                         doneTotal={board.data.doneTotal}
                         doneShown={board.data.doneShown}

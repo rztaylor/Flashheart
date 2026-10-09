@@ -208,6 +208,7 @@ Full format: `docs/dev/specs/board-format.md`.
 - `VIEW-1` **Board**: one column per status in workflow order (Backlog, Up
   next, In progress, Ready to review, Done), each in its manual order
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
+  The Backlog can be hidden from the Board (shown by default; FH-41).
 - `VIEW-2` **Virtual column**: *Needs you* (tickets with a run in Needs you or
   an open question from a live session). It sits between In progress and
   Ready to review and appears while it holds tickets. It can be shown or
@@ -463,7 +464,7 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
 - `CFG-2` UI preferences (theme, density, colour by, visible virtual columns,
-  and each project's view and filters) are saved through the backend in the
+  hidden columns, and each project's view and filters) are saved through the backend in the
   global config, never in browser storage.
 
 ### 6.13 Lifecycle (`LIFE`)

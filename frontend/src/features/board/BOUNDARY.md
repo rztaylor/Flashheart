@@ -1,7 +1,7 @@
 # Board feature boundary
 
 Owns the Board view (VIEW-1, VIEW-6): real columns in workflow order as
-rounded wells, ticket cards in the one anatomy of
+rounded wells, less a hidden Backlog (FH-41), ticket cards in the one anatomy of
 `docs/dev/specs/ui-layout.md` §2 at three densities with workstream stripes
 and bullets, the
 "Colour by" header tint and tag, blocked proof and running

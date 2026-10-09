@@ -64,8 +64,8 @@ The header's far end holds *Archive* and, on Board and Table, **New ticket**
 button per filter, named for what it filters with no separate label, Type,
 Priority, Workstream and State, then *Clear filters* while any filter or chip
 applies; right-aligned, Board only, one icon button, *View options* (⋯),
-whose menu holds Show columns (Needs you), Colour by and
-Density (FH-39). An applied filter's button takes the select border and ring
+whose menu holds Show columns (Backlog, Needs you), Colour by and
+Density (FH-39, FH-41). An applied filter's button takes the select border and ring
 and a count badge (*State: Blocked* for the one-choice State). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
 click shows only that value (with any others shown), a Cmd click (Ctrl off
@@ -97,6 +97,11 @@ load) sit as a full-width strip under the band, above the rail and Main.
   while it holds tickets and is switched on (`VIEW-2`); it holds mirrored
   cards and never accepts a drop. Agent working is a State filter option
   (*State: Agent working*), not a column (FH-42).
+- The Backlog can be hidden with View options › Show columns (shown by
+  default; FH-41) so the columns being worked on get its width. Hidden, it
+  leaves every width, the narrow Column picker included, and Shift with an
+  arrow or a drag never targets it. Its tickets still count in the page
+  header and the chip ordering, and the Table and Workstreams are unchanged.
 - A column is a rounded well. Its head: count badge, then the title in the
   display cut (virtual columns add their run mark). Done reads `n of N`
   while the done limit hides tickets, with *Show all N* / *Show recent only*
