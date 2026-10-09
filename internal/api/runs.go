@@ -13,7 +13,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/runs"
 )
 
-// endedVisible is how long an Ended run stays in the Agents view by default
+// endedVisible is how long an Ended run stays in the runs list by default
 // (VIEW-3).
 const endedVisible = 24 * time.Hour
 

@@ -41,6 +41,19 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- An Overview replaces the Agents view (FH-51, D32). The band's tabs read
+  Board, Overview, Workstreams, Table. The Overview is about tickets, for
+  All projects or one project, in one calm column: Needs your decision
+  (answer an agent's question in place; a permission prompt says which
+  session to answer it in), Ready for your review (oldest first, with
+  Review results opening the ticket's Review tab), At risk (no live
+  session, a quiet session, ended without a handoff, a blocked top of Up
+  next, each in words), In progress (the session's state and its subagents
+  in words), then collapsed Work with no ticket (live sessions with no
+  ticket, each with Create ticket) and Up next. Run detail stays on the
+  card's Runs tab. Old Agents links and a remembered Agents view open the
+  Overview, and the Needs you filter's notice of agents with no ticket
+  opens it too.
 - Plan displays show only for a run with a plan (FH-54). Most sessions
   never record one, so the card panel's Runs tab (and an open run in the
   Agents view) no longer shows an empty Plan section with *No plan

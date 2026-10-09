@@ -1,6 +1,7 @@
 # project-overview
 
-**Status:** Pending. Workstream: `project-overview`. Spike: FH-47.
+**Status:** Partial. Workstream: `project-overview`. Spike: FH-47.
+Built: FH-49, FH-50, FH-51, FH-54. Open: FH-52, FH-53, FH-55.
 Decision: D32.
 
 ## Goal

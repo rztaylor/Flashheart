@@ -11,7 +11,7 @@ import (
 // State is a run's derived state (RUN-3).
 type State string
 
-// Run states, in the Agents view's lane order.
+// Run states, most urgent first.
 const (
 	Working  State = "working"
 	NeedsYou State = "needs-you"

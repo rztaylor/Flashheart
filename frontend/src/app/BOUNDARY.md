@@ -1,9 +1,11 @@
 # App boundary
 
 Owns the application shell and composition (`docs/dev/specs/ui-layout.md`
-§1): the band with view tabs (Board, Agents, Workstreams, Table), the Needs
+§1): the band with view tabs (Board, Overview, Workstreams, Table), the Needs
 you plate and its Board and Table filter with the notice for runs no card
-shows (VIEW-2), backend status and Quit, the page header with the scope's
+shows, which opens the Overview (VIEW-2), old Agents routes landing on the
+Overview, New ticket in a chosen project (the Overview's Create ticket),
+opening the panel on a tab (Review results), backend status and Quit, the page header with the scope's
 identity, the view's summary line and the Archive link, the archive route
 (a project's archived tickets, or the projects archive in All projects),
 the ticket page route (`#/ticket/<id>`, a ticket's full page under the

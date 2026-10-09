@@ -66,9 +66,12 @@ export interface CardPanelProps {
   // answers: the server records answers to agents' questions (RUN-8).
   answers?: boolean;
   workstreamsOf(project: string): WorkstreamBrief[];
+  // initialTab is the tab the ticket opens on (the Overview's Review
+  // results opens Review); the Ticket tab when absent or not offered.
+  initialTab?: PanelTab;
 }
 
-type PanelTab = "ticket" | "edit" | "runs" | "attachments" | "review";
+export type PanelTab = "ticket" | "edit" | "runs" | "attachments" | "review";
 
 // CardPanel shows one ticket beside the board (CARD-1), with a way to its
 // full page in a new tab (CARD-7).
@@ -114,6 +117,7 @@ export function TicketView({
   onStep,
   answers = false,
   workstreamsOf,
+  initialTab = "ticket",
   onDetail,
 }: CardPanelProps & {
   layout: "panel" | "page";
@@ -125,7 +129,7 @@ export function TicketView({
     [fetcher, ticket.id],
   );
   const resource = useResource(load, ticket.id, revision);
-  const [tab, setTab] = useState<PanelTab>("ticket");
+  const [tab, setTab] = useState<PanelTab>(initialTab);
   const tabsId = useId();
   const detail = resource.status === "ready" ? resource.data : undefined;
   useEffect(() => {

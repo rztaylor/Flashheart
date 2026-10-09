@@ -18,17 +18,17 @@ import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
 import { Toast, type ToastMessage } from "../components/Toast";
-import { AgentsView } from "../features/agents/AgentsView";
 import { ArchiveView } from "../features/archive/ArchiveView";
 import { ProjectsArchiveView } from "../features/archive/ProjectsArchiveView";
 import { BoardView, NoTickets } from "../features/board/BoardView";
-import { CardPanel } from "../features/card/CardPanel";
+import { CardPanel, type PanelTab } from "../features/card/CardPanel";
 import { TicketPage } from "../features/card/TicketPage";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { type Movable, useEditing } from "../features/editing/useEditing";
 import { FilterBar } from "../features/filters/FilterBar";
 import { FilterChips } from "../features/filters/FilterChips";
+import { OverviewView } from "../features/overview/OverviewView";
 import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
@@ -86,7 +86,7 @@ const views: {
   icon: IconName;
 }[] = [
   { id: "board", label: "Board", icon: "board" },
-  { id: "agents", label: "Agents", icon: "agents" },
+  { id: "overview", label: "Overview", icon: "overview" },
   { id: "workstreams", label: "Workstreams", icon: "lines" },
   { id: "table", label: "Table", icon: "table" },
 ];
@@ -107,7 +107,10 @@ export function Shell({
   // return to when it is turned off (FH-44).
   const [needsYouFrom, setNeedsYouFrom] = useState<Scope>();
   const { density, colourBy: paint } = preferences;
-  const [newTicket, setNewTicket] = useState(false);
+  // newTicket is the project New ticket opens in, while its dialog is open.
+  const [newTicket, setNewTicket] = useState<{ project: string }>();
+  // panelTab opens a ticket's panel on a tab (the Overview's Review results).
+  const [panelTab, setPanelTab] = useState<{ id: string; tab: PanelTab }>();
   const [doneAll, setDoneAll] = useState(false);
   const [narrowColumn, setNarrowColumn] = useState<string>("in-progress");
   const opener = useRef<HTMLElement | null>(null);
@@ -336,7 +339,8 @@ export function Shell({
     const view = preferences.scopes[name]?.view || route.view;
     go({ scope, view, ticket: undefined });
   };
-  const openTicket = (ticket: TicketRef) => {
+  const openTicket = (ticket: TicketRef, tab?: PanelTab) => {
+    setPanelTab(tab ? { id: ticket.id, tab } : undefined);
     // Remember what opened the panel (a card, row or station) so Escape can
     // return focus there; links inside the panel keep the original opener.
     const active = document.activeElement;
@@ -406,10 +410,9 @@ export function Shell({
         ? { shown: visible.length, total: allCards.length }
         : undefined,
     filtered: isFiltered(filters),
-    runs: current
-      ? current.runs
-      : projects.status === "ready"
-        ? projects.data.runs
+    counts:
+      projects.status === "ready"
+        ? (current ? [current] : summaries).map((project) => project.counts)
         : undefined,
     workstreams: (current ? [current] : summaries).flatMap(
       (project) => project.workstreams,
@@ -628,7 +631,7 @@ export function Shell({
                       <Button
                         variant="primary"
                         className="h-9 py-0"
-                        onClick={() => setNewTicket(true)}
+                        onClick={() => setNewTicket({ project: scopeProject })}
                       >
                         <Icon name="plus" size={16} />
                         New ticket
@@ -738,15 +741,21 @@ export function Shell({
                 ) : (
                   <BoardSkeleton />
                 )
-              ) : route.view === "agents" ? (
+              ) : route.view === "overview" ? (
                 projects.status === "ready" ? (
-                  <AgentsView
+                  <OverviewView
                     fetcher={fetcher}
                     project={scopeProject}
                     projects={summaries}
                     revision={revision}
                     onOpen={openTicket}
+                    onReview={(ticket) => openTicket(ticket, "review")}
                     onAnswer={answers ? editing.answer : undefined}
+                    onCreateTicket={
+                      summaries.length > 0
+                        ? (project) => setNewTicket({ project })
+                        : undefined
+                    }
                   />
                 ) : (
                   <BoardSkeleton />
@@ -808,8 +817,8 @@ export function Shell({
                   {filters.needsYou ? (
                     <NeedsYouNotice
                       count={needsYouUnticketed}
-                      onOpenAgents={() =>
-                        go({ view: "agents", ticket: undefined })
+                      onOpenOverview={() =>
+                        go({ view: "overview", ticket: undefined })
                       }
                     />
                   ) : null}
@@ -873,7 +882,11 @@ export function Shell({
 
             {route.ticket ? (
               <CardPanel
-                key={route.ticket.id}
+                // A Review results press reopens the panel on Review.
+                key={`${route.ticket.id}:${panelTab?.id === route.ticket.id ? panelTab.tab : ""}`}
+                initialTab={
+                  panelTab?.id === route.ticket.id ? panelTab.tab : undefined
+                }
                 ticket={route.ticket}
                 fetcher={fetcher}
                 lines={lines}
@@ -901,10 +914,10 @@ export function Shell({
           <NewTicketDialog
             fetcher={fetcher}
             projects={summaries}
-            project={scopeProject}
-            onClose={() => setNewTicket(false)}
+            project={newTicket.project}
+            onClose={() => setNewTicket(undefined)}
             onCreated={(created: Created) => {
-              setNewTicket(false);
+              setNewTicket(undefined);
               reloadAll();
               editing.notify({ text: `Created ${created.id}.` });
               openTicket({ id: created.id });
