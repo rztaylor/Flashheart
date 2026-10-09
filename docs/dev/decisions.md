@@ -563,3 +563,40 @@ band's plate as the toggle (chosen); keep the column.
 Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
 `needsYou` field is unchanged. A saved `ui.virtual_columns` is ignored on
 load rather than refused, and removed when preferences are next saved.
+
+## 2026-10-09 — D32: An Overview for a project manager replaces the Agents view
+
+Decision (FH-47): the Agents view (`VIEW-3`) gives way to an **Overview**
+tab about tickets, with agent sessions as evidence. The user drew no value
+from a list of runs: it answers "what is each agent doing", an operator's
+question, where the user asks a project manager's: what needs my decision,
+what needs my review, what is at risk, what is in progress and what changed.
+
+The Overview is one calm column, in order: Needs your decision (questions
+answered in place; a permission prompt names the session to answer it in,
+since Flashheart never grants permissions), Ready for your review, At risk
+(no live session, ended without a handoff, quiet, top of Up next blocked),
+In progress (agent, state and subagent counts in words, "3 done · 2
+running"), then collapsed Work with no ticket and Up next. Headline metrics
+under the title count what happened since the user's last change on the
+board (editor edits do not count). Session detail (tools, files, plan,
+subagent tree) stays on the card's Runs tab.
+
+Evidence from the event logs shaped it: no project has recorded a plan, so
+plan displays are always empty; agents edit mostly through Bash, so edited
+files and "no handoff" miss most edits; 21 of 35 sessions never claimed a
+ticket; one `tool.used` per tool call is 78% of all events. Run information
+is kept only where it becomes a fact about a ticket; the hooks move from
+per-call events to throttled activity records.
+
+Options: keep the lanes and tidy them; remove the view and spread its parts
+over the band, cards and Runs tab; an activity feed of live sessions and
+events; a ticket-centric Overview (chosen). For its look, Editorial (a
+headline sentence and numbered stories), Calm (an inbox of section cards)
+and Precision (a three-column dashboard) were generated, with a synthesis of
+Editorial and Precision; the user chose Calm, found the others too busy and
+rejected the headline sentence. Approved concept: FH-47
+`files/20261009T1923-image.png`. Roadmap item: `project-overview`.
+
+Versions: board format stays 2. `PROTOCOL_VERSION` changes only when the
+throttled activity records land (FH-55).

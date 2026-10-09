@@ -45,6 +45,11 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    the Workstreams view draws dependencies as a railway graph (D26, FH-38).
    Built: all of it; open: the user's review. No roadmap dependencies;
    FH-17's workstream UI follows it.
+9. [`project-overview`](roadmap-items/project-overview.md) — **Pending**.
+   An Overview tab for a project manager replaces the Agents view: decisions,
+   reviews, risks and progress by ticket, with sessions as evidence and
+   headline metrics since your last change; hooks record less (D32, FH-47;
+   workstream FH-49–FH-55). No roadmap dependencies.
 
 ## Later possibilities (not scheduled)
 
