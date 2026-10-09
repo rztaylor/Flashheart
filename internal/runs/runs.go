@@ -233,7 +233,8 @@ func (s *Set) run(e events.Event) *Run {
 
 // Apply folds one event into the set. Unknown or malformed data is ignored.
 func (s *Set) Apply(e events.Event) {
-	if e.Run == "" {
+	// The human's board writes have no run (agent-protocol §3).
+	if e.Run == "" || e.Run == events.Human {
 		return
 	}
 	// A subagent first seen ending did nothing visible (Claude Code's

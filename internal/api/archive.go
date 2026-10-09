@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -189,5 +190,6 @@ func (b boardAPI) deleteArchived(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: id, Fields: []string{"deleted"}})
 	b.saved(w, http.StatusOK, "", nil)
 }
