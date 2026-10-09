@@ -149,6 +149,10 @@ func TestEndsRecordWorktreeChangesMadeDuringShellCommands(t *testing.T) {
 			t.Parallel()
 			root, cwd := t.TempDir(), gitRepo(t)
 			play(t, root, cwd, tc.steps...)
+			// A check that failed leaves the end unflagged: say why first.
+			if log := errorLog(t, root); log != "" {
+				t.Fatalf("hook-errors.log = %q", log)
+			}
 			turns, ends := changedFlags(t, root)
 			if len(ends) != 1 {
 				t.Fatalf("run ends = %v", ends)
@@ -156,9 +160,6 @@ func TestEndsRecordWorktreeChangesMadeDuringShellCommands(t *testing.T) {
 			changed := slices.Contains(append(turns, ends...), true)
 			if changed != tc.changed {
 				t.Fatalf("worktree_changed on turn ends %v and the end %v, want %v", turns, ends, tc.changed)
-			}
-			if log := errorLog(t, root); log != "" {
-				t.Fatalf("hook-errors.log = %q", log)
 			}
 			data, _ := json.Marshal(readEvents(t, root, "demo"))
 			if strings.Contains(string(data), ".txt") {

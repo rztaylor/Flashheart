@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,16 +58,49 @@ func ChangedSince(ctx context.Context, worktree, gitDir string, since time.Time,
 }
 
 func git(ctx context.Context, worktree string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "git", append([]string{"--no-optional-locks", "-C", worktree}, args...)...)
-	cmd.WaitDelay = 10 * time.Millisecond
-	out, err := cmd.Output()
-	if err != nil {
+	fail := func(err error) ([]byte, error) {
 		if ctx.Err() != nil {
 			err = ctx.Err()
 		}
 		return nil, fmt.Errorf("git %s: %w", args[0], err)
 	}
-	return out, nil
+	// git writes to a pipe of ours, read until it closes or ctx ends: the
+	// caller's deadline alone bounds the wait, however slowly a loaded
+	// machine hands over the output, and a stray child holding the pipe open
+	// cannot hold the hook past it.
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		return fail(err)
+	}
+	defer reader.Close()
+	cmd := exec.CommandContext(ctx, "git", append([]string{"--no-optional-locks", "-C", worktree}, args...)...)
+	cmd.Stdout = writer
+	err = cmd.Start()
+	writer.Close()
+	if err != nil {
+		return fail(err)
+	}
+	type result struct {
+		out []byte
+		err error
+	}
+	read := make(chan result, 1)
+	go func() {
+		out, err := io.ReadAll(reader)
+		read <- result{out, err}
+	}()
+	if err := cmd.Wait(); err != nil {
+		return fail(err)
+	}
+	select {
+	case r := <-read:
+		if r.err != nil {
+			return fail(r.err)
+		}
+		return r.out, nil
+	case <-ctx.Done():
+		return fail(ctx.Err())
+	}
 }
 
 // headMovedAfter reports whether the worktree's HEAD reflog changed after
