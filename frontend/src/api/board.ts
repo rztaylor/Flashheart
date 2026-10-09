@@ -4,10 +4,12 @@ import {
   isQuestion,
   isRun,
   isRunCounts,
+  isTicketSessions,
   type Live,
   type Question,
   type Run,
   type RunCounts,
+  type TicketSessions,
 } from "./runs";
 
 export type Column = "backlog" | "up-next" | "in-progress" | "review" | "done";
@@ -71,6 +73,9 @@ export interface Card {
   agentWorking: boolean;
   // openQuestions counts open questions about the ticket (CARD-6).
   openQuestions: number;
+  // sessions summarises the runs working for the ticket (RUN-9); absent
+  // when none is linked and the ticket is not in progress.
+  sessions?: TicketSessions;
 }
 
 export interface WorkstreamBrief {
@@ -242,7 +247,8 @@ export function isCard(value: unknown): value is Card {
     (value.live === undefined || isLive(value.live)) &&
     typeof value.needsYou === "boolean" &&
     typeof value.agentWorking === "boolean" &&
-    typeof value.openQuestions === "number"
+    typeof value.openQuestions === "number" &&
+    (value.sessions === undefined || isTicketSessions(value.sessions))
   );
 }
 
