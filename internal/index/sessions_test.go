@@ -186,15 +186,19 @@ func TestTicketSessions(t *testing.T) {
 			ok: true,
 		},
 		{
-			name:   "the orchestrating session's ticket counts every subagent of the session",
+			// Subagents that claimed other tickets count only there; one with
+			// no claim, or one that claimed the session's ticket, rolls up.
+			name:   "the orchestrating session's ticket leaves out subagents that claimed other tickets",
 			ticket: board.Ticket{ID: "AL-9", Column: board.InProgress},
 			events: concat(sessionStart(30, "claude:s1", "main"), []events.Event{
 				claimEvent(29, "claude:s1", "AL-9"),
 				subagentStart(10, "claude:s1/a1"), claimEvent(9, "claude:s1/a1", "AL-3"),
 				subagentStart(8, "claude:s1/a2"), claimEvent(7, "claude:s1/a2", "AL-4"),
+				subagentStart(6, "claude:s1/a3"),
+				subagentStart(5, "claude:s1/a4"), claimEvent(4, "claude:s1/a4", "AL-9"),
 			}),
 			want: TicketSessions{
-				Run: "claude:s1", Agent: "claude", State: runs.Working, LastActivity: sessionsNow.Add(-7 * time.Minute),
+				Run: "claude:s1", Agent: "claude", State: runs.Working, LastActivity: sessionsNow.Add(-4 * time.Minute),
 				Subagents: SubagentCounts{Running: 2},
 			},
 			ok: true,

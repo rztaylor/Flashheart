@@ -353,9 +353,11 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   need you (`VIEW-2`). A board that cannot record answers shows questions
   without an answer form.
 - `RUN-9` Each ticket's board data summarises the runs working for it,
-  derived from the same events (FH-50): the sessions linked to it, all
-  their subagents, and subagents that claimed it themselves, each counted
-  once. The summary names the run that speaks for the ticket (the live one
+  derived from the same events (FH-50): the sessions linked to it, their
+  subagents that inherit the link (no claim of their own, or a claim on
+  the session's ticket), and subagents that claimed it themselves, each
+  counted once. A subagent that claimed another ticket counts only on
+  that ticket. The summary names the run that speaks for the ticket (the live one
   that most needs attention, else the most recently active; a subagent
   only when its session is not linked to the ticket), with its agent,
   state and **dirty** / **no handoff** flags (`RUN-3`); the latest

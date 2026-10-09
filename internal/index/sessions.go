@@ -37,11 +37,12 @@ type SubagentCounts struct {
 	Done, Running, NeedsYou int
 }
 
-// Sessions summarises the runs working for a ticket: the sessions linked
-// to it (by claim or branch, RUN-5), their subagents whatever those
-// claimed, and subagents that claimed the ticket themselves, each counted
-// once. ok is false when no run is linked and the ticket is not in
-// progress.
+// Sessions summarises the runs linked to a ticket (RUN-5), each counted
+// once: the sessions linked to it, their subagents that inherit the link
+// (no claim of their own, or a claim on the session's ticket), and
+// subagents that claimed the ticket themselves. A subagent that claimed
+// another ticket counts only there. ok is false when no run is linked and
+// the ticket is not in progress.
 func (s *Snapshot) Sessions(ticket board.Ticket) (TicketSessions, bool) {
 	var sessions map[string]bool
 	for _, run := range s.Runs {
@@ -55,11 +56,10 @@ func (s *Snapshot) Sessions(ticket board.Ticket) (TicketSessions, bool) {
 	var summary TicketSessions
 	lead, found := -1, false
 	for i, run := range s.Runs {
-		subagent := run.Parent != ""
-		linked := run.Link.Ticket == ticket.ID
-		if !linked && !(subagent && sessions[run.Parent]) {
+		if run.Link.Ticket != ticket.ID {
 			continue
 		}
+		subagent := run.Parent != ""
 		found = true
 		if run.LastActivity.After(summary.LastActivity) {
 			summary.LastActivity = run.LastActivity
@@ -74,7 +74,7 @@ func (s *Snapshot) Sessions(ticket board.Ticket) (TicketSessions, bool) {
 				summary.Subagents.Running++
 			}
 		}
-		if linked && (!subagent || !sessions[run.Parent]) && (lead < 0 || leads(run, s.Runs[lead])) {
+		if (!subagent || !sessions[run.Parent]) && (lead < 0 || leads(run, s.Runs[lead])) {
 			lead = i
 		}
 	}
