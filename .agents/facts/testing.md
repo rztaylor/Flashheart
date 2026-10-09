@@ -26,7 +26,13 @@
   agent's `MANIFEST.md` says which are recorded. Re-record with
   `scripts/record-claude-hooks.sh` when an agent changes.
 - Hook latency: `scripts/hook-bench.sh` (developer tool, not in CI) fails
-  when p95 over 1,000 warm invocations exceeds 50 ms.
+  when p95 over 1,000 warm invocations exceeds 50 ms; `-tools` measures
+  tool results alone (the throttled activity path, FH-55) and both print
+  how many events were recorded.
+- Activity throttling (FH-55) is tested by replaying recorded payloads
+  through the Claude adapter (200 tool results in ten minutes) and with the
+  fake adapter's scripts in `internal/hooks`; the run-state and no-handoff
+  tables run on both encodings of tool use (`tool.used` and `activity`).
 - The Playwright runs spec (`frontend/e2e/runs.spec.mjs`: the Overview,
   live cards, the Runs tab and questions) creates runs by running
   `flashheart hook claude`

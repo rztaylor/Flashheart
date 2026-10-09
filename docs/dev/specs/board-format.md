@@ -32,7 +32,9 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
     ├── .archive/tickets/FH-7-old-idea/   archived tickets (EDIT-8)
     └── .flashheart/
         ├── lock                          advisory project lock (STO-3)
-        └── events/2026-10-05.jsonl       event log (STO-5)
+        ├── events/2026-10-05.jsonl       event log (STO-5)
+        ├── answers/<agent>--<session>.jsonl   answers waiting for a session's next prompt (HOOK-5)
+        └── activity/<agent>--<session>.json   tool activity hooks have not recorded yet (agent-protocol §3)
 ```
 
 Rules:
@@ -298,6 +300,7 @@ version: 2
 auto_create_projects: true
 quiet_minutes: 10
 lease_minutes: 30         # a claim outlives its run's last activity this long
+activity_seconds: 60      # at most one activity record per run this often (agent-protocol §3)
 enforce_handoff: false    # HOOK-6; a project's settings.enforce_handoff overrides it
 user_name: ""             # who answers agents' questions (RUN-8); empty: the computer account's name
 event_retention_days: 90

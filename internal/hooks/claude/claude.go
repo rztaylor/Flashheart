@@ -42,6 +42,9 @@ type payload struct {
 // toolPrefix names Flashheart's own MCP tools in Claude Code.
 const toolPrefix = "mcp__flashheart__"
 
+// checkpointTool is Flashheart's checkpoint tool in Claude Code.
+const checkpointTool = toolPrefix + "checkpoint"
+
 // taskNotification starts the prompt Claude Code submits when one of the
 // agent's background commands finishes (recorded, Claude Code 2.1.291): a
 // turn the user did not start.
@@ -101,6 +104,10 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 	case "PostToolUse", "PostToolUseFailure":
 		ok := event == "PostToolUse"
 		add(actor, events.ToolUsed, events.ToolData{Tool: p.ToolName, OK: ok, Path: editPath(p.ToolName, p.ToolInput)})
+		// A checkpoint settles the session's edits, so the paths it recorded
+		// may be recorded again; a failed one may still have been written,
+		// and recording a path twice is harmless.
+		input.Settled = p.ToolName == checkpointTool
 		if ok {
 			if plan, found := planUpdate(p.ToolName, p.ToolInput, p.ToolResponse); found {
 				add(actor, events.PlanUpdated, plan)

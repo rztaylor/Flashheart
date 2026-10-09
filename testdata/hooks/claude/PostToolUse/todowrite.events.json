@@ -1,10 +1,9 @@
 [
   {
     "run": "claude:5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13",
-    "kind": "tool.used",
+    "kind": "activity",
     "data": {
-      "tool": "TodoWrite",
-      "ok": true
+      "tools": 1
     }
   },
   {

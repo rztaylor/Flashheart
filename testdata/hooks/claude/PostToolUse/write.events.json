@@ -1,11 +1,12 @@
 [
   {
     "run": "claude:340b083f-5d70-41b2-8cff-ec700908097a",
-    "kind": "tool.used",
+    "kind": "activity",
     "data": {
-      "tool": "Write",
-      "ok": true,
-      "path": "notes.txt"
+      "tools": 1,
+      "paths": [
+        "notes.txt"
+      ]
     }
   }
 ]

@@ -18,14 +18,15 @@ func main() {
 	binary := flag.String("binary", "build/flashheart", "flashheart binary to measure")
 	n := flag.Int("n", 1000, "measured invocations")
 	limit := flag.Duration("p95", 50*time.Millisecond, "fail when p95 exceeds this")
+	tools := flag.Bool("tools", false, "invoke tool results only: the throttled path (FH-55)")
 	flag.Parse()
-	if err := run(*binary, *n, *limit); err != nil {
+	if err := run(*binary, *n, *limit, *tools); err != nil {
 		fmt.Fprintln(os.Stderr, "hookbench:", err)
 		os.Exit(1)
 	}
 }
 
-func run(binary string, n int, limit time.Duration) error {
+func run(binary string, n int, limit time.Duration, toolsOnly bool) error {
 	work, err := os.MkdirTemp("", "flashheart-hookbench-")
 	if err != nil {
 		return err
@@ -43,6 +44,11 @@ func run(binary string, n int, limit time.Duration) error {
 
 	// A realistic mix: mostly tool results, with prompts, plans and stops.
 	mix := []string{"PostToolUse/edit", "PostToolUse/read", "PostToolUse/bash", "PostToolUse/todowrite", "PostToolUse/edit", "UserPromptSubmit/prompt", "PostToolUse/write", "Stop/stop"}
+	if toolsOnly {
+		// Tool results within a minute of each other: all but the first and
+		// each newly edited path's are held in the session's state.
+		mix = []string{"PostToolUse/read", "PostToolUse/bash", "PostToolUse/read", "PostToolUseFailure/read-missing", "PostToolUse/edit"}
+	}
 	payloads := make([][]byte, len(mix))
 	events := make([]string, len(mix))
 	for i, name := range mix {
@@ -85,6 +91,13 @@ func run(binary string, n int, limit time.Duration) error {
 	pct := func(p float64) time.Duration { return durations[min(len(durations)-1, int(p*float64(len(durations))))] }
 	fmt.Printf("hook latency over %d warm invocations: p50 %v, p95 %v, p99 %v, max %v\n",
 		n, pct(0.50).Round(10*time.Microsecond), pct(0.95).Round(10*time.Microsecond), pct(0.99).Round(10*time.Microsecond), durations[len(durations)-1].Round(10*time.Microsecond))
+	recorded := 0
+	logs, _ := filepath.Glob(filepath.Join(root, "*", ".flashheart", "events", "*.jsonl"))
+	for _, file := range logs {
+		data, _ := os.ReadFile(file)
+		recorded += bytes.Count(data, []byte("\n"))
+	}
+	fmt.Printf("%d events recorded for %d invocations\n", recorded, n+20)
 	if pct(0.95) > limit {
 		return fmt.Errorf("p95 %v exceeds %v", pct(0.95), limit)
 	}

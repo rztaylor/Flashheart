@@ -148,7 +148,9 @@ Full format: `docs/dev/specs/board-format.md`.
 - `STO-2` Ticket and workstream frontmatter edits preserve key order, comments
   and unknown keys, and produce minimal diffs.
 - `STO-3` All writes are atomic (write temp, fsync, rename) and made under the
-  project lock. Edits from the UI and MCP carry the content hash they were
+  project lock. The one exception is the hooks' per-session activity state
+  (agent-protocol §3), a disposable cache written in place under the lock
+  on every tool result. Edits from the UI and MCP carry the content hash they were
   based on and fail with a conflict if the file changed since. A move sets
   only `status`, applied to the file as it is under the lock, so it needs no
   hash and cannot lose another writer's change.
@@ -403,10 +405,13 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
   stdin, appends normalised events, and exits 0 within 100 ms (p95 50 ms) on
   a warm cache. Errors go to `<root>/.flashheart/hook-errors.log`, never to the
   agent, and never change the exit status (except `HOOK-6`).
-- `HOOK-2` Hooks record tool names, edited file paths relative to the
-  repository, success or failure, and summaries of at most 120 characters,
-  scrubbed of likely secrets. They never record prompts, command lines, tool
-  inputs or tool outputs.
+- `HOOK-2` Hooks record how many tools a run used and how many failed, in
+  at most one activity record per run per `activity_seconds` (default 60;
+  agent-protocol §3), edited file paths relative to the repository (each
+  once per run between checkpoints), the names of tools awaiting
+  permission, and summaries of at most 120 characters, scrubbed of likely
+  secrets. They never record prompts, command lines, tool inputs or tool
+  outputs.
 - `HOOK-3` On session start and resume (including after compaction), the hook
   returns a **recovery note** as additional context: the run id, project,
   linked ticket, its handoff, and answered questions, in at most about 400

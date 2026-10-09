@@ -108,6 +108,9 @@ export interface TimelineEntry {
   tool?: string;
   path?: string;
   failed?: boolean;
+  // tools and failures count an activity record's tool uses (FH-55).
+  tools?: number;
+  failures?: number;
   detail?: string;
   ticket?: string;
 }
