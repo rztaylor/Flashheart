@@ -27,7 +27,9 @@
   `scripts/record-claude-hooks.sh` when an agent changes.
 - Hook latency: `scripts/hook-bench.sh` (developer tool, not in CI) fails
   when p95 over 1,000 warm invocations exceeds 50 ms.
-- The Playwright Agents spec creates runs by running `flashheart hook claude`
+- The Playwright runs spec (`frontend/e2e/runs.spec.mjs`: the Overview,
+  live cards, the Runs tab and questions) creates runs by running
+  `flashheart hook claude`
   against the sandbox (`frontend/e2e/agent-runs.mjs`).
 - Run-state and blocking logic are table tests with a fake clock.
 - MCP tools are tested through the Go SDK's in-memory transport; the
@@ -40,9 +42,10 @@
   moved binary, a hook-errors log).
 - The Runs tab tree is tested from the golden hook payloads' events
   (`TestTicketRunsCarryTheSubagentTree` in `internal/api`), and in the
-  browser from subagents the Agents e2e starts through the real hook.
-- The Agents e2e asks a question through the real `flashheart mcp` and
-  answers it in the browser (`frontend/e2e/agent-runs.mjs`).
+  browser from subagents the runs e2e starts through the real hook.
+- The runs e2e asks questions through the real `flashheart mcp` and
+  answers them in the card panel and on the Overview
+  (`frontend/e2e/agent-runs.mjs`).
 - Concurrency: multi-process write tests for locks and preconditions.
   `store.LockWait` is a variable so a non-parallel test can shorten it (the
   MCP `busy` contract test); restore it before returning.

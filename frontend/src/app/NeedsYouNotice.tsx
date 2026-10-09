@@ -3,13 +3,14 @@ import { RunStateMark } from "../components/RunState";
 
 // NeedsYouNotice sits above the Board and Table while the Needs you filter
 // is on and agents need you with no ticket on the board (FH-44): no filter
-// can show them, so it points to the Agents view, where they are listed.
+// can show them, so it points to the Overview, whose Needs your decision
+// lists them (D32).
 export function NeedsYouNotice({
   count,
-  onOpenAgents,
+  onOpenOverview,
 }: {
   count: number;
-  onOpenAgents(): void;
+  onOpenOverview(): void;
 }) {
   if (count === 0) return null;
   return (
@@ -31,9 +32,9 @@ export function NeedsYouNotice({
       <Button
         variant="quiet"
         className="h-8 px-1.5 text-xs"
-        onClick={onOpenAgents}
+        onClick={onOpenOverview}
       >
-        Open Agents
+        Open Overview
       </Button>
     </section>
   );

@@ -30,7 +30,7 @@ export function QuestionCard({
   // undefined once sent; absent when this board cannot record answers.
   onAnswer?(answer: string): Promise<string | undefined>;
   // headingLevel places the question's heading under the caller's.
-  headingLevel?: 4 | 5;
+  headingLevel?: 3 | 4 | 5;
 }) {
   const id = useId();
   const [answer, setAnswer] = useState("");
@@ -42,7 +42,7 @@ export function QuestionCard({
   const answered = Boolean(question.answeredAt);
   const ended = Boolean(question.sessionEnded);
   const options = [...new Set(question.options ?? [])];
-  const Heading = headingLevel === 4 ? "h4" : "h5";
+  const Heading = `h${headingLevel}` as const;
 
   // The form goes once the answer is recorded; keep focus with the
   // question by moving it to the status that replaces the form.

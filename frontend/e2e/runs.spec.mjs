@@ -1,4 +1,4 @@
-import { appendFile, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -7,9 +7,11 @@ import {
   callTool,
   IDLE_SESSION,
   promptHook,
+  seedClaimedRun,
   seedRuns,
   TASK_NOTIFICATION,
 } from "./agent-runs.mjs";
+import { writeDemoBoard } from "./demo-board.mjs";
 import {
   filterButton,
   filterMenu,
@@ -21,7 +23,9 @@ import {
 } from "./support.mjs";
 
 // Agent runs end to end: sessions are recorded by `flashheart hook claude`,
-// exactly as Claude Code runs it, then read back by the board.
+// exactly as Claude Code runs it, then read back by the board: the
+// Overview, cards, the Runs tab and questions. The demo board gives the
+// Overview realistic tickets; its sample projects carry the runs.
 test.describe.configure({ mode: "serial" });
 
 let sandbox;
@@ -32,12 +36,18 @@ let page;
 
 test.beforeAll(async ({ browser }) => {
   sandbox = await makeSandbox();
+  const demo = join(sandbox.home, "demo");
+  await writeDemoBoard(demo);
+  sandbox.root = demo;
+  // A project with no tickets yet shows every Overview section empty.
+  await mkdir(join(demo, "quiet", "tickets"), { recursive: true });
   // Answers are recorded under the configured name (FH-8).
   await appendFile(
     join(sandbox.root, ".flashheart", "config.yaml"),
     "user_name: Robin\n",
   );
   seeded = await seedRuns(sandbox.home, sandbox.root);
+  await seedClaimedRun(sandbox.home, sandbox.root, "FH-25");
   server = launch(sandbox, ["serve", "--foreground"]);
   const url = await waitForManualURL(server.child, server.output);
   context = await browser.newContext();
@@ -82,72 +92,169 @@ async function shot(name) {
   await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
 }
 
-const lane = (name) => page.getByRole("region", { name, exact: true });
+const section = (name) => page.getByRole("region", { name, exact: true });
 
-test("the Agents view lists runs by state, Needs you first", async () => {
-  await open("#/all/agents");
-  const lanes = page.locator("[data-lane]");
-  await expect(lanes).toHaveCount(5);
-  await expect(lanes.first()).toHaveAttribute("data-lane", "needs-you");
-
-  const needsYou = lane("Needs you 1");
-  await expect(needsYou.getByText("Permission for Bash")).toBeVisible();
-  // The title opens the panel; the id, the ticket's full page (CARD-7).
+test("the Overview puts tickets first: decisions, review, risk, progress, then tiles (FH-51)", async () => {
+  await open("#/all/overview");
+  // The band's tabs: Agents is gone.
   await expect(
-    needsYou.getByRole("button", { name: "Card panel", exact: true }),
+    page.getByRole("navigation", { name: "Views" }).getByRole("link"),
+  ).toHaveText(["Board", "Overview", "Workstreams", "Table"]);
+  await expect(page.getByRole("link", { name: "Overview" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  const sections = page.locator("[data-section]");
+  await expect(sections).toHaveCount(6);
+  expect(
+    await sections.evaluateAll((all) =>
+      all.map((item) => item.dataset.section),
+    ),
+  ).toEqual(["decision", "review", "risk", "progress", "unticketed", "upNext"]);
+
+  // A permission prompt says where to answer it, and offers no button but
+  // the ticket's title: Flashheart never grants permissions.
+  const decision = section("Needs your decision");
+  const prompt = decision.locator('[data-row="AL-3"]');
+  await expect(prompt.getByText("Permission for Bash")).toBeVisible();
+  await expect(
+    prompt.getByText("Answer in the session · Alpha · feature/card-panel"),
   ).toBeVisible();
+  await expect(prompt.getByRole("button")).toHaveText(["Card panel"]);
   await expect(
-    needsYou.getByRole("link", { name: "AL-3", exact: true }),
+    prompt.getByRole("link", { name: "AL-3", exact: true }),
   ).toHaveAttribute("href", "#/ticket/AL-3");
+
+  // In progress says the session's state and its subagents in words.
+  const progress = section("In progress");
   await expect(
-    needsYou.getByRole("img", { name: "Plan 2 of 5 done" }),
+    progress
+      .locator('[data-row="FH-25"]')
+      .getByText("Working · subagents 1 done · 2 running"),
+  ).toBeVisible();
+  await expect(
+    progress
+      .locator('[data-row="AL-3"]')
+      .getByText("Needs you · subagents 1 done · 2 running"),
   ).toBeVisible();
 
-  const working = lane("Working 1");
-  await expect(working.getByText("Unassigned")).toBeVisible();
+  // At risk gives its reasons in words, with no agent where no session
+  // works on the ticket.
+  const risk = section("At risk");
   await expect(
-    working.getByRole("list", { name: /Subagents of/ }).getByText("Explore"),
+    risk.locator('[data-row="FH-10"]').getByText("No session has worked on it"),
   ).toBeVisible();
-  await expect(lane("Waiting 1").getByText("spike/offline-sync")).toBeVisible();
   await expect(
-    lane("Ended 1").getByText("No handoff since its edits"),
+    risk
+      .locator('[data-row="AL-4"]')
+      .getByText("Top of Up next · blocked by AL-3"),
   ).toBeVisible();
-
-  // The band shows Needs you from any view, with one accessible name.
-  await expect(
-    page.getByRole("button", { name: "1 needs you", exact: true }),
-  ).toBeVisible();
-
-  // A row opens to what the run did.
-  await needsYou.getByRole("button", { name: /Claude/ }).click();
-  await expect(needsYou.getByText("Asked permission for Bash")).toBeVisible();
-  await expect(
-    needsYou.getByText("src/panel/RunsTab.tsx").first(),
-  ).toBeVisible();
-  await expectNoAxeViolations("agents light");
+  await expect(risk.getByText("Claude", { exact: true })).toHaveCount(0);
+  await expectNoAxeViolations("overview light");
 
   for (const [width, height] of [
     [1280, 800],
     [1920, 1080],
   ]) {
     for (const theme of ["light", "dark"]) {
-      await open("#/all/agents", { width, height, theme });
-      await shot(`agents-${width}-${theme}`);
+      await open("#/all/overview", { width, height, theme });
+      await shot(`overview-${width}-${theme}`);
     }
   }
-  await open("#/all/agents", { theme: "dark" });
-  await expectNoAxeViolations("agents dark");
-  // Narrow widths stack each row's cells; nothing scrolls sideways.
-  await open("#/all/agents", { width: 390, height: 844 });
-  const overflow = await page.evaluate(
-    () => document.scrollingElement.scrollWidth - window.innerWidth,
+  // The whole page, for review against the approved concept.
+  for (const theme of ["light", "dark"]) {
+    await open("#/all/overview", { width: 1440, height: 2000, theme });
+    await shot(`overview-full-1440-${theme}`);
+  }
+  await open("#/all/overview", { theme: "dark" });
+  await expectNoAxeViolations("overview dark");
+  // A phone stacks each row under its title; nothing scrolls sideways.
+  for (const theme of ["light", "dark"]) {
+    await open("#/all/overview", { width: 390, height: 844, theme });
+    const overflow = await page.evaluate(
+      () => document.scrollingElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    await shot(`overview-390-${theme}`);
+    await open("#/all/overview", { width: 390, height: 3000, theme });
+    await shot(`overview-full-390-${theme}`);
+  }
+  await expectNoAxeViolations("overview at phone width");
+
+  // Review results opens the ticket on its Review tab.
+  const review = section("Ready for your review");
+  await review.getByRole("button", { name: "Review results of AL-2" }).click();
+  const panel = page.getByRole("complementary", { name: "Ticket AL-2" });
+  await expect(panel.getByRole("tab", { name: "Review" })).toHaveAttribute(
+    "aria-selected",
+    "true",
   );
-  expect(overflow).toBeLessThanOrEqual(0);
-  await shot("agents-390-light");
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+
+  // The tiles open: sessions with no ticket, each with Create ticket.
+  const unticketed = section("Work with no ticket");
+  const tile = unticketed.getByRole("button", { name: /Work with no ticket/ });
+  await expect(tile).toHaveAttribute("aria-expanded", "false");
+  await tile.click();
+  await expect(tile).toHaveAttribute("aria-expanded", "true");
+  const beta = unticketed
+    .getByRole("listitem")
+    .filter({ hasText: "beta · main" });
+  await expect(beta.getByText("Session b7c4e9f2")).toBeVisible();
+  const upNext = section("Up next");
+  await upNext.getByRole("button", { name: /Up next/ }).click();
+  await expect(upNext.locator('[data-row="AL-4"]')).toBeVisible();
+  for (const theme of ["light", "dark"]) {
+    await open("#/all/overview", { width: 1440, height: 2600, theme });
+    await shot(`overview-tiles-open-1440-${theme}`);
+  }
+  await open("#/all/overview");
+  await beta.getByRole("button", { name: "Create ticket" }).click();
+  const dialog = page.getByRole("dialog", { name: "New ticket" });
+  // The new ticket goes to the session's project.
+  await dialog.getByRole("textbox", { name: "Title" }).fill("Greeting flow");
+  await dialog.getByRole("button", { name: "Create ticket" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(
+    page.getByRole("complementary", { name: "Ticket BE-2" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Dismiss" }).click();
+
+  // An old Agents route lands on the Overview.
+  await open("#/p/alpha/agents");
+  await expect(page).toHaveURL(/#\/p\/alpha\/overview$/);
+  await expect(page.getByRole("link", { name: "Overview" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(section("Needs your decision")).toBeVisible();
+});
+
+test("every Overview section has a calm empty state (FH-51)", async () => {
+  for (const theme of ["light", "dark"]) {
+    await open("#/p/quiet/overview", { theme });
+    for (const sentence of [
+      "Nothing needs your decision.",
+      "Nothing is waiting for your review.",
+      "Nothing is at risk.",
+      "Nothing is in progress.",
+      "Every live session has a ticket.",
+      "Up next is empty.",
+    ])
+      await expect(page.getByText(sentence)).toBeVisible();
+    // Empty sections have nothing to open.
+    await expect(page.locator("main [aria-expanded]")).toHaveCount(0);
+    await expectNoAxeViolations(`empty overview ${theme}`);
+    await shot(`overview-empty-1440-${theme}`);
+    await open("#/p/quiet/overview", { width: 390, height: 1100, theme });
+    await shot(`overview-empty-390-${theme}`);
+  }
 });
 
 test("the band's Needs you pill opens the Board, filtered, from other views (FH-44)", async () => {
-  await open("#/all/agents");
+  await open("#/all/overview");
   const pill = page.getByRole("button", { name: "1 needs you", exact: true });
   await expect(pill).toHaveAttribute("aria-pressed", "false");
   await pill.click();
@@ -362,6 +469,17 @@ test("a question from an agent is answered on the board and delivered with its n
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await shot(`card-question-1440-${theme}`);
   }
+  // The Overview asks for the same decision, answerable in place.
+  for (const theme of ["light", "dark"]) {
+    await open("#/all/overview", { width: 1440, height: 2000, theme });
+    await expect(
+      section("Needs your decision").getByRole("region", {
+        name: "Needs a decision",
+      }),
+    ).toBeVisible();
+    await shot(`overview-question-full-1440-${theme}`);
+  }
+  await open("#/p/alpha/board?t=AL-1");
 
   // A choice fills the answer; sending it says it is on its way.
   await question.getByRole("button", { name: "Keep it" }).click();
@@ -374,13 +492,14 @@ test("a question from an agent is answered on the board and delivered with its n
   ).toContainText("“Keep it”");
   await expect(panel.getByText(/Answer \(Robin\): "Keep it"/)).toBeVisible();
 
-  // The Agents view shows the session waiting for its next prompt.
-  await open("#/all/agents");
+  // The Overview keeps it under Needs your decision until the session
+  // takes the answer.
+  await open("#/all/overview");
   await expect(
-    page
-      .getByRole("region", { name: /^Needs you/ })
-      .getByText("Answer waits for its next prompt"),
-  ).toBeVisible();
+    section("Needs your decision").getByRole("region", {
+      name: "Answer waits for its next prompt",
+    }),
+  ).toContainText("“Keep it”");
 
   // The session's next prompt delivers the answer, once.
   const output = promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
@@ -392,7 +511,7 @@ test("a question from an agent is answered on the board and delivered with its n
   await expect(card).toHaveCount(0);
 });
 
-test("a question is answered from the Agents view, and fits a phone", async () => {
+test("a question is answered from the Overview, and fits a phone (FH-51)", async () => {
   await callTool(sandbox.root, seeded.gamma, "ask_human", {
     run: `claude:${IDLE_SESSION}`,
     ticket: "AL-1",
@@ -401,10 +520,9 @@ test("a question is answered from the Agents view, and fits a phone", async () =
   });
 
   // At phone width the question card fits without sideways scrolling.
-  await open("#/all/agents", { width: 390, height: 844 });
-  const needsYou = page.getByRole("region", { name: /^Needs you/ });
-  await needsYou.getByRole("button", { name: /e2d8f6a4/ }).click();
-  const question = needsYou.getByRole("region", { name: "Has a question" });
+  await open("#/all/overview", { width: 390, height: 844 });
+  const decision = section("Needs your decision");
+  const question = decision.getByRole("region", { name: "Has a question" });
   await expect(
     question.getByText("Ship the offline spike behind a flag?"),
   ).toBeVisible();
@@ -416,16 +534,19 @@ test("a question is answered from the Agents view, and fits a phone", async () =
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
   await expectNoAxeViolations("question card at phone width");
-  await shot("agents-question-390-light");
+  await question.scrollIntoViewIfNeeded();
+  await shot("overview-question-390-light");
 
-  // Answering from the run's row records it like the panel does.
+  // Answering in place records it like the panel does.
   await question.getByRole("textbox", { name: "Your answer" }).fill("Yes");
   await question.getByRole("button", { name: "Send answer" }).click();
   await expect(
-    needsYou.getByRole("region", { name: "Answer waits for its next prompt" }),
+    decision.getByRole("region", { name: "Answer waits for its next prompt" }),
   ).toContainText("“Yes”");
   const output = promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
   expect(output).toContain('\\"Yes\\" (Robin)');
+  // Delivered, it leaves Needs your decision.
+  await expect(decision.getByText("Ship the offline spike")).toHaveCount(0);
 });
 
 test("a question answered in the session's own chat leaves Needs you", async () => {
@@ -457,26 +578,12 @@ test("a question answered in the session's own chat leaves Needs you", async () 
     await shot(`board-answered-in-session-1440-${theme}`);
   }
 
-  // The run keeps the question in its activity, marked.
-  for (const [width, theme] of [
-    [1440, "light"],
-    [1440, "dark"],
-    [390, "light"],
-  ]) {
-    await open("#/all/agents", { width, height: 900, theme });
-    const row = page.getByRole("button", { name: /e2d8f6a4/ }).first();
-    if ((await row.getAttribute("aria-expanded")) !== "true") await row.click();
-    const mark = page.getByText("Question on AL-1 answered in the session");
-    await expect(mark).toBeVisible();
+  // The Overview no longer asks for it.
+  for (const theme of ["light", "dark"]) {
+    await open("#/all/overview", { theme });
     await expect(
-      page.getByRole("region", { name: /^Needs you/ }).getByRole("button", {
-        name: /e2d8f6a4/,
-      }),
+      section("Needs your decision").getByText("Rename the skeleton package?"),
     ).toHaveCount(0);
-    await mark.scrollIntoViewIfNeeded();
-    if (width === 1440 && theme === "light")
-      await expectNoAxeViolations("run answered in the session");
-    await shot(`agents-answered-in-session-${width}-${theme}`);
   }
 });
 
@@ -505,12 +612,15 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
   await open("#/all/board", { width: 390, height: 844 });
   await shot("board-needs-you-unticketed-390-light");
   await open("#/all/board");
-  await notice.getByRole("button", { name: "Open Agents" }).click();
-  await expect(page).toHaveURL(/#\/all\/agents/);
+  await notice.getByRole("button", { name: "Open Overview" }).click();
+  await expect(page).toHaveURL(/#\/all\/overview/);
   await expect(
-    page
-      .getByRole("region", { name: /^Needs you/ })
-      .getByRole("button", { name: /e2d8f6a4/ }),
+    section("Needs your decision").getByText(
+      "Which repository should the offline spike live in?",
+    ),
+  ).toBeVisible();
+  await expect(
+    section("Needs your decision").getByText("Session e2d8f6a4"),
   ).toBeVisible();
 
   // Answered in the session's own chat, it no longer needs you.

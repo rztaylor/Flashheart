@@ -6,7 +6,6 @@ import {
   compactTimeline,
   counted,
   describeEntry,
-  laneRuns,
   liveReason,
   needsReason,
   permissionReason,
@@ -50,55 +49,6 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     ...patch,
   };
 }
-
-describe("laneRuns", () => {
-  it("puts Needs you first, nests subagents and orders by urgency", () => {
-    const lanes = laneRuns([
-      run("claude:a", {
-        state: "working",
-        lastActivity: "2026-10-05T10:05:00Z",
-        children: ["claude:a/x"],
-      }),
-      run("claude:a/x", { state: "needs-you" }),
-      run("claude:b", {
-        state: "needs-you",
-        lastActivity: "2026-10-05T10:09:00Z",
-      }),
-      run("claude:c", {
-        state: "needs-you",
-        lastActivity: "2026-10-05T10:01:00Z",
-      }),
-      run("claude:d", {
-        state: "working",
-        lastActivity: "2026-10-05T10:08:00Z",
-      }),
-      run("claude:e", { state: "ended" }),
-      run("claude:gone/y", { state: "working" }),
-    ]);
-    expect(lanes.map((lane) => lane.state)).toEqual([
-      "needs-you",
-      "working",
-      "quiet",
-      "waiting",
-      "ended",
-    ]);
-    // Longest-waiting first in Needs you; most recent first elsewhere.
-    expect(lanes[0]?.runs.map((entry) => entry.run.id)).toEqual([
-      "claude:c",
-      "claude:b",
-    ]);
-    expect(lanes[1]?.runs.map((entry) => entry.run.id)).toEqual([
-      "claude:d",
-      "claude:a",
-      "claude:gone/y",
-    ]);
-    // A subagent rides with its session, whatever its own state.
-    expect(lanes[1]?.runs[1]?.children.map((child) => child.id)).toEqual([
-      "claude:a/x",
-    ]);
-    expect(lanes[4]?.runs).toHaveLength(1);
-  });
-});
 
 describe("describeEntry", () => {
   const entry = (patch: Partial<TimelineEntry>): TimelineEntry => ({
@@ -244,7 +194,7 @@ it("names the subagent a session is waiting on", () => {
   ).toBe("Subagent needs permission");
 });
 
-it("gives a card's live run the same reason as the Agents view", () => {
+it("gives a card's live run the same reason as its run on the Runs tab", () => {
   const live = {
     run: "claude:s",
     short: "claude:s",

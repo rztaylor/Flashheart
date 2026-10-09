@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { noRuns } from "../api/runs";
 import { viewSummary } from "./summary";
 
 // The page header's one quiet line (ui-layout.md §1).
+const noCounts = {
+  backlog: 0,
+  "up-next": 0,
+  "in-progress": 0,
+  review: 0,
+  done: 0,
+};
+
 describe("viewSummary", () => {
   const base = { filtered: false, workstreams: [] };
 
@@ -25,25 +32,18 @@ describe("viewSummary", () => {
     expect(viewSummary({ ...base, view: "board" })).toBe("");
   });
 
-  it("counts live runs and who needs you on Agents", () => {
-    expect(
-      viewSummary({ ...base, view: "agents", runs: { ...noRuns, live: 1 } }),
-    ).toBe("1 live run");
+  it("counts what is in progress and ready to review on the Overview", () => {
     expect(
       viewSummary({
         ...base,
-        view: "agents",
-        runs: { ...noRuns, live: 4, needsYou: 1 },
+        view: "overview",
+        counts: [
+          { ...noCounts, "in-progress": 2, review: 1 },
+          { ...noCounts, "in-progress": 1 },
+        ],
       }),
-    ).toBe("4 live runs · 1 needs you");
-    expect(
-      viewSummary({
-        ...base,
-        view: "agents",
-        runs: { ...noRuns, live: 3, needsYou: 2 },
-      }),
-    ).toBe("3 live runs · 2 need you");
-    expect(viewSummary({ ...base, view: "agents" })).toBe("");
+    ).toBe("3 in progress · 1 ready to review");
+    expect(viewSummary({ ...base, view: "overview" })).toBe("");
   });
 
   it("counts workstreams and stations served", () => {

@@ -472,7 +472,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
-- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, lane head, panel). Only Needs you uses it.
+- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark. Only Needs you uses it.
 - **Flash** (`flash` #ffd23f): the bolt before the wordmark.
 - **Danger** (`danger`, `on-danger`, `danger-surface`): application errors, and actions that cannot be undone (a permanent delete): red, in both themes. Never a ticket state.
 
@@ -506,7 +506,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Wordmark** (800, 1.375rem, 87.5%): "Flashheart" in the band, after the bolt.
 - **Display page** (800, 2.5rem, 80%): the page header title.
 - **Display panel** (800, 1.875rem, 80%): the card panel's title and workstream names.
-- **Display head** (800, 1.375rem, 80%): board column and Agents lane heads, empty-state titles, dialog titles.
+- **Display head** (800, 1.375rem, 80%): board column and Overview section heads, empty-state titles, dialog titles.
 - **Heading** (700, 1rem, 87.5%): panel sections (Handoff, Acceptance criteria), markdown headings.
 - **Card title** (600, 0.875rem/1.35rem, normal width): ticket card titles, at most three lines, so a long title never outweighs the card.
 - **Heading small** (700, 0.8125rem, 87.5%): tabs, table heads, run detail sections, the workstream strip label.
@@ -515,11 +515,11 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Ticket id** (600, 0.6875rem, +0.02em, tabular): FH-11 on cards, stations, rows and the panel. Never monospace.
 
 ### Named Rules
-**The Numbers Are Data Rule.** Tabular numerals globally; counts sit in round badges on column and lane heads.
+**The Numbers Are Data Rule.** Tabular numerals globally; counts sit in round badges on column and section heads.
 
 ## Layout
 
-See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 248px rail, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem); below 1440px an open panel collapses the rail to 64px of key badges. Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; Agents stacks lanes; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
+See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 248px rail, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem); below 1440px an open panel collapses the rail to 64px of key badges. Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; the Overview stacks section cards 16px apart in one centred column of at most 56rem; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
 
 ## Elevation & Depth
 
@@ -535,7 +535,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 
 ## Shapes
 
-8px controls (buttons, fields, segmented controls, tabs in the band, key badges); 10px cards, rail tiles, criteria lists and callouts; 14px column wells, lanes, route cards, the table and dialogs; full rounds for pills, tags, count badges, bullets, stations and the Needs you plate. Dashes have three meanings only: a dashed card border with a hatched top band means needs repair; dashed track or a dashed line-colour ring means suspended service; a faint dashed ring means a missing station. Empty columns and lanes use a dashed outline as an empty slot.
+8px controls (buttons, fields, segmented controls, tabs in the band, key badges); 10px cards, rail tiles, criteria lists and callouts; 14px column wells, Overview section cards, route cards, the table and dialogs; full rounds for pills, tags, count badges, bullets, stations and the Needs you plate. Dashes have three meanings only: a dashed card border with a hatched top band means needs repair; dashed track or a dashed line-colour ring means suspended service; a faint dashed ring means a missing station. Empty columns use a dashed outline as an empty slot.
 
 ## Components
 
@@ -555,8 +555,11 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 ### Ticket Card
 White, 10px corners, rule border, card shadow, a 4px workstream stripe down the left. Rows (contract §2): header with id, project and running time, then the title (card title, up to three lines) on the paint tint; tags (bullet, type, age); repair; blocker pill or quiet wait; live run (Needs you plate or run mark, agent, time; the permission reason on its own line; plan step); question waiting; excerpt and next step (Detailed); footer with criteria left and the priority tag right. Selected: select border and ring. Dimmed: 35%.
 
-### Column Well and Lane
-Column well surface, rule border, 14px corners, 10px padding; head with a round count badge, an Agents lane's run mark (Needs you inside an attention disc), and the title in the display head cut. Agents lanes use the same well with run rows inside one card.
+### Column Well
+Column well surface, rule border, 14px corners, 10px padding; head with a round count badge and the title in the display head cut.
+
+### Overview Section Card
+Card surface, rule border, 14px corners, card shadow; the head on the column surface with a 28px round mark (Needs your decision in the attention disc while anything needs you; review and in progress in their status fills; the rest an ink icon on a card disc), the title in the display head cut and a round count badge; the collapsible ones end in a chevron. Rows divided by rules, roomy (12px by 16px): the id, the title over one muted line of words, a small outlined agent chip, a muted time or count, and the action (Review results in the action fill, Create ticket secondary). An empty section is its head with one muted sentence. No coloured edge strips.
 
 ### Navigation
 - **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate (a toggle: pressed, an inset on-attention ring and a close mark, filtering the Board to tickets that need you), search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.

@@ -598,5 +598,14 @@ Editorial and Precision; the user chose Calm, found the others too busy and
 rejected the headline sentence. Approved concept: FH-47
 `files/20261009T1923-image.png`. Roadmap item: `project-overview`.
 
+Built (FH-51): a question answered on the board stays under Needs your
+decision, saying its answer waits for the session's next prompt, because
+its run needs the user until then (`RUN-3`); a question from an ended
+session does not. Section heads sit on the neutral column surface with a
+round mark in their role's colour rather than the concept's tinted heads,
+and rows open the ticket from its title rather than a separate Open
+button. Old `#/…/agents` routes and a remembered `view: agents` in
+`config.yaml` open the Overview, and the next save writes `overview`.
+
 Versions: board format stays 2. `PROTOCOL_VERSION` changes only when the
 throttled activity records land (FH-55).

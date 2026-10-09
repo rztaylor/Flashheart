@@ -209,7 +209,7 @@ describe("run validators", () => {
         ...preferences,
         scopes: {
           alpha: {
-            view: "agents",
+            view: "overview",
             type: { include: [], exclude: [] },
             priority: { include: ["high"], exclude: [] },
             workstream: { include: [], exclude: ["board-ui"] },

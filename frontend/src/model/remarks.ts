@@ -64,7 +64,8 @@ export const PLACEMENTS: Record<
 > = {
   // The wordmark's tooltip: an Easter egg, never visible text.
   brand: { ids: [1, 2, 3, 4, 5, 6, 7], priority: 0 },
-  // Agents, when runs exist and none needs you.
+  // The Overview's empty Needs your decision, when nothing anywhere needs
+  // you.
   "needs-you-clear": { ids: [11, 13, 14, 17, 18, 19], priority: 10 },
   // An empty review column on the board.
   "review-empty": { ids: [71, 72], priority: 10 },
@@ -72,7 +73,7 @@ export const PLACEMENTS: Record<
   "board-empty": { ids: [21, 23, 24, 25, 27, 28, 30], priority: 20 },
   // No workstreams yet.
   "workstreams-none": { ids: [31], priority: 20 },
-  // No agent runs yet.
+  // The Overview's empty In progress, when no session in scope is live.
   "agents-none": { ids: [41, 43, 44, 46, 47, 48, 49, 50], priority: 20 },
   // Filters or a search that match nothing.
   search: { ids: [82, 83, 85, 86, 87, 88], priority: 20 },

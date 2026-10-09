@@ -7,7 +7,7 @@ import { ticketPageHref } from "../model/markdown";
 // is a ticket's full page (CARD-7), reached from its id.
 export type View =
   | "board"
-  | "agents"
+  | "overview"
   | "workstreams"
   | "table"
   | "archive"
@@ -20,7 +20,10 @@ export interface Route {
   ticket?: TicketRef;
 }
 
-const views: View[] = ["board", "agents", "workstreams", "table", "archive"];
+const views: View[] = ["board", "overview", "workstreams", "table", "archive"];
+
+// The Overview replaced the Agents view (D32); its old routes land there.
+const aliases: Record<string, View> = { agents: "overview" };
 
 // Routes live in the URL hash (#/all/board, #/p/<project>/<view>?t=<ticket
 // id>, #/ticket/<ticket id>) so reloads and new tabs keep their place
@@ -42,9 +45,10 @@ export function parseRoute(hash: string): Route {
   } else if (parts[0] === "all") {
     viewPart = parts[1];
   }
+  const named = aliases[viewPart ?? ""] ?? viewPart;
   const view =
-    views.includes(viewPart as View) && viewPart !== "ticket"
-      ? (viewPart as View)
+    views.includes(named as View) && named !== "ticket"
+      ? (named as View)
       : "board";
   const route: Route = { scope, view };
   const ticket = new URLSearchParams(query).get("t");
@@ -76,7 +80,21 @@ function decode(value: string): string {
 export function useRoute(): [Route, (next: Route) => void] {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));
   useEffect(() => {
-    const onChange = () => setRoute(parseRoute(window.location.hash));
+    // An old route (#/all/agents) is rewritten to the view it lands on.
+    const canonical = () => {
+      const [path = ""] = window.location.hash.split("?");
+      if (path.endsWith("/agents"))
+        window.history.replaceState(
+          null,
+          "",
+          formatRoute(parseRoute(window.location.hash)),
+        );
+    };
+    canonical();
+    const onChange = () => {
+      canonical();
+      setRoute(parseRoute(window.location.hash));
+    };
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);

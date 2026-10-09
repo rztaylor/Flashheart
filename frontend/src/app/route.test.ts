@@ -24,14 +24,19 @@ describe("routes", () => {
     expect(formatRoute(route)).toBe("#/p/my%20project/workstreams?t=FH-42");
   });
 
-  it("routes the Agents view", () => {
-    expect(parseRoute("#/p/alpha/agents")).toEqual({
+  it("routes the Overview, and lands an old Agents route there", () => {
+    expect(parseRoute("#/p/alpha/overview")).toEqual({
       scope: { kind: "project", project: "alpha" },
-      view: "agents",
+      view: "overview",
     });
-    expect(formatRoute({ scope: { kind: "all" }, view: "agents" })).toBe(
-      "#/all/agents",
+    expect(formatRoute({ scope: { kind: "all" }, view: "overview" })).toBe(
+      "#/all/overview",
     );
+    expect(parseRoute("#/p/alpha/agents?t=AL-3")).toEqual({
+      scope: { kind: "project", project: "alpha" },
+      view: "overview",
+      ticket: { id: "AL-3" },
+    });
   });
 
   it("ignores unknown views and malformed ticket ids", () => {
