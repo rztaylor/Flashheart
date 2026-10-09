@@ -31,10 +31,13 @@ type RunCountsJSON struct {
 	Quiet    int `json:"quiet"`
 	Ended    int `json:"ended"`
 	Live     int `json:"live"`
+	// NeedsYouUnticketed are the runs in Needs you with no ticket on the
+	// board (FH-44).
+	NeedsYouUnticketed int `json:"needsYouUnticketed"`
 }
 
 func countsJSON(c index.RunCounts) RunCountsJSON {
-	return RunCountsJSON{Working: c.Working, NeedsYou: c.NeedsYou, Waiting: c.Waiting, Quiet: c.Quiet, Ended: c.Ended, Live: c.Live}
+	return RunCountsJSON{Working: c.Working, NeedsYou: c.NeedsYou, Waiting: c.Waiting, Quiet: c.Quiet, Ended: c.Ended, Live: c.Live, NeedsYouUnticketed: c.NeedsYouUnticketed}
 }
 
 // LiveJSON is a card's live badge (VIEW-8): the linked run that most needs

@@ -5,7 +5,7 @@ import { CheckboxField } from "../../components/Field";
 import { filterHandlers, filterHint } from "../../components/FilterChip";
 import { Popover } from "../../components/Popover";
 import { SegmentedControl } from "../../components/SegmentedControl";
-import { toggleVirtual, VIRTUAL_COLUMNS } from "../../model/columns";
+import { setColumnShown } from "../../model/columns";
 import {
   type Choice,
   choiceCount,
@@ -22,7 +22,7 @@ import { priorityLabel } from "../../model/status";
 
 export type { Density } from "../../api/preferences";
 
-import type { Density, VirtualColumn } from "../../api/preferences";
+import type { Density, HideableColumn } from "../../api/preferences";
 import { Icon } from "../../components/Icon";
 
 interface Option {
@@ -30,16 +30,16 @@ interface Option {
   label: string;
 }
 
-// ViewSettings are the Board's view options (VIEW-2, VIEW-6), kept behind
+// ViewSettings are the Board's view options (VIEW-6, FH-41), kept behind
 // the View options menu.
 interface ViewSettings {
   density: Density;
   onDensity(density: Density): void;
   paint: PaintMode;
   onPaint(paint: PaintMode): void;
-  // virtualColumns are the virtual columns shown on the board (VIEW-2).
-  virtualColumns: VirtualColumn[];
-  onVirtualColumns(columns: VirtualColumn[]): void;
+  // hiddenColumns are the real columns hidden from the board (FH-41).
+  hiddenColumns: HideableColumn[];
+  onHiddenColumns(columns: HideableColumn[]): void;
 }
 
 interface FilterBarProps {
@@ -61,7 +61,7 @@ const STATES: { value: StateFilter; label: string }[] = [
 // FilterBar is the view toolbar (ui-layout.md §1, FH-39): one button per
 // filter, each named after what it filters and badged with how many values
 // it holds, Clear filters while any filter applies, and on the Board one
-// View options menu for the virtual columns, Colour by and density. The
+// View options menu for showing the Backlog, Colour by and density. The
 // Board's chip row (FilterChips) edits the same filters. Search lives in
 // the band, New ticket and the ticket count in the page header.
 export function FilterBar({
@@ -254,26 +254,21 @@ function ViewOptions({
   onDensity,
   paint,
   onPaint,
-  virtualColumns,
-  onVirtualColumns,
+  hiddenColumns,
+  onHiddenColumns,
 }: ViewSettings) {
   return (
     <div className="flex w-max flex-col gap-3 p-1.5 text-xs">
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 font-semibold text-ink">Show columns</legend>
-        {VIRTUAL_COLUMNS.map((column) => (
-          <CheckboxField
-            key={column.id}
-            label={column.title}
-            title={`Show a ${column.title} column that mirrors tickets from their real columns`}
-            checked={virtualColumns.includes(column.id)}
-            onChange={(checked) =>
-              onVirtualColumns(
-                toggleVirtual(virtualColumns, column.id, checked),
-              )
-            }
-          />
-        ))}
+        <CheckboxField
+          label="Backlog"
+          title="Show the Backlog column; hidden, the other columns get its width"
+          checked={!hiddenColumns.includes("backlog")}
+          onChange={(checked) =>
+            onHiddenColumns(setColumnShown(hiddenColumns, "backlog", checked))
+          }
+        />
       </fieldset>
       <div className="flex flex-col gap-1.5">
         <span aria-hidden="true" className="font-semibold text-ink">

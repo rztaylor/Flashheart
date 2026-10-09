@@ -864,6 +864,84 @@ test("the theme choice is saved", async () => {
     .toContain("theme: system");
 });
 
+test("the Backlog column can be hidden from View options (FH-41)", async () => {
+  const config = () =>
+    readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
+  const backlogBox = page.getByRole("checkbox", { name: "Backlog" });
+  await open("#/p/flashheart/board");
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.getByRole("button", { name: "View options" }).click();
+    await expect(backlogBox).toBeChecked();
+    // Needs you is a chip now, not a column to show (FH-44).
+    await expect(page.getByRole("checkbox", { name: "Needs you" })).toHaveCount(
+      0,
+    );
+    await page.screenshot({
+      path: resolve(screenshotDir, `view-options-backlog-1440-${theme}.png`),
+    });
+    await page.keyboard.press("Escape");
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "View options" }).click();
+  await backlogBox.uncheck();
+  await page.keyboard.press("Escape");
+  await expect(column("Backlog")).toHaveCount(0);
+  await expect.poll(config).toContain("hidden_columns: [backlog]");
+
+  // Shift with Left from Up next has no column to go to.
+  const first = column("Up next").getByRole("button").first();
+  const name = await first.getAttribute("aria-label");
+  await first.focus();
+  await page.keyboard.press("Shift+ArrowLeft");
+  await expect(
+    column("Up next").getByRole("button", { name, exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Moved" }),
+  ).toHaveCount(0);
+
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.locator("h1").click();
+    await page.screenshot({
+      path: resolve(screenshotDir, `backlog-hidden-1440-${theme}.png`),
+    });
+  }
+
+  // The narrow Column picker leaves it out too.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const picker = page.getByRole("combobox", { name: "Column" });
+  await expect(picker.locator("option")).toHaveText([
+    "Up next",
+    "In progress",
+    "Ready to review",
+    "Done",
+  ]);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.screenshot({
+      path: resolve(screenshotDir, `backlog-hidden-390-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  // The choice survives a reload, and showing it again saves that too.
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Backend connected. Check connection" }),
+  ).toBeVisible();
+  await expect(column("Up next")).toBeVisible();
+  await expect(column("Backlog")).toHaveCount(0);
+  await page.getByRole("button", { name: "View options" }).click();
+  await expect(backlogBox).not.toBeChecked();
+  await backlogBox.check();
+  await page.keyboard.press("Escape");
+  await expect(column("Backlog")).toBeVisible();
+  await expect.poll(config).toContain("hidden_columns: []");
+});
+
 test("switching theme keeps the view, filters, open ticket and scroll", async () => {
   await open("#/p/flashheart/table?t=FH-36");
   const priorities = await filterMenu(page, "Priority");

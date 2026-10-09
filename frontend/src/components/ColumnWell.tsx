@@ -10,7 +10,7 @@ export const wellSurface =
   "flex min-h-0 flex-col rounded-panel border bg-column p-2.5";
 
 // WellHead heads a well: a round count badge (first visually, last in the
-// heading's words), the run mark of a virtual column or lane (Needs you in
+// heading's words), the run mark of an Agents lane (Needs you in
 // the attention disc), and the title in the display cut. titleId names the
 // title alone, for a region labelled by it. A sticky head stays at the top
 // of a well that scrolls with its neighbours, so the board keeps its column

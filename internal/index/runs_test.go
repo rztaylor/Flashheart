@@ -246,3 +246,43 @@ func TestNewEventsFoldIncrementally(t *testing.T) {
 		t.Fatalf("late event: refolds %d, run %+v", index.events.refolds, late.Runs[0])
 	}
 }
+
+// Runs that need you with no ticket on the board are counted apart: the
+// board's Needs you filter cannot show them (FH-44).
+func TestRunCountsNeedsYouWithoutATicket(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	now := clock.now
+	add := func(run, kind string, data any) {
+		t.Helper()
+		if err := log.Append(events.Event{Time: now.Add(-time.Minute), Run: run, Agent: "claude", Kind: kind, Project: "alpha", Data: data}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// claude:s1 is linked to AL-3 by its branch. claude:s2 and claude:s3,
+	// on main, are not, but s3's question is about AL-3, whose card shows
+	// it; only s2 has nothing on the board.
+	for _, run := range []string{"claude:s1", "claude:s2", "claude:s3"} {
+		branch := "main"
+		if run == "claude:s1" {
+			branch = "feature/x"
+		}
+		add(run, events.RunStart, events.RunStartData{Kind: events.KindSession, Branch: branch, Worktree: "/src/alpha"})
+		add(run, events.TurnStart, events.TurnStartData{})
+		if run == "claude:s3" {
+			add(run, events.QuestionAsked, events.QuestionData{ID: "q-1", Ticket: "AL-3", Kind: "question", Text: "Which?"})
+			continue
+		}
+		add(run, events.PermissionRequested, events.PermissionData{Tool: "Bash"})
+	}
+	snapshot, err := index.Rebuild()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, project := range []string{"", "alpha"} {
+		if counts := snapshot.RunCounts(project); counts.NeedsYou != 3 || counts.NeedsYouUnticketed != 1 {
+			t.Errorf("RunCounts(%q) = %+v, want 3 needing you, 1 of them without a ticket", project, counts)
+		}
+	}
+}

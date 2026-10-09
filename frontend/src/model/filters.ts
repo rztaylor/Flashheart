@@ -26,6 +26,9 @@ export interface Filters {
   // age filters by the Colour by age buckets (today, week, older).
   age: Choice;
   state: StateFilter;
+  // needsYou, the band's Needs you toggle, shows only tickets with a run in
+  // Needs you or an open question (FH-44).
+  needsYou: boolean;
 }
 
 export const NO_WORKSTREAM = "(none)";
@@ -39,6 +42,7 @@ export const emptyFilters: Filters = {
   workstream: noChoice,
   age: noChoice,
   state: "all",
+  needsYou: false,
 };
 
 export const CHOICE_KEYS: ChoiceKey[] = [
@@ -89,7 +93,8 @@ export function isFiltered(filters: Filters): boolean {
   return (
     filters.query.trim() !== "" ||
     CHOICE_KEYS.some((key) => choiceCount(filters[key]) > 0) ||
-    filters.state !== "all"
+    filters.state !== "all" ||
+    filters.needsYou
   );
 }
 
@@ -130,6 +135,7 @@ export function applyFilters(
     if (filters.state === "repair" && card.needsRepair.length === 0)
       return false;
     if (filters.state === "working" && !card.agentWorking) return false;
+    if (filters.needsYou && !card.needsYou) return false;
     if (words.length > 0) {
       const text = haystack(card);
       return words.every((word) => text.includes(word));

@@ -86,7 +86,6 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Claim** | A run's lease on a ticket, renewed by its activity. |
 | **Handoff** | The `## Handoff` section of a ticket: done, next, files, open questions. Rewritten at each checkpoint. |
 | **Question** | A run's request for a human decision, answer or review; it puts the run in **Needs you**. |
-| **Virtual column** | A board column computed from run state (for example *Needs you*) rather than a directory; can be shown or hidden. |
 
 ## 5. System overview
 
@@ -208,12 +207,17 @@ Full format: `docs/dev/specs/board-format.md`.
 - `VIEW-1` **Board**: one column per status in workflow order (Backlog, Up
   next, In progress, Ready to review, Done), each in its manual order
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
-- `VIEW-2` **Virtual column**: *Needs you* (tickets with a run in Needs you or
-  an open question from a live session). It sits between In progress and
-  Ready to review and appears while it holds tickets. It can be shown or
-  hidden (shown by default); a ticket in it also stays in its real column,
-  marked as mirrored. Tickets linked to a Working or Quiet run are found with
-  the State filter's *Agent working* option, not a column (D27, FH-42).
+  The Backlog can be hidden from the Board (shown by default; FH-41).
+- `VIEW-2` **Needs you filter**: the band's *Needs you* plate is a toggle.
+  Pressed, it shows *All projects* (the Board, or the Table when open) with
+  only tickets that have a run in Needs you or an open question from a live
+  session; pressed again, it returns to the project it was pressed in. It
+  combines with the other filters, carries from project to project, and is
+  not remembered. While it is on, runs in Needs you that no card on the
+  board shows (no linked ticket, and no open question about a ticket on the
+  board) are named in a notice that opens the Agents view. Tickets show only in their real
+  columns (D31, FH-44). Tickets linked to a Working or Quiet run are found
+  with the State filter's *Agent working* option (D27, FH-42).
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
   (`RUN-3`), Needs you first: *Needs you*, *Working*, *Quiet*, *Waiting*,
   *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
@@ -462,8 +466,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `CFG-1` Settings live in `<root>/.flashheart/config.yaml` (global) and
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
-- `CFG-2` UI preferences (theme, density, colour by, visible virtual columns,
-  and each project's view and filters) are saved through the backend in the
+- `CFG-2` UI preferences (theme, density, colour by, hidden columns, and
+  each project's view and filters) are saved through the backend in the
   global config, never in browser storage.
 
 ### 6.13 Lifecycle (`LIFE`)
@@ -548,7 +552,7 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
   as a route, branch and last activity, and expands to its plan, edited files
   and activity; subagents hang beneath their session.
 - **Needs you** is visible from every view and project (badge in the rail and
-  top bar).
+  top bar); the top bar's plate filters the Board to it (`VIEW-2`).
 - Narrow widths keep a single column with a column picker; the board is not
   a phone-first product.
 

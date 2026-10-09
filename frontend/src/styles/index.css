@@ -220,8 +220,7 @@
   [data-narrow-column="up-next"] section[data-column="up-next"],
   [data-narrow-column="in-progress"] section[data-column="in-progress"],
   [data-narrow-column="review"] section[data-column="review"],
-  [data-narrow-column="done"] section[data-column="done"],
-  [data-narrow-column="needs-you"] section[data-column="needs-you"] {
+  [data-narrow-column="done"] section[data-column="done"] {
     display: flex;
   }
 }

@@ -29,6 +29,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Needs you is a filter instead of a column (FH-44, D31). The Needs you
+  column, which repeated tickets already shown in their own columns, is
+  gone. The band's *N need you* plate is now an on/off filter: pressed, it
+  shows All projects' Board (or Table) with only the tickets that have a
+  run in Needs you or an open question, and pressed again it returns to the
+  project you were in (it used to open the Agents view). Agents that need
+  you with no ticket on the board are named in a notice that opens the
+  Agents view. It combines with the other filters and Clear filters
+  switches it off; it carries from project to project and a reload starts
+  with it off. The rail badges and the card's Needs you mark are
+  unchanged. A saved `ui.virtual_columns` setting is ignored and removed on
+  the next save.
 - The Board toolbar is decluttered (FH-39). Filters are buttons named for
   what they filter (Type, Priority, Workstream, State) with a count badge
   while applied, each opening a list of values; View options (⋯) holds the
@@ -105,6 +117,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- The Board can hide the Backlog column (FH-41): View options › Show
+  columns has a Backlog checkbox, checked by default. Hidden, the columns
+  being worked on get its width, the phone Column picker leaves it out, and
+  Shift with an arrow or a drag never moves a ticket into it. The choice is
+  saved as `ui.hidden_columns` in `config.yaml`; a config without it shows
+  the Backlog.
 - Every ticket has a full page with room to read and review screenshots
   (FH-45, D30). A ticket id anywhere on the board (cards, table rows,
   workstream stations, the Agents view, the archive and the card panel)

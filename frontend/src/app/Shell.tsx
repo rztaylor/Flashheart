@@ -17,7 +17,6 @@ import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
-import { RunStateMark } from "../components/RunState";
 import { Toast, type ToastMessage } from "../components/Toast";
 import { AgentsView } from "../features/agents/AgentsView";
 import { ArchiveView } from "../features/archive/ArchiveView";
@@ -34,10 +33,7 @@ import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
-import {
-  placeVirtual,
-  shownVirtual as shownVirtualColumns,
-} from "../model/columns";
+import { shownColumns } from "../model/columns";
 import {
   applyFilters,
   choiceCount,
@@ -61,6 +57,9 @@ import { viewSummary } from "../model/summary";
 import { useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
 import { BackendStatus } from "./BackendStatus";
+import { NeedsYouNotice } from "./NeedsYouNotice";
+import { NeedsYouPill } from "./NeedsYouPill";
+import { pressNeedsYou } from "./needsYou";
 import { PageHeader } from "./PageHeader";
 import {
   formatRoute,
@@ -104,6 +103,9 @@ export function Shell({
   const { state, fetch: fetcher, ready } = lifecycle;
   const [route, navigate] = useRoute();
   const [filters, setFiltersState] = useState<Filters>(emptyFilters);
+  // needsYouFrom is the scope the Needs you filter was turned on from, to
+  // return to when it is turned off (FH-44).
+  const [needsYouFrom, setNeedsYouFrom] = useState<Scope>();
   const { density, colourBy: paint } = preferences;
   const [newTicket, setNewTicket] = useState(false);
   const [doneAll, setDoneAll] = useState(false);
@@ -176,7 +178,9 @@ export function Shell({
   // biome-ignore lint/correctness/useExhaustiveDependencies: restore only when the scope changes or preferences first load.
   useEffect(() => {
     if (preferencesLoaded)
-      setFiltersState((current) => filtersFor(saved, current.query));
+      setFiltersState((current) =>
+        filtersFor(saved, current.query, current.needsYou),
+      );
   }, [scopeKeyName, preferencesLoaded]);
   // The archive and a ticket's full page are side trips, never the
   // remembered view.
@@ -223,7 +227,9 @@ export function Shell({
   // Needs you is visible from every view and project (SPEC §7).
   const needsYou =
     projects.status === "ready" ? projects.data.runs.needsYou : 0;
-  const shownVirtual = preferences.virtualColumns;
+  const needsYouUnticketed =
+    projects.status === "ready" ? projects.data.runs.needsYouUnticketed : 0;
+  const hiddenColumns = preferences.hiddenColumns;
   const projectNames = useMemo(
     () =>
       route.scope.kind === "all"
@@ -303,16 +309,27 @@ export function Shell({
           if (after !== null) place(shownTicket, shownTicket.column, after);
         }
       : undefined;
-  // The phone column picker falls back to In progress when the virtual
-  // column it showed has emptied and gone.
-  const narrowVirtual = shownVirtualColumns(visible, shownVirtual);
-  const narrowShown =
-    COLUMNS.some((column) => column.id === narrowColumn) ||
-    narrowVirtual.some((column) => column.id === narrowColumn)
-      ? narrowColumn
-      : "in-progress";
+  // The phone column picker falls back to In progress when the column it
+  // showed was hidden.
+  const pickerColumns = shownColumns(hiddenColumns);
+  const narrowShown = pickerColumns.some((column) => column.id === narrowColumn)
+    ? narrowColumn
+    : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
+  // The band's Needs you pill filters All projects' Board or Table, and
+  // turned off returns to where it was turned on (FH-44).
+  const toggleNeedsYou = () => {
+    const press = pressNeedsYou(route, filters.needsYou, needsYouFrom);
+    setNeedsYouFrom(press.cameFrom);
+    if (!press.go) {
+      setFilters({ ...filters, needsYou: press.on });
+      return;
+    }
+    // A new scope restores its own filters, carrying this one over.
+    setFiltersState({ ...filters, needsYou: press.on });
+    go(press.go);
+  };
   const selectScope = (scope: Scope) => {
     setDoneAll(false);
     const name = scope.kind === "all" ? "all" : scope.project;
@@ -338,9 +355,7 @@ export function Shell({
       if (element?.isConnected) element.focus();
       else if (id)
         document
-          .querySelector<HTMLElement>(
-            `[data-ticket="${CSS.escape(id)}"]:not([data-mirrored])`,
-          )
+          .querySelector<HTMLElement>(`[data-ticket="${CSS.escape(id)}"]`)
           ?.focus();
     }, 0);
   }, [navigate, route]);
@@ -450,28 +465,11 @@ export function Shell({
             })}
           </nav>
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
-            {needsYou > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  go({
-                    scope: { kind: "all" },
-                    view: "agents",
-                    ticket: undefined,
-                  });
-                }}
-                className="flex h-8 items-center gap-1.5 rounded-full bg-attention px-2.5 text-xs font-semibold whitespace-nowrap sm:h-9 sm:px-3.5 sm:text-sm text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band"
-              >
-                <RunStateMark state="needs-you" size={11} />
-                {needsYou}
-                <span className="hidden sm:inline">
-                  {needsYou === 1 ? " needs you" : " need you"}
-                </span>
-                <span className="sm:hidden">
-                  {needsYou === 1 ? " agent needs you" : " agents need you"}
-                </span>
-              </button>
-            ) : null}
+            <NeedsYouPill
+              count={needsYou}
+              on={filters.needsYou}
+              onToggle={toggleNeedsYou}
+            />
             {route.view === "board" || route.view === "table" ? (
               <div className="hidden md:flex">
                 <SearchField
@@ -673,10 +671,7 @@ export function Shell({
                     value={narrowShown}
                     onChange={setNarrowColumn}
                   >
-                    {placeVirtual<{ id: string; title: string }>(
-                      COLUMNS,
-                      narrowVirtual,
-                    ).map((column) => (
+                    {pickerColumns.map((column) => (
                       <option key={column.id} value={column.id}>
                         {column.title}
                       </option>
@@ -784,11 +779,11 @@ export function Shell({
                                 ...current,
                                 density: value,
                               })),
-                            virtualColumns: shownVirtual,
-                            onVirtualColumns: (virtualColumns) =>
+                            hiddenColumns,
+                            onHiddenColumns: (hiddenColumns) =>
                               updatePreferences((current) => ({
                                 ...current,
-                                virtualColumns,
+                                hiddenColumns,
                               })),
                             paint,
                             onPaint: choosePaint,
@@ -808,6 +803,14 @@ export function Shell({
                       paints={paints}
                       filters={filters}
                       onChange={setFilters}
+                    />
+                  ) : null}
+                  {filters.needsYou ? (
+                    <NeedsYouNotice
+                      count={needsYouUnticketed}
+                      onOpenAgents={() =>
+                        go({ view: "agents", ticket: undefined })
+                      }
                     />
                   ) : null}
                   {board.status === "loading" ? <BoardSkeleton /> : null}
@@ -839,7 +842,7 @@ export function Shell({
                         projectNames={projectNames}
                         density={density}
                         paint={paint}
-                        virtualColumns={shownVirtual}
+                        hiddenColumns={hiddenColumns}
                         selected={route.ticket}
                         doneTotal={board.data.doneTotal}
                         doneShown={board.data.doneShown}

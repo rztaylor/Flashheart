@@ -141,8 +141,13 @@ func signature(views []runs.View) string {
 }
 
 // RunCounts counts runs by state; Live is every run not Ended.
+// NeedsYouUnticketed counts the runs in Needs you that no card on the
+// board shows: neither their linked ticket nor a ticket one of their open
+// questions is about is on it (none, or archived or gone). The board's
+// Needs you filter cannot show them (FH-44).
 type RunCounts struct {
 	Working, NeedsYou, Waiting, Quiet, Ended, Live int
+	NeedsYouUnticketed                             int
 }
 
 // RunCounts counts a project's runs, or every run when project is "".
@@ -157,6 +162,9 @@ func (s *Snapshot) RunCounts(project string) RunCounts {
 			counts.Working++
 		case runs.NeedsYou:
 			counts.NeedsYou++
+			if !s.shownOnBoard(run) {
+				counts.NeedsYouUnticketed++
+			}
 		case runs.Waiting:
 			counts.Waiting++
 		case runs.Quiet:
@@ -169,6 +177,29 @@ func (s *Snapshot) RunCounts(project string) RunCounts {
 		}
 	}
 	return counts
+}
+
+// shownOnBoard reports whether a card on the board shows the run: its
+// linked ticket's, or that of a ticket one of its open questions is about.
+func (s *Snapshot) shownOnBoard(run runs.View) bool {
+	if s.onBoard(run.Link.Ticket) {
+		return true
+	}
+	for _, question := range run.Questions {
+		if question.Open() && s.onBoard(question.Ticket) {
+			return true
+		}
+	}
+	return false
+}
+
+// onBoard reports whether id names a ticket the board shows.
+func (s *Snapshot) onBoard(id string) bool {
+	if id == "" || s.Archived(id) {
+		return false
+	}
+	_, _, ok := s.FindTicket(id)
+	return ok
 }
 
 // statePriority orders live states for a ticket's badge: the one that most

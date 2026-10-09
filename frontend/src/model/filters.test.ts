@@ -128,6 +128,20 @@ describe("applyFilters", () => {
     ).toEqual(["AL-7"]);
   });
 
+  it("shows only tickets that need you, with any other filter (FH-44)", () => {
+    const waiting = [
+      card({ id: "AL-1", needsYou: true, blocked: true }),
+      card({ id: "AL-2", needsYou: true }),
+      card({ id: "AL-3" }),
+    ];
+    const only = { ...emptyFilters, needsYou: true };
+    expect(ids(applyFilters(waiting, only))).toEqual(["AL-1", "AL-2"]);
+    expect(ids(applyFilters(waiting, { ...only, state: "blocked" }))).toEqual([
+      "AL-1",
+    ]);
+    expect(isFiltered(only)).toBe(true);
+  });
+
   it("shows only tickets with an agent at work (FH-42)", () => {
     const working = [
       card({ id: "AL-1", agentWorking: true }),
