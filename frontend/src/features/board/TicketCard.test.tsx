@@ -165,3 +165,40 @@ describe("TicketCard", () => {
     expect(markup).toContain(`title="${"A".repeat(200)}"`);
   });
 });
+
+// The live badge (VIEW-8) names the plan step only when the run has a plan
+// (FH-54).
+describe("TicketCard live badge", () => {
+  const live = {
+    run: "claude:3f2a9c1e",
+    short: "claude:3f2a9c1e",
+    agent: "claude",
+    state: "working" as const,
+    done: 0,
+    total: 0,
+    step: "",
+    permission: "",
+    waitingOn: "",
+    question: "" as const,
+    questionAnswered: false,
+    lastActivity: "2026-10-06T11:58:00Z",
+  };
+  // badge is the live badge's markup, up to the card's footer.
+  const badge = (markup: string) =>
+    markup.slice(markup.indexOf("data-live="), markup.indexOf("data-row="));
+
+  it("shows no plan step for a run with no plan", () => {
+    const markup = render({ live });
+    expect(badge(markup)).toContain("Claude");
+    expect(badge(markup)).not.toMatch(/\d+\/\d+/);
+    expect(markup).not.toContain("plan");
+  });
+
+  it("shows the current step of a run with a plan", () => {
+    const markup = render({
+      live: { ...live, done: 3, total: 7, step: "Fix header" },
+    });
+    expect(badge(markup)).toContain("3/7 · Fix header");
+    expect(markup).toContain("plan 3 of 7: Fix header");
+  });
+});

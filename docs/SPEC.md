@@ -239,7 +239,8 @@ Full format: `docs/dev/specs/board-format.md`.
   some (FH-39). Filters and view choices are remembered per project
   (`CFG-2`).
 - `VIEW-8` Live badge on a card with a live run: agent (Claude/Codex),
-  current plan step ("3/7 · Fix header"), state, and time since last activity.
+  current plan step ("3/7 · Fix header") when the run has a plan, state, and
+  time since last activity.
 
 ### 6.5 Card detail (`CARD`)
 

@@ -141,7 +141,6 @@ const names: Placement[] = [
   "agents-none",
   "needs-you-clear",
   "workstreams-none",
-  "plan-empty",
   "plan",
   "handoff",
   "handoff-missing",

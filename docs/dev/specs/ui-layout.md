@@ -146,7 +146,7 @@ reorders them.
 | 3 | Tags: workstream bullet, type tag, age tag (Colour by Age) | ✓ | ✓ | ✓ |
 | 4 | Needs repair note | ✓ | ✓ | ✓ |
 | 5 | Blocker pill (diamond, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
-| 6 | Live badge: run state and agent, permission reason, last activity; plan step `done/total · step` (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
+| 6 | Live badge: run state and agent, permission reason, last activity; plan step `done/total · step` when the run has a plan (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
 | 7 | Question waiting plate, when a question needs the user and its run does not | — | ✓ | ✓ |
 | 8 | Description excerpt, three lines | — | — | ✓ |
 | 9 | Handoff next step (arrow) | — | — | ✓ |
@@ -190,8 +190,9 @@ reorders them.
    short id, link, branch and time, then its detail and its subagents as a
    tree on a spur: each row its state, type, the ticket it claimed when that
    is another, and its plan step (or tool and edit counts), opening to its
-   own plan, files and activity (agent-protocol §10). A subagent listed on
-   its own ticket names the session it belongs to.
+   own plan, files and activity (agent-protocol §10). A run's plan shows
+   only when it has one; a run with no plan shows no plan section. A
+   subagent listed on its own ticket names the session it belongs to.
 6. **Attachments tab** (shown when the ticket has files): a two-column grid
    of thumbnails (screenshots) and file tiles, each with caption, file name
    and kind; a thumbnail opens a lightbox dialog (Escape closes, arrows and
@@ -323,14 +324,14 @@ priority first when several are on screen:
 | --- | --- | --- |
 | Move toast (not announced) | A move to Done that finishes its workstream: completion. Any other move to Done: progress, at most every ten minutes | 61–70; 51–53, 55, 57, 58 |
 | Card panel | A current handoff (not stale) with a next step; an in-progress ticket with no handoff | 75, 77, 79, 80; 73 |
-| Open run (Agents) | A plan; no plan | 32, 34–36, 39, 40; 33 |
+| Open run (Agents, Runs tab) | A plan | 32, 34–36, 39, 40 |
 | Empty views | No tickets; nothing matches the filters or search (also the archive's search); no workstreams; no agent runs | 21–30 (reviewed ones); 82–88; 31; 41–50 |
 | Columns and lanes | Ready to review is empty; the Needs you lane is empty and nothing anywhere needs you | 71, 72; 11–19 |
 | Stopped screen | After a successful Quit only (never on a lost or failed connection) | 92–100 |
 | Wordmark tooltip | Always; an Easter egg, never visible text | 1–7 |
 
-Deferred: 54 (claims a plan's first task) and 60 (claims a reader for a
-handoff).
+Deferred: 33 (a run with no plan shows no plan section), 54 (claims a
+plan's first task) and 60 (claims a reader for a handoff).
 
 Focus is always visible; reduced motion removes transitions, the panel
 reveal and the Working beat; every control has an accessible name; contrast
