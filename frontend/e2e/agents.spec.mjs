@@ -92,9 +92,13 @@ test("the Agents view lists runs by state, Needs you first", async () => {
 
   const needsYou = lane("Needs you 1");
   await expect(needsYou.getByText("Permission for Bash")).toBeVisible();
+  // The title opens the panel; the id, the ticket's full page (CARD-7).
   await expect(
-    needsYou.getByRole("button", { name: /AL-3 Card panel/ }),
+    needsYou.getByRole("button", { name: "Card panel", exact: true }),
   ).toBeVisible();
+  await expect(
+    needsYou.getByRole("link", { name: "AL-3", exact: true }),
+  ).toHaveAttribute("href", "#/ticket/AL-3");
   await expect(
     needsYou.getByRole("img", { name: "Plan 2 of 5 done" }),
   ).toBeVisible();
@@ -163,9 +167,11 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
     .getByRole("region", { name: /^In progress/ })
     .getByRole("button", { name: /^Card panel, AL-3, Claude needs you/ });
   await expect(real).toBeVisible();
-  // The live badge says what the run needs and keeps its plan step.
-  await expect(real.getByText("Permission for Bash")).toBeVisible();
-  await expect(real.getByText("2/5 · Runs tab timeline")).toBeVisible();
+  // The live badge says what the run needs and keeps its plan step; the
+  // card's button covers its drawing, which sits beside it.
+  const face = real.locator("xpath=..");
+  await expect(face.getByText("Permission for Bash")).toBeVisible();
+  await expect(face.getByText("2/5 · Runs tab timeline")).toBeVisible();
 
   // A mirrored card takes arrow keys but not moves: Shift with an arrow on
   // it changes nothing.

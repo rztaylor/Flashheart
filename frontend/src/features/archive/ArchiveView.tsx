@@ -10,6 +10,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SearchField } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { StatusPill, Tag } from "../../components/Pill";
+import { TicketLink } from "../../components/TicketLink";
 import { filterArchived } from "../../model/archive";
 import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
@@ -150,7 +151,7 @@ export function ArchiveView({
                         {item.title || item.id}
                       </span>
                       <span className="flex items-center gap-2 text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
-                        {item.id}
+                        <TicketLink id={item.id} className="hover:text-ink" />
                         {item.hasReview ? (
                           <span className="flex items-center gap-0.5 font-normal">
                             <Icon name="review" size={11} />

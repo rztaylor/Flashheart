@@ -3,7 +3,8 @@
 Owns the permanent-delete dialog shell (`TypedDeleteDialog`: preview,
 typed word, red confirmation, reload on a change) and a project's Archive
 view (EDIT-8): the searchable list of archived
-tickets with the column each returns to, Restore, and the Delete
+tickets with the column each returns to, each id linked to the ticket's
+full page (CARD-7), Restore, and the Delete
 permanently dialog that previews what the delete touches (folder files,
 depending tickets, listing workstreams), gates on the typed id and reloads
 the preview when the server reports a change; and the projects archive

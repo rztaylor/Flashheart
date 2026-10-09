@@ -12,6 +12,7 @@ import { LineBullet } from "../../components/LineBullet";
 import { Pill, Tag } from "../../components/Pill";
 import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
+import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { type Paint, paintVars } from "../../model/paint";
 import { agentName, liveReason, STATE_LABEL } from "../../model/runs";
@@ -87,24 +88,16 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     const detailed = density === "detailed";
     const showCriteria = !compact && card.criteria.total > 0;
     const showFiles = detailed && (card.attachments > 0 || card.hasReview);
+    // The card is drawn under one button that covers it, so a click
+    // anywhere opens the panel and the card stays one keyboard stop; only
+    // the id, a link to the ticket's full page, sits above the button. The
+    // drawing is hidden from assistive technology, which hears the button's
+    // name, and the panel header carries the same link for the keyboard.
     return (
-      <button
-        {...dragProps}
-        ref={ref}
-        type="button"
-        tabIndex={tabIndex}
-        onClick={onOpen}
-        onKeyDown={onKeyDown}
-        onFocus={onFocus}
-        // Only the real card is the current ticket; its mirror shares the
-        // selection ring but not the announcement.
-        aria-current={selected && !mirrored ? "true" : undefined}
-        data-ticket={card.id}
-        data-mirrored={mirrored ? "" : undefined}
-        aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
+      <div
         data-paint={painted?.token}
         style={paintVars(painted) as CSSProperties | undefined}
-        className={`group relative flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
+        className={`group relative isolate flex w-full shrink-0 flex-col overflow-hidden rounded-card border bg-card text-left transition-[border-color,opacity,box-shadow,translate] duration-200 ease-out-expo hover:-translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
           selected
             ? "border-select shadow-[0_0_0_1px_var(--fh-select),var(--fh-shadow-card-hover)]"
             : repair
@@ -129,6 +122,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
         {/* Rows 1 and 2: the header (id, project, running time) and the
             title, tinted with the Colour by paint. */}
         <span
+          aria-hidden="true"
           className={`flex flex-col gap-1 pr-3 ${inset} ${repair ? "pt-3.5" : "pt-2.5"} pb-2 ${
             painted
               ? done
@@ -138,9 +132,11 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           }`}
         >
           <span className="flex items-center gap-2 text-2xs text-ink-muted">
-            <span className="shrink-0 font-semibold tracking-[0.02em] tabular-nums text-ink">
-              {card.id}
-            </span>
+            <TicketLink
+              id={card.id}
+              tabIndex={-1}
+              className="relative z-[2] shrink-0 text-ink"
+            />
             {showProject ? (
               <span className="truncate font-medium">{showProject}</span>
             ) : null}
@@ -161,7 +157,10 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           </span>
         </span>
 
-        <span className={`flex flex-col gap-2 pr-3 pb-2.5 ${inset} pt-1`}>
+        <span
+          aria-hidden="true"
+          className={`flex flex-col gap-2 pr-3 pb-2.5 ${inset} pt-1`}
+        >
           {/* Row 3: workstream, type (and age) tags, mirror note; Compact
               also carries the short blocked pill and the run mark here. */}
           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-2xs text-ink-muted">
@@ -275,7 +274,24 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             </span>
           ) : null}
         </span>
-      </button>
+        <button
+          {...dragProps}
+          ref={ref}
+          type="button"
+          tabIndex={tabIndex}
+          onClick={onOpen}
+          onKeyDown={onKeyDown}
+          onFocus={onFocus}
+          // Only the real card is the current ticket; its mirror shares the
+          // selection ring but not the announcement.
+          aria-current={selected && !mirrored ? "true" : undefined}
+          data-ticket={card.id}
+          data-mirrored={mirrored ? "" : undefined}
+          aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
+          // The card clips its edges, so the focus ring is drawn inside.
+          className="absolute inset-0 z-[1] rounded-card focus-visible:-outline-offset-2"
+        />
+      </div>
     );
   },
 );

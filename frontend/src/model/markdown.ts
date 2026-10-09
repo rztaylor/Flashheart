@@ -1,6 +1,6 @@
 // Markdown helpers for ticket and review files: link resolution (CARD-2),
-// linking bare ticket ids (KEY-3), and trimming sections the card panel
-// shows elsewhere.
+// linking bare ticket ids in markdown and plain text (KEY-3), the ticket's
+// full page, and trimming sections the card panel shows elsewhere.
 
 export type LinkTarget =
   | { kind: "ticket"; id: string }
@@ -21,6 +21,12 @@ const safeSegment = /^[A-Za-z0-9][A-Za-z0-9._ -]*$/;
 
 // ticketLinkPrefix marks links made by linkTicketIds.
 export const ticketLinkPrefix = "#ticket-";
+
+// ticketPageHref is a ticket's full page (CARD-7), the target of every
+// ticket id link.
+export function ticketPageHref(id: string): string {
+  return `#/ticket/${encodeURIComponent(id)}`;
+}
 
 export function resolveLink(href: string, context: LinkContext): LinkTarget {
   const trimmed = href.trim();
@@ -83,6 +89,24 @@ interface MdNode {
 }
 
 const idInText = /\b([A-Z][A-Z0-9]{1,9})-([1-9][0-9]*)\b(?![A-Za-z0-9-])/g;
+
+// ticketRefs splits plain text (a criterion, a handoff step, a blocking
+// reason) into text and the ticket ids in it with a known project key.
+export function ticketRefs(
+  text: string,
+  keys: Set<string>,
+): (string | { id: string })[] {
+  const parts: (string | { id: string })[] = [];
+  let last = 0;
+  for (const match of text.matchAll(idInText)) {
+    if (!keys.has(match[1] ?? "") || match.index === undefined) continue;
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    parts.push({ id: match[0] });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
 
 // linkTicketIds is a remark plugin that turns ticket ids with a known project
 // key in text ("see AL-4") into links, leaving code and existing links alone.

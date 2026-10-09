@@ -649,9 +649,10 @@ test("the archive restores tickets and deletes them for good", async () => {
   // The ticket that depended on it no longer waits.
   await open("#/p/alpha/board");
   await expect(card("Long titles overflow the column")).toBeVisible();
-  await expect(card("Long titles overflow the column")).not.toContainText(
-    "AL-4",
-  );
+  // The card's button covers its drawing, which sits beside it.
+  await expect(
+    card("Long titles overflow the column").locator("xpath=.."),
+  ).not.toContainText("AL-4");
 });
 
 test("projects archive, restore and delete for good", async () => {

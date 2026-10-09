@@ -12,7 +12,7 @@ export function viewSummary({
   workstreams,
   archived,
 }: {
-  view: "board" | "agents" | "workstreams" | "table" | "archive";
+  view: "board" | "agents" | "workstreams" | "table" | "archive" | "ticket";
   board?: { shown: number; total: number };
   filtered: boolean;
   runs?: RunCounts;
@@ -20,6 +20,9 @@ export function viewSummary({
   archived?: { count: number; of: "tickets" | "projects" };
 }): string {
   switch (view) {
+    // A ticket's full page has its own header.
+    case "ticket":
+      return "";
     case "archive": {
       if (!archived) return "";
       const one = archived.of === "tickets" ? "ticket" : "project";

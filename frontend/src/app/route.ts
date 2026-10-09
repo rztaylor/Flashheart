@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { TICKET_ID, type TicketRef } from "../api/board";
+import { ticketPageHref } from "../model/markdown";
 
-// archive is reached from the page header, not the band (EDIT-8).
-export type View = "board" | "agents" | "workstreams" | "table" | "archive";
+// archive is reached from the page header, not the band (EDIT-8); ticket
+// is a ticket's full page (CARD-7), reached from its id.
+export type View =
+  | "board"
+  | "agents"
+  | "workstreams"
+  | "table"
+  | "archive"
+  | "ticket";
 export type Scope = { kind: "all" } | { kind: "project"; project: string };
 
 export interface Route {
@@ -14,11 +22,18 @@ export interface Route {
 
 const views: View[] = ["board", "agents", "workstreams", "table", "archive"];
 
-// Routes live in the URL hash (#/all/board, #/p/<project>/<view>?t=<ticket id>)
-// so reloads and new tabs keep their place without any browser storage.
+// Routes live in the URL hash (#/all/board, #/p/<project>/<view>?t=<ticket
+// id>, #/ticket/<ticket id>) so reloads and new tabs keep their place
+// without any browser storage.
 export function parseRoute(hash: string): Route {
   const [path = "", query = ""] = hash.replace(/^#/, "").split("?");
   const parts = path.split("/").filter(Boolean).map(decode);
+  if (parts[0] === "ticket") {
+    const id = parts[1] ?? "";
+    return TICKET_ID.test(id)
+      ? { scope: { kind: "all" }, view: "ticket", ticket: { id } }
+      : { scope: { kind: "all" }, view: "board" };
+  }
   let scope: Scope = { kind: "all" };
   let viewPart: string | undefined;
   if (parts[0] === "p" && parts[1]) {
@@ -27,7 +42,10 @@ export function parseRoute(hash: string): Route {
   } else if (parts[0] === "all") {
     viewPart = parts[1];
   }
-  const view = views.includes(viewPart as View) ? (viewPart as View) : "board";
+  const view =
+    views.includes(viewPart as View) && viewPart !== "ticket"
+      ? (viewPart as View)
+      : "board";
   const route: Route = { scope, view };
   const ticket = new URLSearchParams(query).get("t");
   if (ticket && TICKET_ID.test(ticket)) route.ticket = { id: ticket };
@@ -35,6 +53,8 @@ export function parseRoute(hash: string): Route {
 }
 
 export function formatRoute(route: Route): string {
+  if (route.view === "ticket" && route.ticket)
+    return ticketPageHref(route.ticket.id);
   const base =
     route.scope.kind === "all"
       ? "#/all"

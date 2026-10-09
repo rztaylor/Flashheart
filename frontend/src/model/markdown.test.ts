@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { linkTicketIds, resolveLink, ticketBody } from "./markdown";
+import {
+  linkTicketIds,
+  resolveLink,
+  ticketBody,
+  ticketPageHref,
+  ticketRefs,
+} from "./markdown";
 
 const context = { project: "alpha", ticket: "AL-2" };
 
@@ -101,6 +107,39 @@ describe("linkTicketIds", () => {
       type: "text",
       value: ", not XX-1 or AL-4x.",
     });
+  });
+});
+
+describe("ticketPageHref", () => {
+  it("names a ticket's full page by id", () => {
+    expect(ticketPageHref("FH-42")).toBe("#/ticket/FH-42");
+  });
+});
+
+describe("ticketRefs", () => {
+  it("splits plain text into text and ticket ids of known keys", () => {
+    expect(
+      ticketRefs(
+        "Depends on AL-4 and XX-1, then BE-12.",
+        new Set(["AL", "BE"]),
+      ),
+    ).toEqual([
+      "Depends on ",
+      { id: "AL-4" },
+      " and XX-1, then ",
+      { id: "BE-12" },
+      ".",
+    ]);
+  });
+
+  it("leaves text without ids, and ids glued to other words, alone", () => {
+    expect(ticketRefs("No refs here", new Set(["AL"]))).toEqual([
+      "No refs here",
+    ]);
+    expect(ticketRefs("AL-4x and xAL-4", new Set(["AL"]))).toEqual([
+      "AL-4x and xAL-4",
+    ]);
+    expect(ticketRefs("AL-4", new Set(["AL"]))).toEqual([{ id: "AL-4" }]);
   });
 });
 

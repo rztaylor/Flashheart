@@ -10,6 +10,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { PlanRoute } from "../../components/PlanRoute";
 import { RunStateLabel } from "../../components/RunState";
+import { TicketLink } from "../../components/TicketLink";
 import {
   agentName,
   counted,
@@ -334,23 +335,22 @@ function RunRow({
             </span>
           ) : null}
           {ticket ? (
-            <button
-              type="button"
-              onClick={() => onOpen({ id: ticket })}
-              className="flex min-w-0 items-baseline gap-2 rounded-control text-left hover:underline"
-              title={
-                run.linkedBy === "branch"
-                  ? `Linked by branch ${run.branch}`
-                  : "Claimed"
-              }
-            >
-              <span className="shrink-0 text-2xs font-semibold tracking-[0.02em] text-ink">
-                {ticket}
-              </span>
-              <span className="truncate text-ink">
+            // The id opens the ticket's full page; the title, the panel.
+            <span className="flex min-w-0 items-baseline gap-2">
+              <TicketLink id={ticket} className="shrink-0 text-2xs text-ink" />
+              <button
+                type="button"
+                onClick={() => onOpen({ id: ticket })}
+                className="min-w-0 truncate rounded-control text-left text-ink hover:underline"
+                title={
+                  run.linkedBy === "branch"
+                    ? `Linked by branch ${run.branch}`
+                    : "Claimed"
+                }
+              >
                 {run.ticketTitle || "Ticket not found"}
-              </span>
-            </button>
+              </button>
+            </span>
           ) : subagent ? (
             <span className="text-xs text-ink-muted">
               {counted(run.tools, "tool")}

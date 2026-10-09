@@ -36,9 +36,10 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 7. [`ui-features`](roadmap-items/ui-features.md) — **Partial**. Board UI
    requests outside the other items: shared column scrolling (FH-24),
    saved manual card order (FH-23), archive views with a two-step
-   permanent delete for tickets (FH-20) and projects (FH-21), and discreet
-   humour in secondary copy (FH-22). Built: all five; open: the user's
-   review of each ticket.
+   permanent delete for tickets (FH-20) and projects (FH-21), discreet
+   humour in secondary copy (FH-22), and a full page for every ticket,
+   opened from its id (FH-45). Built: all six; open: the user's review of
+   each ticket.
 8. [`workstream-epics`](roadmap-items/workstream-epics.md) — **Partial**.
    Workstreams are epics: order never blocks, only `depends-on` does, and
    the Workstreams view draws dependencies as a railway graph (D26, FH-38).

@@ -8,7 +8,7 @@
   new UI from either follows `docs/dev/specs/ui-layout.md`. Brief and
   approved image references: `docs/dev/roadmap-items/metro-theme-rollout.md`.
 - `ui-features` (board UI requests, the `ui-features` workstream FH-24,
-  FH-23, FH-20, FH-21, FH-22) has no roadmap dependencies.
+  FH-23, FH-20, FH-21, FH-22, FH-45) has no roadmap dependencies.
 - `workstream-epics` (FH-38, D26: workstream order never blocks) has no
   roadmap dependencies; FH-17's New workstream dialog builds on it.
 - Visible UI changes follow `DESIGN.md`; new surfaces or a changed visual

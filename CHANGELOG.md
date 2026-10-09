@@ -105,6 +105,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Every ticket has a full page with room to read and review screenshots
+  (FH-45, D30). A ticket id anywhere on the board (cards, table rows,
+  workstream stations, the Agents view, the archive and the card panel)
+  opens it in a new tab, and so do ticket ids in ticket text: markdown,
+  acceptance criteria, handoff next steps and blocking reasons. Clicking a
+  card still opens the side panel, which now also has an *Open full page*
+  button. The page shows the panel's tabs at reading width, names the
+  browser tab after the ticket, and links back to the ticket on its board;
+  ticket links on it stay in the same tab.
+
 - The installed Flashheart skill keeps itself current: after you upgrade
   the binary, the next Claude Code session start rewrites
   `~/.claude/skills/flashheart/SKILL.md` to match and says so in one line,
