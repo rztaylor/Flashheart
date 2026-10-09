@@ -14,7 +14,7 @@ import {
 } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useNow } from "../../state/useNow";
-import { BranchLabel, RunDetail } from "../agents/RunDetail";
+import { BranchLabel, RunDetail } from "./RunDetail";
 
 // RunsTab lists the agent runs linked to a ticket, most recent first (CARD-1):
 // each session with its state, plan, edited files and activity, and its

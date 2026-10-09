@@ -93,6 +93,30 @@ ui:
 	}
 }
 
+func TestParseReadsTheAgentsViewAsTheOverview(t *testing.T) {
+	t.Parallel()
+
+	// The Overview replaced the Agents view (D32): a remembered Agents view
+	// opens the Overview, and Agents is no longer a view to save.
+	got, err := Parse([]byte(`
+ui:
+  scopes:
+    alpha:
+      view: agents
+    all:
+      view: table
+`))
+	if err != nil {
+		t.Fatalf("Parse(): %v", err)
+	}
+	if got.UI.Scopes["alpha"].View != "overview" || got.UI.Scopes["all"].View != "table" {
+		t.Errorf("scopes = %+v", got.UI.Scopes)
+	}
+	if _, err := SetUI(nil, UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {View: "agents"}}}); err == nil {
+		t.Error("SetUI saved the retired agents view")
+	}
+}
+
 func TestParseEmptyDocumentUsesDefaults(t *testing.T) {
 	t.Parallel()
 

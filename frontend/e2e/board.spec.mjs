@@ -737,7 +737,7 @@ test("table sorts and opens tickets", async () => {
 
 test("every view names its scope in the page header, not the band", async () => {
   const page = shared;
-  for (const view of ["board", "agents", "workstreams", "table"]) {
+  for (const view of ["board", "overview", "workstreams", "table"]) {
     await open(page, `#/p/flashheart/${view}`);
     await expect(
       page.getByRole("main").getByRole("heading", { level: 1 }),
@@ -835,7 +835,7 @@ for (const theme of ["light", "dark"]) {
     for (const [name, hash] of [
       ["workstreams", "#/p/flashheart/workstreams"],
       ["table", "#/p/flashheart/table"],
-      ["agents", "#/all/agents"],
+      ["overview", "#/all/overview"],
       ["panel", "#/p/flashheart/board?t=FH-11"],
       ["ticket-page", "#/ticket/FH-11"],
     ]) {
@@ -855,7 +855,7 @@ test("marginal remarks: one per screen, only in quiet states, and stable", async
   for (const hash of [
     "#/p/flashheart/board",
     "#/all/board",
-    "#/all/agents",
+    "#/all/overview",
     "#/p/flashheart/workstreams",
     "#/p/flashheart/table",
     "#/p/flashheart/board?t=FH-11",

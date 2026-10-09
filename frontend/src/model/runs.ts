@@ -1,14 +1,13 @@
-// Pure view models for agent runs: lanes for the Agents view (VIEW-3),
-// timeline wording and plan stations.
-import {
-  type Live,
-  type PlanItem,
-  type Question,
-  type QuestionKind,
-  RUN_STATES,
-  type Run,
-  type RunState,
-  type TimelineEntry,
+// Pure view models for agent runs: why a run needs you, timeline wording
+// and plan stations, for cards, the Runs tab and the Overview.
+import type {
+  Live,
+  PlanItem,
+  Question,
+  QuestionKind,
+  Run,
+  RunState,
+  TimelineEntry,
 } from "../api/runs";
 
 export const STATE_LABEL: Record<RunState, string> = {
@@ -28,7 +27,7 @@ export function permissionReason(tool: string): string {
 
 // reasonFor says why a run needs you: its own permission prompt, or that
 // of the subagent (by type) it is waiting on.
-function reasonFor(permission: string, subagent: string): string {
+export function reasonFor(permission: string, subagent: string): string {
   if (!subagent) return permissionReason(permission);
   return permission && permission !== "?"
     ? `${subagent} needs permission for ${permission}`
@@ -110,52 +109,6 @@ export function agentName(agent: string): string {
   if (agent === "claude") return "Claude";
   if (agent === "codex") return "Codex";
   return agent;
-}
-
-export interface LaneRun {
-  run: Run;
-  children: Run[];
-}
-
-export interface Lane {
-  state: RunState;
-  runs: LaneRun[];
-}
-
-const time = (iso: string) => Date.parse(iso) || 0;
-
-// laneRuns groups sessions into lanes by state, Needs you first, with each
-// session's subagents nested under it whatever their own state. Needs you
-// lists the longest waiting first; the other lanes the most recent first.
-export function laneRuns(runs: Run[]): Lane[] {
-  const byID = new Map(runs.map((run) => [run.id, run]));
-  const children = new Map<string, Run[]>();
-  const tops: Run[] = [];
-  for (const run of runs) {
-    if (run.parent && byID.has(run.parent)) {
-      children.set(run.parent, [...(children.get(run.parent) ?? []), run]);
-    } else {
-      tops.push(run);
-    }
-  }
-  return RUN_STATES.map((state) => {
-    const members = tops
-      .filter((run) => run.state === state)
-      .sort((a, b) =>
-        state === "needs-you"
-          ? time(a.lastActivity) - time(b.lastActivity)
-          : time(b.lastActivity) - time(a.lastActivity),
-      );
-    return {
-      state,
-      runs: members.map((run) => ({
-        run,
-        children: (children.get(run.id) ?? []).sort(
-          (a, b) => time(a.started) - time(b.started),
-        ),
-      })),
-    };
-  });
 }
 
 const source: Record<string, string> = {

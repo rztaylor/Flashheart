@@ -181,7 +181,7 @@ Full format: `docs/dev/specs/board-format.md`.
 - `KEY-3` Ids are how tickets are named everywhere: cards, the card panel,
   search, URLs, events, recovery notes, MCP tool arguments and outputs, and
   `depends-on` and workstream lists. Wherever the board shows a ticket's id
-  (cards, table rows, workstream stations, the Agents view, the archive, the
+  (cards, table rows, workstream stations, the Overview, the archive, the
   card panel), the id is a link to the ticket's full page (`CARD-7`) that
   opens in a new tab. A bare id of a known project key in ticket or review
   markdown, and in criteria, handoff next steps and blocking reasons, links
@@ -215,13 +215,30 @@ Full format: `docs/dev/specs/board-format.md`.
   combines with the other filters, carries from project to project, and is
   not remembered. While it is on, runs in Needs you that no card on the
   board shows (no linked ticket, and no open question about a ticket on the
-  board) are named in a notice that opens the Agents view. Tickets show only in their real
+  board) are named in a notice that opens the Overview. Tickets show only in their real
   columns (D31, FH-44). Tickets linked to a Working or Quiet run are found
   with the State filter's *Agent working* option (D27, FH-42).
-- `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
-  (`RUN-3`), Needs you first: *Needs you*, *Working*, *Quiet*, *Waiting*,
-  *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
-  are hidden by default.
+- `VIEW-3` **Overview** (D32, FH-51): what a project manager asks of the
+  board, for *All projects* or one project, about tickets with agent
+  sessions as evidence. One column of section cards, in order: *Needs your
+  decision* (open questions, answered in place as on the card, `CARD-6`,
+  and kept until the session takes the answer; permission prompts, which
+  name the project and branch of the session to answer them in, since
+  Flashheart never grants permissions; runs with no ticket on the board
+  included), *Ready for your review* (tickets in Ready to review, longest
+  waiting first, with criteria met and **Review results** opening the
+  ticket's Review tab), *At risk* (in-progress tickets no live session
+  works on or whose session has gone quiet, tickets whose session ended
+  without a handoff, and the top of a project's Up next when blocked, each
+  reason in words), *In progress* (the session's state and its subagents
+  in words, "subagents 3 done · 2 running", criteria and last activity),
+  then two collapsed tiles: *Work with no ticket* (live sessions linked to
+  no ticket, with project, branch, state and **Create ticket**) and *Up
+  next* (the top of each project's Up next, blocked or ready). At risk and
+  In progress start open when they have something; every section has a
+  one-line empty state. Run detail (tools, edited files, plan, subagents)
+  stays on the card's Runs tab. The Agents view it replaced is gone; its
+  old routes and a remembered Agents view open the Overview.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
   tickets as a railway graph of their `depends-on` links, with status,
   blocked state and progress.
@@ -345,7 +362,7 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
 - `RUN-5` A run links to a ticket by an explicit claim, or provisionally when
   exactly one *in-progress* ticket has `branch:` equal to the run's branch.
   Subagent runs inherit their parent's link. Unlinked runs show under
-  *Unassigned* in the Agents view.
+  under *Work with no ticket* on the Overview while they are live.
 - `RUN-6` A claim is a lease renewed by any event from the claiming run. A
   ticket held by a live claim cannot be claimed by another run without
   `force` and a reason, which both runs' tickets record.
@@ -565,15 +582,14 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
 (D18), which replaced the Transit Line Map of D14.
 
 - **Shell**: left rail of projects (with Needs you badges) and **All
-  projects**; top bar with view switcher (Board · Agents · Workstreams ·
+  projects**; top bar with view switcher (Board · Overview · Workstreams ·
   Table), search, filters, density, virtual-column toggles; quiet backend
   status and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.
-- **Agents**: a departure board: lanes by run state, Needs you first; each
-  run row shows agent, project, ticket (or Unassigned), plan progress drawn
-  as a route, branch and last activity, and expands to its plan, edited files
-  and activity; subagents hang beneath their session.
+- **Overview**: one calm column of section cards about tickets: Needs your
+  decision, Ready for your review, At risk, In progress, then collapsed
+  Work with no ticket and Up next (`VIEW-3`).
 - **Needs you** is visible from every view and project (badge in the rail and
   top bar); the top bar's plate filters the Board to it (`VIEW-2`).
 - Narrow widths keep a single column with a column picker; the board is not

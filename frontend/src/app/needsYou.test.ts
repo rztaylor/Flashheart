@@ -25,7 +25,12 @@ describe("pressNeedsYou (FH-44)", () => {
     expect(pressNeedsYou({ scope: alpha, view: "table" }, false).go?.view).toBe(
       "table",
     );
-    for (const view of ["agents", "workstreams", "archive", "ticket"] as const)
+    for (const view of [
+      "overview",
+      "workstreams",
+      "archive",
+      "ticket",
+    ] as const)
       expect(pressNeedsYou({ scope: alpha, view }, false).go?.view).toBe(
         "board",
       );

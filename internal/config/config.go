@@ -46,7 +46,7 @@ var (
 	densities     = []string{DensityCompact, DensityNormal, DensityDetailed}
 	hiddenColumns = []string{"backlog"}
 	colourBys     = []string{"type", "priority", "age", "none"}
-	views         = []string{"", "board", "agents", "workstreams", "table"}
+	views         = []string{"", "board", "overview", "workstreams", "table"}
 	states        = []string{"", "all", "blocked", "unblocked", "repair", "working"}
 	ages          = []string{"today", "week", "older"}
 	scopeName     = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
@@ -218,6 +218,14 @@ func Parse(data []byte) (Config, error) {
 	}
 	if err := document.Decode(&config); err != nil {
 		return Config{}, fmt.Errorf("parse config.yaml: %w", err)
+	}
+	// The Overview replaced the Agents view (D32); a remembered Agents view
+	// opens the Overview and is saved as it when preferences next change.
+	for name, scope := range config.UI.Scopes {
+		if scope.View == "agents" {
+			scope.View = "overview"
+			config.UI.Scopes[name] = scope
+		}
 	}
 	return config, config.validate()
 }

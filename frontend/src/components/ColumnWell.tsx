@@ -1,17 +1,12 @@
 import type { ReactNode } from "react";
 
-import type { RunState } from "../api/runs";
-import { RunStateMark } from "./RunState";
-
-// The column well (ui-layout.md §2, §5): the rounded surface of a board
-// column or an Agents lane. Callers add the border colour (rule, or select
-// while a drop hovers).
+// The column well (ui-layout.md §2): the rounded surface of a board column.
+// Callers add the border colour (rule, or select while a drop hovers).
 export const wellSurface =
   "flex min-h-0 flex-col rounded-panel border bg-column p-2.5";
 
 // WellHead heads a well: a round count badge (first visually, last in the
-// heading's words), the run mark of an Agents lane (Needs you in
-// the attention disc), and the title in the display cut. titleId names the
+// heading's words) and the title in the display cut. titleId names the
 // title alone, for a region labelled by it. A sticky head stays at the top
 // of a well that scrolls with its neighbours, so the board keeps its column
 // names and counts in view.
@@ -20,14 +15,12 @@ export function WellHead({
   titleId,
   title,
   count,
-  mark,
   sticky = false,
 }: {
   id?: string;
   titleId?: string;
   title: string;
   count: ReactNode;
-  mark?: RunState;
   sticky?: boolean;
 }) {
   return (
@@ -39,21 +32,6 @@ export function WellHead({
           : ""
       }`}
     >
-      {mark ? (
-        <span
-          className={
-            mark === "needs-you"
-              ? "grid size-5 place-items-center rounded-full bg-attention text-on-attention"
-              : "text-ink"
-          }
-        >
-          <RunStateMark
-            state={mark}
-            size={mark === "needs-you" ? 9 : 13}
-            still
-          />
-        </span>
-      ) : null}
       <span id={titleId}>{title}</span>
       <span className="order-first grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-card px-2 text-sm font-semibold tabular-nums text-ink shadow-card">
         {count}

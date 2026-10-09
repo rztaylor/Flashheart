@@ -137,6 +137,35 @@ export async function seedRuns(home, root) {
   return { gamma };
 }
 
+// seedClaimedRun records a session in the demo board's flashheart project
+// that claims ticket through the real MCP server and runs three subagents,
+// one of them finished: an In progress row on the Overview (FH-51).
+export async function seedClaimedRun(home, root, ticket) {
+  const cwd = await repo(home, "flashheart", "feature/locks");
+  const projectFile = join(root, "flashheart", "project.yaml");
+  const project = await readFile(projectFile, "utf8");
+  await writeFile(
+    projectFile,
+    project.replace("repos:\n", `repos:\n  - ${cwd}\n`),
+  );
+  const id = "aa11bb22-3c4d-4e5f-8a9b-0c1d2e3f4a5b";
+  const claimed = session(root, id, cwd);
+  claimed.send("SessionStart", { source: "startup" });
+  claimed.send("UserPromptSubmit", { prompt: "synthetic" });
+  await callTool(root, cwd, "claim", { ticket, run: `claude:${id}` });
+  for (const [agent, type] of [
+    ["d1e2f3a4", "Explore"],
+    ["d2e3f4a5", "Explore"],
+    ["d3e4f5a6", "general-purpose"],
+  ]) {
+    const sub = { agent_id: agent, agent_type: type };
+    claimed.send("SubagentStart", sub);
+    claimed.tool("Read", {}, sub);
+  }
+  claimed.send("SubagentStop", { agent_id: "d1e2f3a4", agent_type: "Explore" });
+  claimed.tool("Read", {});
+}
+
 // TASK_NOTIFICATION is the prompt Claude Code submits when a background
 // command finishes: not the user.
 export const TASK_NOTIFICATION =

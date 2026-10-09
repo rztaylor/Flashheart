@@ -11,7 +11,7 @@ export interface FilterChoice {
 
 export type Density = "compact" | "normal" | "detailed";
 export type ColourBy = "type" | "priority" | "age" | "none";
-export type SavedView = "" | "board" | "agents" | "workstreams" | "table";
+export type SavedView = "" | "board" | "overview" | "workstreams" | "table";
 // HideableColumn is a real column the Board can hide (FH-41).
 export type HideableColumn = "backlog";
 export type SavedState =
@@ -60,7 +60,7 @@ const isColourBy = oneOf<ColourBy>(["type", "priority", "age", "none"]);
 const isView = oneOf<SavedView>([
   "",
   "board",
-  "agents",
+  "overview",
   "workstreams",
   "table",
 ]);

@@ -138,7 +138,7 @@ func TestCardsAndProjectsCarryLiveRuns(t *testing.T) {
 }
 
 // A session held up by its subagent's prompt says which subagent and tool
-// on the card, as the Agents view does.
+// on the card, as the Runs tab does.
 func TestLiveBadgeNamesTheSubagentItWaitsOn(t *testing.T) {
 	t.Parallel()
 
