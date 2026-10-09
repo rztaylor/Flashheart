@@ -356,7 +356,9 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   *Needs you* (permission request, open question or review requested),
   *Waiting* (turn finished, session open), *Quiet* (working but no event for
   the quiet threshold, default 10 minutes), *Ended*. *Ended* runs whose linked
-  ticket has edits since its last checkpoint are flagged **no handoff**.
+  ticket has edits since its last checkpoint (through the edit tools, or
+  files the turn-end hook finds changed in the worktree during the run's
+  own shell commands, not while it waited) are flagged **no handoff**.
 - `RUN-4` A run's **plan** mirrors the agent's own task list (Claude Code's
   task/todo tools, Codex's plan tool) from hook events, without model effort.
 - `RUN-5` A run links to a ticket by an explicit claim, or provisionally when

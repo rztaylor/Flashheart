@@ -1,11 +1,13 @@
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/gitchange"
 	"github.com/rztaylor/flashheart/internal/gitinfo"
 	"github.com/rztaylor/flashheart/internal/logfile"
 	"github.com/rztaylor/flashheart/internal/protocol"
@@ -83,7 +86,13 @@ type Options struct {
 	// session start and reports whether it rewrote it (agent-protocol §5.4);
 	// nil for agents without one.
 	RefreshSkill func() (bool, error)
+	// ChangeTimeout bounds the worktree check at a session's turn end and
+	// end; zero means DefaultChangeTimeout.
+	ChangeTimeout time.Duration
 }
+
+// DefaultChangeTimeout keeps the worktree check within HOOK-1's budget.
+const DefaultChangeTimeout = 50 * time.Millisecond
 
 // Run handles one hook invocation. It never fails: errors and panics go to
 // <root>/.flashheart/hook-errors.log (HOOK-1).
@@ -176,10 +185,15 @@ func handle(options Options) error {
 	}
 	log := events.New(s)
 	var out Output
-	// A stop that cannot be checked is allowed and still recorded (HOOK-1).
+	// A stop or end that cannot be checked is allowed and still recorded
+	// (HOOK-1).
 	var problem error
-	if input.Stop && !input.StopActive {
-		out.Block, problem = enforce(s, log, project, list, at, settings)
+	if index := sessionEnd(list); index >= 0 {
+		timeout := options.ChangeTimeout
+		if timeout <= 0 {
+			timeout = DefaultChangeTimeout
+		}
+		out.Block, problem = settle(s, log, project, info, &list[index], input.Stop && !input.StopActive, at, settings, timeout)
 	}
 	if err := log.Append(list...); err != nil {
 		return errors.Join(problem, err)
@@ -252,44 +266,103 @@ func toAnswers(list []events.Delivery) []protocol.Answer {
 	return out
 }
 
-// enforce decides whether to block a stop for a checkpoint (HOOK-6, §9)
-// and marks the turn end when it does. The log is read only when the
-// project enforces handoffs.
-func enforce(s *store.Store, log *events.Log, project string, list []events.Event, now time.Time, settings config.Config) (string, error) {
-	index := slices.IndexFunc(list, func(e events.Event) bool { return e.Kind == events.TurnEnd })
-	if index < 0 {
+// sessionEnd is the index of a session's turn end or end in list, or -1.
+func sessionEnd(list []events.Event) int {
+	return slices.IndexFunc(list, func(e events.Event) bool {
+		return (e.Kind == events.TurnEnd || e.Kind == events.RunEnd) && !strings.Contains(e.Run, "/")
+	})
+}
+
+// settle handles a session's turn end or end before it is recorded: it
+// marks the event when the worktree changed since the run's last checkpoint
+// other than through the edit tools (agent-protocol §4, FH-53), and at a
+// stop the agent may be blocked at, decides whether to block it for a
+// checkpoint (HOOK-6, §9), marking the turn end when it does. The log is
+// read only when there is a worktree to check or the project enforces
+// handoffs. A failed worktree check is reported, and enforcement still runs.
+func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, end *events.Event, stop bool, now time.Time, settings config.Config, timeout time.Duration) (string, error) {
+	enforcing := false
+	if stop && end.Kind == events.TurnEnd {
+		enforcing = settings.EnforceHandoff
+		override, err := s.EnforceHandoff(project)
+		if err != nil {
+			return "", err
+		}
+		if override != nil {
+			enforcing = *override
+		}
+	}
+	if info.Worktree == "" && !enforcing {
 		return "", nil
-	}
-	enabled := settings.EnforceHandoff
-	override, err := s.EnforceHandoff(project)
-	if err != nil {
-		return "", err
-	}
-	if override != nil {
-		enabled = *override
-	}
-	if !enabled {
-		return "", nil
-	}
-	details, err := s.ReadProject(project)
-	if err != nil {
-		return "", err
 	}
 	set := runs.NewSet()
 	if err := log.Read(project, now.Add(-recoveryWindow), set.Apply); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return "", err
 	}
-	run := list[index].Run
-	r := set.Get(run)
-	if r == nil || !set.Dirty(run) || r.BlockedForHandoff {
-		return "", nil
+	changed, problem := worktreeChanged(set, end.Run, info, timeout)
+	markEnd(end, changed, false)
+	if !enforcing {
+		return "", problem
 	}
-	link := set.Link(run, func(_, branch string) []string { return details.InProgressOnBranch(branch) })
+	r := set.Get(end.Run)
+	if r == nil || !(changed || set.Dirty(end.Run)) || r.BlockedForHandoff {
+		return "", problem
+	}
+	details, err := s.ReadProject(project)
+	if err != nil {
+		return "", errors.Join(problem, err)
+	}
+	link := set.Link(end.Run, func(_, branch string) []string { return details.InProgressOnBranch(branch) })
 	if link.Ticket == "" {
-		return "", nil
+		return "", problem
 	}
-	list[index].Data = events.TurnEndData{BlockedForHandoff: true}
-	return fmt.Sprintf("Flashheart: record a checkpoint on %s (done, next, files) before stopping.", link.Ticket), nil
+	markEnd(end, false, true)
+	return fmt.Sprintf("Flashheart: record a checkpoint on %s (done, next, files) before stopping.", link.Ticket), problem
+}
+
+// worktreeChanged asks git whether a file in the run's worktree changed
+// during one of its (or its subagents') shell commands since its last
+// checkpoint, only when the run is not already due and ran one: the edit
+// tools record their own paths, and a file changed while the session waited
+// is not its doing.
+func worktreeChanged(set *runs.Set, run string, info gitinfo.Info, timeout time.Duration) (bool, error) {
+	if info.Worktree == "" || set.Get(run) == nil || set.Dirty(run) {
+		return false, nil
+	}
+	windows := set.ShellWindows(run)
+	if len(windows) == 0 {
+		return false, nil
+	}
+	// Start just before the first window, so a change at its very start
+	// counts (ChangedSince counts only times after since).
+	since := windows[0].From.Add(-time.Nanosecond)
+	within := func(modified time.Time) bool {
+		return slices.ContainsFunc(windows, func(w runs.Window) bool { return w.Contains(modified) })
+	}
+	gitDir := ""
+	if info.Head != "" {
+		gitDir = filepath.Dir(info.Head)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	changed, err := gitchange.ChangedSince(ctx, info.Worktree, gitDir, since, within)
+	if err != nil {
+		return false, fmt.Errorf("check the worktree for changes: %w", err)
+	}
+	return changed, nil
+}
+
+// markEnd sets a turn end's or end's flags.
+func markEnd(end *events.Event, changed, blocked bool) {
+	switch data := end.Data.(type) {
+	case events.TurnEndData:
+		data.WorktreeChanged = data.WorktreeChanged || changed
+		data.BlockedForHandoff = data.BlockedForHandoff || blocked
+		end.Data = data
+	case events.RunEndData:
+		data.WorktreeChanged = data.WorktreeChanged || changed
+		end.Data = data
+	}
 }
 
 // clean scrubs and bounds the agent-written strings in event data (SEC-3,

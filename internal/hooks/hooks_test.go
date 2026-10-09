@@ -38,6 +38,10 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 		input.Events = []Pending{{Run: run, Kind: events.RunStart, Data: events.RunStartData{Kind: events.KindSession, Source: "startup"}}}
 	case "Edit":
 		input.Events = []Pending{{Run: run, Kind: events.ToolUsed, Data: events.ToolData{Tool: "Edit", OK: true, Path: filepath.Join(cwd, "src", "a.ts")}}}
+	case "Bash":
+		input.Events = []Pending{{Run: run, Kind: events.ToolUsed, Data: events.ToolData{Tool: "Bash", OK: true}}}
+	case "End":
+		input.Events = []Pending{{Run: run, Kind: events.RunEnd, Data: events.RunEndData{Reason: "other"}}}
 	case "Plan":
 		input.Events = []Pending{{Run: run, Kind: events.PlanUpdated, Data: events.PlanData{Items: []events.PlanItem{{Text: "Rotate token=abcdef123456\nnow", Status: "pending"}}}}}
 	case "Prompt":
@@ -85,7 +89,8 @@ func repo(t *testing.T) string {
 func run(t *testing.T, root, event, payload string, adapter Adapter) string {
 	t.Helper()
 	var stdout bytes.Buffer
-	Run(Options{Root: root, Event: event, Stdin: strings.NewReader(payload), Stdout: &stdout, Now: func() time.Time { return now }, Adapter: adapter})
+	// A generous worktree check deadline: parallel tests load the machine.
+	Run(Options{Root: root, Event: event, Stdin: strings.NewReader(payload), Stdout: &stdout, Now: func() time.Time { return now }, Adapter: adapter, ChangeTimeout: 10 * time.Second})
 	return stdout.String()
 }
 
