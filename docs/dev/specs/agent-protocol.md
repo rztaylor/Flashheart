@@ -41,7 +41,9 @@ user's agent configuration; change it deliberately and bump
   `git` subprocess on the hot path); detached HEAD records the short SHA.
 - Resolution results are cached per `cwd` in
   `<root>/.flashheart/cache/cwd.json` with the HEAD file's mtime as the
-  validator, so most hooks do no git work.
+  validator, so most hooks do no git work. The one exception is the
+  worktree check at a session's turn end and end (§4), which runs a bounded
+  `git status` (and `git log` when HEAD moved) without optional locks.
 
 ## 3. Events
 
@@ -61,9 +63,9 @@ writing.
 | Kind | Source | `data` |
 |---|---|---|
 | `run.start` | session start / subagent start hook | `kind` (session/subagent), `parent`, `cwd`, `branch`, `worktree`, `source` (startup/resume/clear/compact), `agent_type` for subagents |
-| `run.end` | session end / subagent stop | `reason` |
+| `run.end` | session end / subagent stop | `reason`; optional `worktree_changed: true` (§4) |
 | `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
-| `turn.end` | stop | `blocked_for_handoff` (bool) |
+| `turn.end` | stop | `blocked_for_handoff` (bool); optional `worktree_changed: true` (§4) |
 | `tool.used` | post tool use | `tool`, `ok`, optional `path` (repo-relative, edits only; omitted outside the worktree), optional `summary` (≤120 chars, not written by the Claude adapter, which reads nothing else from tool inputs) |
 | `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
 | `permission.requested` | permission request / notification | `tool`, optional `summary` |
@@ -111,7 +113,24 @@ days of event files.
 
 Flags:
 
-- **dirty**: an edit `tool.used` after the run's last `checkpoint`.
+- **dirty**: an edit `tool.used` (one with a `path`) after the run's last
+  `checkpoint`, or a `turn.end` or `run.end` after it with
+  `worktree_changed: true`, which counts as one edit. Agents edit mostly
+  through shell commands, which name no path, so at a session's turn end
+  and end the hook checks its worktree when the session is not already
+  dirty and it or one of its subagents ran a shell command (`Bash` or
+  `PowerShell`, `ok`) since its last checkpoint, else since its start. The
+  worktree changed when a file git lists as changed or untracked (not
+  ignored) was modified after that moment (a deleted file by its
+  directory), or a commit made after it changed such a file. Only the
+  boolean is stored, never a path, command or content (`HOOK-2`). Read-only
+  commands leave nothing behind, so they never make a run dirty; committing
+  or switching branch alone does not either. False positives: a file the
+  user (or another process) changes in the same worktree after the
+  checkpoint, while the session runs shell commands, counts as the
+  session's; so does an untracked, unignored file a command generates. A
+  change in a subagent's own worktree is not seen. The check gives up after
+  50 ms and is then logged, leaving the run as it was (`HOOK-1`).
 - **no handoff**: Ended, linked to a ticket, and dirty.
 - **linked**: `claim` (explicit) or branch match (provisional, `RUN-5`);
   subagents inherit the parent's link.
@@ -152,8 +171,8 @@ ticket's `## Notes`.
 | `TaskCreated`, `TaskCompleted` | `plan.updated` (merge) | — |
 | `SubagentStart` / `SubagentStop` | child `run.start` (with `parent`, `agent_type`) / `run.end` (`reason: completed`), keyed by `agent_id` | — |
 | `PreCompact` / `PostCompact` | `compact` | — |
-| `Stop` | `turn.end`; handoff enforcement (§9) | `{"decision":"block","reason":…}` only when enforcing |
-| `SessionEnd` | `run.end` | — |
+| `Stop` | `turn.end`, with `worktree_changed` from the worktree check (§4); handoff enforcement (§9) | `{"decision":"block","reason":…}` only when enforcing |
+| `SessionEnd` | `run.end`, with `worktree_changed` from the worktree check (§4) | — |
 
 Not registered by default: per-tool `PreToolUse` other than Flashheart's own
 tools (noise and latency).
@@ -393,7 +412,8 @@ when it left edits since its last checkpoint.
 
 When `enforce_handoff` is on for the project, at `Stop`:
 
-- if the run is linked, dirty, the agent's payload does not say a stop hook is
+- if the run is linked, dirty (including a worktree change this stop's
+  check found, §4), the agent's payload does not say a stop hook is
   already active, and the run was not blocked for handoff in this turn →
   output `{"decision":"block","reason":"Flashheart: record a checkpoint on <ticket> (done, next, files) before stopping."}`
   and record `turn.end` with `blocked_for_handoff: true`;
@@ -512,3 +532,7 @@ additive, because no event changes shape and older logs read the same (a
 stays 1.
 The session-start hook keeps an installed skill's text current (re-running
 `setup` installs it); `flashheart doctor` says when it is out of date.
+Shell edits count toward dirty (§4), with the optional `worktree_changed`
+field on `turn.end` and `run.end` (FH-53, 2026-10-09): additive, because
+an event without the field reads as before and the tools and skill keep
+their shape, so the version stays 1.

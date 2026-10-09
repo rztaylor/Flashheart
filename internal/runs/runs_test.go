@@ -470,3 +470,75 @@ func TestASubagentCheckpointElsewhereLeavesItsSessionDue(t *testing.T) {
 		t.Fatalf("child dirty %v, session dirty %v edits %d", s.Dirty(child), s.Dirty(session), s.Edits(session))
 	}
 }
+
+// Agents edit mostly through shell commands, which name no path: the hook
+// checks the worktree at turn end and session end and records the finding,
+// which makes the run dirty until its next checkpoint (FH-53).
+func TestShellChangesAfterTheLastCheckpointAreNoHandoff(t *testing.T) {
+	t.Parallel()
+
+	linked := func(string, string) []string { return []string{"AL-3"} }
+	end := func(minutes float64, changed bool) events.Event {
+		return ev(minutes, session, events.RunEnd, events.RunEndData{Reason: "other", WorktreeChanged: changed})
+	}
+	checkpoint := ev(1, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"})
+	cases := []struct {
+		name      string
+		events    []events.Event
+		noHandoff bool
+	}{
+		{"shell change after the checkpoint, then end", []events.Event{start(0), checkpoint, tool(2, "Bash", ""), end(3, true)}, true},
+		{"read-only shell after the checkpoint, then end", []events.Event{start(0), checkpoint, tool(2, "Bash", ""), end(3, false)}, false},
+		{"change found at a turn end stays due at the end", []events.Event{start(0), checkpoint, turn(2), tool(2, "Bash", ""), ev(3, session, events.TurnEnd, events.TurnEndData{WorktreeChanged: true}), end(4, false)}, true},
+		{"a later checkpoint settles it", []events.Event{start(0), turn(1), tool(2, "Bash", ""), ev(3, session, events.TurnEnd, events.TurnEndData{WorktreeChanged: true}), ev(4, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}), end(5, false)}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			set := NewSet()
+			for _, e := range tc.events {
+				set.Apply(e)
+			}
+			view := set.Views(at(10), DefaultSettings(), linked)[0]
+			if view.NoHandoff != tc.noHandoff || view.Dirty != tc.noHandoff || set.Dirty(session) != tc.noHandoff {
+				t.Fatalf("noHandoff=%v dirty=%v set.Dirty=%v, want %v", view.NoHandoff, view.Dirty, set.Dirty(session), tc.noHandoff)
+			}
+			// A change found by the hook counts as one edit.
+			if want := map[bool]int{true: 1}[tc.noHandoff]; view.Edits != want {
+				t.Fatalf("edits = %d, want %d", view.Edits, want)
+			}
+		})
+	}
+}
+
+// The hook checks the worktree only when the session or one of its
+// subagents ran a shell command since the last checkpoint (or the start),
+// and only for changes made after it.
+func TestShellSince(t *testing.T) {
+	t.Parallel()
+
+	child := session + "/a1"
+	s := NewSet()
+	s.Apply(start(0))
+	s.Apply(tool(1, "Read", ""))
+	s.Apply(ev(1, session, events.ToolUsed, events.ToolData{Tool: "Bash", OK: false}))
+	if since, used := s.ShellSince(session); used || !since.Equal(at(0)) {
+		t.Fatalf("after a read and a failed command: since %v used %v", since, used)
+	}
+	s.Apply(tool(2, "Bash", ""))
+	if _, used := s.ShellSince(session); !used {
+		t.Fatal("a successful command since the start was not seen")
+	}
+	s.Apply(ev(3, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}))
+	if since, used := s.ShellSince(session); used || !since.Equal(at(3)) {
+		t.Fatalf("after the checkpoint: since %v used %v", since, used)
+	}
+	s.Apply(ev(4, child, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
+	s.Apply(ev(5, child, events.ToolUsed, events.ToolData{Tool: "Bash", OK: true}))
+	if _, used := s.ShellSince(session); !used {
+		t.Fatal("a subagent's command should count for its session")
+	}
+	if _, used := s.ShellSince("claude:unknown"); used {
+		t.Fatal("unknown run")
+	}
+}

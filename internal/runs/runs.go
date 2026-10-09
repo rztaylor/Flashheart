@@ -93,7 +93,9 @@ type Run struct {
 
 	Plan []events.PlanItem
 	// Tools counts tool uses; Edits counts successful edits since the last
-	// checkpoint (dirty); Files lists edited paths, most recent first.
+	// checkpoint (dirty), where a turn end or end that found the worktree
+	// changed by other means, such as shell commands, counts as one;
+	// Files lists edited paths, most recent first.
 	Tools          int
 	Edits          int
 	Files          []string
@@ -113,7 +115,12 @@ type Run struct {
 
 	turnOpen bool
 	ended    bool
+	// shell counts successful shell commands since the last checkpoint.
+	shell int
 }
+
+// shellTools are the agents' shell command tools, whose edits name no path.
+var shellTools = []string{"Bash", "PowerShell"}
 
 // Question is one ask_human question and what became of it (RUN-8).
 type Question struct {
@@ -276,6 +283,9 @@ func (s *Set) Apply(e events.Event) {
 		// A session that ends mid-turn (interrupted, so no Stop) is not still
 		// working when it resumes.
 		r.ended, r.EndedAt, r.EndReason, r.Permission, r.turnOpen = true, e.Time, data.Reason, "", false
+		if data.WorktreeChanged {
+			r.Edits++
+		}
 		s.settleChildren(r)
 		entry.Detail = data.Reason
 	case events.TurnStart:
@@ -295,6 +305,9 @@ func (s *Set) Apply(e events.Event) {
 		_ = e.Decode(&data)
 		r.turnOpen, r.Permission = false, ""
 		r.BlockedForHandoff = r.BlockedForHandoff || data.BlockedForHandoff
+		if data.WorktreeChanged {
+			r.Edits++
+		}
 		s.settleChildren(r)
 	case events.ToolUsed:
 		var data events.ToolData
@@ -308,6 +321,9 @@ func (s *Set) Apply(e events.Event) {
 			if len(r.Files) > MaxFiles {
 				r.Files = r.Files[:MaxFiles]
 			}
+		}
+		if data.OK && slices.Contains(shellTools, data.Tool) {
+			r.shell++
 		}
 		entry.Tool, entry.Path, entry.Failed = data.Tool, data.Path, !data.OK
 	case events.PlanUpdated:
@@ -344,7 +360,7 @@ func (s *Set) Apply(e events.Event) {
 			members = []*Run{r}
 		}
 		for _, member := range members {
-			member.Edits, member.LastCheckpoint = 0, e.Time
+			member.Edits, member.shell, member.LastCheckpoint = 0, 0, e.Time
 		}
 		entry.Ticket = data.Ticket
 	case events.Claim, events.Release, events.TicketMoved, events.TicketUpdated, events.TicketCreated, events.ReviewWritten, events.AttachmentAdded:
@@ -610,6 +626,26 @@ func (s *Set) Edits(id string) int {
 // Dirty reports edits since the last checkpoint, a session's subagents'
 // included: its handoff is due (HOOK-6).
 func (s *Set) Dirty(id string) bool { return s.Edits(id) > 0 }
+
+// ShellSince returns when the run's unrecorded work would start, its last
+// checkpoint or else its start, and whether it (with its subagents, for a
+// session) ran a shell command successfully since then. Only then is its
+// worktree worth checking for changes the edit tools did not record.
+func (s *Set) ShellSince(id string) (time.Time, bool) {
+	r := s.runs[id]
+	if r == nil {
+		return time.Time{}, false
+	}
+	since := r.LastCheckpoint
+	if since.IsZero() {
+		since = r.Started
+	}
+	members := []*Run{r}
+	if r.Parent == "" {
+		members = s.family(r)
+	}
+	return since, slices.ContainsFunc(members, func(m *Run) bool { return m.shell > 0 })
+}
 
 func (s *Set) children(r *Run) []*Run {
 	var list []*Run

@@ -18,6 +18,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Files changed through shell commands now count toward the handoff
+  (FH-53). A run used to be dirty only after the edit tools, though agents
+  edit mostly through shell commands, so "no handoff", the At risk reason
+  and handoff enforcement missed most edits. At a session's turn end and
+  end, when it ran a shell command since its last checkpoint, the hook asks
+  git (within 50 ms, without locks) whether a changed, untracked or newly
+  committed file was modified since then, and records only yes or no on
+  `turn.end` and `run.end` (`worktree_changed`, agent-protocol §4; protocol
+  version unchanged). Read-only commands never flag a run; a file the user
+  changes in the same worktree meanwhile can.
 - A question answered in the agent's own chat no longer leaves the session
   and its ticket in Needs you (FH-43, D28). A prompt in the asking session
   answers its open questions there (its subagents' too, never another
