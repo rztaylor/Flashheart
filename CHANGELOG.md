@@ -31,12 +31,14 @@ All notable changes to this project are documented here. The project follows
 
 - Needs you is a filter instead of a column (FH-44, D31). The Needs you
   column, which repeated tickets already shown in their own columns, is
-  gone. The band's *N need you* plate is now an on/off filter: pressed, the
-  Board and Table show only the tickets with a run in Needs you or an open
-  question, and from another view it opens the Board, filtered (it used to
-  open the Agents view). It combines with the other filters and Clear
-  filters switches it off; it carries from project to project and a reload
-  starts with it off. The rail badges and the card's Needs you mark are
+  gone. The band's *N need you* plate is now an on/off filter: pressed, it
+  shows All projects' Board (or Table) with only the tickets that have a
+  run in Needs you or an open question, and pressed again it returns to the
+  project you were in (it used to open the Agents view). Agents that need
+  you with no ticket on the board are named in a notice that opens the
+  Agents view. It combines with the other filters and Clear filters
+  switches it off; it carries from project to project and a reload starts
+  with it off. The rail badges and the card's Needs you mark are
   unchanged. A saved `ui.virtual_columns` setting is ignored and removed on
   the next save.
 - The Board toolbar is decluttered (FH-39). Filters are buttons named for

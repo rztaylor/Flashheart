@@ -522,18 +522,35 @@ change.
 Decision (FH-44, user): the Needs you virtual column is retired, completing
 D27. A ticket mirrored in Needs you while it sat in its own column read as
 being in two places at once, as Agent working did. The band's Needs you
-plate becomes the filter: it is a toggle, and pressed, the Board and Table
-show only the tickets with a run in Needs you or an open question about
-them. From another view it opens the Board, filtered, where it used to open
-the Agents view. It combines with every other filter, and Clear filters
-switches it off. It stays in the band while pressed, so it can be switched
-off once nothing needs you.
+plate becomes the filter: it is a toggle, and pressed, it shows All
+projects' Board (or Table, when that is open) with only the tickets that
+have a run in Needs you or an open question about them. It used to open the
+Agents view. A second press returns to the project it was pressed in,
+unless another scope was chosen since. It combines with every other filter,
+and Clear filters switches it off. It stays in the band while pressed, so
+it can be switched off once nothing needs you.
+
+All projects, because the plate counts runs across every project: filtering
+only the project in view left a "1 needs you" press on an empty board when
+the run was elsewhere, contradicting the label (the user's review). Options
+weighed: All projects and back (chosen); stay in the project when something
+there needs you, else All projects (what a press does would depend on
+something unseen); count only the project in view (the plate would stop
+warning about other projects); keep the project with an empty state naming
+the others (two steps to the answer).
+
+The count and the board can still differ: a run in Needs you may have no
+ticket on the board (an ad hoc session hitting a permission prompt, a
+question asked before claiming, a branch matching no single ticket, an
+archived ticket; RUN-5 allows unlinked runs). While the filter is on, a
+notice names those runs ("1 agent needs you with no ticket on the board")
+and opens the Agents view, which lists them. A run counts as shown when its
+linked ticket, or the ticket one of its open questions is about, is on the
+board. The counts gain `needsYouUnticketed`.
 
 It is a lens, not a remembered filter: like the search text it carries from
-project to project, and a reload starts with it off. The plate's count is
-of runs across every project, so the filter follows it from scope to scope
-rather than being saved per scope. The rail's badges and the card's Needs
-you mark are unchanged.
+project to project, and a reload starts with it off. The rail's badges and
+the card's Needs you mark are unchanged.
 
 With both mirrored columns gone, View options › Show columns holds only the
 Backlog (FH-41).

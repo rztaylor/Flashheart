@@ -186,49 +186,68 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: /^Needs you/ })).toHaveCount(0);
 
-  // The band's pill is an on/off filter: pressed, the Board shows only the
-  // tickets that need you.
+  // The band's pill is an on/off filter over All projects, where its count
+  // is taken: pressed, the Board shows only the tickets that need you.
   const cards = page.locator("[data-ticket]");
   const total = await cards.count();
   const pill = page.getByRole("button", { name: "1 needs you", exact: true });
   await pill.click();
+  await expect(page).toHaveURL(/#\/all\/board/);
   await expect(pill).toHaveAttribute("aria-pressed", "true");
   await expect(real).toBeVisible();
   await expect(cards).toHaveCount(1);
-  await expect(page.getByText(`1 of ${total} tickets`)).toBeVisible();
+  await expect(page.getByText(/^1 of \d+ tickets$/)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Clear filters" }),
   ).toBeVisible();
+  // Every agent that needs you has its ticket on the board, so no notice.
+  await expect(
+    page.getByRole("region", { name: "Agents without a ticket" }),
+  ).toHaveCount(0);
   for (const theme of ["light", "dark"]) {
-    await open("#/p/alpha/board", { theme });
+    await open("#/all/board", { theme });
     await shot(`board-needs-you-1440-${theme}`);
   }
   for (const theme of ["light", "dark"]) {
-    await open("#/p/alpha/board", { width: 390, height: 844, theme });
+    await open("#/all/board", { width: 390, height: 844, theme });
     await expect(
       page.getByRole("button", { name: "1 agent needs you", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     await shot(`board-needs-you-390-${theme}`);
   }
+  await open("#/all/board");
 
-  // It carries over to another project and to the Table.
-  await open("#/p/beta/board");
-  await expect(pill).toHaveAttribute("aria-pressed", "true");
-  await open("#/p/alpha/table");
-  await expect(pill).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("row")).toHaveCount(2);
-  await open("#/p/alpha/board");
-
-  // A second click shows every ticket; Clear filters switches it off too.
+  // A second press goes back to the project it was pressed in.
   await pill.click();
+  await expect(page).toHaveURL(/#\/p\/alpha\/board/);
   await expect(pill).toHaveAttribute("aria-pressed", "false");
   await expect(cards).toHaveCount(total);
+
+  // On the Table it opens All projects' Table; Clear filters switches it
+  // off too, staying put.
+  await open("#/p/alpha/table");
   await pill.click();
+  await expect(page).toHaveURL(/#\/all\/table/);
+  await expect(page.getByRole("row")).toHaveCount(2);
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(pill).toHaveAttribute("aria-pressed", "false");
-  await expect(cards).toHaveCount(total);
+  await expect(page).toHaveURL(/#\/all\/table/);
+
+  // Choosing a project while it is on keeps it on there, and a press then
+  // switches it off in place.
+  await pill.click();
+  await page
+    .getByRole("button", { name: /^Alpha/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/#\/p\/alpha\//);
+  await expect(pill).toHaveAttribute("aria-pressed", "true");
+  await pill.click();
+  await expect(pill).toHaveAttribute("aria-pressed", "false");
+  await expect(page).toHaveURL(/#\/p\/alpha\//);
 
   // It is a lens, not a saved filter: a reload starts with it off.
+  await open("#/p/alpha/board");
   await pill.click();
   await page.waitForTimeout(600);
   expect(
@@ -453,4 +472,45 @@ test("a question answered in the session's own chat leaves Needs you", async () 
       await expectNoAxeViolations("run answered in the session");
     await shot(`agents-answered-in-session-${width}-${theme}`);
   }
+});
+
+test("the Needs you filter points to agents with no ticket (FH-44)", async () => {
+  // The gamma session has no ticket; its question is about none either.
+  await callTool(sandbox.root, seeded.gamma, "ask_human", {
+    run: `claude:${IDLE_SESSION}`,
+    kind: "question",
+    text: "Which repository should the offline spike live in?",
+  });
+  await open("#/p/alpha/board");
+  const pill = page.getByRole("button", { name: "2 need you", exact: true });
+  await pill.click();
+  await expect(page).toHaveURL(/#\/all\/board/);
+  const notice = page.getByRole("region", { name: "Agents without a ticket" });
+  await expect(notice).toContainText(
+    "1 agent needs you with no ticket on the board.",
+  );
+  // AL-3's card still shows; the gamma agent cannot.
+  await expect(page.locator("[data-ticket]")).toHaveCount(1);
+  await expectNoAxeViolations("needs you notice");
+  for (const theme of ["light", "dark"]) {
+    await open("#/all/board", { theme });
+    await shot(`board-needs-you-unticketed-1440-${theme}`);
+  }
+  await open("#/all/board", { width: 390, height: 844 });
+  await shot("board-needs-you-unticketed-390-light");
+  await open("#/all/board");
+  await notice.getByRole("button", { name: "Open Agents" }).click();
+  await expect(page).toHaveURL(/#\/all\/agents/);
+  await expect(
+    page
+      .getByRole("region", { name: /^Needs you/ })
+      .getByRole("button", { name: /e2d8f6a4/ }),
+  ).toBeVisible();
+
+  // Answered in the session's own chat, it no longer needs you.
+  promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
+  await open("#/all/board");
+  await expect(notice).toHaveCount(0);
+  await page.getByRole("button", { name: "1 needs you", exact: true }).click();
+  await expect(page).toHaveURL(/#\/p\/alpha\/board/);
 });

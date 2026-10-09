@@ -35,10 +35,10 @@ each an icon and a label, the current one marked; then, right-aligned, the
 Needs you plate while any run anywhere needs the user (disc mark, count and
 "need(s) you"). It is the Needs you filter (`VIEW-2`, FH-44), a toggle:
 pressed, it takes an inset ring in the on-attention ink and a close mark
-(the ring alone on a phone) and the Board and Table show only tickets that
-need the user; from another view it opens the Board, filtered. It stays
-while pressed, so it can be switched off once nothing needs the user. Then
-search (Board and Table
+(the ring alone on a phone) and shows All projects' Board (the Table when
+that is open) with only tickets that need the user; pressed again, it
+returns to the project it was pressed in. It stays while pressed, so it can
+be switched off once nothing needs the user. Then search (Board and Table
 only), the backend status (quiet dot while healthy, words when not,
 `LIFE-1`) and Quit. The band carries no tagline and no project name.
 
@@ -88,6 +88,12 @@ rules: a shown-only chip takes the selection ring, a hidden one is dashed and
 struck through. The row never wraps: chips that do not fit stay out of view,
 colour chips before workstreams; the menus list every value. Hidden when
 there are neither workstream chips nor colour chips.
+
+**Needs you notice** (Board and Table, while the Needs you filter is on and
+runs need the user with no ticket on the board): a well-coloured strip under
+the chip row, the Needs you mark on its attention disc, *N agent(s) need(s)
+you with no ticket on the board.* and a quiet **Open Agents** button
+(FH-44).
 
 **Panel** beside the main view at clamp(26rem, 32vw, 35rem), narrowing it
 (`CARD-1`); it covers the view below the band under 48rem.

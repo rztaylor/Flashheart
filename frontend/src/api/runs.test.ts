@@ -11,6 +11,7 @@ const counts = {
   quiet: 0,
   ended: 2,
   live: 2,
+  needsYouUnticketed: 0,
 };
 const live = {
   run: "claude:s",
@@ -92,6 +93,9 @@ describe("run validators", () => {
 
   it("reject unknown states and missing fields", () => {
     expect(isRunCounts({ ...counts, live: "2" })).toBe(false);
+    expect(isRunCounts({ ...counts, needsYouUnticketed: undefined })).toBe(
+      false,
+    );
     expect(isLive({ ...live, state: "busy" })).toBe(false);
     expect(isLive({ ...live, waitingOn: undefined })).toBe(false);
     expect(isRun({ ...run, kind: "thread" })).toBe(false);

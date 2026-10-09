@@ -57,7 +57,9 @@ import { viewSummary } from "../model/summary";
 import { useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
 import { BackendStatus } from "./BackendStatus";
+import { NeedsYouNotice } from "./NeedsYouNotice";
 import { NeedsYouPill } from "./NeedsYouPill";
+import { pressNeedsYou } from "./needsYou";
 import { PageHeader } from "./PageHeader";
 import {
   formatRoute,
@@ -101,6 +103,9 @@ export function Shell({
   const { state, fetch: fetcher, ready } = lifecycle;
   const [route, navigate] = useRoute();
   const [filters, setFiltersState] = useState<Filters>(emptyFilters);
+  // needsYouFrom is the scope the Needs you filter was turned on from, to
+  // return to when it is turned off (FH-44).
+  const [needsYouFrom, setNeedsYouFrom] = useState<Scope>();
   const { density, colourBy: paint } = preferences;
   const [newTicket, setNewTicket] = useState(false);
   const [doneAll, setDoneAll] = useState(false);
@@ -222,6 +227,8 @@ export function Shell({
   // Needs you is visible from every view and project (SPEC §7).
   const needsYou =
     projects.status === "ready" ? projects.data.runs.needsYou : 0;
+  const needsYouUnticketed =
+    projects.status === "ready" ? projects.data.runs.needsYouUnticketed : 0;
   const hiddenColumns = preferences.hiddenColumns;
   const projectNames = useMemo(
     () =>
@@ -310,15 +317,18 @@ export function Shell({
     : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
-  // The band's Needs you pill filters the Board and Table (FH-44); from
-  // another view it opens the Board, filtered.
+  // The band's Needs you pill filters All projects' Board or Table, and
+  // turned off returns to where it was turned on (FH-44).
   const toggleNeedsYou = () => {
-    if (route.view === "board" || route.view === "table") {
-      setFilters({ ...filters, needsYou: !filters.needsYou });
+    const press = pressNeedsYou(route, filters.needsYou, needsYouFrom);
+    setNeedsYouFrom(press.cameFrom);
+    if (!press.go) {
+      setFilters({ ...filters, needsYou: press.on });
       return;
     }
-    setFiltersState({ ...filters, needsYou: true });
-    go({ view: "board", ticket: undefined });
+    // A new scope restores its own filters, carrying this one over.
+    setFiltersState({ ...filters, needsYou: press.on });
+    go(press.go);
   };
   const selectScope = (scope: Scope) => {
     setDoneAll(false);
@@ -793,6 +803,14 @@ export function Shell({
                       paints={paints}
                       filters={filters}
                       onChange={setFilters}
+                    />
+                  ) : null}
+                  {filters.needsYou ? (
+                    <NeedsYouNotice
+                      count={needsYouUnticketed}
+                      onOpenAgents={() =>
+                        go({ view: "agents", ticket: undefined })
+                      }
                     />
                   ) : null}
                   {board.status === "loading" ? <BoardSkeleton /> : null}

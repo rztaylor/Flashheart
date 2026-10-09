@@ -209,10 +209,13 @@ Full format: `docs/dev/specs/board-format.md`.
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
   The Backlog can be hidden from the Board (shown by default; FH-41).
 - `VIEW-2` **Needs you filter**: the band's *Needs you* plate is a toggle.
-  Pressed, the Board and Table show only tickets with a run in Needs you or
-  an open question from a live session; from another view it opens the
-  Board, filtered. It combines with the other filters, carries from project
-  to project, and is not remembered. Tickets show only in their real
+  Pressed, it shows *All projects* (the Board, or the Table when open) with
+  only tickets that have a run in Needs you or an open question from a live
+  session; pressed again, it returns to the project it was pressed in. It
+  combines with the other filters, carries from project to project, and is
+  not remembered. While it is on, runs in Needs you that no card on the
+  board shows (no linked ticket, and no open question about a ticket on the
+  board) are named in a notice that opens the Agents view. Tickets show only in their real
   columns (D31, FH-44). Tickets linked to a Working or Quiet run are found
   with the State filter's *Agent working* option (D27, FH-42).
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
