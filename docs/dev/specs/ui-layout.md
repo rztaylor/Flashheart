@@ -262,9 +262,13 @@ id a separate link.
 ## 5. Overview
 
 The project manager's view (`VIEW-3`, D32; approved concept: FH-47's Calm
-direction). Page header (a headline metrics row may sit under it, FH-52);
-then one centred column, at most 56rem wide, of rounded section cards in
-fixed order:
+direction). Page header; then one centred column, at most 56rem wide,
+opening with the headline metrics (FH-52): a muted line *Since your last
+change · yesterday 18:00* (*In the last 24 hours* when no change of yours
+is recorded) over four equal hairline tiles, each a large tabular number
+over a muted word: Done, To review, New tickets, Criteria ticked (singular
+for one). Ink only: no colour carries meaning. Four across from 40rem, two
+by two below. Then the rounded section cards in fixed order:
 
 1. **Needs your decision**: questions, each a question card answerable in
    place (`CARD-6`), and permission prompts, which say *Answer in the

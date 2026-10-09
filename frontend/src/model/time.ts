@@ -36,6 +36,33 @@ export function durationWords(iso: string, now: Date = new Date()): string {
   return plural(Math.floor(days / 365), "year");
 }
 
+// dayAndTime names a past moment by its local day and clock time for the
+// Overview's headline ("yesterday 18:00", "Mon 09:12", "20 Sept 09:12");
+// empty for missing or invalid input.
+export function dayAndTime(iso: string, now: Date = new Date()): string {
+  if (!iso) return "";
+  const then = new Date(Date.parse(iso));
+  if (Number.isNaN(then.getTime())) return "";
+  const clock = then.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const day = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.round((day(now) - day(then)) / 86_400_000);
+  if (days <= 0) return `today ${clock}`;
+  if (days === 1) return `yesterday ${clock}`;
+  if (days < 7) {
+    return `${then.toLocaleDateString([], { weekday: "short" })} ${clock}`;
+  }
+  const date = then.toLocaleDateString([], {
+    day: "numeric",
+    month: "short",
+    year: then.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+  return `${date} ${clock}`;
+}
+
 export function absoluteTime(iso: string): string {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return "";
