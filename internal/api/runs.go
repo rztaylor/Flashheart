@@ -160,6 +160,7 @@ type RunResponse struct {
 func (b boardAPI) registerRuns(mux *http.ServeMux) {
 	mux.Handle("/api/runs", getOnly(b.runs))
 	mux.Handle("/api/run", getOnly(b.run))
+	mux.Handle("/api/metrics", getOnly(b.metrics))
 }
 
 func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {

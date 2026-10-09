@@ -561,6 +561,9 @@ Column well surface, rule border, 14px corners, 10px padding; head with a round 
 ### Overview Section Card
 Card surface, rule border, 14px corners, card shadow; the head on the column surface with a 28px round mark (Needs your decision in the attention disc while anything needs you; review and in progress in their status fills; the rest an ink icon on a card disc), the title in the display head cut and a round count badge; the collapsible ones end in a chevron. Rows divided by rules, roomy (12px by 16px): the id, the title over one muted line of words, a small outlined agent chip, a muted time or count, and the action (Review results in the action fill, Create ticket secondary). An empty section is its head with one muted sentence. No coloured edge strips.
 
+### Overview Headline Metrics
+Above the section cards: one muted line naming the moment counted from (*Since your last change · yesterday 18:00*, or *In the last 24 hours*), then four equal tiles, card surface, rule hairline, 10px corners, no shadow: a 1.875rem display-cut tabular number in ink over a muted word. Ink only; four across from 40rem, two by two below.
+
 ### Navigation
 - **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate (a toggle: pressed, an inset on-attention ring and a close mark, filtering the Board to tickets that need you), search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.
 - **Rail:** All projects, a divider, projects with key badge (8px, tinted; filled in the accent when current), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile is raised: rail active surface, hairline border, card shadow. Footer: theme (System, Light, Dark), board root (cut from the start) and version.

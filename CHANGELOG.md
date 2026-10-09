@@ -136,6 +136,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Headline metrics under the Overview's title (FH-52): a quiet row saying
+  *Since your last change · yesterday 18:00* over four tiles, Done, To
+  review, New tickets and Criteria ticked, for All projects or the project
+  shown. They count tickets moved to Done and to Ready to review and tickets
+  created (each ticket once) and criteria updates, since your latest change
+  on the board there (a board edit, move, new ticket or answer; editor edits
+  do not count). With none recorded the row counts the last 24 hours and
+  says so. Served by `GET /api/metrics?project=`; counted from the event
+  log the server already reads, with no new events.
 - Each card in the board API carries a `sessions` summary of the runs
   working for its ticket (FH-50, RUN-9): the live agent and its state, the
   last activity, whether the handoff is behind the session's work, and its
