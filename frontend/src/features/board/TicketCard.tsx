@@ -5,7 +5,7 @@ import {
   type KeyboardEvent,
 } from "react";
 
-import { type Card, COLUMNS } from "../../api/board";
+import type { Card } from "../../api/board";
 import type { Live } from "../../api/runs";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
@@ -38,9 +38,6 @@ interface TicketCardProps {
   // lifted draws the card being dragged; ghost the place it left.
   lifted?: boolean;
   ghost?: boolean;
-  // mirrored marks a copy shown in a virtual column (VIEW-2); the ticket
-  // lives in its real column.
-  mirrored?: boolean;
 }
 
 // TicketCard is one ticket on the board (VIEW-6), in the one anatomy of
@@ -70,7 +67,6 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
       dragProps,
       lifted,
       ghost,
-      mirrored,
     },
     ref,
   ) {
@@ -161,7 +157,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           aria-hidden="true"
           className={`flex flex-col gap-2 pr-3 pb-2.5 ${inset} pt-1`}
         >
-          {/* Row 3: workstream, type (and age) tags, mirror note; Compact
+          {/* Row 3: workstream, type (and age) tags; Compact
               also carries the short blocked pill and the run mark here. */}
           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-2xs text-ink-muted">
             <LineBullet line={line} size="sm" label={workstreamTitle} />
@@ -182,11 +178,6 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
                   <RunStateMark state={card.live.state} size={10} />
                 </span>
               )
-            ) : null}
-            {mirrored ? (
-              <span className="text-ink-faint">
-                in {columnName(card.column)}
-              </span>
             ) : null}
           </span>
 
@@ -282,12 +273,9 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           onClick={onOpen}
           onKeyDown={onKeyDown}
           onFocus={onFocus}
-          // Only the real card is the current ticket; its mirror shares the
-          // selection ring but not the announcement.
-          aria-current={selected && !mirrored ? "true" : undefined}
+          aria-current={selected ? "true" : undefined}
           data-ticket={card.id}
-          data-mirrored={mirrored ? "" : undefined}
-          aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}${mirrored ? `, also in ${columnName(card.column)}` : ""}`}
+          aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}`}
           // The card clips its edges, so the focus ring is drawn inside.
           className="absolute inset-0 z-[1] rounded-card focus-visible:-outline-offset-2"
         />
@@ -300,9 +288,6 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
 // the user, when no live run of its own explains it (CARD-6).
 const questionsWaiting = (count: number) =>
   count === 1 ? "Question waiting" : `${count} questions waiting`;
-
-const columnName = (id: string) =>
-  COLUMNS.find((column) => column.id === id)?.title ?? id;
 
 // liveLabel is the live badge in words, for the card's accessible name.
 function liveLabel(live: Live): string {

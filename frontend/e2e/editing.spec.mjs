@@ -869,8 +869,21 @@ test("the Backlog column can be hidden from View options (FH-41)", async () => {
     readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
   const backlogBox = page.getByRole("checkbox", { name: "Backlog" });
   await open("#/p/flashheart/board");
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.getByRole("button", { name: "View options" }).click();
+    await expect(backlogBox).toBeChecked();
+    // Needs you is a chip now, not a column to show (FH-44).
+    await expect(page.getByRole("checkbox", { name: "Needs you" })).toHaveCount(
+      0,
+    );
+    await page.screenshot({
+      path: resolve(screenshotDir, `view-options-backlog-1440-${theme}.png`),
+    });
+    await page.keyboard.press("Escape");
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await page.getByRole("button", { name: "View options" }).click();
-  await expect(backlogBox).toBeChecked();
   await backlogBox.uncheck();
   await page.keyboard.press("Escape");
   await expect(column("Backlog")).toHaveCount(0);

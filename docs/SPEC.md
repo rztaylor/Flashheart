@@ -86,7 +86,6 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Claim** | A run's lease on a ticket, renewed by its activity. |
 | **Handoff** | The `## Handoff` section of a ticket: done, next, files, open questions. Rewritten at each checkpoint. |
 | **Question** | A run's request for a human decision, answer or review; it puts the run in **Needs you**. |
-| **Virtual column** | A board column computed from run state (for example *Needs you*) rather than a directory; can be shown or hidden. |
 
 ## 5. System overview
 
@@ -209,12 +208,14 @@ Full format: `docs/dev/specs/board-format.md`.
   next, In progress, Ready to review, Done), each in its manual order
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
   The Backlog can be hidden from the Board (shown by default; FH-41).
-- `VIEW-2` **Virtual column**: *Needs you* (tickets with a run in Needs you or
-  an open question from a live session). It sits between In progress and
-  Ready to review and appears while it holds tickets. It can be shown or
-  hidden (shown by default); a ticket in it also stays in its real column,
-  marked as mirrored. Tickets linked to a Working or Quiet run are found with
-  the State filter's *Agent working* option, not a column (D27, FH-42).
+- `VIEW-2` **Needs you filter**: a *Needs you* chip leads the Board's chip
+  row while a ticket in scope has a run in Needs you or an open question
+  from a live session. Like the other chips, a click shows only those
+  tickets, a Cmd or Ctrl click hides them, and a click on the chosen chip
+  restores the board; it combines with the other filters and is remembered
+  with them. Tickets show only in their real columns (D31, FH-44). Tickets
+  linked to a Working or Quiet run are found with the State filter's *Agent
+  working* option (D27, FH-42).
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
   (`RUN-3`), Needs you first: *Needs you*, *Working*, *Quiet*, *Waiting*,
   *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
@@ -463,8 +464,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `CFG-1` Settings live in `<root>/.flashheart/config.yaml` (global) and
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
-- `CFG-2` UI preferences (theme, density, colour by, visible virtual columns,
-  hidden columns, and each project's view and filters) are saved through the backend in the
+- `CFG-2` UI preferences (theme, density, colour by, hidden columns, and
+  each project's view and filters) are saved through the backend in the
   global config, never in browser storage.
 
 ### 6.13 Lifecycle (`LIFE`)

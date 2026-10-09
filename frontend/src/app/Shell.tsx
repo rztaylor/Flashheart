@@ -34,11 +34,7 @@ import { ProjectRail } from "../features/projects/ProjectRail";
 import { TableView } from "../features/table/TableView";
 import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
-import {
-  placeVirtual,
-  shownColumns,
-  shownVirtual as shownVirtualColumns,
-} from "../model/columns";
+import { shownColumns } from "../model/columns";
 import {
   applyFilters,
   choiceCount,
@@ -224,7 +220,6 @@ export function Shell({
   // Needs you is visible from every view and project (SPEC §7).
   const needsYou =
     projects.status === "ready" ? projects.data.runs.needsYou : 0;
-  const shownVirtual = preferences.virtualColumns;
   const hiddenColumns = preferences.hiddenColumns;
   const projectNames = useMemo(
     () =>
@@ -305,15 +300,12 @@ export function Shell({
           if (after !== null) place(shownTicket, shownTicket.column, after);
         }
       : undefined;
-  // The phone column picker falls back to In progress when the virtual
-  // column it showed has emptied and gone, or its column was hidden.
-  const narrowVirtual = shownVirtualColumns(visible, shownVirtual);
-  const narrowReal = shownColumns(hiddenColumns);
-  const narrowShown =
-    narrowReal.some((column) => column.id === narrowColumn) ||
-    narrowVirtual.some((column) => column.id === narrowColumn)
-      ? narrowColumn
-      : "in-progress";
+  // The phone column picker falls back to In progress when the column it
+  // showed was hidden.
+  const pickerColumns = shownColumns(hiddenColumns);
+  const narrowShown = pickerColumns.some((column) => column.id === narrowColumn)
+    ? narrowColumn
+    : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
   const selectScope = (scope: Scope) => {
@@ -341,9 +333,7 @@ export function Shell({
       if (element?.isConnected) element.focus();
       else if (id)
         document
-          .querySelector<HTMLElement>(
-            `[data-ticket="${CSS.escape(id)}"]:not([data-mirrored])`,
-          )
+          .querySelector<HTMLElement>(`[data-ticket="${CSS.escape(id)}"]`)
           ?.focus();
     }, 0);
   }, [navigate, route]);
@@ -676,10 +666,7 @@ export function Shell({
                     value={narrowShown}
                     onChange={setNarrowColumn}
                   >
-                    {placeVirtual<{ id: string; title: string }>(
-                      narrowReal,
-                      narrowVirtual,
-                    ).map((column) => (
+                    {pickerColumns.map((column) => (
                       <option key={column.id} value={column.id}>
                         {column.title}
                       </option>
@@ -787,12 +774,6 @@ export function Shell({
                                 ...current,
                                 density: value,
                               })),
-                            virtualColumns: shownVirtual,
-                            onVirtualColumns: (virtualColumns) =>
-                              updatePreferences((current) => ({
-                                ...current,
-                                virtualColumns,
-                              })),
                             hiddenColumns,
                             onHiddenColumns: (hiddenColumns) =>
                               updatePreferences((current) => ({
@@ -848,7 +829,6 @@ export function Shell({
                         projectNames={projectNames}
                         density={density}
                         paint={paint}
-                        virtualColumns={shownVirtual}
                         hiddenColumns={hiddenColumns}
                         selected={route.ticket}
                         doneTotal={board.data.doneTotal}

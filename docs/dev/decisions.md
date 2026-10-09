@@ -516,3 +516,29 @@ the board (no room gained, no URL to keep); an "open full page" button only
 
 Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; no API
 change.
+
+## 2026-10-09 — D31: Needs you is a chip, not a column
+
+Decision (FH-44, user): the Needs you virtual column is retired, completing
+D27. A ticket mirrored in Needs you while it sat in its own column read as
+being in two places at once, as Agent working did. Needs you is now a filter
+chip at the head of the Board's chip row, drawn like the workstream and
+colour chips and with their click rules: a click shows only the tickets with
+a run in Needs you or an open question about them, a Cmd or Ctrl click hides
+them, and a click on the chosen chip restores the board. The chip appears
+while a ticket in scope needs you, or while it is chosen, so it can be
+restored. It combines with every other filter, and is remembered with the
+scope's filters (`needs_you: only | hidden`). The band's Needs you pill, the
+rail's badges and the card's Needs you mark are unchanged.
+
+With both mirrored columns gone, View options › Show columns holds only the
+Backlog (FH-41).
+
+Options: a *Needs you* State filter option, as Agent working (State takes
+one choice, so it could not combine with Blocked); a toolbar toggle beside
+the filter buttons; a chip like the colour key's (chosen); keep the column.
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
+`needsYou` field is unchanged. A saved `ui.virtual_columns` is ignored on
+load rather than refused, and removed when preferences are next saved.
+

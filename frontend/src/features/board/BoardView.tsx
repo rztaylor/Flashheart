@@ -32,18 +32,12 @@ import {
   type TicketRef,
   type WorkstreamBrief,
 } from "../../api/board";
-import type { HideableColumn, VirtualColumn } from "../../api/preferences";
+import type { HideableColumn } from "../../api/preferences";
 import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
-import {
-  neighbourColumn,
-  placeVirtual,
-  shownColumns,
-  shownVirtual,
-  VIRTUAL_COLUMNS,
-} from "../../model/columns";
+import { neighbourColumn, shownColumns } from "../../model/columns";
 import type { Line } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
 import {
@@ -66,9 +60,6 @@ interface BoardViewProps {
   projectNames?: Map<string, string>;
   density: Density;
   paint: PaintMode;
-  // virtualColumns are shown after In progress while they hold tickets,
-  // mirroring tickets whose runs need you or are working (VIEW-2).
-  virtualColumns?: VirtualColumn[];
   // hiddenColumns are real columns left off the board, and so never a move's
   // target (FH-41).
   hiddenColumns?: HideableColumn[];
@@ -97,9 +88,7 @@ const keyMoves: Record<string, GridMove> = {
 };
 
 const columnTitle = (id: string) =>
-  COLUMNS.find((column) => column.id === id)?.title ??
-  VIRTUAL_COLUMNS.find((column) => column.id === id)?.title ??
-  id;
+  COLUMNS.find((column) => column.id === id)?.title ?? id;
 
 const instructions =
   "Press Shift with the left or right arrow to move this ticket to the next column, or with the up or down arrow to move it within its column, or drag it with the pointer. Enter opens it.";
@@ -130,7 +119,6 @@ export function BoardView(props: BoardViewProps) {
     projectNames,
     density,
     paint,
-    virtualColumns = [],
     hiddenColumns = [],
     selected,
     doneTotal,
@@ -142,8 +130,8 @@ export function BoardView(props: BoardViewProps) {
     sort = null,
   } = props;
   const reorderable = canReorder(sort);
-  // The cursor names its column, so a virtual column appearing or leaving
-  // does not move it to a neighbour.
+  // The cursor names its column, so a column hidden or shown does not move
+  // it to a neighbour.
   const [cursor, setCursor] = useState<{ column: string; row: number }>({
     column: "",
     row: 0,
@@ -177,27 +165,13 @@ export function BoardView(props: BoardViewProps) {
     );
     for (const card of displayOrder(cards, sort))
       grouped.get(card.column)?.push(card);
-    // A virtual column appears only while it holds tickets, so a board
-    // with nothing to flag stays calm.
-    const mirrors = shownVirtual(cards, virtualColumns).map((column) => ({
-      id: column.id as Column | VirtualColumn,
+    return shownColumns(hiddenColumns).map((column) => ({
+      id: column.id,
       title: column.title,
-      empty: column.empty,
-      virtual: true,
-      cards: cards.filter(column.holds),
+      empty: column.id === "in-progress" ? "Nothing in progress" : "No tickets",
+      cards: grouped.get(column.id) ?? [],
     }));
-    return placeVirtual(
-      shownColumns(hiddenColumns).map((column) => ({
-        id: column.id as Column | VirtualColumn,
-        title: column.title,
-        empty:
-          column.id === "in-progress" ? "Nothing in progress" : "No tickets",
-        virtual: false,
-        cards: grouped.get(column.id) ?? [],
-      })),
-      mirrors,
-    );
-  }, [cards, virtualColumns, hiddenColumns, sort]);
+  }, [cards, hiddenColumns, sort]);
   const sizes = columns.map((column) => column.cards.length);
   const firstNonEmpty = Math.max(
     0,
@@ -218,10 +192,7 @@ export function BoardView(props: BoardViewProps) {
 
   const keyOf = (column: number, row: number) => `${column}:${row}`;
   const findCard = (id: string) =>
-    [...refs.current.values()].find(
-      (element) =>
-        element.dataset.ticket === id && element.dataset.mirrored === undefined,
-    );
+    [...refs.current.values()].find((element) => element.dataset.ticket === id);
 
   // Keep the selected card (and so its column) in view as the panel opens
   // beside the board, without moving focus.
@@ -246,54 +217,51 @@ export function BoardView(props: BoardViewProps) {
     }
   }, [cards]);
 
-  const onKey =
-    (card: Card, mirrored = false) =>
-    (event: KeyboardEvent<HTMLButtonElement>) => {
-      if (mirrored && event.shiftKey) return;
-      if (
-        event.shiftKey &&
-        onMove &&
-        (event.key === "ArrowUp" || event.key === "ArrowDown")
-      ) {
-        event.preventDefault();
-        if (!reorderable || card.column === "done") return;
-        const shown =
-          columns.find((column) => column.id === card.column)?.cards ?? [];
-        const after = afterForStep(
-          shown,
-          card,
-          event.key === "ArrowUp" ? "up" : "down",
-        );
-        if (after !== null) {
-          refocus.current = card.id;
-          onMove(card, card.column, after);
-        }
-        return;
-      }
-      if (
-        event.shiftKey &&
-        onMove &&
-        (event.key === "ArrowLeft" || event.key === "ArrowRight")
-      ) {
-        event.preventDefault();
-        const target = neighbourColumn(
-          hiddenColumns,
-          card.column,
-          event.key === "ArrowLeft" ? -1 : 1,
-        );
-        if (target) {
-          refocus.current = card.id;
-          onMove(card, target);
-        }
-        return;
-      }
-      const move = keyMoves[event.key];
-      if (!move) return;
+  const onKey = (card: Card) => (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (
+      event.shiftKey &&
+      onMove &&
+      (event.key === "ArrowUp" || event.key === "ArrowDown")
+    ) {
       event.preventDefault();
-      const next = moveInGrid(sizes, active, move);
-      moveCursor(next.column, next.row);
-      refs.current.get(keyOf(next.column, next.row))?.focus();
-    };
+      if (!reorderable || card.column === "done") return;
+      const shown =
+        columns.find((column) => column.id === card.column)?.cards ?? [];
+      const after = afterForStep(
+        shown,
+        card,
+        event.key === "ArrowUp" ? "up" : "down",
+      );
+      if (after !== null) {
+        refocus.current = card.id;
+        onMove(card, card.column, after);
+      }
+      return;
+    }
+    if (
+      event.shiftKey &&
+      onMove &&
+      (event.key === "ArrowLeft" || event.key === "ArrowRight")
+    ) {
+      event.preventDefault();
+      const target = neighbourColumn(
+        hiddenColumns,
+        card.column,
+        event.key === "ArrowLeft" ? -1 : 1,
+      );
+      if (target) {
+        refocus.current = card.id;
+        onMove(card, target);
+      }
+      return;
+    }
+    const move = keyMoves[event.key];
+    if (!move) return;
+    event.preventDefault();
+    const next = moveInGrid(sizes, active, move);
+    moveCursor(next.column, next.row);
+    refs.current.get(keyOf(next.column, next.row))?.focus();
+  };
 
   const workstreamTitle = (card: Card) =>
     workstreams
@@ -312,7 +280,7 @@ export function BoardView(props: BoardViewProps) {
   });
 
   const shownIn = (id: string) =>
-    columns.find((column) => column.id === id && !column.virtual)?.cards ?? [];
+    columns.find((column) => column.id === id)?.cards ?? [];
 
   // dropAt finds where in the hovered column a drop would land: below every
   // shown card whose middle is above the pointer. Done keeps most recent
@@ -417,12 +385,7 @@ export function BoardView(props: BoardViewProps) {
           style={{ "--board-columns": columns.length } as CSSProperties}
         >
           {columns.map((column, columnIndex) => (
-            <DropColumn
-              key={column.id}
-              id={column.id}
-              enabled={!!onMove && !column.virtual}
-              virtual={column.virtual}
-            >
+            <DropColumn key={column.id} id={column.id} enabled={!!onMove}>
               {/* The title alone names the column region. */}
               <WellHead
                 sticky
@@ -432,13 +395,6 @@ export function BoardView(props: BoardViewProps) {
                   column.id === "done" && doneTotal > column.cards.length
                     ? `${column.cards.length} of ${doneTotal}`
                     : column.cards.length
-                }
-                mark={
-                  column.virtual
-                    ? column.id === "needs-you"
-                      ? "needs-you"
-                      : "working"
-                    : undefined
                 }
               />
               <div className="flex flex-1 flex-col gap-2.5 pt-0.5 pb-3">
@@ -473,21 +429,6 @@ export function BoardView(props: BoardViewProps) {
                       refs.current.set(keyOf(columnIndex, rowIndex), node);
                     else refs.current.delete(keyOf(columnIndex, rowIndex));
                   };
-                  if (column.virtual) {
-                    return (
-                      <TicketCard
-                        key={`${card.project}/${card.id}`}
-                        ref={ref}
-                        {...cardProps(card)}
-                        mirrored
-                        selected={selected?.id === card.id}
-                        tabIndex={isActive ? 0 : -1}
-                        onOpen={() => onOpen({ id: card.id })}
-                        onKeyDown={onKey(card, true)}
-                        onFocus={() => moveCursor(columnIndex, rowIndex)}
-                      />
-                    );
-                  }
                   return (
                     <div
                       key={`${card.project}/${card.id}`}
@@ -564,12 +505,10 @@ function DropLine({ edge }: { edge: "top" | "end" }) {
 function DropColumn({
   id,
   enabled,
-  virtual,
   children,
 }: {
-  id: Column | VirtualColumn;
+  id: Column;
   enabled: boolean;
-  virtual: boolean;
   children: ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled: !enabled });
@@ -577,7 +516,6 @@ function DropColumn({
     <section
       ref={setNodeRef}
       data-column={id}
-      data-virtual={virtual ? "" : undefined}
       aria-labelledby={`column-${id}`}
       className={`${wellSurface} snap-start transition-[border-color,box-shadow] ${
         isOver

@@ -29,6 +29,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Needs you is a filter chip instead of a column (FH-44, D31). The Needs
+  you column, which repeated tickets already shown in their own columns, is
+  gone. While a ticket needs you, a *Needs you* chip leads the Board's chip
+  row: a click shows only the tickets with a run in Needs you or an open
+  question, Cmd-click (Ctrl-click off macOS) hides them, and a second click
+  restores the board. It combines with the other filters and is remembered
+  with them. The band's Needs you pill, the rail badges and the card's
+  Needs you mark are unchanged. A saved `ui.virtual_columns` setting is
+  ignored and removed on the next save.
 - The Board toolbar is decluttered (FH-39). Filters are buttons named for
   what they filter (Type, Priority, Workstream, State) with a count badge
   while applied, each opening a list of values; View options (⋯) holds the

@@ -42,15 +42,15 @@ const (
 )
 
 var (
-	themes         = []string{ThemeSystem, ThemeLight, ThemeDark}
-	densities      = []string{DensityCompact, DensityNormal, DensityDetailed}
-	virtualColumns = []string{"needs-you"}
-	hiddenColumns  = []string{"backlog"}
-	colourBys      = []string{"type", "priority", "age", "none"}
-	views          = []string{"", "board", "agents", "workstreams", "table"}
-	states         = []string{"", "all", "blocked", "unblocked", "repair", "working"}
-	ages           = []string{"today", "week", "older"}
-	scopeName      = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
+	themes        = []string{ThemeSystem, ThemeLight, ThemeDark}
+	densities     = []string{DensityCompact, DensityNormal, DensityDetailed}
+	hiddenColumns = []string{"backlog"}
+	colourBys     = []string{"type", "priority", "age", "none"}
+	views         = []string{"", "board", "agents", "workstreams", "table"}
+	states        = []string{"", "all", "blocked", "unblocked", "repair", "working"}
+	needsYous     = []string{"", "only", "hidden"}
+	ages          = []string{"today", "week", "older"}
+	scopeName     = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )
 
 // Config is the global configuration (CFG-1, CFG-2).
@@ -96,10 +96,11 @@ type Attachments struct {
 
 // UI holds interface preferences saved through the backend (CFG-2).
 type UI struct {
-	Theme          string   `yaml:"theme"`
-	Density        string   `yaml:"density"`
-	ColourBy       string   `yaml:"colour_by"`
-	VirtualColumns []string `yaml:"virtual_columns"`
+	// The virtual_columns setting of earlier versions is ignored: Needs you
+	// and Agent working became filters (FH-42, FH-44).
+	Theme    string `yaml:"theme"`
+	Density  string `yaml:"density"`
+	ColourBy string `yaml:"colour_by"`
 	// HiddenColumns lists the real columns hidden from the Board; only the
 	// Backlog can be hidden (FH-41).
 	HiddenColumns []string `yaml:"hidden_columns"`
@@ -117,6 +118,9 @@ type Scope struct {
 	Workstream Choice `yaml:"workstream,omitempty" json:"workstream"`
 	Age        Choice `yaml:"age,omitempty" json:"age"`
 	State      string `yaml:"state,omitempty" json:"state"`
+	// NeedsYou is the Needs you chip: only those tickets, or them hidden
+	// (FH-44).
+	NeedsYou string `yaml:"needs_you,omitempty" json:"needsYou"`
 }
 
 // Choice is one filter dimension: the values shown only (Include) and the
@@ -168,7 +172,7 @@ func Defaults() Config {
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
-		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", VirtualColumns: []string{"needs-you"}, HiddenColumns: []string{}},
+		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", HiddenColumns: []string{}},
 	}
 }
 
@@ -219,11 +223,6 @@ func Parse(data []byte) (Config, error) {
 	if err := document.Decode(&config); err != nil {
 		return Config{}, fmt.Errorf("parse config.yaml: %w", err)
 	}
-	// The Agent working column was retired for the State filter (FH-42); a
-	// saved one is dropped rather than refused.
-	if config.UI.VirtualColumns != nil {
-		config.UI.VirtualColumns = slices.DeleteFunc(config.UI.VirtualColumns, func(column string) bool { return column == "agent-working" })
-	}
 	return config, config.validate()
 }
 
@@ -272,9 +271,6 @@ func (u UI) problems() []string {
 	oneOf("ui.theme", u.Theme, themes)
 	oneOf("ui.density", u.Density, densities)
 	oneOf("ui.colour_by", u.ColourBy, colourBys)
-	for _, column := range u.VirtualColumns {
-		oneOf("ui.virtual_columns", column, virtualColumns)
-	}
 	for _, column := range u.HiddenColumns {
 		oneOf("ui.hidden_columns", column, hiddenColumns)
 	}
@@ -285,6 +281,7 @@ func (u UI) problems() []string {
 		}
 		oneOf("ui.scopes."+name+".view", scope.View, views)
 		oneOf("ui.scopes."+name+".state", scope.State, states)
+		oneOf("ui.scopes."+name+".needs_you", scope.NeedsYou, needsYous)
 		for _, value := range scope.Age.values() {
 			oneOf("ui.scopes."+name+".age", value, ages)
 		}

@@ -308,16 +308,17 @@ ui:
   theme: system           # system | light | dark
   density: normal         # compact | normal | detailed
   colour_by: type         # type | priority | age | none
-  virtual_columns: [needs-you]   # needs-you; [] shows none (agent-working is ignored)
   hidden_columns: []      # real columns left off the Board: backlog (FH-41); absent shows all
   scopes:                 # remembered view and filters, per project or "all"
-    flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked}   # view: board, agents, workstreams or table
+    flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked, needs_you: only}   # view: board, agents, workstreams or table; needs_you: only or hidden
 ```
 
 Each of a scope's `type`, `priority`, `workstream` and `age` (today, week or
 older) filters lists the values shown only (`include`, any of them) and the
 values hidden (`exclude`), at most 100 each. A bare value, the form before
-FH-39, reads as one included value; `hide_later` is ignored.
+FH-39, reads as one included value; `hide_later` is ignored. `needs_you` is
+the Needs you chip (FH-44). The `virtual_columns` list of earlier versions
+is ignored, and dropped when preferences are next saved.
 
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
 other settings, unknown keys and comments.

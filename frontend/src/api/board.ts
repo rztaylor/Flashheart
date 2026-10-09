@@ -64,7 +64,7 @@ export interface Card {
   warnings: string[];
   searchText?: string;
   // live is the linked run that most needs attention (VIEW-8); needsYou
-  // places the card in the Needs you column (VIEW-2), and agentWorking
+  // answers the Needs you chip (VIEW-2, FH-44), and agentWorking
   // answers the Agent working State filter (FH-42).
   live?: Live;
   needsYou: boolean;

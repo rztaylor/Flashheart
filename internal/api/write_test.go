@@ -247,17 +247,16 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	handler, root := writableAPI(t)
 	var prefs Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
-	if prefs.Theme != "system" || prefs.ColourBy != "type" || prefs.Scopes == nil || !slices.Equal(prefs.VirtualColumns, []string{"needs-you"}) {
+	if prefs.Theme != "system" || prefs.ColourBy != "type" || prefs.Scopes == nil {
 		t.Errorf("defaults = %+v", prefs)
 	}
 	prefs.Theme, prefs.Density, prefs.ColourBy = "dark", "compact", "priority"
-	prefs.VirtualColumns = []string{}
-	prefs.Scopes["alpha"] = config.Scope{View: "table", Type: config.Choice{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked"}
+	prefs.Scopes["alpha"] = config.Scope{View: "table", Type: config.Choice{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked", NeedsYou: "only"}
 	prefs.Scopes["beta"] = config.Scope{View: "agents"}
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
-	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || !slices.Equal(again.Scopes["alpha"].Type.Include, []string{"bug"}) || again.Scopes["beta"].View != "agents" || len(again.VirtualColumns) != 0 {
+	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || !slices.Equal(again.Scopes["alpha"].Type.Include, []string{"bug"}) || again.Scopes["beta"].View != "agents" || again.Scopes["alpha"].NeedsYou != "only" {
 		t.Errorf("saved = %+v", again)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
@@ -266,15 +265,9 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	}
 	prefs.ColourBy = "rainbow"
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
-	prefs.ColourBy, prefs.VirtualColumns = "type", []string{"mystery"}
+	prefs.ColourBy = "type"
+	prefs.Scopes["alpha"] = config.Scope{View: "table", NeedsYou: "sometimes"}
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
-	// An absent list means none shown, not the default.
-	prefs.VirtualColumns = nil
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
-	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
-	if again.VirtualColumns == nil || len(again.VirtualColumns) != 0 {
-		t.Errorf("cleared virtual columns = %#v", again.VirtualColumns)
-	}
 }
 
 // The Backlog can be hidden from the Board (FH-41); a config without the

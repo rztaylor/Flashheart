@@ -126,12 +126,11 @@ describe("run validators", () => {
     expect(isCard({ ...card, needsYou: undefined })).toBe(false);
   });
 
-  it("check saved virtual columns", () => {
+  it("check saved preferences", () => {
     const preferences = {
       theme: "system",
       density: "normal",
       colourBy: "type",
-      virtualColumns: ["needs-you"],
       hiddenColumns: [],
       scopes: {},
     };
@@ -146,12 +145,6 @@ describe("run validators", () => {
     expect(isPreferences({ ...preferences, hiddenColumns: undefined })).toBe(
       false,
     );
-    expect(isPreferences({ ...preferences, virtualColumns: ["mystery"] })).toBe(
-      false,
-    );
-    expect(
-      isPreferences({ ...preferences, virtualColumns: ["agent-working"] }),
-    ).toBe(false);
     expect(
       isPreferences({
         ...preferences,
@@ -163,10 +156,25 @@ describe("run validators", () => {
             workstream: { include: [], exclude: ["board-ui"] },
             age: { include: [], exclude: [] },
             state: "working",
+            needsYou: "only",
           },
         },
       }),
     ).toBe(true);
+    const scope = {
+      view: "board",
+      type: { include: [], exclude: [] },
+      priority: { include: [], exclude: [] },
+      workstream: { include: [], exclude: [] },
+      age: { include: [], exclude: [] },
+      state: "",
+    };
+    expect(
+      isPreferences({
+        ...preferences,
+        scopes: { alpha: { ...scope, needsYou: "sometimes" } },
+      }),
+    ).toBe(false);
     // Filters are lists since FH-39; the single-value form is read only by
     // the server.
     expect(

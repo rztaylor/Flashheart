@@ -1,4 +1,4 @@
-import { appendFile } from "node:fs/promises";
+import { appendFile, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -156,13 +156,8 @@ test("the band plate opens the Agents view from any project", async () => {
   );
 });
 
-test("cards carry live runs and the Needs you column mirrors them", async () => {
+test("cards carry live runs and the Needs you chip filters to them (FH-44)", async () => {
   await open("#/p/alpha/board");
-  const needsColumn = page.getByRole("region", { name: /^Needs you/ });
-  const mirror = needsColumn.getByRole("button", {
-    name: /^Card panel, AL-3, .*also in In progress/,
-  });
-  await expect(mirror).toBeVisible();
   const real = page
     .getByRole("region", { name: /^In progress/ })
     .getByRole("button", { name: /^Card panel, AL-3, Claude needs you/ });
@@ -173,52 +168,85 @@ test("cards carry live runs and the Needs you column mirrors them", async () => 
   await expect(face.getByText("Permission for Bash")).toBeVisible();
   await expect(face.getByText("2/5 · Runs tab timeline")).toBeVisible();
 
-  // A mirrored card takes arrow keys but not moves: Shift with an arrow on
-  // it changes nothing.
-  await mirror.focus();
-  await page.keyboard.press("Shift+ArrowRight");
-  await expect(mirror).toBeVisible();
-  await expect(real).toBeVisible();
-  // Needs you stands between In progress and Ready to review.
-  await page.keyboard.press("ArrowRight");
-  await expect(
-    page
-      .getByRole("region", { name: /^Ready to review/ })
-      .getByRole("button")
-      .first(),
-  ).toBeFocused();
-
-  // Needs you is the one virtual column, and can be hidden; Agent working is
-  // a State filter, never a column (FH-42).
+  // Needs you and Agent working are filters, never columns (FH-42, FH-44);
+  // the View options menu no longer offers them.
+  await expect(page.getByRole("region", { name: /^Needs you/ })).toHaveCount(0);
   await expect(
     page.getByRole("region", { name: /^Agent working/ }),
   ).toHaveCount(0);
+  await page.getByRole("button", { name: "View options" }).click();
+  await expect(page.getByRole("checkbox", { name: "Needs you" })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("Escape");
+
+  // The Needs you chip leads the chip row: a click shows only the tickets
+  // that need you, Cmd or Ctrl click hides them, a second click restores.
+  const cards = page.locator("[data-ticket]");
+  const total = await cards.count();
+  const chip = page
+    .getByRole("group", { name: "Filter by tickets that need you" })
+    .getByRole("button");
+  await expect(chip).toHaveAccessibleName("Needs you");
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await expect(real).toBeVisible();
+  await expect(cards).toHaveCount(1);
+  await expect(page.getByText(`1 of ${total} tickets`)).toBeVisible();
+  for (const theme of ["light", "dark"]) {
+    await open("#/p/alpha/board", { theme });
+    await shot(`board-needs-you-1440-${theme}`);
+  }
+  await open("#/p/alpha/board", { width: 390, height: 844 });
+  await expect(chip).toBeVisible();
+  for (const theme of ["light", "dark"]) {
+    await open("#/p/alpha/board", { width: 390, height: 844, theme });
+    await shot(`board-needs-you-390-${theme}`);
+  }
+  await open("#/p/alpha/board");
+  // The chip is remembered with the project's other filters.
+  await expect
+    .poll(() =>
+      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
+    )
+    .toContain("needs_you: only");
+  await page.reload();
+  await open("#/p/alpha/board");
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await chip.click();
+  await expect(cards).toHaveCount(total);
+  await chip.click({ modifiers: ["ControlOrMeta"] });
+  await expect(chip).toHaveAccessibleName("Needs you, hidden");
+  await expect(real).toHaveCount(0);
+  await expect(cards).toHaveCount(total - 1);
+  await expect
+    .poll(() =>
+      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
+    )
+    .toContain("needs_you: hidden");
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(real).toBeVisible();
+  await expect
+    .poll(() =>
+      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
+    )
+    .not.toContain("needs_you");
+
+  // Agent working is a State option; AL-3's run waits on a permission, so
+  // it is not at work.
   const state = await filterMenu(page, "State");
   await state.getByRole("button", { name: "Agent working" }).click();
   await expect(filterButton(page, "State")).toHaveAccessibleName(
     "State: Agent working",
   );
-  // AL-3's run waits on a permission; it is not at work.
   await expect(real).toHaveCount(0);
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(real).toBeVisible();
-  await page.getByRole("button", { name: "View options" }).click();
-  await expect(
-    page.getByRole("checkbox", { name: "Agent working" }),
-  ).toHaveCount(0);
-  await page.getByRole("checkbox", { name: "Needs you" }).uncheck();
-  await expect(needsColumn).toHaveCount(0);
-  await page.getByRole("checkbox", { name: "Needs you" }).check();
-  await page.keyboard.press("Escape");
-  await expect(mirror).toBeVisible();
-  // Turning it back on shows it again.
-  await expect(needsColumn.getByRole("heading")).toBeInViewport();
   await expectNoAxeViolations("board with runs");
   for (const theme of ["light", "dark"]) {
     await page.reload();
     await open("#/p/alpha/board", { theme });
-    await expect(needsColumn.getByRole("heading")).toBeInViewport();
-    await expect(mirror).toBeInViewport();
+    await expect(real).toBeInViewport();
     await shot(`board-runs-1440-${theme}`);
   }
 
@@ -283,8 +311,7 @@ test("a question from an agent is answered on the board and delivered with its n
   expect(asked).toContain("the answer will arrive in a later prompt");
 
   await open("#/p/alpha/board");
-  const needsColumn = page.getByRole("region", { name: /^Needs you/ });
-  const card = needsColumn.getByRole("button", {
+  const card = page.getByRole("button", {
     name: /^Project skeleton, AL-1, needs you: question waiting/,
   });
   await expect(card).toBeVisible();
@@ -378,11 +405,9 @@ test("a question answered in the session's own chat leaves Needs you", async () 
     options: ["Rename", "Keep"],
   });
   await open("#/p/alpha/board");
-  const card = page
-    .getByRole("region", { name: /^Needs you/ })
-    .getByRole("button", {
-      name: /^Project skeleton, AL-1, needs you: question waiting/,
-    });
+  const card = page.getByRole("button", {
+    name: /^Project skeleton, AL-1, needs you: question waiting/,
+  });
   await expect(card).toBeVisible();
 
   // A background command finishing is not the user answering.

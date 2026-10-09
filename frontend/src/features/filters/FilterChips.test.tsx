@@ -14,10 +14,13 @@ const brief = (slug: string, done: number, total: number): WorkstreamBrief => ({
   total,
 });
 
-const card = (workstream: string, column: Card["column"]) =>
-  ({ workstream, column }) as Card;
+const card = (workstream: string, column: Card["column"], needsYou = false) =>
+  ({ workstream, column, needsYou }) as Card;
 
-const render = (filters: Filters = emptyFilters) =>
+const render = (
+  filters: Filters = emptyFilters,
+  cards = [card("busy", "in-progress"), card("busy", "review")],
+) =>
   renderToStaticMarkup(
     <FilterChips
       workstreams={[
@@ -26,7 +29,7 @@ const render = (filters: Filters = emptyFilters) =>
         brief("over", 2, 2),
       ]}
       lines={new Map()}
-      cards={[card("busy", "in-progress"), card("busy", "review")]}
+      cards={cards}
       paint="type"
       paints={[
         { token: "type-feature", label: "feature", value: "feature" },
@@ -64,5 +67,23 @@ describe("FilterChips", () => {
 
   it("never wraps the workstream row", () => {
     expect(render()).toContain("flex-nowrap");
+  });
+
+  it("leads with a Needs you chip while a ticket needs you (FH-44)", () => {
+    expect(render()).not.toContain("Needs you");
+    const waiting = [card("busy", "in-progress", true), card("busy", "review")];
+    const markup = render(emptyFilters, waiting);
+    expect(markup).toContain('aria-label="Filter by tickets that need you"');
+    expect(markup.indexOf("Needs you")).toBeLessThan(markup.indexOf("BUSY"));
+    expect(markup).toMatch(/aria-pressed="false"[^>]*>(<[^>]*>)*Needs you/);
+    expect(render({ ...emptyFilters, needsYou: "included" }, waiting)).toMatch(
+      /aria-pressed="true"[^>]*>(<[^>]*>)*Needs you/,
+    );
+  });
+
+  it("keeps a chosen Needs you chip to restore once nothing needs you", () => {
+    expect(render({ ...emptyFilters, needsYou: "excluded" })).toContain(
+      'aria-label="Needs you, hidden"',
+    );
   });
 });

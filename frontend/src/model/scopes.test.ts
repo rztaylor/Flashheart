@@ -11,6 +11,7 @@ describe("remembered scopes", () => {
       type: { include: ["bug", "spike"], exclude: [] },
       workstream: { include: [], exclude: ["board-ui"] },
       state: "blocked" as const,
+      needsYou: "excluded" as const,
     };
     const saved = rememberScope(filters, "table");
     expect(saved).toEqual({
@@ -20,9 +21,13 @@ describe("remembered scopes", () => {
       workstream: { include: [], exclude: ["board-ui"] },
       age: { include: [], exclude: [] },
       state: "blocked",
+      needsYou: "hidden",
     });
     expect(filtersFor(saved, "kept")).toEqual({ ...filters, query: "kept" });
     expect(filtersFor(undefined)).toEqual(emptyFilters);
+    expect(
+      filtersFor(rememberScope({ ...emptyFilters, needsYou: "included" }, "")),
+    ).toEqual({ ...emptyFilters, needsYou: "included" });
     expect(sameScope(saved, rememberScope(filters, "table"))).toBe(true);
     expect(sameScope(saved, rememberScope(filters, "board"))).toBe(false);
     expect(
@@ -32,6 +37,12 @@ describe("remembered scopes", () => {
           { ...filters, type: { include: ["bug"], exclude: [] } },
           "table",
         ),
+      ),
+    ).toBe(false);
+    expect(
+      sameScope(
+        saved,
+        rememberScope({ ...filters, needsYou: "included" }, "table"),
       ),
     ).toBe(false);
   });

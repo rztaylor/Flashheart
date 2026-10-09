@@ -9,6 +9,7 @@ import {
 import type { Card, WorkstreamBrief } from "../../api/board";
 import { FilterChip } from "../../components/FilterChip";
 import { LineBullet } from "../../components/LineBullet";
+import { RunStateMark } from "../../components/RunState";
 import {
   type ChoiceKey,
   chipWorkstreams,
@@ -16,6 +17,7 @@ import {
   type Filters,
   fittingCount,
   toggleChoice,
+  toggleState,
 } from "../../model/filters";
 import type { Line } from "../../model/lines";
 import {
@@ -41,9 +43,9 @@ interface FilterChipsProps {
 // The chip gap, gap-2 in the rows below.
 const GAP = 8;
 
-// FilterChips is the Board's chip row (FH-39): the project's workstreams,
-// busiest first, and the colour key for the Colour by setting, both as
-// filters. A click shows only a value, Cmd or Ctrl click hides it, and a
+// FilterChips is the Board's chip row (FH-39): a Needs you chip while a
+// ticket needs you (FH-44), the project's workstreams, busiest first, and
+// the colour key for the Colour by setting, all as filters. A click shows only a value, Cmd or Ctrl click hides it, and a
 // click on a chosen chip restores it. The row keeps to one line: chips that
 // do not fit stay out of view, colour chips first; the toolbar menus list
 // every value.
@@ -59,7 +61,11 @@ export function FilterChips({
   const chosen = [...filters.workstream.include, ...filters.workstream.exclude];
   const shown = chipWorkstreams(workstreams, cards, chosen);
   const colourKey: ChoiceKey | undefined = paint === "none" ? undefined : paint;
-  if (shown.length === 0 && (!colourKey || paints.length === 0)) return null;
+  // Needs you stays while chosen, so it can be restored once nothing does.
+  const needsYou =
+    filters.needsYou !== "idle" || cards.some((card) => card.needsYou);
+  if (!needsYou && shown.length === 0 && (!colourKey || paints.length === 0))
+    return null;
   const toggle = (key: ChoiceKey, value: string, exclude: boolean) =>
     onChange({ ...filters, [key]: toggleChoice(filters[key], value, exclude) });
   const modeName = PAINT_MODES.find((mode) => mode.value === paint)?.label;
@@ -67,6 +73,24 @@ export function FilterChips({
     // Both groups keep to one line. Workstreams keep their width up to the
     // row's; only the colour chips shrink, so they give way first.
     <div className="flex items-center gap-x-6 overflow-hidden border-t border-rule px-4 py-2.5 md:px-6">
+      {needsYou ? (
+        <fieldset
+          aria-label="Filter by tickets that need you"
+          className="-m-1 flex shrink-0 p-1"
+        >
+          <FilterChip
+            name="Needs you"
+            bullet={<NeedsYouBullet />}
+            state={filters.needsYou}
+            onToggle={(exclude) =>
+              onChange({
+                ...filters,
+                needsYou: toggleState(filters.needsYou, exclude),
+              })
+            }
+          />
+        </fieldset>
+      ) : null}
       {shown.length > 0 ? (
         <fieldset className="flex max-w-full min-w-0 shrink-0 items-center gap-2">
           <legend className="sr-only">
@@ -135,6 +159,19 @@ function PaintBullet({ paint }: { paint: Paint }) {
       className="inline-block size-5 shrink-0 rounded-full bg-(--paint) shadow-[inset_0_0_0_1px_var(--fh-casing)]"
       style={paintVars(paint)}
     />
+  );
+}
+
+// NeedsYouBullet is the Needs you chip's bullet: the run mark on the
+// attention colour, as the band's Needs you pill shows it.
+function NeedsYouBullet() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-attention text-on-attention"
+    >
+      <RunStateMark state="needs-you" size={8} />
+    </span>
   );
 }
 

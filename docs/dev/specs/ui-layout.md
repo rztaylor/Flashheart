@@ -64,7 +64,7 @@ The header's far end holds *Archive* and, on Board and Table, **New ticket**
 button per filter, named for what it filters with no separate label, Type,
 Priority, Workstream and State, then *Clear filters* while any filter or chip
 applies; right-aligned, Board only, one icon button, *View options* (⋯),
-whose menu holds Show columns (Backlog, Needs you), Colour by and
+whose menu holds Show columns (Backlog), Colour by and
 Density (FH-39, FH-41). An applied filter's button takes the select border and ring
 and a count badge (*State: Blocked* for the one-choice State). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
@@ -74,7 +74,9 @@ chosen value restores it; values of one filter match any, filters combine.
 Menus open below their button on the lifted popover surface and close on
 Escape (focus returns to the button), a click outside or tabbing away.
 
-**Chip row** (Board): on the left the label *Workstreams* and one chip per
+**Chip row** (Board): first, while a ticket in scope needs you or it is
+chosen, the *Needs you* chip (the Needs you run mark on an attention disc as
+its bullet; `VIEW-2`, FH-44); then the label *Workstreams* and one chip per
 workstream of the project in scope (bullet and name), busiest first (most
 tickets neither done nor in the backlog), finished workstreams left out
 unless chosen; right-aligned, one chip per Colour by value present (a round
@@ -82,7 +84,7 @@ paint bullet and the value's word). Both are filters with the menus' click
 rules: a shown-only chip takes the selection ring, a hidden one is dashed and
 struck through. The row never wraps: chips that do not fit stay out of view,
 colour chips before workstreams; the menus list every value. Hidden when
-there are neither workstream chips nor colour chips.
+there are no Needs you, workstream or colour chips.
 
 **Panel** beside the main view at clamp(26rem, 32vw, 35rem), narrowing it
 (`CARD-1`); it covers the view below the band under 48rem.
@@ -93,17 +95,16 @@ load) sit as a full-width strip under the band, above the rail and Main.
 ## 2. Board
 
 - Columns in workflow order: Backlog, Up next, In progress, Ready to review,
-  Done (`VIEW-1`). Needs you stands between In progress and Ready to review
-  while it holds tickets and is switched on (`VIEW-2`); it holds mirrored
-  cards and never accepts a drop. Agent working is a State filter option
-  (*State: Agent working*), not a column (FH-42).
+  Done (`VIEW-1`). A ticket shows once, in its own column. Needs you is a
+  chip in the chip row (`VIEW-2`, FH-44) and Agent working a State filter
+  option (*State: Agent working*, FH-42), not columns.
 - The Backlog can be hidden with View options › Show columns (shown by
   default; FH-41) so the columns being worked on get its width. Hidden, it
   leaves every width, the narrow Column picker included, and Shift with an
   arrow or a drag never targets it. Its tickets still count in the page
   header and the chip ordering, and the Table and Workstreams are unchanged.
 - A column is a rounded well. Its head: count badge, then the title in the
-  display cut (virtual columns add their run mark). Done reads `n of N`
+  display cut. Done reads `n of N`
   while the done limit hides tickets, with *Show all N* / *Show recent only*
   at the foot. An empty column says *No tickets* (*Nothing in progress* for
   In progress).
@@ -133,7 +134,7 @@ reorders them.
 | --- | --- | --- | --- | --- |
 | 1 | Header: id, project name (All projects only), running time right | ✓ | ✓ | ✓ |
 | 2 | Title, wrapping to at most three lines (full title in its tooltip and the card's name) | ✓ | ✓ | ✓ |
-| 3 | Tags: workstream bullet, type tag, age tag (Colour by Age), *in <column>* on a mirror | ✓ | ✓ | ✓ |
+| 3 | Tags: workstream bullet, type tag, age tag (Colour by Age) | ✓ | ✓ | ✓ |
 | 4 | Needs repair note | ✓ | ✓ | ✓ |
 | 5 | Blocker pill (diamond, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
 | 6 | Live badge: run state and agent, permission reason, last activity; plan step `done/total · step` (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
@@ -352,8 +353,8 @@ other than the above, the above wins:
   footer, so it shows at every width and with the rail collapsed.
 - **Omissions the references do not show but the product keeps**: project
   route bars and counts in the rail, the filter buttons, the
-  ticket count, virtual columns and their toggles, the colour chips, mirrored
-  cards, repair, wait notes, the project name on All-projects cards,
+  ticket count, the Needs you chip, the Backlog toggle, the colour chips,
+  repair, wait notes, the project name on All-projects cards,
   attachments and review markers, Archive, the Edit and Runs tabs' content,
   the board root and version, Agents and Table.
 - **Additions the references show but the product does not have**: a card
