@@ -353,6 +353,19 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   answerable, marked as waiting for the session to resume; it does not
   need you (`VIEW-2`). A board that cannot record answers shows questions
   without an answer form.
+- `RUN-9` Each ticket's board data summarises the runs working for it,
+  derived from the same events (FH-50): the sessions linked to it, their
+  subagents that inherit the link (no claim of their own, or a claim on
+  the session's ticket), and subagents that claimed it themselves, each
+  counted once. A subagent that claimed another ticket counts only on
+  that ticket. The summary names the run that speaks for the ticket (the live one
+  that most needs attention, else the most recently active; a subagent
+  only when its session is not linked to the ticket), with its agent,
+  state and **dirty** / **no handoff** flags (`RUN-3`); the latest
+  activity of any of them; and the subagents as counts: done (Ended),
+  running and needs you (subagents never wait). An in-progress ticket that
+  no live run works on is marked **no live session**, with its last
+  activity when it had runs.
 
 ### 6.8 Hooks (`HOOK`)
 

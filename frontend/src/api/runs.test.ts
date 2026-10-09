@@ -130,6 +130,61 @@ describe("run validators", () => {
     expect(isCard({ ...card, needsYou: undefined })).toBe(false);
   });
 
+  it("check a card's session summary", () => {
+    const card = {
+      project: "alpha",
+      id: "AL-3",
+      slug: "card-panel",
+      column: "in-progress",
+      title: "Card panel",
+      type: "feature",
+      priority: "high",
+      workstream: "",
+      tags: [],
+      modified: "",
+      criteria: { done: 0, total: 0 },
+      excerpt: "",
+      handoffNext: "",
+      blocked: false,
+      blockedBy: [],
+      needsRepair: [],
+      warnings: [],
+      needsYou: false,
+      agentWorking: true,
+      openQuestions: 0,
+    };
+    const sessions = {
+      run: "claude:s",
+      short: "claude:s",
+      agent: "claude",
+      state: "working",
+      lastActivity: "2026-10-06T07:05:00Z",
+      noLiveSession: false,
+      dirty: true,
+      noHandoff: false,
+      subagents: { done: 3, running: 2, needsYou: 0 },
+    };
+    expect(isCard({ ...card, sessions })).toBe(true);
+    // An in-progress ticket with no run at all has no state.
+    const nobody = {
+      ...sessions,
+      run: "",
+      short: "",
+      agent: "",
+      state: "",
+      lastActivity: "",
+      noLiveSession: true,
+      subagents: { done: 0, running: 0, needsYou: 0 },
+    };
+    expect(isCard({ ...card, sessions: nobody })).toBe(true);
+    expect(isCard({ ...card, sessions: { ...sessions, state: "busy" } })).toBe(
+      false,
+    );
+    expect(
+      isCard({ ...card, sessions: { ...sessions, subagents: { done: 1 } } }),
+    ).toBe(false);
+  });
+
   it("check saved preferences", () => {
     const preferences = {
       theme: "system",

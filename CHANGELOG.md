@@ -123,6 +123,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Each card in the board API carries a `sessions` summary of the runs
+  working for its ticket (FH-50, RUN-9): the live agent and its state, the
+  last activity, whether the handoff is behind the session's work, and its
+  subagents counted as done, running and needing you. An in-progress ticket
+  that no live session works on is marked `noLiveSession`. It is derived
+  from the events already recorded; hooks are unchanged. The Overview
+  (FH-47) builds on it.
 - The Board can hide the Backlog column (FH-41): View options › Show
   columns has a Backlog checkbox, checked by default. Hidden, the columns
   being worked on get its width, the phone Column picker leaves it out, and

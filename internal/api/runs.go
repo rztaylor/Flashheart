@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/protocol"
@@ -61,6 +62,49 @@ type LiveJSON struct {
 	// session's next prompt.
 	QuestionAnswered bool   `json:"questionAnswered"`
 	LastActivity     string `json:"lastActivity"`
+}
+
+// SessionsJSON summarises the sessions working for a ticket (RUN-9): the
+// run that speaks for it (the live one that most needs attention, else the
+// most recently active; empty with no run), its state ("ended" when none is
+// live, "" with no run), the latest activity of any of them, its handoff
+// flags, and the ticket's subagents by state.
+type SessionsJSON struct {
+	Run          string `json:"run"`
+	Short        string `json:"short"`
+	Agent        string `json:"agent"`
+	State        string `json:"state"`
+	LastActivity string `json:"lastActivity"`
+	// NoLiveSession marks an in-progress ticket no live run works on.
+	NoLiveSession bool               `json:"noLiveSession"`
+	Dirty         bool               `json:"dirty"`
+	NoHandoff     bool               `json:"noHandoff"`
+	Subagents     SubagentCountsJSON `json:"subagents"`
+}
+
+// SubagentCountsJSON counts a ticket's subagents: Done (ended), Running
+// and NeedsYou.
+type SubagentCountsJSON struct {
+	Done     int `json:"done"`
+	Running  int `json:"running"`
+	NeedsYou int `json:"needsYou"`
+}
+
+// sessionsJSON is a card's session summary, or nil when no run is linked
+// to the ticket and it is not in progress.
+func sessionsJSON(snapshot *index.Snapshot, ticket board.Ticket) *SessionsJSON {
+	summary, ok := snapshot.Sessions(ticket)
+	if !ok {
+		return nil
+	}
+	return &SessionsJSON{
+		Run: summary.Run, Short: protocol.ShortRun(summary.Run), Agent: summary.Agent, State: string(summary.State),
+		LastActivity:  timestamp(summary.LastActivity),
+		NoLiveSession: summary.NoLiveSession, Dirty: summary.Dirty, NoHandoff: summary.NoHandoff,
+		Subagents: SubagentCountsJSON{
+			Done: summary.Subagents.Done, Running: summary.Subagents.Running, NeedsYou: summary.Subagents.NeedsYou,
+		},
+	}
 }
 
 // RunJSON is one run (RUN-2). Timeline is sent only for a single run or a

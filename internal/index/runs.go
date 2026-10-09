@@ -214,8 +214,7 @@ func (s *Snapshot) TicketRun(id string) (runs.View, bool) {
 		if run.Link.Ticket != id || run.State == runs.Ended || run.Parent != "" {
 			continue
 		}
-		if best < 0 || statePriority[run.State] < statePriority[s.Runs[best].State] ||
-			(run.State == s.Runs[best].State && run.LastActivity.After(s.Runs[best].LastActivity)) {
+		if best < 0 || leads(run, s.Runs[best]) {
 			best = i
 		}
 	}

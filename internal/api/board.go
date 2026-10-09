@@ -136,6 +136,9 @@ type Card struct {
 	AgentWorking bool      `json:"agentWorking"`
 	// OpenQuestions counts open questions about the ticket (CARD-6).
 	OpenQuestions int `json:"openQuestions"`
+	// Sessions summarises the runs working for the ticket (RUN-9); absent
+	// when none is linked and the ticket is not in progress.
+	Sessions *SessionsJSON `json:"sessions,omitempty"`
 }
 
 // BoardResponse is GET /api/projects/{project}/board.
@@ -630,6 +633,7 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 		result.HandoffNext = ticket.Handoff.Next[0]
 	}
 	liveBadge(snapshot, &result)
+	result.Sessions = sessionsJSON(snapshot, ticket)
 	if withSearch {
 		text := []rune(ticket.Body)
 		if len(text) > searchTextRunes {

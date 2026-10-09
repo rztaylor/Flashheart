@@ -265,3 +265,54 @@ func TestTicketRunsBoundSubagentsPerSession(t *testing.T) {
 		t.Fatalf("subagents = %d, want %d", children, maxSubagents)
 	}
 }
+
+// Each card carries a summary of the sessions working for its ticket
+// (RUN-9, FH-50): the run that speaks for it, last activity, handoff flags
+// and subagent counts; an in-progress ticket nobody works on any more is
+// marked as having no live session.
+func TestCardsSummariseTheirSessions(t *testing.T) {
+	t.Parallel()
+
+	running := `{"v":1,"ts":"2026-10-04T13:28:00.000Z","run":"` + sampleSession + `/e1","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"subagent","parent":"` + sampleSession + `","agent_type":"Explore"}}`
+	live := runsAPI(t, time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC), running)
+	var raw struct {
+		Cards []map[string]json.RawMessage `json:"cards"`
+	}
+	getJSON(t, live, "/api/projects/alpha/board", http.StatusOK, &raw)
+	var summary map[string]any
+	for _, card := range raw.Cards {
+		var id string
+		_ = json.Unmarshal(card["id"], &id)
+		switch id {
+		case "AL-3":
+			if err := json.Unmarshal(card["sessions"], &summary); err != nil {
+				t.Fatalf("AL-3 sessions = %s: %v", card["sessions"], err)
+			}
+		case "AL-4":
+			if _, ok := card["sessions"]; ok {
+				t.Fatalf("AL-4, with no runs and not in progress, has sessions %s", card["sessions"])
+			}
+		}
+	}
+	want := map[string]any{
+		"run": sampleSession, "short": "claude:3f2a9c1e", "agent": "claude", "state": "needs-you",
+		"lastActivity": "2026-10-04T13:28:00Z", "noLiveSession": false, "dirty": true, "noHandoff": false,
+		"subagents": map[string]any{"done": 1, "running": 1, "needsYou": 0},
+	}
+	gotJSON, _ := json.Marshal(summary)
+	wantJSON, _ := json.Marshal(want)
+	if string(gotJSON) != string(wantJSON) {
+		t.Fatalf("AL-3 sessions = %s\nwant %s", gotJSON, wantJSON)
+	}
+
+	// A day later the session has gone stale: AL-3, still in progress, has
+	// no live session and no handoff for its last edits.
+	stale := runsAPI(t, time.Date(2026, 10, 5, 13, 30, 0, 0, time.UTC), running)
+	var board AllBoardResponse
+	getJSON(t, stale, "/api/all/board", http.StatusOK, &board)
+	got := cardByID(t, board.Cards, "AL-3").Sessions
+	if got == nil || got.State != "ended" || !got.NoLiveSession || !got.NoHandoff || got.LastActivity != "2026-10-04T13:28:00Z" ||
+		got.Subagents != (SubagentCountsJSON{Done: 2}) {
+		t.Fatalf("stale AL-3 sessions = %+v", got)
+	}
+}
