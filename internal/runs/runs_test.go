@@ -358,6 +358,24 @@ func TestSubagentFirstSeenEndingIsIgnored(t *testing.T) {
 	}
 }
 
+// The human's board writes are recorded with run "human" (agent-protocol
+// §3): they are no run, and change no agent's run.
+func TestTheHumansBoardWritesAreNoRun(t *testing.T) {
+	t.Parallel()
+
+	set := NewSet()
+	set.Apply(start(0))
+	set.Apply(ev(1, session, events.Claim, events.TicketData{Ticket: "AL-3"}))
+	set.Apply(events.ByHuman(at(2), "alpha", events.TicketMoved, events.TicketData{Ticket: "AL-3", From: "in-progress", To: "review"}))
+	set.Apply(events.ByHuman(at(3), "alpha", events.TicketUpdated, events.TicketData{Ticket: "AL-3", Fields: []string{"priority"}}))
+	if set.Get(events.Human) != nil || len(set.Runs()) != 1 {
+		t.Fatalf("runs = %d, human run = %+v", len(set.Runs()), set.Get(events.Human))
+	}
+	if run := set.Get(session); run.Claim != "AL-3" || !run.LastActivity.Equal(at(1)) {
+		t.Errorf("session = claim %q, last activity %v", run.Claim, run.LastActivity)
+	}
+}
+
 // A subagent's unanswered permission prompt ends when its session moves on:
 // a denial sends no event, and the subagent may never report again.
 func TestSessionTurnsClearASubagentsPendingPermission(t *testing.T) {

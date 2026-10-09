@@ -75,13 +75,41 @@ writing.
 | `claim` / `release` | MCP | `ticket`, `force`, `reason`; a claim also records `home`, the claimant's own project, so a reader of the ticket's log knows where the holder's activity is recorded |
 | `checkpoint` | MCP | `ticket`, counts of done/next/files/questions |
 | `ticket.moved` | MCP or UI | `ticket`, `from`, `to`, `by` (run id or `human`) |
-| `ticket.updated` | MCP or UI | `ticket`, `fields` changed |
-| `ticket.created` | MCP or UI | `ticket` |
+| `ticket.updated` | MCP or UI | `ticket`, `fields` changed; from the UI also `by: human` |
+| `ticket.created` | MCP or UI | `ticket`, `by` (run id or `human`) |
 | `review.written` | MCP | `ticket` |
 | `attachment.added` | MCP | `ticket`, `file`, `kind` |
 | `question.asked` | MCP | `id`, `ticket`, `kind`, `text` (≤1,000), `options` |
 | `question.answered` | UI | `id`, `answer`, `by` |
 | `question.delivered` | hook | `id` |
+
+### The human's board writes
+
+Every board write that changes a ticket (`EDIT-10`) appends one `ticket.*`
+event to the ticket's project log, attributed to the human: `run`, `agent`
+and `data.by` are all `human`, which no run id (`agent:session`) can be.
+It records that the human changed the ticket, and when, never what the
+ticket says:
+
+| Board write | Kind | `data` besides `ticket` and `by` |
+|---|---|---|
+| new ticket | `ticket.created` | none |
+| move, or a place within or across columns (`EDIT-9`) | `ticket.moved` | `from`, `to` (columns; equal for a reorder) |
+| field edits (`EDIT-6`) | `ticket.updated` | `fields`: the frontmatter keys or `title` sent |
+| raw edit | `ticket.updated` | none (what changed is not worked out) |
+| ticked criterion | `ticket.updated` | `fields: [criteria]` |
+| ticked review step (`REV-3`) | `ticket.updated` | `fields: [review]` |
+| archive, restore | `ticket.updated` | `fields: [archived]` |
+| permanent delete | `ticket.updated` | `fields: [deleted]` |
+
+A blocked start's reason goes into the ticket's `## Notes`, not the event.
+Writes that change no ticket (workstream order, project keys, preferences)
+and edits made to ticket files outside the board record nothing. The
+human's events are no run: run derivation (§4) skips them. With
+`question.answered` (recorded on the asking run), they are the human's
+board activity, which `serve` reads per project and across projects from
+the whole retained log. Agents' MCP writes are unchanged and are never the
+human's.
 
 ## 4. Run state
 

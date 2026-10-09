@@ -41,6 +41,12 @@ type tracker struct {
 	last time.Time
 	// refolds counts full refolds, for tests.
 	refolds int
+	// humans is each project's latest human board activity (agent-protocol
+	// §3): from the files before the window, read once when the project is
+	// first seen (seeded), and from every event read since. Unlike the
+	// window, it outlives a new day.
+	humans map[string]events.HumanActivity
+	seeded map[string]bool
 }
 
 type projectEvents struct {
@@ -64,6 +70,15 @@ func (t *tracker) update(projects []string, now time.Time) string {
 			refold = true
 		}
 	}
+	if t.humans == nil {
+		t.humans, t.seeded = map[string]events.HumanActivity{}, map[string]bool{}
+	}
+	for name := range t.seeded {
+		if !slices.Contains(projects, name) {
+			delete(t.seeded, name)
+			delete(t.humans, name)
+		}
+	}
 	var fresh []events.Event
 	for _, project := range slices.Sorted(slices.Values(projects)) {
 		files, err := t.source.Files(project)
@@ -75,12 +90,17 @@ func (t *tracker) update(projects []string, now time.Time) string {
 			state = &projectEvents{offsets: map[string]int64{}}
 			t.projects[project] = state
 		}
+		if !t.seeded[project] {
+			t.seeded[project] = true
+			t.seedHuman(project, files, first)
+		}
 		for _, file := range files {
 			if file < first {
 				continue
 			}
 			offset, _ := t.source.ReadFrom(project, file, state.offsets[file], func(e events.Event) {
 				state.events = append(state.events, e)
+				t.noteHuman(e)
 				fresh = append(fresh, e)
 			})
 			state.offsets[file] = offset
@@ -110,6 +130,31 @@ func (t *tracker) update(projects []string, now time.Time) string {
 	sort.Strings(parts)
 	return strings.Join(parts, ",")
 }
+
+// noteHuman keeps e if it is the human's latest board activity in its
+// project so far.
+func (t *tracker) noteHuman(e events.Event) {
+	if activity, ok := events.HumanActivityOf(e); ok && activity.Time.After(t.humans[e.Project].Time) {
+		t.humans[e.Project] = activity
+	}
+}
+
+// seedHuman reads a project's files dated before the window, newest first,
+// up to the first with any human activity: the human may not have touched
+// the board for longer than runs are kept.
+func (t *tracker) seedHuman(project string, files []string, first string) {
+	for index := len(files) - 1; index >= 0; index-- {
+		if _, found := t.humans[project]; found {
+			return
+		}
+		if files[index] < first {
+			_, _ = t.source.ReadFrom(project, files[index], 0, t.noteHuman)
+		}
+	}
+}
+
+// human returns a copy of each project's latest human activity.
+func (t *tracker) human() map[string]events.HumanActivity { return maps.Clone(t.humans) }
 
 // views derives every tracked run at now, linking runs by branch to the
 // board's in-progress tickets (RUN-5).

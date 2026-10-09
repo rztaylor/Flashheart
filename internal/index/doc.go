@@ -3,9 +3,11 @@
 // last two days' event logs (read and folded incrementally across projects
 // in time order, so a run with a claim in another project is one run, and
 // refolded only when an event arrives out of order;
-// linked to tickets by branch, and summarised per ticket: RUN-9), rebuilt
-// from store and events when a caller finds it older than MaxAge or when
-// file watching sees a change.
+// linked to tickets by branch, and summarised per ticket: RUN-9) and each
+// project's latest human board activity (EDIT-10; older activity is read
+// once from the files before the window), rebuilt from store and events
+// when a caller finds it older than MaxAge or when file watching sees a
+// change.
 //
 // The revision increases only when the files read change (or the root
 // appears or disappears), or when the clock changes a run's state. Watch

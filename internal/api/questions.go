@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -43,10 +42,7 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "board_unavailable", "The board could not be read")
 		return
 	}
-	now := time.Now().UTC()
-	if b.now != nil {
-		now = b.now().UTC()
-	}
+	now := b.now().UTC()
 	answeredBy := b.answeredBy
 	question, run, ok := snapshot.Question(r.PathValue("id"))
 	if !ok {

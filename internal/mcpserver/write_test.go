@@ -194,6 +194,31 @@ func TestMove(t *testing.T) {
 	}
 }
 
+// An agent's ticket writes are its run's, never the human's (FH-49).
+func TestAgentWritesAreNeverTheHumans(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	e.startSession(session)
+	created := e.ok("create_ticket", map[string]any{"title": "First", "type": "feature", "priority": "medium", "description": "x", "criteria": []string{"a"}})
+	contains(t, created, "DM-1")
+	e.ok("claim", map[string]any{"ticket": "DM-1"})
+	e.ok("update_ticket", map[string]any{"ticket": "DM-1", "set": map[string]any{"priority": "high"}, "check": []string{"1"}})
+	e.ok("move", map[string]any{"ticket": "DM-1", "to": "review"})
+	kinds := map[string]bool{}
+	for _, ev := range e.log() {
+		kinds[ev.Kind] = true
+		if activity, ok := events.HumanActivityOf(ev); ok || ev.Run == events.Human {
+			t.Errorf("an agent's %s is the human's: %+v", ev.Kind, activity)
+		}
+	}
+	for _, kind := range []string{events.TicketCreated, events.TicketUpdated, events.TicketMoved} {
+		if !kinds[kind] {
+			t.Errorf("no %s recorded", kind)
+		}
+	}
+}
+
 func TestProjectKeys(t *testing.T) {
 	t.Parallel()
 

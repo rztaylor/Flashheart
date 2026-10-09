@@ -142,6 +142,16 @@ All notable changes to this project are documented here. The project follows
   that no live session works on is marked `noLiveSession`. It is derived
   from the events already recorded; hooks are unchanged. The Overview
   (FH-47) builds on it.
+- The board records when you change a ticket (FH-49, `EDIT-10`). Every
+  board write that changes a ticket (new ticket, move or reorder, field,
+  raw and criterion edits, a ticked review step, archive, restore, delete)
+  appends one `ticket.created`, `ticket.moved` or `ticket.updated` event
+  with run, agent and `by` set to `human`, naming the ticket and at most the
+  columns or fields changed, never their values or any ticket text
+  (agent-protocol §3). With answered questions, this is your latest board
+  activity, which the server can read per project and across projects for
+  the coming Overview. Edits made in an editor do not count, agents' writes
+  are unchanged, and the human is never shown as a run.
 - The Board can hide the Backlog column (FH-41): View options › Show
   columns has a Backlog checkbox, checked by default. Hidden, the columns
   being worked on get its width, the phone Column picker leaves it out, and

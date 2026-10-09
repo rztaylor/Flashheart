@@ -316,6 +316,15 @@ Full format: `docs/dev/specs/board-format.md`.
   is shown and never writes ranks; while one is on, cards cannot be
   reordered within a column and a move keeps the ticket's rank. Board order
   is separate from workstream order (`EDIT-4`) and never changes it.
+- `EDIT-10` Every board write that changes a ticket (new ticket, move or
+  place, field, raw and criterion edits, a ticked review step, archive,
+  restore, permanent delete) appends one event to the ticket's project log
+  saying that the human changed it, and when: the ticket's id and at most
+  the columns or names of the fields changed, never their values or any
+  ticket text (agent-protocol §3). With answers to agents' questions
+  (`RUN-8`), these are the human's board activity, which the server reads
+  per project and across projects. Edits made to ticket files outside the
+  board are not recorded and do not count.
 
 ### 6.7 Runs (`RUN`)
 
