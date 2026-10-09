@@ -208,14 +208,13 @@ Full format: `docs/dev/specs/board-format.md`.
   next, In progress, Ready to review, Done), each in its manual order
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
   The Backlog can be hidden from the Board (shown by default; FH-41).
-- `VIEW-2` **Needs you filter**: a *Needs you* chip leads the Board's chip
-  row while a ticket in scope has a run in Needs you or an open question
-  from a live session. Like the other chips, a click shows only those
-  tickets, a Cmd or Ctrl click hides them, and a click on the chosen chip
-  restores the board; it combines with the other filters and is remembered
-  with them. Tickets show only in their real columns (D31, FH-44). Tickets
-  linked to a Working or Quiet run are found with the State filter's *Agent
-  working* option (D27, FH-42).
+- `VIEW-2` **Needs you filter**: the band's *Needs you* plate is a toggle.
+  Pressed, the Board and Table show only tickets with a run in Needs you or
+  an open question from a live session; from another view it opens the
+  Board, filtered. It combines with the other filters, carries from project
+  to project, and is not remembered. Tickets show only in their real
+  columns (D31, FH-44). Tickets linked to a Working or Quiet run are found
+  with the State filter's *Agent working* option (D27, FH-42).
 - `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
   (`RUN-3`), Needs you first: *Needs you*, *Working*, *Quiet*, *Waiting*,
   *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
@@ -550,7 +549,7 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
   as a route, branch and last activity, and expands to its plan, edited files
   and activity; subagents hang beneath their session.
 - **Needs you** is visible from every view and project (badge in the rail and
-  top bar).
+  top bar); the top bar's plate filters the Board to it (`VIEW-2`).
 - Narrow widths keep a single column with a column picker; the board is not
   a phone-first product.
 

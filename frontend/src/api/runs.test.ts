@@ -156,25 +156,10 @@ describe("run validators", () => {
             workstream: { include: [], exclude: ["board-ui"] },
             age: { include: [], exclude: [] },
             state: "working",
-            needsYou: "only",
           },
         },
       }),
     ).toBe(true);
-    const scope = {
-      view: "board",
-      type: { include: [], exclude: [] },
-      priority: { include: [], exclude: [] },
-      workstream: { include: [], exclude: [] },
-      age: { include: [], exclude: [] },
-      state: "",
-    };
-    expect(
-      isPreferences({
-        ...preferences,
-        scopes: { alpha: { ...scope, needsYou: "sometimes" } },
-      }),
-    ).toBe(false);
     // Filters are lists since FH-39; the single-value form is read only by
     // the server.
     expect(

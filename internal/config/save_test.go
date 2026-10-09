@@ -27,13 +27,13 @@ ui:
 	ui.HiddenColumns = []string{"backlog"}
 	ui.Scopes = map[string]Scope{
 		"all":        {View: "board", State: "working"},
-		"flashheart": {View: "table", Type: Choice{Include: []string{"bug", "spike"}}, Workstream: Choice{Exclude: []string{"board-ui"}}, Age: Choice{Include: []string{"today"}}, State: "blocked", NeedsYou: "only"},
+		"flashheart": {View: "table", Type: Choice{Include: []string{"bug", "spike"}}, Workstream: Choice{Exclude: []string{"board-ui"}}, Age: Choice{Include: []string{"today"}}, State: "blocked"},
 	}
 	got, err := SetUI(data, ui)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  hidden_columns: [backlog]\n", "needs_you: only"} {
+	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  hidden_columns: [backlog]\n"} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("SetUI lost %q:\n%s", want, got)
 		}

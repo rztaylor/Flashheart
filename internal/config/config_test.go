@@ -119,7 +119,6 @@ func TestParseRejectsInvalidValues(t *testing.T) {
 		{"zero version", "version: 0", "version must be 1 or 2"},
 		{"theme", "ui: {theme: sepia}", `ui.theme "sepia" must be one of system, light, dark`},
 		{"density", "ui: {density: roomy}", `ui.density "roomy" must be one of compact, normal, detailed`},
-		{"needs you", "ui: {scopes: {alpha: {needs_you: maybe}}}", `ui.scopes.alpha.needs_you "maybe" must be one of only, hidden`},
 		{"hidden column", "ui: {hidden_columns: [done]}", `ui.hidden_columns "done" must be one of backlog`},
 		{"quiet minutes", "quiet_minutes: 0", "quiet_minutes must be at least 1"},
 		{"retention", "event_retention_days: -1", "event_retention_days must be at least 1"},

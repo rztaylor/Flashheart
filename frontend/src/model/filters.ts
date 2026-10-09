@@ -26,9 +26,9 @@ export interface Filters {
   // age filters by the Colour by age buckets (today, week, older).
   age: Choice;
   state: StateFilter;
-  // needsYou is the Needs you chip: tickets with a run in Needs you or an
-  // open question shown only (included) or hidden (excluded) (FH-44).
-  needsYou: ChoiceState;
+  // needsYou, the band's Needs you toggle, shows only tickets with a run in
+  // Needs you or an open question (FH-44).
+  needsYou: boolean;
 }
 
 export const NO_WORKSTREAM = "(none)";
@@ -42,7 +42,7 @@ export const emptyFilters: Filters = {
   workstream: noChoice,
   age: noChoice,
   state: "all",
-  needsYou: "idle",
+  needsYou: false,
 };
 
 export const CHOICE_KEYS: ChoiceKey[] = [
@@ -58,12 +58,6 @@ export function choiceState(choice: Choice, value: string): ChoiceState {
   if (choice.include.includes(value)) return "included";
   if (choice.exclude.includes(value)) return "excluded";
   return "idle";
-}
-
-// toggleState is a click on a one-value chip, by toggleChoice's rules.
-export function toggleState(state: ChoiceState, exclude: boolean): ChoiceState {
-  if (state !== "idle") return "idle";
-  return exclude ? "excluded" : "included";
 }
 
 export function choiceCount(choice: Choice): number {
@@ -100,7 +94,7 @@ export function isFiltered(filters: Filters): boolean {
     filters.query.trim() !== "" ||
     CHOICE_KEYS.some((key) => choiceCount(filters[key]) > 0) ||
     filters.state !== "all" ||
-    filters.needsYou !== "idle"
+    filters.needsYou
   );
 }
 
@@ -141,8 +135,7 @@ export function applyFilters(
     if (filters.state === "repair" && card.needsRepair.length === 0)
       return false;
     if (filters.state === "working" && !card.agentWorking) return false;
-    if (filters.needsYou === "included" && !card.needsYou) return false;
-    if (filters.needsYou === "excluded" && card.needsYou) return false;
+    if (filters.needsYou && !card.needsYou) return false;
     if (words.length > 0) {
       const text = haystack(card);
       return words.every((word) => text.includes(word));

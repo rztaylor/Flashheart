@@ -146,17 +146,22 @@ test("the Agents view lists runs by state, Needs you first", async () => {
   await shot("agents-390-light");
 });
 
-test("the band plate opens the Agents view from any project", async () => {
-  await open("#/p/beta/board");
-  await page.getByRole("button", { name: "1 needs you", exact: true }).click();
-  await expect(page).toHaveURL(/#\/all\/agents$/);
-  await expect(page.locator("[data-lane]").first()).toHaveAttribute(
-    "data-lane",
-    "needs-you",
-  );
+test("the band's Needs you pill opens the Board, filtered, from other views (FH-44)", async () => {
+  await open("#/all/agents");
+  const pill = page.getByRole("button", { name: "1 needs you", exact: true });
+  await expect(pill).toHaveAttribute("aria-pressed", "false");
+  await pill.click();
+  await expect(page).toHaveURL(/#\/all\/board/);
+  await expect(pill).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-ticket]")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: /^Card panel, AL-3,/ }),
+  ).toBeVisible();
+  await pill.click();
+  await expect(pill).toHaveAttribute("aria-pressed", "false");
 });
 
-test("cards carry live runs and the Needs you chip filters to them (FH-44)", async () => {
+test("cards carry live runs and the band's Needs you pill filters to them (FH-44)", async () => {
   await open("#/p/alpha/board");
   const real = page
     .getByRole("region", { name: /^In progress/ })
@@ -169,7 +174,7 @@ test("cards carry live runs and the Needs you chip filters to them (FH-44)", asy
   await expect(face.getByText("2/5 · Runs tab timeline")).toBeVisible();
 
   // Needs you and Agent working are filters, never columns (FH-42, FH-44);
-  // the View options menu no longer offers them.
+  // neither the View options menu nor the chip row offers them.
   await expect(page.getByRole("region", { name: /^Needs you/ })).toHaveCount(0);
   await expect(
     page.getByRole("region", { name: /^Agent working/ }),
@@ -179,58 +184,60 @@ test("cards carry live runs and the Needs you chip filters to them (FH-44)", asy
     0,
   );
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: /^Needs you/ })).toHaveCount(0);
 
-  // The Needs you chip leads the chip row: a click shows only the tickets
-  // that need you, Cmd or Ctrl click hides them, a second click restores.
+  // The band's pill is an on/off filter: pressed, the Board shows only the
+  // tickets that need you.
   const cards = page.locator("[data-ticket]");
   const total = await cards.count();
-  const chip = page
-    .getByRole("group", { name: "Filter by tickets that need you" })
-    .getByRole("button");
-  await expect(chip).toHaveAccessibleName("Needs you");
-  await chip.click();
-  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  const pill = page.getByRole("button", { name: "1 needs you", exact: true });
+  await pill.click();
+  await expect(pill).toHaveAttribute("aria-pressed", "true");
   await expect(real).toBeVisible();
   await expect(cards).toHaveCount(1);
   await expect(page.getByText(`1 of ${total} tickets`)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Clear filters" }),
+  ).toBeVisible();
   for (const theme of ["light", "dark"]) {
     await open("#/p/alpha/board", { theme });
     await shot(`board-needs-you-1440-${theme}`);
   }
-  await open("#/p/alpha/board", { width: 390, height: 844 });
-  await expect(chip).toBeVisible();
   for (const theme of ["light", "dark"]) {
     await open("#/p/alpha/board", { width: 390, height: 844, theme });
+    await expect(
+      page.getByRole("button", { name: "1 agent needs you", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
     await shot(`board-needs-you-390-${theme}`);
   }
+
+  // It carries over to another project and to the Table.
+  await open("#/p/beta/board");
+  await expect(pill).toHaveAttribute("aria-pressed", "true");
+  await open("#/p/alpha/table");
+  await expect(pill).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("row")).toHaveCount(2);
   await open("#/p/alpha/board");
-  // The chip is remembered with the project's other filters.
-  await expect
-    .poll(() =>
-      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
-    )
-    .toContain("needs_you: only");
+
+  // A second click shows every ticket; Clear filters switches it off too.
+  await pill.click();
+  await expect(pill).toHaveAttribute("aria-pressed", "false");
+  await expect(cards).toHaveCount(total);
+  await pill.click();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(pill).toHaveAttribute("aria-pressed", "false");
+  await expect(cards).toHaveCount(total);
+
+  // It is a lens, not a saved filter: a reload starts with it off.
+  await pill.click();
+  await page.waitForTimeout(600);
+  expect(
+    await readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
+  ).not.toContain("needs");
   await page.reload();
   await open("#/p/alpha/board");
-  await expect(chip).toHaveAttribute("aria-pressed", "true");
-  await chip.click();
+  await expect(pill).toHaveAttribute("aria-pressed", "false");
   await expect(cards).toHaveCount(total);
-  await chip.click({ modifiers: ["ControlOrMeta"] });
-  await expect(chip).toHaveAccessibleName("Needs you, hidden");
-  await expect(real).toHaveCount(0);
-  await expect(cards).toHaveCount(total - 1);
-  await expect
-    .poll(() =>
-      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
-    )
-    .toContain("needs_you: hidden");
-  await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(real).toBeVisible();
-  await expect
-    .poll(() =>
-      readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
-    )
-    .not.toContain("needs_you");
 
   // Agent working is a State option; AL-3's run waits on a permission, so
   // it is not at work.

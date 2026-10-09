@@ -17,7 +17,6 @@ import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { SearchField, SelectField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
-import { RunStateMark } from "../components/RunState";
 import { Toast, type ToastMessage } from "../components/Toast";
 import { AgentsView } from "../features/agents/AgentsView";
 import { ArchiveView } from "../features/archive/ArchiveView";
@@ -58,6 +57,7 @@ import { viewSummary } from "../model/summary";
 import { useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
 import { BackendStatus } from "./BackendStatus";
+import { NeedsYouPill } from "./NeedsYouPill";
 import { PageHeader } from "./PageHeader";
 import {
   formatRoute,
@@ -173,7 +173,9 @@ export function Shell({
   // biome-ignore lint/correctness/useExhaustiveDependencies: restore only when the scope changes or preferences first load.
   useEffect(() => {
     if (preferencesLoaded)
-      setFiltersState((current) => filtersFor(saved, current.query));
+      setFiltersState((current) =>
+        filtersFor(saved, current.query, current.needsYou),
+      );
   }, [scopeKeyName, preferencesLoaded]);
   // The archive and a ticket's full page are side trips, never the
   // remembered view.
@@ -308,6 +310,16 @@ export function Shell({
     : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
+  // The band's Needs you pill filters the Board and Table (FH-44); from
+  // another view it opens the Board, filtered.
+  const toggleNeedsYou = () => {
+    if (route.view === "board" || route.view === "table") {
+      setFilters({ ...filters, needsYou: !filters.needsYou });
+      return;
+    }
+    setFiltersState({ ...filters, needsYou: true });
+    go({ view: "board", ticket: undefined });
+  };
   const selectScope = (scope: Scope) => {
     setDoneAll(false);
     const name = scope.kind === "all" ? "all" : scope.project;
@@ -443,28 +455,11 @@ export function Shell({
             })}
           </nav>
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
-            {needsYou > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  go({
-                    scope: { kind: "all" },
-                    view: "agents",
-                    ticket: undefined,
-                  });
-                }}
-                className="flex h-8 items-center gap-1.5 rounded-full bg-attention px-2.5 text-xs font-semibold whitespace-nowrap sm:h-9 sm:px-3.5 sm:text-sm text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band"
-              >
-                <RunStateMark state="needs-you" size={11} />
-                {needsYou}
-                <span className="hidden sm:inline">
-                  {needsYou === 1 ? " needs you" : " need you"}
-                </span>
-                <span className="sm:hidden">
-                  {needsYou === 1 ? " agent needs you" : " agents need you"}
-                </span>
-              </button>
-            ) : null}
+            <NeedsYouPill
+              count={needsYou}
+              on={filters.needsYou}
+              onToggle={toggleNeedsYou}
+            />
             {route.view === "board" || route.view === "table" ? (
               <div className="hidden md:flex">
                 <SearchField

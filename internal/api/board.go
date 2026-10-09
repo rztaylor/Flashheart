@@ -129,7 +129,7 @@ type Card struct {
 	Warnings    []string     `json:"warnings"`
 	SearchText  string       `json:"searchText,omitempty"`
 	// Live is the linked run that most needs attention (VIEW-8); NeedsYou
-	// answers the Needs you chip (VIEW-2, FH-44), and AgentWorking
+	// answers the band's Needs you filter (VIEW-2, FH-44), and AgentWorking
 	// answers the Agent working State filter (FH-42).
 	Live         *LiveJSON `json:"live,omitempty"`
 	NeedsYou     bool      `json:"needsYou"`

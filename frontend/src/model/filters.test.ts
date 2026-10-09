@@ -12,7 +12,6 @@ import {
   isFiltered,
   noChoice,
   toggleChoice,
-  toggleState,
 } from "./filters";
 
 function card(overrides: Partial<Card>): Card {
@@ -135,24 +134,12 @@ describe("applyFilters", () => {
       card({ id: "AL-2", needsYou: true }),
       card({ id: "AL-3" }),
     ];
-    const only = { ...emptyFilters, needsYou: "included" as const };
+    const only = { ...emptyFilters, needsYou: true };
     expect(ids(applyFilters(waiting, only))).toEqual(["AL-1", "AL-2"]);
     expect(ids(applyFilters(waiting, { ...only, state: "blocked" }))).toEqual([
       "AL-1",
     ]);
-    expect(
-      ids(applyFilters(waiting, { ...emptyFilters, needsYou: "excluded" })),
-    ).toEqual(["AL-3"]);
     expect(isFiltered(only)).toBe(true);
-    expect(isFiltered({ ...emptyFilters, needsYou: "excluded" })).toBe(true);
-  });
-
-  it("toggles a one-value chip as a choice chip toggles (FH-44)", () => {
-    expect(toggleState("idle", false)).toBe("included");
-    expect(toggleState("idle", true)).toBe("excluded");
-    expect(toggleState("included", false)).toBe("idle");
-    expect(toggleState("excluded", false)).toBe("idle");
-    expect(toggleState("included", true)).toBe("idle");
   });
 
   it("shows only tickets with an agent at work (FH-42)", () => {

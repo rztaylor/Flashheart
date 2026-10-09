@@ -472,7 +472,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
-- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, lane head, panel, the Needs you chip's bullet). Only Needs you uses it.
+- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, lane head, panel). Only Needs you uses it.
 - **Flash** (`flash` #ffd23f): the bolt before the wordmark.
 - **Danger** (`danger`, `on-danger`, `danger-surface`): application errors, and actions that cannot be undone (a permanent delete): red, in both themes. Never a ticket state.
 
@@ -559,7 +559,7 @@ White, 10px corners, rule border, card shadow, a 4px workstream stripe down the 
 Column well surface, rule border, 14px corners, 10px padding; head with a round count badge, an Agents lane's run mark (Needs you inside an attention disc), and the title in the display head cut. Agents lanes use the same well with run rows inside one card.
 
 ### Navigation
-- **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate, search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.
+- **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate (a toggle: pressed, an inset on-attention ring and a close mark, filtering the Board to tickets that need you), search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.
 - **Rail:** All projects, a divider, projects with key badge (8px, tinted; filled in the accent when current), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile is raised: rail active surface, hairline border, card shadow. Footer: theme (System, Light, Dark), board root (cut from the start) and version.
 - **Page header:** key badge (or board icon) and the scope's name in the display page cut, with one muted summary line.
 - **Panel tabs:** heading-small labels over a rule, the current one underlined 3px in select.

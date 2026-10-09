@@ -1,44 +1,30 @@
-import type {
-  SavedNeedsYou,
-  SavedView,
-  ScopePreferences,
-} from "../api/preferences";
+import type { SavedView, ScopePreferences } from "../api/preferences";
 import {
   CHOICE_KEYS,
   type Choice,
-  type ChoiceState,
   emptyFilters,
   type Filters,
   noChoice,
 } from "./filters";
 
 // Remembered view and filters per project or All projects (VIEW-7, CFG-2).
-// The search box is never remembered.
-
-const savedNeedsYou: Record<ChoiceState, SavedNeedsYou> = {
-  idle: "",
-  included: "only",
-  excluded: "hidden",
-};
+// The search box and the band's Needs you toggle (FH-44) are never
+// remembered; they carry over from scope to scope.
 
 export function filtersFor(
   saved: ScopePreferences | undefined,
   query = "",
+  needsYou = false,
 ): Filters {
-  if (!saved) return { ...emptyFilters, query };
+  if (!saved) return { ...emptyFilters, query, needsYou };
   return {
     query,
+    needsYou,
     type: saved.type,
     priority: saved.priority,
     workstream: saved.workstream,
     age: saved.age,
     state: saved.state || "all",
-    needsYou:
-      saved.needsYou === "only"
-        ? "included"
-        : saved.needsYou === "hidden"
-          ? "excluded"
-          : "idle",
   };
 }
 
@@ -53,7 +39,6 @@ export function rememberScope(
     workstream: filters.workstream,
     age: filters.age,
     state: filters.state === "all" ? "" : filters.state,
-    needsYou: savedNeedsYou[filters.needsYou],
   };
 }
 
@@ -71,7 +56,6 @@ export function sameScope(
     a !== undefined &&
     a.view === b.view &&
     a.state === b.state &&
-    a.needsYou === b.needsYou &&
     CHOICE_KEYS.every((key) => sameChoice(a[key], b[key]))
   );
 }

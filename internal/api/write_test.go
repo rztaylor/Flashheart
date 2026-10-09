@@ -251,12 +251,12 @@ func TestPreferencesRoundTrip(t *testing.T) {
 		t.Errorf("defaults = %+v", prefs)
 	}
 	prefs.Theme, prefs.Density, prefs.ColourBy = "dark", "compact", "priority"
-	prefs.Scopes["alpha"] = config.Scope{View: "table", Type: config.Choice{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked", NeedsYou: "only"}
+	prefs.Scopes["alpha"] = config.Scope{View: "table", Type: config.Choice{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked"}
 	prefs.Scopes["beta"] = config.Scope{View: "agents"}
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
-	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || !slices.Equal(again.Scopes["alpha"].Type.Include, []string{"bug"}) || again.Scopes["beta"].View != "agents" || again.Scopes["alpha"].NeedsYou != "only" {
+	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || !slices.Equal(again.Scopes["alpha"].Type.Include, []string{"bug"}) || again.Scopes["beta"].View != "agents" {
 		t.Errorf("saved = %+v", again)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
@@ -264,9 +264,6 @@ func TestPreferencesRoundTrip(t *testing.T) {
 		t.Errorf("other settings lost:\n%s", data)
 	}
 	prefs.ColourBy = "rainbow"
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
-	prefs.ColourBy = "type"
-	prefs.Scopes["alpha"] = config.Scope{View: "table", NeedsYou: "sometimes"}
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 

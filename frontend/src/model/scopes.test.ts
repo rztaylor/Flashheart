@@ -11,7 +11,6 @@ describe("remembered scopes", () => {
       type: { include: ["bug", "spike"], exclude: [] },
       workstream: { include: [], exclude: ["board-ui"] },
       state: "blocked" as const,
-      needsYou: "excluded" as const,
     };
     const saved = rememberScope(filters, "table");
     expect(saved).toEqual({
@@ -21,13 +20,10 @@ describe("remembered scopes", () => {
       workstream: { include: [], exclude: ["board-ui"] },
       age: { include: [], exclude: [] },
       state: "blocked",
-      needsYou: "hidden",
     });
     expect(filtersFor(saved, "kept")).toEqual({ ...filters, query: "kept" });
     expect(filtersFor(undefined)).toEqual(emptyFilters);
-    expect(
-      filtersFor(rememberScope({ ...emptyFilters, needsYou: "included" }, "")),
-    ).toEqual({ ...emptyFilters, needsYou: "included" });
+
     expect(sameScope(saved, rememberScope(filters, "table"))).toBe(true);
     expect(sameScope(saved, rememberScope(filters, "board"))).toBe(false);
     expect(
@@ -39,11 +35,14 @@ describe("remembered scopes", () => {
         ),
       ),
     ).toBe(false);
-    expect(
-      sameScope(
-        saved,
-        rememberScope({ ...filters, needsYou: "included" }, "table"),
-      ),
-    ).toBe(false);
+  });
+
+  it("keeps the band's Needs you filter across scopes, unsaved (FH-44)", () => {
+    const on = { ...emptyFilters, needsYou: true };
+    expect(rememberScope(on, "board")).not.toHaveProperty("needsYou");
+    expect(filtersFor(undefined, "", true)).toEqual(on);
+    expect(filtersFor(rememberScope(emptyFilters, "board"), "", true)).toEqual(
+      on,
+    );
   });
 });

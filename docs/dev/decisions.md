@@ -517,28 +517,32 @@ the board (no room gained, no URL to keep); an "open full page" button only
 Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; no API
 change.
 
-## 2026-10-09 — D31: Needs you is a chip, not a column
+## 2026-10-09 — D31: Needs you is the band's filter, not a column
 
 Decision (FH-44, user): the Needs you virtual column is retired, completing
 D27. A ticket mirrored in Needs you while it sat in its own column read as
-being in two places at once, as Agent working did. Needs you is now a filter
-chip at the head of the Board's chip row, drawn like the workstream and
-colour chips and with their click rules: a click shows only the tickets with
-a run in Needs you or an open question about them, a Cmd or Ctrl click hides
-them, and a click on the chosen chip restores the board. The chip appears
-while a ticket in scope needs you, or while it is chosen, so it can be
-restored. It combines with every other filter, and is remembered with the
-scope's filters (`needs_you: only | hidden`). The band's Needs you pill, the
-rail's badges and the card's Needs you mark are unchanged.
+being in two places at once, as Agent working did. The band's Needs you
+plate becomes the filter: it is a toggle, and pressed, the Board and Table
+show only the tickets with a run in Needs you or an open question about
+them. From another view it opens the Board, filtered, where it used to open
+the Agents view. It combines with every other filter, and Clear filters
+switches it off. It stays in the band while pressed, so it can be switched
+off once nothing needs you.
+
+It is a lens, not a remembered filter: like the search text it carries from
+project to project, and a reload starts with it off. The plate's count is
+of runs across every project, so the filter follows it from scope to scope
+rather than being saved per scope. The rail's badges and the card's Needs
+you mark are unchanged.
 
 With both mirrored columns gone, View options › Show columns holds only the
 Backlog (FH-41).
 
 Options: a *Needs you* State filter option, as Agent working (State takes
-one choice, so it could not combine with Blocked); a toolbar toggle beside
-the filter buttons; a chip like the colour key's (chosen); keep the column.
+one choice, so it could not combine with Blocked); a chip in the chip row,
+like the colour key's (built, then dropped: it repeated the plate); the
+band's plate as the toggle (chosen); keep the column.
 
 Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
 `needsYou` field is unchanged. A saved `ui.virtual_columns` is ignored on
 load rather than refused, and removed when preferences are next saved.
-

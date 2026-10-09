@@ -21,10 +21,6 @@ export type SavedState =
   | "unblocked"
   | "repair"
   | "working";
-// SavedNeedsYou is the Needs you chip: tickets that need you shown only or
-// hidden (FH-44).
-export type SavedNeedsYou = "" | "only" | "hidden";
-
 // ScopePreferences is the remembered view and filters of one project, or of
 // All projects under the key "all".
 export interface ScopePreferences {
@@ -34,7 +30,6 @@ export interface ScopePreferences {
   workstream: FilterChoice;
   age: FilterChoice;
   state: SavedState;
-  needsYou: SavedNeedsYou;
 }
 
 export interface Preferences {
@@ -78,7 +73,6 @@ const isState = oneOf<SavedState>([
   "repair",
   "working",
 ]);
-const isNeedsYou = oneOf<SavedNeedsYou>(["", "only", "hidden"]);
 
 const isStrings = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -97,8 +91,7 @@ function isScope(value: unknown): value is ScopePreferences {
     isChoice(value.priority) &&
     isChoice(value.workstream) &&
     isChoice(value.age) &&
-    isState(value.state) &&
-    isNeedsYou(value.needsYou)
+    isState(value.state)
   );
 }
 

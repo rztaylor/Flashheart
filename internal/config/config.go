@@ -48,7 +48,6 @@ var (
 	colourBys     = []string{"type", "priority", "age", "none"}
 	views         = []string{"", "board", "agents", "workstreams", "table"}
 	states        = []string{"", "all", "blocked", "unblocked", "repair", "working"}
-	needsYous     = []string{"", "only", "hidden"}
 	ages          = []string{"today", "week", "older"}
 	scopeName     = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )
@@ -118,9 +117,6 @@ type Scope struct {
 	Workstream Choice `yaml:"workstream,omitempty" json:"workstream"`
 	Age        Choice `yaml:"age,omitempty" json:"age"`
 	State      string `yaml:"state,omitempty" json:"state"`
-	// NeedsYou is the Needs you chip: only those tickets, or them hidden
-	// (FH-44).
-	NeedsYou string `yaml:"needs_you,omitempty" json:"needsYou"`
 }
 
 // Choice is one filter dimension: the values shown only (Include) and the
@@ -281,7 +277,6 @@ func (u UI) problems() []string {
 		}
 		oneOf("ui.scopes."+name+".view", scope.View, views)
 		oneOf("ui.scopes."+name+".state", scope.State, states)
-		oneOf("ui.scopes."+name+".needs_you", scope.NeedsYou, needsYous)
 		for _, value := range scope.Age.values() {
 			oneOf("ui.scopes."+name+".age", value, ages)
 		}
