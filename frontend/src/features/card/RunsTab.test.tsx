@@ -102,3 +102,36 @@ describe("RunsTab for a subagent on its own ticket", () => {
     expect(markup).toContain("claude:3f2a9c1e");
   });
 });
+
+// Most sessions never record a plan (FH-54): the Runs tab shows plan UI
+// only for a run that has one.
+describe("RunsTab plan", () => {
+  const render = (patch: Partial<Run>) =>
+    renderToStaticMarkup(
+      <RunsTab
+        detail={{ id: "AL-3", branch: "", runs: [run(session, patch)] }}
+      />,
+    );
+
+  it("shows no plan section for a run with no plan", () => {
+    const markup = render({});
+    expect(markup).not.toMatch(/>Plan<\/h4>/);
+    expect(markup).not.toContain("No plan");
+    expect(markup).toContain("Edited files");
+  });
+
+  it("shows the route and current step of a run with a plan", () => {
+    const markup = render({
+      plan: [
+        { text: "Read the board", status: "completed" },
+        { text: "Write the tests", status: "in_progress" },
+        { text: "Open the PR", status: "pending" },
+      ],
+      progress: { done: 1, total: 3, current: "Write the tests" },
+    });
+    expect(markup).toMatch(/>Plan<\/h4>/);
+    expect(markup).toContain("Done: </span>Read the board");
+    expect(markup).toContain("In progress: </span>Write the tests");
+    expect(markup).toContain("To do: </span>Open the PR");
+  });
+});

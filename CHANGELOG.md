@@ -29,6 +29,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Plan displays show only for a run with a plan (FH-54). Most sessions
+  never record one, so the card panel's Runs tab (and an open run in the
+  Agents view) no longer shows an empty Plan section with *No plan
+  recorded*; the card's live badge already named a plan step only when
+  there was one. A run with a plan still shows its route and current step.
+
 - Needs you is a filter instead of a column (FH-44, D31). The Needs you
   column, which repeated tickets already shown in their own columns, is
   gone. The band's *N need you* plate is now an on/off filter: pressed, it

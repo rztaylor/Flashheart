@@ -289,6 +289,12 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
   await expect(
     panel.getByText("Asked permission for Bash").first(),
   ).toBeVisible();
+  // Only the session with a plan shows one; the ended session recorded
+  // none, so it has no plan section (FH-54).
+  await expect(
+    panel.getByRole("heading", { name: "Plan", level: 4 }),
+  ).toHaveCount(1);
+  await expect(panel.getByText(/No plan/)).toHaveCount(0);
   const scrolled = await page.evaluate(
     () => document.scrollingElement?.scrollTop ?? 0,
   );
