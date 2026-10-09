@@ -119,18 +119,24 @@ Flags:
   through shell commands, which name no path, so at a session's turn end
   and end the hook checks its worktree when the session is not already
   dirty and it or one of its subagents ran a shell command (`Bash` or
-  `PowerShell`, `ok`) since its last checkpoint, else since its start. The
-  worktree changed when a file git lists as changed or untracked (not
-  ignored) was modified after that moment (a deleted file by its
-  directory), or a commit made after it changed such a file. Only the
-  boolean is stored, never a path, command or content (`HOOK-2`). Read-only
-  commands leave nothing behind, so they never make a run dirty; committing
-  or switching branch alone does not either. False positives: a file the
-  user (or another process) changes in the same worktree after the
-  checkpoint, while the session runs shell commands, counts as the
-  session's; so does an untracked, unignored file a command generates. A
-  change in a subagent's own worktree is not seen. The check gives up after
-  50 ms and is then logged, leaving the run as it was (`HOOK-1`).
+  `PowerShell`, `ok`) since its last checkpoint. Each such command has a
+  **window**, from its run's previous event to its `tool.used`, widened by
+  2 s either side for clock and flush granularity and cut at the last
+  checkpoint; the timestamps are the log's own, so no hook does extra
+  work. The worktree changed when a file git lists as changed or untracked
+  (not ignored), or a file of a commit made since the first window, has a
+  modification time inside a window (a deleted file by its directory's).
+  Only the boolean is stored, never a path, command or content
+  (`HOOK-2`). Read-only commands leave nothing behind, so they never make a
+  run dirty; committing or switching branch alone does not either; a file
+  the user changes while the session waits for them, between turns or
+  after it stops is not the session's. Remaining false positives: a file
+  the user or another process changes while one of the session's commands
+  (or the model's thinking before it) is under way, and an untracked,
+  unignored file a command generates. Missed: what a background command
+  writes after its `tool.used`, and a subagent's own worktree. The check
+  gives up after 50 ms and is then logged, leaving the run as it was
+  (`HOOK-1`).
 - **no handoff**: Ended, linked to a ticket, and dirty.
 - **linked**: `claim` (explicit) or branch match (provisional, `RUN-5`);
   subagents inherit the parent's link.
@@ -413,7 +419,8 @@ when it left edits since its last checkpoint.
 When `enforce_handoff` is on for the project, at `Stop`:
 
 - if the run is linked, dirty (including a worktree change this stop's
-  check found, §4), the agent's payload does not say a stop hook is
+  check found during one of its shell commands, §4), the agent's payload
+  does not say a stop hook is
   already active, and the run was not blocked for handoff in this turn →
   output `{"decision":"block","reason":"Flashheart: record a checkpoint on <ticket> (done, next, files) before stopping."}`
   and record `turn.end` with `blocked_for_handoff: true`;
@@ -532,7 +539,8 @@ additive, because no event changes shape and older logs read the same (a
 stays 1.
 The session-start hook keeps an installed skill's text current (re-running
 `setup` installs it); `flashheart doctor` says when it is out of date.
-Shell edits count toward dirty (§4), with the optional `worktree_changed`
+Shell edits, made during the run's own shell command windows, count
+toward dirty (§4), with the optional `worktree_changed`
 field on `turn.end` and `run.end` (FH-53, 2026-10-09): additive, because
 an event without the field reads as before and the tools and skill keep
 their shape, so the version stays 1.

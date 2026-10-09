@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -49,6 +51,51 @@ func gitRepo(t *testing.T) string {
 	return dir
 }
 
+// minutes is the hooks' clock m minutes after now.
+func minutes(m float64) time.Time { return now.Add(time.Duration(m * float64(time.Minute))) }
+
+// play runs a session's script in a checkout: each step is "<minute>
+// <action>", where the action is a fake adapter event, "touch <file>" (the
+// file is written and dated at that minute, as a command or the user would
+// leave it) or "checkpoint" (on DM-1). It returns the last hook's output.
+func play(t *testing.T, root, cwd string, steps ...string) string {
+	t.Helper()
+	out := ""
+	for _, step := range steps {
+		fields := strings.Fields(step)
+		minute, err := strconv.ParseFloat(fields[0], 64)
+		if err != nil {
+			t.Fatalf("step %q: %v", step, err)
+		}
+		at := minutes(minute)
+		switch fields[1] {
+		case "touch":
+			name := filepath.Join(cwd, fields[2])
+			if err := os.WriteFile(name, []byte(step+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chtimes(name, at, at); err != nil {
+				t.Fatal(err)
+			}
+		case "checkpoint":
+			s, err := store.Open(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = events.New(s).Append(events.Event{Time: at, Run: "fake:s1", Agent: "fake", Kind: events.Checkpoint, Project: "demo", Data: events.CheckpointData{Ticket: "DM-1"}})
+			s.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+		default:
+			var stdout strings.Builder
+			Run(Options{Root: root, Event: fields[1], Stdin: strings.NewReader("s1 " + cwd), Stdout: &stdout, Now: func() time.Time { return at }, Adapter: fake{}, ChangeTimeout: 10 * time.Second})
+			out = stdout.String()
+		}
+	}
+	return out
+}
+
 func changedFlags(t *testing.T, root string) (turnEnds, runEnds []bool) {
 	t.Helper()
 	for _, e := range readEvents(t, root, "demo") {
@@ -67,55 +114,54 @@ func changedFlags(t *testing.T, root string) (turnEnds, runEnds []bool) {
 }
 
 // FH-53: agents edit mostly through shell commands, which name no path, so
-// the turn-end and session-end hooks check the worktree for files changed
-// since the last checkpoint and record only whether there were any.
-func TestEndsRecordWorktreeChangesAfterShellCommands(t *testing.T) {
+// the turn-end and session-end hooks check the worktree and record only
+// whether a file changed during one of the session's shell commands since
+// its last checkpoint. A command's window runs from the run's previous
+// event to the command's tool.used, so files the user changes while the
+// session waits are not the session's.
+func TestEndsRecordWorktreeChangesMadeDuringShellCommands(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name    string
 		steps   []string
-		write   bool
 		changed bool
 	}{
-		{"a shell command changed a file, then the session ended", []string{"Bash", "write", "End"}, true, true},
-		{"a read-only shell command, then the session ended", []string{"Bash", "End"}, false, false},
-		{"a file changed with no shell command (the user's own edit)", []string{"write", "End"}, true, false},
-		{"a shell change before the checkpoint", []string{"Bash", "write", "checkpoint", "End"}, true, false},
+		{"a file changed during a shell command, then the session ended",
+			[]string{"0 SessionStart", "1 Prompt", "2 touch a.txt", "3 Bash", "10 End"}, true},
+		{"a read-only shell command, then the session ended",
+			[]string{"0 SessionStart", "1 Prompt", "3 Bash", "4 Stop", "10 End"}, false},
+		{"a file changed with no shell command (the user's own edit)",
+			[]string{"0 SessionStart", "1 Prompt", "2 touch a.txt", "4 Stop", "10 End"}, false},
+		{"a file changed only while the session waited for the user",
+			[]string{"0 SessionStart", "1 Prompt", "3 Bash", "4 Stop", "6 touch a.txt", "8 Prompt", "9 Stop", "10 End"}, false},
+		{"a file created only after the session stopped",
+			[]string{"0 SessionStart", "1 Prompt", "3 Bash", "4 Stop", "6 touch new.txt", "10 End"}, false},
+		{"files changed both during a command and while waiting",
+			[]string{"0 SessionStart", "1 Prompt", "3 Bash", "4 Stop", "2 touch a.txt", "6 touch b.txt", "10 End"}, true},
+		{"a shell change before the checkpoint",
+			[]string{"0 SessionStart", "1 Prompt", "2 touch a.txt", "3 Bash", "3.5 checkpoint", "4 Stop", "10 End"}, false},
+		{"a change within the slack after the command's result",
+			[]string{"0 SessionStart", "1 Prompt", "3 Bash", "3.02 touch a.txt", "10 End"}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			root, cwd := t.TempDir(), gitRepo(t)
-			run(t, root, "SessionStart", "s1 "+cwd, fake{})
-			for _, step := range tc.steps {
-				switch step {
-				case "write":
-					// Written now, after the hooks' clock.
-					if err := os.WriteFile(filepath.Join(cwd, "a.txt"), []byte("changed\n"), 0o644); err != nil {
-						t.Fatal(err)
-					}
-				case "checkpoint":
-					// A checkpoint after the write: it ages the write to before it.
-					if err := os.Chtimes(filepath.Join(cwd, "a.txt"), now.Add(-time.Minute), now.Add(-time.Minute)); err != nil {
-						t.Fatal(err)
-					}
-					s, _ := store.Open(root)
-					_ = events.New(s).Append(events.Event{Time: now, Run: "fake:s1", Agent: "fake", Kind: events.Checkpoint, Project: "demo", Data: events.CheckpointData{Ticket: "DM-1"}})
-					s.Close()
-				default:
-					run(t, root, step, "s1 "+cwd, fake{})
-				}
+			play(t, root, cwd, tc.steps...)
+			turns, ends := changedFlags(t, root)
+			if len(ends) != 1 {
+				t.Fatalf("run ends = %v", ends)
 			}
-			_, ends := changedFlags(t, root)
-			if len(ends) != 1 || ends[0] != tc.changed {
-				t.Fatalf("run.end worktree_changed = %v, want [%v]", ends, tc.changed)
+			changed := slices.Contains(append(turns, ends...), true)
+			if changed != tc.changed {
+				t.Fatalf("worktree_changed on turn ends %v and the end %v, want %v", turns, ends, tc.changed)
 			}
 			if log := errorLog(t, root); log != "" {
 				t.Fatalf("hook-errors.log = %q", log)
 			}
 			data, _ := json.Marshal(readEvents(t, root, "demo"))
-			if strings.Contains(string(data), "a.txt") {
+			if strings.Contains(string(data), ".txt") {
 				t.Fatalf("the log names a changed file:\n%s", data)
 			}
 		})
@@ -128,13 +174,9 @@ func TestASlowWorktreeCheckFailsOpen(t *testing.T) {
 	t.Parallel()
 
 	root, cwd := t.TempDir(), gitRepo(t)
-	run(t, root, "SessionStart", "s1 "+cwd, fake{})
-	run(t, root, "Bash", "s1 "+cwd, fake{})
-	if err := os.WriteFile(filepath.Join(cwd, "a.txt"), []byte("changed\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	play(t, root, cwd, "0 SessionStart", "2 touch a.txt", "3 Bash")
 	var stdout strings.Builder
-	Run(Options{Root: root, Event: "End", Stdin: strings.NewReader("s1 " + cwd), Stdout: &stdout, Now: func() time.Time { return now }, Adapter: fake{}, ChangeTimeout: time.Nanosecond})
+	Run(Options{Root: root, Event: "End", Stdin: strings.NewReader("s1 " + cwd), Stdout: &stdout, Now: func() time.Time { return minutes(10) }, Adapter: fake{}, ChangeTimeout: time.Nanosecond})
 	if _, ends := changedFlags(t, root); len(ends) != 1 || ends[0] {
 		t.Fatalf("run.end worktree_changed = %v, want [false]", ends)
 	}
@@ -156,20 +198,17 @@ func TestStopEnforcesHandoffAfterShellChanges(t *testing.T) {
 		t.Run(map[bool]string{true: "changed", false: "read only"}[write], func(t *testing.T) {
 			t.Parallel()
 			root, cwd := t.TempDir(), gitRepo(t)
-			run(t, root, "SessionStart", "s1 "+cwd, fake{})
+			play(t, root, cwd, "0 SessionStart")
 			project := "name: demo\nkey: DM\nnext_id: 2\nrepos:\n  - " + cwd + "\nsettings:\n  enforce_handoff: true\n"
 			if err := os.WriteFile(filepath.Join(root, "demo", "project.yaml"), []byte(project), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			writeTicket(t, root, "demo", "DM-1-card-panel", "---\nid: DM-1\nstatus: in-progress\ntype: feature\npriority: high\ncreated: 2026-10-01\nbranch: feature/demo\n---\n# Card panel\n")
-			run(t, root, "Prompt", "s1 "+cwd, fake{})
-			run(t, root, "Bash", "s1 "+cwd, fake{})
+			steps := []string{"1 Prompt", "3 Bash", "4 Stop"}
 			if write {
-				if err := os.WriteFile(filepath.Join(cwd, "b.txt"), []byte("new\n"), 0o644); err != nil {
-					t.Fatal(err)
-				}
+				steps = []string{"1 Prompt", "2 touch b.txt", "3 Bash", "4 Stop"}
 			}
-			out := run(t, root, "Stop", "s1 "+cwd, fake{})
+			out := play(t, root, cwd, steps...)
 			if blocked := strings.HasPrefix(out, "block:"); blocked != write {
 				t.Fatalf("stop output = %q, blocked want %v", out, write)
 			}

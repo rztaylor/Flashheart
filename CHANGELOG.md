@@ -24,10 +24,12 @@ All notable changes to this project are documented here. The project follows
   and handoff enforcement missed most edits. At a session's turn end and
   end, when it ran a shell command since its last checkpoint, the hook asks
   git (within 50 ms, without locks) whether a changed, untracked or newly
-  committed file was modified since then, and records only yes or no on
-  `turn.end` and `run.end` (`worktree_changed`, agent-protocol §4; protocol
-  version unchanged). Read-only commands never flag a run; a file the user
-  changes in the same worktree meanwhile can.
+  committed file was modified during one of its shell commands (from the
+  run's previous event to the command's result, give or take 2 s), and
+  records only yes or no on `turn.end` and `run.end` (`worktree_changed`,
+  agent-protocol §4; protocol version unchanged). Read-only commands never
+  flag a run, and neither do files you change while the session waits for
+  you.
 - A question answered in the agent's own chat no longer leaves the session
   and its ticket in Needs you (FH-43, D28). A prompt in the asking session
   answers its open questions there (its subagents' too, never another

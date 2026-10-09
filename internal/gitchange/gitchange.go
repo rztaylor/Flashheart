@@ -16,10 +16,16 @@ const maxPaths = 2000
 // ChangedSince reports whether worktree's work changed after since: a file
 // git lists as changed or untracked (not ignored) was modified after it, or
 // a commit made after it changed a file that was. A deleted file counts by
-// its directory's modification time. gitDir is the worktree's own git
-// directory, whose HEAD reflog says cheaply whether any commit can be newer.
-// It fails when git is missing, the directory is not a worktree or ctx ends.
-func ChangedSince(ctx context.Context, worktree, gitDir string, since time.Time) (bool, error) {
+// its directory's modification time. When counts is set, a modification
+// time after since counts only if counts accepts it (the caller's shell
+// command windows); committed files are judged by their modification time
+// the same way. gitDir is the worktree's own git directory, whose HEAD
+// reflog says cheaply whether any commit can be newer. It fails when git is
+// missing, the directory is not a worktree or ctx ends.
+func ChangedSince(ctx context.Context, worktree, gitDir string, since time.Time, counts func(modified time.Time) bool) (bool, error) {
+	counted := func(modified time.Time) bool {
+		return modified.After(since) && (counts == nil || counts(modified))
+	}
 	status, err := git(ctx, worktree, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames")
 	if err != nil {
 		return false, err
@@ -31,7 +37,7 @@ func ChangedSince(ctx context.Context, worktree, gitDir string, since time.Time)
 			paths = append(paths, string(entry[3:]))
 		}
 	}
-	if modifiedAfter(worktree, paths, since) {
+	if modified(worktree, paths, counted) {
 		return true, nil
 	}
 	if !headMovedAfter(gitDir, since) {
@@ -47,7 +53,7 @@ func ChangedSince(ctx context.Context, worktree, gitDir string, since time.Time)
 			paths = append(paths, string(name))
 		}
 	}
-	return modifiedAfter(worktree, paths, since), nil
+	return modified(worktree, paths, counted), nil
 }
 
 func git(ctx context.Context, worktree string, args ...string) ([]byte, error) {
@@ -73,7 +79,9 @@ func headMovedAfter(gitDir string, since time.Time) bool {
 	return err == nil && info.ModTime().After(since)
 }
 
-func modifiedAfter(worktree string, paths []string, since time.Time) bool {
+// modified reports whether any of paths has a modification time counted
+// accepts.
+func modified(worktree string, paths []string, counted func(time.Time) bool) bool {
 	for _, path := range paths[:min(len(paths), maxPaths)] {
 		name := filepath.Join(worktree, filepath.FromSlash(path))
 		info, err := os.Lstat(name)
@@ -82,7 +90,7 @@ func modifiedAfter(worktree string, paths []string, since time.Time) bool {
 			dir = filepath.Dir(dir)
 			info, err = os.Lstat(dir)
 		}
-		if err == nil && info.ModTime().After(since) {
+		if err == nil && counted(info.ModTime()) {
 			return true
 		}
 	}

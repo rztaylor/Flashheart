@@ -115,12 +115,46 @@ type Run struct {
 
 	turnOpen bool
 	ended    bool
-	// shell counts successful shell commands since the last checkpoint.
-	shell int
+	// windows are the run's successful shell commands since the last
+	// checkpoint, oldest first, merged where they overlap.
+	windows []Window
 }
 
 // shellTools are the agents' shell command tools, whose edits name no path.
 var shellTools = []string{"Bash", "PowerShell"}
+
+// Shell command windows (agent-protocol §4).
+const (
+	// ShellSlack widens each window for clock and flush granularity.
+	ShellSlack = 2 * time.Second
+	// MaxWindows bounds a run's windows; the oldest two merge beyond it.
+	MaxWindows = 100
+)
+
+// Window is when a shell command may have changed files: from the run's
+// previous event to the command's tool.used, widened by ShellSlack.
+type Window struct {
+	From, To time.Time
+}
+
+// Contains reports whether t falls inside the window, ends included.
+func (w Window) Contains(t time.Time) bool { return !t.Before(w.From) && !t.After(w.To) }
+
+// addWindow appends w, merging it into the last window when they overlap
+// and the oldest two when there are too many.
+func (r *Run) addWindow(w Window) {
+	if last := len(r.windows) - 1; last >= 0 && !w.From.After(r.windows[last].To) {
+		if w.To.After(r.windows[last].To) {
+			r.windows[last].To = w.To
+		}
+		return
+	}
+	r.windows = append(r.windows, w)
+	if len(r.windows) > MaxWindows {
+		r.windows[1].From = r.windows[0].From
+		r.windows = slices.Delete(r.windows, 0, 1)
+	}
+}
 
 // Question is one ask_human question and what became of it (RUN-8).
 type Question struct {
@@ -250,6 +284,12 @@ func (s *Set) Apply(e events.Event) {
 		return
 	}
 	r := s.run(e)
+	// previous is the run's last event before this one, where a shell
+	// command's window starts.
+	previous := r.LastActivity
+	if previous.IsZero() || previous.After(e.Time) {
+		previous = e.Time
+	}
 	if e.Time.After(r.LastActivity) {
 		r.LastActivity = e.Time
 	}
@@ -323,7 +363,7 @@ func (s *Set) Apply(e events.Event) {
 			}
 		}
 		if data.OK && slices.Contains(shellTools, data.Tool) {
-			r.shell++
+			r.addWindow(Window{From: previous.Add(-ShellSlack), To: e.Time.Add(ShellSlack)})
 		}
 		entry.Tool, entry.Path, entry.Failed = data.Tool, data.Path, !data.OK
 	case events.PlanUpdated:
@@ -360,7 +400,7 @@ func (s *Set) Apply(e events.Event) {
 			members = []*Run{r}
 		}
 		for _, member := range members {
-			member.Edits, member.shell, member.LastCheckpoint = 0, 0, e.Time
+			member.Edits, member.windows, member.LastCheckpoint = 0, nil, e.Time
 		}
 		entry.Ticket = data.Ticket
 	case events.Claim, events.Release, events.TicketMoved, events.TicketUpdated, events.TicketCreated, events.ReviewWritten, events.AttachmentAdded:
@@ -627,24 +667,44 @@ func (s *Set) Edits(id string) int {
 // included: its handoff is due (HOOK-6).
 func (s *Set) Dirty(id string) bool { return s.Edits(id) > 0 }
 
-// ShellSince returns when the run's unrecorded work would start, its last
-// checkpoint or else its start, and whether it (with its subagents, for a
-// session) ran a shell command successfully since then. Only then is its
-// worktree worth checking for changes the edit tools did not record.
-func (s *Set) ShellSince(id string) (time.Time, bool) {
+// ShellWindows returns the windows of the run's successful shell commands
+// since its last checkpoint, with its subagents' for a session, sorted,
+// merged where they overlap and cut at the checkpoint; nil when there are
+// none. A worktree change counts as the run's only inside one of them: the
+// edit tools record their own paths, and a file changed while the session
+// waited is not its doing.
+func (s *Set) ShellWindows(id string) []Window {
 	r := s.runs[id]
 	if r == nil {
-		return time.Time{}, false
-	}
-	since := r.LastCheckpoint
-	if since.IsZero() {
-		since = r.Started
+		return nil
 	}
 	members := []*Run{r}
 	if r.Parent == "" {
 		members = s.family(r)
 	}
-	return since, slices.ContainsFunc(members, func(m *Run) bool { return m.shell > 0 })
+	var list []Window
+	for _, member := range members {
+		for _, w := range member.windows {
+			if w.From.Before(r.LastCheckpoint) {
+				w.From = r.LastCheckpoint
+			}
+			if !w.To.Before(w.From) {
+				list = append(list, w)
+			}
+		}
+	}
+	slices.SortFunc(list, func(a, b Window) int { return a.From.Compare(b.From) })
+	var merged []Window
+	for _, w := range list {
+		if last := len(merged) - 1; last >= 0 && !w.From.After(merged[last].To) {
+			if w.To.After(merged[last].To) {
+				merged[last].To = w.To
+			}
+			continue
+		}
+		merged = append(merged, w)
+	}
+	return merged
 }
 
 func (s *Set) children(r *Run) []*Run {

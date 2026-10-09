@@ -320,17 +320,24 @@ func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, 
 	return fmt.Sprintf("Flashheart: record a checkpoint on %s (done, next, files) before stopping.", link.Ticket), problem
 }
 
-// worktreeChanged asks git whether the run's worktree changed since its
-// last checkpoint (or start), only when the run is not already due and it
-// or its subagents ran a shell command since then: the edit tools record
-// their own paths, and without a command the change is not the run's.
+// worktreeChanged asks git whether a file in the run's worktree changed
+// during one of its (or its subagents') shell commands since its last
+// checkpoint, only when the run is not already due and ran one: the edit
+// tools record their own paths, and a file changed while the session waited
+// is not its doing.
 func worktreeChanged(set *runs.Set, run string, info gitinfo.Info, timeout time.Duration) (bool, error) {
 	if info.Worktree == "" || set.Get(run) == nil || set.Dirty(run) {
 		return false, nil
 	}
-	since, used := set.ShellSince(run)
-	if !used {
+	windows := set.ShellWindows(run)
+	if len(windows) == 0 {
 		return false, nil
+	}
+	// Start just before the first window, so a change at its very start
+	// counts (ChangedSince counts only times after since).
+	since := windows[0].From.Add(-time.Nanosecond)
+	within := func(modified time.Time) bool {
+		return slices.ContainsFunc(windows, func(w runs.Window) bool { return w.Contains(modified) })
 	}
 	gitDir := ""
 	if info.Head != "" {
@@ -338,7 +345,7 @@ func worktreeChanged(set *runs.Set, run string, info gitinfo.Info, timeout time.
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	changed, err := gitchange.ChangedSince(ctx, info.Worktree, gitDir, since)
+	changed, err := gitchange.ChangedSince(ctx, info.Worktree, gitDir, since, within)
 	if err != nil {
 		return false, fmt.Errorf("check the worktree for changes: %w", err)
 	}

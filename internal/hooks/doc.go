@@ -5,9 +5,9 @@
 // stored, appends the events, renders the recovery note at session start
 // (after calling the caller's skill refresh and noting an update),
 // delivers waiting answers with a prompt (HOOK-5), marks a session's turn
-// end or end when its worktree changed after its last checkpoint through
-// shell commands (asking gitchange, under a deadline, only when it ran one;
-// agent-protocol §4), blocks a stop once for a checkpoint when the project
+// end or end when a file in its worktree changed during one of its shell
+// commands since its last checkpoint (asking gitchange, under a deadline,
+// only when it ran one; agent-protocol §4), blocks a stop once for a checkpoint when the project
 // enforces handoffs (HOOK-6), and prints
 // adapter-only replies such as run stamping without opening the board.
 // Every failure is logged to hook-errors.log and swallowed. In a repository
