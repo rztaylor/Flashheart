@@ -49,7 +49,6 @@ export type Placement =
   | "agents-none"
   | "needs-you-clear"
   | "workstreams-none"
-  | "plan-empty"
   | "plan"
   | "handoff"
   | "handoff-missing"
@@ -77,9 +76,8 @@ export const PLACEMENTS: Record<
   "agents-none": { ids: [41, 43, 44, 46, 47, 48, 49, 50], priority: 20 },
   // Filters or a search that match nothing.
   search: { ids: [82, 83, 85, 86, 87, 88], priority: 20 },
-  // An open run with a plan, or with none.
+  // An open run with a plan (a run with none shows no plan section).
   plan: { ids: [32, 34, 35, 36, 39, 40], priority: 30 },
-  "plan-empty": { ids: [33], priority: 30 },
   // A ticket's current handoff with a next step; an in-progress ticket
   // with no handoff.
   handoff: { ids: [75, 77, 79, 80], priority: 30 },
@@ -95,9 +93,10 @@ export const PLACEMENTS: Record<
   shutdown: { ids: [92, 93, 95, 96, 99, 100], priority: 0 },
 };
 
-// DEFERRED lists reviewed remarks with no honest placement yet: 54 claims a
-// plan's first task, and 60 a handoff someone else will read.
-export const DEFERRED = [54, 60];
+// DEFERRED lists reviewed remarks with no honest placement yet: 33 asks for
+// a next step of a run with no plan, which shows no plan section (FH-54), 54
+// claims a plan's first task, and 60 a handoff someone else will read.
+export const DEFERRED = [33, 54, 60];
 
 export function remarksFor(placement: Placement): Remark[] {
   const { ids } = PLACEMENTS[placement];
