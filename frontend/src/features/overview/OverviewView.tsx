@@ -588,7 +588,7 @@ function RiskRow({
           <Ago
             iso={item.since}
             now={now}
-            before="Last activity "
+            before={item.sinceSession ? "Last activity " : "Last changed "}
             after=" ago"
           />
         )

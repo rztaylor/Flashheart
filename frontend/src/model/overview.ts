@@ -78,6 +78,9 @@ export interface RiskItem {
   card: Card;
   reasons: string[];
   since: string;
+  // sinceSession: since is a session's last activity; otherwise it is when
+  // the ticket last changed.
+  sinceSession: boolean;
 }
 
 export interface ProgressItem {
@@ -261,7 +264,12 @@ export function overview(cards: Card[], runs: Run[]): Overview {
     const reasons = riskReasons(card, tops.has(card.id));
     if (reasons.length === 0) continue;
     atRisk.add(card.id);
-    risk.push({ card, reasons, since: lastActivity(card) });
+    risk.push({
+      card,
+      reasons,
+      since: lastActivity(card),
+      sinceSession: Boolean(card.sessions?.lastActivity),
+    });
   }
 
   const runIDs = new Set(runs.map((run) => run.id));

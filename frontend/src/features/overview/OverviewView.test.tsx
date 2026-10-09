@@ -227,6 +227,22 @@ describe("OverviewSections", () => {
             subagents: { done: 0, running: 0, needsYou: 0 },
           },
         }),
+        card({
+          id: "AL-5",
+          title: "Hook latency",
+          modified: "2026-10-05T09:00:00Z",
+          sessions: {
+            run: "",
+            short: "",
+            agent: "",
+            state: "",
+            lastActivity: "",
+            noLiveSession: true,
+            dirty: false,
+            noHandoff: false,
+            subagents: { done: 0, running: 0, needsYou: 0 },
+          },
+        }),
       ],
       [run("claude:free")],
     );
@@ -236,6 +252,8 @@ describe("OverviewSections", () => {
     expect(markup).toContain("Working · subagents 3 done · 2 running");
     expect(markup).toContain("No live session");
     expect(markup).toContain("Last activity 1 day ago");
+    // With no session activity, the time is the ticket's own change.
+    expect(markup).toContain("Last changed 3 h ago");
     // At risk names no agent for a ticket no session works on.
     const risk = markup.slice(
       markup.indexOf("At risk"),

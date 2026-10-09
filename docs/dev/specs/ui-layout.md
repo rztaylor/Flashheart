@@ -273,8 +273,10 @@ fixed order:
    time and one primary **Review results** button opening the ticket's
    Review tab.
 3. **At risk**: the reason in words (no live session, session gone quiet,
-   ended without a handoff, top of Up next blocked by …) and the last
-   activity, or *Not started*; an agent is named only for a live session.
+   ended without a handoff, top of Up next blocked by …) and *Last
+   activity …* (a session's), *Last changed …* (the ticket's own change,
+   when no session has activity) or *Not started*; an agent is named only
+   for a live session.
 4. **In progress**: the session's state and its subagents in words
    (*Working · subagents 3 done · 2 running*), agent, criteria and last
    activity.

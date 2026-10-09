@@ -346,13 +346,14 @@ describe("overview", () => {
     const view = overview(cards, []);
     expect(view.review.map((item) => item.card.id)).toEqual(["AL-4", "AL-5"]);
     expect(view.review[0]?.since).toBe("2026-10-03T09:00:00Z");
-    // At risk: the in-progress ticket no session works on (its last
-    // activity falls back to the ticket's change time), and the blocked
-    // top of Up next.
+    // At risk: the in-progress ticket no session works on (its time is the
+    // ticket's own change, not session activity), and the blocked top of
+    // Up next.
     expect(view.risk.map((item) => item.card.id)).toEqual(["AL-3", "AL-6"]);
     expect(view.risk[0]).toMatchObject({
       reasons: ["No session has worked on it"],
       since: "2026-10-04T08:00:00Z",
+      sinceSession: false,
     });
     // In progress leaves out what is at risk; most recent activity first.
     expect(view.progress.map((item) => item.card.id)).toEqual(["AL-2", "AL-1"]);
@@ -366,6 +367,23 @@ describe("overview", () => {
       "BE-1",
     ]);
     expect(view.upNextTotal).toBe(3);
+  });
+
+  it("times a risk by session activity when a session has any", () => {
+    const quiet = card({
+      id: "AL-9",
+      column: "in-progress",
+      modified: "2026-10-05T11:59:00Z",
+      sessions: sessions({
+        state: "quiet",
+        lastActivity: "2026-10-05T11:20:00Z",
+      }),
+    });
+    expect(overview([quiet], []).risk[0]).toMatchObject({
+      reasons: ["Session gone quiet"],
+      since: "2026-10-05T11:20:00Z",
+      sinceSession: true,
+    });
   });
 
   it("is empty with no tickets and no runs", () => {
