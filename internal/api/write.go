@@ -11,6 +11,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/config"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
 )
@@ -142,6 +143,16 @@ func (b boardAPI) saved(w http.ResponseWriter, status int, hash string, warnings
 	writeJSON(w, status, WriteResponse{Hash: hash, Revision: revision, Warnings: nonNil(warnings)})
 }
 
+// recordHuman records that the human changed a ticket on the board: its id
+// and at most the columns or field names, never their values (agent-protocol
+// §3). The ticket is already saved and the board files are the source of
+// truth, so a failure to record does not fail the write.
+func (b boardAPI) recordHuman(project, kind string, data events.TicketData) {
+	if b.events != nil {
+		_ = b.events.Append(events.ByHuman(b.now(), project, kind, data))
+	}
+}
+
 // MoveRequest is POST /api/tickets/{id}/move (EDIT-1).
 type MoveRequest struct {
 	Base string `json:"base"`
@@ -217,6 +228,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketMoved, events.TicketData{Ticket: ticket.ID, From: string(ticket.Column), To: string(to)})
 	if to == board.Review && ticket.Column != board.Review {
 		review := ""
 		if project.Reviews[ticket.ID] && b.files != nil {
@@ -317,6 +329,11 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	fields := make([]string, 0, len(changes))
+	for _, c := range changes {
+		fields = append(fields, c.key)
+	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: fields})
 	b.saved(w, http.StatusOK, hash, nil)
 }
 
@@ -354,6 +371,8 @@ func (b boardAPI) putRaw(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	// A raw edit names no fields: what it changed is not worked out.
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID})
 	b.saved(w, http.StatusOK, hash, warnings)
 }
 
@@ -384,6 +403,7 @@ func (b boardAPI) setCriterion(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{"criteria"}})
 	b.saved(w, http.StatusOK, hash, nil)
 }
 
@@ -400,6 +420,7 @@ func (b boardAPI) archive(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{"archived"}})
 	b.saved(w, http.StatusOK, "", nil)
 }
 
@@ -424,6 +445,7 @@ func (b boardAPI) unarchive(w http.ResponseWriter, r *http.Request) {
 				writeStoreError(w, err)
 				return
 			}
+			b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: id, Fields: []string{"archived"}})
 			b.saved(w, http.StatusOK, "", nil)
 			return
 		}
@@ -477,6 +499,7 @@ func (b boardAPI) createTicket(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(r.PathValue("project"), events.TicketCreated, events.TicketData{Ticket: created.ID})
 	revision := uint64(0)
 	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
 		revision = snapshot.Revision
@@ -642,5 +665,6 @@ func (b boardAPI) setReviewStep(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{"review"}})
 	b.saved(w, http.StatusOK, hash, nil)
 }

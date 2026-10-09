@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/runs"
 )
 
@@ -43,6 +44,9 @@ type Snapshot struct {
 	// Runs are the agent runs of the last two days' event logs at BuiltAt.
 	Runs []runs.View
 
+	// human is each project's latest human board activity (LatestHuman).
+	human map[string]events.HumanActivity
+
 	projects map[string]int
 	tickets  map[string][2]int // id → project index, ticket index (first copy)
 	archived map[string]bool
@@ -70,6 +74,23 @@ func (s *Snapshot) FindTicket(id string) (*board.Project, board.Ticket, bool) {
 
 // Archived reports whether id names an archived ticket.
 func (s *Snapshot) Archived(id string) bool { return s.archived[id] }
+
+// LatestHuman returns the human's latest activity on the board in a project,
+// or across every project when project is "": a ticket written on the board
+// or an agent's question answered there (agent-protocol §3), from the whole
+// retained event log. ok is false when there is none.
+func (s *Snapshot) LatestHuman(project string) (activity events.HumanActivity, ok bool) {
+	if project != "" {
+		activity, ok = s.human[project]
+		return activity, ok
+	}
+	for _, candidate := range s.human {
+		if !ok || candidate.Time.After(activity.Time) {
+			activity, ok = candidate, true
+		}
+	}
+	return activity, ok
+}
 
 // Index caches the latest snapshot.
 type Index struct {
@@ -143,6 +164,7 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 	}
 	now := i.now()
 	var views []runs.View
+	var human map[string]events.HumanActivity
 	if i.events != nil && !missing {
 		names := make([]string, 0, len(b.Projects))
 		for _, project := range b.Projects {
@@ -150,6 +172,7 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 		}
 		read := i.events.update(names, now)
 		views = i.events.views(b, now, i.runs)
+		human = i.events.human()
 		fingerprint += "\x00runs:" + read + "\x00" + signature(views)
 	}
 	revision := uint64(1)
@@ -167,6 +190,7 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 		Board:       b,
 		Analysis:    board.Analyze(b),
 		Runs:        views,
+		human:       human,
 		projects:    make(map[string]int, len(b.Projects)),
 		tickets:     map[string][2]int{},
 		archived:    map[string]bool{},
