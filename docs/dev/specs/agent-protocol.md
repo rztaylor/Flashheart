@@ -1,4 +1,4 @@
-# Agent protocol (v1)
+# Agent protocol (v2)
 
 How AI agents and Flashheart talk: runs, events, hooks, MCP tools, claims,
 handoffs, questions and recovery. This is a contract with agents and with the
@@ -51,7 +51,7 @@ user's agent configuration; change it deliberately and bump
 
 ```json
 {"v":1,"ts":"2026-10-04T14:12:09.123Z","run":"claude:3f2a9c1e-…","agent":"claude",
- "kind":"tool.used","project":"ngplus","data":{"tool":"Edit","ok":true,"path":"src/ui/AppShell.tsx"}}
+ "kind":"activity","project":"ngplus","data":{"tools":12,"failed":1,"paths":["src/ui/AppShell.tsx"]}}
 ```
 
 `ts` is RFC 3339 UTC with milliseconds. `data` is kind-specific. All strings
@@ -66,7 +66,8 @@ writing.
 | `run.end` | session end / subagent stop | `reason`; optional `worktree_changed: true` (§4) |
 | `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
 | `turn.end` | stop | `blocked_for_handoff` (bool); optional `worktree_changed: true` (§4) |
-| `tool.used` | post tool use | `tool`, `ok`, optional `path` (repo-relative, edits only; omitted outside the worktree), optional `summary` (≤120 chars, not written by the Claude adapter, which reads nothing else from tool inputs) |
+| `activity` | post tool use, throttled (below) | `tools` (tool results since the run's previous `activity`), optional `failed` (how many of them failed), `paths` (the repo-relative edit paths the run had not recorded since its last checkpoint; omitted outside the worktree), `shell` (≤20 `{from, to}` windows of its successful shell commands, §4, merged where they meet) |
+| `tool.used` | post tool use, before protocol 2; still read | `tool`, `ok`, optional `path` (repo-relative, edits only), optional `summary` (≤120 chars) |
 | `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
 | `permission.requested` | permission request / notification | `tool`, optional `summary` |
 | `permission.resolved` | permission denied | `outcome` (allowed/denied/unknown), optional `tool`. A pending request is also resolved, without an event, by the run's next tool result, prompt, turn end or end (§4) |
@@ -82,6 +83,40 @@ writing.
 | `question.asked` | MCP | `id`, `ticket`, `kind`, `text` (≤1,000), `options` |
 | `question.answered` | UI | `id`, `answer`, `by` |
 | `question.delivered` | hook | `id` |
+
+### Activity records
+
+Tool results are most of what a session does, so they are counted, not
+recorded one by one (FH-55). Hooks record a run's tool results as one
+`activity` at most every `activity_seconds` (`config.yaml`, default 60),
+counting the tool uses and failures since its previous one, except that a
+tool result is recorded at once when:
+
+- it edits a path the run has not recorded since its last checkpoint, so
+  dirty (§4) is never late. Each path is recorded once per run between
+  checkpoints: the result of the agent's own `checkpoint` tool call lets
+  every run of its session record its paths again;
+- a permission request of the run waits on it (§4);
+- it is the run's first, or its first after `activity_seconds` without a
+  recorded event.
+
+Before a turn end or end, the pending activity of the runs it ends is
+recorded (a session's turn end or end: the session and its subagents), so
+the worktree check and handoff enforcement (§4, §9) see all of it. A run's
+last activity therefore lags its last tool result by at most
+`activity_seconds`, well inside `quiet_minutes`. Every other kind is
+recorded as it happens.
+
+Between hooks, a session's pending activity, the time of each of its runs'
+latest hook event (where a shell command's window starts) and the paths
+recorded since the last checkpoint live in
+`<project>/.flashheart/activity/<agent>--<session>.json`, read and written
+under the project lock together with the log, so tool results arriving
+together all count. It is a disposable cache: an unreadable one starts
+afresh, a run's entry goes with its end, and the session's file with the
+session's end (a session that never reports its end leaves a small file
+behind). Logs written before protocol 2 hold one `tool.used` per tool
+call; readers fold both.
 
 ### The human's board writes
 
@@ -126,7 +161,8 @@ table):
 
 A run's last event includes its subagents' events. A subagent ends with its
 session, and a session needs you while one of its live subagents does. A
-pending permission is cleared by the run's next `tool.used`, `turn.start`,
+pending permission is cleared by the run's next `activity` (or
+`tool.used`), `turn.start`,
 `turn.end`, `permission.resolved` or `run.end`. A question not yet answered
 on the board is **answered in the session**, without an event, by its
 session's next `turn.start` that is not `background`: the user replied in
@@ -141,17 +177,21 @@ days of event files.
 
 Flags:
 
-- **dirty**: an edit `tool.used` (one with a `path`) after the run's last
+- **dirty**: an edited path in an `activity` (or an edit `tool.used`, one
+  with a `path`) after the run's last
   `checkpoint`, or a `turn.end` or `run.end` after it with
   `worktree_changed: true`, which counts as one edit. Agents edit mostly
   through shell commands, which name no path, so at a session's turn end
   and end the hook checks its worktree when the session is not already
   dirty and it or one of its subagents ran a shell command (`Bash` or
   `PowerShell`, `ok`) since its last checkpoint. Each such command has a
-  **window**, from its run's previous event to its `tool.used`, widened by
+  **window**, from its run's previous event to its result, widened by
   2 s either side for clock and flush granularity and cut at the last
-  checkpoint; the timestamps are the log's own, so no hook does extra
-  work. The worktree changed when a file git lists as changed or untracked
+  checkpoint. The hook keeps each window in the session's activity state
+  until it records it in an `activity`'s `shell` (§3), at the latest
+  just before the turn end or end it checks; in older logs a window ends
+  at a `tool.used` and starts at the run's previous event. No hook does
+  extra work for it. The worktree changed when a file git lists as changed or untracked
   (not ignored), or a file of a commit made since the first window, has a
   modification time inside a window (a deleted file by its directory's).
   Only the boolean is stored, never a path, command or content
@@ -162,7 +202,7 @@ Flags:
   the user or another process changes while one of the session's commands
   (or the model's thinking before it) is under way, and an untracked,
   unignored file a command generates. Missed: what a background command
-  writes after its `tool.used`, and a subagent's own worktree. The check
+  writes after its result, and a subagent's own worktree. The check
   gives up after 50 ms and is then logged, leaving the run as it was
   (`HOOK-1`).
 - **no handoff**: Ended, linked to a ticket, and dirty.
@@ -197,8 +237,8 @@ ticket's `## Notes`.
 | `SessionStart` (`source`: startup, resume, clear, compact) | `run.start` | Recovery note as `hookSpecificOutput.additionalContext` (§8) |
 | `UserPromptSubmit` | `turn.start` (resolves a pending permission and, unless `background`, answers open questions in the session, §4); `question.delivered` for each answer handed over | Answered questions as `additionalContext` (`HOOK-5`), from the session's answers inbox |
 | `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping: `hookSpecificOutput.updatedInput` is the tool input with `run` set to the calling run (the subagent's when `agent_id` is present), and no permission decision (§7.1) |
-| `PostToolUse` | `tool.used`; `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`). A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
-| `PostToolUseFailure` | `tool.used` with `ok: false` | — |
+| `PostToolUse` | a tool use counted into `activity` (throttled, §3); `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`); `mcp__flashheart__checkpoint` lets the session record its edited paths again. A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
+| `PostToolUseFailure` | a failed tool use counted into `activity` | — |
 | `PermissionRequest` | `permission.requested` | — (never decides the permission) |
 | `PermissionDenied` | `permission.resolved` denied | — |
 | `Notification` | `notification` with type `permission` (`permission_prompt`), `idle` (`idle_prompt`) or the agent's own short type; permission type also → `permission.requested` | — |
@@ -223,7 +263,7 @@ small.
 |---|---|
 | `SessionStart` | `run.start`; recovery note as additional context |
 | `UserPromptSubmit` | `turn.start`; answered questions |
-| `PostToolUse` | `tool.used`; `plan.updated` for `update_plan`; edit paths from `apply_patch` file headers |
+| `PostToolUse` | a tool use counted into `activity` (§3); `plan.updated` for `update_plan`; edit paths from `apply_patch` file headers |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs |
 | `PreCompact` / `PostCompact` | `compact` |
@@ -535,7 +575,8 @@ kept current by the session-start hook (§5.4). It covers, briefly:
   `scripts/record-claude-hooks.sh` records a real Claude Code session.
   Re-record when an agent changes.
 - **Hook latency**: `scripts/hook-bench.sh` runs 1,000 warm invocations of
-  the built binary and fails when p95 exceeds 50 ms (`HOOK-1`).
+  the built binary and fails when p95 exceeds 50 ms (`HOOK-1`); `-tools`
+  measures tool results alone, the throttled path (§3).
 - **State table tests** for §4, including clock-driven transitions.
 - **MCP contract tests** through the Go SDK's in-memory transport.
 - **End-to-end smoke**: a scripted sequence (start → claim → edits → stop
@@ -543,10 +584,21 @@ kept current by the session-start hook (§5.4). It covers, briefly:
 
 ## 14. Versioning
 
-`PROTOCOL_VERSION = 1`, reported by `flashheart version` and in the MCP
+`PROTOCOL_VERSION = 2`, reported by `flashheart version` and in the MCP
 server's instructions. Additive changes (new tools, new event kinds, new
 optional fields) keep the version; removing or changing meaning bumps it and
 requires `setup` to be re-run.
+
+Version 2 (FH-55, 2026-10-09): hooks record throttled `activity` records
+(§3) instead of one `tool.used` per tool call, and a run's edit count is
+of paths recorded since its last checkpoint rather than of edit tool
+calls. Not additive: a version 1 reader skips the unknown kind, so it
+would miss edits, shell command windows and liveness. A version 2 reader
+still folds `tool.used` from older logs, so the last two days read
+correctly across the upgrade. Agents see no difference: the MCP tools, the
+hook registrations and the skill's text keep their shape, and only the
+skill's `flashheart-protocol` metadata changes, which the session-start
+hook refreshes (§5.4); re-running `setup claude --write` updates it too.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

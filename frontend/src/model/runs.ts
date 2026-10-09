@@ -137,6 +137,8 @@ export function describeEntry(entry: TimelineEntry): string {
       if (entry.failed) return `${tool} failed`;
       return entry.path ? `${tool} ${entry.path}` : tool;
     }
+    case "activity":
+      return describeActivity(entry);
     case "turn.start":
       return entry.detail === "background"
         ? "Background task finished"
@@ -172,6 +174,12 @@ export function describeEntry(entry: TimelineEntry): string {
       return `Claimed ${entry.ticket ?? "a ticket"}`;
     case "release":
       return `Released ${entry.ticket ?? "a ticket"}`;
+    case "ticket.moved":
+      return `Moved ${entry.ticket ?? "a ticket"}`;
+    case "ticket.created":
+      return `Created ${entry.ticket ?? "a ticket"}`;
+    case "review.written":
+      return `Wrote the review of ${entry.ticket ?? "a ticket"}`;
     case "question.asked":
       return `${asked[entry.detail ?? ""] ?? "Asked a question"}${on(entry.ticket)}`;
     case "question.answered":
@@ -185,17 +193,46 @@ export function describeEntry(entry: TimelineEntry): string {
   }
 }
 
+// describeActivity summarises an activity record: the path it edited, its
+// tool uses and how many failed (FH-55).
+function describeActivity(entry: TimelineEntry): string {
+  const tools = entry.tools ?? 0;
+  const parts = entry.path
+    ? [
+        `Edited ${entry.path}`,
+        ...(tools > 1 ? [counted(tools, "tool use")] : []),
+      ]
+    : [counted(tools, "tool use")];
+  if (entry.failures) parts.push(`${entry.failures} failed`);
+  return parts.join(", ");
+}
+
 export interface CompactEntry {
   entry: TimelineEntry;
   count: number;
 }
 
 // compactTimeline folds consecutive uses of the same tool that edited
-// nothing into one line with a count, and lists the newest first.
+// nothing into one line with a count, adds up consecutive activity records
+// that edited nothing, and lists the newest first.
 export function compactTimeline(entries: TimelineEntry[]): CompactEntry[] {
   const folded: CompactEntry[] = [];
   for (const entry of entries) {
     const last = folded[folded.length - 1];
+    if (
+      last &&
+      entry.kind === "activity" &&
+      last.entry.kind === "activity" &&
+      !entry.path &&
+      !last.entry.path
+    ) {
+      last.entry = {
+        ...entry,
+        tools: (last.entry.tools ?? 0) + (entry.tools ?? 0),
+        failures: (last.entry.failures ?? 0) + (entry.failures ?? 0),
+      };
+      continue;
+    }
     const repeat =
       last &&
       entry.kind === "tool.used" &&

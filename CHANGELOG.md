@@ -41,6 +41,26 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- **Agent protocol 2** (FH-55, D32): hooks record a run's tool results as
+  throttled `activity` records instead of one `tool.used` per tool call,
+  which was about 80% of all events. A record counts the tool uses and
+  failures since the run's previous one, at most one a minute
+  (`activity_seconds` in `config.yaml`); an edit of a path the run has not
+  recorded since its last checkpoint, and the tool result a permission
+  request waits on, are recorded at once, and what is pending is recorded
+  before a turn end or end. Each edited path is recorded once per run
+  between checkpoints, so a run's edit count is now of files. Shell
+  commands' windows (FH-53) travel in the records, so shell edits still
+  count toward the handoff. On this board's own logs the change leaves
+  about a third of the events (6,475 to 2,132). Last activity lags a run's
+  last tool result by at most a minute; Quiet, Needs you and dirty behave as
+  before, and logs written before the upgrade read as before. The Runs
+  tab's activity shows turns, checkpoints, questions, moves and summaries
+  such as "Edited src/app.ts, 3 tool uses" or "40 tool uses, 2 failed"
+  instead of every tool's name. Agents see no difference; the installed
+  skill's protocol number updates at the next session start, or re-run
+  `flashheart setup claude --write`. Update the binary and the board
+  together: an older `serve` does not read the new records.
 - An Overview replaces the Agents view (FH-51, D32). The band's tabs read
   Board, Overview, Workstreams, Table. The Overview is about tickets, for
   All projects or one project, in one calm column: Needs your decision

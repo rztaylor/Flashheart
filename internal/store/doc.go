@@ -11,7 +11,8 @@
 // references and retired keys (PRJ-5), copies allow-listed local files into a ticket (REV-1, REV-5),
 // writes reviews (REV-4) and ticks their How to Verify steps (REV-3), finds or creates a repository's project
 // (PRJ-2–PRJ-5), resolves working directories through the cwd cache, and
-// keeps event files and answers inboxes.
+// keeps event files, answers inboxes and the hooks' per-session activity
+// state (read, appended with and replaced under one project lock).
 //
 // Callers that need a few projects at scale read every project's identity
 // with ReadHeads; read-only callers find a repository's project with
