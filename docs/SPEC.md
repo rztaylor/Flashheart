@@ -77,7 +77,7 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Project** | A subdirectory of the root, normally one per repository, named after the repository's main checkout. |
 | **Ticket** | One unit of work with a stable id such as `FH-42`: a folder `tickets/FH-42-<slug>/` holding the ticket file `FH-42-<slug>.md`, its review and copied files. |
 | **Ticket id** | `<project key>-<number>`, unique across the root; how humans and agents refer to tickets (`KEY`). |
-| **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. |
+| **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. A `rejected` ticket (closed without being accepted) is in Done and says Rejected (FH-58). |
 | **Workstream** | A group of tickets with a shared goal, like an epic, worked on in sequence or in parallel; only `depends-on` orders its tickets (D26). |
 | **Review** | A human verification guide for a ticket in `reviews/`. |
 | **Attachment** | A file (screenshot, log, PDF) copied into the ticket's `files/` folder. |
@@ -290,7 +290,9 @@ Full format: `docs/dev/specs/board-format.md`.
 - `EDIT-1` Drag and drop moves a ticket between columns (edits its `status`).
   Every drag action has a keyboard and menu alternative: Shift with an arrow
   moves a focused card to the next column (and a station along its line),
-  and the card panel has **Move to …**. Each move can be undone.
+  and the card panel has **Move to …**, which also offers **Rejected**: a
+  Done state for a ticket closed without being accepted (FH-58). Each move
+  can be undone.
 - `EDIT-2` Moving a blocked ticket into *in-progress* asks for confirmation
   and records the override reason in `## Notes`.
 - `EDIT-3` Moving into *Ready to review* warns when the review file is

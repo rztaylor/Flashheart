@@ -47,17 +47,26 @@ export function Pill({
   );
 }
 
-// StatusPill names a ticket's column (or an archived or missing station).
+// StatusPill names a ticket's column (or an archived or missing station),
+// or Rejected, with a cross rather than a check, for a rejected ticket in
+// Done.
 export function StatusPill({
   column,
+  rejected,
   className,
 }: {
   column: string;
+  rejected?: boolean;
   className?: string;
 }) {
-  const { tone, label } = statusOf(column);
+  const { tone, label } = statusOf(column, rejected);
+  const crossed = rejected && column === "done";
   return (
-    <Pill tone={tone} className={className}>
+    <Pill
+      tone={tone}
+      icon={crossed ? "close" : undefined}
+      className={className}
+    >
       {label}
     </Pill>
   );

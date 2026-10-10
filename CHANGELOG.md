@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The project follows
 
 ## Unreleased
 
+### Added
+
+- A **Rejected** status for tickets closed without being accepted (FH-58).
+  `status: rejected` is a Done state: the ticket sits in the Done column
+  and counts as done for blocking and workstream progress, but its card,
+  panel, table row, archive row and workstream station say *Rejected*
+  (a neutral pill and a crossed station, never a check). Reject a ticket
+  with the panel's **Move to → Rejected** or the Edit tab's Status; moving
+  it anywhere else, Done included, clears it. Agents see `rejected` in
+  `list_tickets` and `get_ticket` and can filter by it, but `move` refuses
+  it, as it refuses `done` (protocol version unchanged).
+
 ### Security
 
 - `serve` no longer copies any linked local file into a directly edited

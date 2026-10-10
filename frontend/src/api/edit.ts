@@ -1,7 +1,7 @@
 // Writes to the board (board-editing). Every ticket edit sends the hash the
 // client read; a stale hash fails with a conflict carrying the current file
 // (STO-3, EDIT-7).
-import { type Column, segment } from "./board";
+import { type Column, type Status, segment } from "./board";
 import {
   ApiError,
   type AuthenticatedFetch,
@@ -44,7 +44,7 @@ const ticketPath = (id: string) => `/api/tickets/${segment(id)}`;
 export function moveTicket(
   fetcher: AuthenticatedFetch,
   id: string,
-  to: Column,
+  to: Status,
   base: string,
   reason = "",
   after?: string,

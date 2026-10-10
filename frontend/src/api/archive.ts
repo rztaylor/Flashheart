@@ -11,8 +11,10 @@ export interface Archived {
   type: string;
   priority: string;
   workstream: string;
-  // column is where Restore returns the ticket.
+  // column is where Restore returns the ticket; rejected, that it is
+  // rejected there.
   column: Column;
+  rejected?: boolean;
   archived: string;
   attachments: number;
   hasReview: boolean;

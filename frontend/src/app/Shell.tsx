@@ -7,6 +7,7 @@ import {
   fetchAllBoard,
   fetchProjectBoard,
   fetchProjects,
+  type Status,
   type TicketRef,
 } from "../api/board";
 import type { Created } from "../api/edit";
@@ -155,7 +156,7 @@ export function Shell({
   const cardsForRemarks = useRef<Card[]>([]);
   const lastProgress = useRef<number | undefined>(undefined);
   const remark = useCallback(
-    (ticket: Movable, to: Column): ToastMessage["aside"] => {
+    (ticket: Movable, to: Status): ToastMessage["aside"] => {
       if (to !== "done" || ticket.column === "done") return undefined;
       const cards = cardsForRemarks.current;
       const card = cards.find((item) => item.id === ticket.id);

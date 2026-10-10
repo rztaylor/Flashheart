@@ -243,6 +243,8 @@ id a separate link.
   id, status pill, with a *Needs FH-n* blocked pill above it for an
   unfinished dependency outside the line.
   - **Done or archived**: filled line-colour station with a check.
+  - **Rejected**: filled line-colour station with a cross (finished, not
+    accepted; never a check).
   - **Ready to review**: filled line-colour station with a ground dot (served,
     not finished; never a check).
   - **Next stop**: the larger interchange ring in the line colour with a
@@ -316,7 +318,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | Attention | A run or question that needs the user | Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark | Disc mark and words |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
 | Paint | The Colour by value | Card header tint, filled tag, colour chip bullet | The value's word |
-| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green | Icon and column word |
+| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done) | Icon and column word |
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |
