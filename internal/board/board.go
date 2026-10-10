@@ -39,6 +39,20 @@ func ParseColumn(value string) (Column, bool) {
 	return column, slices.Contains(Columns, column)
 }
 
+// Rejected is the status of a ticket closed without being accepted (FH-58):
+// it sits in Done and counts as done, but says Rejected.
+const Rejected = "rejected"
+
+// ParseStatus returns the column a status value puts a ticket in and
+// whether the value is rejected.
+func ParseStatus(value string) (column Column, rejected, ok bool) {
+	if value == Rejected {
+		return Done, true, true
+	}
+	column, ok = ParseColumn(value)
+	return column, false, ok
+}
+
 // TicketTypes are the known ticket types.
 var TicketTypes = []string{"feature", "test", "bug", "refactor", "infra", "docs", "spike"}
 
@@ -162,6 +176,8 @@ type Ticket struct {
 	// folder's readable part.
 	ID, Folder, Slug string
 	Column           Column
+	// Rejected marks a ticket in Done whose status is rejected.
+	Rejected bool
 
 	Title, Type, Created, Priority        string
 	Session, GitRef, Branch, Workstream   string
@@ -185,6 +201,14 @@ type Ticket struct {
 
 	// Modified is the file's modification time, set by the reader.
 	Modified time.Time
+}
+
+// Status is the ticket's status value: its column, or rejected.
+func (t Ticket) Status() string {
+	if t.Rejected {
+		return Rejected
+	}
+	return string(t.Column)
 }
 
 // NeedsRepair reports whether the ticket must be shown as needing repair.
@@ -249,8 +273,8 @@ func ParseTicket(folder string, data []byte) (ticket Ticket) {
 	}
 
 	status, hasStatus := doc.String("status")
-	if column, ok := ParseColumn(status); ok {
-		ticket.Column = column
+	if column, rejected, ok := ParseStatus(status); ok {
+		ticket.Column, ticket.Rejected = column, rejected
 	} else if !hasStatus || status == "" {
 		ticket.Warnings = append(ticket.Warnings, "missing status; shown in Backlog")
 	} else {
@@ -304,7 +328,7 @@ func joinColumns() string {
 	for index, column := range Columns {
 		names[index] = string(column)
 	}
-	return strings.Join(names, ", ")
+	return strings.Join(append(names, Rejected), ", ")
 }
 
 func validDate(value string) bool {

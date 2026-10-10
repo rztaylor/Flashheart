@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
-  COLUMNS,
+  STATUSES,
+  statusWord,
   type TicketDetail,
   type WorkstreamBrief,
 } from "../../api/board";
@@ -40,7 +41,7 @@ function baseOf(detail: TicketDetail) {
 function formOf(detail: TicketDetail): Form {
   return {
     title: detail.title,
-    status: detail.column,
+    status: statusWord(detail),
     type: detail.type,
     priority: detail.priority,
     created: detail.created,
@@ -185,11 +186,11 @@ export function EditTab({
             />
           </FormField>
           <div className="grid grid-cols-3 gap-3">
-            <FormField label="Column">
+            <FormField label="Status">
               <Select value={form.status} onChange={set("status")}>
-                {COLUMNS.map((column) => (
-                  <option key={column.id} value={column.id}>
-                    {column.title}
+                {STATUSES.map((status) => (
+                  <option key={status.id} value={status.id}>
+                    {status.title}
                   </option>
                 ))}
               </Select>

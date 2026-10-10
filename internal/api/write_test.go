@@ -89,6 +89,43 @@ func TestMoveSavesStatusAndRefusesStaleHashes(t *testing.T) {
 	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", `{"to":"done","extra":1}`, http.StatusBadRequest, nil)
 }
 
+// Rejecting a ticket writes status: rejected; it shows in Done, says so on
+// its card, its detail and its workstream station, and moving it on clears
+// it (FH-58).
+func TestMoveToRejectedIsDoneButSaysSo(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "rejected"}, http.StatusOK, nil)
+	data, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "AL-2-board-columns.md"))
+	if !strings.Contains(string(data), "status: rejected") {
+		t.Fatalf("ticket =\n%s", data)
+	}
+	if detail := ticketDetail(t, handler, "AL-2"); detail.Column != "done" || !detail.Rejected {
+		t.Errorf("detail column=%s rejected=%v, want done, true", detail.Column, detail.Rejected)
+	}
+	var cards BoardResponse
+	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &cards)
+	if index := slices.IndexFunc(cards.Cards, func(card Card) bool { return card.ID == "AL-2" }); index < 0 || !cards.Cards[index].Rejected || cards.Cards[index].Column != "done" {
+		t.Errorf("AL-2 card = %+v", cards.Cards)
+	}
+	var lines WorkstreamsResponse
+	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &lines)
+	if station := lines.Workstreams[0].Tickets[0]; station.ID != "AL-2" || station.Column != "done" || !station.Rejected {
+		t.Errorf("station = %+v", station)
+	}
+
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "done"}, http.StatusOK, nil)
+	if detail := ticketDetail(t, handler, "AL-2"); detail.Column != "done" || detail.Rejected {
+		t.Errorf("after done: column=%s rejected=%v", detail.Column, detail.Rejected)
+	}
+	detail := ticketDetail(t, handler, "AL-2")
+	send(t, handler, http.MethodPatch, "/api/tickets/AL-2", PatchRequest{Base: detail.Hash, Fields: map[string]json.RawMessage{"status": json.RawMessage(`"rejected"`)}}, http.StatusOK, nil)
+	if detail := ticketDetail(t, handler, "AL-2"); !detail.Rejected {
+		t.Errorf("PATCH status rejected: rejected=%v", detail.Rejected)
+	}
+}
+
 func TestMovingABlockedTicketIntoProgressNeedsAReason(t *testing.T) {
 	t.Parallel()
 

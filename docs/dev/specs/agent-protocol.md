@@ -74,7 +74,7 @@ writing.
 | `compact` | pre/post compact | `phase` (pre/post) |
 | `claim` / `release` | MCP | `ticket`, `force`, `reason`; a claim also records `home`, the claimant's own project, so a reader of the ticket's log knows where the holder's activity is recorded |
 | `checkpoint` | MCP | `ticket`, counts of done/next/files/questions |
-| `ticket.moved` | MCP or UI | `ticket`, `from`, `to`, `by` (run id or `human`) |
+| `ticket.moved` | MCP or UI | `ticket`, `from`, `to` (statuses: a column or `rejected`), `by` (run id or `human`) |
 | `ticket.updated` | MCP or UI | `ticket`, `fields` changed; from the UI also `by: human` |
 | `ticket.created` | MCP or UI | `ticket`, `by` (run id or `human`) |
 | `review.written` | MCP | `ticket` |
@@ -94,7 +94,7 @@ ticket says:
 | Board write | Kind | `data` besides `ticket` and `by` |
 |---|---|---|
 | new ticket | `ticket.created` | none |
-| move, or a place within or across columns (`EDIT-9`) | `ticket.moved` | `from`, `to` (columns; equal for a reorder) |
+| move, or a place within or across columns (`EDIT-9`) | `ticket.moved` | `from`, `to` (statuses: a column or `rejected`; equal for a reorder) |
 | field edits (`EDIT-6`) | `ticket.updated` | `fields`: the frontmatter keys or `title` sent |
 | raw edit | `ticket.updated` | none (what changed is not worked out) |
 | ticked criterion | `ticket.updated` | `fields: [criteria]` |
@@ -339,13 +339,13 @@ the recovery note shows it) is accepted when it names one run.
 | Tool | Input | Effect | Output |
 |---|---|---|---|
 | `board_context` | `project?`, `run?` | none | ≤1,500 tokens: your project and its key, or, when none is chosen yet, a suggested key, the keys in use and a request to set one (`KEY-5`); your run and link; your ticket's handoff and unticked criteria; answered questions not yet delivered; other in-progress tickets with holders; the top 5 unblocked Up next tickets by priority (then Backlog when Up next is short); the project's unfinished workstreams with progress and next ticket |
-| `list_tickets` | `project?`, `type?`, `status?` (list; default open: in-progress, up-next, backlog), `priority?`, `tag?`, `blocked?`, `text?`, `limit?` (default 10, max 50) | none | one line per ticket, ordered by status (In progress, Up next, Backlog), then priority, then age: `FH-42 bug high up-next "Title" [blocked: …]` (`MCP-7`) |
+| `list_tickets` | `project?`, `type?`, `status?` (list; default open: in-progress, up-next, backlog; `done` includes rejected tickets, `rejected` lists only them), `priority?`, `tag?`, `blocked?`, `text?`, `limit?` (default 10, max 50) | none | one line per ticket, ordered by status (In progress, Up next, Backlog), then priority, then age: `FH-42 bug high up-next "Title" [blocked: …]`; a rejected ticket shows `rejected` (`MCP-7`) |
 | `get_ticket` | `ticket` (id) | none | ticket markdown, column, blocked reasons, review, files list |
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff |
 | `release` | `ticket`, `reason?` | §6 | ok |
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
 | `update_ticket` | `ticket`, `set?` (frontmatter fields), `check?` (criteria text or index), `append_notes?` | frontmatter/body edit with hash precondition; setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4) | changed fields |
-| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` is refused (humans move tickets to Done); a blocked ticket is started with `claim` and `force` | new column, warnings |
+| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `project_key?` (only for a project with no key yet) | new ticket folder with the next id (`KEY-2`); a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` is joined (§7.4) | id |
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
@@ -572,3 +572,9 @@ toward dirty (§4), with the optional `worktree_changed`
 field on `turn.end` and `run.end` (FH-53, 2026-10-09): additive, because
 an event without the field reads as before and the tools and skill keep
 their shape, so the version stays 1.
+The `rejected` status (FH-58, 2026-10-10): `list_tickets`, `get_ticket`,
+`board_context` and the recovery note may show `rejected` where they show a
+column, `list_tickets` accepts it as a filter, `move` refuses it, and
+`ticket.moved` may carry it in `from` or `to`. Additive, because a rejected
+ticket was not expressible before and every existing value keeps its
+meaning, so the version stays 1.

@@ -51,11 +51,13 @@ const served = (ticket: WorkstreamTicket) =>
   ticket.column === "done" ||
   ticket.column === "archived";
 
-// A check means finished (Done or Archived); Ready to review is served but
-// never checked (ui-layout.md §4). An unfinished ticket that can start is a
-// next stop; one held by something outside the line is a dashed ring.
+// A check means finished (Done or Archived); a rejected ticket is finished
+// but crossed, and Ready to review is served but never checked
+// (ui-layout.md §4). An unfinished ticket that can start is a next stop; one
+// held by something outside the line is a dashed ring.
 function stationState(ticket: WorkstreamTicket, suspended: boolean) {
   if (ticket.missing) return "missing";
+  if (ticket.column === "done" && ticket.rejected) return "rejected";
   if (ticket.column === "done" || ticket.column === "archived") return "done";
   if (served(ticket)) return "served";
   if (ticket.held || suspended) return "held";
@@ -64,8 +66,8 @@ function stationState(ticket: WorkstreamTicket, suspended: boolean) {
 }
 type State = ReturnType<typeof stationState>;
 
-const columnTitle = (column: WorkstreamTicket["column"]) =>
-  statusOf(column).label;
+const columnTitle = (ticket: WorkstreamTicket) =>
+  statusOf(ticket.column, ticket.rejected).label;
 
 type Track = "served" | "ahead" | "suspended";
 
@@ -485,7 +487,7 @@ function StationButton({
   const needs = [...ticket.dependsOn, ...ticket.outside];
   const label = [
     ticket.title,
-    columnTitle(ticket.column),
+    columnTitle(ticket),
     ticket.blocked ? "blocked" : "",
     state === "next" ? "next stop" : "",
     needs.length > 0
@@ -543,7 +545,7 @@ function StationButton({
           {state === "missing" ? (
             <span className="text-2xs text-ink-muted">Does not exist</span>
           ) : (
-            <StatusPill column={ticket.column} />
+            <StatusPill column={ticket.column} rejected={ticket.rejected} />
           )}
         </span>
       </div>
@@ -554,6 +556,7 @@ function StationButton({
 function Mark({ state, colour }: { state: State; colour: string }) {
   switch (state) {
     case "done":
+    case "rejected":
       return (
         <span
           className="grid size-8 place-items-center rounded-full"
@@ -564,7 +567,11 @@ function Mark({ state, colour }: { state: State; colour: string }) {
               "inset 0 0 0 1px var(--fh-casing), 0 0 0 3px var(--route-surface)",
           }}
         >
-          <Icon name="check" size={16} className="[stroke-width:3]" />
+          <Icon
+            name={state === "rejected" ? "close" : "check"}
+            size={16}
+            className="[stroke-width:3]"
+          />
         </span>
       );
     case "served":
