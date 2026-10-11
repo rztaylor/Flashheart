@@ -77,7 +77,7 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Project** | A subdirectory of the root, normally one per repository, named after the repository's main checkout. |
 | **Ticket** | One unit of work with a stable id such as `FH-42`: a folder `tickets/FH-42-<slug>/` holding the ticket file `FH-42-<slug>.md`, its review and copied files. |
 | **Ticket id** | `<project key>-<number>`, unique across the root; how humans and agents refer to tickets (`KEY`). |
-| **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. |
+| **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. A `rejected` ticket (closed without being accepted) is in Done and says Rejected (FH-58). |
 | **Workstream** | A group of tickets with a shared goal, like an epic, worked on in sequence or in parallel; only `depends-on` orders its tickets (D26). |
 | **Review** | A human verification guide for a ticket in `reviews/`. |
 | **Attachment** | A file (screenshot, log, PDF) copied into the ticket's `files/` folder. |
@@ -222,7 +222,15 @@ Full format: `docs/dev/specs/board-format.md`.
   with the State filter's *Agent working* option (D27, FH-42).
 - `VIEW-3` **Overview** (D32, FH-51): what a project manager asks of the
   board, for *All projects* or one project, about tickets with agent
-  sessions as evidence. One column of section cards, in order: *Needs your
+  sessions as evidence. Under the title, headline metrics (FH-52): *Since
+  your last change · <day and time>* over tiles counting, since the
+  human's latest board activity in the scope (`EDIT-10`), tickets moved to
+  Done, tickets moved to Ready to review and tickets created (each ticket
+  once per tile) and criteria updates that ticked criteria, by agents or
+  the human; the human's own changes are that activity, so only what came
+  after it counts. With no human activity recorded in the scope they count
+  the last 24 hours and say so. Needs you is not among them (the band shows
+  it). One column of section cards, in order: *Needs your
   decision* (open questions, answered in place as on the card, `CARD-6`,
   and kept until the session takes the answer; permission prompts, which
   name the project and branch of the session to answer them in, since
@@ -292,7 +300,9 @@ Full format: `docs/dev/specs/board-format.md`.
 - `EDIT-1` Drag and drop moves a ticket between columns (edits its `status`).
   Every drag action has a keyboard and menu alternative: Shift with an arrow
   moves a focused card to the next column (and a station along its line),
-  and the card panel has **Move to …**. Each move can be undone.
+  and the card panel has **Move to …**, which also offers **Rejected**: a
+  Done state for a ticket closed without being accepted (FH-58). Each move
+  can be undone.
 - `EDIT-2` Moving a blocked ticket into *in-progress* asks for confirmation
   and records the override reason in `## Notes`.
 - `EDIT-3` Moving into *Ready to review* warns when the review file is
@@ -594,9 +604,10 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
   status and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.
-- **Overview**: one calm column of section cards about tickets: Needs your
-  decision, Ready for your review, At risk, In progress, then collapsed
-  Work with no ticket and Up next (`VIEW-3`).
+- **Overview**: headline metrics since your last change on the board, then
+  one calm column of section cards about tickets: Needs your decision,
+  Ready for your review, At risk, In progress, then collapsed Work with no
+  ticket and Up next (`VIEW-3`).
 - **Needs you** is visible from every view and project (badge in the rail and
   top bar); the top bar's plate filters the Board to it (`VIEW-2`).
 - Narrow widths keep a single column with a column picker; the board is not

@@ -139,7 +139,8 @@ export async function seedRuns(home, root) {
 
 // seedClaimedRun records a session in the demo board's flashheart project
 // that claims ticket through the real MCP server and runs three subagents,
-// one of them finished: an In progress row on the Overview (FH-51).
+// one of them finished: an In progress row on the Overview (FH-51). It
+// returns the session's run and working directory, for its MCP calls.
 export async function seedClaimedRun(home, root, ticket) {
   const cwd = await repo(home, "flashheart", "feature/locks");
   const projectFile = join(root, "flashheart", "project.yaml");
@@ -164,6 +165,7 @@ export async function seedClaimedRun(home, root, ticket) {
   }
   claimed.send("SubagentStop", { agent_id: "d1e2f3a4", agent_type: "Explore" });
   claimed.tool("Read", {});
+  return { run: `claude:${id}`, cwd };
 }
 
 // TASK_NOTIFICATION is the prompt Claude Code submits when a background

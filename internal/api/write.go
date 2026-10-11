@@ -156,7 +156,8 @@ func (b boardAPI) recordHuman(project, kind string, data events.TicketData) {
 // MoveRequest is POST /api/tickets/{id}/move (EDIT-1).
 type MoveRequest struct {
 	Base string `json:"base"`
-	To   string `json:"to"`
+	// To is the new status: a column, or rejected (Done, FH-58).
+	To string `json:"to"`
 	// Reason confirms moving a blocked ticket into In progress (EDIT-2).
 	Reason string `json:"reason"`
 	// After places the ticket directly after this ticket in its new column
@@ -173,9 +174,9 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &request) {
 		return
 	}
-	to, ok := board.ParseColumn(request.To)
+	to, _, ok := board.ParseStatus(request.To)
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q is not a column", request.To))
+		writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q is not a status", request.To))
 		return
 	}
 	if request.After != nil && *request.After != "" {
@@ -206,7 +207,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	edit := func(data []byte) ([]byte, error) {
-		next, err := mdfile.SetScalar(data, "status", string(to))
+		next, err := mdfile.SetScalar(data, "status", request.To)
 		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
 			return next, err
 		}
@@ -228,7 +229,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
-	b.recordHuman(project.Name, events.TicketMoved, events.TicketData{Ticket: ticket.ID, From: string(ticket.Column), To: string(to)})
+	b.recordHuman(project.Name, events.TicketMoved, events.TicketData{Ticket: ticket.ID, From: ticket.Status(), To: request.To})
 	if to == board.Review && ticket.Column != board.Review {
 		review := ""
 		if project.Reviews[ticket.ID] && b.files != nil {

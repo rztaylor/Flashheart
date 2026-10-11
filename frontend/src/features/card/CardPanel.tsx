@@ -1,10 +1,11 @@
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import {
   type Attachment,
-  COLUMNS,
-  type Column,
   fetchTicket,
   type Reason,
+  STATUSES,
+  type Status,
+  statusWord,
   type TicketDetail,
   type TicketRef,
   type WorkstreamBrief,
@@ -331,17 +332,17 @@ const steps: { value: Step; short: string; label: string }[] = [
   },
 ];
 
-// PanelActions moves the ticket to any column or to a place in its column
-// (the menu alternatives to dragging, EDIT-1, EDIT-9) or archives it
-// (EDIT-8).
-function PanelActions({
+// PanelActions moves the ticket to any column, rejects it (FH-58), moves it
+// to a place in its column (the menu alternatives to dragging, EDIT-1,
+// EDIT-9) or archives it (EDIT-8).
+export function PanelActions({
   detail,
   onMove,
   onStep,
   onArchive,
 }: {
   detail: TicketDetail;
-  onMove(to: Column): void;
+  onMove(to: Status): void;
   onStep?: (step: Step) => void;
   onArchive(): void;
 }) {
@@ -351,12 +352,12 @@ function PanelActions({
       <label className="flex items-center gap-2 text-xs text-ink-muted">
         Move to
         <Select
-          value={detail.column}
-          onChange={(value) => onMove(value as Column)}
+          value={statusWord(detail)}
+          onChange={(value) => onMove(value as Status)}
         >
-          {COLUMNS.map((column) => (
-            <option key={column.id} value={column.id}>
-              {column.title}
+          {STATUSES.map((status) => (
+            <option key={status.id} value={status.id}>
+              {status.title}
             </option>
           ))}
         </Select>
@@ -426,7 +427,7 @@ export function PanelHeader({
         {detail.title}
       </Heading>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <StatusPill column={detail.column} />
+        <StatusPill column={detail.column} rejected={detail.rejected} />
         {detail.blockedBy.length > 0 ? (
           <Pill tone="blocked">Blocked</Pill>
         ) : null}

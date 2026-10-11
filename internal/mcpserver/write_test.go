@@ -178,6 +178,7 @@ func TestMove(t *testing.T) {
 		t.Fatal("not moved")
 	}
 	e.fails("move", map[string]any{"ticket": first, "to": "done"}, "invalid_input")
+	e.fails("move", map[string]any{"ticket": first, "to": "rejected"}, "invalid_input")
 	e.fails("move", map[string]any{"ticket": first, "to": "todo"}, "invalid_input")
 	e.ok("move", map[string]any{"ticket": first, "to": "backlog"})
 	e.fails("move", map[string]any{"ticket": second, "to": "in-progress"}, "blocked")

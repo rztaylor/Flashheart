@@ -175,7 +175,7 @@ export function TableView({
                   </td>
                 ) : null}
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <StatusPill column={card.column} />
+                  <StatusPill column={card.column} rejected={card.rejected} />
                 </td>
                 <td className="px-3 py-2">
                   {card.type ? <Tag>{card.type}</Tag> : null}

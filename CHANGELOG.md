@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The project follows
 
 ## Unreleased
 
+### Added
+
+- A **Rejected** status for tickets closed without being accepted (FH-58).
+  `status: rejected` is a Done state: the ticket sits in the Done column
+  and counts as done for blocking and workstream progress, but its card,
+  panel, table row, archive row and workstream station say *Rejected*
+  (a neutral pill and a crossed station, never a check). Reject a ticket
+  with the panel's **Move to → Rejected** or the Edit tab's Status; moving
+  it anywhere else, Done included, clears it. Agents see `rejected` in
+  `list_tickets` and `get_ticket` and can filter by it, but `move` refuses
+  it, as it refuses `done` (protocol version unchanged).
+
 ### Security
 
 - `serve` no longer copies any linked local file into a directly edited
@@ -168,6 +180,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Headline metrics under the Overview's title (FH-52): a quiet row saying
+  *Since your last change · yesterday 18:00* over four tiles, Done, To
+  review, New tickets and Criteria ticked, for All projects or the project
+  shown. They count tickets moved to Done and to Ready to review and tickets
+  created (each ticket once) and criteria updates, since your latest change
+  on the board there (a board edit, move, new ticket or answer; editor edits
+  do not count). With none recorded the row counts the last 24 hours and
+  says so. Served by `GET /api/metrics?project=`; counted from the event
+  log the server already reads, with no new events.
 - Each card in the board API carries a `sessions` summary of the runs
   working for its ticket (FH-50, RUN-9): the live agent and its state, the
   last activity, whether the handoff is behind the session's work, and its

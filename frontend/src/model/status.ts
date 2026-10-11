@@ -11,8 +11,15 @@ const tones: Record<string, StateTone> = {
   done: "done",
 };
 
-// statusOf names a ticket's column, or an archived or missing station.
-export function statusOf(column: string): { tone: StateTone; label: string } {
+// statusOf names a ticket's column, or an archived or missing station. A
+// rejected ticket in Done is neutral, not Done green: it finished without
+// being accepted (FH-58).
+export function statusOf(
+  column: string,
+  rejected = false,
+): { tone: StateTone; label: string } {
+  if (rejected && column === "done")
+    return { tone: "neutral", label: "Rejected" };
   if (column === "archived") return { tone: "neutral", label: "Archived" };
   const known = COLUMNS.find((item) => item.id === column);
   if (!known) return { tone: "neutral", label: "Missing" };

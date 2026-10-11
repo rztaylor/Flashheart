@@ -461,7 +461,7 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 	if link := set.Link(current, byBranch); link.Ticket != "" {
 		if i := slices.IndexFunc(details.Tickets, func(t board.Ticket) bool { return t.ID == link.Ticket }); i >= 0 {
 			ticket := details.Tickets[i]
-			linked := &protocol.RecoveryTicket{ID: ticket.ID, Title: ticket.Title, Column: string(ticket.Column), LinkedBy: link.By}
+			linked := &protocol.RecoveryTicket{ID: ticket.ID, Title: ticket.Title, Column: ticket.Status(), LinkedBy: link.By}
 			if ticket.Handoff != nil {
 				linked.Next = ticket.Handoff.Next
 			}

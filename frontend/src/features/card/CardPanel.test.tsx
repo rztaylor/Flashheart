@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TicketDetail } from "../../api/board";
 import { TicketLinksInPlace } from "../../components/TicketLink";
-import { PanelHeader, ReviewTab, TicketTab } from "./CardPanel";
+import { PanelActions, PanelHeader, ReviewTab, TicketTab } from "./CardPanel";
 
 // The card panel of docs/dev/specs/ui-layout.md §3.
 function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
@@ -100,6 +100,32 @@ describe("PanelHeader", () => {
     expect(markup).toContain(">In progress<");
     expect(markup).toContain('data-tone="blocked"');
     expect(markup).toContain(">High priority<");
+  });
+});
+
+describe("a rejected ticket (FH-58)", () => {
+  const rejected = detail({ column: "done", rejected: true, blocked: false });
+
+  it("says Rejected, not Done, in the header", () => {
+    const markup = renderToStaticMarkup(
+      <PanelHeader detail={rejected} workstreamTitle="" />,
+    );
+    expect(markup).toContain(">Rejected<");
+    expect(markup).not.toContain(">Done<");
+  });
+
+  it("offers Rejected in Move to, chosen while the ticket is rejected", () => {
+    const markup = renderToStaticMarkup(
+      <PanelActions
+        detail={rejected}
+        onMove={() => undefined}
+        onArchive={() => undefined}
+      />,
+    );
+    expect(markup).toMatch(
+      /<option value="rejected" selected="">Rejected<\/option>/,
+    );
+    expect(markup).toMatch(/<option value="done">Done<\/option>/);
   });
 });
 

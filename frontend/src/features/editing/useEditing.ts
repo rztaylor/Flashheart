@@ -1,6 +1,12 @@
 import { useCallback, useRef, useState } from "react";
 
-import { COLUMNS, type Column } from "../../api/board";
+import {
+  type Column,
+  columnOf,
+  STATUSES,
+  type Status,
+  statusWord,
+} from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import {
   answerQuestion,
@@ -16,6 +22,7 @@ export interface Movable {
   id: string;
   title: string;
   column: Column;
+  rejected?: boolean;
 }
 
 // Placement puts a ticket directly after another in its column ("" for the
@@ -27,21 +34,22 @@ export interface Placement {
 
 export interface BlockedMove {
   ticket: Movable;
-  to: Column;
+  to: Status;
   reasons: string[];
   placement: Placement;
 }
 
 export type { Pending } from "./pending";
 
-const columnTitle = (column: Column) =>
-  COLUMNS.find((item) => item.id === column)?.title ?? column;
+const statusTitle = (status: Status) =>
+  STATUSES.find((item) => item.id === status)?.title ?? status;
 
 const failure = (error: unknown) =>
   error instanceof Error ? error.message : "The change could not be saved";
 
 // useEditing coordinates moves and archiving from any view (EDIT-1, EDIT-2,
-// EDIT-3, EDIT-8): it shows the new column and place at once (EDIT-9), asks
+// EDIT-3, EDIT-8), rejecting included (a move to the rejected status, which
+// shows in Done; FH-58): it shows the new column and place at once (EDIT-9), asks
 // for a reason before starting a blocked ticket, and announces each result
 // with Undo, which puts the ticket back in its old column and place.
 // remark, when given, picks a marginal remark for a successful move's toast
@@ -49,7 +57,7 @@ const failure = (error: unknown) =>
 export function useEditing(
   fetcher: AuthenticatedFetch,
   onChanged: () => void,
-  remark?: (ticket: Movable, to: Column) => ToastMessage["aside"],
+  remark?: (ticket: Movable, to: Status) => ToastMessage["aside"],
 ) {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [blocked, setBlocked] = useState<BlockedMove | null>(null);
@@ -69,17 +77,18 @@ export function useEditing(
   const move = useCallback(
     async (
       ticket: Movable,
-      to: Column,
+      to: Status,
       reason = "",
       placement: Placement = {},
     ) => {
       const { after, undoAfter } = placement;
-      if (ticket.column === to && after === undefined) return;
+      const from = statusWord(ticket);
+      if (from === to && after === undefined) return;
       seq.current += 1;
       const mine = seq.current;
       setPending((current) => ({
         ...current,
-        [ticket.id]: { column: to, after, saved: false, seq: mine },
+        [ticket.id]: { column: columnOf(to), after, saved: false, seq: mine },
       }));
       try {
         const saved = await queue.current(() =>
@@ -88,17 +97,23 @@ export function useEditing(
         setPending((current) => markSaved(current, ticket.id, mine));
         notify({
           text:
-            ticket.column === to
-              ? `Moved ${ticket.id} in ${columnTitle(to)}.`
-              : `Moved ${ticket.id} to ${columnTitle(to)}.`,
+            to === "rejected"
+              ? `Rejected ${ticket.id}.`
+              : from === to
+                ? `Moved ${ticket.id} in ${statusTitle(to)}.`
+                : `Moved ${ticket.id} to ${statusTitle(to)}.`,
           details: saved.warnings,
           aside: remark?.(ticket, to),
           action: {
             label: "Undo",
             run: () =>
               void move(
-                { ...ticket, column: to },
-                ticket.column,
+                {
+                  ...ticket,
+                  column: columnOf(to),
+                  rejected: to === "rejected",
+                },
+                from,
                 "",
                 after === undefined
                   ? {}

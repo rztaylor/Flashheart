@@ -80,7 +80,7 @@ Rules:
 ```markdown
 ---
 id: FH-42
-status: up-next          # backlog | up-next | in-progress | review | done
+status: up-next          # backlog | up-next | in-progress | review | done | rejected
 type: feature            # feature | test | bug | refactor | infra | docs | spike
 priority: high           # high | medium | low
 created: 2026-10-04
@@ -110,7 +110,7 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 | Field | Required | Notes |
 |---|---|---|
 | `id` | yes | `<key>-<number>`. Taken from the folder name, with a warning, when absent. |
-| `status` | yes | The column. Missing reads as `backlog` with a warning; an unknown value marks the ticket *needs repair* (shown in Backlog). |
+| `status` | yes | The column, or `rejected` (shown in Done). Missing reads as `backlog` with a warning; an unknown value marks the ticket *needs repair* (shown in Backlog). |
 | `type` | yes | `feature`, `test`, `bug`, `refactor`, `infra`, `docs`, `spike`. |
 | `priority` | yes | `high`, `medium`, `low`. |
 | `created` | yes | `YYYY-MM-DD`. Orders numbering at migration and ties in sorting. |
@@ -134,6 +134,13 @@ The title is the first `#` heading. Unknown keys are preserved in place
 | `in-progress` | In progress | Being worked on. |
 | `review` | Ready to review | Implemented; waiting for human review. |
 | `done` | Done | Accepted. |
+| `rejected` | Done | Closed without being accepted (FH-58). |
+
+`rejected` is a Done state: the ticket sits in the Done column and counts as
+done everywhere (blocking, workstream progress, the done limit, ordering),
+but says *Rejected* wherever its status is shown. Like Done, only humans set
+it: the MCP `move` refuses it. Moving a rejected ticket anywhere, Done
+included, writes that status and so clears the rejection.
 
 A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content

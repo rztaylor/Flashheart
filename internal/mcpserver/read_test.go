@@ -109,6 +109,13 @@ func TestListTicketsFiltersAndOrders(t *testing.T) {
 	}
 	contains(t, e.ok("list_tickets", map[string]any{"blocked": false, "type": "bug"}), "ok shown=2 total=2")
 	contains(t, e.ok("list_tickets", map[string]any{"status": []string{"done"}}), `DM-5 bug high done "Finished bug"`)
+	// A rejected ticket is done, and says so (FH-58).
+	rejected := e.ticket(store.NewTicket{Title: "Rejected idea", Type: "feature", Priority: "low"})
+	e.setStatus(rejected, board.Rejected, "")
+	contains(t, e.ok("list_tickets", map[string]any{"status": []string{"done"}}), `DM-5 bug high done "Finished bug"`, `DM-6 feature low rejected "Rejected idea"`, "ok shown=2")
+	out = e.ok("list_tickets", map[string]any{"status": []string{"rejected"}})
+	contains(t, out, `DM-6 feature low rejected "Rejected idea"`, "ok shown=1")
+	contains(t, e.ok("get_ticket", map[string]any{"ticket": rejected}), `DM-6 feature low rejected "Rejected idea"`)
 	contains(t, e.ok("list_tickets", map[string]any{"tag": "ui"}), "DM-3", "ok shown=1")
 	contains(t, e.ok("list_tickets", map[string]any{"text": "second"}), "DM-4", "ok shown=1")
 	contains(t, e.ok("list_tickets", map[string]any{"priority": "low"}), "DM-1", "ok shown=1")

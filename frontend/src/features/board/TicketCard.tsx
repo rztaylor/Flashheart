@@ -9,7 +9,7 @@ import type { Card } from "../../api/board";
 import type { Live } from "../../api/runs";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
-import { Pill, Tag } from "../../components/Pill";
+import { Pill, StatusPill, Tag } from "../../components/Pill";
 import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import { TicketLink } from "../../components/TicketLink";
@@ -72,6 +72,8 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
   ) {
     const repair = card.needsRepair.length > 0;
     const done = card.column === "done";
+    // A rejected ticket sits in Done; its pill says it was not accepted.
+    const rejected = done && card.rejected === true;
     const age = runningTime(card.modified, now);
     const blocker = card.blockedBy[0];
     const more = card.blockedBy.length - 1;
@@ -167,6 +169,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
             {paintedAs("age") ? (
               <Tag paint={paintedAs("age")}>{paintedAs("age")?.label}</Tag>
             ) : null}
+            {rejected ? <StatusPill column={card.column} rejected /> : null}
             {compact && blocker ? <Pill tone="blocked">Blocked</Pill> : null}
             {compact && card.live ? (
               card.live.state === "needs-you" ? (
@@ -275,7 +278,7 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           onFocus={onFocus}
           aria-current={selected ? "true" : undefined}
           data-ticket={card.id}
-          aria-label={`${card.title}, ${card.id}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}`}
+          aria-label={`${card.title}, ${card.id}${rejected ? ", rejected" : ""}${card.blocked ? ", blocked" : ""}${repair ? ", needs repair" : ""}${card.live ? `, ${liveLabel(card.live)}` : ""}${card.openQuestions > 0 && card.live?.state !== "needs-you" ? `, needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}` : ""}`}
           // The card clips its edges, so the focus ring is drawn inside.
           className="absolute inset-0 z-[1] rounded-card focus-visible:-outline-offset-2"
         />
