@@ -318,10 +318,11 @@ export interface PipelineStage {
 
 // pipelineStages are the Overview's headline (FH-63): every board column
 // in order, with its whole count for the project, or summed across
-// projects when project is "". Done is everything finished; the others are
-// what sits there now, so they always agree with the sections below.
+// projects when project is "". Done is the accepted work, so rejected
+// tickets are left out of it; the others are what sits there now, so they
+// always agree with the sections below.
 export function pipelineStages(
-  projects: Pick<ProjectSummary, "name" | "counts">[],
+  projects: Pick<ProjectSummary, "name" | "counts" | "rejected">[],
   project: string,
 ): PipelineStage[] {
   const scope = project
@@ -331,6 +332,10 @@ export function pipelineStages(
     column: id,
     title,
     tone: statusOf(id).tone,
-    count: scope.reduce((sum, item) => sum + (item.counts[id] ?? 0), 0),
+    count: scope.reduce(
+      (sum, item) =>
+        sum + (item.counts[id] ?? 0) - (id === "done" ? item.rejected : 0),
+      0,
+    ),
   }));
 }

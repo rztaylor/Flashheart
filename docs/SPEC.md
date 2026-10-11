@@ -225,7 +225,8 @@ Full format: `docs/dev/specs/board-format.md`.
   sessions as evidence. Under the title, the pipeline (FH-63): every board
   column in order (Backlog, Up next, In progress, Ready to review, Done)
   with its whole count in the scope, each leading to the Board. Done counts
-  everything finished, Rejected included; archived tickets are not counted.
+  accepted work: Rejected tickets (`FH-58`) sit in the Done column but are
+  left out of it, and archived tickets are not counted.
   The other stages are what sits there now, so they agree with the
   sections below. One column of section cards, in order: *Needs your
   decision* (open questions, answered in place as on the card, `CARD-6`,

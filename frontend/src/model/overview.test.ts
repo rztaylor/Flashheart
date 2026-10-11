@@ -500,10 +500,12 @@ describe("pipelineStages", () => {
     done,
   });
   const projects = [
-    { name: "alpha", counts: counts(5, 2, 1, 4, 30) },
-    { name: "beta", counts: counts(1, 0, 2, 0, 7) },
+    { name: "alpha", counts: counts(5, 2, 1, 4, 30), rejected: 3 },
+    { name: "beta", counts: counts(1, 0, 2, 0, 7), rejected: 0 },
   ];
 
+  // Done counts accepted work: rejected tickets sit in Done but are left
+  // out (user, 2026-10-11).
   it("names every board column in order, in its state tone", () => {
     expect(pipelineStages(projects, "alpha")).toEqual([
       { column: "backlog", title: "Backlog", tone: "neutral", count: 5 },
@@ -515,13 +517,13 @@ describe("pipelineStages", () => {
         count: 1,
       },
       { column: "review", title: "Ready to review", tone: "review", count: 4 },
-      { column: "done", title: "Done", tone: "done", count: 30 },
+      { column: "done", title: "Done", tone: "done", count: 27 },
     ]);
   });
 
   it("sums every project for All projects", () => {
     expect(pipelineStages(projects, "").map((stage) => stage.count)).toEqual([
-      6, 2, 3, 4, 37,
+      6, 2, 3, 4, 34,
     ]);
   });
 

@@ -189,7 +189,9 @@ All notable changes to this project are documented here. The project follows
 - The Overview opens with the pipeline (FH-63): Backlog, Up next, In
   progress, Ready to review and Done as a row of interlocking chevron
   cards, each the column's whole count in its status colour, for All
-  projects or the project shown. Each stage opens the Board. It replaced
+  projects or the project shown; Done counts accepted work, leaving out
+  Rejected tickets (project summaries now carry a `rejected` count). Each
+  stage opens the Board. It replaced
   FH-52's *Since your last change* tiles, whose To review counted tickets
   arriving since your last change and so could read 0 above a Ready for
   your review section listing four; `GET /api/metrics` is gone.

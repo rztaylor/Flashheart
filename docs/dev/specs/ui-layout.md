@@ -267,7 +267,8 @@ The project manager's view (`VIEW-3`, D32; approved concept: FH-47's Calm
 direction). Page header; then one column, filling Main with the same gutter
 as the other views, opening with the pipeline (FH-63): one row of five
 interlocking chevron cards, pointing left to right, one per board column in
-order (Backlog, Up next, In progress, Ready to review, Done), each a large
+order (Backlog, Up next, In progress, Ready to review, Done, the last
+without Rejected tickets), each a large
 tabular count over the column's word with its status icon, in the State
 role (§7). Each card leads to the Board for the scope. The row stays one row
 at every width; below 40rem the icons go and the words wrap. Then the

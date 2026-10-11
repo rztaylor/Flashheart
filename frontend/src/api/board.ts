@@ -123,6 +123,8 @@ export interface ProjectSummary {
   workstreams: WorkstreamBrief[];
   // archived counts the project's archived tickets (EDIT-8).
   archived: number;
+  // rejected counts the tickets in Done whose status is rejected (FH-58).
+  rejected: number;
   runs: RunCounts;
 }
 
@@ -290,6 +292,7 @@ function isSummary(value: unknown): value is ProjectSummary {
     typeof value.needsRepair === "number" &&
     typeof value.blocked === "number" &&
     typeof value.archived === "number" &&
+    typeof value.rejected === "number" &&
     isString(value.lastModified) &&
     Array.isArray(value.workstreams) &&
     isRunCounts(value.runs)
