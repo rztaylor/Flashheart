@@ -418,7 +418,7 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
 - `HOOK-2` Hooks record how many tools a run used and how many failed, in
   at most one activity record per run per `activity_seconds` (default 60;
   agent-protocol §3), edited file paths relative to the repository (each
-  once per run between checkpoints), the names of tools awaiting
+  once per run per turn, and again after a checkpoint), the names of tools awaiting
   permission, and summaries of at most 120 characters, scrubbed of likely
   secrets. They never record prompts, command lines, tool inputs or tool
   outputs.

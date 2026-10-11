@@ -6,7 +6,12 @@ import type { Card } from "../../api/board";
 import type { Run } from "../../api/runs";
 import { QuestionCard } from "../../components/QuestionCard";
 import { overview } from "../../model/overview";
-import { DecisionRow, OverviewSections, UnticketedRow } from "./OverviewView";
+import {
+  DecisionRow,
+  OverviewSections,
+  OverviewView,
+  UnticketedRow,
+} from "./OverviewView";
 
 const now = new Date("2026-10-05T12:00:00Z");
 const names = new Map([
@@ -139,6 +144,23 @@ function find(
   }
   return undefined;
 }
+
+describe("OverviewView", () => {
+  it("fills the main area's width like the other views (FH-60)", () => {
+    const html = renderToStaticMarkup(
+      <OverviewView
+        fetcher={() => new Promise<Response>(() => {})}
+        project=""
+        projects={[]}
+        revision={0}
+        onOpen={() => {}}
+        onReview={() => {}}
+      />,
+    );
+    expect(html).toContain("px-4");
+    expect(html).not.toMatch(/max-w-|mx-auto/);
+  });
+});
 
 describe("OverviewSections", () => {
   it("shows every section in order, each with its calm empty sentence", () => {

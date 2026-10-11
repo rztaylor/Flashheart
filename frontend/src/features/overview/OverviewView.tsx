@@ -35,6 +35,9 @@ import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
 import { HeadlineMetrics } from "./HeadlineMetrics";
 
+// column fills Main with the gutter Board, Workstreams and Table share.
+const column = "flex flex-col gap-4 px-4 pt-1 md:px-6";
+
 type Answer = (question: string, answer: string) => Promise<string | undefined>;
 
 interface OverviewViewProps {
@@ -110,7 +113,7 @@ export function OverviewView({
   }
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 pt-1 pb-12 md:px-6">
+      <div className={`${column} pb-12`}>
         <HeadlineMetrics metrics={resource.data.metrics} now={now} />
         {resource.error ? (
           <p role="status" className="text-xs text-ink-muted">
@@ -686,10 +689,7 @@ function UpNextRow({
 
 function OverviewSkeleton() {
   return (
-    <div
-      aria-hidden="true"
-      className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 pt-1 md:px-6"
-    >
+    <div aria-hidden="true" className={column}>
       {[0, 1, 2].map((section) => (
         <div
           key={section}

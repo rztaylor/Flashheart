@@ -613,8 +613,11 @@ throttled activity records land (FH-55).
 Built (FH-55): `PROTOCOL_VERSION` 2. Adapters still report every tool
 result; hooks count them into an `activity` record at most once a minute
 per run (`activity_seconds`), recording at once an edit of a path not
-recorded since the run's last checkpoint (each path once per run between
-checkpoints, the checkpoint tool's own result resetting them) and the tool
+recorded in the turn or since the run's last checkpoint (each path once
+per run per turn and again after a checkpoint: a prompt, a subagent's
+start and the checkpoint tool's own result reset them; the user chose the
+per-turn reset, 2026-10-11, so a missed checkpoint result costs at most
+one turn) and the tool
 result a permission request waits on, and flushing what is pending before
 a turn end or end. FH-53's shell command windows are kept in a small
 per-session state file under the project lock and travel in the records,

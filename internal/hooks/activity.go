@@ -13,7 +13,8 @@ import (
 // tool result as a tool.used; hooks records them as activity records, at
 // most one per run per interval, counting the tool uses and failures in
 // between. A record is made at once for an edit of a path the run has not
-// recorded since its last checkpoint (so dirty is never late) and for the
+// recorded in this turn or since its last checkpoint (so dirty is never
+// late) and for the
 // first tool result after a permission request (which it resolves), and a
 // run's pending activity is recorded before its turn end or end (a
 // session's with its subagents'), so the worktree check and handoff
@@ -46,8 +47,8 @@ type runState struct {
 	Tools  int           `json:"tools,omitempty"`
 	Failed int           `json:"failed,omitempty"`
 	Shell  []events.Span `json:"shell,omitempty"`
-	// Paths are the edit paths recorded since the run's last checkpoint,
-	// oldest first.
+	// Paths are the edit paths recorded in the run's current turn and since
+	// its last checkpoint, oldest first.
 	Paths []string `json:"paths,omitempty"`
 }
 
@@ -177,8 +178,14 @@ func throttle(state *sessionState, list []events.Event, at time.Time, interval t
 			}
 			r := state.run(e.Run)
 			r.Last, r.Logged = at, at
-			if e.Kind == events.PermissionRequested {
+			switch {
+			case e.Kind == events.PermissionRequested:
 				r.Logged = time.Time{}
+			case e.Kind == events.RunStart, e.Kind == events.TurnStart && !background(e):
+				// A prompt (a subagent: its start) begins a turn whose paths
+				// are recorded afresh, so a lost checkpoint signal costs at
+				// most one turn.
+				r.Paths = nil
 			}
 			continue
 		}
@@ -217,6 +224,15 @@ func throttle(state *sessionState, list []events.Event, at time.Time, interval t
 	}
 	state.bound()
 	return out
+}
+
+// background reports a turn the agent's own background task started.
+func background(e events.Event) bool {
+	data, ok := e.Data.(events.TurnStartData)
+	if !ok {
+		_ = e.Decode(&data)
+	}
+	return data.Background
 }
 
 // flushRuns records the pending activity of the runs an end settles.
