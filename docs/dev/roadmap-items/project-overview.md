@@ -1,7 +1,8 @@
 # project-overview
 
 **Status:** Partial. Workstream: `project-overview`. Spike: FH-47.
-Built: FH-49, FH-50, FH-51, FH-54, FH-55. Open: FH-52, FH-53.
+Built: all of it, FH-49 to FH-55 (FH-55: agent protocol 2). Open: the
+user's review.
 Decision: D32.
 
 ## Goal
