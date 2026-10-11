@@ -53,6 +53,9 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	case "Checkpointed":
 		// The checkpoint tool's own result (agent-protocol §5.2).
 		input.Events, input.Settled = tool("mcp__flashheart__checkpoint", true, ""), true
+	case "Background":
+		// A turn the agent's own background task started, not a prompt.
+		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{Background: true}}}
 	case "Permission":
 		input.Events = []Pending{{Run: actor, Kind: events.PermissionRequested, Data: events.PermissionData{Tool: "Bash"}}}
 	case "SubagentStart":

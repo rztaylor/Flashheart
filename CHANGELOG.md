@@ -61,10 +61,11 @@ All notable changes to this project are documented here. The project follows
   which was about 80% of all events. A record counts the tool uses and
   failures since the run's previous one, at most one a minute
   (`activity_seconds` in `config.yaml`); an edit of a path the run has not
-  recorded since its last checkpoint, and the tool result a permission
-  request waits on, are recorded at once, and what is pending is recorded
-  before a turn end or end. Each edited path is recorded once per run
-  between checkpoints, so a run's edit count is now of files. Shell
+  recorded in this turn or since its last checkpoint, and the tool result a
+  permission request waits on, are recorded at once, and what is pending is
+  recorded before a turn end or end. Each edited path is recorded once per
+  run per turn, and again after a checkpoint, so a run's edit count is now
+  of files. Shell
   commands' windows (FH-53) travel in the records, so shell edits still
   count toward the handoff. On this board's own logs the change leaves
   about a third of the events (6,475 to 2,132). Last activity lags a run's

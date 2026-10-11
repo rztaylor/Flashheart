@@ -66,7 +66,7 @@ writing.
 | `run.end` | session end / subagent stop | `reason`; optional `worktree_changed: true` (§4) |
 | `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
 | `turn.end` | stop | `blocked_for_handoff` (bool); optional `worktree_changed: true` (§4) |
-| `activity` | post tool use, throttled (below) | `tools` (tool results since the run's previous `activity`), optional `failed` (how many of them failed), `paths` (the repo-relative edit paths the run had not recorded since its last checkpoint; omitted outside the worktree), `shell` (≤20 `{from, to}` windows of its successful shell commands, §4, merged where they meet) |
+| `activity` | post tool use, throttled (below) | `tools` (tool results since the run's previous `activity`), optional `failed` (how many of them failed), `paths` (the repo-relative edit paths the run had not recorded in this turn or since its last checkpoint; omitted outside the worktree), `shell` (≤20 `{from, to}` windows of its successful shell commands, §4, merged where they meet) |
 | `tool.used` | post tool use, before protocol 2; still read | `tool`, `ok`, optional `path` (repo-relative, edits only), optional `summary` (≤120 chars) |
 | `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
 | `permission.requested` | permission request / notification | `tool`, optional `summary` |
@@ -92,10 +92,14 @@ recorded one by one (FH-55). Hooks record a run's tool results as one
 counting the tool uses and failures since its previous one, except that a
 tool result is recorded at once when:
 
-- it edits a path the run has not recorded since its last checkpoint, so
-  dirty (§4) is never late. Each path is recorded once per run between
-  checkpoints: the result of the agent's own `checkpoint` tool call lets
-  every run of its session record its paths again;
+- it edits a path the run has not recorded in this turn or since its last
+  checkpoint, so dirty (§4) is never late. Each path is recorded once per
+  run per turn, and again after a checkpoint: a prompt (a `turn.start`
+  that is not `background`) lets the session record its paths again, a
+  subagent's start its own, and the result of the agent's own `checkpoint`
+  tool call every run of its session. Should the hook miss that result, a
+  path edited again is recorded from the next prompt, so the loss is at
+  most one turn;
 - a permission request of the run waits on it (§4);
 - it is the run's first, or its first after `activity_seconds` without a
   recorded event.
@@ -595,7 +599,8 @@ requires `setup` to be re-run.
 
 Version 2 (FH-55, 2026-10-09): hooks record throttled `activity` records
 (§3) instead of one `tool.used` per tool call, and a run's edit count is
-of paths recorded since its last checkpoint rather than of edit tool
+of paths recorded since its last checkpoint (each once per turn) rather
+than of edit tool
 calls. Not additive: a version 1 reader skips the unknown kind, so it
 would miss edits, shell command windows and liveness. A version 2 reader
 still folds `tool.used` from older logs, so the last two days read
