@@ -43,6 +43,12 @@ func (s *Store) AppendEventLines(project, file string, lines []byte) error {
 		return err
 	}
 	defer release()
+	return s.appendEventLinesLocked(project, file, lines)
+}
+
+// appendEventLinesLocked appends to an event file whose project lock the
+// caller holds.
+func (s *Store) appendEventLinesLocked(project, file string, lines []byte) error {
 	root, _, err := s.handle()
 	if err != nil {
 		return err

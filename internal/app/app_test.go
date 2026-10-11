@@ -111,7 +111,7 @@ func TestServerComposesAuthenticatedApplication(t *testing.T) {
 	if err := json.NewDecoder(response.Body).Decode(&info); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if info.Name != "Flashheart" || info.Version != "test" || info.Commit != "c0ffee" || info.ProtocolVersion != 1 || info.Root != root || info.Theme != "system" {
+	if info.Name != "Flashheart" || info.Version != "test" || info.Commit != "c0ffee" || info.ProtocolVersion != 2 || info.Root != root || info.Theme != "system" {
 		t.Errorf("info = %+v", info)
 	}
 

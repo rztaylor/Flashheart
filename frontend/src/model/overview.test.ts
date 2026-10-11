@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { Card } from "../api/board";
+import type { Metrics } from "../api/metrics";
 import type { Question, Run, TicketSessions } from "../api/runs";
 import {
+  headlineLabel,
+  headlineTiles,
   overview,
   riskReasons,
   SECTIONS,
@@ -10,6 +13,7 @@ import {
   sessionWords,
   subagentWords,
 } from "./overview";
+import { dayAndTime } from "./time";
 
 function card(patch: Partial<Card>): Card {
   return {
@@ -481,5 +485,46 @@ describe("overview", () => {
       "claude:new",
       "claude:old",
     ]);
+  });
+});
+
+describe("headline metrics", () => {
+  const metrics: Metrics = {
+    revision: 1,
+    since: new Date(2026, 9, 8, 18, 0).toISOString(),
+    lastChange: true,
+    done: 4,
+    review: 1,
+    created: 6,
+    criteriaTicked: 1,
+  };
+  const now = new Date(2026, 9, 9, 12, 0);
+
+  it("counts from your last change, named in time", () => {
+    expect(headlineLabel(metrics, now)).toEqual({
+      text: "Since your last change",
+      time: dayAndTime(metrics.since, now),
+    });
+    expect(headlineLabel(metrics, now).time).toMatch(/^yesterday /);
+  });
+
+  it("says when it falls back to the last 24 hours", () => {
+    expect(headlineLabel({ ...metrics, lastChange: false }, now)).toEqual({
+      text: "In the last 24 hours",
+      time: "",
+    });
+  });
+
+  it("draws four tiles in order, without Needs you, singular or plural", () => {
+    expect(headlineTiles(metrics)).toEqual([
+      { id: "done", value: 4, word: "Done" },
+      { id: "review", value: 1, word: "To review" },
+      { id: "created", value: 6, word: "New tickets" },
+      { id: "criteria", value: 1, word: "Criterion ticked" },
+    ]);
+    const words = headlineTiles({ ...metrics, created: 1, criteriaTicked: 0 })
+      .slice(2)
+      .map((tile) => tile.word);
+    expect(words).toEqual(["New ticket", "Criteria ticked"]);
   });
 });

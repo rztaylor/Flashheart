@@ -609,3 +609,14 @@ button. Old `#/…/agents` routes and a remembered `view: agents` in
 
 Versions: board format stays 2. `PROTOCOL_VERSION` changes only when the
 throttled activity records land (FH-55).
+
+Built (FH-55): `PROTOCOL_VERSION` 2. Adapters still report every tool
+result; hooks count them into an `activity` record at most once a minute
+per run (`activity_seconds`), recording at once an edit of a path not
+recorded since the run's last checkpoint (each path once per run between
+checkpoints, the checkpoint tool's own result resetting them) and the tool
+result a permission request waits on, and flushing what is pending before
+a turn end or end. FH-53's shell command windows are kept in a small
+per-session state file under the project lock and travel in the records,
+so the worktree check sees every command. Readers still fold `tool.used`
+from older logs. Replaying this board's logs: 6,475 events become 2,132.

@@ -8,6 +8,7 @@ import {
   type TicketRef,
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
+import { fetchMetrics } from "../../api/metrics";
 import { fetchRuns, type Run } from "../../api/runs";
 import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
@@ -32,6 +33,7 @@ import { agentName, shortID, shortRun } from "../../model/runs";
 import { absoluteTime, durationWords } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
+import { HeadlineMetrics } from "./HeadlineMetrics";
 
 // column fills Main with the gutter Board, Workstreams and Table share.
 const column = "flex flex-col gap-4 px-4 pt-1 md:px-6";
@@ -55,8 +57,9 @@ interface OverviewViewProps {
 
 // OverviewView is the project manager's view (VIEW-3, D32): what needs a
 // decision, what is ready for review, what is at risk and what is in
-// progress, about tickets, with agent sessions as evidence. It loads the
-// scope's tickets and runs; run detail stays on the card's Runs tab.
+// progress, about tickets, with agent sessions as evidence, under a row of
+// headline metrics (FH-52). It loads the scope's tickets, runs and metrics;
+// run detail stays on the card's Runs tab.
 export function OverviewView({
   fetcher,
   project,
@@ -70,13 +73,14 @@ export function OverviewView({
   const now = useNow();
   const load = useCallback(
     async (signal: AbortSignal) => {
-      const [board, runs] = await Promise.all([
+      const [board, runs, metrics] = await Promise.all([
         project
           ? fetchProjectBoard(fetcher, project, false, signal)
           : fetchAllBoard(fetcher, false, signal),
         fetchRuns(fetcher, project, false, signal),
+        fetchMetrics(fetcher, project, signal),
       ]);
-      return { cards: board.cards, runs: runs.runs };
+      return { cards: board.cards, runs: runs.runs, metrics };
     },
     [fetcher, project],
   );
@@ -110,6 +114,7 @@ export function OverviewView({
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className={`${column} pb-12`}>
+        <HeadlineMetrics metrics={resource.data.metrics} now={now} />
         {resource.error ? (
           <p role="status" className="text-xs text-ink-muted">
             Showing the last good copy: {resource.error}

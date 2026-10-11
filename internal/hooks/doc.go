@@ -2,7 +2,12 @@
 // agent's payload schema (HOOK-1–HOOK-4): it reads the payload, has the
 // agent's Adapter turn it into events, resolves the project, branch and
 // worktree from the working directory, scrubs and bounds what will be
-// stored, appends the events, renders the recovery note at session start
+// stored, throttles tool results into activity records (at most one per
+// run per activity_seconds, with each newly edited path and permission
+// resolution at once and pending activity before a turn end or end),
+// keeping a session's pending activity in its state file under the
+// project lock (agent-protocol §3), appends the events, renders the
+// recovery note at session start
 // (after calling the caller's skill refresh and noting an update),
 // delivers waiting answers with a prompt (HOOK-5), marks a session's turn
 // end or end when a file in its worktree changed during one of its shell

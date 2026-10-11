@@ -47,6 +47,17 @@ type tracker struct {
 	// window, it outlives a new day.
 	humans map[string]events.HumanActivity
 	seeded map[string]bool
+	// changes are each project's changes the Overview's headline metrics
+	// count (events.ChangeOf) made after its latest human activity, read
+	// with it and kept with it; counted keys each once, so a new day's
+	// re-read of the window adds nothing twice.
+	changes map[string][]events.Change
+	counted map[string]map[changeKey]bool
+}
+
+type changeKey struct {
+	at           int64
+	kind, ticket string
 }
 
 type projectEvents struct {
@@ -72,11 +83,14 @@ func (t *tracker) update(projects []string, now time.Time) string {
 	}
 	if t.humans == nil {
 		t.humans, t.seeded = map[string]events.HumanActivity{}, map[string]bool{}
+		t.changes, t.counted = map[string][]events.Change{}, map[string]map[changeKey]bool{}
 	}
 	for name := range t.seeded {
 		if !slices.Contains(projects, name) {
 			delete(t.seeded, name)
 			delete(t.humans, name)
+			delete(t.changes, name)
+			delete(t.counted, name)
 		}
 	}
 	var fresh []events.Event
@@ -100,7 +114,7 @@ func (t *tracker) update(projects []string, now time.Time) string {
 			}
 			offset, _ := t.source.ReadFrom(project, file, state.offsets[file], func(e events.Event) {
 				state.events = append(state.events, e)
-				t.noteHuman(e)
+				t.note(e)
 				fresh = append(fresh, e)
 			})
 			state.offsets[file] = offset
@@ -131,30 +145,65 @@ func (t *tracker) update(projects []string, now time.Time) string {
 	return strings.Join(parts, ",")
 }
 
-// noteHuman keeps e if it is the human's latest board activity in its
-// project so far.
-func (t *tracker) noteHuman(e events.Event) {
+// note keeps e if it is the human's latest board activity in its project
+// so far, dropping the changes it makes old, or if it is a change made
+// after that activity.
+func (t *tracker) note(e events.Event) {
 	if activity, ok := events.HumanActivityOf(e); ok && activity.Time.After(t.humans[e.Project].Time) {
 		t.humans[e.Project] = activity
+		t.dropChanges(e.Project, activity.Time)
+	}
+	change, ok := events.ChangeOf(e)
+	if !ok || !change.Time.After(t.humans[e.Project].Time) {
+		return
+	}
+	key := changeKey{change.Time.UnixNano(), change.Kind, change.Ticket}
+	if t.counted[e.Project] == nil {
+		t.counted[e.Project] = map[changeKey]bool{}
+	}
+	if !t.counted[e.Project][key] {
+		t.counted[e.Project][key] = true
+		t.changes[e.Project] = append(t.changes[e.Project], change)
 	}
 }
 
+// dropChanges forgets a project's changes made at or before since.
+func (t *tracker) dropChanges(project string, since time.Time) {
+	t.changes[project] = slices.DeleteFunc(t.changes[project], func(change events.Change) bool {
+		if change.Time.After(since) {
+			return false
+		}
+		delete(t.counted[project], changeKey{change.Time.UnixNano(), change.Kind, change.Ticket})
+		return true
+	})
+}
+
 // seedHuman reads a project's files dated before the window, newest first,
-// up to the first with any human activity: the human may not have touched
-// the board for longer than runs are kept.
+// up to the first with any human activity, with the changes made after it:
+// the human may not have touched the board for longer than runs are kept.
 func (t *tracker) seedHuman(project string, files []string, first string) {
 	for index := len(files) - 1; index >= 0; index-- {
 		if _, found := t.humans[project]; found {
 			return
 		}
 		if files[index] < first {
-			_, _ = t.source.ReadFrom(project, files[index], 0, t.noteHuman)
+			_, _ = t.source.ReadFrom(project, files[index], 0, t.note)
 		}
 	}
 }
 
 // human returns a copy of each project's latest human activity.
 func (t *tracker) human() map[string]events.HumanActivity { return maps.Clone(t.humans) }
+
+// changeList returns a copy of every project's changes since its latest
+// human activity.
+func (t *tracker) changeList() []events.Change {
+	var list []events.Change
+	for _, name := range slices.Sorted(maps.Keys(t.changes)) {
+		list = append(list, t.changes[name]...)
+	}
+	return list
+}
 
 // views derives every tracked run at now, linking runs by branch to the
 // board's in-progress tickets (RUN-5).

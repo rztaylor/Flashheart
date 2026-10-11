@@ -148,7 +148,9 @@ Full format: `docs/dev/specs/board-format.md`.
 - `STO-2` Ticket and workstream frontmatter edits preserve key order, comments
   and unknown keys, and produce minimal diffs.
 - `STO-3` All writes are atomic (write temp, fsync, rename) and made under the
-  project lock. Edits from the UI and MCP carry the content hash they were
+  project lock. The one exception is the hooks' per-session activity state
+  (agent-protocol §3), a disposable cache written in place under the lock
+  on every tool result. Edits from the UI and MCP carry the content hash they were
   based on and fail with a conflict if the file changed since. A move sets
   only `status`, applied to the file as it is under the lock, so it needs no
   hash and cannot lose another writer's change.
@@ -220,7 +222,15 @@ Full format: `docs/dev/specs/board-format.md`.
   with the State filter's *Agent working* option (D27, FH-42).
 - `VIEW-3` **Overview** (D32, FH-51): what a project manager asks of the
   board, for *All projects* or one project, about tickets with agent
-  sessions as evidence. One column of section cards, in order: *Needs your
+  sessions as evidence. Under the title, headline metrics (FH-52): *Since
+  your last change · <day and time>* over tiles counting, since the
+  human's latest board activity in the scope (`EDIT-10`), tickets moved to
+  Done, tickets moved to Ready to review and tickets created (each ticket
+  once per tile) and criteria updates that ticked criteria, by agents or
+  the human; the human's own changes are that activity, so only what came
+  after it counts. With no human activity recorded in the scope they count
+  the last 24 hours and say so. Needs you is not among them (the band shows
+  it). One column of section cards, in order: *Needs your
   decision* (open questions, answered in place as on the card, `CARD-6`,
   and kept until the session takes the answer; permission prompts, which
   name the project and branch of the session to answer them in, since
@@ -405,10 +415,13 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
   stdin, appends normalised events, and exits 0 within 100 ms (p95 50 ms) on
   a warm cache. Errors go to `<root>/.flashheart/hook-errors.log`, never to the
   agent, and never change the exit status (except `HOOK-6`).
-- `HOOK-2` Hooks record tool names, edited file paths relative to the
-  repository, success or failure, and summaries of at most 120 characters,
-  scrubbed of likely secrets. They never record prompts, command lines, tool
-  inputs or tool outputs.
+- `HOOK-2` Hooks record how many tools a run used and how many failed, in
+  at most one activity record per run per `activity_seconds` (default 60;
+  agent-protocol §3), edited file paths relative to the repository (each
+  once per run between checkpoints), the names of tools awaiting
+  permission, and summaries of at most 120 characters, scrubbed of likely
+  secrets. They never record prompts, command lines, tool inputs or tool
+  outputs.
 - `HOOK-3` On session start and resume (including after compaction), the hook
   returns a **recovery note** as additional context: the run id, project,
   linked ticket, its handoff, and answered questions, in at most about 400
@@ -591,9 +604,10 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
   status and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.
-- **Overview**: one calm column of section cards about tickets: Needs your
-  decision, Ready for your review, At risk, In progress, then collapsed
-  Work with no ticket and Up next (`VIEW-3`).
+- **Overview**: headline metrics since your last change on the board, then
+  one calm column of section cards about tickets: Needs your decision,
+  Ready for your review, At risk, In progress, then collapsed Work with no
+  ticket and Up next (`VIEW-3`).
 - **Needs you** is visible from every view and project (badge in the rail and
   top bar); the top bar's plate filters the Board to it (`VIEW-2`).
 - Narrow widths keep a single column with a column picker; the board is not

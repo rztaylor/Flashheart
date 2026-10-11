@@ -137,7 +137,7 @@ func TestVersionPrintsBuildAndProtocol(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("code=%d stderr=%q", code, stderr)
 	}
-	want := "flashheart v0.0.1 (commit abc1234, built 2026-10-04)\nagent protocol 1\n"
+	want := "flashheart v0.0.1 (commit abc1234, built 2026-10-04)\nagent protocol 2\n"
 	if stdout != want {
 		t.Errorf("stdout = %q, want %q", stdout, want)
 	}
@@ -650,7 +650,7 @@ func TestMCPServesTheProtocolOnStdio(t *testing.T) {
 			t.Fatalf("not a protocol message: %q", line)
 		}
 	}
-	for _, part := range []string{`"name":"flashheart"`, `"instructions":"Flashheart (protocol 1)`} {
+	for _, part := range []string{`"name":"flashheart"`, `"instructions":"Flashheart (protocol 2)`} {
 		if !strings.Contains(lines[0], part) {
 			t.Errorf("initialize result missing %s:\n%s", part, lines[0])
 		}

@@ -62,14 +62,18 @@ const (
 )
 
 // Entry is one timeline event of a run, with the fields worth showing.
+// An activity record's entry counts its tool uses (Tools) and failures and
+// names the first path it recorded.
 type Entry struct {
-	Time   time.Time `json:"time"`
-	Kind   string    `json:"kind"`
-	Tool   string    `json:"tool,omitempty"`
-	Path   string    `json:"path,omitempty"`
-	Failed bool      `json:"failed,omitempty"`
-	Detail string    `json:"detail,omitempty"`
-	Ticket string    `json:"ticket,omitempty"`
+	Time     time.Time `json:"time"`
+	Kind     string    `json:"kind"`
+	Tool     string    `json:"tool,omitempty"`
+	Path     string    `json:"path,omitempty"`
+	Failed   bool      `json:"failed,omitempty"`
+	Tools    int       `json:"tools,omitempty"`
+	Failures int       `json:"failures,omitempty"`
+	Detail   string    `json:"detail,omitempty"`
+	Ticket   string    `json:"ticket,omitempty"`
 }
 
 // Run is everything the events say about one session or subagent (RUN-2).
@@ -153,6 +157,16 @@ func (r *Run) addWindow(w Window) {
 	if len(r.windows) > MaxWindows {
 		r.windows[1].From = r.windows[0].From
 		r.windows = slices.Delete(r.windows, 0, 1)
+	}
+}
+
+// edited records a successful edit of path since the last checkpoint.
+func (r *Run) edited(path string) {
+	r.Edits++
+	r.Files = slices.DeleteFunc(r.Files, func(f string) bool { return f == path })
+	r.Files = append([]string{path}, r.Files...)
+	if len(r.Files) > MaxFiles {
+		r.Files = r.Files[:MaxFiles]
 	}
 }
 
@@ -356,17 +370,33 @@ func (s *Set) Apply(e events.Event) {
 		r.Tools++
 		r.Permission = ""
 		if data.OK && data.Path != "" {
-			r.Edits++
-			r.Files = slices.DeleteFunc(r.Files, func(f string) bool { return f == data.Path })
-			r.Files = append([]string{data.Path}, r.Files...)
-			if len(r.Files) > MaxFiles {
-				r.Files = r.Files[:MaxFiles]
-			}
+			r.edited(data.Path)
 		}
 		if data.OK && slices.Contains(shellTools, data.Tool) {
 			r.addWindow(Window{From: previous.Add(-ShellSlack), To: e.Time.Add(ShellSlack)})
 		}
 		entry.Tool, entry.Path, entry.Failed = data.Tool, data.Path, !data.OK
+	case events.Activity:
+		var data events.ActivityData
+		if e.Decode(&data) != nil || data.Tools < 1 {
+			break
+		}
+		r.Tools += data.Tools
+		r.Permission = ""
+		for _, path := range data.Paths {
+			if path != "" {
+				r.edited(path)
+				entry.Path = first(entry.Path, path)
+			}
+		}
+		// The hook remembered each command's window; the fold widens it as
+		// it widens a tool.used's.
+		for _, span := range data.Shell {
+			if !span.To.Before(span.From) {
+				r.addWindow(Window{From: span.From.Add(-ShellSlack), To: span.To.Add(ShellSlack)})
+			}
+		}
+		entry.Tools, entry.Failures = data.Tools, max(data.Failed, 0)
 	case events.PlanUpdated:
 		var data events.PlanData
 		_ = e.Decode(&data)
