@@ -56,6 +56,26 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- **Agent protocol 2** (FH-55, D32): hooks record a run's tool results as
+  throttled `activity` records instead of one `tool.used` per tool call,
+  which was about 80% of all events. A record counts the tool uses and
+  failures since the run's previous one, at most one a minute
+  (`activity_seconds` in `config.yaml`); an edit of a path the run has not
+  recorded since its last checkpoint, and the tool result a permission
+  request waits on, are recorded at once, and what is pending is recorded
+  before a turn end or end. Each edited path is recorded once per run
+  between checkpoints, so a run's edit count is now of files. Shell
+  commands' windows (FH-53) travel in the records, so shell edits still
+  count toward the handoff. On this board's own logs the change leaves
+  about a third of the events (6,475 to 2,132). Last activity lags a run's
+  last tool result by at most a minute; Quiet, Needs you and dirty behave as
+  before, and logs written before the upgrade read as before. The Runs
+  tab's activity shows turns, checkpoints, questions, moves and summaries
+  such as "Edited src/app.ts, 3 tool uses" or "40 tool uses, 2 failed"
+  instead of every tool's name. Agents see no difference; the installed
+  skill's protocol number updates at the next session start, or re-run
+  `flashheart setup claude --write`. Update the binary and the board
+  together: an older `serve` does not read the new records.
 - An Overview replaces the Agents view (FH-51, D32). The band's tabs read
   Board, Overview, Workstreams, Table. The Overview is about tickets, for
   All projects or one project, in one calm column: Needs your decision
@@ -163,6 +183,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Headline metrics under the Overview's title (FH-52): a quiet row saying
+  *Since your last change · yesterday 18:00* over four tiles, Done, To
+  review, New tickets and Criteria ticked, for All projects or the project
+  shown. They count tickets moved to Done and to Ready to review and tickets
+  created (each ticket once) and criteria updates, since your latest change
+  on the board there (a board edit, move, new ticket or answer; editor edits
+  do not count). With none recorded the row counts the last 24 hours and
+  says so. Served by `GET /api/metrics?project=`; counted from the event
+  log the server already reads, with no new events.
 - Each card in the board API carries a `sessions` summary of the runs
   working for its ticket (FH-50, RUN-9): the live agent and its state, the
   last activity, whether the handoff is behind the session's work, and its

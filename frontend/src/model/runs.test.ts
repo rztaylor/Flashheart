@@ -111,7 +111,32 @@ describe("describeEntry", () => {
         entry({ kind: "question.answered-in-session", ticket: "FH-1" }),
       ),
     ).toBe("Question on FH-1 answered in the session");
+    expect(describeEntry(entry({ kind: "ticket.moved", ticket: "FH-1" }))).toBe(
+      "Moved FH-1",
+    );
+    expect(
+      describeEntry(entry({ kind: "ticket.created", ticket: "FH-2" })),
+    ).toBe("Created FH-2");
+    expect(
+      describeEntry(entry({ kind: "review.written", ticket: "FH-1" })),
+    ).toBe("Wrote the review of FH-1");
     expect(describeEntry(entry({ kind: "future.kind" }))).toBe("future.kind");
+  });
+
+  it("summarises activity records (FH-55)", () => {
+    const activity = (patch: Partial<TimelineEntry>) =>
+      entry({ kind: "activity", ...patch });
+    expect(describeEntry(activity({ tools: 12 }))).toBe("12 tool uses");
+    expect(describeEntry(activity({ tools: 1 }))).toBe("1 tool use");
+    expect(describeEntry(activity({ tools: 12, failures: 2 }))).toBe(
+      "12 tool uses, 2 failed",
+    );
+    expect(describeEntry(activity({ tools: 1, path: "src/app.ts" }))).toBe(
+      "Edited src/app.ts",
+    );
+    expect(
+      describeEntry(activity({ tools: 3, failures: 1, path: "src/app.ts" })),
+    ).toBe("Edited src/app.ts, 3 tool uses, 1 failed");
   });
 });
 
@@ -135,6 +160,29 @@ describe("compactTimeline", () => {
       ["Prompt", 1],
     ]);
     expect(compact[2]?.entry.time).toBe(at(3));
+  });
+
+  it("adds up consecutive activity records that edited nothing", () => {
+    const at = (minute: number) => `2026-10-05T10:0${minute}:00Z`;
+    const compact = compactTimeline([
+      { time: at(0), kind: "turn.start" },
+      { time: at(1), kind: "activity", tools: 4 },
+      { time: at(2), kind: "activity", tools: 6, failures: 1 },
+      { time: at(3), kind: "activity", tools: 2, path: "a.ts" },
+      { time: at(4), kind: "activity", tools: 5 },
+      { time: at(5), kind: "activity", tools: 3, failures: 2 },
+      { time: at(6), kind: "turn.end" },
+    ]);
+    expect(
+      compact.map((item) => [describeEntry(item.entry), item.count]),
+    ).toEqual([
+      ["Turn finished", 1],
+      ["8 tool uses, 2 failed", 1],
+      ["Edited a.ts, 2 tool uses", 1],
+      ["10 tool uses, 1 failed", 1],
+      ["Prompt", 1],
+    ]);
+    expect(compact[1]?.entry.time).toBe(at(5));
   });
 });
 

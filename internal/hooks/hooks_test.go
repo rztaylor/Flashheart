@@ -32,14 +32,40 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	}
 	input := Input{Cwd: cwd}
 	run := "fake:" + session
+	// "Sub:<event>" is a tool event from inside the session's subagent a1.
+	actor := run
+	if rest, sub := strings.CutPrefix(event, "Sub:"); sub {
+		event, actor = rest, run+"/a1"
+	}
+	tool := func(name string, ok bool, path string) []Pending {
+		return []Pending{{Run: actor, Kind: events.ToolUsed, Data: events.ToolData{Tool: name, OK: ok, Path: path}}}
+	}
+	// "Edit:<file>" edits a file of the checkout.
+	if file, edit := strings.CutPrefix(event, "Edit:"); edit {
+		input.Events = tool("Edit", true, filepath.Join(cwd, file))
+		return input, nil
+	}
 	switch event {
+	case "Read":
+		input.Events = tool("Read", true, "")
+	case "Fail":
+		input.Events = tool("Bash", false, "")
+	case "Checkpointed":
+		// The checkpoint tool's own result (agent-protocol §5.2).
+		input.Events, input.Settled = tool("mcp__flashheart__checkpoint", true, ""), true
+	case "Permission":
+		input.Events = []Pending{{Run: actor, Kind: events.PermissionRequested, Data: events.PermissionData{Tool: "Bash"}}}
+	case "SubagentStart":
+		input.Events = []Pending{{Run: run + "/a1", Kind: events.RunStart, Data: events.RunStartData{Kind: events.KindSubagent, Parent: run}}}
+	case "SubagentStop":
+		input.Events = []Pending{{Run: run + "/a1", Kind: events.RunEnd, Data: events.RunEndData{Reason: "completed"}}}
 	case "SessionStart":
 		input.Recovery = true
 		input.Events = []Pending{{Run: run, Kind: events.RunStart, Data: events.RunStartData{Kind: events.KindSession, Source: "startup"}}}
 	case "Edit":
-		input.Events = []Pending{{Run: run, Kind: events.ToolUsed, Data: events.ToolData{Tool: "Edit", OK: true, Path: filepath.Join(cwd, "src", "a.ts")}}}
+		input.Events = tool("Edit", true, filepath.Join(cwd, "src", "a.ts"))
 	case "Bash":
-		input.Events = []Pending{{Run: run, Kind: events.ToolUsed, Data: events.ToolData{Tool: "Bash", OK: true}}}
+		input.Events = tool("Bash", true, "")
 	case "End":
 		input.Events = []Pending{{Run: run, Kind: events.RunEnd, Data: events.RunEndData{Reason: "other"}}}
 	case "Plan":
@@ -141,10 +167,10 @@ func TestRunAppendsEventsAndCreatesTheProject(t *testing.T) {
 	if turn.Cwd != cwd || turn.Branch != "feature/demo" || turn.Worktree != cwd {
 		t.Fatalf("turn data = %+v", turn)
 	}
-	var edit events.ToolData
+	var edit events.ActivityData
 	_ = list[1].Decode(&edit)
-	if edit.Path != "src/a.ts" {
-		t.Fatalf("edit path = %q, want repository-relative", edit.Path)
+	if list[1].Kind != events.Activity || edit.Tools != 1 || len(edit.Paths) != 1 || edit.Paths[0] != "src/a.ts" {
+		t.Fatalf("edit = %s %+v, want an activity record with the repository-relative path", list[1].Kind, edit)
 	}
 	var plan events.PlanData
 	_ = list[2].Decode(&plan)

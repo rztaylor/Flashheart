@@ -5,7 +5,8 @@
 // refolded only when an event arrives out of order;
 // linked to tickets by branch, and summarised per ticket: RUN-9) and each
 // project's latest human board activity (EDIT-10; older activity is read
-// once from the files before the window), rebuilt from store and events
+// once from the files before the window) with the changes the Overview's
+// headline metrics count since it (VIEW-3), rebuilt from store and events
 // when a caller finds it older than MaxAge or when file watching sees a
 // change.
 //

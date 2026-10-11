@@ -1,10 +1,15 @@
 [
   {
     "run": "claude:340b083f-5d70-41b2-8cff-ec700908097a",
-    "kind": "tool.used",
+    "kind": "activity",
     "data": {
-      "tool": "Bash",
-      "ok": true
+      "tools": 1,
+      "shell": [
+        {
+          "from": "2026-10-05T14:12:09Z",
+          "to": "2026-10-05T14:12:09Z"
+        }
+      ]
     }
   }
 ]
