@@ -16,7 +16,9 @@
 // enforces handoffs (HOOK-6), and prints
 // adapter-only replies such as run stamping without opening the board.
 // Every failure is logged to hook-errors.log and swallowed. In a repository
-// whose project is archived (PRJ-5) a hook records nothing and stays quiet.
+// whose project is archived (PRJ-5) a hook records nothing and stays quiet;
+// outside any git repository (PRJ-4) it also writes nothing at all, not
+// even the root or the skill.
 //
 // Payload schemas and output formats belong to the adapters
 // (hooks/claude); event files to events and store; run derivation to runs;

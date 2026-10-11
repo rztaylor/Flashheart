@@ -18,7 +18,6 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 │   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
 │   └── serve.log                         background serve diagnostics (LIFE-4), rotated at 1 MB
 ├── .archive/<project>/                   archived projects (PRJ-5), as they were
-├── _scratch/                             agent activity outside any git repository (PRJ-4)
 └── <project>/                            e.g. flashheart
     ├── project.yaml                      key, display name, repos, next id (PRJ-3, KEY-1)
     ├── workstreams/<slug>.md
@@ -48,7 +47,9 @@ Rules:
   `<id>-*.md` file in it is read with a warning. A folder with no ticket file,
   or more than one candidate, is ignored.
 - Two tickets with the same id are both shown as *needs repair*.
-- Directories starting with `.` are Flashheart's or archives. Unknown files and
+- Directories starting with `.` are Flashheart's or archives; directories
+  starting with `_` are not projects (`PRJ-1`), so a `_scratch/` left by an
+  older version (before D33) is ignored and can be deleted. Unknown files and
   directories are ignored and preserved.
 
 ## Ticket ids (KEY)

@@ -12,7 +12,8 @@ const cwdCache = ".flashheart/cache/cwd.json"
 // Where finds a working directory's repository, branch and worktree through
 // the root's cwd cache, writing the cache back only when it changed. A
 // cache that cannot be written is not an error: the next caller resolves
-// again.
+// again. A directory outside git is not cached, since activity there is not
+// recorded (PRJ-4).
 func (s *Store) Where(cwd string, now time.Time) gitinfo.Info {
 	return s.where(cwd, now, true)
 }
@@ -27,7 +28,7 @@ func (s *Store) where(cwd string, now time.Time, write bool) gitinfo.Info {
 	data, _ := s.ReadFile(cwdCache)
 	cache := gitinfo.ParseCache(data)
 	info, _ := cache.Resolve(cwd, now)
-	if write && cache.Changed() {
+	if write && info.Repo != "" && cache.Changed() {
 		_ = s.WriteFileAtomic(cwdCache, cache.Marshal())
 	}
 	return info

@@ -124,6 +124,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Removed
 
+- The `_scratch` project (FH-62, D33). Agent activity outside a git
+  repository is no longer recorded: hooks there write and print nothing,
+  `board_context` and `list_tickets` say there is no current project, and
+  tools that need one (`create_ticket`, `ask_human`, `claim`…) answer the
+  new `no_project` error, so the agent talks to you in chat instead. Run
+  `git init` in a folder to track it. An old `_scratch` folder in the board
+  root is now ignored and can be deleted (protocol version unchanged).
 - The Hide later filter (FH-39); a remembered `hide_later` is ignored.
 - The Agent working column (FH-42, D27): a working ticket now shows once,
   in its own column, with the Working mark; *State: Agent working* lists

@@ -634,7 +634,37 @@ ticked.
 Superseded (FH-63, user, 2026-10-11): the metrics confused more than they
 helped. To review counted tickets that arrived since your last change, so
 it read 0 above a Ready for your review section listing four. The headline
-is now the pipeline: every board column's whole count, which can never
+is now the pipeline: every board column's count, which can never
 disagree with the sections, as interlocking chevrons in the State role.
+Done counts accepted work, leaving out Rejected tickets (user).
 Throughput figures (done this week, time in review) were left out because
 each needs a time window again.
+
+## 2026-10-11 — D33: Activity outside git is not recorded
+
+Decision (user, FH-62): agent activity outside any git repository belongs
+to no project and is not recorded (PRJ-4); the reserved `_scratch` project
+is removed. Sessions outside git are mostly throwaway, have no repository
+or tickets to resume from, and the board's value is per project, so a
+`_scratch` board, created by hooks on first contact (even a lone
+`run.end`), showed users noise they never asked for. Its one real use, a
+home for an `ask_human` question or a ticket from such a session, is better
+served by telling the agent there is no project so it talks to the user in
+chat.
+
+Outside git, hooks return before writing anything: no project, no events,
+no cwd cache entry, not even a missing board root or the skill refresh.
+MCP read tools without a `project` argument answer that there is no
+current project and list the projects to pass; tools that need the
+caller's project or run answer `no_project`; tools given a ticket id or a
+`project` still work. A user who wants a folder tracked runs `git init`.
+
+Options: keep `_scratch` but hide it in the UI (still writes files no one
+sees); `_scratch` only for MCP writes (a board the user never looks at);
+record nothing (chosen). Existing `_scratch` folders need no migration:
+without the PRJ-1 exception they are `_`-prefixed directories, which the
+board ignores, and the user can delete them.
+
+Versions: board format stays 2; `PROTOCOL_VERSION` stays 2, since
+`no_project` is a new coded error with a fix, added as `project_archived`
+was, and no event or tool changes shape (agent-protocol §14).
