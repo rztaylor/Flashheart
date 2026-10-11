@@ -133,7 +133,8 @@ type ToolData struct {
 
 // ActivityData is activity's data: a run's tool use since its previous
 // activity record, recorded at most once per activity interval unless an
-// edit names a path the run has not recorded since its last checkpoint, or
+// edit names a path the run has not recorded in this turn or since its
+// last checkpoint, or
 // a permission request waits on the next tool result (agent-protocol §3).
 // Paths are those newly edited paths, repository-relative; Shell holds the
 // windows of the run's successful shell commands, each from the run's
