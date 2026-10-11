@@ -8,8 +8,10 @@
 // last two days of those projects' event logs and the claim holder's home.
 // Read-only tools change nothing on disk; files referenced by local path are copied into the ticket
 // (REV-5). A session in an archived project's repository, or a ticket of an
-// archived project, is answered with project_archived (PRJ-5); there is no
-// archive, restore or delete tool.
+// archived project, is answered with project_archived (PRJ-5). Outside any
+// git repository there is no current project (PRJ-4): reads say so, and
+// tools that need the caller's project or run answer no_project. There is
+// no archive, restore or delete tool.
 //
 // Files, locks and copies belong to store; parsing and blocking rules to
 // board; text edits to mdfile; run state to runs; the protocol wording to

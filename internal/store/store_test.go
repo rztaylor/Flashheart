@@ -76,6 +76,7 @@ func TestProjectDiscovery(t *testing.T) {
 	root := sampleCopy(t)
 	write(t, filepath.Join(root, "_ignored", "tickets", "IG-1-x", "IG-1-x.md"), "# X\n")
 	write(t, filepath.Join(root, ".hidden", "tickets", "HI-1-x", "HI-1-x.md"), "# X\n")
+	// A folder from the removed _scratch project (FH-62) is ignored too.
 	write(t, filepath.Join(root, "_scratch", "tickets", "SC-1-s", "SC-1-s.md"), "# S\n")
 	write(t, filepath.Join(root, "only-config", "project.yaml"), "name: Only\n")
 	write(t, filepath.Join(root, "legacy", "todo", "feat--x.md"), "# X\n")
@@ -91,7 +92,7 @@ func TestProjectDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Projects(): %v", err)
 	}
-	if want := []string{"_scratch", "alpha", "beta", "only-config"}; !reflect.DeepEqual(names, want) {
+	if want := []string{"alpha", "beta", "only-config"}; !reflect.DeepEqual(names, want) {
 		t.Errorf("Projects() = %q, want %q", names, want)
 	}
 	if v1, err := store.V1Projects(); err != nil || !reflect.DeepEqual(v1, []string{"legacy"}) {

@@ -32,8 +32,15 @@ user's agent configuration; change it deliberately and bump
   directory, take its parent's basename; apply the collision rule (`PRJ-3`).
   A bare repository (`repo.git`) names itself (`repo`); a submodule, whose
   git directory sits under its parent's `.git/modules/`, is its own
-  checkout. Outside git → `_scratch`. Names are made safe for a directory
-  (other characters become `-`). A repository whose project is archived
+  checkout. Names are made safe for a directory (other characters become
+  `-`). Outside any git repository there is no project and nothing is
+  recorded (`PRJ-4`): hooks exit 0 quietly without writing anything, not
+  even the cwd cache, the board root or the skill (§5.4); MCP read tools
+  without a `project` argument answer that there is no current project; and
+  tools that need the caller's project or run (`create_ticket`,
+  `create_workstream`, `set_project_key` without `project`, `claim`,
+  `release`, `ask_human`) answer `no_project`. Tools given a ticket id or a
+  `project` still work. A repository whose project is archived
   (`PRJ-5`) is not recorded: hooks exit 0 quietly and record nothing, and
   MCP tools answer `project_archived` without creating anything, until the
   human restores it.
@@ -309,7 +316,8 @@ when nothing changed since, else removes only setup's own hooks.
 
 The protocol skill is Flashheart's own code, not user configuration, so it
 is kept current without setup: at every `SessionStart` (startup, resume,
-clear, compact) the hook compares the installed `SKILL.md` with the
+clear, compact) inside a git repository (outside one a hook does nothing,
+§2) the hook compares the installed `SKILL.md` with the
 binary's skill and, when they differ, rewrites it atomically and opens the
 returned context with one line saying the skill was updated. It only
 updates a `SKILL.md` that exists and has Flashheart's frontmatter
@@ -406,7 +414,9 @@ and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
 `blocked`, `ambiguous_run`, `invalid_input`, `key_taken`, `key_fixed`,
 `needs_repair`, `busy`, `type_not_allowed`, `too_large`,
 `project_archived` (the caller's project, or a ticket's, is archived; the
-fix asks the human to restore it), `unsupported` (the board uses a newer
+fix asks the human to restore it), `no_project` (the caller works outside
+any git repository, §2; the fix says to work inside a repository or talk to
+the user in chat), `unsupported` (the board uses a newer
 format than this binary) and `internal`. Every write tool answers `busy`
 when another writer holds its lock past the lock wait; every write to a
 ticket another live run holds answers `claimed`; `conflict` comes only
@@ -549,6 +559,9 @@ kept current by the session-start hook (§5.4). It covers, briefly:
 - if your project has no key yet, choose 2–5 letters a person would use for
   it in conversation (`FH` for Flashheart, `NG` for NG+), and set it with
   `set_project_key` before creating tickets; pick another if it is taken;
+- outside a git repository there is no project and nothing is recorded:
+  talk to the user in chat instead of creating tickets or asking with
+  `ask_human`;
 - refer to tickets by id (`FH-42`); when asked for work in plain words ("the
   three top-priority bugs"), use `list_tickets`, then `claim` each ticket;
 - before work on a ticket: `claim`; create tickets for new work rather than
@@ -608,6 +621,13 @@ correctly across the upgrade. Agents see no difference: the MCP tools, the
 hook registrations and the skill's text keep their shape, and only the
 skill's `flashheart-protocol` metadata changes, which the session-start
 hook refreshes (§5.4); re-running `setup claude --write` updates it too.
+
+Additive change within version 2 (D33, FH-62, 2026-10-11): activity
+outside any git repository is no longer recorded in a `_scratch` project;
+MCP tools answer the new `no_project` code instead, and the skill gains a
+line saying so. No event or tool changes shape and logs read the same, and
+an older skill meets a coded error with a fix, as with `project_archived`,
+so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

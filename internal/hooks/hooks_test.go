@@ -288,14 +288,30 @@ func TestRunWithoutAutoCreateSkipsUnknownProjects(t *testing.T) {
 	}
 }
 
-func TestEventsOutsideGitGoToScratch(t *testing.T) {
+// Outside git nothing is recorded (PRJ-4): a whole session, down to a lone
+// run.end, creates no project, no cache and not even the root, and prints
+// nothing.
+func TestEventsOutsideGitRecordNothing(t *testing.T) {
 	t.Parallel()
 
-	root := t.TempDir()
 	outside, _ := filepath.EvalSymlinks(t.TempDir())
-	run(t, root, "UserPromptSubmit", "s1 "+outside, fake{})
-	if list := readEvents(t, root, store.ScratchProject); len(list) != 1 {
-		t.Fatalf("scratch events = %+v", list)
+	for _, script := range [][]string{{"SessionStart", "Prompt", "Edit", "Bash", "Stop", "End"}, {"End"}} {
+		root := filepath.Join(t.TempDir(), "absent")
+		for _, event := range script {
+			if out := run(t, root, event, "s1 "+outside, fake{}); out != "" {
+				t.Errorf("%s output = %q", event, out)
+			}
+		}
+		if _, err := os.Stat(root); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("%v outside git created the root: %v", script, err)
+		}
+	}
+	// With the root there, it is left as it was.
+	root := t.TempDir()
+	run(t, root, "SessionStart", "s1 "+outside, fake{})
+	run(t, root, "End", "s1 "+outside, fake{})
+	if entries, _ := os.ReadDir(root); len(entries) != 0 {
+		t.Fatalf("root after a session outside git = %v", entries)
 	}
 }
 

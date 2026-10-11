@@ -109,7 +109,7 @@ watches the root and keeps an in-memory index; the UI is optional.
 
 - `PRJ-1` Every immediate subdirectory of the root that contains a `tickets/`
   directory or a `project.yaml` is a project. Directories starting with
-  `.` or `_` are ignored, except the reserved `_scratch` project (`PRJ-4`).
+  `.` or `_` are ignored.
 - `PRJ-2` A project's name is its directory name. For a repository, hooks and
   setup derive it from the **main checkout** directory name, so worktrees map
   to the same project:
@@ -118,7 +118,11 @@ watches the root and keeps an in-memory index; the UI is optional.
   paths seen, and per-project settings. When a second, different repository
   path would map to an existing name, the new one becomes
   `<name>-<first 6 hex of sha256(path)>` and both are shown with their paths.
-- `PRJ-4` Agent activity outside any git repository goes to `_scratch`.
+- `PRJ-4` Agent activity outside any git repository belongs to no project
+  and is not recorded: hooks write nothing and print nothing, MCP read tools
+  report that there is no current project, and MCP tools that need the
+  caller's project answer `no_project` (D33). To track a folder, run
+  `git init` there.
 - `PRJ-5` A project directory is created on first agent contact when
   `auto_create_projects` is on (default on), with a `project.yaml` holding its
   name and repository but no key yet (`KEY-5`). A project can be archived
