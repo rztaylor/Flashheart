@@ -196,6 +196,39 @@ func TestArchivedProjectsRepositoryIsNotRecreated(t *testing.T) {
 	}
 }
 
+// TestArchivedProjectsRepositoryDoesNotWaitForTheRootLock: a hook in an
+// archived project's repository learns it is archived without the root lock
+// (FH-27). Not parallel: it shortens the package-wide LockWait, and
+// parallel tests run after it.
+func TestArchivedProjectsRepositoryDoesNotWaitForTheRootLock(t *testing.T) {
+	old := LockWait
+	LockWait = 300 * time.Millisecond
+	t.Cleanup(func() { LockWait = old })
+
+	s, root := writable(t)
+	if err := s.ArchiveProject("alpha"); err != nil {
+		t.Fatal(err)
+	}
+	// Another writer (a long delete plan, say) holds the root lock.
+	release, err := open(t, root).lock(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+
+	start := time.Now()
+	name, err := s.ProjectFor("alpha", "/Users/example/src/alpha", true)
+	if elapsed := time.Since(start); elapsed >= LockWait/2 {
+		t.Errorf("ProjectFor waited %v for the root lock", elapsed)
+	}
+	if !errors.Is(err, ErrProjectArchived) || name != "alpha" {
+		t.Fatalf("ProjectFor = %q, %v, want alpha with ErrProjectArchived", name, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "alpha")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("project recreated: %v", err)
+	}
+}
+
 func TestASymlinkedProjectIsNotArchived(t *testing.T) {
 	t.Parallel()
 
