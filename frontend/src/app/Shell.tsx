@@ -86,10 +86,10 @@ const views: {
   label: string;
   icon: IconName;
 }[] = [
-  { id: "board", label: "Board", icon: "board" },
   { id: "overview", label: "Overview", icon: "overview" },
   { id: "workstreams", label: "Workstreams", icon: "lines" },
   { id: "table", label: "Table", icon: "table" },
+  { id: "board", label: "Board", icon: "board" },
 ];
 
 // Shell composes the signage band, the project rail, the filter bar, the

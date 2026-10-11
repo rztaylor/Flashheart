@@ -56,6 +56,8 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The view tabs read Overview, Workstreams, Table, Board (FH-61).
+
 - **Agent protocol 2** (FH-55, D32): hooks record a run's tool results as
   throttled `activity` records instead of one `tool.used` per tool call,
   which was about 80% of all events. A record counts the tool uses and

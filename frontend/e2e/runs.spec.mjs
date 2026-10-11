@@ -97,10 +97,10 @@ const section = (name) => page.getByRole("region", { name, exact: true });
 
 test("the Overview puts tickets first: decisions, review, risk, progress, then tiles (FH-51)", async () => {
   await open("#/all/overview");
-  // The band's tabs: Agents is gone.
+  // The band's tabs, Overview first and Board last (FH-61); Agents is gone.
   await expect(
     page.getByRole("navigation", { name: "Views" }).getByRole("link"),
-  ).toHaveText(["Board", "Overview", "Workstreams", "Table"]);
+  ).toHaveText(["Overview", "Workstreams", "Table", "Board"]);
   await expect(page.getByRole("link", { name: "Overview" })).toHaveAttribute(
     "aria-current",
     "page",
