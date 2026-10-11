@@ -47,9 +47,11 @@ var (
 	hiddenColumns = []string{"backlog"}
 	colourBys     = []string{"type", "priority", "age", "none"}
 	views         = []string{"", "board", "overview", "workstreams", "table"}
-	states        = []string{"", "all", "blocked", "unblocked", "repair", "working"}
+	states        = []string{"", "all", "blocked", "unblocked", "repair", "working", "rejected"}
 	ages          = []string{"today", "week", "older"}
 	scopeName     = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
+	// workstreamSlug is the board's workstream slug rule (board-format.md).
+	workstreamSlug = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,99}$`)
 )
 
 // Config is the global configuration (CFG-1, CFG-2).
@@ -110,6 +112,10 @@ type UI struct {
 	// Scopes remembers the view and filters per project name, or "all" for
 	// All projects (VIEW-7).
 	Scopes map[string]Scope `yaml:"scopes,omitempty"`
+	// ExpandedWorkstreams lists, per project name, the finished workstreams
+	// the user expanded on the Workstreams view; the others show collapsed
+	// (FH-68).
+	ExpandedWorkstreams map[string][]string `yaml:"expanded_workstreams,omitempty"`
 }
 
 // Scope is the remembered view and filters of one project or All projects.
@@ -267,6 +273,9 @@ func (c Config) validate() error {
 // maxChoiceValues bounds each list of a remembered filter.
 const maxChoiceValues = 100
 
+// maxExpandedWorkstreams bounds each project's list of expanded workstreams.
+const maxExpandedWorkstreams = 500
+
 func (c Choice) values() []string {
 	return append(slices.Clone(c.Include), c.Exclude...)
 }
@@ -283,6 +292,21 @@ func (u UI) problems() []string {
 	oneOf("ui.colour_by", u.ColourBy, colourBys)
 	for _, column := range u.HiddenColumns {
 		oneOf("ui.hidden_columns", column, hiddenColumns)
+	}
+	for name, slugs := range u.ExpandedWorkstreams {
+		if !scopeName.MatchString(name) || strings.Contains(name, "..") {
+			problems = append(problems, fmt.Sprintf("ui.expanded_workstreams %q is not a project name", name))
+			continue
+		}
+		if len(slugs) > maxExpandedWorkstreams {
+			problems = append(problems, fmt.Sprintf("ui.expanded_workstreams.%s lists more than %d workstreams", name, maxExpandedWorkstreams))
+			continue
+		}
+		for _, slug := range slugs {
+			if !workstreamSlug.MatchString(slug) {
+				problems = append(problems, fmt.Sprintf("ui.expanded_workstreams.%s %q is not a workstream slug", name, slug))
+			}
+		}
 	}
 	for name, scope := range u.Scopes {
 		if !scopeName.MatchString(name) || strings.Contains(name, "..") {

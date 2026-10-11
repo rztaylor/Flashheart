@@ -394,6 +394,10 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
   await page.keyboard.press("Escape");
 
   await open("#/p/flashheart/workstreams");
+  // Foundation is finished, a rejected ticket included, so it shows
+  // collapsed until expanded (FH-68).
+  const foundation = page.getByRole("button", { name: /^Foundation/ });
+  await foundation.click();
   const station = page.getByRole("button", {
     name: /^Log background diagnostics to serve\.log, Rejected/,
   });
@@ -402,6 +406,8 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
   await page.screenshot({
     path: resolve(screenshotDir, "rejected-workstreams-1440-light.png"),
   });
+  await foundation.click();
+  await expect(foundation).toHaveAttribute("aria-expanded", "false");
   await open("#/p/flashheart/table");
   const row = page.getByRole("row", { name: /Log background diagnostics/ });
   await row.scrollIntoViewIfNeeded();
@@ -418,6 +424,50 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
     path: resolve(screenshotDir, "rejected-board-390-light.png"),
   });
   await page.setViewportSize({ width: 1440, height: 900 });
+
+  // The State filter's Rejected option shows it alone, on the Board and the
+  // Table, for the project and for All projects (FH-59).
+  const cards = page.getByRole("button", { name: /, [A-Z][A-Z0-9]*-\d+,/ });
+  await open("#/p/flashheart/board");
+  const states = await filterMenu(page, "State");
+  const option = states.getByRole("button", { name: "Rejected" });
+  await expect(option).toBeVisible();
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`state menu ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `state-menu-rejected-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await option.click();
+  await expect(filterButton(page, "State")).toHaveAccessibleName(
+    "State: Rejected",
+  );
+  await expect(rejected).toBeVisible();
+  await expect(cards).toHaveCount(1);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`rejected filter ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `state-rejected-board-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await open("#/p/flashheart/table");
+  await expect(page.getByRole("row")).toHaveCount(2);
+  await expect(row).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(filterButton(page, "State")).toHaveAccessibleName("State");
+  await expect(page.getByRole("row")).not.toHaveCount(2);
+  await open("#/all/board");
+  await (await filterMenu(page, "State"))
+    .getByRole("button", { name: "Rejected" })
+    .click();
+  await expect(rejected).toBeVisible();
+  await expect(cards).toHaveCount(1);
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(cards).not.toHaveCount(1);
 
   // Moving it to Done clears the rejection.
   await open("#/p/flashheart/board?t=FH-5");
@@ -872,6 +922,111 @@ test("independent stations reorder with Shift and an arrow", async () => {
       ),
     )
     .toContain("tickets:\n  - NG-5\n  - NG-4\n");
+});
+
+test("finished workstreams collapse and remember being expanded (FH-68)", async () => {
+  const config = () =>
+    readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
+  await open("#/p/flashheart/workstreams");
+  // Every Foundation ticket is Done: its card is a head with a chevron.
+  const foundation = page.getByRole("article", { name: "Foundation" });
+  const head = foundation.getByRole("button", { name: /^Foundation/ });
+  const stations = foundation.getByRole("list", {
+    name: "Foundation stations",
+  });
+  const station = foundation.getByRole("button", {
+    name: /^Go module and CLI skeleton,/,
+  });
+  await expect(head).toHaveAttribute("aria-expanded", "false");
+  await expect(head).toContainText("Completed");
+  await expect(head).toContainText("5 of 5 served");
+  await expect(stations).toHaveCount(0);
+  // Reduced motion: the chevron turns at once.
+  expect(
+    await head
+      .locator("svg")
+      .last()
+      .evaluate((icon) => getComputedStyle(icon).transitionDuration),
+  ).toBe("0s");
+  // Collapsing never reorders the lines.
+  const lineOrder = () =>
+    page
+      .locator("article[aria-labelledby^=ws-]")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute("aria-labelledby")),
+      );
+  const collapsedOrder = await lineOrder();
+  await foundation.scrollIntoViewIfNeeded();
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`collapsed workstream ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `workstreams-collapsed-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+
+  // The mouse, Space and Enter toggle it; the choice is saved.
+  await head.click();
+  await expect(head).toHaveAttribute("aria-expanded", "true");
+  await expect(station).toBeVisible();
+  await expect
+    .poll(config)
+    .toMatch(/expanded_workstreams:\n\s+flashheart: \[foundation\]/);
+  expect(await lineOrder()).toEqual(collapsedOrder);
+  await head.focus();
+  await page.keyboard.press("Space");
+  await expect(head).toHaveAttribute("aria-expanded", "false");
+  await expect(stations).toHaveCount(0);
+  await expect.poll(config).not.toContain("expanded_workstreams");
+  await page.keyboard.press("Enter");
+  await expect(head).toHaveAttribute("aria-expanded", "true");
+  await expect(head).toBeFocused();
+  await expect.poll(config).toContain("flashheart: [foundation]");
+  await expectNoAxeViolations("expanded finished workstream");
+  await foundation.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: resolve(screenshotDir, "workstreams-expanded-1440-light.png"),
+  });
+
+  // It stays expanded after a reload.
+  await page.reload();
+  await open("#/p/flashheart/workstreams");
+  await expect(head).toHaveAttribute("aria-expanded", "true");
+  await expect(station).toBeVisible();
+
+  // A ticket back in Ready to review shows the line in full with no
+  // control, though it still reads Completed, and forgets the choice.
+  await open("#/p/flashheart/board?t=FH-5");
+  await page
+    .getByRole("complementary", { name: "Ticket FH-5" })
+    .getByLabel("Move to")
+    .selectOption("review");
+  await expect.poll(() => ticketById("FH-5")).toContain("status: review");
+  await page.keyboard.press("Escape");
+  await open("#/p/flashheart/workstreams");
+  await expect(station).toBeVisible();
+  await expect(
+    foundation.getByRole("button", { name: /^Foundation/ }),
+  ).toHaveCount(0);
+  await expect(foundation).toContainText("Completed");
+  await expect.poll(config).not.toContain("expanded_workstreams");
+  await foundation.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: resolve(screenshotDir, "workstreams-reopened-1440-light.png"),
+  });
+
+  // Finished again, it collapses.
+  await open("#/p/flashheart/board?t=FH-5");
+  await page
+    .getByRole("complementary", { name: "Ticket FH-5" })
+    .getByLabel("Move to")
+    .selectOption("done");
+  await expect.poll(() => ticketById("FH-5")).toContain("status: done");
+  await page.keyboard.press("Escape");
+  await open("#/p/flashheart/workstreams");
+  await expect(head).toHaveAttribute("aria-expanded", "false");
+  await expect(stations).toHaveCount(0);
 });
 
 test("preferences are saved through the backend and survive a reload", async () => {

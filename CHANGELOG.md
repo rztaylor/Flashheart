@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Finished workstreams collapse on the Workstreams view (FH-68). A
+  workstream whose tickets are all Done, Rejected or Archived shows only
+  its route card head (name, *Completed*, `d of t served`) with a chevron;
+  click it, or press Enter or Space, to show the full line. Flashheart
+  remembers your choice in `config.yaml` (`ui.expanded_workstreams`) while
+  the workstream stays finished. A workstream with work still in Ready to
+  review or earlier always shows in full.
+
 - A **Rejected** status for tickets closed without being accepted (FH-58).
   `status: rejected` is a Done state: the ticket sits in the Done column
   and counts as done for blocking and workstream progress, but its card,
@@ -17,6 +25,10 @@ All notable changes to this project are documented here. The project follows
   it anywhere else, Done included, clears it. Agents see `rejected` in
   `list_tickets` and `get_ticket` and can filter by it, but `move` refuses
   it, as it refuses `done` (protocol version unchanged).
+- The State filter's **Rejected** option shows only rejected tickets, on
+  the Board and the Table, for one project or All projects, and is
+  remembered like the other states (FH-59). The Done limit still applies,
+  so older rejected tickets need *Show all*.
 
 ### Security
 
@@ -40,6 +52,15 @@ All notable changes to this project are documented here. The project follows
 
 - The Overview fills the main area like Board, Workstreams and Table
   instead of sitting in a centred 56rem column (FH-60).
+- Hooks in an archived project's repository no longer wait for the root
+  lock to learn the project is archived (FH-27). They used to wait up to
+  5 s behind a long write such as a permanent project delete; they now
+  return at once and still record and print nothing.
+
+- `flashheart doctor` no longer reports a `flashheart` MCP server
+  registered at local or project scope as "not registered" (FH-35). It is
+  a warning naming the scope, with `setup claude --write` as the fix to
+  register it for every project.
 
 - Files changed through shell commands now count toward the handoff
   (FH-53). A run used to be dirty only after the edit tools, though agents

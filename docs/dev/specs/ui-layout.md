@@ -71,7 +71,10 @@ Priority, Workstream and State, then *Clear filters* while any filter or chip
 applies; right-aligned, Board only, one icon button, *View options* (⋯),
 whose menu holds Show columns (Backlog), Colour by and
 Density (FH-39, FH-41). An applied filter's button takes the select border and ring
-and a count badge (*State: Blocked* for the one-choice State). Type,
+and a count badge (*State: Blocked* for the one-choice State). State
+offers All states, Blocked, Not blocked, Needs repair, Agent working and
+Rejected (tickets in Done whose status is rejected, FH-59; the Done limit
+still applies, so older ones need *Show all*). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
 click shows only that value (with any others shown), a Cmd click (Ctrl off
 macOS) or Cmd/Ctrl with Enter hides it, struck through, and a click on a
@@ -237,6 +240,19 @@ id a separate link.
 - Route card head: large bullet, name in the display cut, derived status in
   words with its mark (*Running*, *Blocked* with diamond, *Completed* with
   check), and `d of t served` right. Repair, blocker and warning notes follow.
+- **Finished lines collapse** (FH-68, D35). A workstream whose tickets are all
+  Done, Rejected or Archived, with nothing to repair, shows only its head
+  with a chevron at the right (pointing right when collapsed, down when
+  expanded). The head is then a disclosure button inside the heading
+  (`aria-expanded`, named by the head's words, the workstream's name
+  first); the mouse, Enter or Space expands the full card and collapses it
+  again. The chevron turns with the default transition, which reduced
+  motion sets to none. Any ticket in Ready to review or earlier keeps the
+  card in full with no control, though its head already reads *Completed*.
+  The expand choice is a saved preference (`CFG-2`) that lasts only while
+  the workstream stays finished: reopened, it shows in full, and once
+  finished again it collapses. Collapsing never changes the order of lines
+  or the per-project grouping.
 - Stations form a railway graph of the tickets' `depends-on` links on the
   line (D26), left to right, scrolling with an edge fade and a *more* hint.
   A ticket's column is one past the longest chain it depends on; a chain

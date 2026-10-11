@@ -1,13 +1,15 @@
 import type { Card, WorkstreamBrief } from "../api/board";
 import { ageOf } from "./paint";
 
-// working shows only tickets with an agent at work (FH-42).
+// working shows only tickets with an agent at work (FH-42); rejected only
+// tickets in Done whose status is rejected (FH-59).
 export type StateFilter =
   | "all"
   | "blocked"
   | "unblocked"
   | "repair"
-  | "working";
+  | "working"
+  | "rejected";
 
 // Choice is one filter dimension: values shown only (include, any of them)
 // and values hidden (exclude). Both empty means no filter.
@@ -135,6 +137,7 @@ export function applyFilters(
     if (filters.state === "repair" && card.needsRepair.length === 0)
       return false;
     if (filters.state === "working" && !card.agentWorking) return false;
+    if (filters.state === "rejected" && !card.rejected) return false;
     if (filters.needsYou && !card.needsYou) return false;
     if (words.length > 0) {
       const text = haystack(card);

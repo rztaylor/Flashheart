@@ -253,7 +253,9 @@ Full format: `docs/dev/specs/board-format.md`.
   old routes and a remembered Agents view open the Overview.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
   tickets as a railway graph of their `depends-on` links, with status,
-  blocked state and progress.
+  blocked state and progress. A finished workstream (every ticket Done,
+  Rejected or Archived) shows collapsed to its head until the user expands
+  it; any other workstream always shows in full.
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
 - `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
   workstream, blocked, live badge, criteria progress), *Detailed* (+
@@ -263,7 +265,8 @@ Full format: `docs/dev/specs/board-format.md`.
   the value in a tag, with colour chips on the board that also filter; the colour is never the
   only carrier of meaning and never uses the workstream line colours.
 - `VIEW-7` Filters and search across title, slug, body, tags, type, priority,
-  workstream, blocked/unblocked, has-run, has-question. Type, priority,
+  workstream, state (blocked, not blocked, needs repair, agent working or
+  rejected, FH-59), has-run, has-question. Type, priority,
   workstream and the Colour by value can each show only some values or hide
   some (FH-39). Filters and view choices are remembered per project
   (`CFG-2`).
@@ -499,6 +502,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   nothing, reports each check as ok, warning or problem with the fix (a
   missing hook, a configured binary that no longer exists, an out-of-date
   skill, hook errors of the last day), and exits 1 when it finds a problem.
+  An MCP server registered at local or project scope instead of setup's
+  user scope is a warning naming the scope, not "not registered".
 
 ### 6.11 Review and attachments (`REV`)
 
@@ -531,9 +536,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `CFG-1` Settings live in `<root>/.flashheart/config.yaml` (global) and
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
-- `CFG-2` UI preferences (theme, density, colour by, hidden columns, and
-  each project's view and filters) are saved through the backend in the
-  global config, never in browser storage.
+- `CFG-2` UI preferences (theme, density, colour by, hidden columns, each
+  project's view and filters, and the finished workstreams expanded) are
+  saved through the backend in the global config, never in browser storage.
 
 ### 6.13 Lifecycle (`LIFE`)
 

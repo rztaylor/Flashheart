@@ -65,8 +65,8 @@ flashheart setup claude             # show the changes as a diff
 flashheart setup claude --write     # apply them, with backups
 ```
 
-See [`docs/user/claude-code.md`](docs/user/claude-code.md). Planned:
-`flashheart setup codex` and `flashheart doctor`.
+See [`docs/user/claude-code.md`](docs/user/claude-code.md);
+`flashheart doctor` checks the result. Planned: `flashheart setup codex`.
 
 The board root defaults to `~/reports/Kanban`; override with `--root` or
 `FLASHHEART_ROOT`.

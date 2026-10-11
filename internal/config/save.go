@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -49,6 +51,15 @@ func SetUI(data []byte, ui UI) ([]byte, error) {
 			return nil, err
 		}
 		set(uiNode, "scopes", &scopes)
+	}
+	if len(ui.ExpandedWorkstreams) == 0 {
+		remove(uiNode, "expanded_workstreams")
+	} else {
+		expanded := &yaml.Node{Kind: yaml.MappingNode}
+		for _, name := range slices.Sorted(maps.Keys(ui.ExpandedWorkstreams)) {
+			expanded.Content = append(expanded.Content, scalarNode(name, "!!str"), flowList(ui.ExpandedWorkstreams[name]))
+		}
+		set(uiNode, "expanded_workstreams", expanded)
 	}
 	var out bytes.Buffer
 	encoder := yaml.NewEncoder(&out)
