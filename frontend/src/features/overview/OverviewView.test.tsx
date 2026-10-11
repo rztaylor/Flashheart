@@ -153,6 +153,7 @@ describe("OverviewView", () => {
         project=""
         projects={[]}
         revision={0}
+        boardHref="#/all/board"
         onOpen={() => {}}
         onReview={() => {}}
       />,

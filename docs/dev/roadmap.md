@@ -47,8 +47,8 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    FH-17's workstream UI follows it.
 9. [`project-overview`](roadmap-items/project-overview.md) — **Partial**.
    An Overview tab for a project manager replaces the Agents view: decisions,
-   reviews, risks and progress by ticket, with sessions as evidence and
-   headline metrics since your last change; hooks record less (D32, FH-47;
+   reviews, risks and progress by ticket, with sessions as evidence under a
+   pipeline of the board's columns (FH-63); hooks record less (D32, FH-47;
    workstream FH-49–FH-55). Built: all of it (FH-55: agent protocol 2);
    open: the user's review. No roadmap dependencies.
 

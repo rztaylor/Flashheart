@@ -64,6 +64,9 @@ type ProjectSummary struct {
 	Workstreams  []WorkstreamBrief `json:"workstreams"`
 	// Archived counts the project's archived tickets (EDIT-8).
 	Archived int `json:"archived"`
+	// Rejected counts the tickets in Done whose status is rejected (FH-58),
+	// so the Overview's pipeline can count accepted work (FH-63).
+	Rejected int `json:"rejected"`
 	// Runs counts the project's agent runs by state (PRJ-6).
 	Runs RunCountsJSON `json:"runs"`
 }
@@ -703,6 +706,9 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 	}
 	for _, ticket := range project.Tickets {
 		result.Counts[string(ticket.Column)]++
+		if ticket.Rejected {
+			result.Rejected++
+		}
 		if ticket.NeedsRepair() {
 			result.NeedsRepair++
 		}

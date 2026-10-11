@@ -749,6 +749,10 @@ export function Shell({
                     project={scopeProject}
                     projects={summaries}
                     revision={revision}
+                    boardHref={formatRoute({
+                      scope: route.scope,
+                      view: "board",
+                    })}
                     onOpen={openTicket}
                     onReview={(ticket) => openTicket(ticket, "review")}
                     onAnswer={answers ? editing.answer : undefined}

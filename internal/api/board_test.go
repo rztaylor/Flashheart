@@ -119,6 +119,23 @@ func TestProjectsListsKeysCountsAndActivity(t *testing.T) {
 	}
 }
 
+// A rejected ticket sits in Done; the summary counts it there and again on
+// its own, so the Overview's pipeline can count accepted work (FH-63).
+func TestProjectsCountRejectedTickets(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := writableAPI(t)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "rejected"}, http.StatusOK, nil)
+	var body ProjectsResponse
+	getJSON(t, handler, "/api/projects", http.StatusOK, &body)
+	for _, project := range body.Projects {
+		want := map[string][2]int{"alpha": {2, 1}, "beta": {0, 0}}[project.Name]
+		if project.Counts["done"] != want[0] || project.Rejected != want[1] {
+			t.Errorf("%s done = %d, rejected = %d, want %v", project.Name, project.Counts["done"], project.Rejected, want)
+		}
+	}
+}
+
 func TestProjectBoardPlacesAndExplainsEveryTicket(t *testing.T) {
 	t.Parallel()
 

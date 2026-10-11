@@ -632,97 +632,80 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
   await expect(page).toHaveURL(/#\/p\/alpha\/board/);
 });
 
-test("the Overview's headline metrics count agents' changes since your last change (FH-52)", async () => {
-  // Earlier tests changed the board as the human (a new ticket, answers):
-  // the row counts from the latest of those.
+test("the Overview's pipeline counts every column of the scope (FH-63)", async () => {
   await open("#/all/overview");
-  const row = page.locator("[data-headline-metrics]");
-  await expect(row).toBeVisible();
-  await expect(row.locator("p")).toHaveText(
-    /^Since your last change · today \d/,
-  );
-  await expect(row.locator("dt")).toHaveText([
-    /^Checkpoints?$/,
-    "To review",
-    /^New tickets?$/,
-    /^Criteri(a|on) ticked$/,
+  const pipeline = page.getByRole("navigation", { name: "Pipeline" });
+  const stages = pipeline.getByRole("link");
+  await expect(stages).toHaveText([
+    /^\d+Backlog$/,
+    /^\d+Up next$/,
+    /^\d+In progress$/,
+    /^\d+Ready to review$/,
+    /^\d+Done$/,
   ]);
-  const value = (metric) =>
-    row.locator(`[data-metric="${metric}"] dd`).textContent();
-  const before = {};
-  for (const metric of ["checkpoints", "review", "created", "criteria"])
-    before[metric] = Number(await value(metric));
+  const counts = () =>
+    stages.evaluateAll((links) =>
+      links.map((link) =>
+        Number(link.getAttribute("aria-label").match(/: (\d+) tickets?$/)[1]),
+      ),
+    );
+  const before = await counts();
 
-  // An agent creates a ticket, ticks a criterion, moves it to review and
-  // records a handoff on the ticket it holds, through the real MCP server.
+  // An agent creates a ticket, then moves it to review, through the real
+  // MCP server: it leaves Backlog for Ready to review.
   const created = await callTool(sandbox.root, claimed.cwd, "create_ticket", {
     run: claimed.run,
     type: "feature",
-    title: "Headline metrics",
-    description: "Count what changed.",
-    criteria: ["Counts", "Labels"],
+    title: "Pipeline headline",
+    description: "Count every column.",
+    criteria: ["Counts"],
     priority: "medium",
   });
   const id = created.match(/ticket=(\S+)/)[1];
-  await callTool(sandbox.root, claimed.cwd, "update_ticket", {
-    run: claimed.run,
-    ticket: id,
-    check: ["1"],
-  });
+  await expect.poll(counts).toEqual([before[0] + 1, ...before.slice(1)]);
   await callTool(sandbox.root, claimed.cwd, "move", {
     run: claimed.run,
     ticket: id,
     to: "review",
   });
-  await callTool(sandbox.root, claimed.cwd, "checkpoint", {
-    run: claimed.run,
-    ticket: "FH-25",
-    done: ["Lock acquisition"],
-    next: ["Release on exit"],
-    files: [],
-  });
   await expect
-    .poll(async () => [
-      Number(await value("checkpoints")),
-      Number(await value("review")),
-      Number(await value("created")),
-      Number(await value("criteria")),
-    ])
-    .toEqual([
-      before.checkpoints + 1,
-      before.review + 1,
-      before.created + 1,
-      before.criteria + 1,
-    ]);
-  // Ink only: the numbers are tabular and take no status colour.
-  const number = row.locator('[data-metric="review"] dd');
-  await expect(number).toHaveCSS("font-variant-numeric", "tabular-nums");
-  await expectNoAxeViolations("headline metrics");
+    .poll(counts)
+    .toEqual([before[0], before[1], before[2], before[3] + 1, before[4]]);
+
+  // The stages are interlocking chevrons in their state colours.
+  const review = pipeline.locator('[data-stage="review"]');
+  await expect(review).toHaveCSS("clip-path", /^polygon/);
+  await expect(review).toHaveAttribute("data-tone", "review");
+  await expectNoAxeViolations("pipeline");
   for (const theme of ["light", "dark"]) {
-    await open("#/all/overview", { theme });
-    await shot(`overview-metrics-1440-${theme}`);
+    for (const width of [1280, 1920]) {
+      await open("#/all/overview", { width, theme });
+      await shot(`overview-pipeline-${width}-${theme}`);
+    }
+    // At phone width the five stages stay on one row with no page scroll.
     await open("#/all/overview", { width: 390, height: 844, theme });
     const overflow = await page.evaluate(
       () => document.scrollingElement.scrollWidth - window.innerWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
-    // Four tiles wrap to two by two.
-    const tops = await row
-      .locator("[data-metric]")
-      .evaluateAll((tiles) => tiles.map((tile) => tile.offsetTop));
-    expect(tops[0]).toBe(tops[1]);
-    expect(tops[2]).toBe(tops[3]);
-    expect(tops[2]).toBeGreaterThan(tops[0]);
-    await shot(`overview-metrics-390-${theme}`);
+    const tops = await stages.evaluateAll((links) =>
+      links.map((link) => link.getBoundingClientRect().top),
+    );
+    expect(new Set(tops).size).toBe(1);
+    await shot(`overview-pipeline-390-${theme}`);
   }
 
-  // A project with no recorded change of yours counts the last day, and
-  // says so.
+  // One project counts only its own tickets, and leads to its own board.
   await open("#/p/quiet/overview");
-  await expect(row.locator("p")).toHaveText("In the last 24 hours");
-  await expect(row.locator("dd")).toHaveText(["0", "0", "0", "0"]);
-  for (const theme of ["light", "dark"]) {
-    await open("#/p/quiet/overview", { theme });
-    await shot(`overview-metrics-fallback-1440-${theme}`);
-  }
+  await expect(stages).toHaveText([
+    "0Backlog",
+    "0Up next",
+    "0In progress",
+    "0Ready to review",
+    "0Done",
+  ]);
+  await pipeline
+    .getByRole("link", { name: "Ready to review: 0 tickets" })
+    .click();
+  await expect(page).toHaveURL(/#\/p\/quiet\/board$/);
 });

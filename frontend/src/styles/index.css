@@ -224,3 +224,37 @@
     display: flex;
   }
 }
+
+/* Chevron: an arrow card, notched on the left and pointed on the right, so
+   a row of them interlocks and reads left to right (the Overview's
+   pipeline, FH-63). The depth comes from --chevron-point; chevron-start is
+   the first card, flat on the left. */
+@utility chevron {
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--chevron-point)) 0,
+    100% 50%,
+    calc(100% - var(--chevron-point)) 100%,
+    0 100%,
+    var(--chevron-point) 50%
+  );
+}
+
+@utility chevron-start {
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--chevron-point)) 0,
+    100% 50%,
+    calc(100% - var(--chevron-point)) 100%,
+    0 100%
+  );
+}
+
+/* chevron-ring is the focus outline of a chevron's wrapper: four offset
+   copies of the shape in the focus colour, since an outline would draw the
+   rectangle the clip hides. */
+@utility chevron-ring {
+  filter: drop-shadow(2px 0 0 var(--fh-focus))
+    drop-shadow(-2px 0 0 var(--fh-focus)) drop-shadow(0 2px 0 var(--fh-focus))
+    drop-shadow(0 -2px 0 var(--fh-focus));
+}
