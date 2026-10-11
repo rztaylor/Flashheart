@@ -24,6 +24,10 @@ Intended layout (packages are created when they get real content):
 - `internal/scrub`: secret scrubbing and length limits for agent strings.
 - `internal/gitinfo`: project, branch and worktree from a cwd without git
   subprocesses; cached.
+- `internal/gitchange`: whether a worktree's work changed after a moment
+  (changed, untracked and newly committed files' modification times), for
+  the turn-end and session-end hooks only (FH-53); one bounded
+  `git status` (and `git log` when HEAD moved), without optional locks.
 - `internal/runs`: pure run-state derivation, links, claims and flags from
   events and a clock; it reads `events`' envelope types and no files.
 - `internal/protocol`: `PROTOCOL_VERSION`, recovery note and protocol text
@@ -48,6 +52,7 @@ Intended layout (packages are created when they get real content):
   `store`; link syntax is `board.RewriteLocalLinks`, shared with the MCP
   tools. Copies only from the project's repository, not git-ignored
   (SEC-6); the one place serve runs a git subprocess (`check-ignore`).
+  Hooks run git only through `gitchange`.
 - `internal/migrate`: one-time conversion of a v1 root to board format v2
   (`flashheart migrate`, MIG-1): plan, number, rewrite references, move v1
   files to `.flashheart/backup/`. Writes only through `store` primitives.
@@ -60,7 +65,7 @@ Intended layout (packages are created when they get real content):
 - `frontend/`: React UI; ownership in `.agents/facts/frontend-ui.md`.
 
 Dependency direction: `cli` → (`app` | `background` | `migrate` | `mcpserver` | `hooks` | `setup` | `await`) →
-(`index`, `runs`, `protocol`) → (`store`, `events`) → (`board`, `mdfile`,
+(`index`, `runs`, `protocol`, `gitchange`) → (`store`, `events`) → (`board`, `mdfile`,
 `gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `scrub`)
 import no I/O packages; `runs` imports only `events`' types. Nothing below `app` imports HTTP or
 Singleserve.

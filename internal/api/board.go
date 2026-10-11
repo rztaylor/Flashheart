@@ -104,10 +104,12 @@ type ReasonJSON struct {
 
 // Card is a ticket as shown on a board (VIEW-6).
 type Card struct {
-	Project     string       `json:"project"`
-	ID          string       `json:"id"`
-	Slug        string       `json:"slug"`
-	Column      string       `json:"column"`
+	Project string `json:"project"`
+	ID      string `json:"id"`
+	Slug    string `json:"slug"`
+	Column  string `json:"column"`
+	// Rejected marks a ticket in Done whose status is rejected (FH-58).
+	Rejected    bool         `json:"rejected"`
 	Title       string       `json:"title"`
 	Type        string       `json:"type"`
 	Priority    string       `json:"priority"`
@@ -219,10 +221,11 @@ type TicketResponse struct {
 
 // WorkstreamTicket is one ticket in a workstream swimlane, in order.
 type WorkstreamTicket struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Column  string `json:"column"`
-	Blocked bool   `json:"blocked"`
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Column   string `json:"column"`
+	Rejected bool   `json:"rejected"`
+	Blocked  bool   `json:"blocked"`
 	// Held means blocked by something other than a ticket on this line or
 	// its workstream-level dependencies.
 	Held    bool `json:"held"`
@@ -518,7 +521,7 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 				ref := board.Ref{Project: owner.Name, ID: id}
 				reasons := snapshot.Analysis.Blocked[ref]
 				entry = WorkstreamTicket{
-					ID: id, Title: ticket.Title, Column: string(ticket.Column),
+					ID: id, Title: ticket.Title, Column: string(ticket.Column), Rejected: ticket.Rejected,
 					Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream),
 					DependsOn: []string{}, Outside: []string{},
 				}
@@ -614,7 +617,7 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 	ref := board.Ref{Project: project.Name, ID: ticket.ID}
 	blockedBy := reasons(project.Name, snapshot.Analysis.Blocked[ref])
 	result := Card{
-		Project: project.Name, ID: ticket.ID, Slug: ticket.Slug, Column: string(ticket.Column),
+		Project: project.Name, ID: ticket.ID, Slug: ticket.Slug, Column: string(ticket.Column), Rejected: ticket.Rejected,
 		Title: ticket.Title, Type: ticket.Type, Priority: ticket.Priority, Workstream: ticket.Workstream,
 		Tags: nonNil(ticket.Tags), Created: ticket.Created, Updated: ticket.Updated,
 		Modified: timestamp(ticket.Modified), Branch: ticket.Branch, DependsOn: nonNil(ticket.DependsOn),

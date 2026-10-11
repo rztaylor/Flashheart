@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { type Archived, fetchArchive } from "../../api/archive";
-import { COLUMNS, type TicketRef } from "../../api/board";
+import { STATUSES, statusWord, type TicketRef } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { unarchiveTicket } from "../../api/edit";
 import { Aside } from "../../components/Aside";
@@ -19,8 +19,9 @@ import type { Editing } from "../editing/useEditing";
 import { ArchiveProjectDialog } from "./ArchiveProjectDialog";
 import { DeleteTicketDialog } from "./DeleteTicketDialog";
 
-const columnTitle = (column: string) =>
-  COLUMNS.find((item) => item.id === column)?.title ?? column;
+const statusTitle = (item: Archived) =>
+  STATUSES.find((status) => status.id === statusWord(item))?.title ??
+  item.column;
 
 const failure = (error: unknown) =>
   error instanceof Error ? error.message : "The request failed";
@@ -64,7 +65,7 @@ export function ArchiveView({
       await unarchiveTicket(fetcher, item.id);
       archive.reload();
       notify({
-        text: `Restored ${item.id} to ${columnTitle(item.column)}.`,
+        text: `Restored ${item.id} to ${statusTitle(item)}.`,
         action: { label: "Open", run: () => onOpen({ id: item.id }) },
       });
     } catch (error) {
@@ -169,7 +170,7 @@ export function ArchiveView({
                     </span>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    <StatusPill column={item.column} />
+                    <StatusPill column={item.column} rejected={item.rejected} />
                   </td>
                   <td className="px-3 py-2">
                     {item.type ? <Tag>{item.type}</Tag> : null}

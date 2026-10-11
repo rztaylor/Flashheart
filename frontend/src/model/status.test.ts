@@ -17,6 +17,14 @@ describe("statusOf", () => {
     expect(statusOf("done")).toEqual({ tone: "done", label: "Done" });
   });
 
+  it("says Rejected, not Done, for a rejected ticket (FH-58)", () => {
+    expect(statusOf("done", true)).toEqual({
+      tone: "neutral",
+      label: "Rejected",
+    });
+    expect(statusOf("done", false)).toEqual({ tone: "done", label: "Done" });
+  });
+
   it("treats archived and missing stations as neutral words", () => {
     expect(statusOf("archived")).toEqual({
       tone: "neutral",

@@ -29,8 +29,8 @@ func ValidateField(key, value string) error {
 			return errors.New("title must be 1 to 300 characters")
 		}
 	case "status":
-		if _, ok := ParseColumn(value); !ok {
-			return fmt.Errorf("%q is not a column", value)
+		if _, _, ok := ParseStatus(value); !ok {
+			return fmt.Errorf("%q is not a status", value)
 		}
 	case "type":
 		if !slices.Contains(TicketTypes, value) {

@@ -41,7 +41,9 @@ user's agent configuration; change it deliberately and bump
   `git` subprocess on the hot path); detached HEAD records the short SHA.
 - Resolution results are cached per `cwd` in
   `<root>/.flashheart/cache/cwd.json` with the HEAD file's mtime as the
-  validator, so most hooks do no git work.
+  validator, so most hooks do no git work. The one exception is the
+  worktree check at a session's turn end and end (§4), which runs a bounded
+  `git status` (and `git log` when HEAD moved) without optional locks.
 
 ## 3. Events
 
@@ -61,9 +63,9 @@ writing.
 | Kind | Source | `data` |
 |---|---|---|
 | `run.start` | session start / subagent start hook | `kind` (session/subagent), `parent`, `cwd`, `branch`, `worktree`, `source` (startup/resume/clear/compact), `agent_type` for subagents |
-| `run.end` | session end / subagent stop | `reason` |
+| `run.end` | session end / subagent stop | `reason`; optional `worktree_changed: true` (§4) |
 | `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
-| `turn.end` | stop | `blocked_for_handoff` (bool) |
+| `turn.end` | stop | `blocked_for_handoff` (bool); optional `worktree_changed: true` (§4) |
 | `tool.used` | post tool use | `tool`, `ok`, optional `path` (repo-relative, edits only; omitted outside the worktree), optional `summary` (≤120 chars, not written by the Claude adapter, which reads nothing else from tool inputs) |
 | `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
 | `permission.requested` | permission request / notification | `tool`, optional `summary` |
@@ -72,7 +74,7 @@ writing.
 | `compact` | pre/post compact | `phase` (pre/post) |
 | `claim` / `release` | MCP | `ticket`, `force`, `reason`; a claim also records `home`, the claimant's own project, so a reader of the ticket's log knows where the holder's activity is recorded |
 | `checkpoint` | MCP | `ticket`, counts of done/next/files/questions |
-| `ticket.moved` | MCP or UI | `ticket`, `from`, `to`, `by` (run id or `human`) |
+| `ticket.moved` | MCP or UI | `ticket`, `from`, `to` (statuses: a column or `rejected`), `by` (run id or `human`) |
 | `ticket.updated` | MCP or UI | `ticket`, `fields` changed; from the UI also `by: human` |
 | `ticket.created` | MCP or UI | `ticket`, `by` (run id or `human`) |
 | `review.written` | MCP | `ticket` |
@@ -92,7 +94,7 @@ ticket says:
 | Board write | Kind | `data` besides `ticket` and `by` |
 |---|---|---|
 | new ticket | `ticket.created` | none |
-| move, or a place within or across columns (`EDIT-9`) | `ticket.moved` | `from`, `to` (columns; equal for a reorder) |
+| move, or a place within or across columns (`EDIT-9`) | `ticket.moved` | `from`, `to` (statuses: a column or `rejected`; equal for a reorder) |
 | field edits (`EDIT-6`) | `ticket.updated` | `fields`: the frontmatter keys or `title` sent |
 | raw edit | `ticket.updated` | none (what changed is not worked out) |
 | ticked criterion | `ticket.updated` | `fields: [criteria]` |
@@ -142,7 +144,30 @@ days of event files.
 
 Flags:
 
-- **dirty**: an edit `tool.used` after the run's last `checkpoint`.
+- **dirty**: an edit `tool.used` (one with a `path`) after the run's last
+  `checkpoint`, or a `turn.end` or `run.end` after it with
+  `worktree_changed: true`, which counts as one edit. Agents edit mostly
+  through shell commands, which name no path, so at a session's turn end
+  and end the hook checks its worktree when the session is not already
+  dirty and it or one of its subagents ran a shell command (`Bash` or
+  `PowerShell`, `ok`) since its last checkpoint. Each such command has a
+  **window**, from its run's previous event to its `tool.used`, widened by
+  2 s either side for clock and flush granularity and cut at the last
+  checkpoint; the timestamps are the log's own, so no hook does extra
+  work. The worktree changed when a file git lists as changed or untracked
+  (not ignored), or a file of a commit made since the first window, has a
+  modification time inside a window (a deleted file by its directory's).
+  Only the boolean is stored, never a path, command or content
+  (`HOOK-2`). Read-only commands leave nothing behind, so they never make a
+  run dirty; committing or switching branch alone does not either; a file
+  the user changes while the session waits for them, between turns or
+  after it stops is not the session's. Remaining false positives: a file
+  the user or another process changes while one of the session's commands
+  (or the model's thinking before it) is under way, and an untracked,
+  unignored file a command generates. Missed: what a background command
+  writes after its `tool.used`, and a subagent's own worktree. The check
+  gives up after 50 ms and is then logged, leaving the run as it was
+  (`HOOK-1`).
 - **no handoff**: Ended, linked to a ticket, and dirty.
 - **linked**: `claim` (explicit) or branch match (provisional, `RUN-5`);
   subagents inherit the parent's link.
@@ -183,8 +208,8 @@ ticket's `## Notes`.
 | `TaskCreated`, `TaskCompleted` | `plan.updated` (merge) | — |
 | `SubagentStart` / `SubagentStop` | child `run.start` (with `parent`, `agent_type`) / `run.end` (`reason: completed`), keyed by `agent_id` | — |
 | `PreCompact` / `PostCompact` | `compact` | — |
-| `Stop` | `turn.end`; handoff enforcement (§9) | `{"decision":"block","reason":…}` only when enforcing |
-| `SessionEnd` | `run.end` | — |
+| `Stop` | `turn.end`, with `worktree_changed` from the worktree check (§4); handoff enforcement (§9) | `{"decision":"block","reason":…}` only when enforcing |
+| `SessionEnd` | `run.end`, with `worktree_changed` from the worktree check (§4) | — |
 
 Not registered by default: per-tool `PreToolUse` other than Flashheart's own
 tools (noise and latency).
@@ -317,13 +342,13 @@ the recovery note shows it) is accepted when it names one run.
 | Tool | Input | Effect | Output |
 |---|---|---|---|
 | `board_context` | `project?`, `run?` | none | ≤1,500 tokens: your project and its key, or, when none is chosen yet, a suggested key, the keys in use and a request to set one (`KEY-5`); your run and link; your ticket's handoff and unticked criteria; answered questions not yet delivered; other in-progress tickets with holders; the top 5 unblocked Up next tickets by priority (then Backlog when Up next is short); the project's unfinished workstreams with progress and next ticket |
-| `list_tickets` | `project?`, `type?`, `status?` (list; default open: in-progress, up-next, backlog), `priority?`, `tag?`, `blocked?`, `text?`, `limit?` (default 10, max 50) | none | one line per ticket, ordered by status (In progress, Up next, Backlog), then priority, then age: `FH-42 bug high up-next "Title" [blocked: …]` (`MCP-7`) |
+| `list_tickets` | `project?`, `type?`, `status?` (list; default open: in-progress, up-next, backlog; `done` includes rejected tickets, `rejected` lists only them), `priority?`, `tag?`, `blocked?`, `text?`, `limit?` (default 10, max 50) | none | one line per ticket, ordered by status (In progress, Up next, Backlog), then priority, then age: `FH-42 bug high up-next "Title" [blocked: …]`; a rejected ticket shows `rejected` (`MCP-7`) |
 | `get_ticket` | `ticket` (id) | none | ticket markdown, column, blocked reasons, review, files list |
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff |
 | `release` | `ticket`, `reason?` | §6 | ok |
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
 | `update_ticket` | `ticket`, `set?` (frontmatter fields), `check?` (criteria text or index), `append_notes?` | frontmatter/body edit with hash precondition; setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4) | changed fields |
-| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` is refused (humans move tickets to Done); a blocked ticket is started with `claim` and `force` | new column, warnings |
+| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `project_key?` (only for a project with no key yet) | new ticket folder with the next id (`KEY-2`); a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` is joined (§7.4) | id |
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
@@ -424,7 +449,9 @@ when it left edits since its last checkpoint.
 
 When `enforce_handoff` is on for the project, at `Stop`:
 
-- if the run is linked, dirty, the agent's payload does not say a stop hook is
+- if the run is linked, dirty (including a worktree change this stop's
+  check found during one of its shell commands, §4), the agent's payload
+  does not say a stop hook is
   already active, and the run was not blocked for handoff in this turn →
   output `{"decision":"block","reason":"Flashheart: record a checkpoint on <ticket> (done, next, files) before stopping."}`
   and record `turn.end` with `blocked_for_handoff: true`;
@@ -543,3 +570,14 @@ additive, because no event changes shape and older logs read the same (a
 stays 1.
 The session-start hook keeps an installed skill's text current (re-running
 `setup` installs it); `flashheart doctor` says when it is out of date.
+Shell edits, made during the run's own shell command windows, count
+toward dirty (§4), with the optional `worktree_changed`
+field on `turn.end` and `run.end` (FH-53, 2026-10-09): additive, because
+an event without the field reads as before and the tools and skill keep
+their shape, so the version stays 1.
+The `rejected` status (FH-58, 2026-10-10): `list_tickets`, `get_ticket`,
+`board_context` and the recovery note may show `rejected` where they show a
+column, `list_tickets` accepts it as a filter, `move` refuses it, and
+`ticket.moved` may carry it in `from` or `to`. Additive, because a rejected
+ticket was not expressible before and every existing value keeps its
+meaning, so the version stays 1.

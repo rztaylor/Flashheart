@@ -90,9 +90,13 @@ type RunStartData struct {
 	AgentType string `json:"agent_type,omitempty"`
 }
 
-// RunEndData is run.end's data.
+// RunEndData is run.end's data. WorktreeChanged is the hook's finding that
+// the session's worktree changed after its last checkpoint other than
+// through the edit tools, such as by shell commands (agent-protocol §4);
+// only the fact is stored, never what changed.
 type RunEndData struct {
-	Reason string `json:"reason,omitempty"`
+	Reason          string `json:"reason,omitempty"`
+	WorktreeChanged bool   `json:"worktree_changed,omitempty"`
 }
 
 // TurnStartData is turn.start's data. The prompt is never stored; the
@@ -107,9 +111,10 @@ type TurnStartData struct {
 	Worktree   string `json:"worktree,omitempty"`
 }
 
-// TurnEndData is turn.end's data.
+// TurnEndData is turn.end's data. WorktreeChanged is as in RunEndData.
 type TurnEndData struct {
 	BlockedForHandoff bool `json:"blocked_for_handoff"`
+	WorktreeChanged   bool `json:"worktree_changed,omitempty"`
 }
 
 // ToolData is tool.used's data. Path is repository-relative and set for

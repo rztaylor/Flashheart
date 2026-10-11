@@ -85,7 +85,7 @@ func TestParseTicketWarningsAndRepairs(t *testing.T) {
 		{"unknown type", "FH-42-x", strings.Replace(fullFront, "feature", "chore", 1), `type "chore" is not a known ticket type`, "", "FH-42", InProgress},
 		{"bad date", "FH-42-x", strings.Replace(fullFront, "2026-10-02", "Oct 2", 1), `created "Oct 2" should be YYYY-MM-DD`, "", "FH-42", InProgress},
 		{"missing status", "FH-42-x", strings.Replace(fullFront, "status: in-progress\n", "", 1), "missing status; shown in Backlog", "", "FH-42", Backlog},
-		{"unknown status", "FH-42-x", strings.Replace(fullFront, "in-progress", "doing", 1), "", `status "doing" is not one of backlog, up-next, in-progress, review, done`, "FH-42", Backlog},
+		{"unknown status", "FH-42-x", strings.Replace(fullFront, "in-progress", "doing", 1), "", `status "doing" is not one of backlog, up-next, in-progress, review, done, rejected`, "FH-42", Backlog},
 		{"id from folder", "FH-42-x", strings.Replace(fullFront, "id: FH-42\n", "", 1), "missing id; using FH-42 from the folder name", "", "FH-42", InProgress},
 		{"id mismatch", "FH-43-x", fullFront, "id FH-42 does not match the folder name FH-43-x", "", "FH-42", InProgress},
 		{"invalid id", "notes", strings.Replace(fullFront, "FH-42", "fh42", 1), "", `id "fh42" is not a ticket id like FH-42`, "", InProgress},
@@ -108,6 +108,48 @@ func TestParseTicketWarningsAndRepairs(t *testing.T) {
 				t.Errorf("id=%q column=%q, want %q %q", ticket.ID, ticket.Column, test.id, test.column)
 			}
 		})
+	}
+}
+
+// A rejected ticket is closed without being accepted: it sits in Done, says
+// so, and counts as done for everything that waits on it (FH-58).
+func TestRejectedTicketIsDoneButSaysRejected(t *testing.T) {
+	t.Parallel()
+
+	rejected := ParseTicket("FH-42-x", ticketMD(strings.Replace(fullFront, "in-progress", "rejected", 1), "# T\n"))
+	if rejected.Column != Done || !rejected.Rejected || rejected.Status() != "rejected" {
+		t.Errorf("column=%q rejected=%v status=%q, want done, true, rejected", rejected.Column, rejected.Rejected, rejected.Status())
+	}
+	if rejected.NeedsRepair() || len(rejected.Warnings) != 0 {
+		t.Errorf("warnings=%q repair=%q", rejected.Warnings, rejected.Repair)
+	}
+	if done := tk("FH-1", Done, ""); done.Rejected || done.Status() != "done" {
+		t.Errorf("done ticket rejected=%v status=%q", done.Rejected, done.Status())
+	}
+
+	project := Project{Name: "p", Key: "FH", Tickets: []Ticket{
+		rejected,
+		tk("FH-43", Backlog, "depends-on: [FH-42]\n"),
+	}}
+	analysis := Analyze(Board{Projects: []Project{project}})
+	if reasons := reasonsOf(analysis, "p", "FH-43"); len(reasons) != 0 {
+		t.Errorf("FH-43 waits on a rejected ticket: %+v", reasons)
+	}
+
+	for value, want := range map[string]struct {
+		column   Column
+		rejected bool
+		ok       bool
+	}{
+		"rejected": {Done, true, true}, "done": {Done, false, true}, "review": {Review, false, true}, "nope": {"nope", false, false},
+	} {
+		column, isRejected, ok := ParseStatus(value)
+		if column != want.column || isRejected != want.rejected || ok != want.ok {
+			t.Errorf("ParseStatus(%q) = %q %v %v, want %+v", value, column, isRejected, ok, want)
+		}
+	}
+	if err := ValidateField("status", "rejected"); err != nil {
+		t.Errorf("ValidateField(status, rejected) = %v", err)
 	}
 }
 

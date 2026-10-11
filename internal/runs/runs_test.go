@@ -488,3 +488,120 @@ func TestASubagentCheckpointElsewhereLeavesItsSessionDue(t *testing.T) {
 		t.Fatalf("child dirty %v, session dirty %v edits %d", s.Dirty(child), s.Dirty(session), s.Edits(session))
 	}
 }
+
+// Agents edit mostly through shell commands, which name no path: the hook
+// checks the worktree at turn end and session end and records the finding,
+// which makes the run dirty until its next checkpoint (FH-53).
+func TestShellChangesAfterTheLastCheckpointAreNoHandoff(t *testing.T) {
+	t.Parallel()
+
+	linked := func(string, string) []string { return []string{"AL-3"} }
+	end := func(minutes float64, changed bool) events.Event {
+		return ev(minutes, session, events.RunEnd, events.RunEndData{Reason: "other", WorktreeChanged: changed})
+	}
+	checkpoint := ev(1, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"})
+	cases := []struct {
+		name      string
+		events    []events.Event
+		noHandoff bool
+	}{
+		{"shell change after the checkpoint, then end", []events.Event{start(0), checkpoint, tool(2, "Bash", ""), end(3, true)}, true},
+		{"read-only shell after the checkpoint, then end", []events.Event{start(0), checkpoint, tool(2, "Bash", ""), end(3, false)}, false},
+		{"change found at a turn end stays due at the end", []events.Event{start(0), checkpoint, turn(2), tool(2, "Bash", ""), ev(3, session, events.TurnEnd, events.TurnEndData{WorktreeChanged: true}), end(4, false)}, true},
+		{"a later checkpoint settles it", []events.Event{start(0), turn(1), tool(2, "Bash", ""), ev(3, session, events.TurnEnd, events.TurnEndData{WorktreeChanged: true}), ev(4, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}), end(5, false)}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			set := NewSet()
+			for _, e := range tc.events {
+				set.Apply(e)
+			}
+			view := set.Views(at(10), DefaultSettings(), linked)[0]
+			if view.NoHandoff != tc.noHandoff || view.Dirty != tc.noHandoff || set.Dirty(session) != tc.noHandoff {
+				t.Fatalf("noHandoff=%v dirty=%v set.Dirty=%v, want %v", view.NoHandoff, view.Dirty, set.Dirty(session), tc.noHandoff)
+			}
+			// A change found by the hook counts as one edit.
+			if want := map[bool]int{true: 1}[tc.noHandoff]; view.Edits != want {
+				t.Fatalf("edits = %d, want %d", view.Edits, want)
+			}
+		})
+	}
+}
+
+// The hook counts a worktree change as the session's only when it was made
+// during one of its (or its subagents') successful shell commands since the
+// last checkpoint: from the run's previous event to the command's tool.used,
+// with ShellSlack either side.
+func TestShellWindows(t *testing.T) {
+	t.Parallel()
+
+	window := func(from, to float64) Window {
+		return Window{From: at(from).Add(-ShellSlack), To: at(to).Add(ShellSlack)}
+	}
+	child := session + "/a1"
+	s := NewSet()
+	s.Apply(start(0))
+	s.Apply(turn(1))
+	s.Apply(tool(2, "Read", ""))
+	s.Apply(ev(3, session, events.ToolUsed, events.ToolData{Tool: "Bash", OK: false}))
+	if got := s.ShellWindows(session); len(got) != 0 {
+		t.Fatalf("after a read and a failed command: %v", got)
+	}
+	s.Apply(tool(5, "Bash", ""))
+	s.Apply(stop(6))
+	s.Apply(turn(20))
+	s.Apply(tool(22, "PowerShell", ""))
+	if got, want := s.ShellWindows(session), []Window{window(3, 5), window(20, 22)}; !slices.Equal(got, want) {
+		t.Fatalf("windows = %v, want %v", got, want)
+	}
+	s.Apply(ev(30, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}))
+	if got := s.ShellWindows(session); len(got) != 0 {
+		t.Fatalf("after the checkpoint: %v", got)
+	}
+	s.Apply(ev(31, child, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
+	s.Apply(ev(33, child, events.ToolUsed, events.ToolData{Tool: "Bash", OK: true}))
+	s.Apply(tool(34, "Bash", ""))
+	// The session's command runs from its checkpoint (its previous event),
+	// so the window starts there, and the subagent's window inside it merges.
+	if got, want := s.ShellWindows(session), []Window{{From: at(30), To: at(34).Add(ShellSlack)}}; !slices.Equal(got, want) {
+		t.Fatalf("session windows with its subagent's = %v, want %v (overlaps merge)", got, want)
+	}
+	if got, want := s.ShellWindows(child), []Window{window(31, 33)}; !slices.Equal(got, want) {
+		t.Fatalf("subagent windows = %v, want %v", got, want)
+	}
+	if got := s.ShellWindows("claude:unknown"); got != nil {
+		t.Fatalf("unknown run: %v", got)
+	}
+}
+
+// A window never reaches back before the last checkpoint, and a long run
+// keeps a bounded number of windows, merging the oldest.
+func TestShellWindowsAreClampedAndBounded(t *testing.T) {
+	t.Parallel()
+
+	s := NewSet()
+	s.Apply(start(0))
+	s.Apply(ev(10, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}))
+	// The subagent's previous event predates the session's checkpoint.
+	child := session + "/a1"
+	s.Apply(ev(5, child, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
+	s.Apply(ev(12, child, events.ToolUsed, events.ToolData{Tool: "Bash", OK: true}))
+	if got := s.ShellWindows(session); len(got) != 1 || !got[0].From.Equal(at(10)) {
+		t.Fatalf("windows = %v, want one from the checkpoint", got)
+	}
+
+	long := NewSet()
+	long.Apply(start(0))
+	for i := range MaxWindows + 5 {
+		long.Apply(turn(float64(i * 10)))
+		long.Apply(tool(float64(i*10+1), "Bash", ""))
+	}
+	got := long.ShellWindows(session)
+	if len(got) != MaxWindows {
+		t.Fatalf("windows = %d, want %d", len(got), MaxWindows)
+	}
+	if !got[0].From.Equal(at(0).Add(-ShellSlack)) || !got[len(got)-1].To.Equal(at(float64((MaxWindows+4)*10+1)).Add(ShellSlack)) {
+		t.Fatalf("bounded windows lost their span: first %v, last %v", got[0], got[len(got)-1])
+	}
+}

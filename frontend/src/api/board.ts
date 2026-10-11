@@ -22,6 +22,26 @@ export const COLUMNS: { id: Column; title: string }[] = [
   { id: "done", title: "Done" },
 ];
 
+// Status is a ticket's status value: its column, or rejected, a ticket
+// closed without being accepted, which sits in Done (FH-58).
+export type Status = Column | "rejected";
+
+// STATUSES are the statuses a ticket can be moved to, in workflow order.
+export const STATUSES: { id: Status; title: string }[] = [
+  ...COLUMNS,
+  { id: "rejected", title: "Rejected" },
+];
+
+// statusWord is a ticket's status: rejected, or else its column.
+export const statusWord = (ticket: {
+  column: Column;
+  rejected?: boolean;
+}): Status => (ticket.rejected ? "rejected" : ticket.column);
+
+// columnOf is the column a status puts a ticket in.
+export const columnOf = (status: Status): Column =>
+  status === "rejected" ? "done" : status;
+
 // TicketRef names a ticket by id (FH-42); ids are unique across the root.
 export interface TicketRef {
   id: string;
@@ -45,6 +65,8 @@ export interface Card {
   id: string;
   slug: string;
   column: Column;
+  // rejected marks a ticket in Done whose status is rejected (FH-58).
+  rejected?: boolean;
   title: string;
   type: string;
   priority: string;
@@ -178,6 +200,7 @@ export interface WorkstreamTicket {
   id: string;
   title: string;
   column: Column | "archived" | "";
+  rejected?: boolean;
   blocked: boolean;
   held: boolean;
   missing: boolean;

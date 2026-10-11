@@ -108,6 +108,15 @@ describe("TicketCard", () => {
     expect(markup).toContain('data-row="footer"');
   });
 
+  it("says Rejected on a rejected ticket in Done, at every density (FH-58)", () => {
+    for (const density of ["compact", "normal", "detailed"] as const) {
+      const markup = render({ column: "done", rejected: true }, density);
+      expect(markup).toContain(">Rejected<");
+      expect(markup).toContain(", rejected");
+    }
+    expect(render({ column: "done" })).not.toContain("Rejected");
+  });
+
   it("keeps type and priority in Compact, and drops criteria", () => {
     const markup = render({}, "compact");
     expect(markup).toContain(">feature<");
