@@ -35,7 +35,8 @@ type Pending struct {
 	Run  string
 	Kind string
 	// Data is one of the events *Data types. Edit paths in ToolData may be
-	// absolute; hooks makes them repository-relative.
+	// absolute; hooks makes them repository-relative. A tool.used is an
+	// observation: hooks records it as throttled activity (activity.go).
 	Data any
 }
 
@@ -54,6 +55,9 @@ type Input struct {
 	// Reply is output the adapter worked out alone (run stamping); it is
 	// printed without opening the board.
 	Reply *Output
+	// Settled is the adapter seeing a run's checkpoint tool return: the
+	// session's runs may record the paths they edited again (FH-55).
+	Settled bool
 }
 
 // Output is what hooks wants said back to the agent.
@@ -184,23 +188,33 @@ func handle(options Options) error {
 		})
 	}
 	log := events.New(s)
+	interval := time.Duration(settings.ActivitySeconds) * time.Second
 	var out Output
 	// A stop or end that cannot be checked is allowed and still recorded
 	// (HOOK-1).
 	var problem error
 	if index := sessionEnd(list); index >= 0 {
+		// The session's pending activity is recorded first, so the worktree
+		// check and enforcement see every shell command and edit.
+		end := list[index]
+		_, problem = record(log, project, list, func(state *sessionState) []events.Event { return flushRuns(state, end, at) })
 		timeout := options.ChangeTimeout
 		if timeout <= 0 {
 			timeout = DefaultChangeTimeout
 		}
-		out.Block, problem = settle(s, log, project, info, &list[index], input.Stop && !input.StopActive, at, settings, timeout)
+		var err error
+		out.Block, err = settle(s, log, project, info, &list[index], input.Stop && !input.StopActive, at, settings, timeout)
+		problem = errors.Join(problem, err)
 	}
-	if err := log.Append(list...); err != nil {
+	appended, err := record(log, project, list, func(state *sessionState) []events.Event {
+		return throttle(state, list, at, interval, input.Settled)
+	})
+	if err != nil {
 		return errors.Join(problem, err)
 	}
 	switch {
 	case input.Recovery:
-		if out.Context, err = recovery(s, log, project, info, list, at, settings); err != nil {
+		if out.Context, err = recovery(s, log, project, info, appended, at, settings); err != nil {
 			return errors.Join(problem, err)
 		}
 		out.Context = joinNotes(skillNote, out.Context)

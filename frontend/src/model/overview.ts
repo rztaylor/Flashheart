@@ -2,8 +2,10 @@
 // board, about tickets, with agent sessions as evidence. Pure grouping,
 // order and wording; the view draws them.
 import type { Card } from "../api/board";
+import type { Metrics } from "../api/metrics";
 import type { Question, Run, TicketSessions } from "../api/runs";
 import { permissionReason, questionReason, reasonFor } from "./runs";
+import { dayAndTime } from "./time";
 
 export type SectionId =
   | "decision"
@@ -301,4 +303,43 @@ export function overview(cards: Card[], runs: Run[]): Overview {
     upNext: shown,
     upNextTotal: upNext.length,
   };
+}
+
+// headlineLabel names what the headline metrics count from: the user's
+// last change on the board, or the last 24 hours when none is recorded
+// (FH-52).
+export function headlineLabel(
+  metrics: Metrics,
+  now: Date,
+): { text: string; time: string } {
+  return metrics.lastChange
+    ? { text: "Since your last change", time: dayAndTime(metrics.since, now) }
+    : { text: "In the last 24 hours", time: "" };
+}
+
+export interface HeadlineTile {
+  id: "done" | "review" | "created" | "criteria";
+  value: number;
+  word: string;
+}
+
+// headlineTiles are the headline metrics in order. Needs you is current
+// state, shown on the band, so it is not one of them.
+export function headlineTiles(metrics: Metrics): HeadlineTile[] {
+  const word = (count: number, one: string, many: string) =>
+    count === 1 ? one : many;
+  return [
+    { id: "done", value: metrics.done, word: "Done" },
+    { id: "review", value: metrics.review, word: "To review" },
+    {
+      id: "created",
+      value: metrics.created,
+      word: word(metrics.created, "New ticket", "New tickets"),
+    },
+    {
+      id: "criteria",
+      value: metrics.criteriaTicked,
+      word: word(metrics.criteriaTicked, "Criterion ticked", "Criteria ticked"),
+    },
+  ];
 }

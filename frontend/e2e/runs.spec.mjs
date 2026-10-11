@@ -30,6 +30,7 @@ test.describe.configure({ mode: "serial" });
 
 let sandbox;
 let seeded;
+let claimed;
 let server;
 let context;
 let page;
@@ -47,7 +48,7 @@ test.beforeAll(async ({ browser }) => {
     "user_name: Robin\n",
   );
   seeded = await seedRuns(sandbox.home, sandbox.root);
-  await seedClaimedRun(sandbox.home, sandbox.root, "FH-25");
+  claimed = await seedClaimedRun(sandbox.home, sandbox.root, "FH-25");
   server = launch(sandbox, ["serve", "--foreground"]);
   const url = await waitForManualURL(server.child, server.output);
   context = await browser.newContext();
@@ -629,4 +630,92 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
   await expect(notice).toHaveCount(0);
   await page.getByRole("button", { name: "1 needs you", exact: true }).click();
   await expect(page).toHaveURL(/#\/p\/alpha\/board/);
+});
+
+test("the Overview's headline metrics count agents' changes since your last change (FH-52)", async () => {
+  // Earlier tests changed the board as the human (a new ticket, answers):
+  // the row counts from the latest of those.
+  await open("#/all/overview");
+  const row = page.locator("[data-headline-metrics]");
+  await expect(row).toBeVisible();
+  await expect(row.locator("p")).toHaveText(
+    /^Since your last change · today \d/,
+  );
+  await expect(row.locator("dt")).toHaveText([
+    "Done",
+    "To review",
+    /^New tickets?$/,
+    /^Criteri(a|on) ticked$/,
+  ]);
+  const value = (metric) =>
+    row.locator(`[data-metric="${metric}"] dd`).textContent();
+  const before = {};
+  for (const metric of ["done", "review", "created", "criteria"])
+    before[metric] = Number(await value(metric));
+
+  // An agent creates a ticket, ticks a criterion and moves it to review
+  // through the real MCP server.
+  const created = await callTool(sandbox.root, claimed.cwd, "create_ticket", {
+    run: claimed.run,
+    type: "feature",
+    title: "Headline metrics",
+    description: "Count what changed.",
+    criteria: ["Counts", "Labels"],
+    priority: "medium",
+  });
+  const id = created.match(/ticket=(\S+)/)[1];
+  await callTool(sandbox.root, claimed.cwd, "update_ticket", {
+    run: claimed.run,
+    ticket: id,
+    check: ["1"],
+  });
+  await callTool(sandbox.root, claimed.cwd, "move", {
+    run: claimed.run,
+    ticket: id,
+    to: "review",
+  });
+  await expect
+    .poll(async () => [
+      Number(await value("done")),
+      Number(await value("review")),
+      Number(await value("created")),
+      Number(await value("criteria")),
+    ])
+    .toEqual([
+      before.done,
+      before.review + 1,
+      before.created + 1,
+      before.criteria + 1,
+    ]);
+  // Ink only: the numbers are tabular and take no status colour.
+  const number = row.locator('[data-metric="review"] dd');
+  await expect(number).toHaveCSS("font-variant-numeric", "tabular-nums");
+  await expectNoAxeViolations("headline metrics");
+  for (const theme of ["light", "dark"]) {
+    await open("#/all/overview", { theme });
+    await shot(`overview-metrics-1440-${theme}`);
+    await open("#/all/overview", { width: 390, height: 844, theme });
+    const overflow = await page.evaluate(
+      () => document.scrollingElement.scrollWidth - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    // Four tiles wrap to two by two.
+    const tops = await row
+      .locator("[data-metric]")
+      .evaluateAll((tiles) => tiles.map((tile) => tile.offsetTop));
+    expect(tops[0]).toBe(tops[1]);
+    expect(tops[2]).toBe(tops[3]);
+    expect(tops[2]).toBeGreaterThan(tops[0]);
+    await shot(`overview-metrics-390-${theme}`);
+  }
+
+  // A project with no recorded change of yours counts the last day, and
+  // says so.
+  await open("#/p/quiet/overview");
+  await expect(row.locator("p")).toHaveText("In the last 24 hours");
+  await expect(row.locator("dd")).toHaveText(["0", "0", "0", "0"]);
+  for (const theme of ["light", "dark"]) {
+    await open("#/p/quiet/overview", { theme });
+    await shot(`overview-metrics-fallback-1440-${theme}`);
+  }
 });

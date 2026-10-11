@@ -19,7 +19,8 @@ Intended layout (packages are created when they get real content):
 - `internal/store`: the only package that touches the board root: discovery,
   reads, locked atomic writes with hash preconditions, moves, archive,
   attachments, path confinement.
-- `internal/events`: event envelope and kinds, locked JSONL append, daily
+- `internal/events`: event envelope and kinds, locked JSONL append (alone
+  or with a session's hook activity state, under one project lock), daily
   rotation, retention, tolerant reading.
 - `internal/scrub`: secret scrubbing and length limits for agent strings.
 - `internal/gitinfo`: project, branch and worktree from a cwd without git
@@ -33,7 +34,8 @@ Intended layout (packages are created when they get real content):
 - `internal/protocol`: `PROTOCOL_VERSION`, recovery note and protocol text
   rendering shared by hooks, MCP and setup.
 - `internal/logfile`: also owns `hook-errors.log` (HOOK-1).
-- `internal/hooks`: agent-neutral hook handling and outputs;
+- `internal/hooks`: agent-neutral hook handling and outputs, including
+  throttling tool results into activity records (agent-protocol §3);
   `internal/hooks/claude` and `internal/hooks/codex` are the only places that
   know each agent's payload schema.
 - `internal/mcpserver`: MCP tools over store, events and runs.

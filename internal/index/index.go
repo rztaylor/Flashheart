@@ -44,8 +44,10 @@ type Snapshot struct {
 	// Runs are the agent runs of the last two days' event logs at BuiltAt.
 	Runs []runs.View
 
-	// human is each project's latest human board activity (LatestHuman).
-	human map[string]events.HumanActivity
+	// human is each project's latest human board activity (LatestHuman),
+	// and changes what agents and the human changed since (Metrics).
+	human   map[string]events.HumanActivity
+	changes []events.Change
 
 	projects map[string]int
 	tickets  map[string][2]int // id → project index, ticket index (first copy)
@@ -165,6 +167,7 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 	now := i.now()
 	var views []runs.View
 	var human map[string]events.HumanActivity
+	var changes []events.Change
 	if i.events != nil && !missing {
 		names := make([]string, 0, len(b.Projects))
 		for _, project := range b.Projects {
@@ -172,7 +175,7 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 		}
 		read := i.events.update(names, now)
 		views = i.events.views(b, now, i.runs)
-		human = i.events.human()
+		human, changes = i.events.human(), i.events.changeList()
 		fingerprint += "\x00runs:" + read + "\x00" + signature(views)
 	}
 	revision := uint64(1)
@@ -191,6 +194,7 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 		Analysis:    board.Analyze(b),
 		Runs:        views,
 		human:       human,
+		changes:     changes,
 		projects:    make(map[string]int, len(b.Projects)),
 		tickets:     map[string][2]int{},
 		archived:    map[string]bool{},

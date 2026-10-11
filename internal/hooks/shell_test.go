@@ -77,12 +77,18 @@ func play(t *testing.T, root, cwd string, steps ...string) string {
 			if err := os.Chtimes(name, at, at); err != nil {
 				t.Fatal(err)
 			}
-		case "checkpoint":
+		case "checkpoint", "legacy":
+			// legacy is a shell command recorded by a binary from before
+			// FH-55, as one tool.used.
+			e := events.Event{Time: at, Run: "fake:s1", Agent: "fake", Kind: events.Checkpoint, Project: "demo", Data: events.CheckpointData{Ticket: "DM-1"}}
+			if fields[1] == "legacy" {
+				e.Kind, e.Data = events.ToolUsed, events.ToolData{Tool: "Bash", OK: true}
+			}
 			s, err := store.Open(root)
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = events.New(s).Append(events.Event{Time: at, Run: "fake:s1", Agent: "fake", Kind: events.Checkpoint, Project: "demo", Data: events.CheckpointData{Ticket: "DM-1"}})
+			err = events.New(s).Append(e)
 			s.Close()
 			if err != nil {
 				t.Fatal(err)
@@ -143,6 +149,22 @@ func TestEndsRecordWorktreeChangesMadeDuringShellCommands(t *testing.T) {
 			[]string{"0 SessionStart", "1 Prompt", "2 touch a.txt", "3 Bash", "3.5 checkpoint", "4 Stop", "10 End"}, false},
 		{"a change within the slack after the command's result",
 			[]string{"0 SessionStart", "1 Prompt", "3 Bash", "3.02 touch a.txt", "10 End"}, true},
+		// FH-55: commands within a minute of the run's last record are held
+		// in the session's state, with their windows, until the turn end.
+		{"a change during a command not yet recorded at the stop",
+			[]string{"0 SessionStart", "1 Prompt", "1.2 touch a.txt", "1.3 Bash", "1.5 Stop", "10 End"}, true},
+		{"a change during the second of two held commands",
+			[]string{"0 SessionStart", "1 Prompt", "1.1 Bash", "1.3 touch a.txt", "1.4 Bash", "1.5 Stop", "10 End"}, true},
+		{"a held command's window starts at the run's previous tool result",
+			[]string{"0 SessionStart", "1 Prompt", "1.1 touch a.txt", "1.2 Read", "1.3 Bash", "1.4 Stop", "10 End"}, false},
+		{"a held command's window starts at its turn's prompt",
+			[]string{"0 SessionStart", "1 Prompt", "1.1 Bash", "1.2 Stop", "1.5 touch a.txt", "1.6 Prompt", "1.7 Bash", "1.8 Stop", "10 End"}, false},
+		{"a failed command is no window",
+			[]string{"0 SessionStart", "1 Prompt", "1.2 touch a.txt", "1.3 Fail", "1.5 Stop", "10 End"}, false},
+		{"a subagent's held command counts for its session",
+			[]string{"0 SessionStart", "1 Prompt", "1.1 SubagentStart", "1.2 touch a.txt", "1.3 Sub:Bash", "1.5 Stop", "10 End"}, true},
+		{"a command recorded by an older binary as a tool.used",
+			[]string{"0 SessionStart", "1 Prompt", "2 touch a.txt", "3 legacy", "4 Stop", "10 End"}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

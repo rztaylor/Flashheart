@@ -9,7 +9,9 @@ card paint for "Colour by" (`paint`, VIEW-6), ticket status tones and
 priority wording (`status`), the page header's summary line (`summary`),
 why a run needs you, timeline
 wording and plan stations (`runs`), the Overview's sections, their
-order, at-risk reasons and wording (`overview`, VIEW-3), keyboard grid movement, and
+order, at-risk reasons and wording, and its headline metrics' label and
+tiles (`overview`, VIEW-3), a moment as day and time (`time`), keyboard
+grid movement, and
 manual-order placements and display sorts (`order`, EDIT-9), archive
 search and the delete gate (`archive`, EDIT-8), and the marginal remarks
 catalogue (`remarks.md`), placements and selection (`remarks`).
