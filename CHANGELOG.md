@@ -30,6 +30,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- The Overview fills the main area like Board, Workstreams and Table
+  instead of sitting in a centred 56rem column (FH-60).
+
 - Files changed through shell commands now count toward the handoff
   (FH-53). A run used to be dirty only after the edit tools, though agents
   edit mostly through shell commands, so "no handoff", the At risk reason

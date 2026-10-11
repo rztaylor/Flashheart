@@ -265,8 +265,8 @@ id a separate link.
 
 The project manager's view (`VIEW-3`, D32; approved concept: FH-47's Calm
 direction). Page header (a headline metrics row may sit under it, FH-52);
-then one centred column, at most 56rem wide, of rounded section cards in
-fixed order:
+then one column, filling Main with the same gutter as the other views, of
+rounded section cards in fixed order:
 
 1. **Needs your decision**: questions, each a question card answerable in
    place (`CARD-6`), and permission prompts, which say *Answer in the
