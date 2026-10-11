@@ -9,7 +9,8 @@ use token-backed utilities and never raw values; a theme changes values,
 never layout. `tokens.test.ts` holds both palettes to WCAG AA and the dark
 neutrals to no hue.
 
-Also owns the shared CSS utilities (heading and display cuts, hatching) and
+Also owns the shared CSS utilities (heading and display cuts, hatching,
+the chevron shapes and their focus ring) and
 keyframes (panel and toast entrances, the run beat), each switched off
 under reduced motion. Values follow `DESIGN.md`.
 
