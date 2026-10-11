@@ -1,9 +1,8 @@
-// Pure view models for agent runs: why a run needs you, timeline wording
-// and plan stations, for cards, the Runs tab and the Overview.
+// Pure view models for agent runs: why a run needs you and timeline
+// wording, for cards, the Runs tab and the Overview.
 import { STATUSES } from "../api/board";
 import type {
   Live,
-  PlanItem,
   Question,
   QuestionKind,
   Run,
@@ -297,26 +296,4 @@ export function compactTimeline(entries: TimelineEntry[]): CompactEntry[] {
     }
   }
   return folded.reverse();
-}
-
-export type Station = "served" | "current" | "ahead";
-
-// MAX_STATIONS is the longest plan drawn as a route; longer plans show as
-// numbers.
-export const MAX_STATIONS = 12;
-
-// planStations draws a plan as a route: completed steps served, the step in
-// progress (or else the first pending one) current, the rest ahead.
-export function planStations(plan: PlanItem[]): Station[] {
-  if (plan.length > MAX_STATIONS) return [];
-  let current = plan.findIndex((item) => item.status === "in_progress");
-  if (current < 0)
-    current = plan.findIndex((item) => item.status !== "completed");
-  return plan.map((item, index) =>
-    item.status === "completed" && index !== current
-      ? "served"
-      : index === current
-        ? "current"
-        : "ahead",
-  );
 }
