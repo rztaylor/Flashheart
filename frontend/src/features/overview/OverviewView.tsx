@@ -29,7 +29,7 @@ import {
   type SectionId,
   sectionOpen,
 } from "../../model/overview";
-import { agentName, mcpOnly, shortID, shortRun } from "../../model/runs";
+import { agentName, agentNote, shortID, shortRun } from "../../model/runs";
 import { absoluteTime, durationWords } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
@@ -515,7 +515,7 @@ export function DecisionRow({
         title={title}
         sub={ticket ? undefined : place}
         agent={agentName(run.agent)}
-        agentNote={mcpOnly(run) ? "MCP only" : undefined}
+        agentNote={agentNote(run)}
         meta={<Ago iso={item.since} now={now} before="Asked " after=" ago" />}
       >
         <QuestionCard
@@ -536,7 +536,7 @@ export function DecisionRow({
       title={title}
       sub={item.reason}
       agent={agentName(run.agent)}
-      agentNote={mcpOnly(run) ? "MCP only" : undefined}
+      agentNote={agentNote(run)}
       meta={<Ago iso={item.since} now={now} before="Waiting " />}
       action={<span>Answer in the session · {place}</span>}
     />
@@ -664,7 +664,7 @@ export function UnticketedRow({
       title={`Session ${shortID(run.id)}`}
       sub={where(run, projectNames)}
       agent={agentName(run.agent)}
-      agentNote={mcpOnly(run) ? "MCP only" : undefined}
+      agentNote={agentNote(run)}
       meta={
         <span className="flex flex-wrap items-center gap-x-2">
           <RunStateLabel state={run.state} />

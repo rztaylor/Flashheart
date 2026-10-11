@@ -131,14 +131,18 @@ export function agentName(agent: string): string {
 // Flashheart's hooks: it reports tool calls, claims and questions only,
 // never a plan, edits or permission prompts (agent-protocol §7.1).
 export function mcpOnly(run: Run): boolean {
-  return run.source === "mcp";
+  return startedByMCP(run.id);
 }
 
-// runAgentName names a session's agent, marking a run without hooks.
+// agentNote qualifies a run's agent: "MCP only" for a run without hooks.
+export function agentNote(run: Run): string | undefined {
+  return mcpOnly(run) ? "MCP only" : undefined;
+}
+
+// runAgentName names a session's agent, with its note when it has one.
 export function runAgentName(run: Run): string {
-  return mcpOnly(run)
-    ? `${agentName(run.agent)} (MCP only)`
-    : agentName(run.agent);
+  const note = agentNote(run);
+  return note ? `${agentName(run.agent)} (${note})` : agentName(run.agent);
 }
 
 const source: Record<string, string> = {

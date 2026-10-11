@@ -31,11 +31,10 @@ type conn struct {
 	recorded      time.Time
 }
 
-// invocation is one tool call: its connection and tool, and the run the
-// call was attributed to once its call began.
+// invocation is one tool call: its connection, and the run the call was
+// attributed to once its call began.
 type invocation struct {
 	conn *conn
-	tool string
 	run  string
 	// every is activity_seconds, read when the call began.
 	every time.Duration

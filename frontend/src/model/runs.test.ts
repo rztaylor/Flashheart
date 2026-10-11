@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Run, TimelineEntry } from "../api/runs";
 import {
   agentName,
+  agentNote,
   compactTimeline,
   counted,
   describeEntry,
@@ -221,8 +222,13 @@ it("marks runs the MCP server started for agents without hooks", () => {
   });
   expect(mcpOnly(hookless)).toBe(true);
   expect(runAgentName(hookless)).toBe("Codex (MCP only)");
+  expect(agentNote(hookless)).toBe("MCP only");
   expect(runAgentName(run("claude:s"))).toBe("Claude");
+  expect(agentNote(run("claude:s"))).toBeUndefined();
   expect(mcpOnly(run("claude:s", { source: "startup" }))).toBe(false);
+  // One signal decides it, the run id the server minted, as for questions
+  // and cards, which carry only the run id.
+  expect(mcpOnly(run("codex:mcp-0a1b2c3d4e5f", { agent: "codex" }))).toBe(true);
   expect(startedByMCP("codex:mcp-0a1b2c3d4e5f")).toBe(true);
   expect(startedByMCP("claude:5b0c7e2a-1f3d")).toBe(false);
   expect(startedByMCP("claude:5b0c7e2a/mcp-1")).toBe(false);

@@ -734,12 +734,16 @@ test("an agent without hooks gets a run from its first write, and its answers wi
     // The Overview asks for the decision, naming the session MCP only.
     const decision = section("Needs your decision");
     const question = decision.getByRole("region", { name: "Has a question" });
-    for (const [width, theme] of [
-      [1440, "light"],
-      [1440, "dark"],
-      [390, "light"],
-    ]) {
-      await open("#/all/overview", { width, height: 900, theme });
+    // Screenshots at the project's widths, both themes, and a phone.
+    const sizes = [
+      [1280, 800, "light"],
+      [1280, 800, "dark"],
+      [1920, 1080, "light"],
+      [1920, 1080, "dark"],
+      [390, 844, "light"],
+    ];
+    for (const [width, height, theme] of sizes) {
+      await open("#/all/overview", { width, height, theme });
       await expect(question.getByText("Greet in English only?")).toBeVisible();
       await expect(
         decision.getByText("MCP only", { exact: true }),
@@ -749,7 +753,7 @@ test("an agent without hooks gets a run from its first write, and its answers wi
           "It reaches the session with its next Flashheart tool call.",
         ),
       ).toBeVisible();
-      if (width === 1440 && theme === "light")
+      if (width === 1280 && theme === "light")
         await expectNoAxeViolations("question from a run without hooks");
       await question.scrollIntoViewIfNeeded();
       await shot(`overview-mcp-only-${width}-${theme}`);
@@ -764,9 +768,11 @@ test("an agent without hooks gets a run from its first write, and its answers wi
     await expect(
       panel.getByText("Connected without hooks (MCP only)"),
     ).toBeVisible();
-    for (const theme of ["light", "dark"]) {
+    for (const [width, height, theme] of sizes.slice(0, 4)) {
+      await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-      await shot(`runs-tab-mcp-only-1440-${theme}`);
+      await expect(panel.getByText("Codex (MCP only)")).toBeVisible();
+      await shot(`runs-tab-mcp-only-${width}-${theme}`);
     }
 
     // Answered on the Overview, the answer reaches the session with its

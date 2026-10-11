@@ -45,7 +45,8 @@ type server struct {
 
 	mu    sync.Mutex
 	conns map[*mcp.ServerSession]*conn
-	// ending counts started runs whose end is not recorded yet.
+	// ending counts connections still open, each of which records its
+	// started run's end, if any, when it closes.
 	ending sync.WaitGroup
 }
 
@@ -154,7 +155,7 @@ func asToolError(err error) *toolError {
 // activity, and its result carries the run's waiting answers.
 func tool[In any](srv *server, server *mcp.Server, name, description string, handle func(*invocation, In) (string, error)) {
 	mcp.AddTool(server, &mcp.Tool{Name: name, Description: description}, func(_ context.Context, req *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
-		inv := &invocation{conn: srv.connection(req.Session), tool: name}
+		inv := &invocation{conn: srv.connection(req.Session)}
 		text, err := handle(inv, input)
 		if err != nil {
 			text = asToolError(err).Error()
