@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -24,6 +25,10 @@ type conn struct {
 	// run is the started run, "" until a write needs one; project is where
 	// its events are recorded.
 	run, project string
+	// tools and failed count the run's tool calls since its last activity
+	// record, written at recorded (agent-protocol §3, protocol 2).
+	tools, failed int
+	recorded      time.Time
 }
 
 // invocation is one tool call: its connection and tool, and the run the
@@ -32,6 +37,8 @@ type invocation struct {
 	conn *conn
 	tool string
 	run  string
+	// every is activity_seconds, read when the call began.
+	every time.Duration
 }
 
 // connection returns the state of a client connection, created at its
@@ -171,33 +178,61 @@ func (srv *server) disconnected(cn *conn) {
 	srv.mu.Lock()
 	delete(srv.conns, cn.session)
 	srv.mu.Unlock()
-	run, project := cn.current()
-	if run == "" {
+	cn.mu.Lock()
+	defer cn.mu.Unlock()
+	if cn.run == "" {
 		return
 	}
-	// Failing open: the stale rule ends a run whose end was not recorded.
-	_ = srv.log.Append(events.Event{Time: srv.options.Now().UTC(), Run: run, Agent: agentOf(run), Kind: events.RunEnd, Project: project,
-		Data: events.RunEndData{Reason: events.RunEndDisconnected}})
+	// Activity not yet recorded goes first, as hooks flush it before an
+	// end. Failing open: the stale rule ends a run whose end was not
+	// recorded.
+	now := srv.options.Now().UTC()
+	list := []events.Event{{Time: now, Run: cn.run, Agent: agentOf(cn.run), Kind: events.RunEnd, Project: cn.project,
+		Data: events.RunEndData{Reason: events.RunEndDisconnected}}}
+	if activity, ok := cn.take(); ok {
+		list = append([]events.Event{{Time: now, Run: cn.run, Agent: agentOf(cn.run), Kind: events.Activity, Project: cn.project, Data: activity}}, list...)
+	}
+	_ = srv.log.Append(list...)
 }
 
-// called records a tool call of the connection's started run as its
-// activity, which renews its claim's lease (agent-protocol §6), and returns
-// the answers waiting for it, marked delivered: with no prompt hook, the
-// next tool result carries them (HOOK-5). A call attributed to another run
-// leaves the started run alone.
+// take returns the run's activity since its last record and starts a new
+// count; ok is false when there is none. The caller holds cn.mu.
+func (cn *conn) take() (events.ActivityData, bool) {
+	activity := events.ActivityData{Tools: cn.tools, Failed: cn.failed}
+	cn.tools, cn.failed = 0, 0
+	return activity, activity.Tools > 0
+}
+
+// called counts a tool call of the connection's started run as its
+// activity, recorded as hooks record tool results: at most one activity
+// record per activity_seconds, which renews its claim's lease
+// (agent-protocol §3, §6). It returns the answers waiting for the run,
+// marked delivered: with no prompt hook, the next tool result carries them
+// (HOOK-5). A call attributed to another run leaves the started run alone.
 func (srv *server) called(inv *invocation, ok bool) string {
-	if inv.conn == nil {
-		return ""
-	}
-	run, project := inv.conn.current()
-	if run == "" || inv.run != run {
+	cn := inv.conn
+	if cn == nil {
 		return ""
 	}
 	now := srv.options.Now().UTC()
-	// Activity is best effort: the call itself has already succeeded or
-	// failed on its own terms.
-	_ = srv.log.Append(events.Event{Time: now, Run: run, Agent: agentOf(run), Kind: events.ToolUsed, Project: project,
-		Data: events.ToolData{Tool: inv.tool, OK: ok}})
+	cn.mu.Lock()
+	run, project := cn.run, cn.project
+	if run == "" || inv.run != run {
+		cn.mu.Unlock()
+		return ""
+	}
+	cn.tools++
+	if !ok {
+		cn.failed++
+	}
+	if now.Sub(cn.recorded) >= inv.every {
+		activity, _ := cn.take()
+		cn.recorded = now
+		// Activity is best effort: the call itself has already succeeded
+		// or failed on its own terms.
+		_ = srv.log.Append(events.Event{Time: now, Run: run, Agent: agentOf(run), Kind: events.Activity, Project: project, Data: activity})
+	}
+	cn.mu.Unlock()
 	waiting, err := srv.log.TakeAnswers(project, run)
 	if err != nil || len(waiting) == 0 {
 		return ""

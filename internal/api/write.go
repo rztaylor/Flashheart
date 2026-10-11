@@ -11,6 +11,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/config"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
 )
@@ -142,10 +143,21 @@ func (b boardAPI) saved(w http.ResponseWriter, status int, hash string, warnings
 	writeJSON(w, status, WriteResponse{Hash: hash, Revision: revision, Warnings: nonNil(warnings)})
 }
 
+// recordHuman records that the human changed a ticket on the board: its id
+// and at most the columns or field names, never their values (agent-protocol
+// §3). The ticket is already saved and the board files are the source of
+// truth, so a failure to record does not fail the write.
+func (b boardAPI) recordHuman(project, kind string, data events.TicketData) {
+	if b.events != nil {
+		_ = b.events.Append(events.ByHuman(b.now(), project, kind, data))
+	}
+}
+
 // MoveRequest is POST /api/tickets/{id}/move (EDIT-1).
 type MoveRequest struct {
 	Base string `json:"base"`
-	To   string `json:"to"`
+	// To is the new status: a column, or rejected (Done, FH-58).
+	To string `json:"to"`
 	// Reason confirms moving a blocked ticket into In progress (EDIT-2).
 	Reason string `json:"reason"`
 	// After places the ticket directly after this ticket in its new column
@@ -162,9 +174,9 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &request) {
 		return
 	}
-	to, ok := board.ParseColumn(request.To)
+	to, _, ok := board.ParseStatus(request.To)
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q is not a column", request.To))
+		writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q is not a status", request.To))
 		return
 	}
 	if request.After != nil && *request.After != "" {
@@ -195,7 +207,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	edit := func(data []byte) ([]byte, error) {
-		next, err := mdfile.SetScalar(data, "status", string(to))
+		next, err := mdfile.SetScalar(data, "status", request.To)
 		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
 			return next, err
 		}
@@ -217,6 +229,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketMoved, events.TicketData{Ticket: ticket.ID, From: ticket.Status(), To: request.To})
 	if to == board.Review && ticket.Column != board.Review {
 		review := ""
 		if project.Reviews[ticket.ID] && b.files != nil {
@@ -317,6 +330,11 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	fields := make([]string, 0, len(changes))
+	for _, c := range changes {
+		fields = append(fields, c.key)
+	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: fields})
 	b.saved(w, http.StatusOK, hash, nil)
 }
 
@@ -354,6 +372,8 @@ func (b boardAPI) putRaw(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	// A raw edit names no fields: what it changed is not worked out.
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID})
 	b.saved(w, http.StatusOK, hash, warnings)
 }
 
@@ -384,6 +404,7 @@ func (b boardAPI) setCriterion(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{"criteria"}})
 	b.saved(w, http.StatusOK, hash, nil)
 }
 
@@ -400,6 +421,7 @@ func (b boardAPI) archive(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{"archived"}})
 	b.saved(w, http.StatusOK, "", nil)
 }
 
@@ -424,6 +446,7 @@ func (b boardAPI) unarchive(w http.ResponseWriter, r *http.Request) {
 				writeStoreError(w, err)
 				return
 			}
+			b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: id, Fields: []string{"archived"}})
 			b.saved(w, http.StatusOK, "", nil)
 			return
 		}
@@ -477,6 +500,7 @@ func (b boardAPI) createTicket(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(r.PathValue("project"), events.TicketCreated, events.TicketData{Ticket: created.ID})
 	revision := uint64(0)
 	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
 		revision = snapshot.Revision
@@ -547,9 +571,9 @@ type Preferences struct {
 	Theme    string `json:"theme"`
 	Density  string `json:"density"`
 	ColourBy string `json:"colourBy"`
-	// VirtualColumns lists the virtual columns shown (VIEW-2).
-	VirtualColumns []string                `json:"virtualColumns"`
-	Scopes         map[string]config.Scope `json:"scopes"`
+	// HiddenColumns lists the real columns hidden from the Board (FH-41).
+	HiddenColumns []string                `json:"hiddenColumns"`
+	Scopes        map[string]config.Scope `json:"scopes"`
 }
 
 func (b boardAPI) currentUI(w http.ResponseWriter) (config.UI, bool) {
@@ -576,7 +600,7 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	if scopes == nil {
 		scopes = map[string]config.Scope{}
 	}
-	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, VirtualColumns: nonNil(ui.VirtualColumns), Scopes: scopes})
+	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Scopes: scopes})
 }
 
 func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
@@ -592,7 +616,7 @@ func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ui.Theme, ui.Density, ui.ColourBy, ui.Scopes = request.Theme, request.Density, request.ColourBy, request.Scopes
-	ui.VirtualColumns = nonNil(request.VirtualColumns)
+	ui.HiddenColumns = nonNil(request.HiddenColumns)
 	if len(ui.Scopes) > 500 {
 		writeError(w, http.StatusBadRequest, "invalid_input", "Too many remembered views")
 		return
@@ -642,5 +666,6 @@ func (b boardAPI) setReviewStep(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{"review"}})
 	b.saved(w, http.StatusOK, hash, nil)
 }

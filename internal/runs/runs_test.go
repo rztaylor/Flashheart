@@ -39,6 +39,48 @@ func permission(minutes float64) events.Event {
 	return ev(minutes, session, events.PermissionRequested, events.PermissionData{Tool: "Bash"})
 }
 
+// encodings are the two ways a log records tool use: one tool.used per call
+// (logs written before FH-55, still read for two days) and activity records
+// (since FH-55). The same table must hold for both.
+var encodings = map[string]func([]events.Event) []events.Event{
+	"tool.used": func(list []events.Event) []events.Event { return list },
+	"activity":  asActivity,
+}
+
+// asActivity re-encodes a log as hooks write it since FH-55: each tool.used
+// becomes an activity record of one tool use, and a shell command's window
+// runs from its run's previous event, as the hook's state remembers it.
+func asActivity(list []events.Event) []events.Event {
+	previous := map[string]time.Time{}
+	out := make([]events.Event, 0, len(list))
+	for _, e := range list {
+		if e.Kind == events.ToolUsed {
+			var data events.ToolData
+			_ = e.Decode(&data)
+			activity := events.ActivityData{Tools: 1}
+			if !data.OK {
+				activity.Failed = 1
+			}
+			if data.OK && data.Path != "" {
+				activity.Paths = []string{data.Path}
+			}
+			if data.OK && (data.Tool == "Bash" || data.Tool == "PowerShell") {
+				from, seen := previous[e.Run]
+				if !seen || from.After(e.Time) {
+					from = e.Time
+				}
+				activity.Shell = []events.Span{{From: from, To: e.Time}}
+			}
+			e = events.Event{Time: e.Time, Run: e.Run, Agent: e.Agent, Kind: events.Activity, Project: e.Project, Data: activity}
+		}
+		if e.Time.After(previous[e.Run]) {
+			previous[e.Run] = e.Time
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
 func TestStateTable(t *testing.T) {
 	t.Parallel()
 
@@ -75,16 +117,18 @@ func TestStateTable(t *testing.T) {
 		{"compaction is activity", []events.Event{start(0), turn(1), ev(15, session, events.Compact, events.CompactData{Phase: "pre"})}, 16, Working},
 	}
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			set := NewSet()
-			for _, e := range tc.events {
-				set.Apply(e)
-			}
-			if got := set.State(session, at(tc.now), settings); got != tc.want {
-				t.Fatalf("state at %vm = %s, want %s", tc.now, got, tc.want)
-			}
-		})
+		for encoding, encode := range encodings {
+			t.Run(encoding+"/"+tc.name, func(t *testing.T) {
+				t.Parallel()
+				set := NewSet()
+				for _, e := range encode(tc.events) {
+					set.Apply(e)
+				}
+				if got := set.State(session, at(tc.now), settings); got != tc.want {
+					t.Fatalf("state at %vm = %s, want %s", tc.now, got, tc.want)
+				}
+			})
+		}
 	}
 }
 
@@ -358,6 +402,24 @@ func TestSubagentFirstSeenEndingIsIgnored(t *testing.T) {
 	}
 }
 
+// The human's board writes are recorded with run "human" (agent-protocol
+// §3): they are no run, and change no agent's run.
+func TestTheHumansBoardWritesAreNoRun(t *testing.T) {
+	t.Parallel()
+
+	set := NewSet()
+	set.Apply(start(0))
+	set.Apply(ev(1, session, events.Claim, events.TicketData{Ticket: "AL-3"}))
+	set.Apply(events.ByHuman(at(2), "alpha", events.TicketMoved, events.TicketData{Ticket: "AL-3", From: "in-progress", To: "review"}))
+	set.Apply(events.ByHuman(at(3), "alpha", events.TicketUpdated, events.TicketData{Ticket: "AL-3", Fields: []string{"priority"}}))
+	if set.Get(events.Human) != nil || len(set.Runs()) != 1 {
+		t.Fatalf("runs = %d, human run = %+v", len(set.Runs()), set.Get(events.Human))
+	}
+	if run := set.Get(session); run.Claim != "AL-3" || !run.LastActivity.Equal(at(1)) {
+		t.Errorf("session = claim %q, last activity %v", run.Claim, run.LastActivity)
+	}
+}
+
 // A subagent's unanswered permission prompt ends when its session moves on:
 // a denial sends no event, and the subagent may never report again.
 func TestSessionTurnsClearASubagentsPendingPermission(t *testing.T) {
@@ -468,5 +530,173 @@ func TestASubagentCheckpointElsewhereLeavesItsSessionDue(t *testing.T) {
 	}
 	if s.Dirty(child) || !s.Dirty(session) || s.Edits(session) != 1 {
 		t.Fatalf("child dirty %v, session dirty %v edits %d", s.Dirty(child), s.Dirty(session), s.Edits(session))
+	}
+}
+
+// Agents edit mostly through shell commands, which name no path: the hook
+// checks the worktree at turn end and session end and records the finding,
+// which makes the run dirty until its next checkpoint (FH-53).
+func TestShellChangesAfterTheLastCheckpointAreNoHandoff(t *testing.T) {
+	t.Parallel()
+
+	linked := func(string, string) []string { return []string{"AL-3"} }
+	end := func(minutes float64, changed bool) events.Event {
+		return ev(minutes, session, events.RunEnd, events.RunEndData{Reason: "other", WorktreeChanged: changed})
+	}
+	checkpoint := ev(1, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"})
+	cases := []struct {
+		name      string
+		events    []events.Event
+		noHandoff bool
+	}{
+		{"shell change after the checkpoint, then end", []events.Event{start(0), checkpoint, tool(2, "Bash", ""), end(3, true)}, true},
+		{"read-only shell after the checkpoint, then end", []events.Event{start(0), checkpoint, tool(2, "Bash", ""), end(3, false)}, false},
+		{"change found at a turn end stays due at the end", []events.Event{start(0), checkpoint, turn(2), tool(2, "Bash", ""), ev(3, session, events.TurnEnd, events.TurnEndData{WorktreeChanged: true}), end(4, false)}, true},
+		{"a later checkpoint settles it", []events.Event{start(0), turn(1), tool(2, "Bash", ""), ev(3, session, events.TurnEnd, events.TurnEndData{WorktreeChanged: true}), ev(4, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}), end(5, false)}, false},
+	}
+	for _, tc := range cases {
+		for encoding, encode := range encodings {
+			t.Run(encoding+"/"+tc.name, func(t *testing.T) {
+				t.Parallel()
+				set := NewSet()
+				for _, e := range encode(tc.events) {
+					set.Apply(e)
+				}
+				view := set.Views(at(10), DefaultSettings(), linked)[0]
+				if view.NoHandoff != tc.noHandoff || view.Dirty != tc.noHandoff || set.Dirty(session) != tc.noHandoff {
+					t.Fatalf("noHandoff=%v dirty=%v set.Dirty=%v, want %v", view.NoHandoff, view.Dirty, set.Dirty(session), tc.noHandoff)
+				}
+				// A change found by the hook counts as one edit.
+				if want := map[bool]int{true: 1}[tc.noHandoff]; view.Edits != want {
+					t.Fatalf("edits = %d, want %d", view.Edits, want)
+				}
+			})
+		}
+	}
+}
+
+// The hook counts a worktree change as the session's only when it was made
+// during one of its (or its subagents') successful shell commands since the
+// last checkpoint: from the run's previous event to the command's tool.used,
+// with ShellSlack either side.
+func TestShellWindows(t *testing.T) {
+	t.Parallel()
+
+	window := func(from, to float64) Window {
+		return Window{From: at(from).Add(-ShellSlack), To: at(to).Add(ShellSlack)}
+	}
+	child := session + "/a1"
+	s := NewSet()
+	s.Apply(start(0))
+	s.Apply(turn(1))
+	s.Apply(tool(2, "Read", ""))
+	s.Apply(ev(3, session, events.ToolUsed, events.ToolData{Tool: "Bash", OK: false}))
+	if got := s.ShellWindows(session); len(got) != 0 {
+		t.Fatalf("after a read and a failed command: %v", got)
+	}
+	s.Apply(tool(5, "Bash", ""))
+	s.Apply(stop(6))
+	s.Apply(turn(20))
+	s.Apply(tool(22, "PowerShell", ""))
+	if got, want := s.ShellWindows(session), []Window{window(3, 5), window(20, 22)}; !slices.Equal(got, want) {
+		t.Fatalf("windows = %v, want %v", got, want)
+	}
+	s.Apply(ev(30, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}))
+	if got := s.ShellWindows(session); len(got) != 0 {
+		t.Fatalf("after the checkpoint: %v", got)
+	}
+	s.Apply(ev(31, child, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
+	s.Apply(ev(33, child, events.ToolUsed, events.ToolData{Tool: "Bash", OK: true}))
+	s.Apply(tool(34, "Bash", ""))
+	// The session's command runs from its checkpoint (its previous event),
+	// so the window starts there, and the subagent's window inside it merges.
+	if got, want := s.ShellWindows(session), []Window{{From: at(30), To: at(34).Add(ShellSlack)}}; !slices.Equal(got, want) {
+		t.Fatalf("session windows with its subagent's = %v, want %v (overlaps merge)", got, want)
+	}
+	if got, want := s.ShellWindows(child), []Window{window(31, 33)}; !slices.Equal(got, want) {
+		t.Fatalf("subagent windows = %v, want %v", got, want)
+	}
+	if got := s.ShellWindows("claude:unknown"); got != nil {
+		t.Fatalf("unknown run: %v", got)
+	}
+}
+
+// A window never reaches back before the last checkpoint, and a long run
+// keeps a bounded number of windows, merging the oldest.
+func TestShellWindowsAreClampedAndBounded(t *testing.T) {
+	t.Parallel()
+
+	s := NewSet()
+	s.Apply(start(0))
+	s.Apply(ev(10, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}))
+	// The subagent's previous event predates the session's checkpoint.
+	child := session + "/a1"
+	s.Apply(ev(5, child, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
+	s.Apply(ev(12, child, events.ToolUsed, events.ToolData{Tool: "Bash", OK: true}))
+	if got := s.ShellWindows(session); len(got) != 1 || !got[0].From.Equal(at(10)) {
+		t.Fatalf("windows = %v, want one from the checkpoint", got)
+	}
+
+	long := NewSet()
+	long.Apply(start(0))
+	for i := range MaxWindows + 5 {
+		long.Apply(turn(float64(i * 10)))
+		long.Apply(tool(float64(i*10+1), "Bash", ""))
+	}
+	got := long.ShellWindows(session)
+	if len(got) != MaxWindows {
+		t.Fatalf("windows = %d, want %d", len(got), MaxWindows)
+	}
+	if !got[0].From.Equal(at(0).Add(-ShellSlack)) || !got[len(got)-1].To.Equal(at(float64((MaxWindows+4)*10+1)).Add(ShellSlack)) {
+		t.Fatalf("bounded windows lost their span: first %v, last %v", got[0], got[len(got)-1])
+	}
+}
+
+// FH-55: hooks record throttled activity records instead of one tool.used
+// per call. A record carries the tool uses and failures since the run's
+// previous record, the edit paths it newly recorded and its shell commands'
+// windows, which the fold widens by ShellSlack as it does a tool.used's.
+func TestActivityRecordsCountToolsEditsAndShellWindows(t *testing.T) {
+	t.Parallel()
+
+	set := NewSet()
+	set.Apply(start(0))
+	set.Apply(turn(1))
+	set.Apply(permission(2))
+	set.Apply(ev(4, session, events.Activity, events.ActivityData{
+		Tools: 12, Failed: 2, Paths: []string{"a.ts", "b.ts"},
+		Shell: []events.Span{{From: at(2), To: at(2.5)}, {From: at(3), To: at(3.5)}},
+	}))
+	run := set.Get(session)
+	if run.Tools != 12 || run.Edits != 2 || !slices.Equal(run.Files, []string{"b.ts", "a.ts"}) || !run.LastActivity.Equal(at(4)) {
+		t.Fatalf("tools %d edits %d files %v last %v", run.Tools, run.Edits, run.Files, run.LastActivity)
+	}
+	if got := set.State(session, at(5), DefaultSettings()); got != Working {
+		t.Fatalf("state after tool use = %s; tool use resolves a pending permission", got)
+	}
+	window := func(from, to float64) Window {
+		return Window{From: at(from).Add(-ShellSlack), To: at(to).Add(ShellSlack)}
+	}
+	if got, want := set.ShellWindows(session), []Window{window(2, 2.5), window(3, 3.5)}; !slices.Equal(got, want) {
+		t.Fatalf("windows = %v, want %v", got, want)
+	}
+	last := run.Timeline[len(run.Timeline)-1]
+	if last.Kind != events.Activity || last.Tools != 12 || last.Failures != 2 || last.Path != "a.ts" {
+		t.Fatalf("timeline entry = %+v", last)
+	}
+
+	// A checkpoint settles the paths and windows; a record after it counts
+	// again, and a window that ended before it is cut away.
+	set.Apply(ev(6, session, events.Checkpoint, events.CheckpointData{Ticket: "AL-3"}))
+	set.Apply(ev(7, session, events.Activity, events.ActivityData{Tools: 3, Paths: []string{"a.ts"}, Shell: []events.Span{{From: at(5), To: at(5.5)}}}))
+	if run.Tools != 15 || run.Edits != 1 || set.ShellWindows(session) != nil {
+		t.Fatalf("after the checkpoint: tools %d edits %d windows %v", run.Tools, run.Edits, set.ShellWindows(session))
+	}
+
+	// Malformed records count nothing and never panic.
+	set.Apply(ev(8, session, events.Activity, events.ActivityData{Tools: -5, Paths: []string{""}, Shell: []events.Span{{From: at(9), To: at(8)}}}))
+	set.Apply(events.Event{Time: at(8), Run: session, Agent: "claude", Kind: events.Activity, Project: "alpha", Data: "garbage"})
+	if run.Tools != 15 || run.Edits != 1 {
+		t.Fatalf("malformed records counted: tools %d edits %d", run.Tools, run.Edits)
 	}
 }

@@ -481,7 +481,195 @@ Versions: `PROTOCOL_VERSION` stays 1 (additive: an optional `background`
 field and a derived state rule); board format stays 2. The protocol skill
 says a reply in the chat answers the question.
 
-## 2026-10-08 — D30: The MCP server starts a run for a session without hooks
+## 2026-10-08 — D30: Ticket ids open a full page in a new tab
+
+Decision (FH-45): every ticket has a full page, `#/ticket/<id>` (CARD-7),
+and every ticket id the board shows is a link to it that opens a new tab:
+on cards, table rows, workstream stations, the Agents view, the archive,
+the card panel's header, and ids of known keys in ticket and review text
+(markdown, criteria, handoff next steps, blocking reasons). Clicking a
+card, row or station still opens the side panel. On a full page, ticket
+links stay in its tab. The user asked for a Jira-like page with room to
+read, review screenshots and, later, edit (FH-16).
+
+Ids in text used to open the side panel in place. They now follow the one
+rule, "an id opens the full page", so a reference in a ticket behaves like
+the id on a card; the blocked-by section keeps its Open button for the
+panel. Links are real links (`href`), so Cmd or middle click and copying
+the address work as anywhere else.
+
+A link inside a button is invalid HTML and an accessibility failure, and
+cards and stations are buttons that drag. They are now drawn under one
+button that covers them, hidden from assistive technology (the button
+carries the name, as before), with the id link above the button and off the
+tab order; the panel header's id link is the keyboard route. Table rows and
+the Agents view split the title button from the id link.
+
+New tabs authenticate with Singleserve's session cookie, as reloads do; no
+credential is in the URL. Each tab heartbeats; the server stops when the
+last tab closes, as before.
+
+Options: open the full page in the same tab (loses the board); a modal over
+the board (no room gained, no URL to keep); an "open full page" button only
+(ids would stay inert, which the user asked to change); ids open in new tabs
+(chosen).
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; no API
+change.
+
+## 2026-10-09 — D31: Needs you is the band's filter, not a column
+
+Decision (FH-44, user): the Needs you virtual column is retired, completing
+D27. A ticket mirrored in Needs you while it sat in its own column read as
+being in two places at once, as Agent working did. The band's Needs you
+plate becomes the filter: it is a toggle, and pressed, it shows All
+projects' Board (or Table, when that is open) with only the tickets that
+have a run in Needs you or an open question about them. It used to open the
+Agents view. A second press returns to the project it was pressed in,
+unless another scope was chosen since. It combines with every other filter,
+and Clear filters switches it off. It stays in the band while pressed, so
+it can be switched off once nothing needs you.
+
+All projects, because the plate counts runs across every project: filtering
+only the project in view left a "1 needs you" press on an empty board when
+the run was elsewhere, contradicting the label (the user's review). Options
+weighed: All projects and back (chosen); stay in the project when something
+there needs you, else All projects (what a press does would depend on
+something unseen); count only the project in view (the plate would stop
+warning about other projects); keep the project with an empty state naming
+the others (two steps to the answer).
+
+The count and the board can still differ: a run in Needs you may have no
+ticket on the board (an ad hoc session hitting a permission prompt, a
+question asked before claiming, a branch matching no single ticket, an
+archived ticket; RUN-5 allows unlinked runs). While the filter is on, a
+notice names those runs ("1 agent needs you with no ticket on the board")
+and opens the Agents view, which lists them. A run counts as shown when its
+linked ticket, or the ticket one of its open questions is about, is on the
+board. The counts gain `needsYouUnticketed`.
+
+It is a lens, not a remembered filter: like the search text it carries from
+project to project, and a reload starts with it off. The rail's badges and
+the card's Needs you mark are unchanged.
+
+With both mirrored columns gone, View options › Show columns holds only the
+Backlog (FH-41).
+
+Options: a *Needs you* State filter option, as Agent working (State takes
+one choice, so it could not combine with Blocked); a chip in the chip row,
+like the colour key's (built, then dropped: it repeated the plate); the
+band's plate as the toggle (chosen); keep the column.
+
+Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
+`needsYou` field is unchanged. A saved `ui.virtual_columns` is ignored on
+load rather than refused, and removed when preferences are next saved.
+
+## 2026-10-09 — D32: An Overview for a project manager replaces the Agents view
+
+Decision (FH-47): the Agents view (`VIEW-3`) gives way to an **Overview**
+tab about tickets, with agent sessions as evidence. The user drew no value
+from a list of runs: it answers "what is each agent doing", an operator's
+question, where the user asks a project manager's: what needs my decision,
+what needs my review, what is at risk, what is in progress and what changed.
+
+The Overview is one calm column, in order: Needs your decision (questions
+answered in place; a permission prompt names the session to answer it in,
+since Flashheart never grants permissions), Ready for your review, At risk
+(no live session, ended without a handoff, quiet, top of Up next blocked),
+In progress (agent, state and subagent counts in words, "3 done · 2
+running"), then collapsed Work with no ticket and Up next. Headline metrics
+under the title count what happened since the user's last change on the
+board (editor edits do not count). Session detail (tools, files, plan,
+subagent tree) stays on the card's Runs tab.
+
+Evidence from the event logs shaped it: no project has recorded a plan, so
+plan displays are always empty; agents edit mostly through Bash, so edited
+files and "no handoff" miss most edits; 21 of 35 sessions never claimed a
+ticket; one `tool.used` per tool call is 78% of all events. Run information
+is kept only where it becomes a fact about a ticket; the hooks move from
+per-call events to throttled activity records.
+
+Options: keep the lanes and tidy them; remove the view and spread its parts
+over the band, cards and Runs tab; an activity feed of live sessions and
+events; a ticket-centric Overview (chosen). For its look, Editorial (a
+headline sentence and numbered stories), Calm (an inbox of section cards)
+and Precision (a three-column dashboard) were generated, with a synthesis of
+Editorial and Precision; the user chose Calm, found the others too busy and
+rejected the headline sentence. Approved concept: FH-47
+`files/20261009T1923-image.png`. Roadmap item: `project-overview`.
+
+Built (FH-51): a question answered on the board stays under Needs your
+decision, saying its answer waits for the session's next prompt, because
+its run needs the user until then (`RUN-3`); a question from an ended
+session does not. Section heads sit on the neutral column surface with a
+round mark in their role's colour rather than the concept's tinted heads,
+and rows open the ticket from its title rather than a separate Open
+button. Old `#/…/agents` routes and a remembered `view: agents` in
+`config.yaml` open the Overview, and the next save writes `overview`.
+
+Versions: board format stays 2. `PROTOCOL_VERSION` changes only when the
+throttled activity records land (FH-55).
+
+Built (FH-55): `PROTOCOL_VERSION` 2. Adapters still report every tool
+result; hooks count them into an `activity` record at most once a minute
+per run (`activity_seconds`), recording at once an edit of a path not
+recorded in the turn or since the run's last checkpoint (each path once
+per run per turn and again after a checkpoint: a prompt, a subagent's
+start and the checkpoint tool's own result reset them; the user chose the
+per-turn reset, 2026-10-11, so a missed checkpoint result costs at most
+one turn) and the tool
+result a permission request waits on, and flushing what is pending before
+a turn end or end. FH-53's shell command windows are kept in a small
+per-session state file under the project lock and travel in the records,
+so the worktree check sees every command. Readers still fold `tool.used`
+from older logs. Replaying this board's logs: 6,475 events become 2,132.
+
+Built (FH-52): the headline metrics are Checkpoints, To review, New
+tickets and Criteria ticked. The concept's Done tile gave way to
+Checkpoints (user, 2026-10-11): only the human moves tickets to Done, and
+that move is the human's latest change, so Done since it was always 0.
+Criteria ticked counts updates, since the event does not say how many were
+ticked.
+
+Superseded (FH-63, user, 2026-10-11): the metrics confused more than they
+helped. To review counted tickets that arrived since your last change, so
+it read 0 above a Ready for your review section listing four. The headline
+is now the pipeline: every board column's count, which can never
+disagree with the sections, as interlocking chevrons in the State role.
+Done counts accepted work, leaving out Rejected tickets (user).
+Throughput figures (done this week, time in review) were left out because
+each needs a time window again.
+
+## 2026-10-11 — D33: Activity outside git is not recorded
+
+Decision (user, FH-62): agent activity outside any git repository belongs
+to no project and is not recorded (PRJ-4); the reserved `_scratch` project
+is removed. Sessions outside git are mostly throwaway, have no repository
+or tickets to resume from, and the board's value is per project, so a
+`_scratch` board, created by hooks on first contact (even a lone
+`run.end`), showed users noise they never asked for. Its one real use, a
+home for an `ask_human` question or a ticket from such a session, is better
+served by telling the agent there is no project so it talks to the user in
+chat.
+
+Outside git, hooks return before writing anything: no project, no events,
+no cwd cache entry, not even a missing board root or the skill refresh.
+MCP read tools without a `project` argument answer that there is no
+current project and list the projects to pass; tools that need the
+caller's project or run answer `no_project`; tools given a ticket id or a
+`project` still work. A user who wants a folder tracked runs `git init`.
+
+Options: keep `_scratch` but hide it in the UI (still writes files no one
+sees); `_scratch` only for MCP writes (a board the user never looks at);
+record nothing (chosen). Existing `_scratch` folders need no migration:
+without the PRJ-1 exception they are `_`-prefixed directories, which the
+board ignores, and the user can delete them.
+
+Versions: board format stays 2; `PROTOCOL_VERSION` stays 2, since
+`no_project` is a new coded error with a fix, added as `project_archived`
+was, and no event or tool changes shape (agent-protocol §14).
+
+## 2026-10-11 — D34: The MCP server starts a run for a session without hooks
 
 Decision (FH-15, `mcp-runs`): when a write reaches the `flashheart` MCP
 server and no run is found (agent-protocol §7.1), the server starts one for
@@ -495,8 +683,9 @@ writes said "unknown", and nothing reached the Agents view.
 
 The run reads as Waiting unless it needs you: it has no turns, so it is
 never Working or Quiet, and it has no plan, edits or permission prompts.
-Every Flashheart tool call it makes, reads included, is recorded as
-`tool.used`, which renews its claim's lease; closing the connection records
+Every Flashheart tool call it makes, reads included, counts as a tool
+result in a throttled `activity` record, as protocol 2's hooks count them,
+which renews its claim's lease; closing the connection records
 `run.end` with reason `disconnected`, and a server that dies leaves it to
 the stale rule. Answers waiting for it are appended to its next tool result
 and marked delivered, standing in for the prompt hook; `board_context`
@@ -517,7 +706,7 @@ unreliably, and attribution would depend on it); a run started by the first
 write (chosen). Reads are activity once the run exists but never start one,
 so a session that only reads leaves no trace.
 
-Versions: `PROTOCOL_VERSION` stays 1 (additive: a new `source` and `reason`
-value, `tool.used` written by the server, answers in tool results); board
+Versions: `PROTOCOL_VERSION` stays 2 (additive: a new `source` and `reason`
+value, `activity` written by the server, answers in tool results); board
 format stays 2. The protocol skill says that without hooks the answer
 arrives with the next Flashheart tool result.

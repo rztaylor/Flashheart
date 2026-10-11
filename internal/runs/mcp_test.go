@@ -20,8 +20,9 @@ func mcpStart(minutes float64) events.Event {
 	return mcpEvent(minutes, events.RunStart, events.RunStartData{Kind: events.KindSession, Cwd: "/src/alpha", Branch: "feature/x", Worktree: "/src/alpha", Source: events.SourceMCP})
 }
 
-func mcpCall(minutes float64, name string) events.Event {
-	return mcpEvent(minutes, events.ToolUsed, events.ToolData{Tool: name, OK: true})
+// mcpCall is the activity record of the run's Flashheart tool calls.
+func mcpCall(minutes float64, tools int) events.Event {
+	return mcpEvent(minutes, events.Activity, events.ActivityData{Tools: tools})
 }
 
 func TestMCPStartedRuns(t *testing.T) {
@@ -40,15 +41,15 @@ func TestMCPStartedRuns(t *testing.T) {
 		holding bool
 	}{
 		{"started by a write: waiting, never working", []events.Event{mcpStart(0), claim}, 2, Waiting, true},
-		{"tool calls are activity but not a turn", []events.Event{mcpStart(0), claim, mcpCall(1, "claim"), mcpCall(20, "get_ticket")}, 21, Waiting, true},
+		{"tool calls are activity but not a turn", []events.Event{mcpStart(0), claim, mcpCall(1, 1), mcpCall(20, 1)}, 21, Waiting, true},
 		{"a question needs you", []events.Event{mcpStart(0), claim, question}, 4, NeedsYou, true},
 		{"answered, not yet delivered: still needs you", []events.Event{mcpStart(0), claim, question, answered}, 5.5, NeedsYou, true},
 		{"delivered in a tool result: waiting", []events.Event{mcpStart(0), claim, question, answered, delivered}, 7, Waiting, true},
-		{"no tool call for the lease: the claim lapses", []events.Event{mcpStart(0), claim, mcpCall(1, "claim")}, 32, Waiting, false},
-		{"a tool call renews the lease", []events.Event{mcpStart(0), claim, mcpCall(1, "claim"), mcpCall(25, "list_tickets")}, 50, Waiting, true},
+		{"no tool call for the lease: the claim lapses", []events.Event{mcpStart(0), claim, mcpCall(1, 1)}, 32, Waiting, false},
+		{"a tool call renews the lease", []events.Event{mcpStart(0), claim, mcpCall(1, 1), mcpCall(25, 1)}, 50, Waiting, true},
 		{"disconnected: ended", []events.Event{mcpStart(0), claim, mcpEvent(4, events.RunEnd, events.RunEndData{Reason: "disconnected"})}, 5, Ended, false},
 		{"ended beats an open question", []events.Event{mcpStart(0), question, mcpEvent(4, events.RunEnd, events.RunEndData{Reason: "disconnected"})}, 5, Ended, false},
-		{"a server that died: ended by the stale rule", []events.Event{mcpStart(0), claim, mcpCall(1, "claim")}, 12*60 + 2, Ended, false},
+		{"a server that died: ended by the stale rule", []events.Event{mcpStart(0), claim, mcpCall(1, 1)}, 12*60 + 2, Ended, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

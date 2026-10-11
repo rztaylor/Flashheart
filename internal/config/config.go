@@ -42,14 +42,14 @@ const (
 )
 
 var (
-	themes         = []string{ThemeSystem, ThemeLight, ThemeDark}
-	densities      = []string{DensityCompact, DensityNormal, DensityDetailed}
-	virtualColumns = []string{"needs-you"}
-	colourBys      = []string{"type", "priority", "age", "none"}
-	views          = []string{"", "board", "agents", "workstreams", "table"}
-	states         = []string{"", "all", "blocked", "unblocked", "repair", "working"}
-	ages           = []string{"today", "week", "older"}
-	scopeName      = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
+	themes        = []string{ThemeSystem, ThemeLight, ThemeDark}
+	densities     = []string{DensityCompact, DensityNormal, DensityDetailed}
+	hiddenColumns = []string{"backlog"}
+	colourBys     = []string{"type", "priority", "age", "none"}
+	views         = []string{"", "board", "overview", "workstreams", "table"}
+	states        = []string{"", "all", "blocked", "unblocked", "repair", "working"}
+	ages          = []string{"today", "week", "older"}
+	scopeName     = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )
 
 // Config is the global configuration (CFG-1, CFG-2).
@@ -59,6 +59,10 @@ type Config struct {
 	QuietMinutes       int  `yaml:"quiet_minutes"`
 	// LeaseMinutes is how long a claim outlives its run's activity.
 	LeaseMinutes int `yaml:"lease_minutes"`
+	// ActivitySeconds is the least time between a run's activity records
+	// (agent-protocol §3): its tool results in between are counted, not
+	// recorded one by one.
+	ActivitySeconds int `yaml:"activity_seconds"`
 	// EnforceHandoff blocks a stop once for a checkpoint (HOOK-6); a
 	// project's settings.enforce_handoff overrides it.
 	EnforceHandoff     bool        `yaml:"enforce_handoff"`
@@ -95,10 +99,14 @@ type Attachments struct {
 
 // UI holds interface preferences saved through the backend (CFG-2).
 type UI struct {
-	Theme          string   `yaml:"theme"`
-	Density        string   `yaml:"density"`
-	ColourBy       string   `yaml:"colour_by"`
-	VirtualColumns []string `yaml:"virtual_columns"`
+	// The virtual_columns setting of earlier versions is ignored: Needs you
+	// and Agent working became filters (FH-42, FH-44).
+	Theme    string `yaml:"theme"`
+	Density  string `yaml:"density"`
+	ColourBy string `yaml:"colour_by"`
+	// HiddenColumns lists the real columns hidden from the Board; only the
+	// Backlog can be hidden (FH-41).
+	HiddenColumns []string `yaml:"hidden_columns"`
 	// Scopes remembers the view and filters per project name, or "all" for
 	// All projects (VIEW-7).
 	Scopes map[string]Scope `yaml:"scopes,omitempty"`
@@ -161,10 +169,11 @@ func Defaults() Config {
 		AutoCreateProjects: true,
 		QuietMinutes:       10,
 		LeaseMinutes:       30,
+		ActivitySeconds:    60,
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
-		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", VirtualColumns: []string{"needs-you"}},
+		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", HiddenColumns: []string{}},
 	}
 }
 
@@ -215,10 +224,13 @@ func Parse(data []byte) (Config, error) {
 	if err := document.Decode(&config); err != nil {
 		return Config{}, fmt.Errorf("parse config.yaml: %w", err)
 	}
-	// The Agent working column was retired for the State filter (FH-42); a
-	// saved one is dropped rather than refused.
-	if config.UI.VirtualColumns != nil {
-		config.UI.VirtualColumns = slices.DeleteFunc(config.UI.VirtualColumns, func(column string) bool { return column == "agent-working" })
+	// The Overview replaced the Agents view (D32); a remembered Agents view
+	// opens the Overview and is saved as it when preferences next change.
+	for name, scope := range config.UI.Scopes {
+		if scope.View == "agents" {
+			scope.View = "overview"
+			config.UI.Scopes[name] = scope
+		}
 	}
 	return config, config.validate()
 }
@@ -238,6 +250,7 @@ func (c Config) validate() error {
 	}
 	atLeastOne("quiet_minutes", int64(c.QuietMinutes))
 	atLeastOne("lease_minutes", int64(c.LeaseMinutes))
+	atLeastOne("activity_seconds", int64(c.ActivitySeconds))
 	atLeastOne("event_retention_days", int64(c.EventRetentionDays))
 	atLeastOne("done_column_limit", int64(c.DoneColumnLimit))
 	atLeastOne("attachments.max_bytes", c.Attachments.MaxBytes)
@@ -268,8 +281,8 @@ func (u UI) problems() []string {
 	oneOf("ui.theme", u.Theme, themes)
 	oneOf("ui.density", u.Density, densities)
 	oneOf("ui.colour_by", u.ColourBy, colourBys)
-	for _, column := range u.VirtualColumns {
-		oneOf("ui.virtual_columns", column, virtualColumns)
+	for _, column := range u.HiddenColumns {
+		oneOf("ui.hidden_columns", column, hiddenColumns)
 	}
 	for name, scope := range u.Scopes {
 		if !scopeName.MatchString(name) || strings.Contains(name, "..") {

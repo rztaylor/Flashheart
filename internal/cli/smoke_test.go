@@ -198,7 +198,7 @@ func TestHooklessSessionOverStdio(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{events.RunStart, events.Claim, events.TicketMoved, events.ToolUsed, events.RunEnd}
+	want := []string{events.RunStart, events.Claim, events.TicketMoved, events.Activity, events.RunEnd}
 	if !strings.HasPrefix(run, "codex:mcp-") || !slices.Equal(kinds, want) {
 		t.Fatalf("run %q events = %v, want %v", run, kinds, want)
 	}

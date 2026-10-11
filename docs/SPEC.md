@@ -77,7 +77,7 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Project** | A subdirectory of the root, normally one per repository, named after the repository's main checkout. |
 | **Ticket** | One unit of work with a stable id such as `FH-42`: a folder `tickets/FH-42-<slug>/` holding the ticket file `FH-42-<slug>.md`, its review and copied files. |
 | **Ticket id** | `<project key>-<number>`, unique across the root; how humans and agents refer to tickets (`KEY`). |
-| **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. |
+| **Column** | A ticket's `status`: Backlog, Up next, In progress, Ready to review, Done. A `rejected` ticket (closed without being accepted) is in Done and says Rejected (FH-58). |
 | **Workstream** | A group of tickets with a shared goal, like an epic, worked on in sequence or in parallel; only `depends-on` orders its tickets (D26). |
 | **Review** | A human verification guide for a ticket in `reviews/`. |
 | **Attachment** | A file (screenshot, log, PDF) copied into the ticket's `files/` folder. |
@@ -86,7 +86,6 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Claim** | A run's lease on a ticket, renewed by its activity. |
 | **Handoff** | The `## Handoff` section of a ticket: done, next, files, open questions. Rewritten at each checkpoint. |
 | **Question** | A run's request for a human decision, answer or review; it puts the run in **Needs you**. |
-| **Virtual column** | A board column computed from run state (for example *Needs you*) rather than a directory; can be shown or hidden. |
 
 ## 5. System overview
 
@@ -110,7 +109,7 @@ watches the root and keeps an in-memory index; the UI is optional.
 
 - `PRJ-1` Every immediate subdirectory of the root that contains a `tickets/`
   directory or a `project.yaml` is a project. Directories starting with
-  `.` or `_` are ignored, except the reserved `_scratch` project (`PRJ-4`).
+  `.` or `_` are ignored.
 - `PRJ-2` A project's name is its directory name. For a repository, hooks and
   setup derive it from the **main checkout** directory name, so worktrees map
   to the same project:
@@ -119,7 +118,11 @@ watches the root and keeps an in-memory index; the UI is optional.
   paths seen, and per-project settings. When a second, different repository
   path would map to an existing name, the new one becomes
   `<name>-<first 6 hex of sha256(path)>` and both are shown with their paths.
-- `PRJ-4` Agent activity outside any git repository goes to `_scratch`.
+- `PRJ-4` Agent activity outside any git repository belongs to no project
+  and is not recorded: hooks write nothing and print nothing, MCP read tools
+  report that there is no current project, and MCP tools that need the
+  caller's project answer `no_project` (D33). To track a folder, run
+  `git init` there.
 - `PRJ-5` A project directory is created on first agent contact when
   `auto_create_projects` is on (default on), with a `project.yaml` holding its
   name and repository but no key yet (`KEY-5`). A project can be archived
@@ -149,7 +152,9 @@ Full format: `docs/dev/specs/board-format.md`.
 - `STO-2` Ticket and workstream frontmatter edits preserve key order, comments
   and unknown keys, and produce minimal diffs.
 - `STO-3` All writes are atomic (write temp, fsync, rename) and made under the
-  project lock. Edits from the UI and MCP carry the content hash they were
+  project lock. The one exception is the hooks' per-session activity state
+  (agent-protocol §3), a disposable cache written in place under the lock
+  on every tool result. Edits from the UI and MCP carry the content hash they were
   based on and fail with a conflict if the file changed since. A move sets
   only `status`, applied to the file as it is under the lock, so it needs no
   hash and cannot lose another writer's change.
@@ -181,8 +186,12 @@ Full format: `docs/dev/specs/board-format.md`.
   it is not reused even if `next_id` is lost.
 - `KEY-3` Ids are how tickets are named everywhere: cards, the card panel,
   search, URLs, events, recovery notes, MCP tool arguments and outputs, and
-  `depends-on` and workstream lists. A bare id in ticket or review markdown
-  links to that ticket.
+  `depends-on` and workstream lists. Wherever the board shows a ticket's id
+  (cards, table rows, workstream stations, the Overview, the archive, the
+  card panel), the id is a link to the ticket's full page (`CARD-7`) that
+  opens in a new tab. A bare id of a known project key in ticket or review
+  markdown, and in criteria, handoff next steps and blocking reasons, links
+  there too (D30).
 - `KEY-4` Agents can be told "tackle the three top-priority bugs": the MCP
   server knows the caller's project (PRJ-2) and its key, and `list_tickets`
   returns open tickets filtered by type, status, priority or text, highest
@@ -204,16 +213,44 @@ Full format: `docs/dev/specs/board-format.md`.
 - `VIEW-1` **Board**: one column per status in workflow order (Backlog, Up
   next, In progress, Ready to review, Done), each in its manual order
   (`EDIT-9`). *done* shows the most recent 20 by default with **Show all**.
-- `VIEW-2` **Virtual column**: *Needs you* (tickets with a run in Needs you or
-  an open question from a live session). It sits between In progress and
-  Ready to review and appears while it holds tickets. It can be shown or
-  hidden (shown by default); a ticket in it also stays in its real column,
-  marked as mirrored. Tickets linked to a Working or Quiet run are found with
-  the State filter's *Agent working* option, not a column (D27, FH-42).
-- `VIEW-3` **Agents**: one row per run, grouped into lanes by run state
-  (`RUN-3`), Needs you first: *Needs you*, *Working*, *Quiet*, *Waiting*,
-  *Ended*. Subagents nest under their parent. Ended runs older than 24 hours
-  are hidden by default.
+  The Backlog can be hidden from the Board (shown by default; FH-41).
+- `VIEW-2` **Needs you filter**: the band's *Needs you* plate is a toggle.
+  Pressed, it shows *All projects* (the Board, or the Table when open) with
+  only tickets that have a run in Needs you or an open question from a live
+  session; pressed again, it returns to the project it was pressed in. It
+  combines with the other filters, carries from project to project, and is
+  not remembered. While it is on, runs in Needs you that no card on the
+  board shows (no linked ticket, and no open question about a ticket on the
+  board) are named in a notice that opens the Overview. Tickets show only in their real
+  columns (D31, FH-44). Tickets linked to a Working or Quiet run are found
+  with the State filter's *Agent working* option (D27, FH-42).
+- `VIEW-3` **Overview** (D32, FH-51): what a project manager asks of the
+  board, for *All projects* or one project, about tickets with agent
+  sessions as evidence. Under the title, the pipeline (FH-63): every board
+  column in order (Backlog, Up next, In progress, Ready to review, Done)
+  with its whole count in the scope, each leading to the Board. Done counts
+  accepted work: Rejected tickets (`FH-58`) sit in the Done column but are
+  left out of it, and archived tickets are not counted.
+  The other stages are what sits there now, so they agree with the
+  sections below. One column of section cards, in order: *Needs your
+  decision* (open questions, answered in place as on the card, `CARD-6`,
+  and kept until the session takes the answer; permission prompts, which
+  name the project and branch of the session to answer them in, since
+  Flashheart never grants permissions; runs with no ticket on the board
+  included), *Ready for your review* (tickets in Ready to review, longest
+  waiting first, with criteria met and **Review results** opening the
+  ticket's Review tab), *At risk* (in-progress tickets no live session
+  works on or whose session has gone quiet, tickets whose session ended
+  without a handoff, and the top of a project's Up next when blocked, each
+  reason in words), *In progress* (the session's state and its subagents
+  in words, "subagents 3 done · 2 running", criteria and last activity),
+  then two collapsed tiles: *Work with no ticket* (live sessions linked to
+  no ticket, with project, branch, state and **Create ticket**) and *Up
+  next* (the top of each project's Up next, blocked or ready). At risk and
+  In progress start open when they have something; every section has a
+  one-line empty state. Run detail (tools, edited files, plan, subagents)
+  stays on the card's Runs tab. The Agents view it replaced is gone; its
+  old routes and a remembered Agents view open the Overview.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
   tickets as a railway graph of their `depends-on` links, with status,
   blocked state and progress.
@@ -231,7 +268,8 @@ Full format: `docs/dev/specs/board-format.md`.
   some (FH-39). Filters and view choices are remembered per project
   (`CFG-2`).
 - `VIEW-8` Live badge on a card with a live run: agent (Claude/Codex),
-  current plan step ("3/7 · Fix header"), state, and time since last activity.
+  current plan step ("3/7 · Fix header") when the run has a plan, state, and
+  time since last activity.
 
 ### 6.5 Card detail (`CARD`)
 
@@ -242,7 +280,8 @@ Full format: `docs/dev/specs/board-format.md`.
   and subagent tree), **Attachments**, **Review** (when a review file exists).
 - `CARD-2` Markdown renders GitHub-flavoured markdown (tables, task lists,
   code). Raw HTML is not rendered. Ticket ids in text (`FH-42`) and relative
-  links into another ticket's folder open that ticket.
+  links into another ticket's folder open that ticket's full page
+  (`CARD-7`).
 - `CARD-3` Acceptance-criteria checkboxes can be ticked in the rendered view
   and are saved to the file.
 - `CARD-4` A **Blocked by** section explains each blocking reason: ticket
@@ -251,13 +290,21 @@ Full format: `docs/dev/specs/board-format.md`.
   and time, and a warning when the claimed run has edited files since.
 - `CARD-6` Open questions show with an answer box or option buttons
   (`RUN-8`).
+- `CARD-7` Every ticket has a full page, `#/ticket/<id>`, reachable by URL,
+  reload or a new tab: the panel's header, tabs and content at reading
+  width under the band, the browser tab named `<id> · <title>`, and a link
+  to the ticket beside its project's board. Clicking a card, row or station
+  opens the panel; clicking a ticket id opens the full page in a new tab
+  (`KEY-3`). Ticket links on a full page stay in its tab.
 
 ### 6.6 Editing (`EDIT`)
 
 - `EDIT-1` Drag and drop moves a ticket between columns (edits its `status`).
   Every drag action has a keyboard and menu alternative: Shift with an arrow
   moves a focused card to the next column (and a station along its line),
-  and the card panel has **Move to …**. Each move can be undone.
+  and the card panel has **Move to …**, which also offers **Rejected**: a
+  Done state for a ticket closed without being accepted (FH-58). Each move
+  can be undone.
 - `EDIT-2` Moving a blocked ticket into *in-progress* asks for confirmation
   and records the override reason in `## Notes`.
 - `EDIT-3` Moving into *Ready to review* warns when the review file is
@@ -300,6 +347,15 @@ Full format: `docs/dev/specs/board-format.md`.
   is shown and never writes ranks; while one is on, cards cannot be
   reordered within a column and a move keeps the ticket's rank. Board order
   is separate from workstream order (`EDIT-4`) and never changes it.
+- `EDIT-10` Every board write that changes a ticket (new ticket, move or
+  place, field, raw and criterion edits, a ticked review step, archive,
+  restore, permanent delete) appends one event to the ticket's project log
+  saying that the human changed it, and when: the ticket's id and at most
+  the columns or names of the fields changed, never their values or any
+  ticket text (agent-protocol §3). With answers to agents' questions
+  (`RUN-8`), these are the human's board activity, which the server reads
+  per project and across projects. Edits made to ticket files outside the
+  board are not recorded and do not count.
 
 ### 6.7 Runs (`RUN`)
 
@@ -310,7 +366,7 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   or, for a session that reaches the MCP server without hooks, from its first
   MCP write, keyed `<agent>:mcp-<random>`; such a run lasts as long as its
   MCP connection and reports claims, checkpoints, questions and tool calls,
-  not turns, plans or edits (D30).
+  not turns, plans or edits (D34).
 - `RUN-2` A run records agent, kind (session/subagent), parent, project, cwd,
   branch, worktree, linked ticket and how it was linked (claim or branch
   match), plan, start, last activity, end and end reason.
@@ -318,13 +374,15 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   *Needs you* (permission request, open question or review requested),
   *Waiting* (turn finished, session open), *Quiet* (working but no event for
   the quiet threshold, default 10 minutes), *Ended*. *Ended* runs whose linked
-  ticket has edits since its last checkpoint are flagged **no handoff**.
+  ticket has edits since its last checkpoint (through the edit tools, or
+  files the turn-end hook finds changed in the worktree during the run's
+  own shell commands, not while it waited) are flagged **no handoff**.
 - `RUN-4` A run's **plan** mirrors the agent's own task list (Claude Code's
   task/todo tools, Codex's plan tool) from hook events, without model effort.
 - `RUN-5` A run links to a ticket by an explicit claim, or provisionally when
   exactly one *in-progress* ticket has `branch:` equal to the run's branch.
   Subagent runs inherit their parent's link. Unlinked runs show under
-  *Unassigned* in the Agents view.
+  under *Work with no ticket* on the Overview while they are live.
 - `RUN-6` A claim is a lease renewed by any event from the claiming run. A
   ticket held by a live claim cannot be claimed by another run without
   `force` and a reason, which both runs' tickets record.
@@ -341,6 +399,19 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   answerable, marked as waiting for the session to resume; it does not
   need you (`VIEW-2`). A board that cannot record answers shows questions
   without an answer form.
+- `RUN-9` Each ticket's board data summarises the runs working for it,
+  derived from the same events (FH-50): the sessions linked to it, their
+  subagents that inherit the link (no claim of their own, or a claim on
+  the session's ticket), and subagents that claimed it themselves, each
+  counted once. A subagent that claimed another ticket counts only on
+  that ticket. The summary names the run that speaks for the ticket (the live one
+  that most needs attention, else the most recently active; a subagent
+  only when its session is not linked to the ticket), with its agent,
+  state and **dirty** / **no handoff** flags (`RUN-3`); the latest
+  activity of any of them; and the subagents as counts: done (Ended),
+  running and needs you (subagents never wait). An in-progress ticket that
+  no live run works on is marked **no live session**, with its last
+  activity when it had runs.
 
 ### 6.8 Hooks (`HOOK`)
 
@@ -350,10 +421,13 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
   stdin, appends normalised events, and exits 0 within 100 ms (p95 50 ms) on
   a warm cache. Errors go to `<root>/.flashheart/hook-errors.log`, never to the
   agent, and never change the exit status (except `HOOK-6`).
-- `HOOK-2` Hooks record tool names, edited file paths relative to the
-  repository, success or failure, and summaries of at most 120 characters,
-  scrubbed of likely secrets. They never record prompts, command lines, tool
-  inputs or tool outputs.
+- `HOOK-2` Hooks record how many tools a run used and how many failed, in
+  at most one activity record per run per `activity_seconds` (default 60;
+  agent-protocol §3), edited file paths relative to the repository (each
+  once per run per turn, and again after a checkpoint), the names of tools awaiting
+  permission, and summaries of at most 120 characters, scrubbed of likely
+  secrets. They never record prompts, command lines, tool inputs or tool
+  outputs.
 - `HOOK-3` On session start and resume (including after compaction), the hook
   returns a **recovery note** as additional context: the run id, project,
   linked ticket, its handoff, and answered questions, in at most about 400
@@ -457,8 +531,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `CFG-1` Settings live in `<root>/.flashheart/config.yaml` (global) and
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
-- `CFG-2` UI preferences (theme, density, colour by, visible virtual columns,
-  and each project's view and filters) are saved through the backend in the
+- `CFG-2` UI preferences (theme, density, colour by, hidden columns, and
+  each project's view and filters) are saved through the backend in the
   global config, never in browser storage.
 
 ### 6.13 Lifecycle (`LIFE`)
@@ -533,17 +607,17 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
 (D18), which replaced the Transit Line Map of D14.
 
 - **Shell**: left rail of projects (with Needs you badges) and **All
-  projects**; top bar with view switcher (Board · Agents · Workstreams ·
-  Table), search, filters, density, virtual-column toggles; quiet backend
+  projects**; top bar with view switcher (Overview · Workstreams · Table ·
+  Board), search, filters, density, virtual-column toggles; quiet backend
   status and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.
-- **Agents**: a departure board: lanes by run state, Needs you first; each
-  run row shows agent, project, ticket (or Unassigned), plan progress drawn
-  as a route, branch and last activity, and expands to its plan, edited files
-  and activity; subagents hang beneath their session.
+- **Overview**: the pipeline of the board's columns and their counts, then
+  one calm column of section cards about tickets: Needs your decision,
+  Ready for your review, At risk, In progress, then collapsed Work with no
+  ticket and Up next (`VIEW-3`).
 - **Needs you** is visible from every view and project (badge in the rail and
-  top bar).
+  top bar); the top bar's plate filters the Board to it (`VIEW-2`).
 - Narrow widths keep a single column with a column picker; the board is not
   a phone-first product.
 

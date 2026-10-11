@@ -3,13 +3,14 @@
 Status: **Partial**. Tracked on the dogfood board as FH-15. Depends on
 `mcp-protocol`; `codex-support` depends on it.
 
-Built (2026-10-08, D30): the server starts runs for hookless connections,
+Built (2026-10-11, D34): the server starts runs for hookless connections,
 tool calls as activity, `run.end` on disconnect, answers in the next tool
-result, the agent from `clientInfo`, "MCP only" in the Agents view, spec,
+result, the agent from `clientInfo`, "MCP only" on the Overview and the
+Runs tab (the Agents view they replaced is gone, D32), spec,
 protocol and skill text. Evidence: the MCP contract tests
 (`internal/mcpserver/mcpruns_test.go`), the run-fold table
 (`internal/runs/mcp_test.go`), the stdio test through the real `mcp`
-command (`TestHooklessSessionOverStdio`) and the Agents e2e driving a
+command (`TestHooklessSessionOverStdio`) and the runs e2e driving a
 hookless `codex-mcp-client` session. Open: a real Codex session without
 Flashheart hooks (the last criterion), met by dogfooding; it also confirms
 that Codex starts one MCP server per session and closes it at the end.
@@ -47,7 +48,7 @@ activity reached the event log or the Agents view.
   MCP only, without plan, edits or permission prompts.
 - Spec and protocol: `RUN-1` (a run is created from the first hook event or
   the first MCP write), agent-protocol §1, §4 and §7.1, a decision record,
-  and the protocol skill text. Additive: `PROTOCOL_VERSION` stays 1.
+  and the protocol skill text. Additive: `PROTOCOL_VERSION` stays 2.
 - Before building, confirm with each agent that one MCP server process
   serves one session and is closed when the session ends (documented for
   Claude Code; to be checked for Codex).

@@ -137,7 +137,7 @@ func TestVersionPrintsBuildAndProtocol(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("code=%d stderr=%q", code, stderr)
 	}
-	want := "flashheart v0.0.1 (commit abc1234, built 2026-10-04)\nagent protocol 1\n"
+	want := "flashheart v0.0.1 (commit abc1234, built 2026-10-04)\nagent protocol 2\n"
 	if stdout != want {
 		t.Errorf("stdout = %q, want %q", stdout, want)
 	}
@@ -561,19 +561,51 @@ func TestHookRecordsEventsAndPrintsNothing(t *testing.T) {
 
 	h := newHarness(t)
 	root := t.TempDir()
-	outside, _ := filepath.EvalSymlinks(t.TempDir())
-	h.stdin = `{"session_id":"abc123","cwd":"` + outside + `","hook_event_name":"UserPromptSubmit","prompt":"secret plans"}`
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	repo := filepath.Join(base, "demo")
+	mustWrite(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
+	h.stdin = `{"session_id":"abc123","cwd":"` + repo + `","hook_event_name":"UserPromptSubmit","prompt":"secret plans"}`
 	code, stdout, stderr := h.run("hook", "claude", "UserPromptSubmit", "--root", root)
 	if code != 0 || stdout != "" || stderr != "" {
 		t.Fatalf("hook = %d, %q, %q", code, stdout, stderr)
 	}
-	files, _ := filepath.Glob(filepath.Join(root, "_scratch", ".flashheart", "events", "*.jsonl"))
+	files, _ := filepath.Glob(filepath.Join(root, "demo", ".flashheart", "events", "*.jsonl"))
 	if len(files) != 1 {
 		t.Fatalf("event files = %v", files)
 	}
 	data, _ := os.ReadFile(files[0])
 	if !strings.Contains(string(data), `"run":"claude:abc123"`) || strings.Contains(string(data), "secret plans") {
 		t.Fatalf("event log = %s", data)
+	}
+}
+
+// Outside git a Claude Code session is not recorded (PRJ-4): its hooks exit
+// 0, print nothing and leave the root empty, even for a lone SessionEnd,
+// and the installed skill is left for a session in a repository to refresh.
+func TestHookOutsideGitRecordsNothing(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	root := t.TempDir()
+	skill := filepath.Join(h.home, ".claude", "skills", "flashheart", "SKILL.md")
+	old := "---\nname: flashheart\ndescription: old\nmetadata:\n  flashheart-protocol: 1\n---\n\nOld.\n"
+	mustWrite(t, skill, old)
+	outside, _ := filepath.EvalSymlinks(t.TempDir())
+	for _, payload := range []struct{ event, extra string }{
+		{"SessionStart", `"source":"startup"`},
+		{"UserPromptSubmit", `"prompt":"tidy up"`},
+		{"SessionEnd", `"reason":"other"`},
+	} {
+		h.stdin = `{"session_id":"abc123","cwd":"` + outside + `","hook_event_name":"` + payload.event + `",` + payload.extra + `}`
+		if code, stdout, stderr := h.run("hook", "claude", payload.event, "--root", root); code != 0 || stdout != "" || stderr != "" {
+			t.Errorf("%s = %d, %q, %q", payload.event, code, stdout, stderr)
+		}
+	}
+	if entries, _ := os.ReadDir(root); len(entries) != 0 {
+		t.Fatalf("root after a session outside git = %v", entries)
+	}
+	if got, _ := os.ReadFile(skill); string(got) != old {
+		t.Fatalf("skill changed outside git:\n%s", got)
 	}
 }
 
@@ -650,7 +682,7 @@ func TestMCPServesTheProtocolOnStdio(t *testing.T) {
 			t.Fatalf("not a protocol message: %q", line)
 		}
 	}
-	for _, part := range []string{`"name":"flashheart"`, `"instructions":"Flashheart (protocol 1)`} {
+	for _, part := range []string{`"name":"flashheart"`, `"instructions":"Flashheart (protocol 2)`} {
 		if !strings.Contains(lines[0], part) {
 			t.Errorf("initialize result missing %s:\n%s", part, lines[0])
 		}
@@ -805,8 +837,10 @@ func TestClaudeSessionStartRefreshesTheInstalledSkill(t *testing.T) {
 	if err := os.WriteFile(skill, []byte("---\nname: flashheart\ndescription: old\nmetadata:\n  flashheart-protocol: 1\n---\n\nOld.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	outside, _ := filepath.EvalSymlinks(t.TempDir())
-	h.stdin = `{"session_id":"abc123","cwd":"` + outside + `","hook_event_name":"SessionStart","source":"startup"}`
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	repo := filepath.Join(base, "demo")
+	mustWrite(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
+	h.stdin = `{"session_id":"abc123","cwd":"` + repo + `","hook_event_name":"SessionStart","source":"startup"}`
 	code, stdout, stderr := h.run("hook", "claude", "SessionStart", "--root", root)
 	if code != 0 || stderr != "" || !strings.Contains(stdout, "flashheart skill was updated") {
 		t.Fatalf("hook = %d, %q, %q", code, stdout, stderr)

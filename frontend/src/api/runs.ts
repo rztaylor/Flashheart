@@ -18,6 +18,9 @@ export interface RunCounts {
   quiet: number;
   ended: number;
   live: number;
+  // needsYouUnticketed are the runs in Needs you with no ticket on the
+  // board, which the Needs you filter cannot show (FH-44).
+  needsYouUnticketed: number;
 }
 
 export const noRuns: RunCounts = {
@@ -27,6 +30,7 @@ export const noRuns: RunCounts = {
   quiet: 0,
   ended: 0,
   live: 0,
+  needsYouUnticketed: 0,
 };
 
 // Live is a card's badge: the linked run that most needs attention.
@@ -48,6 +52,24 @@ export interface Live {
   // questionAnswered: that question's answer waits for the next prompt.
   questionAnswered: boolean;
   lastActivity: string;
+}
+
+// TicketSessions summarises the sessions working for a ticket (RUN-9): the
+// run that speaks for it (the live one that most needs attention, else the
+// most recently active; "" with no run), its state ("ended" when none is
+// live, "" with no run), the latest activity of any of them, its handoff
+// flags, and the ticket's subagents by state (subagents never wait).
+export interface TicketSessions {
+  run: string;
+  short: string;
+  agent: string;
+  state: RunState | "";
+  lastActivity: string;
+  // noLiveSession: the ticket is in progress and no live run works on it.
+  noLiveSession: boolean;
+  dirty: boolean;
+  noHandoff: boolean;
+  subagents: { done: number; running: number; needsYou: number };
 }
 
 export type QuestionKind = "question" | "decision" | "review" | "blocked";
@@ -86,6 +108,9 @@ export interface TimelineEntry {
   tool?: string;
   path?: string;
   failed?: boolean;
+  // tools and failures count an activity record's tool uses (FH-55).
+  tools?: number;
+  failures?: number;
   detail?: string;
   ticket?: string;
 }
@@ -143,7 +168,8 @@ export function isRunCounts(value: unknown): value is RunCounts {
     isNumber(value.waiting) &&
     isNumber(value.quiet) &&
     isNumber(value.ended) &&
-    isNumber(value.live)
+    isNumber(value.live) &&
+    isNumber(value.needsYouUnticketed)
   );
 }
 
@@ -162,6 +188,24 @@ export function isLive(value: unknown): value is Live {
     (value.question === "" || isQuestionKind(value.question)) &&
     typeof value.questionAnswered === "boolean" &&
     isString(value.lastActivity)
+  );
+}
+
+export function isTicketSessions(value: unknown): value is TicketSessions {
+  return (
+    isRecord(value) &&
+    isString(value.run) &&
+    isString(value.short) &&
+    isString(value.agent) &&
+    (value.state === "" || isRunState(value.state)) &&
+    isString(value.lastActivity) &&
+    typeof value.noLiveSession === "boolean" &&
+    typeof value.dirty === "boolean" &&
+    typeof value.noHandoff === "boolean" &&
+    isRecord(value.subagents) &&
+    isNumber(value.subagents.done) &&
+    isNumber(value.subagents.running) &&
+    isNumber(value.subagents.needsYou)
   );
 }
 

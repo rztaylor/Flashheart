@@ -24,14 +24,19 @@ describe("routes", () => {
     expect(formatRoute(route)).toBe("#/p/my%20project/workstreams?t=FH-42");
   });
 
-  it("routes the Agents view", () => {
-    expect(parseRoute("#/p/alpha/agents")).toEqual({
+  it("routes the Overview, and lands an old Agents route there", () => {
+    expect(parseRoute("#/p/alpha/overview")).toEqual({
       scope: { kind: "project", project: "alpha" },
-      view: "agents",
+      view: "overview",
     });
-    expect(formatRoute({ scope: { kind: "all" }, view: "agents" })).toBe(
-      "#/all/agents",
+    expect(formatRoute({ scope: { kind: "all" }, view: "overview" })).toBe(
+      "#/all/overview",
     );
+    expect(parseRoute("#/p/alpha/agents?t=AL-3")).toEqual({
+      scope: { kind: "project", project: "alpha" },
+      view: "overview",
+      ticket: { id: "AL-3" },
+    });
   });
 
   it("ignores unknown views and malformed ticket ids", () => {
@@ -40,6 +45,32 @@ describe("routes", () => {
       view: "board",
     });
     expect(parseRoute("#/all/board?t=../x")).toEqual({
+      scope: { kind: "all" },
+      view: "board",
+    });
+  });
+
+  it("routes a ticket's full page by id (KEY-3)", () => {
+    expect(parseRoute("#/ticket/FH-42")).toEqual({
+      scope: { kind: "all" },
+      view: "ticket",
+      ticket: { id: "FH-42" },
+    });
+    expect(
+      formatRoute({
+        scope: { kind: "project", project: "flashheart" },
+        view: "ticket",
+        ticket: { id: "FH-42" },
+      }),
+    ).toBe("#/ticket/FH-42");
+  });
+
+  it("falls back to the board for a full page without a valid id", () => {
+    expect(parseRoute("#/ticket/../x")).toEqual({
+      scope: { kind: "all" },
+      view: "board",
+    });
+    expect(parseRoute("#/ticket")).toEqual({
       scope: { kind: "all" },
       view: "board",
     });

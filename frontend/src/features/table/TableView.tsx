@@ -10,6 +10,7 @@ import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Pill, StatusPill, Tag } from "../../components/Pill";
 import { RunStateLabel } from "../../components/RunState";
+import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { priorityLabel } from "../../model/status";
 import { runningTime } from "../../model/time";
@@ -153,18 +154,20 @@ export function TableView({
                 className={`[&>td]:border-b [&>td]:border-rule last:[&>td]:border-b-0 ${isSelected ? "bg-select-surface" : "hover:bg-well"}`}
               >
                 <td className="max-w-[28rem] px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() => onOpen({ id: card.id })}
-                    className="flex flex-col text-left"
-                  >
-                    <span className="font-semibold text-ink hover:underline">
+                  {/* The title opens the panel; the id, the full page. */}
+                  <span className="flex flex-col items-start">
+                    <button
+                      type="button"
+                      onClick={() => onOpen({ id: card.id })}
+                      className="text-left font-semibold text-ink hover:underline"
+                    >
                       {card.title}
-                    </span>
-                    <span className="text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
-                      {card.id}
-                    </span>
-                  </button>
+                    </button>
+                    <TicketLink
+                      id={card.id}
+                      className="text-2xs text-ink-muted hover:text-ink"
+                    />
+                  </span>
                 </td>
                 {projectNames ? (
                   <td className="px-3 py-2 text-ink-muted">
@@ -172,7 +175,7 @@ export function TableView({
                   </td>
                 ) : null}
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <StatusPill column={card.column} />
+                  <StatusPill column={card.column} rejected={card.rejected} />
                 </td>
                 <td className="px-3 py-2">
                   {card.type ? <Tag>{card.type}</Tag> : null}

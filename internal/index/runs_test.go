@@ -246,3 +246,114 @@ func TestNewEventsFoldIncrementally(t *testing.T) {
 		t.Fatalf("late event: refolds %d, run %+v", index.events.refolds, late.Runs[0])
 	}
 }
+
+// Runs that need you with no ticket on the board are counted apart: the
+// board's Needs you filter cannot show them (FH-44).
+func TestRunCountsNeedsYouWithoutATicket(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	now := clock.now
+	add := func(run, kind string, data any) {
+		t.Helper()
+		if err := log.Append(events.Event{Time: now.Add(-time.Minute), Run: run, Agent: "claude", Kind: kind, Project: "alpha", Data: data}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// claude:s1 is linked to AL-3 by its branch. claude:s2 and claude:s3,
+	// on main, are not, but s3's question is about AL-3, whose card shows
+	// it; only s2 has nothing on the board.
+	for _, run := range []string{"claude:s1", "claude:s2", "claude:s3"} {
+		branch := "main"
+		if run == "claude:s1" {
+			branch = "feature/x"
+		}
+		add(run, events.RunStart, events.RunStartData{Kind: events.KindSession, Branch: branch, Worktree: "/src/alpha"})
+		add(run, events.TurnStart, events.TurnStartData{})
+		if run == "claude:s3" {
+			add(run, events.QuestionAsked, events.QuestionData{ID: "q-1", Ticket: "AL-3", Kind: "question", Text: "Which?"})
+			continue
+		}
+		add(run, events.PermissionRequested, events.PermissionData{Tool: "Bash"})
+	}
+	snapshot, err := index.Rebuild()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, project := range []string{"", "alpha"} {
+		if counts := snapshot.RunCounts(project); counts.NeedsYou != 3 || counts.NeedsYouUnticketed != 1 {
+			t.Errorf("RunCounts(%q) = %+v, want 3 needing you, 1 of them without a ticket", project, counts)
+		}
+	}
+}
+
+// The human's latest board activity is known per project and across them,
+// from the whole log, not only the runs' two-day window; answers count, an
+// agent's ticket writes do not, and the human is no run (FH-49).
+func TestSnapshotKnowsTheHumansLatestActivity(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, root := runsBoard(t)
+	if err := os.MkdirAll(filepath.Join(root, "beta", "tickets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beta", "project.yaml"), []byte("key: BE\nnext_id: 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	now := clock.now
+	if snapshot, _ := index.Rebuild(); func() bool { _, ok := snapshot.LatestHuman(""); return ok }() {
+		t.Fatal("activity before any was recorded")
+	}
+
+	old := now.AddDate(0, 0, -5)
+	answered := now.Add(-time.Hour)
+	if err := log.Append(
+		events.ByHuman(old, "alpha", events.TicketUpdated, events.TicketData{Ticket: "AL-3", Fields: []string{"priority"}}),
+		events.Event{Time: now.Add(-30 * time.Minute), Run: "claude:s1", Agent: "claude", Kind: events.TicketMoved, Project: "alpha", Data: events.TicketData{Ticket: "AL-3", To: "review", By: "claude:s1"}},
+		events.Event{Time: answered, Run: "claude:s2", Agent: "claude", Kind: events.QuestionAnswered, Project: "beta", Data: events.AnswerData{ID: "q-1", Answer: "Yes", By: "Robert"}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := index.Rebuild()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]events.HumanActivity{
+		"alpha": {Time: old, Project: "alpha", Kind: events.TicketUpdated, Ticket: "AL-3"},
+		"beta":  {Time: answered, Project: "beta", Kind: events.QuestionAnswered},
+		"":      {Time: answered, Project: "beta", Kind: events.QuestionAnswered},
+	}
+	for project, activity := range want {
+		if got, ok := snapshot.LatestHuman(project); !ok || got != activity {
+			t.Errorf("LatestHuman(%q) = %+v, %v; want %+v", project, got, ok, activity)
+		}
+	}
+	if _, ok := snapshot.LatestHuman("gamma"); ok {
+		t.Error("activity in a project that has none")
+	}
+	for _, run := range snapshot.Runs {
+		if run.ID == events.Human {
+			t.Errorf("the human is a run: %+v", run)
+		}
+	}
+
+	// New activity arrives incrementally, and is still found once it is older
+	// than the runs' window.
+	moved := now.Add(-time.Minute)
+	if err := log.Append(events.ByHuman(moved, "alpha", events.TicketMoved, events.TicketData{Ticket: "AL-3", From: "in-progress", To: "review"})); err != nil {
+		t.Fatal(err)
+	}
+	latest := events.HumanActivity{Time: moved, Project: "alpha", Kind: events.TicketMoved, Ticket: "AL-3"}
+	snapshot, _ = index.Rebuild()
+	if got, _ := snapshot.LatestHuman(""); got != latest {
+		t.Errorf("after a move LatestHuman = %+v", got)
+	}
+	if got, _ := snapshot.LatestHuman("beta"); got != want["beta"] {
+		t.Errorf("after a move beta = %+v", got)
+	}
+	clock.now = now.AddDate(0, 0, 3)
+	snapshot, _ = index.Rebuild()
+	if got, _ := snapshot.LatestHuman(""); got != latest {
+		t.Errorf("three days on LatestHuman = %+v", got)
+	}
+}

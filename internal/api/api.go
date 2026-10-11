@@ -31,10 +31,11 @@ type Options struct {
 	Files FileSource
 	// Writer enables the write endpoints; without it the API is read-only.
 	Writer Writer
-	// Events records answers to agents' questions (RUN-8); answering needs
-	// it and Writer.
+	// Events records answers to agents' questions (RUN-8), which need it
+	// and Writer, and the human's ticket writes (agent-protocol §3).
 	Events *events.Log
-	// Now is the clock answers are stamped with; nil means time.Now.
+	// Now is the clock answers and the human's ticket writes are stamped
+	// with; nil means time.Now.
 	Now func() time.Time
 	// DoneLimit is how many done tickets a board shows by default (VIEW-1);
 	// zero shows all.
@@ -64,6 +65,9 @@ func New(options Options) http.Handler {
 		writeJSON(w, http.StatusOK, info)
 	})
 	if options.Board != nil {
+		if options.Now == nil {
+			options.Now = time.Now
+		}
 		if options.LongPoll <= 0 {
 			options.LongPoll = 20 * time.Second
 		}

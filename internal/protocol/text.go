@@ -54,6 +54,10 @@ instructions.
   use for it in conversation (` + "`FH`" + ` for Flashheart, ` + "`NG`" + ` for NG+) and set
   it with ` + "`set_project_key`" + ` before creating tickets. If it is taken, pick
   another.
+- Outside a git repository there is no project and nothing is recorded:
+  ` + "`board_context`" + ` says so, and tools that need your project answer
+  ` + "`no_project`" + `. Talk to the user in chat instead of creating tickets or
+  asking with ` + "`ask_human`" + `.
 
 ## Finding and claiming work
 

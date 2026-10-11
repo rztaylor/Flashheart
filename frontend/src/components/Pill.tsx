@@ -4,7 +4,9 @@ import { type Paint, paintVars } from "../model/paint";
 import { type StateTone, statusOf } from "../model/status";
 import { Icon, type IconName } from "./Icon";
 
-const toneClass: Record<StateTone, string> = {
+// stateToneClass and stateToneIcon are a state's colour role and its icon,
+// for the pill and the Overview's pipeline (FH-63).
+export const stateToneClass: Record<StateTone, string> = {
   neutral: "bg-(--fh-state-neutral) text-(--fh-state-neutral-ink)",
   progress: "bg-(--fh-state-progress) text-(--fh-state-progress-ink)",
   review: "bg-(--fh-state-review) text-(--fh-state-review-ink)",
@@ -12,7 +14,7 @@ const toneClass: Record<StateTone, string> = {
   blocked: "bg-(--fh-state-blocked) text-(--fh-state-blocked-ink)",
 };
 
-const toneIcon: Record<StateTone, IconName> = {
+export const stateToneIcon: Record<StateTone, IconName> = {
   neutral: "ring",
   progress: "half",
   review: "review",
@@ -39,25 +41,34 @@ export function Pill({
   return (
     <span
       data-tone={tone}
-      className={`${pillBase} text-2xs ${toneClass[tone]} ${className ?? ""}`}
+      className={`${pillBase} text-2xs ${stateToneClass[tone]} ${className ?? ""}`}
     >
-      <Icon name={icon ?? toneIcon[tone]} size={11} />
+      <Icon name={icon ?? stateToneIcon[tone]} size={11} />
       {children}
     </span>
   );
 }
 
-// StatusPill names a ticket's column (or an archived or missing station).
+// StatusPill names a ticket's column (or an archived or missing station),
+// or Rejected, with a cross rather than a check, for a rejected ticket in
+// Done.
 export function StatusPill({
   column,
+  rejected,
   className,
 }: {
   column: string;
+  rejected?: boolean;
   className?: string;
 }) {
-  const { tone, label } = statusOf(column);
+  const { tone, label } = statusOf(column, rejected);
+  const crossed = rejected && column === "done";
   return (
-    <Pill tone={tone} className={className}>
+    <Pill
+      tone={tone}
+      icon={crossed ? "close" : undefined}
+      className={className}
+    >
       {label}
     </Pill>
   );
@@ -67,10 +78,14 @@ export function StatusPill({
 // reasons wrap within the pill rather than running off the card.
 export function BlockerPill({
   children,
+  title,
   lines = 3,
   className,
 }: {
-  children: string;
+  // children is the reason, as text or with its ticket ids linked; title
+  // carries it as text for the tooltip.
+  children: ReactNode;
+  title?: string;
   // lines clamps a long reason; its full text stays in the tooltip.
   lines?: 1 | 2 | 3;
   className?: string;
@@ -79,8 +94,8 @@ export function BlockerPill({
   return (
     <span
       data-tone="blocked"
-      title={children}
-      className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${toneClass.blocked} ${className ?? ""}`}
+      title={title ?? (typeof children === "string" ? children : undefined)}
+      className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${stateToneClass.blocked} ${className ?? ""}`}
     >
       <Icon name="diamond" size={12} className="mt-[0.15em]" />
       <span className={clamp[lines]}>

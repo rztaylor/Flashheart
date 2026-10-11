@@ -6,13 +6,13 @@ import {
   compactTimeline,
   counted,
   describeEntry,
-  laneRuns,
   liveReason,
   mcpOnly,
   needsReason,
   permissionReason,
   planStations,
   questionReason,
+  runAgentName,
   sessionsOf,
   shortID,
   startedByMCP,
@@ -52,55 +52,6 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     ...patch,
   };
 }
-
-describe("laneRuns", () => {
-  it("puts Needs you first, nests subagents and orders by urgency", () => {
-    const lanes = laneRuns([
-      run("claude:a", {
-        state: "working",
-        lastActivity: "2026-10-05T10:05:00Z",
-        children: ["claude:a/x"],
-      }),
-      run("claude:a/x", { state: "needs-you" }),
-      run("claude:b", {
-        state: "needs-you",
-        lastActivity: "2026-10-05T10:09:00Z",
-      }),
-      run("claude:c", {
-        state: "needs-you",
-        lastActivity: "2026-10-05T10:01:00Z",
-      }),
-      run("claude:d", {
-        state: "working",
-        lastActivity: "2026-10-05T10:08:00Z",
-      }),
-      run("claude:e", { state: "ended" }),
-      run("claude:gone/y", { state: "working" }),
-    ]);
-    expect(lanes.map((lane) => lane.state)).toEqual([
-      "needs-you",
-      "working",
-      "quiet",
-      "waiting",
-      "ended",
-    ]);
-    // Longest-waiting first in Needs you; most recent first elsewhere.
-    expect(lanes[0]?.runs.map((entry) => entry.run.id)).toEqual([
-      "claude:c",
-      "claude:b",
-    ]);
-    expect(lanes[1]?.runs.map((entry) => entry.run.id)).toEqual([
-      "claude:d",
-      "claude:a",
-      "claude:gone/y",
-    ]);
-    // A subagent rides with its session, whatever its own state.
-    expect(lanes[1]?.runs[1]?.children.map((child) => child.id)).toEqual([
-      "claude:a/x",
-    ]);
-    expect(lanes[4]?.runs).toHaveLength(1);
-  });
-});
 
 describe("describeEntry", () => {
   const entry = (patch: Partial<TimelineEntry>): TimelineEntry => ({
@@ -163,7 +114,32 @@ describe("describeEntry", () => {
         entry({ kind: "question.answered-in-session", ticket: "FH-1" }),
       ),
     ).toBe("Question on FH-1 answered in the session");
+    expect(describeEntry(entry({ kind: "ticket.moved", ticket: "FH-1" }))).toBe(
+      "Moved FH-1",
+    );
+    expect(
+      describeEntry(entry({ kind: "ticket.created", ticket: "FH-2" })),
+    ).toBe("Created FH-2");
+    expect(
+      describeEntry(entry({ kind: "review.written", ticket: "FH-1" })),
+    ).toBe("Wrote the review of FH-1");
     expect(describeEntry(entry({ kind: "future.kind" }))).toBe("future.kind");
+  });
+
+  it("summarises activity records (FH-55)", () => {
+    const activity = (patch: Partial<TimelineEntry>) =>
+      entry({ kind: "activity", ...patch });
+    expect(describeEntry(activity({ tools: 12 }))).toBe("12 tool uses");
+    expect(describeEntry(activity({ tools: 1 }))).toBe("1 tool use");
+    expect(describeEntry(activity({ tools: 12, failures: 2 }))).toBe(
+      "12 tool uses, 2 failed",
+    );
+    expect(describeEntry(activity({ tools: 1, path: "src/app.ts" }))).toBe(
+      "Edited src/app.ts",
+    );
+    expect(
+      describeEntry(activity({ tools: 3, failures: 1, path: "src/app.ts" })),
+    ).toBe("Edited src/app.ts, 3 tool uses, 1 failed");
   });
 });
 
@@ -187,6 +163,29 @@ describe("compactTimeline", () => {
       ["Prompt", 1],
     ]);
     expect(compact[2]?.entry.time).toBe(at(3));
+  });
+
+  it("adds up consecutive activity records that edited nothing", () => {
+    const at = (minute: number) => `2026-10-05T10:0${minute}:00Z`;
+    const compact = compactTimeline([
+      { time: at(0), kind: "turn.start" },
+      { time: at(1), kind: "activity", tools: 4 },
+      { time: at(2), kind: "activity", tools: 6, failures: 1 },
+      { time: at(3), kind: "activity", tools: 2, path: "a.ts" },
+      { time: at(4), kind: "activity", tools: 5 },
+      { time: at(5), kind: "activity", tools: 3, failures: 2 },
+      { time: at(6), kind: "turn.end" },
+    ]);
+    expect(
+      compact.map((item) => [describeEntry(item.entry), item.count]),
+    ).toEqual([
+      ["Turn finished", 1],
+      ["8 tool uses, 2 failed", 1],
+      ["Edited a.ts, 2 tool uses", 1],
+      ["10 tool uses, 1 failed", 1],
+      ["Prompt", 1],
+    ]);
+    expect(compact[1]?.entry.time).toBe(at(5));
   });
 });
 
@@ -216,8 +215,13 @@ describe("planStations", () => {
 });
 
 it("marks runs the MCP server started for agents without hooks", () => {
-  const hookless = run("codex:mcp-0a1b2c3d4e5f", { source: "mcp" });
+  const hookless = run("codex:mcp-0a1b2c3d4e5f", {
+    agent: "codex",
+    source: "mcp",
+  });
   expect(mcpOnly(hookless)).toBe(true);
+  expect(runAgentName(hookless)).toBe("Codex (MCP only)");
+  expect(runAgentName(run("claude:s"))).toBe("Claude");
   expect(mcpOnly(run("claude:s", { source: "startup" }))).toBe(false);
   expect(startedByMCP("codex:mcp-0a1b2c3d4e5f")).toBe(true);
   expect(startedByMCP("claude:5b0c7e2a-1f3d")).toBe(false);
@@ -262,7 +266,7 @@ it("names the subagent a session is waiting on", () => {
   ).toBe("Subagent needs permission");
 });
 
-it("gives a card's live run the same reason as the Agents view", () => {
+it("gives a card's live run the same reason as its run on the Runs tab", () => {
   const live = {
     run: "claude:s",
     short: "claude:s",
@@ -316,7 +320,7 @@ it("says what a question asks for, and when its answer is on its way", () => {
       answeredAt: "2026-10-05T10:01:00Z",
     }),
   ).toBe("Answer waits for its next prompt");
-  // A run without hooks gets its answer with its next tool call (D30).
+  // A run without hooks gets its answer with its next tool call (D34).
   expect(
     questionReason({
       ...asked,

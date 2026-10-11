@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -28,8 +29,9 @@ type ArchivedJSON struct {
 	Type       string `json:"type"`
 	Priority   string `json:"priority"`
 	Workstream string `json:"workstream"`
-	// Column is where Restore returns it.
-	Column string `json:"column"`
+	// Column is where Restore returns it; Rejected that it is rejected there.
+	Column   string `json:"column"`
+	Rejected bool   `json:"rejected"`
 	// Archived is when it was archived: its last update.
 	Archived    string `json:"archived"`
 	Attachments int    `json:"attachments"`
@@ -106,7 +108,7 @@ func (b boardAPI) archived(w http.ResponseWriter, r *http.Request) {
 		}
 		response.Tickets = append(response.Tickets, ArchivedJSON{
 			ID: item.Ticket.ID, Title: item.Ticket.Title, Type: item.Ticket.Type, Priority: item.Ticket.Priority,
-			Workstream: item.Ticket.Workstream, Column: string(item.Ticket.Column), Archived: archived,
+			Workstream: item.Ticket.Workstream, Column: string(item.Ticket.Column), Rejected: item.Ticket.Rejected, Archived: archived,
 			Attachments: item.Attachments, HasReview: item.Review,
 		})
 	}
@@ -189,5 +191,6 @@ func (b boardAPI) deleteArchived(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: id, Fields: []string{"deleted"}})
 	b.saved(w, http.StatusOK, "", nil)
 }

@@ -18,7 +18,6 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 │   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
 │   └── serve.log                         background serve diagnostics (LIFE-4), rotated at 1 MB
 ├── .archive/<project>/                   archived projects (PRJ-5), as they were
-├── _scratch/                             agent activity outside any git repository (PRJ-4)
 └── <project>/                            e.g. flashheart
     ├── project.yaml                      key, display name, repos, next id (PRJ-3, KEY-1)
     ├── workstreams/<slug>.md
@@ -32,7 +31,9 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
     ├── .archive/tickets/FH-7-old-idea/   archived tickets (EDIT-8)
     └── .flashheart/
         ├── lock                          advisory project lock (STO-3)
-        └── events/2026-10-05.jsonl       event log (STO-5)
+        ├── events/2026-10-05.jsonl       event log (STO-5)
+        ├── answers/<agent>--<session>.jsonl   answers waiting for a session's next prompt (HOOK-5)
+        └── activity/<agent>--<session>.json   tool activity hooks have not recorded yet (agent-protocol §3)
 ```
 
 Rules:
@@ -46,7 +47,9 @@ Rules:
   `<id>-*.md` file in it is read with a warning. A folder with no ticket file,
   or more than one candidate, is ignored.
 - Two tickets with the same id are both shown as *needs repair*.
-- Directories starting with `.` are Flashheart's or archives. Unknown files and
+- Directories starting with `.` are Flashheart's or archives; directories
+  starting with `_` are not projects (`PRJ-1`), so a `_scratch/` left by an
+  older version (before D33) is ignored and can be deleted. Unknown files and
   directories are ignored and preserved.
 
 ## Ticket ids (KEY)
@@ -78,7 +81,7 @@ Rules:
 ```markdown
 ---
 id: FH-42
-status: up-next          # backlog | up-next | in-progress | review | done
+status: up-next          # backlog | up-next | in-progress | review | done | rejected
 type: feature            # feature | test | bug | refactor | infra | docs | spike
 priority: high           # high | medium | low
 created: 2026-10-04
@@ -108,7 +111,7 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 | Field | Required | Notes |
 |---|---|---|
 | `id` | yes | `<key>-<number>`. Taken from the folder name, with a warning, when absent. |
-| `status` | yes | The column. Missing reads as `backlog` with a warning; an unknown value marks the ticket *needs repair* (shown in Backlog). |
+| `status` | yes | The column, or `rejected` (shown in Done). Missing reads as `backlog` with a warning; an unknown value marks the ticket *needs repair* (shown in Backlog). |
 | `type` | yes | `feature`, `test`, `bug`, `refactor`, `infra`, `docs`, `spike`. |
 | `priority` | yes | `high`, `medium`, `low`. |
 | `created` | yes | `YYYY-MM-DD`. Orders numbering at migration and ties in sorting. |
@@ -132,6 +135,13 @@ The title is the first `#` heading. Unknown keys are preserved in place
 | `in-progress` | In progress | Being worked on. |
 | `review` | Ready to review | Implemented; waiting for human review. |
 | `done` | Done | Accepted. |
+| `rejected` | Done | Closed without being accepted (FH-58). |
+
+`rejected` is a Done state: the ticket sits in the Done column and counts as
+done everywhere (blocking, workstream progress, the done limit, ordering),
+but says *Rejected* wherever its status is shown. Like Done, only humans set
+it: the MCP `move` refuses it. Moving a rejected ticket anywhere, Done
+included, writes that status and so clears the rejection.
 
 A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content
@@ -298,6 +308,7 @@ version: 2
 auto_create_projects: true
 quiet_minutes: 10
 lease_minutes: 30         # a claim outlives its run's last activity this long
+activity_seconds: 60      # at most one activity record per run this often (agent-protocol §3)
 enforce_handoff: false    # HOOK-6; a project's settings.enforce_handoff overrides it
 user_name: ""             # who answers agents' questions (RUN-8); empty: the computer account's name
 event_retention_days: 90
@@ -308,7 +319,7 @@ ui:
   theme: system           # system | light | dark
   density: normal         # compact | normal | detailed
   colour_by: type         # type | priority | age | none
-  virtual_columns: [needs-you]   # needs-you; [] shows none (agent-working is ignored)
+  hidden_columns: []      # real columns left off the Board: backlog (FH-41); absent shows all
   scopes:                 # remembered view and filters, per project or "all"
     flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked}   # view: board, agents, workstreams or table
 ```
@@ -316,7 +327,9 @@ ui:
 Each of a scope's `type`, `priority`, `workstream` and `age` (today, week or
 older) filters lists the values shown only (`include`, any of them) and the
 values hidden (`exclude`), at most 100 each. A bare value, the form before
-FH-39, reads as one included value; `hide_later` is ignored.
+FH-39, reads as one included value; `hide_later` is ignored. The
+`virtual_columns` list of earlier versions
+is ignored, and dropped when preferences are next saved.
 
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
 other settings, unknown keys and comments.

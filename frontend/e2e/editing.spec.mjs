@@ -369,6 +369,64 @@ test("moving into review warns about unticked criteria", async () => {
   await expect(toast).toContainText("2 acceptance criteria are not ticked.");
 });
 
+test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", async () => {
+  await open("#/p/flashheart/board?t=FH-5");
+  const panel = page.getByRole("complementary", { name: "Ticket FH-5" });
+  await panel.getByLabel("Move to").selectOption("rejected");
+  const toast = page.getByRole("status").filter({ hasText: "Rejected FH-5." });
+  await expect(toast).toBeVisible();
+  await expect.poll(() => ticketById("FH-5")).toContain("status: rejected");
+  const rejected = column("Done").getByRole("button", {
+    name: /^Log background diagnostics to serve\.log, FH-5, rejected/,
+  });
+  await expect(rejected).toBeVisible();
+  await expect(panel.getByLabel("Move to")).toHaveValue("rejected");
+  await toast.getByRole("button", { name: "Dismiss" }).click();
+  await rejected.scrollIntoViewIfNeeded();
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`rejected ticket ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `rejected-board-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.keyboard.press("Escape");
+
+  await open("#/p/flashheart/workstreams");
+  const station = page.getByRole("button", {
+    name: /^Log background diagnostics to serve\.log, Rejected/,
+  });
+  await station.scrollIntoViewIfNeeded();
+  await expect(station).toBeVisible();
+  await page.screenshot({
+    path: resolve(screenshotDir, "rejected-workstreams-1440-light.png"),
+  });
+  await open("#/p/flashheart/table");
+  const row = page.getByRole("row", { name: /Log background diagnostics/ });
+  await row.scrollIntoViewIfNeeded();
+  await expect(row).toContainText("Rejected");
+  await page.screenshot({
+    path: resolve(screenshotDir, "rejected-table-1440-light.png"),
+  });
+
+  await open("#/p/flashheart/board");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("combobox", { name: "Column" }).selectOption("done");
+  await expect(rejected).toBeVisible();
+  await page.screenshot({
+    path: resolve(screenshotDir, "rejected-board-390-light.png"),
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  // Moving it to Done clears the rejection.
+  await open("#/p/flashheart/board?t=FH-5");
+  await panel.getByLabel("Move to").selectOption("done");
+  await expect.poll(() => ticketById("FH-5")).toContain("status: done");
+  await expect(rejected).toHaveCount(0);
+  await page.keyboard.press("Escape");
+});
+
 test("criteria tick in the panel and save to the file", async () => {
   await open("#/p/flashheart/board?t=FH-33");
   const panel = page.getByRole("complementary", { name: "Ticket FH-33" });
@@ -649,9 +707,10 @@ test("the archive restores tickets and deletes them for good", async () => {
   // The ticket that depended on it no longer waits.
   await open("#/p/alpha/board");
   await expect(card("Long titles overflow the column")).toBeVisible();
-  await expect(card("Long titles overflow the column")).not.toContainText(
-    "AL-4",
-  );
+  // The card's button covers its drawing, which sits beside it.
+  await expect(
+    card("Long titles overflow the column").locator("xpath=.."),
+  ).not.toContainText("AL-4");
 });
 
 test("projects archive, restore and delete for good", async () => {
@@ -861,6 +920,84 @@ test("the theme choice is saved", async () => {
       readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
     )
     .toContain("theme: system");
+});
+
+test("the Backlog column can be hidden from View options (FH-41)", async () => {
+  const config = () =>
+    readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
+  const backlogBox = page.getByRole("checkbox", { name: "Backlog" });
+  await open("#/p/flashheart/board");
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.getByRole("button", { name: "View options" }).click();
+    await expect(backlogBox).toBeChecked();
+    // Needs you is a chip now, not a column to show (FH-44).
+    await expect(page.getByRole("checkbox", { name: "Needs you" })).toHaveCount(
+      0,
+    );
+    await page.screenshot({
+      path: resolve(screenshotDir, `view-options-backlog-1440-${theme}.png`),
+    });
+    await page.keyboard.press("Escape");
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "View options" }).click();
+  await backlogBox.uncheck();
+  await page.keyboard.press("Escape");
+  await expect(column("Backlog")).toHaveCount(0);
+  await expect.poll(config).toContain("hidden_columns: [backlog]");
+
+  // Shift with Left from Up next has no column to go to.
+  const first = column("Up next").getByRole("button").first();
+  const name = await first.getAttribute("aria-label");
+  await first.focus();
+  await page.keyboard.press("Shift+ArrowLeft");
+  await expect(
+    column("Up next").getByRole("button", { name, exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Moved" }),
+  ).toHaveCount(0);
+
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.locator("h1").click();
+    await page.screenshot({
+      path: resolve(screenshotDir, `backlog-hidden-1440-${theme}.png`),
+    });
+  }
+
+  // The narrow Column picker leaves it out too.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const picker = page.getByRole("combobox", { name: "Column" });
+  await expect(picker.locator("option")).toHaveText([
+    "Up next",
+    "In progress",
+    "Ready to review",
+    "Done",
+  ]);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.screenshot({
+      path: resolve(screenshotDir, `backlog-hidden-390-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  // The choice survives a reload, and showing it again saves that too.
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Backend connected. Check connection" }),
+  ).toBeVisible();
+  await expect(column("Up next")).toBeVisible();
+  await expect(column("Backlog")).toHaveCount(0);
+  await page.getByRole("button", { name: "View options" }).click();
+  await expect(backlogBox).not.toBeChecked();
+  await backlogBox.check();
+  await page.keyboard.press("Escape");
+  await expect(column("Backlog")).toBeVisible();
+  await expect.poll(config).toContain("hidden_columns: []");
 });
 
 test("switching theme keeps the view, filters, open ticket and scroll", async () => {

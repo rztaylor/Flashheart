@@ -43,6 +43,12 @@ func (s *Store) AppendEventLines(project, file string, lines []byte) error {
 		return err
 	}
 	defer release()
+	return s.appendEventLinesLocked(project, file, lines)
+}
+
+// appendEventLinesLocked appends to an event file whose project lock the
+// caller holds.
+func (s *Store) appendEventLinesLocked(project, file string, lines []byte) error {
 	root, _, err := s.handle()
 	if err != nil {
 		return err
@@ -119,6 +125,10 @@ var unsafeProjectRun = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 // may change (MIG-1).
 var ErrNeedsMigration = errors.New("the project uses board format v1; run flashheart migrate")
 
+// ErrNoProject reports activity outside any git repository, which belongs to
+// no project and is not recorded (PRJ-4).
+var ErrNoProject = errors.New("not in a project: the working directory is not inside a git repository")
+
 // ProjectName turns a repository directory name into a safe project name,
 // or "" when nothing usable is left.
 func ProjectName(name string) string {
@@ -145,15 +155,19 @@ func repoSuffix(repo string) string {
 // key when create is set (PRJ-5, KEY-5). A project that records no
 // repositories adopts this one; a project that records others leaves this
 // repository to <name>-<6 hex of sha256(repo)> (PRJ-3). An empty repo means
-// activity outside git, which goes to _scratch (PRJ-4); a name with nothing
-// usable becomes repo-<6 hex>, never _scratch. A v1 project is left for
-// migrate (ErrNeedsMigration). A repository whose project is archived gets
-// that project's name with ErrProjectArchived, and nothing is created.
+// activity outside git, which has no project: ErrNoProject, and nothing is
+// created (PRJ-4). A name with nothing usable becomes repo-<6 hex>. A v1
+// project is left for migrate (ErrNeedsMigration). A repository whose
+// project is archived gets that project's name with ErrProjectArchived, and
+// nothing is created.
 func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
+	if repo == "" {
+		return "", ErrNoProject
+	}
 	candidates := projectCandidates(name, repo)
 	// Fast path without a lock: the project already records this repository.
 	for _, candidate := range candidates {
-		if repos, ok := s.projectRepos(candidate); ok && (repo == "" || slices.Contains(repos, repo)) {
+		if repos, ok := s.projectRepos(candidate); ok && slices.Contains(repos, repo) {
 			return candidate, nil
 		}
 	}
@@ -163,8 +177,11 @@ func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 // FindProject is ProjectFor for callers that only read: it takes no lock and
 // writes nothing, so a project that records no repositories is found but
 // not given this one. A missing project is ErrNotFound with the name a
-// write would create.
+// write would create; outside git it is ErrNoProject.
 func (s *Store) FindProject(name, repo string) (string, error) {
+	if repo == "" {
+		return "", ErrNoProject
+	}
 	candidates := projectCandidates(name, repo)
 	for _, candidate := range candidates {
 		if s.IsV1Project(candidate) {
@@ -172,13 +189,13 @@ func (s *Store) FindProject(name, repo string) (string, error) {
 		}
 		repos, exists := s.projectRepos(candidate)
 		switch {
-		case exists && (repo == "" || len(repos) == 0 || slices.Contains(repos, repo)):
+		case exists && (len(repos) == 0 || slices.Contains(repos, repo)):
 			return candidate, nil
 		case exists:
 			continue
 		}
 		if archived, ok := s.archivedRepos(candidate); ok {
-			if repo == "" || len(archived) == 0 || slices.Contains(archived, repo) {
+			if len(archived) == 0 || slices.Contains(archived, repo) {
 				return candidate, fmt.Errorf("project %q: %w", candidate, ErrProjectArchived)
 			}
 			continue
@@ -189,17 +206,13 @@ func (s *Store) FindProject(name, repo string) (string, error) {
 }
 
 // projectCandidates are the names a repository's project may have (PRJ-2,
-// PRJ-3, PRJ-4).
+// PRJ-3).
 func projectCandidates(name, repo string) []string {
-	candidates := []string{ScratchProject}
-	if repo != "" {
-		base := ProjectName(name)
-		if base == "" {
-			base = "repo-" + repoSuffix(repo)
-		}
-		candidates = []string{base, base + "-" + repoSuffix(repo)}
+	base := ProjectName(name)
+	if base == "" {
+		base = "repo-" + repoSuffix(repo)
 	}
-	return candidates
+	return []string{base, base + "-" + repoSuffix(repo)}
 }
 
 func (s *Store) projectForLocked(candidates []string, repo string, create bool) (string, error) {
@@ -214,7 +227,7 @@ func (s *Store) projectForLocked(candidates []string, repo string, create bool) 
 		}
 		repos, exists := s.projectRepos(candidate)
 		switch {
-		case exists && (repo == "" || slices.Contains(repos, repo)):
+		case exists && slices.Contains(repos, repo):
 			return candidate, nil
 		case exists && len(repos) == 0:
 			return candidate, s.addRepo(candidate, repo)
@@ -224,7 +237,7 @@ func (s *Store) projectForLocked(candidates []string, repo string, create bool) 
 		// An archived project keeps its repositories: activity there waits
 		// for a restore instead of starting an empty project (PRJ-5).
 		if archived, ok := s.archivedRepos(candidate); ok {
-			if repo == "" || len(archived) == 0 || slices.Contains(archived, repo) {
+			if len(archived) == 0 || slices.Contains(archived, repo) {
 				return candidate, fmt.Errorf("project %q: %w", candidate, ErrProjectArchived)
 			}
 			continue

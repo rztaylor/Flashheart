@@ -23,6 +23,7 @@ describe("remembered scopes", () => {
     });
     expect(filtersFor(saved, "kept")).toEqual({ ...filters, query: "kept" });
     expect(filtersFor(undefined)).toEqual(emptyFilters);
+
     expect(sameScope(saved, rememberScope(filters, "table"))).toBe(true);
     expect(sameScope(saved, rememberScope(filters, "board"))).toBe(false);
     expect(
@@ -34,5 +35,14 @@ describe("remembered scopes", () => {
         ),
       ),
     ).toBe(false);
+  });
+
+  it("keeps the band's Needs you filter across scopes, unsaved (FH-44)", () => {
+    const on = { ...emptyFilters, needsYou: true };
+    expect(rememberScope(on, "board")).not.toHaveProperty("needsYou");
+    expect(filtersFor(undefined, "", true)).toEqual(on);
+    expect(filtersFor(rememberScope(emptyFilters, "board"), "", true)).toEqual(
+      on,
+    );
   });
 });

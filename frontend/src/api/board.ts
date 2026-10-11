@@ -4,10 +4,12 @@ import {
   isQuestion,
   isRun,
   isRunCounts,
+  isTicketSessions,
   type Live,
   type Question,
   type Run,
   type RunCounts,
+  type TicketSessions,
 } from "./runs";
 
 export type Column = "backlog" | "up-next" | "in-progress" | "review" | "done";
@@ -19,6 +21,26 @@ export const COLUMNS: { id: Column; title: string }[] = [
   { id: "review", title: "Ready to review" },
   { id: "done", title: "Done" },
 ];
+
+// Status is a ticket's status value: its column, or rejected, a ticket
+// closed without being accepted, which sits in Done (FH-58).
+export type Status = Column | "rejected";
+
+// STATUSES are the statuses a ticket can be moved to, in workflow order.
+export const STATUSES: { id: Status; title: string }[] = [
+  ...COLUMNS,
+  { id: "rejected", title: "Rejected" },
+];
+
+// statusWord is a ticket's status: rejected, or else its column.
+export const statusWord = (ticket: {
+  column: Column;
+  rejected?: boolean;
+}): Status => (ticket.rejected ? "rejected" : ticket.column);
+
+// columnOf is the column a status puts a ticket in.
+export const columnOf = (status: Status): Column =>
+  status === "rejected" ? "done" : status;
 
 // TicketRef names a ticket by id (FH-42); ids are unique across the root.
 export interface TicketRef {
@@ -43,6 +65,8 @@ export interface Card {
   id: string;
   slug: string;
   column: Column;
+  // rejected marks a ticket in Done whose status is rejected (FH-58).
+  rejected?: boolean;
   title: string;
   type: string;
   priority: string;
@@ -64,13 +88,16 @@ export interface Card {
   warnings: string[];
   searchText?: string;
   // live is the linked run that most needs attention (VIEW-8); needsYou
-  // places the card in the Needs you column (VIEW-2), and agentWorking
+  // answers the band's Needs you filter (VIEW-2, FH-44), and agentWorking
   // answers the Agent working State filter (FH-42).
   live?: Live;
   needsYou: boolean;
   agentWorking: boolean;
   // openQuestions counts open questions about the ticket (CARD-6).
   openQuestions: number;
+  // sessions summarises the runs working for the ticket (RUN-9); absent
+  // when none is linked and the ticket is not in progress.
+  sessions?: TicketSessions;
 }
 
 export interface WorkstreamBrief {
@@ -96,6 +123,8 @@ export interface ProjectSummary {
   workstreams: WorkstreamBrief[];
   // archived counts the project's archived tickets (EDIT-8).
   archived: number;
+  // rejected counts the tickets in Done whose status is rejected (FH-58).
+  rejected: number;
   runs: RunCounts;
 }
 
@@ -173,6 +202,7 @@ export interface WorkstreamTicket {
   id: string;
   title: string;
   column: Column | "archived" | "";
+  rejected?: boolean;
   blocked: boolean;
   held: boolean;
   missing: boolean;
@@ -242,7 +272,8 @@ export function isCard(value: unknown): value is Card {
     (value.live === undefined || isLive(value.live)) &&
     typeof value.needsYou === "boolean" &&
     typeof value.agentWorking === "boolean" &&
-    typeof value.openQuestions === "number"
+    typeof value.openQuestions === "number" &&
+    (value.sessions === undefined || isTicketSessions(value.sessions))
   );
 }
 
@@ -261,6 +292,7 @@ function isSummary(value: unknown): value is ProjectSummary {
     typeof value.needsRepair === "number" &&
     typeof value.blocked === "number" &&
     typeof value.archived === "number" &&
+    typeof value.rejected === "number" &&
     isString(value.lastModified) &&
     Array.isArray(value.workstreams) &&
     isRunCounts(value.runs)

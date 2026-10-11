@@ -1,4 +1,4 @@
-# Agent protocol (v1)
+# Agent protocol (v2)
 
 How AI agents and Flashheart talk: runs, events, hooks, MCP tools, claims,
 handoffs, questions and recovery. This is a contract with agents and with the
@@ -42,8 +42,15 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   directory, take its parent's basename; apply the collision rule (`PRJ-3`).
   A bare repository (`repo.git`) names itself (`repo`); a submodule, whose
   git directory sits under its parent's `.git/modules/`, is its own
-  checkout. Outside git → `_scratch`. Names are made safe for a directory
-  (other characters become `-`). A repository whose project is archived
+  checkout. Names are made safe for a directory (other characters become
+  `-`). Outside any git repository there is no project and nothing is
+  recorded (`PRJ-4`): hooks exit 0 quietly without writing anything, not
+  even the cwd cache, the board root or the skill (§5.4); MCP read tools
+  without a `project` argument answer that there is no current project; and
+  tools that need the caller's project or run (`create_ticket`,
+  `create_workstream`, `set_project_key` without `project`, `claim`,
+  `release`, `ask_human`) answer `no_project`. Tools given a ticket id or a
+  `project` still work. A repository whose project is archived
   (`PRJ-5`) is not recorded: hooks exit 0 quietly and record nothing, and
   MCP tools answer `project_archived` without creating anything, until the
   human restores it.
@@ -51,7 +58,9 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   `git` subprocess on the hot path); detached HEAD records the short SHA.
 - Resolution results are cached per `cwd` in
   `<root>/.flashheart/cache/cwd.json` with the HEAD file's mtime as the
-  validator, so most hooks do no git work.
+  validator, so most hooks do no git work. The one exception is the
+  worktree check at a session's turn end and end (§4), which runs a bounded
+  `git status` (and `git log` when HEAD moved) without optional locks.
 
 ## 3. Events
 
@@ -59,7 +68,7 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
 
 ```json
 {"v":1,"ts":"2026-10-04T14:12:09.123Z","run":"claude:3f2a9c1e-…","agent":"claude",
- "kind":"tool.used","project":"ngplus","data":{"tool":"Edit","ok":true,"path":"src/ui/AppShell.tsx"}}
+ "kind":"activity","project":"ngplus","data":{"tools":12,"failed":1,"paths":["src/ui/AppShell.tsx"]}}
 ```
 
 `ts` is RFC 3339 UTC with milliseconds. `data` is kind-specific. All strings
@@ -71,10 +80,11 @@ writing.
 | Kind | Source | `data` |
 |---|---|---|
 | `run.start` | session start / subagent start hook; MCP server (§7.1) | `kind` (session/subagent), `parent`, `cwd`, `branch`, `worktree`, `source` (startup/resume/clear/compact; `mcp` for a run the MCP server started), `agent_type` for subagents |
-| `run.end` | session end / subagent stop; MCP server | `reason` (`disconnected` when a started run's connection closes) |
+| `run.end` | session end / subagent stop; MCP server | `reason` (`disconnected` when a started run's connection closes); optional `worktree_changed: true` (§4) |
 | `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
-| `turn.end` | stop | `blocked_for_handoff` (bool) |
-| `tool.used` | post tool use; MCP server, for each tool call of a run it started (`tool` is the Flashheart tool's name) | `tool`, `ok`, optional `path` (repo-relative, edits only; omitted outside the worktree), optional `summary` (≤120 chars, not written by the Claude adapter, which reads nothing else from tool inputs) |
+| `turn.end` | stop | `blocked_for_handoff` (bool); optional `worktree_changed: true` (§4) |
+| `activity` | post tool use, throttled (below); MCP server, for the Flashheart tool calls of a run it started, throttled the same way (§7.1) | `tools` (tool results since the run's previous `activity`), optional `failed` (how many of them failed), `paths` (the repo-relative edit paths the run had not recorded in this turn or since its last checkpoint; omitted outside the worktree), `shell` (≤20 `{from, to}` windows of its successful shell commands, §4, merged where they meet) |
+| `tool.used` | post tool use, before protocol 2; still read | `tool`, `ok`, optional `path` (repo-relative, edits only), optional `summary` (≤120 chars) |
 | `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
 | `permission.requested` | permission request / notification | `tool`, optional `summary` |
 | `permission.resolved` | permission denied | `outcome` (allowed/denied/unknown), optional `tool`. A pending request is also resolved, without an event, by the run's next tool result, prompt, turn end or end (§4) |
@@ -82,14 +92,80 @@ writing.
 | `compact` | pre/post compact | `phase` (pre/post) |
 | `claim` / `release` | MCP | `ticket`, `force`, `reason`; a claim also records `home`, the claimant's own project, so a reader of the ticket's log knows where the holder's activity is recorded |
 | `checkpoint` | MCP | `ticket`, counts of done/next/files/questions |
-| `ticket.moved` | MCP or UI | `ticket`, `from`, `to`, `by` (run id or `human`) |
-| `ticket.updated` | MCP or UI | `ticket`, `fields` changed |
-| `ticket.created` | MCP or UI | `ticket` |
+| `ticket.moved` | MCP or UI | `ticket`, `from`, `to` (statuses: a column or `rejected`), `by` (run id or `human`) |
+| `ticket.updated` | MCP or UI | `ticket`, `fields` changed; from the UI also `by: human` |
+| `ticket.created` | MCP or UI | `ticket`, `by` (run id or `human`) |
 | `review.written` | MCP | `ticket` |
 | `attachment.added` | MCP | `ticket`, `file`, `kind` |
 | `question.asked` | MCP | `id`, `ticket`, `kind`, `text` (≤1,000), `options` |
 | `question.answered` | UI | `id`, `answer`, `by` |
 | `question.delivered` | hook | `id` |
+
+### Activity records
+
+Tool results are most of what a session does, so they are counted, not
+recorded one by one (FH-55). Hooks record a run's tool results as one
+`activity` at most every `activity_seconds` (`config.yaml`, default 60),
+counting the tool uses and failures since its previous one, except that a
+tool result is recorded at once when:
+
+- it edits a path the run has not recorded in this turn or since its last
+  checkpoint, so dirty (§4) is never late. Each path is recorded once per
+  run per turn, and again after a checkpoint: a prompt (a `turn.start`
+  that is not `background`) lets the session record its paths again, a
+  subagent's start its own, and the result of the agent's own `checkpoint`
+  tool call every run of its session. Should the hook miss that result, a
+  path edited again is recorded from the next prompt, so the loss is at
+  most one turn;
+- a permission request of the run waits on it (§4);
+- it is the run's first, or its first after `activity_seconds` without a
+  recorded event.
+
+Before a turn end or end, the pending activity of the runs it ends is
+recorded (a session's turn end or end: the session and its subagents), so
+the worktree check and handoff enforcement (§4, §9) see all of it. A run's
+last activity therefore lags its last tool result by at most
+`activity_seconds`, well inside `quiet_minutes`. Every other kind is
+recorded as it happens.
+
+Between hooks, a session's pending activity, the time of each of its runs'
+latest hook event (where a shell command's window starts) and the paths
+recorded since the last checkpoint live in
+`<project>/.flashheart/activity/<agent>--<session>.json`, read and written
+under the project lock together with the log, so tool results arriving
+together all count. It is a disposable cache: an unreadable one starts
+afresh, a run's entry goes with its end, and the session's file with the
+session's end (a session that never reports its end leaves a small file
+behind). Logs written before protocol 2 hold one `tool.used` per tool
+call; readers fold both.
+
+### The human's board writes
+
+Every board write that changes a ticket (`EDIT-10`) appends one `ticket.*`
+event to the ticket's project log, attributed to the human: `run`, `agent`
+and `data.by` are all `human`, which no run id (`agent:session`) can be.
+It records that the human changed the ticket, and when, never what the
+ticket says:
+
+| Board write | Kind | `data` besides `ticket` and `by` |
+|---|---|---|
+| new ticket | `ticket.created` | none |
+| move, or a place within or across columns (`EDIT-9`) | `ticket.moved` | `from`, `to` (statuses: a column or `rejected`; equal for a reorder) |
+| field edits (`EDIT-6`) | `ticket.updated` | `fields`: the frontmatter keys or `title` sent |
+| raw edit | `ticket.updated` | none (what changed is not worked out) |
+| ticked criterion | `ticket.updated` | `fields: [criteria]` |
+| ticked review step (`REV-3`) | `ticket.updated` | `fields: [review]` |
+| archive, restore | `ticket.updated` | `fields: [archived]` |
+| permanent delete | `ticket.updated` | `fields: [deleted]` |
+
+A blocked start's reason goes into the ticket's `## Notes`, not the event.
+Writes that change no ticket (workstream order, project keys, preferences)
+and edits made to ticket files outside the board record nothing. The
+human's events are no run: run derivation (§4) skips them. With
+`question.answered` (recorded on the asking run), they are the human's
+board activity, which `serve` reads per project and across projects from
+the whole retained log. Agents' MCP writes are unchanged and are never the
+human's.
 
 ## 4. Run state
 
@@ -106,7 +182,8 @@ table):
 
 A run's last event includes its subagents' events. A subagent ends with its
 session, and a session needs you while one of its live subagents does. A
-pending permission is cleared by the run's next `tool.used`, `turn.start`,
+pending permission is cleared by the run's next `activity` (or
+`tool.used`), `turn.start`,
 `turn.end`, `permission.resolved` or `run.end`. A question not yet answered
 on the board is **answered in the session**, without an event, by its
 session's next `turn.start` that is not `background`: the user replied in
@@ -125,7 +202,34 @@ days of event files.
 
 Flags:
 
-- **dirty**: an edit `tool.used` after the run's last `checkpoint`.
+- **dirty**: an edited path in an `activity` (or an edit `tool.used`, one
+  with a `path`) after the run's last
+  `checkpoint`, or a `turn.end` or `run.end` after it with
+  `worktree_changed: true`, which counts as one edit. Agents edit mostly
+  through shell commands, which name no path, so at a session's turn end
+  and end the hook checks its worktree when the session is not already
+  dirty and it or one of its subagents ran a shell command (`Bash` or
+  `PowerShell`, `ok`) since its last checkpoint. Each such command has a
+  **window**, from its run's previous event to its result, widened by
+  2 s either side for clock and flush granularity and cut at the last
+  checkpoint. The hook keeps each window in the session's activity state
+  until it records it in an `activity`'s `shell` (§3), at the latest
+  just before the turn end or end it checks; in older logs a window ends
+  at a `tool.used` and starts at the run's previous event. No hook does
+  extra work for it. The worktree changed when a file git lists as changed or untracked
+  (not ignored), or a file of a commit made since the first window, has a
+  modification time inside a window (a deleted file by its directory's).
+  Only the boolean is stored, never a path, command or content
+  (`HOOK-2`). Read-only commands leave nothing behind, so they never make a
+  run dirty; committing or switching branch alone does not either; a file
+  the user changes while the session waits for them, between turns or
+  after it stops is not the session's. Remaining false positives: a file
+  the user or another process changes while one of the session's commands
+  (or the model's thinking before it) is under way, and an untracked,
+  unignored file a command generates. Missed: what a background command
+  writes after its result, and a subagent's own worktree. The check
+  gives up after 50 ms and is then logged, leaving the run as it was
+  (`HOOK-1`).
 - **no handoff**: Ended, linked to a ticket, and dirty.
 - **linked**: `claim` (explicit) or branch match (provisional, `RUN-5`);
   subagents inherit the parent's link.
@@ -159,16 +263,16 @@ ticket's `## Notes`.
 | `SessionStart` (`source`: startup, resume, clear, compact) | `run.start` | Recovery note as `hookSpecificOutput.additionalContext` (§8) |
 | `UserPromptSubmit` | `turn.start` (resolves a pending permission and, unless `background`, answers open questions in the session, §4); `question.delivered` for each answer handed over | Answered questions as `additionalContext` (`HOOK-5`), from the session's answers inbox |
 | `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping: `hookSpecificOutput.updatedInput` is the tool input with `run` set to the calling run (the subagent's when `agent_id` is present), and no permission decision (§7.1) |
-| `PostToolUse` | `tool.used`; `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`). A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
-| `PostToolUseFailure` | `tool.used` with `ok: false` | — |
+| `PostToolUse` | a tool use counted into `activity` (throttled, §3); `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`); `mcp__flashheart__checkpoint` lets the session record its edited paths again. A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
+| `PostToolUseFailure` | a failed tool use counted into `activity` | — |
 | `PermissionRequest` | `permission.requested` | — (never decides the permission) |
 | `PermissionDenied` | `permission.resolved` denied | — |
 | `Notification` | `notification` with type `permission` (`permission_prompt`), `idle` (`idle_prompt`) or the agent's own short type; permission type also → `permission.requested` | — |
 | `TaskCreated`, `TaskCompleted` | `plan.updated` (merge) | — |
 | `SubagentStart` / `SubagentStop` | child `run.start` (with `parent`, `agent_type`) / `run.end` (`reason: completed`), keyed by `agent_id` | — |
 | `PreCompact` / `PostCompact` | `compact` | — |
-| `Stop` | `turn.end`; handoff enforcement (§9) | `{"decision":"block","reason":…}` only when enforcing |
-| `SessionEnd` | `run.end` | — |
+| `Stop` | `turn.end`, with `worktree_changed` from the worktree check (§4); handoff enforcement (§9) | `{"decision":"block","reason":…}` only when enforcing |
+| `SessionEnd` | `run.end`, with `worktree_changed` from the worktree check (§4) | — |
 
 Not registered by default: per-tool `PreToolUse` other than Flashheart's own
 tools (noise and latency).
@@ -185,7 +289,7 @@ small.
 |---|---|
 | `SessionStart` | `run.start`; recovery note as additional context |
 | `UserPromptSubmit` | `turn.start`; answered questions |
-| `PostToolUse` | `tool.used`; `plan.updated` for `update_plan`; edit paths from `apply_patch` file headers |
+| `PostToolUse` | a tool use counted into `activity` (§3); `plan.updated` for `update_plan`; edit paths from `apply_patch` file headers |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs |
 | `PreCompact` / `PostCompact` | `compact` |
@@ -224,7 +328,8 @@ when nothing changed since, else removes only setup's own hooks.
 
 The protocol skill is Flashheart's own code, not user configuration, so it
 is kept current without setup: at every `SessionStart` (startup, resume,
-clear, compact) the hook compares the installed `SKILL.md` with the
+clear, compact) inside a git repository (outside one a hook does nothing,
+§2) the hook compares the installed `SKILL.md` with the
 binary's skill and, when they differ, rewrites it atomically and opens the
 returned context with one line saying the skill was updated. It only
 updates a `SKILL.md` that exists and has Flashheart's frontmatter
@@ -305,8 +410,10 @@ two connections in one worktree get two runs. When the connection's agent
 has switched branches since, the server records `run.start` again with the
 new branch, as a hook run's next prompt would, so the run's link and
 handoff follow it. Each tool call the
-connection's run makes, read or write, is recorded as `tool.used` (`tool`
-the Flashheart tool's name, `ok`), so its claim's lease is renewed (§6);
+connection's run makes, read or write, counts as a tool result, recorded as
+hooks record them: in an `activity` record at most once per
+`activity_seconds` (`tools`, `failed`; never `paths` or `shell`), with what
+is pending recorded before its end, so its claim's lease is renewed (§6);
 answers waiting in its inbox are appended to that call's result as the
 answers note and marked delivered, standing in for the prompt hook
 (`HOOK-5`), and `board_context` stands in for the recovery note (`HOOK-3`).
@@ -334,13 +441,13 @@ one run.
 | Tool | Input | Effect | Output |
 |---|---|---|---|
 | `board_context` | `project?`, `run?` | none | ≤1,500 tokens: your project and its key, or, when none is chosen yet, a suggested key, the keys in use and a request to set one (`KEY-5`); your run and link; your ticket's handoff and unticked criteria; answered questions not yet delivered; other in-progress tickets with holders; the top 5 unblocked Up next tickets by priority (then Backlog when Up next is short); the project's unfinished workstreams with progress and next ticket |
-| `list_tickets` | `project?`, `type?`, `status?` (list; default open: in-progress, up-next, backlog), `priority?`, `tag?`, `blocked?`, `text?`, `limit?` (default 10, max 50) | none | one line per ticket, ordered by status (In progress, Up next, Backlog), then priority, then age: `FH-42 bug high up-next "Title" [blocked: …]` (`MCP-7`) |
+| `list_tickets` | `project?`, `type?`, `status?` (list; default open: in-progress, up-next, backlog; `done` includes rejected tickets, `rejected` lists only them), `priority?`, `tag?`, `blocked?`, `text?`, `limit?` (default 10, max 50) | none | one line per ticket, ordered by status (In progress, Up next, Backlog), then priority, then age: `FH-42 bug high up-next "Title" [blocked: …]`; a rejected ticket shows `rejected` (`MCP-7`) |
 | `get_ticket` | `ticket` (id) | none | ticket markdown, column, blocked reasons, review, files list |
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff |
 | `release` | `ticket`, `reason?` | §6 | ok |
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
 | `update_ticket` | `ticket`, `set?` (frontmatter fields), `check?` (criteria text or index), `append_notes?` | frontmatter/body edit with hash precondition; setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4) | changed fields |
-| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` is refused (humans move tickets to Done); a blocked ticket is started with `claim` and `force` | new column, warnings |
+| `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `project_key?` (only for a project with no key yet) | new ticket folder with the next id (`KEY-2`); a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` is joined (§7.4) | id |
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
@@ -353,7 +460,9 @@ and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
 `blocked`, `ambiguous_run`, `invalid_input`, `key_taken`, `key_fixed`,
 `needs_repair`, `busy`, `type_not_allowed`, `too_large`,
 `project_archived` (the caller's project, or a ticket's, is archived; the
-fix asks the human to restore it), `unsupported` (the board uses a newer
+fix asks the human to restore it), `no_project` (the caller works outside
+any git repository, §2; the fix says to work inside a repository or talk to
+the user in chat), `unsupported` (the board uses a newer
 format than this binary) and `internal`. Every write tool answers `busy`
 when another writer holds its lock past the lock wait; every write to a
 ticket another live run holds answers `claimed`; `conflict` comes only
@@ -441,7 +550,9 @@ when it left edits since its last checkpoint.
 
 When `enforce_handoff` is on for the project, at `Stop`:
 
-- if the run is linked, dirty, the agent's payload does not say a stop hook is
+- if the run is linked, dirty (including a worktree change this stop's
+  check found during one of its shell commands, §4), the agent's payload
+  does not say a stop hook is
   already active, and the run was not blocked for handoff in this turn →
   output `{"decision":"block","reason":"Flashheart: record a checkpoint on <ticket> (done, next, files) before stopping."}`
   and record `turn.end` with `blocked_for_handoff: true`;
@@ -494,6 +605,9 @@ kept current by the session-start hook (§5.4). It covers, briefly:
 - if your project has no key yet, choose 2–5 letters a person would use for
   it in conversation (`FH` for Flashheart, `NG` for NG+), and set it with
   `set_project_key` before creating tickets; pick another if it is taken;
+- outside a git repository there is no project and nothing is recorded:
+  talk to the user in chat instead of creating tickets or asking with
+  `ask_human`;
 - refer to tickets by id (`FH-42`); when asked for work in plain words ("the
   three top-priority bugs"), use `list_tickets`, then `claim` each ticket;
 - before work on a ticket: `claim`; create tickets for new work rather than
@@ -529,7 +643,8 @@ kept current by the session-start hook (§5.4). It covers, briefly:
   `scripts/record-claude-hooks.sh` records a real Claude Code session.
   Re-record when an agent changes.
 - **Hook latency**: `scripts/hook-bench.sh` runs 1,000 warm invocations of
-  the built binary and fails when p95 exceeds 50 ms (`HOOK-1`).
+  the built binary and fails when p95 exceeds 50 ms (`HOOK-1`); `-tools`
+  measures tool results alone, the throttled path (§3).
 - **State table tests** for §4, including clock-driven transitions.
 - **MCP contract tests** through the Go SDK's in-memory transport.
 - **End-to-end smoke**: a scripted sequence (start → claim → edits → stop
@@ -537,10 +652,37 @@ kept current by the session-start hook (§5.4). It covers, briefly:
 
 ## 14. Versioning
 
-`PROTOCOL_VERSION = 1`, reported by `flashheart version` and in the MCP
+`PROTOCOL_VERSION = 2`, reported by `flashheart version` and in the MCP
 server's instructions. Additive changes (new tools, new event kinds, new
 optional fields) keep the version; removing or changing meaning bumps it and
 requires `setup` to be re-run.
+
+Version 2 (FH-55, 2026-10-09): hooks record throttled `activity` records
+(§3) instead of one `tool.used` per tool call, and a run's edit count is
+of paths recorded since its last checkpoint (each once per turn) rather
+than of edit tool
+calls. Not additive: a version 1 reader skips the unknown kind, so it
+would miss edits, shell command windows and liveness. A version 2 reader
+still folds `tool.used` from older logs, so the last two days read
+correctly across the upgrade. Agents see no difference: the MCP tools, the
+hook registrations and the skill's text keep their shape, and only the
+skill's `flashheart-protocol` metadata changes, which the session-start
+hook refreshes (§5.4); re-running `setup claude --write` updates it too.
+
+Additive change within version 2 (D33, FH-62, 2026-10-11): activity
+outside any git repository is no longer recorded in a `_scratch` project;
+MCP tools answer the new `no_project` code instead, and the skill gains a
+line saying so. No event or tool changes shape and logs read the same, and
+an older skill meets a coded error with a fix, as with `project_archived`,
+so the version stays 2.
+
+Additive change within version 2 (D34, FH-15, 2026-10-11): runs the MCP
+server starts for sessions without hooks (§7.1): `run.start` source `mcp`,
+`run.end` reason `disconnected`, `activity` written by the server, answers
+in tool results, the caller's agent from `clientInfo`, and the skill's line
+that without hooks an answer arrives with the next tool result. Every event
+keeps its shape and hook-attributed calls are unchanged, so the version
+stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`
@@ -558,10 +700,17 @@ stays 1. A prompt answering the session's open questions (§4), with
 refusal and `flashheart await`'s note for it (D28, FH-43, 2026-10-08):
 additive, because no event changes shape and older logs read the same (a
 `turn.start` without `background` was always a prompt), so the version
-stays 1. Runs the MCP server starts for sessions without hooks (§7.1,
-D30, FH-15, 2026-10-08): `run.start` source `mcp`, `run.end` reason
-`disconnected`, `tool.used` from the server, answers in tool results, and
-the caller's agent from `clientInfo`: additive, because every event keeps
-its shape and hook-attributed calls are unchanged, so the version stays 1.
+stays 1.
 The session-start hook keeps an installed skill's text current (re-running
 `setup` installs it); `flashheart doctor` says when it is out of date.
+Shell edits, made during the run's own shell command windows, count
+toward dirty (§4), with the optional `worktree_changed`
+field on `turn.end` and `run.end` (FH-53, 2026-10-09): additive, because
+an event without the field reads as before and the tools and skill keep
+their shape, so the version stays 1.
+The `rejected` status (FH-58, 2026-10-10): `list_tickets`, `get_ticket`,
+`board_context` and the recovery note may show `rejected` where they show a
+column, `list_tickets` accepts it as a filter, `move` refuses it, and
+`ticket.moved` may carry it in `from` or `to`. Additive, because a rejected
+ticket was not expressible before and every existing value keeps its
+meaning, so the version stays 1.

@@ -3,7 +3,10 @@ package mcpserver
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -109,6 +112,13 @@ func TestListTicketsFiltersAndOrders(t *testing.T) {
 	}
 	contains(t, e.ok("list_tickets", map[string]any{"blocked": false, "type": "bug"}), "ok shown=2 total=2")
 	contains(t, e.ok("list_tickets", map[string]any{"status": []string{"done"}}), `DM-5 bug high done "Finished bug"`)
+	// A rejected ticket is done, and says so (FH-58).
+	rejected := e.ticket(store.NewTicket{Title: "Rejected idea", Type: "feature", Priority: "low"})
+	e.setStatus(rejected, board.Rejected, "")
+	contains(t, e.ok("list_tickets", map[string]any{"status": []string{"done"}}), `DM-5 bug high done "Finished bug"`, `DM-6 feature low rejected "Rejected idea"`, "ok shown=2")
+	out = e.ok("list_tickets", map[string]any{"status": []string{"rejected"}})
+	contains(t, out, `DM-6 feature low rejected "Rejected idea"`, "ok shown=1")
+	contains(t, e.ok("get_ticket", map[string]any{"ticket": rejected}), `DM-6 feature low rejected "Rejected idea"`)
 	contains(t, e.ok("list_tickets", map[string]any{"tag": "ui"}), "DM-3", "ok shown=1")
 	contains(t, e.ok("list_tickets", map[string]any{"text": "second"}), "DM-4", "ok shown=1")
 	contains(t, e.ok("list_tickets", map[string]any{"priority": "low"}), "DM-1", "ok shown=1")
@@ -177,6 +187,76 @@ func TestAnArchivedProjectIsNotRecreated(t *testing.T) {
 	if _, err := os.Stat(e.root + "/demo"); !errors.Is(err, os.ErrNotExist) {
 		t.Error("the archived project was recreated")
 	}
+}
+
+// Outside git there is no current project (PRJ-4): reads succeed and say
+// so, tools that need the caller's project answer no_project and write
+// nothing, and tools given a project or ticket id still work (FH-62).
+func TestOutsideGitThereIsNoProject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel", Type: "feature", Priority: "high"})
+	e.cwd = filepath.Join(filepath.Dir(e.root), "notes")
+	if err := os.MkdirAll(e.cwd, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	before := tree(t, e.root)
+	contains(t, e.ok("board_context", nil), "no current project", "not inside a git repository", "demo (DM)")
+	contains(t, e.ok("list_tickets", nil), "no current project", "demo (DM)")
+	contains(t, e.ok("list_tickets", map[string]any{"project": "DM"}), id)
+	contains(t, e.ok("board_context", map[string]any{"project": "demo"}), "project=demo key=DM")
+	contains(t, e.ok("get_ticket", map[string]any{"ticket": id}), "Card panel")
+	for _, tool := range []struct {
+		name string
+		args map[string]any
+	}{
+		{"create_ticket", map[string]any{"type": "bug", "title": "X", "description": "x", "criteria": []string{"y"}, "priority": "low"}},
+		{"create_workstream", map[string]any{"title": "W", "goal": "g"}},
+		{"set_project_key", map[string]any{"key": "NO"}},
+		{"ask_human", map[string]any{"kind": "question", "text": "Still there?"}},
+		{"claim", map[string]any{"ticket": id}},
+		{"release", map[string]any{"ticket": id}},
+	} {
+		out := e.fails(tool.name, tool.args, "no_project")
+		contains(t, out, "not in a project", "work inside a git repository", "in chat")
+	}
+	if after := tree(t, e.root); !slices.Equal(before, after) {
+		t.Fatalf("calls outside git wrote to the root:\nbefore %v\nafter  %v", before, after)
+	}
+	contains(t, e.ok("update_ticket", map[string]any{"ticket": id, "append_notes": "Seen from outside."}), id)
+	contains(t, e.file(id), "Seen from outside.")
+}
+
+// With no board root yet, a session outside git is told the same, and the
+// root is not created.
+func TestOutsideGitWithNoRoot(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "")
+	if err := os.RemoveAll(e.root); err != nil {
+		t.Fatal(err)
+	}
+	e.cwd = filepath.Dir(e.root)
+	contains(t, e.ok("board_context", nil), "no current project", "read one of: none")
+	e.fails("create_ticket", map[string]any{"type": "bug", "title": "X", "description": "x", "criteria": []string{"y"}, "priority": "low"}, "no_project")
+	if _, err := os.Stat(e.root); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the root was created: %v", err)
+	}
+}
+
+// tree lists every path under root.
+func tree(t *testing.T, root string) []string {
+	t.Helper()
+	var paths []string
+	err := filepath.WalkDir(root, func(path string, _ fs.DirEntry, err error) error {
+		paths = append(paths, path)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return paths
 }
 
 // Read tools change nothing on disk: no project is created or adopted and

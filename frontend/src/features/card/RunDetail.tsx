@@ -9,8 +9,9 @@ import { absoluteTime, runningTime } from "../../model/time";
 const MAX_TIMELINE = 40;
 
 // RunDetail is what a run did: its open questions, its plan as a list of
-// stops, the files it edited and its recent activity, newest first. Agent
-// text is shown as data.
+// stops (only when it has one; most sessions never record a plan), the files
+// it edited and its recent activity, newest first. Agent text is shown as
+// data.
 export function RunDetail({
   run,
   timeline,
@@ -56,19 +57,12 @@ export function RunDetail({
       ) : null}
       <div className="grid gap-x-8 gap-y-5 text-xs @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="flex min-w-0 flex-col gap-5">
-          <DetailSection level={headingLevel} title="Plan">
-            {run.plan.length === 0 ? (
-              <>
-                <p className="text-ink-muted">No plan recorded.</p>
-                <Aside placement="plan-empty" className="mt-1" />
-              </>
-            ) : (
-              <>
-                <PlanList plan={run.plan} />
-                <Aside placement="plan" className="mt-2" />
-              </>
-            )}
-          </DetailSection>
+          {run.plan.length > 0 ? (
+            <DetailSection level={headingLevel} title="Plan">
+              <PlanList plan={run.plan} />
+              <Aside placement="plan" className="mt-2" />
+            </DetailSection>
+          ) : null}
           <DetailSection
             level={headingLevel}
             title={

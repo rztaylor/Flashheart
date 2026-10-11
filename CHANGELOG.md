@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The project follows
 
 ## Unreleased
 
+### Added
+
+- A **Rejected** status for tickets closed without being accepted (FH-58).
+  `status: rejected` is a Done state: the ticket sits in the Done column
+  and counts as done for blocking and workstream progress, but its card,
+  panel, table row, archive row and workstream station say *Rejected*
+  (a neutral pill and a crossed station, never a check). Reject a ticket
+  with the panel's **Move to → Rejected** or the Edit tab's Status; moving
+  it anywhere else, Done included, clears it. Agents see `rejected` in
+  `list_tickets` and `get_ticket` and can filter by it, but `move` refuses
+  it, as it refuses `done` (protocol version unchanged).
+
 ### Security
 
 - `serve` no longer copies any linked local file into a directly edited
@@ -18,6 +30,21 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- The Overview fills the main area like Board, Workstreams and Table
+  instead of sitting in a centred 56rem column (FH-60).
+
+- Files changed through shell commands now count toward the handoff
+  (FH-53). A run used to be dirty only after the edit tools, though agents
+  edit mostly through shell commands, so "no handoff", the At risk reason
+  and handoff enforcement missed most edits. At a session's turn end and
+  end, when it ran a shell command since its last checkpoint, the hook asks
+  git (within 50 ms, without locks) whether a changed, untracked or newly
+  committed file was modified during one of its shell commands (from the
+  run's previous event to the command's result, give or take 2 s), and
+  records only yes or no on `turn.end` and `run.end` (`worktree_changed`,
+  agent-protocol §4; protocol version unchanged). Read-only commands never
+  flag a run, and neither do files you change while the session waits for
+  you.
 - A question answered in the agent's own chat no longer leaves the session
   and its ticket in Needs you (FH-43, D28). A prompt in the asking session
   answers its open questions there (its subagents' too, never another
@@ -29,6 +56,60 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The view tabs read Overview, Workstreams, Table, Board (FH-61).
+
+- **Agent protocol 2** (FH-55, D32): hooks record a run's tool results as
+  throttled `activity` records instead of one `tool.used` per tool call,
+  which was about 80% of all events. A record counts the tool uses and
+  failures since the run's previous one, at most one a minute
+  (`activity_seconds` in `config.yaml`); an edit of a path the run has not
+  recorded in this turn or since its last checkpoint, and the tool result a
+  permission request waits on, are recorded at once, and what is pending is
+  recorded before a turn end or end. Each edited path is recorded once per
+  run per turn, and again after a checkpoint, so a run's edit count is now
+  of files. Shell
+  commands' windows (FH-53) travel in the records, so shell edits still
+  count toward the handoff. On this board's own logs the change leaves
+  about a third of the events (6,475 to 2,132). Last activity lags a run's
+  last tool result by at most a minute; Quiet, Needs you and dirty behave as
+  before, and logs written before the upgrade read as before. The Runs
+  tab's activity shows turns, checkpoints, questions, moves and summaries
+  such as "Edited src/app.ts, 3 tool uses" or "40 tool uses, 2 failed"
+  instead of every tool's name. Agents see no difference; the installed
+  skill's protocol number updates at the next session start, or re-run
+  `flashheart setup claude --write`. Update the binary and the board
+  together: an older `serve` does not read the new records.
+- An Overview replaces the Agents view (FH-51, D32). The band's tabs read
+  Board, Overview, Workstreams, Table. The Overview is about tickets, for
+  All projects or one project, in one calm column: Needs your decision
+  (answer an agent's question in place; a permission prompt says which
+  session to answer it in), Ready for your review (oldest first, with
+  Review results opening the ticket's Review tab), At risk (no live
+  session, a quiet session, ended without a handoff, a blocked top of Up
+  next, each in words), In progress (the session's state and its subagents
+  in words), then collapsed Work with no ticket (live sessions with no
+  ticket, each with Create ticket) and Up next. Run detail stays on the
+  card's Runs tab. Old Agents links and a remembered Agents view open the
+  Overview, and the Needs you filter's notice of agents with no ticket
+  opens it too.
+- Plan displays show only for a run with a plan (FH-54). Most sessions
+  never record one, so the card panel's Runs tab (and an open run in the
+  Agents view) no longer shows an empty Plan section with *No plan
+  recorded*; the card's live badge already named a plan step only when
+  there was one. A run with a plan still shows its route and current step.
+
+- Needs you is a filter instead of a column (FH-44, D31). The Needs you
+  column, which repeated tickets already shown in their own columns, is
+  gone. The band's *N need you* plate is now an on/off filter: pressed, it
+  shows All projects' Board (or Table) with only the tickets that have a
+  run in Needs you or an open question, and pressed again it returns to the
+  project you were in (it used to open the Agents view). Agents that need
+  you with no ticket on the board are named in a notice that opens the
+  Agents view. It combines with the other filters and Clear filters
+  switches it off; it carries from project to project and a reload starts
+  with it off. The rail badges and the card's Needs you mark are
+  unchanged. A saved `ui.virtual_columns` setting is ignored and removed on
+  the next save.
 - The Board toolbar is decluttered (FH-39). Filters are buttons named for
   what they filter (Type, Priority, Workstream, State) with a count badge
   while applied, each opening a list of values; View options (⋯) holds the
@@ -43,6 +124,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Removed
 
+- The `_scratch` project (FH-62, D33). Agent activity outside a git
+  repository is no longer recorded: hooks there write and print nothing,
+  `board_context` and `list_tickets` say there is no current project, and
+  tools that need one (`create_ticket`, `ask_human`, `claim`…) answer the
+  new `no_project` error, so the agent talks to you in chat instead. Run
+  `git init` in a folder to track it. An old `_scratch` folder in the board
+  root is now ignored and can be deleted (protocol version unchanged).
 - The Hide later filter (FH-39); a remembered `hide_later` is ignored.
 - The Agent working column (FH-42, D27): a working ticket now shows once,
   in its own column, with the Working mark; *State: Agent working* lists
@@ -106,15 +194,57 @@ All notable changes to this project are documented here. The project follows
 ### Added
 
 - An agent that reaches Flashheart's MCP server without its hooks (Codex
-  today, or a user who declined hooks) gets a run of its own (FH-15, D30).
+  today, or a user who declined hooks) gets a run of its own (FH-15, D34).
   Its first write starts the run, so `claim`, `release` and `ask_human`
   work and its tickets name it instead of "unknown". Each of its Flashheart
   tool calls keeps its claim alive; closing the session ends the run.
-  Answers to its questions arrive with its next tool call. The Agents view
-  shows it, marked "MCP only", since without hooks it reports no plan,
-  edits or permission prompts. A session with hooks is attributed as
+  Answers to its questions arrive with its next tool call. Its session
+  shows on the Overview and in the ticket's Runs tab, marked "MCP only",
+  since without hooks it reports no plan, edits or permission prompts. A session with hooks is attributed as
   before, and a Codex session is no longer mistaken for a Claude Code
   session in the same worktree.
+- The Overview opens with the pipeline (FH-63): Backlog, Up next, In
+  progress, Ready to review and Done as a row of interlocking chevron
+  cards, each the column's whole count in its status colour, for All
+  projects or the project shown; Done counts accepted work, leaving out
+  Rejected tickets (project summaries now carry a `rejected` count). Each
+  stage opens the Board. It replaced
+  FH-52's *Since your last change* tiles, whose To review counted tickets
+  arriving since your last change and so could read 0 above a Ready for
+  your review section listing four; `GET /api/metrics` is gone.
+- Each card in the board API carries a `sessions` summary of the runs
+  working for its ticket (FH-50, RUN-9): the live agent and its state, the
+  last activity, whether the handoff is behind the session's work, and its
+  subagents counted as done, running and needing you. An in-progress ticket
+  that no live session works on is marked `noLiveSession`. It is derived
+  from the events already recorded; hooks are unchanged. The Overview
+  (FH-47) builds on it.
+- The board records when you change a ticket (FH-49, `EDIT-10`). Every
+  board write that changes a ticket (new ticket, move or reorder, field,
+  raw and criterion edits, a ticked review step, archive, restore, delete)
+  appends one `ticket.created`, `ticket.moved` or `ticket.updated` event
+  with run, agent and `by` set to `human`, naming the ticket and at most the
+  columns or fields changed, never their values or any ticket text
+  (agent-protocol §3). With answered questions, this is your latest board
+  activity, which the server can read per project and across projects for
+  the coming Overview. Edits made in an editor do not count, agents' writes
+  are unchanged, and the human is never shown as a run.
+- The Board can hide the Backlog column (FH-41): View options › Show
+  columns has a Backlog checkbox, checked by default. Hidden, the columns
+  being worked on get its width, the phone Column picker leaves it out, and
+  Shift with an arrow or a drag never moves a ticket into it. The choice is
+  saved as `ui.hidden_columns` in `config.yaml`; a config without it shows
+  the Backlog.
+- Every ticket has a full page with room to read and review screenshots
+  (FH-45, D30). A ticket id anywhere on the board (cards, table rows,
+  workstream stations, the Agents view, the archive and the card panel)
+  opens it in a new tab, and so do ticket ids in ticket text: markdown,
+  acceptance criteria, handoff next steps and blocking reasons. Clicking a
+  card still opens the side panel, which now also has an *Open full page*
+  button. The page shows the panel's tabs at reading width, names the
+  browser tab after the ticket, and links back to the ticket on its board;
+  ticket links on it stay in the same tab.
+
 - The installed Flashheart skill keeps itself current: after you upgrade
   the binary, the next Claude Code session start rewrites
   `~/.claude/skills/flashheart/SKILL.md` to match and says so in one line,

@@ -19,7 +19,7 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    dogfooding Flashheart's own sessions.
 3. [`mcp-runs`](roadmap-items/mcp-runs.md) — **Partial**. The MCP server
    starts a run for an agent without hooks, so claims, questions and
-   attribution work and it shows in the Agents view. Built (FH-15, D30);
+   attribution work and it shows on the Overview. Built (FH-15, D34);
    open: a real Codex session without hooks, by dogfooding. Depends on
    `mcp-protocol`.
 4. [`codex-support`](roadmap-items/codex-support.md) — **Pending**. Codex
@@ -37,14 +37,21 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 7. [`ui-features`](roadmap-items/ui-features.md) — **Partial**. Board UI
    requests outside the other items: shared column scrolling (FH-24),
    saved manual card order (FH-23), archive views with a two-step
-   permanent delete for tickets (FH-20) and projects (FH-21), and discreet
-   humour in secondary copy (FH-22). Built: all five; open: the user's
-   review of each ticket.
+   permanent delete for tickets (FH-20) and projects (FH-21), discreet
+   humour in secondary copy (FH-22), and a full page for every ticket,
+   opened from its id (FH-45). Built: all six; open: the user's review of
+   each ticket.
 8. [`workstream-epics`](roadmap-items/workstream-epics.md) — **Partial**.
    Workstreams are epics: order never blocks, only `depends-on` does, and
    the Workstreams view draws dependencies as a railway graph (D26, FH-38).
    Built: all of it; open: the user's review. No roadmap dependencies;
    FH-17's workstream UI follows it.
+9. [`project-overview`](roadmap-items/project-overview.md) — **Partial**.
+   An Overview tab for a project manager replaces the Agents view: decisions,
+   reviews, risks and progress by ticket, with sessions as evidence under a
+   pipeline of the board's columns (FH-63); hooks record less (D32, FH-47;
+   workstream FH-49–FH-55). Built: all of it (FH-55: agent protocol 2);
+   open: the user's review. No roadmap dependencies.
 
 ## Later possibilities (not scheduled)
 

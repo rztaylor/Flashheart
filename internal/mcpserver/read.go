@@ -40,6 +40,9 @@ func (srv *server) boardContext(inv *invocation, input BoardContextInput) (strin
 	if err != nil {
 		return "", err
 	}
+	if input.Project == "" && c.outside {
+		return c.noProjectNote(), nil
+	}
 	if input.Project == "" && c.project == "" && c.missing != "" {
 		return fmt.Sprintf("[Flashheart] project %q is not on the board yet; your first write creates it. "+
 			"Choose 2–5 capital letters people would call it by and pass them as project_key to create_ticket, or set them with set_project_key. "+
@@ -83,7 +86,7 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 	link := c.linked()
 	if link.Ticket != "" {
 		if p, ticket, err := c.find(link.Ticket); err == nil {
-			lines = append(lines, fmt.Sprintf("Your ticket %s %q (%s, %s, linked by %s).", ticket.ID, text(ticket.Title), ticket.Column, ticket.Priority, link.By))
+			lines = append(lines, fmt.Sprintf("Your ticket %s %q (%s, %s, linked by %s).", ticket.ID, text(ticket.Title), ticket.Status(), ticket.Priority, link.By))
 			if reasons := c.blocked(p, ticket); len(reasons) > 0 {
 				lines = append(lines, "Blocked: "+strings.Join(reasons, "; "))
 			}
@@ -239,7 +242,7 @@ type ListTicketsInput struct {
 	Attribution
 	Project  string   `json:"project,omitempty" jsonschema:"a project name or key; default: your project"`
 	Type     string   `json:"type,omitempty" jsonschema:"feature, bug, test, refactor, infra, docs or spike"`
-	Status   []string `json:"status,omitempty" jsonschema:"columns to include: backlog, up-next, in-progress, review, done; default the open ones"`
+	Status   []string `json:"status,omitempty" jsonschema:"columns to include: backlog, up-next, in-progress, review, done (with rejected), or rejected alone; default the open ones"`
 	Priority string   `json:"priority,omitempty" jsonschema:"high, medium or low"`
 	Tag      string   `json:"tag,omitempty"`
 	Blocked  *bool    `json:"blocked,omitempty" jsonschema:"true for blocked tickets only, false for unblocked only"`
@@ -248,7 +251,9 @@ type ListTicketsInput struct {
 }
 
 type ticketFilter struct {
-	statuses       []board.Column
+	statuses []board.Column
+	// rejected adds rejected tickets when statuses leaves out done.
+	rejected       bool
 	kind, priority string
 	tag, text      string
 	blocked        *bool
@@ -259,17 +264,24 @@ func (srv *server) listTickets(inv *invocation, input ListTicketsInput) (string,
 	if err != nil {
 		return "", err
 	}
+	if input.Project == "" && c.outside {
+		return c.noProjectNote(), nil
+	}
 	project, err := c.projectArg(input.Project)
 	if err != nil {
 		return "", err
 	}
 	filter := ticketFilter{kind: input.Type, priority: input.Priority, tag: input.Tag, text: strings.ToLower(strings.TrimSpace(input.Text)), blocked: input.Blocked}
 	for _, status := range input.Status {
-		column, ok := board.ParseColumn(status)
+		column, rejected, ok := board.ParseStatus(status)
 		if !ok {
-			return "", fail("invalid_input", "use backlog, up-next, in-progress, review or done", "%q is not a status", status)
+			return "", fail("invalid_input", "use backlog, up-next, in-progress, review, done or rejected", "%q is not a status", status)
 		}
-		filter.statuses = append(filter.statuses, column)
+		if rejected {
+			filter.rejected = true
+		} else {
+			filter.statuses = append(filter.statuses, column)
+		}
 	}
 	if filter.kind != "" && !slices.Contains(board.TicketTypes, filter.kind) {
 		return "", fail("invalid_input", "use one of "+strings.Join(board.TicketTypes, ", "), "%q is not a ticket type", filter.kind)
@@ -298,12 +310,13 @@ var statusOrder = []board.Column{board.InProgress, board.UpNext, board.Backlog, 
 // status, priority, then age (MCP-7).
 func (c *call) matching(project *board.Project, filter ticketFilter) []board.Ticket {
 	statuses := filter.statuses
-	if len(statuses) == 0 {
+	if len(statuses) == 0 && !filter.rejected {
 		statuses = []board.Column{board.InProgress, board.UpNext, board.Backlog}
 	}
 	var list []board.Ticket
 	for _, ticket := range project.Tickets {
-		if ticket.NeedsRepair() || !slices.Contains(statuses, ticket.Column) ||
+		listed := slices.Contains(statuses, ticket.Column) || filter.rejected && ticket.Rejected
+		if ticket.NeedsRepair() || !listed ||
 			filter.kind != "" && ticket.Type != filter.kind ||
 			filter.priority != "" && ticket.Priority != filter.priority ||
 			filter.tag != "" && !slices.Contains(ticket.Tags, filter.tag) {
@@ -338,7 +351,7 @@ func (c *call) matching(project *board.Project, filter ticketFilter) []board.Tic
 
 // row is one ticket line: id, type, priority, status, title, blocked.
 func (c *call) row(project *board.Project, ticket board.Ticket, text func(string) string) string {
-	line := fmt.Sprintf("%s %s %s %s %q", ticket.ID, ticket.Type, ticket.Priority, ticket.Column, text(ticket.Title))
+	line := fmt.Sprintf("%s %s %s %s %q", ticket.ID, ticket.Type, ticket.Priority, ticket.Status(), text(ticket.Title))
 	if reasons := c.blocked(project, ticket); len(reasons) > 0 {
 		line += " [blocked: " + text(strings.Join(reasons, "; ")) + "]"
 	}
@@ -364,7 +377,7 @@ func (srv *server) getTicket(inv *invocation, input TicketInput) (string, error)
 	if err != nil {
 		return "", err
 	}
-	lines := []string{fmt.Sprintf("%s %s %s %s %q (project %s)", ticket.ID, ticket.Type, ticket.Priority, ticket.Column, scrub.Limit(ticket.Title, 200), project.Name)}
+	lines := []string{fmt.Sprintf("%s %s %s %s %q (project %s)", ticket.ID, ticket.Type, ticket.Priority, ticket.Status(), scrub.Limit(ticket.Title, 200), project.Name)}
 	if reasons := c.blocked(project, ticket); len(reasons) > 0 {
 		lines = append(lines, "Blocked: "+strings.Join(reasons, "; "))
 	}

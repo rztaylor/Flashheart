@@ -11,7 +11,7 @@ import (
 // State is a run's derived state (RUN-3).
 type State string
 
-// Run states, in the Agents view's lane order.
+// Run states, most urgent first.
 const (
 	Working  State = "working"
 	NeedsYou State = "needs-you"
@@ -62,14 +62,18 @@ const (
 )
 
 // Entry is one timeline event of a run, with the fields worth showing.
+// An activity record's entry counts its tool uses (Tools) and failures and
+// names the first path it recorded.
 type Entry struct {
-	Time   time.Time `json:"time"`
-	Kind   string    `json:"kind"`
-	Tool   string    `json:"tool,omitempty"`
-	Path   string    `json:"path,omitempty"`
-	Failed bool      `json:"failed,omitempty"`
-	Detail string    `json:"detail,omitempty"`
-	Ticket string    `json:"ticket,omitempty"`
+	Time     time.Time `json:"time"`
+	Kind     string    `json:"kind"`
+	Tool     string    `json:"tool,omitempty"`
+	Path     string    `json:"path,omitempty"`
+	Failed   bool      `json:"failed,omitempty"`
+	Tools    int       `json:"tools,omitempty"`
+	Failures int       `json:"failures,omitempty"`
+	Detail   string    `json:"detail,omitempty"`
+	Ticket   string    `json:"ticket,omitempty"`
 }
 
 // Run is everything the events say about one session or subagent (RUN-2).
@@ -93,7 +97,9 @@ type Run struct {
 
 	Plan []events.PlanItem
 	// Tools counts tool uses; Edits counts successful edits since the last
-	// checkpoint (dirty); Files lists edited paths, most recent first.
+	// checkpoint (dirty), where a turn end or end that found the worktree
+	// changed by other means, such as shell commands, counts as one;
+	// Files lists edited paths, most recent first.
 	Tools          int
 	Edits          int
 	Files          []string
@@ -113,6 +119,55 @@ type Run struct {
 
 	turnOpen bool
 	ended    bool
+	// windows are the run's successful shell commands since the last
+	// checkpoint, oldest first, merged where they overlap.
+	windows []Window
+}
+
+// shellTools are the agents' shell command tools, whose edits name no path.
+var shellTools = []string{"Bash", "PowerShell"}
+
+// Shell command windows (agent-protocol §4).
+const (
+	// ShellSlack widens each window for clock and flush granularity.
+	ShellSlack = 2 * time.Second
+	// MaxWindows bounds a run's windows; the oldest two merge beyond it.
+	MaxWindows = 100
+)
+
+// Window is when a shell command may have changed files: from the run's
+// previous event to the command's tool.used, widened by ShellSlack.
+type Window struct {
+	From, To time.Time
+}
+
+// Contains reports whether t falls inside the window, ends included.
+func (w Window) Contains(t time.Time) bool { return !t.Before(w.From) && !t.After(w.To) }
+
+// addWindow appends w, merging it into the last window when they overlap
+// and the oldest two when there are too many.
+func (r *Run) addWindow(w Window) {
+	if last := len(r.windows) - 1; last >= 0 && !w.From.After(r.windows[last].To) {
+		if w.To.After(r.windows[last].To) {
+			r.windows[last].To = w.To
+		}
+		return
+	}
+	r.windows = append(r.windows, w)
+	if len(r.windows) > MaxWindows {
+		r.windows[1].From = r.windows[0].From
+		r.windows = slices.Delete(r.windows, 0, 1)
+	}
+}
+
+// edited records a successful edit of path since the last checkpoint.
+func (r *Run) edited(path string) {
+	r.Edits++
+	r.Files = slices.DeleteFunc(r.Files, func(f string) bool { return f == path })
+	r.Files = append([]string{path}, r.Files...)
+	if len(r.Files) > MaxFiles {
+		r.Files = r.Files[:MaxFiles]
+	}
 }
 
 // Question is one ask_human question and what became of it (RUN-8).
@@ -233,7 +288,8 @@ func (s *Set) run(e events.Event) *Run {
 
 // Apply folds one event into the set. Unknown or malformed data is ignored.
 func (s *Set) Apply(e events.Event) {
-	if e.Run == "" {
+	// The human's board writes have no run (agent-protocol §3).
+	if e.Run == "" || e.Run == events.Human {
 		return
 	}
 	// A subagent first seen ending did nothing visible (Claude Code's
@@ -243,6 +299,12 @@ func (s *Set) Apply(e events.Event) {
 		return
 	}
 	r := s.run(e)
+	// previous is the run's last event before this one, where a shell
+	// command's window starts.
+	previous := r.LastActivity
+	if previous.IsZero() || previous.After(e.Time) {
+		previous = e.Time
+	}
 	if e.Time.After(r.LastActivity) {
 		r.LastActivity = e.Time
 	}
@@ -276,6 +338,9 @@ func (s *Set) Apply(e events.Event) {
 		// A session that ends mid-turn (interrupted, so no Stop) is not still
 		// working when it resumes.
 		r.ended, r.EndedAt, r.EndReason, r.Permission, r.turnOpen = true, e.Time, data.Reason, "", false
+		if data.WorktreeChanged {
+			r.Edits++
+		}
 		s.settleChildren(r)
 		entry.Detail = data.Reason
 	case events.TurnStart:
@@ -295,6 +360,9 @@ func (s *Set) Apply(e events.Event) {
 		_ = e.Decode(&data)
 		r.turnOpen, r.Permission = false, ""
 		r.BlockedForHandoff = r.BlockedForHandoff || data.BlockedForHandoff
+		if data.WorktreeChanged {
+			r.Edits++
+		}
 		s.settleChildren(r)
 	case events.ToolUsed:
 		var data events.ToolData
@@ -302,14 +370,33 @@ func (s *Set) Apply(e events.Event) {
 		r.Tools++
 		r.Permission = ""
 		if data.OK && data.Path != "" {
-			r.Edits++
-			r.Files = slices.DeleteFunc(r.Files, func(f string) bool { return f == data.Path })
-			r.Files = append([]string{data.Path}, r.Files...)
-			if len(r.Files) > MaxFiles {
-				r.Files = r.Files[:MaxFiles]
-			}
+			r.edited(data.Path)
+		}
+		if data.OK && slices.Contains(shellTools, data.Tool) {
+			r.addWindow(Window{From: previous.Add(-ShellSlack), To: e.Time.Add(ShellSlack)})
 		}
 		entry.Tool, entry.Path, entry.Failed = data.Tool, data.Path, !data.OK
+	case events.Activity:
+		var data events.ActivityData
+		if e.Decode(&data) != nil || data.Tools < 1 {
+			break
+		}
+		r.Tools += data.Tools
+		r.Permission = ""
+		for _, path := range data.Paths {
+			if path != "" {
+				r.edited(path)
+				entry.Path = first(entry.Path, path)
+			}
+		}
+		// The hook remembered each command's window; the fold widens it as
+		// it widens a tool.used's.
+		for _, span := range data.Shell {
+			if !span.To.Before(span.From) {
+				r.addWindow(Window{From: span.From.Add(-ShellSlack), To: span.To.Add(ShellSlack)})
+			}
+		}
+		entry.Tools, entry.Failures = data.Tools, max(data.Failed, 0)
 	case events.PlanUpdated:
 		var data events.PlanData
 		_ = e.Decode(&data)
@@ -344,7 +431,7 @@ func (s *Set) Apply(e events.Event) {
 			members = []*Run{r}
 		}
 		for _, member := range members {
-			member.Edits, member.LastCheckpoint = 0, e.Time
+			member.Edits, member.windows, member.LastCheckpoint = 0, nil, e.Time
 		}
 		entry.Ticket = data.Ticket
 	case events.Claim, events.Release, events.TicketMoved, events.TicketUpdated, events.TicketCreated, events.ReviewWritten, events.AttachmentAdded:
@@ -610,6 +697,46 @@ func (s *Set) Edits(id string) int {
 // Dirty reports edits since the last checkpoint, a session's subagents'
 // included: its handoff is due (HOOK-6).
 func (s *Set) Dirty(id string) bool { return s.Edits(id) > 0 }
+
+// ShellWindows returns the windows of the run's successful shell commands
+// since its last checkpoint, with its subagents' for a session, sorted,
+// merged where they overlap and cut at the checkpoint; nil when there are
+// none. A worktree change counts as the run's only inside one of them: the
+// edit tools record their own paths, and a file changed while the session
+// waited is not its doing.
+func (s *Set) ShellWindows(id string) []Window {
+	r := s.runs[id]
+	if r == nil {
+		return nil
+	}
+	members := []*Run{r}
+	if r.Parent == "" {
+		members = s.family(r)
+	}
+	var list []Window
+	for _, member := range members {
+		for _, w := range member.windows {
+			if w.From.Before(r.LastCheckpoint) {
+				w.From = r.LastCheckpoint
+			}
+			if !w.To.Before(w.From) {
+				list = append(list, w)
+			}
+		}
+	}
+	slices.SortFunc(list, func(a, b Window) int { return a.From.Compare(b.From) })
+	var merged []Window
+	for _, w := range list {
+		if last := len(merged) - 1; last >= 0 && !w.From.After(merged[last].To) {
+			if w.To.After(merged[last].To) {
+				merged[last].To = w.To
+			}
+			continue
+		}
+		merged = append(merged, w)
+	}
+	return merged
+}
 
 func (s *Set) children(r *Run) []*Run {
 	var list []*Run

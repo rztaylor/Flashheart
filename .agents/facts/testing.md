@@ -26,8 +26,16 @@
   agent's `MANIFEST.md` says which are recorded. Re-record with
   `scripts/record-claude-hooks.sh` when an agent changes.
 - Hook latency: `scripts/hook-bench.sh` (developer tool, not in CI) fails
-  when p95 over 1,000 warm invocations exceeds 50 ms.
-- The Playwright Agents spec creates runs by running `flashheart hook claude`
+  when p95 over 1,000 warm invocations exceeds 50 ms; `-tools` measures
+  tool results alone (the throttled activity path, FH-55) and both print
+  how many events were recorded.
+- Activity throttling (FH-55) is tested by replaying recorded payloads
+  through the Claude adapter (200 tool results in ten minutes) and with the
+  fake adapter's scripts in `internal/hooks`; the run-state and no-handoff
+  tables run on both encodings of tool use (`tool.used` and `activity`).
+- The Playwright runs spec (`frontend/e2e/runs.spec.mjs`: the Overview,
+  live cards, the Runs tab and questions) creates runs by running
+  `flashheart hook claude`
   against the sandbox (`frontend/e2e/agent-runs.mjs`).
 - Run-state and blocking logic are table tests with a fake clock.
 - MCP tools are tested through the Go SDK's in-memory transport; the
@@ -40,11 +48,12 @@
   moved binary, a hook-errors log).
 - The Runs tab tree is tested from the golden hook payloads' events
   (`TestTicketRunsCarryTheSubagentTree` in `internal/api`), and in the
-  browser from subagents the Agents e2e starts through the real hook.
-- The Agents e2e asks a question through the real `flashheart mcp` and
-  answers it in the browser (`frontend/e2e/agent-runs.mjs`), and drives a
-  hookless Codex session through it (`connectMCP`) to its answer and end.
-- Runs the MCP server starts (D30) are tested over the in-memory transport
+  browser from subagents the runs e2e starts through the real hook.
+- The runs e2e asks questions through the real `flashheart mcp` and
+  answers them in the card panel and on the Overview
+  (`frontend/e2e/agent-runs.mjs`), and drives a hookless Codex session
+  through it (`connectMCP`) to its answer and end.
+- Runs the MCP server starts (D34) are tested over the in-memory transport
   with several client connections (`env.dial`), and over stdio by
   `TestHooklessSessionOverStdio` in `internal/cli`.
 - Concurrency: multi-process write tests for locks and preconditions.

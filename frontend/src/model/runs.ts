@@ -1,14 +1,13 @@
-// Pure view models for agent runs: lanes for the Agents view (VIEW-3),
-// timeline wording and plan stations.
-import {
-  type Live,
-  type PlanItem,
-  type Question,
-  type QuestionKind,
-  RUN_STATES,
-  type Run,
-  type RunState,
-  type TimelineEntry,
+// Pure view models for agent runs: why a run needs you, timeline wording
+// and plan stations, for cards, the Runs tab and the Overview.
+import type {
+  Live,
+  PlanItem,
+  Question,
+  QuestionKind,
+  Run,
+  RunState,
+  TimelineEntry,
 } from "../api/runs";
 
 export const STATE_LABEL: Record<RunState, string> = {
@@ -28,7 +27,7 @@ export function permissionReason(tool: string): string {
 
 // reasonFor says why a run needs you: its own permission prompt, or that
 // of the subagent (by type) it is waiting on.
-function reasonFor(permission: string, subagent: string): string {
+export function reasonFor(permission: string, subagent: string): string {
   if (!subagent) return permissionReason(permission);
   return permission && permission !== "?"
     ? `${subagent} needs permission for ${permission}`
@@ -44,7 +43,7 @@ const QUESTION_REASON: Record<QuestionKind, string> = {
 
 // startedByMCP reports a run id the MCP server minted for a session
 // without hooks, `<agent>:mcp-<random>` (agent-protocol §2): no prompt hook
-// delivers its answers; its next Flashheart tool call does (D30).
+// delivers its answers; its next Flashheart tool call does (D34).
 export function startedByMCP(runID: string): boolean {
   const [, session = ""] = runID.split(":");
   return session.startsWith("mcp-") && !session.includes("/");
@@ -135,50 +134,11 @@ export function mcpOnly(run: Run): boolean {
   return run.source === "mcp";
 }
 
-export interface LaneRun {
-  run: Run;
-  children: Run[];
-}
-
-export interface Lane {
-  state: RunState;
-  runs: LaneRun[];
-}
-
-const time = (iso: string) => Date.parse(iso) || 0;
-
-// laneRuns groups sessions into lanes by state, Needs you first, with each
-// session's subagents nested under it whatever their own state. Needs you
-// lists the longest waiting first; the other lanes the most recent first.
-export function laneRuns(runs: Run[]): Lane[] {
-  const byID = new Map(runs.map((run) => [run.id, run]));
-  const children = new Map<string, Run[]>();
-  const tops: Run[] = [];
-  for (const run of runs) {
-    if (run.parent && byID.has(run.parent)) {
-      children.set(run.parent, [...(children.get(run.parent) ?? []), run]);
-    } else {
-      tops.push(run);
-    }
-  }
-  return RUN_STATES.map((state) => {
-    const members = tops
-      .filter((run) => run.state === state)
-      .sort((a, b) =>
-        state === "needs-you"
-          ? time(a.lastActivity) - time(b.lastActivity)
-          : time(b.lastActivity) - time(a.lastActivity),
-      );
-    return {
-      state,
-      runs: members.map((run) => ({
-        run,
-        children: (children.get(run.id) ?? []).sort(
-          (a, b) => time(a.started) - time(b.started),
-        ),
-      })),
-    };
-  });
+// runAgentName names a session's agent, marking a run without hooks.
+export function runAgentName(run: Run): string {
+  return mcpOnly(run)
+    ? `${agentName(run.agent)} (MCP only)`
+    : agentName(run.agent);
 }
 
 const source: Record<string, string> = {
@@ -208,6 +168,8 @@ export function describeEntry(entry: TimelineEntry): string {
       if (entry.failed) return `${tool} failed`;
       return entry.path ? `${tool} ${entry.path}` : tool;
     }
+    case "activity":
+      return describeActivity(entry);
     case "turn.start":
       return entry.detail === "background"
         ? "Background task finished"
@@ -243,6 +205,12 @@ export function describeEntry(entry: TimelineEntry): string {
       return `Claimed ${entry.ticket ?? "a ticket"}`;
     case "release":
       return `Released ${entry.ticket ?? "a ticket"}`;
+    case "ticket.moved":
+      return `Moved ${entry.ticket ?? "a ticket"}`;
+    case "ticket.created":
+      return `Created ${entry.ticket ?? "a ticket"}`;
+    case "review.written":
+      return `Wrote the review of ${entry.ticket ?? "a ticket"}`;
     case "question.asked":
       return `${asked[entry.detail ?? ""] ?? "Asked a question"}${on(entry.ticket)}`;
     case "question.answered":
@@ -256,17 +224,46 @@ export function describeEntry(entry: TimelineEntry): string {
   }
 }
 
+// describeActivity summarises an activity record: the path it edited, its
+// tool uses and how many failed (FH-55).
+function describeActivity(entry: TimelineEntry): string {
+  const tools = entry.tools ?? 0;
+  const parts = entry.path
+    ? [
+        `Edited ${entry.path}`,
+        ...(tools > 1 ? [counted(tools, "tool use")] : []),
+      ]
+    : [counted(tools, "tool use")];
+  if (entry.failures) parts.push(`${entry.failures} failed`);
+  return parts.join(", ");
+}
+
 export interface CompactEntry {
   entry: TimelineEntry;
   count: number;
 }
 
 // compactTimeline folds consecutive uses of the same tool that edited
-// nothing into one line with a count, and lists the newest first.
+// nothing into one line with a count, adds up consecutive activity records
+// that edited nothing, and lists the newest first.
 export function compactTimeline(entries: TimelineEntry[]): CompactEntry[] {
   const folded: CompactEntry[] = [];
   for (const entry of entries) {
     const last = folded[folded.length - 1];
+    if (
+      last &&
+      entry.kind === "activity" &&
+      last.entry.kind === "activity" &&
+      !entry.path &&
+      !last.entry.path
+    ) {
+      last.entry = {
+        ...entry,
+        tools: (last.entry.tools ?? 0) + (entry.tools ?? 0),
+        failures: (last.entry.failures ?? 0) + (entry.failures ?? 0),
+      };
+      continue;
+    }
     const repeat =
       last &&
       entry.kind === "tool.used" &&

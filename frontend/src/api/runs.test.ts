@@ -11,6 +11,7 @@ const counts = {
   quiet: 0,
   ended: 2,
   live: 2,
+  needsYouUnticketed: 0,
 };
 const live = {
   run: "claude:s",
@@ -92,6 +93,9 @@ describe("run validators", () => {
 
   it("reject unknown states and missing fields", () => {
     expect(isRunCounts({ ...counts, live: "2" })).toBe(false);
+    expect(isRunCounts({ ...counts, needsYouUnticketed: undefined })).toBe(
+      false,
+    );
     expect(isLive({ ...live, state: "busy" })).toBe(false);
     expect(isLive({ ...live, waitingOn: undefined })).toBe(false);
     expect(isRun({ ...run, kind: "thread" })).toBe(false);
@@ -126,27 +130,86 @@ describe("run validators", () => {
     expect(isCard({ ...card, needsYou: undefined })).toBe(false);
   });
 
-  it("check saved virtual columns", () => {
+  it("check a card's session summary", () => {
+    const card = {
+      project: "alpha",
+      id: "AL-3",
+      slug: "card-panel",
+      column: "in-progress",
+      title: "Card panel",
+      type: "feature",
+      priority: "high",
+      workstream: "",
+      tags: [],
+      modified: "",
+      criteria: { done: 0, total: 0 },
+      excerpt: "",
+      handoffNext: "",
+      blocked: false,
+      blockedBy: [],
+      needsRepair: [],
+      warnings: [],
+      needsYou: false,
+      agentWorking: true,
+      openQuestions: 0,
+    };
+    const sessions = {
+      run: "claude:s",
+      short: "claude:s",
+      agent: "claude",
+      state: "working",
+      lastActivity: "2026-10-06T07:05:00Z",
+      noLiveSession: false,
+      dirty: true,
+      noHandoff: false,
+      subagents: { done: 3, running: 2, needsYou: 0 },
+    };
+    expect(isCard({ ...card, sessions })).toBe(true);
+    // An in-progress ticket with no run at all has no state.
+    const nobody = {
+      ...sessions,
+      run: "",
+      short: "",
+      agent: "",
+      state: "",
+      lastActivity: "",
+      noLiveSession: true,
+      subagents: { done: 0, running: 0, needsYou: 0 },
+    };
+    expect(isCard({ ...card, sessions: nobody })).toBe(true);
+    expect(isCard({ ...card, sessions: { ...sessions, state: "busy" } })).toBe(
+      false,
+    );
+    expect(
+      isCard({ ...card, sessions: { ...sessions, subagents: { done: 1 } } }),
+    ).toBe(false);
+  });
+
+  it("check saved preferences", () => {
     const preferences = {
       theme: "system",
       density: "normal",
       colourBy: "type",
-      virtualColumns: ["needs-you"],
+      hiddenColumns: [],
       scopes: {},
     };
     expect(isPreferences(preferences)).toBe(true);
-    expect(isPreferences({ ...preferences, virtualColumns: ["mystery"] })).toBe(
+    // Only the Backlog can be hidden (FH-41).
+    expect(isPreferences({ ...preferences, hiddenColumns: ["backlog"] })).toBe(
+      true,
+    );
+    expect(isPreferences({ ...preferences, hiddenColumns: ["done"] })).toBe(
       false,
     );
-    expect(
-      isPreferences({ ...preferences, virtualColumns: ["agent-working"] }),
-    ).toBe(false);
+    expect(isPreferences({ ...preferences, hiddenColumns: undefined })).toBe(
+      false,
+    );
     expect(
       isPreferences({
         ...preferences,
         scopes: {
           alpha: {
-            view: "agents",
+            view: "overview",
             type: { include: [], exclude: [] },
             priority: { include: ["high"], exclude: [] },
             workstream: { include: [], exclude: ["board-ui"] },

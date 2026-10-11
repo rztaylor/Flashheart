@@ -14,11 +14,11 @@ resolution under *Corrections to the references*.
 
 ## 1. Shell
 
-One shell for Board, Agents, Workstreams and Table, in both themes.
+One shell for Overview, Workstreams, Table and Board, in both themes.
 
 ```
 ┌ Band ─────────────────────────────────────────────────────────────────┐
-│ ⚡ Flashheart │ Board  Agents  Workstreams  Table │   [● N need you] [Search] status [Quit] │
+│ ⚡ Flashheart │ Overview  Workstreams  Table  Board │ [● N need you] [Search] status [Quit] │
 ├ Rail ────────┬ Main ──────────────────────────────────────┬ Panel ────┤
 │ All projects │ Page header: scope identity · view summary │ (ticket)  │
 │ ──────────── │ View toolbar (Board, Table)                │           │
@@ -30,10 +30,15 @@ One shell for Board, Agents, Workstreams and Table, in both themes.
 ```
 
 **Band** (3.5rem tall, left to right): the bolt and the *Flashheart*
-wordmark in sentence case; the view tabs Board, Agents, Workstreams, Table,
+wordmark in sentence case; the view tabs Overview, Workstreams, Table, Board,
 each an icon and a label, the current one marked; then, right-aligned, the
 Needs you plate while any run anywhere needs the user (disc mark, count and
-"need(s) you"; it opens Agents across all projects), search (Board and Table
+"need(s) you"). It is the Needs you filter (`VIEW-2`, FH-44), a toggle:
+pressed, it takes an inset ring in the on-attention ink and a close mark
+(the ring alone on a phone) and shows All projects' Board (the Table when
+that is open) with only tickets that need the user; pressed again, it
+returns to the project it was pressed in. It stays while pressed, so it can
+be switched off once nothing needs the user. Then search (Board and Table
 only), the backend status (quiet dot while healthy, words when not,
 `LIFE-1`) and Quit. The band carries no tagline and no project name.
 
@@ -53,7 +58,7 @@ the board icon in the all scope), then one quiet summary line for the view:
 | View | Summary line |
 | --- | --- |
 | Board | `N tickets` (`n of N tickets` when filtered) |
-| Agents | `N live runs` and, when any, `k need(s) you` |
+| Overview | `n in progress · r ready to review` |
 | Workstreams | `N workstreams` and `d of t stations served` |
 | Table | as Board |
 
@@ -64,8 +69,8 @@ The header's far end holds *Archive* and, on Board and Table, **New ticket**
 button per filter, named for what it filters with no separate label, Type,
 Priority, Workstream and State, then *Clear filters* while any filter or chip
 applies; right-aligned, Board only, one icon button, *View options* (⋯),
-whose menu holds Show columns (Needs you), Colour by and
-Density (FH-39). An applied filter's button takes the select border and ring
+whose menu holds Show columns (Backlog), Colour by and
+Density (FH-39, FH-41). An applied filter's button takes the select border and ring
 and a count badge (*State: Blocked* for the one-choice State). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
 click shows only that value (with any others shown), a Cmd click (Ctrl off
@@ -84,6 +89,12 @@ struck through. The row never wraps: chips that do not fit stay out of view,
 colour chips before workstreams; the menus list every value. Hidden when
 there are neither workstream chips nor colour chips.
 
+**Needs you notice** (Board and Table, while the Needs you filter is on and
+runs need the user with no ticket on the board): a well-coloured strip under
+the chip row, the Needs you mark on its attention disc, *N agent(s) need(s)
+you with no ticket on the board.* and a quiet **Open Overview** button
+(FH-44), whose Needs your decision lists them (D32).
+
 **Panel** beside the main view at clamp(26rem, 32vw, 35rem), narrowing it
 (`CARD-1`); it covers the view below the band under 48rem.
 
@@ -93,12 +104,16 @@ load) sit as a full-width strip under the band, above the rail and Main.
 ## 2. Board
 
 - Columns in workflow order: Backlog, Up next, In progress, Ready to review,
-  Done (`VIEW-1`). Needs you stands between In progress and Ready to review
-  while it holds tickets and is switched on (`VIEW-2`); it holds mirrored
-  cards and never accepts a drop. Agent working is a State filter option
-  (*State: Agent working*), not a column (FH-42).
+  Done (`VIEW-1`). A ticket shows once, in its own column. Needs you is the
+  band plate's filter (`VIEW-2`, FH-44) and Agent working a State filter
+  option (*State: Agent working*, FH-42), not columns.
+- The Backlog can be hidden with View options › Show columns (shown by
+  default; FH-41) so the columns being worked on get its width. Hidden, it
+  leaves every width, the narrow Column picker included, and Shift with an
+  arrow or a drag never targets it. Its tickets still count in the page
+  header and the chip ordering, and the Table and Workstreams are unchanged.
 - A column is a rounded well. Its head: count badge, then the title in the
-  display cut (virtual columns add their run mark). Done reads `n of N`
+  display cut. Done reads `n of N`
   while the done limit hides tickets, with *Show all N* / *Show recent only*
   at the foot. An empty column says *No tickets* (*Nothing in progress* for
   In progress).
@@ -128,10 +143,10 @@ reorders them.
 | --- | --- | --- | --- | --- |
 | 1 | Header: id, project name (All projects only), running time right | ✓ | ✓ | ✓ |
 | 2 | Title, wrapping to at most three lines (full title in its tooltip and the card's name) | ✓ | ✓ | ✓ |
-| 3 | Tags: workstream bullet, type tag, age tag (Colour by Age), *in <column>* on a mirror | ✓ | ✓ | ✓ |
+| 3 | Tags: workstream bullet, type tag, age tag (Colour by Age) | ✓ | ✓ | ✓ |
 | 4 | Needs repair note | ✓ | ✓ | ✓ |
 | 5 | Blocker pill (diamond, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
-| 6 | Live badge: run state and agent, permission reason, last activity; plan step `done/total · step` (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
+| 6 | Live badge: run state and agent, permission reason, last activity; plan step `done/total · step` when the run has a plan (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
 | 7 | Question waiting plate, when a question needs the user and its run does not | — | ✓ | ✓ |
 | 8 | Description excerpt, three lines | — | — | ✓ |
 | 9 | Handoff next step (arrow) | — | — | ✓ |
@@ -152,11 +167,13 @@ reorders them.
 
 ## 3. Card panel
 
-1. **Header**: id and project name; the title in the display cut; a pill row
+1. **Header**: id (a link to the full page, `CARD-7`) and project name; the
+   title in the display cut; a pill row
    (status pill for its column, the blocker pill when blocked, priority tag,
    type tag); a meta row (workstream bullet and name, created date, branch in
-   monospace, changed time); actions (Move to, Archive) when editable. A close
-   button sits top right; Escape closes.
+   monospace, changed time); actions (Move to, Archive) when editable. Top
+   right, *Open full page in a new tab* (expand icon) and close; Escape
+   closes.
 2. **Tabs**: Ticket, Edit (editable only), Runs (with its session count),
    Attachments (once `review-and-orchestration` builds it), Review (when a
    review file exists). Hidden tabs never leave a gap.
@@ -164,7 +181,7 @@ reorders them.
    frontmatter) · questions for you, each with its answer box or option
    buttons (`CARD-6`) · Handoff, the accent callout with the next steps large
    and the full handoff behind a disclosure, with a warning when the run has
-   edited since (`CARD-5`) · Blocked by (diamond, reasons, Open) and Waits for
+   edited since (`CARD-5`) · Blocked by (diamond, reasons with ids linked, Open) and Waits for
    (`CARD-4`) · Acceptance criteria with `d of t` and tickable boxes
    (`CARD-3`) · format warnings · the ticket's markdown (`CARD-2`).
 4. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
@@ -173,8 +190,9 @@ reorders them.
    short id, link, branch and time, then its detail and its subagents as a
    tree on a spur: each row its state, type, the ticket it claimed when that
    is another, and its plan step (or tool and edit counts), opening to its
-   own plan, files and activity (agent-protocol §10). A subagent listed on
-   its own ticket names the session it belongs to.
+   own plan, files and activity (agent-protocol §10). A run's plan shows
+   only when it has one; a run with no plan shows no plan section. A
+   subagent listed on its own ticket names the session it belongs to.
 6. **Attachments tab** (shown when the ticket has files): a two-column grid
    of thumbnails (screenshots) and file tiles, each with caption, file name
    and kind; a thumbnail opens a lightbox dialog (Escape closes, arrows and
@@ -184,6 +202,28 @@ reorders them.
    Verify* steps show as a checklist with `d of t`, between the section's
    own text, and a tick is written into the step's line in `review.md`
    (`REV-3`).
+
+### Ticket page
+
+A ticket's full page (`CARD-7`, `#/ticket/<id>`) is the panel at reading
+width: the band (no view current; its views leave the ticket), then a
+column of at most 64rem, centred, that scrolls as a whole. A quiet *Show on
+the <project> board* link (board icon) leads, then the panel's header with
+the title as the page's h1 (the id plain, being this page's own), the tabs
+and the tab's content, under a visually hidden h2 naming the tab. No close
+button and no Position buttons. Ticket links on the page stay in its tab;
+the browser tab reads `<id> · <title> · Flashheart`.
+
+### Ticket ids
+
+A ticket id shown anywhere is a link to the ticket's full page in a new tab
+(`KEY-3`): semibold, tabular, underlined on hover. A link never sits inside
+a button. Where the whole of a card or station opens the panel, one button
+covers its drawing (which is hidden from assistive technology, the button
+carrying the name) and the id link sits above the button, off the tab order:
+the card stays one keyboard stop, and the panel header's id link serves the
+keyboard. In table rows and the Overview the title is the button and the
+id a separate link.
 
 ## 4. Workstreams
 
@@ -203,6 +243,8 @@ reorders them.
   id, status pill, with a *Needs FH-n* blocked pill above it for an
   unfinished dependency outside the line.
   - **Done or archived**: filled line-colour station with a check.
+  - **Rejected**: filled line-colour station with a cross (finished, not
+    accepted; never a check).
   - **Ready to review**: filled line-colour station with a ground dot (served,
     not finished; never a check).
   - **Next stop**: the larger interchange ring in the line colour with a
@@ -219,16 +261,48 @@ reorders them.
   faint rule when there is a graph, wrapping onto rows.
   Shift with Left/Right or drag reorders them (`EDIT-4`).
 
-## 5. Agents
+## 5. Overview
 
-Page header; then lanes in fixed order Needs you, Working, Quiet, Waiting,
-Ended (`VIEW-3`), each a rounded surface headed like a board column (run
-mark, title, count badge). An empty lane keeps its head above one quiet
-sentence. Each run is one row: state and reason · agent and short id (the
-expand control) · project key (all scope) · ticket id and title or
-*Unassigned* · plan route and step · branch · last activity right. Subagents
-hang under their session. An open row shows plan, edited files, meta and
-activity. Older ended runs sit behind *Show older ended runs*.
+The project manager's view (`VIEW-3`, D32; approved concept: FH-47's Calm
+direction). Page header; then one column, filling Main with the same gutter
+as the other views, opening with the pipeline (FH-63): one row of five
+interlocking chevron cards, pointing left to right, one per board column in
+order (Backlog, Up next, In progress, Ready to review, Done, the last
+without Rejected tickets), each a large
+tabular count over the column's word with its status icon, in the State
+role (§7). Each card leads to the Board for the scope. The row stays one row
+at every width; below 40rem the icons go and the words wrap. Then the
+rounded section cards in fixed order:
+
+1. **Needs your decision**: questions, each a question card answerable in
+   place (`CARD-6`), and permission prompts, which say *Answer in the
+   session · project · branch* and offer no button.
+2. **Ready for your review**: oldest waiting first; criteria met, waiting
+   time and one primary **Review results** button opening the ticket's
+   Review tab.
+3. **At risk**: the reason in words (no live session, session gone quiet,
+   ended without a handoff, top of Up next blocked by …) and *Last
+   activity …* (a session's), *Last changed …* (the ticket's own change,
+   when no session has activity) or *Not started*; an agent is named only
+   for a live session.
+4. **In progress**: the session's state and its subagents in words
+   (*Working · subagents 3 done · 2 running*), agent, criteria and last
+   activity.
+5. **Work with no ticket** and **Up next**, collapsed tiles: a live session
+   with no ticket (session id, project · branch, agent, run state, time,
+   **Create ticket** opening New ticket in its project); the top three of
+   each project's Up next, blocked (its reason) or *Ready to start*.
+
+A section card's head sits on the column surface: a round mark (Needs your
+decision in the attention disc while anything needs you, review and in
+progress in their status colours, the rest ink on a card disc), the title
+in the display head cut and a count badge. At risk and In progress open
+when they have something, the tiles start closed, and each of those four
+toggles with a chevron; the choice is not remembered. An empty section is
+its head with one calm sentence and nothing to open. Rows align from 48rem
+(id · title over one line of words · agent chip · meta · action) and stack
+under the title below. The id opens the full page, the title the panel.
+No coloured edge strips; the attention colour stays with Needs you.
 
 ## 6. Table
 
@@ -247,10 +321,10 @@ for another role's job, and none is ever the only carrier of meaning.
 | --- | --- | --- | --- |
 | Frame | Brand surface and the current scope | Band and its current view tab (raspberry light, black dark), rail and its current tile | The tab's or project's name |
 | Action | The primary action | Primary button | Its label |
-| Attention | A run or question that needs the user | Needs you plate (band, rail, card, lane, panel) | Disc mark and words |
+| Attention | A run or question that needs the user | Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark | Disc mark and words |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
 | Paint | The Colour by value | Card header tint, filled tag, colour chip bullet | The value's word |
-| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green | Icon and column word |
+| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages | Icon and column word |
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |
@@ -264,7 +338,7 @@ is dashed and hatched in ink.
 
 | State | Contract |
 | --- | --- |
-| Loading | Skeletons in the shape of the view (columns, lanes, route cards, panel header) |
+| Loading | Skeletons in the shape of the view (columns, section cards, route cards, panel header) |
 | Empty | Centred display-cut title and one plain sentence of what fills it |
 | Error | Danger strip with the error in words and *Try again*; the last good copy stays visible with a note |
 | Board root missing | Empty state naming the path |
@@ -284,14 +358,14 @@ priority first when several are on screen:
 | --- | --- | --- |
 | Move toast (not announced) | A move to Done that finishes its workstream: completion. Any other move to Done: progress, at most every ten minutes | 61–70; 51–53, 55, 57, 58 |
 | Card panel | A current handoff (not stale) with a next step; an in-progress ticket with no handoff | 75, 77, 79, 80; 73 |
-| Open run (Agents) | A plan; no plan | 32, 34–36, 39, 40; 33 |
-| Empty views | No tickets; nothing matches the filters or search (also the archive's search); no workstreams; no agent runs | 21–30 (reviewed ones); 82–88; 31; 41–50 |
-| Columns and lanes | Ready to review is empty; the Needs you lane is empty and nothing anywhere needs you | 71, 72; 11–19 |
+| Open run (Runs tab) | A plan | 32, 34–36, 39, 40 |
+| Empty views | No tickets; nothing matches the filters or search (also the archive's search); no workstreams; the Overview's In progress is empty and no session in scope is live | 21–30 (reviewed ones); 82–88; 31; 41–50 |
+| Columns and sections | Ready to review is empty; the Overview's Needs your decision is empty and nothing anywhere needs you | 71, 72; 11–19 |
 | Stopped screen | After a successful Quit only (never on a lost or failed connection) | 92–100 |
 | Wordmark tooltip | Always; an Easter egg, never visible text | 1–7 |
 
-Deferred: 54 (claims a plan's first task) and 60 (claims a reader for a
-handoff).
+Deferred: 33 (a run with no plan shows no plan section), 54 (claims a
+plan's first task) and 60 (claims a reader for a handoff).
 
 Focus is always visible; reduced motion removes transitions, the panel
 reveal and the Working beat; every control has an accessible name; contrast
@@ -323,10 +397,10 @@ other than the above, the above wins:
   footer, so it shows at every width and with the rail collapsed.
 - **Omissions the references do not show but the product keeps**: project
   route bars and counts in the rail, the filter buttons, the
-  ticket count, virtual columns and their toggles, the colour chips, mirrored
-  cards, repair, wait notes, the project name on All-projects cards,
+  ticket count, the Needs you filter, the Backlog toggle, the colour chips,
+  repair, wait notes, the project name on All-projects cards,
   attachments and review markers, Archive, the Edit and Runs tabs' content,
-  the board root and version, Agents and Table.
+  the board root and version, the Overview and Table.
 - **Additions the references show but the product does not have**: a card
   overflow menu, a ⌘K search shortcut, a single filters popover, workstream
   descriptions and a ticket details list. None are added by this rollout.

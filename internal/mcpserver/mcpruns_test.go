@@ -79,7 +79,7 @@ func TestAWriteWithoutAHookRunStartsOne(t *testing.T) {
 		t.Fatalf("run.start = %+v %+v", start, data)
 	}
 	run := start.Run
-	if kinds := e.kinds(run); !slices.Equal(kinds, []string{events.RunStart, events.Claim, events.TicketMoved, events.ToolUsed}) {
+	if kinds := e.kinds(run); !slices.Equal(kinds, []string{events.RunStart, events.Claim, events.TicketMoved, events.Activity}) {
 		t.Fatalf("events = %v", kinds)
 	}
 	short := run[:len("codex:mcp-0123")]
@@ -237,8 +237,23 @@ func TestTwoConnectionsGetTwoRuns(t *testing.T) {
 	}
 }
 
-// Every tool call of a started run is activity, so its claim's lease is
-// renewed by reads as well as writes (agent-protocol §6, RUN-6).
+// activity lists a run's activity records.
+func (e *env) activity(run string) []events.ActivityData {
+	e.t.Helper()
+	var list []events.ActivityData
+	for _, ev := range e.log() {
+		var data events.ActivityData
+		if ev.Run == run && ev.Kind == events.Activity && ev.Decode(&data) == nil {
+			list = append(list, data)
+		}
+	}
+	return list
+}
+
+// Every tool call of a started run is activity, recorded as hooks record
+// tool results (at most one activity record per activity_seconds), so its
+// claim's lease is renewed by reads as well as writes (agent-protocol §6,
+// RUN-6).
 func TestToolCallsRenewAStartedRunsLease(t *testing.T) {
 	t.Parallel()
 
@@ -246,43 +261,38 @@ func TestToolCallsRenewAStartedRunsLease(t *testing.T) {
 	id := e.ticket(store.NewTicket{Title: "Card panel"})
 	codex := e.dial(codexClient)
 	e.okOn(codex, "claim", map[string]any{"ticket": id})
+	run := e.started()[0].Run
+	// Calls within a minute of the last record wait for the next one.
+	e.okOn(codex, "board_context", nil)
+	e.okOn(codex, "list_tickets", nil)
+	if got := e.activity(run); len(got) != 1 || got[0].Tools != 1 {
+		t.Fatalf("activity after three calls in a minute = %+v", got)
+	}
 	e.now = e.now.Add(25 * time.Minute)
 	e.okOn(codex, "get_ticket", map[string]any{"ticket": id})
+	if got := e.activity(run); len(got) != 2 || got[1].Tools != 3 || got[1].Failed != 0 || len(got[1].Paths) != 0 {
+		t.Fatalf("activity = %+v", got)
+	}
 	e.now = e.now.Add(25 * time.Minute)
 	rival := e.dial(codexClient)
 	out, failed := e.callOn(rival, "claim", map[string]any{"ticket": id})
 	if !failed || !strings.Contains(out, "error claimed:") {
 		t.Fatalf("the lease was not renewed by get_ticket:\n%s", out)
 	}
-	run := e.started()[0].Run
-	var tools []string
-	for _, ev := range e.log() {
-		var data events.ToolData
-		if ev.Run == run && ev.Kind == events.ToolUsed && ev.Decode(&data) == nil {
-			tools = append(tools, data.Tool)
-			if !data.OK || data.Path != "" {
-				t.Fatalf("tool.used = %+v", data)
-			}
-		}
-	}
-	if !slices.Equal(tools, []string{"claim", "get_ticket"}) {
-		t.Fatalf("activity = %v", tools)
-	}
 	if state := e.fold().State(run, e.now, runs.DefaultSettings()); state != runs.Waiting {
 		t.Fatalf("state = %s", state)
 	}
 	// A call naming no run it can be is not the started run's activity.
+	e.now = e.now.Add(2 * time.Minute)
 	before := len(e.log())
 	e.callOn(codex, "get_ticket", map[string]any{"ticket": id, "run": "codex:nope"})
 	if len(e.log()) != before {
 		t.Fatalf("a call with a wrong run recorded %+v", e.log()[before:])
 	}
-	// A failed call is activity too, marked failed.
+	// A failed call is activity too, counted as failed.
 	e.callOn(codex, "claim", map[string]any{"ticket": "DM-99"})
-	last := e.log()[len(e.log())-1]
-	var data events.ToolData
-	if last.Run != run || last.Kind != events.ToolUsed || last.Decode(&data) != nil || data.OK {
-		t.Fatalf("last event = %+v", last)
+	if got := e.activity(run); len(got) != 3 || got[2].Tools != 1 || got[2].Failed != 1 {
+		t.Fatalf("activity = %+v", got)
 	}
 }
 
@@ -295,6 +305,8 @@ func TestClosingTheConnectionEndsItsRun(t *testing.T) {
 	codex := e.dial(codexClient)
 	e.okOn(codex, "claim", map[string]any{"ticket": id})
 	run := e.started()[0].Run
+	// A call since the last activity record is recorded before the end.
+	e.okOn(codex, "get_ticket", map[string]any{"ticket": id})
 	if err := codex.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -313,6 +325,9 @@ func TestClosingTheConnectionEndsItsRun(t *testing.T) {
 	var data events.RunEndData
 	if err := last.Decode(&data); err != nil || data.Reason != "disconnected" {
 		t.Fatalf("run.end = %+v", data)
+	}
+	if got := e.activity(run); len(got) != 2 || got[1].Tools != 1 {
+		t.Fatalf("activity before the end = %+v", got)
 	}
 	set := e.fold()
 	if state := set.State(run, e.now, runs.DefaultSettings()); state != runs.Ended {

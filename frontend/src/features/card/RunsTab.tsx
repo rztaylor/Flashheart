@@ -6,15 +6,16 @@ import { Icon } from "../../components/Icon";
 import { RunStateLabel } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import {
-  agentName,
   counted,
+  mcpOnly,
   needsReason,
+  runAgentName,
   sessionsOf,
   shortID,
 } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useNow } from "../../state/useNow";
-import { BranchLabel, RunDetail } from "../agents/RunDetail";
+import { BranchLabel, RunDetail } from "./RunDetail";
 
 // RunsTab lists the agent runs linked to a ticket, most recent first (CARD-1):
 // each session with its state, plan, edited files and activity, and its
@@ -103,8 +104,15 @@ function RunCard({
             </>
           ) : (
             <>
-              <span className="font-medium text-ink">
-                {agentName(run.agent)}
+              <span
+                className="font-medium text-ink"
+                title={
+                  mcpOnly(run)
+                    ? "Started by Flashheart's MCP server: without hooks it reports tool calls, claims and questions, never a plan, edits or permission prompts"
+                    : undefined
+                }
+              >
+                {runAgentName(run)}
               </span>
               <span className="font-normal text-ink-muted" title={run.id}>
                 {shortID(run.id)}

@@ -2,31 +2,30 @@ import type { ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import type { TicketRef } from "../api/board";
 import {
   type LinkContext,
   linkTicketIds,
   resolveLink,
 } from "../model/markdown";
+import { TicketLink } from "./TicketLink";
 
 interface MarkdownProps {
   children: string;
   context: LinkContext;
   // Project keys whose ticket ids in text become links (KEY-3).
   keys: Set<string>;
-  onOpenTicket(ticket: TicketRef): void;
   // inline renders one line of markdown inside a span, without paragraphs.
   inline?: boolean;
 }
 
 // Markdown renders GitHub-flavoured markdown without raw HTML (CARD-2,
-// SEC-4). Ticket links open the ticket, web links open in a new tab, images
+// SEC-4). Ticket links open the ticket's full page (TicketLink), web links
+// open in a new tab, images
 // load only from the attachment endpoint, and anything else renders as text.
 export function Markdown({
   children,
   context,
   keys,
-  onOpenTicket,
   inline = false,
 }: MarkdownProps) {
   const components: Components = {
@@ -35,16 +34,12 @@ export function Markdown({
       switch (target.kind) {
         case "ticket":
           return (
-            <a
-              href={`#ticket-${target.id}`}
-              onClick={(event) => {
-                event.preventDefault();
-                onOpenTicket({ id: target.id });
-              }}
+            <TicketLink
+              id={target.id}
               className="font-medium text-ink underline decoration-rule-strong/40 hover:decoration-rule-strong"
             >
               {label}
-            </a>
+            </TicketLink>
           );
         case "external":
           return (

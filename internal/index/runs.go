@@ -41,6 +41,12 @@ type tracker struct {
 	last time.Time
 	// refolds counts full refolds, for tests.
 	refolds int
+	// humans is each project's latest human board activity (agent-protocol
+	// §3): from the files before the window, read once when the project is
+	// first seen (seeded), and from every event read since. Unlike the
+	// window, it outlives a new day.
+	humans map[string]events.HumanActivity
+	seeded map[string]bool
 }
 
 type projectEvents struct {
@@ -64,6 +70,15 @@ func (t *tracker) update(projects []string, now time.Time) string {
 			refold = true
 		}
 	}
+	if t.humans == nil {
+		t.humans, t.seeded = map[string]events.HumanActivity{}, map[string]bool{}
+	}
+	for name := range t.seeded {
+		if !slices.Contains(projects, name) {
+			delete(t.seeded, name)
+			delete(t.humans, name)
+		}
+	}
 	var fresh []events.Event
 	for _, project := range slices.Sorted(slices.Values(projects)) {
 		files, err := t.source.Files(project)
@@ -75,12 +90,17 @@ func (t *tracker) update(projects []string, now time.Time) string {
 			state = &projectEvents{offsets: map[string]int64{}}
 			t.projects[project] = state
 		}
+		if !t.seeded[project] {
+			t.seeded[project] = true
+			t.seedHuman(project, files, first)
+		}
 		for _, file := range files {
 			if file < first {
 				continue
 			}
 			offset, _ := t.source.ReadFrom(project, file, state.offsets[file], func(e events.Event) {
 				state.events = append(state.events, e)
+				t.noteHuman(e)
 				fresh = append(fresh, e)
 			})
 			state.offsets[file] = offset
@@ -110,6 +130,31 @@ func (t *tracker) update(projects []string, now time.Time) string {
 	sort.Strings(parts)
 	return strings.Join(parts, ",")
 }
+
+// noteHuman keeps e if it is the human's latest board activity in its
+// project so far.
+func (t *tracker) noteHuman(e events.Event) {
+	if activity, ok := events.HumanActivityOf(e); ok && activity.Time.After(t.humans[e.Project].Time) {
+		t.humans[e.Project] = activity
+	}
+}
+
+// seedHuman reads a project's files dated before the window, newest first,
+// up to the first with any human activity: the human may not have touched
+// the board for longer than runs are kept.
+func (t *tracker) seedHuman(project string, files []string, first string) {
+	for index := len(files) - 1; index >= 0; index-- {
+		if _, found := t.humans[project]; found {
+			return
+		}
+		if files[index] < first {
+			_, _ = t.source.ReadFrom(project, files[index], 0, t.noteHuman)
+		}
+	}
+}
+
+// human returns a copy of each project's latest human activity.
+func (t *tracker) human() map[string]events.HumanActivity { return maps.Clone(t.humans) }
 
 // views derives every tracked run at now, linking runs by branch to the
 // board's in-progress tickets (RUN-5).
@@ -141,8 +186,13 @@ func signature(views []runs.View) string {
 }
 
 // RunCounts counts runs by state; Live is every run not Ended.
+// NeedsYouUnticketed counts the runs in Needs you that no card on the
+// board shows: neither their linked ticket nor a ticket one of their open
+// questions is about is on it (none, or archived or gone). The board's
+// Needs you filter cannot show them (FH-44).
 type RunCounts struct {
 	Working, NeedsYou, Waiting, Quiet, Ended, Live int
+	NeedsYouUnticketed                             int
 }
 
 // RunCounts counts a project's runs, or every run when project is "".
@@ -157,6 +207,9 @@ func (s *Snapshot) RunCounts(project string) RunCounts {
 			counts.Working++
 		case runs.NeedsYou:
 			counts.NeedsYou++
+			if !s.shownOnBoard(run) {
+				counts.NeedsYouUnticketed++
+			}
 		case runs.Waiting:
 			counts.Waiting++
 		case runs.Quiet:
@@ -171,6 +224,29 @@ func (s *Snapshot) RunCounts(project string) RunCounts {
 	return counts
 }
 
+// shownOnBoard reports whether a card on the board shows the run: its
+// linked ticket's, or that of a ticket one of its open questions is about.
+func (s *Snapshot) shownOnBoard(run runs.View) bool {
+	if s.onBoard(run.Link.Ticket) {
+		return true
+	}
+	for _, question := range run.Questions {
+		if question.Open() && s.onBoard(question.Ticket) {
+			return true
+		}
+	}
+	return false
+}
+
+// onBoard reports whether id names a ticket the board shows.
+func (s *Snapshot) onBoard(id string) bool {
+	if id == "" || s.Archived(id) {
+		return false
+	}
+	_, _, ok := s.FindTicket(id)
+	return ok
+}
+
 // statePriority orders live states for a ticket's badge: the one that most
 // needs attention first.
 var statePriority = map[runs.State]int{runs.NeedsYou: 0, runs.Working: 1, runs.Quiet: 2, runs.Waiting: 3}
@@ -183,8 +259,7 @@ func (s *Snapshot) TicketRun(id string) (runs.View, bool) {
 		if run.Link.Ticket != id || run.State == runs.Ended || run.Parent != "" {
 			continue
 		}
-		if best < 0 || statePriority[run.State] < statePriority[s.Runs[best].State] ||
-			(run.State == s.Runs[best].State && run.LastActivity.After(s.Runs[best].LastActivity)) {
+		if best < 0 || leads(run, s.Runs[best]) {
 			best = i
 		}
 	}

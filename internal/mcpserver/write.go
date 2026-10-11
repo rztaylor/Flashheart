@@ -96,7 +96,7 @@ func (srv *server) claim(inv *invocation, input ClaimInput) (string, error) {
 		return "", fail("needs_repair", "ask the human to repair it on the board", "%s needs repair: %s", ticket.ID, strings.Join(ticket.Repair, "; "))
 	}
 	if ticket.Column == board.Done {
-		return "", fail("invalid_input", "create a ticket for new work on it, or ask the human to reopen it", "%s is done", ticket.ID)
+		return "", fail("invalid_input", "create a ticket for new work on it, or ask the human to reopen it", "%s is %s", ticket.ID, ticket.Status())
 	}
 	reason := scrub.Text(input.Reason, events.MaxReasonText)
 	if input.Force && reason == "" {
@@ -556,9 +556,12 @@ func (srv *server) move(inv *invocation, input MoveInput) (string, error) {
 			return "", err
 		}
 	}
-	to, ok := board.ParseColumn(strings.TrimSpace(input.To))
+	to, rejected, ok := board.ParseStatus(strings.TrimSpace(input.To))
 	if !ok {
 		return "", fail("invalid_input", "use backlog, up-next, in-progress or review", "%q is not a column", input.To)
+	}
+	if rejected {
+		return "", fail("invalid_input", "ask the human to reject it on the board", "agents do not reject tickets")
 	}
 	if to == board.Done {
 		return "", fail("invalid_input", "move it to review; the human moves it to done after verifying", "agents do not move tickets to done")
@@ -589,7 +592,7 @@ func (srv *server) move(inv *invocation, input MoveInput) (string, error) {
 		warnings = board.ReviewWarnings(ticket, review, project.Reviews[ticket.ID])
 	}
 	if ticket.Column != to {
-		if err := c.record(project.Name, events.Event{Kind: events.TicketMoved, Data: events.TicketData{Ticket: ticket.ID, From: string(ticket.Column), To: string(to), By: c.by()}}); err != nil {
+		if err := c.record(project.Name, events.Event{Kind: events.TicketMoved, Data: events.TicketData{Ticket: ticket.ID, From: ticket.Status(), To: string(to), By: c.by()}}); err != nil {
 			return "", err
 		}
 	}

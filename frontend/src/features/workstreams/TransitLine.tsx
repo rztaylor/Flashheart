@@ -23,6 +23,7 @@ import {
 import type { TicketRef, Workstream, WorkstreamTicket } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { Pill, StatusPill } from "../../components/Pill";
+import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { statusOf } from "../../model/status";
 import { type Edge, layoutGraph, moveFree } from "./graph";
@@ -50,11 +51,13 @@ const served = (ticket: WorkstreamTicket) =>
   ticket.column === "done" ||
   ticket.column === "archived";
 
-// A check means finished (Done or Archived); Ready to review is served but
-// never checked (ui-layout.md §4). An unfinished ticket that can start is a
-// next stop; one held by something outside the line is a dashed ring.
+// A check means finished (Done or Archived); a rejected ticket is finished
+// but crossed, and Ready to review is served but never checked
+// (ui-layout.md §4). An unfinished ticket that can start is a next stop; one
+// held by something outside the line is a dashed ring.
 function stationState(ticket: WorkstreamTicket, suspended: boolean) {
   if (ticket.missing) return "missing";
+  if (ticket.column === "done" && ticket.rejected) return "rejected";
   if (ticket.column === "done" || ticket.column === "archived") return "done";
   if (served(ticket)) return "served";
   if (ticket.held || suspended) return "held";
@@ -63,8 +66,8 @@ function stationState(ticket: WorkstreamTicket, suspended: boolean) {
 }
 type State = ReturnType<typeof stationState>;
 
-const columnTitle = (column: WorkstreamTicket["column"]) =>
-  statusOf(column).label;
+const columnTitle = (ticket: WorkstreamTicket) =>
+  statusOf(ticket.column, ticket.rejected).label;
 
 type Track = "served" | "ahead" | "suspended";
 
@@ -484,7 +487,7 @@ function StationButton({
   const needs = [...ticket.dependsOn, ...ticket.outside];
   const label = [
     ticket.title,
-    columnTitle(ticket.column),
+    columnTitle(ticket),
     ticket.blocked ? "blocked" : "",
     state === "next" ? "next stop" : "",
     needs.length > 0
@@ -502,31 +505,50 @@ function StationButton({
           </Pill>
         ) : null}
       </span>
-      <button
-        {...drag}
-        type="button"
-        data-station={ticket.id}
-        data-station-state={state}
-        disabled={ticket.missing}
-        onClick={() => !ticket.missing && onOpen({ id: ticket.id })}
-        aria-label={label}
-        className="group relative z-10 flex flex-col items-center gap-1.5 rounded-control px-1 pb-1 text-center disabled:cursor-default"
-      >
-        <span className="grid h-9 place-items-center">
+      {/* One button covers the station's drawing, as on a board card; only
+          the id, a link to the ticket's full page, sits above it. */}
+      <div className="group relative z-10 flex flex-col items-center gap-1.5 px-1 pb-1 text-center">
+        <button
+          {...drag}
+          type="button"
+          data-station={ticket.id}
+          data-station-state={state}
+          disabled={ticket.missing}
+          onClick={() => !ticket.missing && onOpen({ id: ticket.id })}
+          aria-label={label}
+          className="absolute inset-0 z-[1] rounded-control disabled:cursor-default"
+        />
+        <span aria-hidden="true" className="grid h-9 place-items-center">
           <Mark state={state} colour={colour} />
         </span>
-        <span className="line-clamp-2 text-sm leading-snug font-semibold text-ink group-enabled:group-hover:underline">
+        <span
+          aria-hidden="true"
+          className={`line-clamp-2 text-sm leading-snug font-semibold text-ink ${ticket.missing ? "" : "group-hover:underline"}`}
+        >
           {ticket.title}
         </span>
-        <span className="max-w-full truncate text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
-          {ticket.id}
+        <span
+          aria-hidden="true"
+          className="max-w-full truncate text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted"
+        >
+          {ticket.missing ? (
+            ticket.id
+          ) : (
+            <TicketLink
+              id={ticket.id}
+              tabIndex={-1}
+              className="relative z-[2] hover:text-ink"
+            />
+          )}
         </span>
-        {state === "missing" ? (
-          <span className="text-2xs text-ink-muted">Does not exist</span>
-        ) : (
-          <StatusPill column={ticket.column} />
-        )}
-      </button>
+        <span aria-hidden="true">
+          {state === "missing" ? (
+            <span className="text-2xs text-ink-muted">Does not exist</span>
+          ) : (
+            <StatusPill column={ticket.column} rejected={ticket.rejected} />
+          )}
+        </span>
+      </div>
     </>
   );
 }
@@ -534,6 +556,7 @@ function StationButton({
 function Mark({ state, colour }: { state: State; colour: string }) {
   switch (state) {
     case "done":
+    case "rejected":
       return (
         <span
           className="grid size-8 place-items-center rounded-full"
@@ -544,7 +567,11 @@ function Mark({ state, colour }: { state: State; colour: string }) {
               "inset 0 0 0 1px var(--fh-casing), 0 0 0 3px var(--route-surface)",
           }}
         >
-          <Icon name="check" size={16} className="[stroke-width:3]" />
+          <Icon
+            name={state === "rejected" ? "close" : "check"}
+            size={16}
+            className="[stroke-width:3]"
+          />
         </span>
       );
     case "served":

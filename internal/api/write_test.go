@@ -89,6 +89,43 @@ func TestMoveSavesStatusAndRefusesStaleHashes(t *testing.T) {
 	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", `{"to":"done","extra":1}`, http.StatusBadRequest, nil)
 }
 
+// Rejecting a ticket writes status: rejected; it shows in Done, says so on
+// its card, its detail and its workstream station, and moving it on clears
+// it (FH-58).
+func TestMoveToRejectedIsDoneButSaysSo(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "rejected"}, http.StatusOK, nil)
+	data, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "AL-2-board-columns.md"))
+	if !strings.Contains(string(data), "status: rejected") {
+		t.Fatalf("ticket =\n%s", data)
+	}
+	if detail := ticketDetail(t, handler, "AL-2"); detail.Column != "done" || !detail.Rejected {
+		t.Errorf("detail column=%s rejected=%v, want done, true", detail.Column, detail.Rejected)
+	}
+	var cards BoardResponse
+	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &cards)
+	if index := slices.IndexFunc(cards.Cards, func(card Card) bool { return card.ID == "AL-2" }); index < 0 || !cards.Cards[index].Rejected || cards.Cards[index].Column != "done" {
+		t.Errorf("AL-2 card = %+v", cards.Cards)
+	}
+	var lines WorkstreamsResponse
+	getJSON(t, handler, "/api/projects/alpha/workstreams", http.StatusOK, &lines)
+	if station := lines.Workstreams[0].Tickets[0]; station.ID != "AL-2" || station.Column != "done" || !station.Rejected {
+		t.Errorf("station = %+v", station)
+	}
+
+	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "done"}, http.StatusOK, nil)
+	if detail := ticketDetail(t, handler, "AL-2"); detail.Column != "done" || detail.Rejected {
+		t.Errorf("after done: column=%s rejected=%v", detail.Column, detail.Rejected)
+	}
+	detail := ticketDetail(t, handler, "AL-2")
+	send(t, handler, http.MethodPatch, "/api/tickets/AL-2", PatchRequest{Base: detail.Hash, Fields: map[string]json.RawMessage{"status": json.RawMessage(`"rejected"`)}}, http.StatusOK, nil)
+	if detail := ticketDetail(t, handler, "AL-2"); !detail.Rejected {
+		t.Errorf("PATCH status rejected: rejected=%v", detail.Rejected)
+	}
+}
+
 func TestMovingABlockedTicketIntoProgressNeedsAReason(t *testing.T) {
 	t.Parallel()
 
@@ -247,17 +284,16 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	handler, root := writableAPI(t)
 	var prefs Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
-	if prefs.Theme != "system" || prefs.ColourBy != "type" || prefs.Scopes == nil || !slices.Equal(prefs.VirtualColumns, []string{"needs-you"}) {
+	if prefs.Theme != "system" || prefs.ColourBy != "type" || prefs.Scopes == nil {
 		t.Errorf("defaults = %+v", prefs)
 	}
 	prefs.Theme, prefs.Density, prefs.ColourBy = "dark", "compact", "priority"
-	prefs.VirtualColumns = []string{}
 	prefs.Scopes["alpha"] = config.Scope{View: "table", Type: config.Choice{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked"}
-	prefs.Scopes["beta"] = config.Scope{View: "agents"}
+	prefs.Scopes["beta"] = config.Scope{View: "overview"}
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
-	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || !slices.Equal(again.Scopes["alpha"].Type.Include, []string{"bug"}) || again.Scopes["beta"].View != "agents" || len(again.VirtualColumns) != 0 {
+	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || !slices.Equal(again.Scopes["alpha"].Type.Include, []string{"bug"}) || again.Scopes["beta"].View != "overview" {
 		t.Errorf("saved = %+v", again)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
@@ -266,15 +302,32 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	}
 	prefs.ColourBy = "rainbow"
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
-	prefs.ColourBy, prefs.VirtualColumns = "type", []string{"mystery"}
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
-	// An absent list means none shown, not the default.
-	prefs.VirtualColumns = nil
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
-	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
-	if again.VirtualColumns == nil || len(again.VirtualColumns) != 0 {
-		t.Errorf("cleared virtual columns = %#v", again.VirtualColumns)
+}
+
+// The Backlog can be hidden from the Board (FH-41); a config without the
+// setting shows it.
+func TestPreferencesHideTheBacklog(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	var prefs Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
+	if prefs.HiddenColumns == nil || len(prefs.HiddenColumns) != 0 {
+		t.Fatalf("default hidden columns = %#v", prefs.HiddenColumns)
 	}
+	prefs.HiddenColumns = []string{"backlog"}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	var again Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
+	if !slices.Equal(again.HiddenColumns, []string{"backlog"}) {
+		t.Errorf("saved hidden columns = %#v", again.HiddenColumns)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
+	if !strings.Contains(string(data), "hidden_columns: [backlog]") {
+		t.Errorf("config.yaml lacks hidden_columns:\n%s", data)
+	}
+	prefs.HiddenColumns = []string{"done"}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 
 func TestReadOnlyServerRefusesWrites(t *testing.T) {

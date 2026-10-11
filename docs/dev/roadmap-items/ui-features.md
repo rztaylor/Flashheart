@@ -1,7 +1,7 @@
 # ui-features
 
 Status: **Partial** (all built; awaiting the user's review). Tracked on the dogfood board as the `ui-features`
-workstream: FH-24, FH-23, FH-20, FH-21, FH-22, in that order. No roadmap
+workstream: FH-24, FH-23, FH-20, FH-21, FH-22, then FH-45. No roadmap
 dependencies; FH-22 follows the Metro Pop rollout (FH-14).
 
 ## Goal
@@ -25,6 +25,9 @@ restrained humour in secondary copy.
   recorded (`project_archived`). **Built.**
 - FH-22 — discreet Blackadder remarks from the reviewed collection in
   secondary copy, placed as ui-layout.md §8 lists. **Built.**
+- FH-45 — a full page for every ticket (`CARD-7`), opened in a new tab
+  from any ticket id, including ids in ticket text (`KEY-3`, D30).
+  **Built.**
 
 Each ticket's acceptance criteria and test plan are on the board; the
 behaviour lands in `docs/SPEC.md`, the board-format and layout specs, the

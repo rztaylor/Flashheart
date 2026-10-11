@@ -64,6 +64,14 @@ function render(
   );
 }
 
+// idLink is the ticket id as a link to its full page in a new tab (KEY-3).
+const idLink = (id: string) =>
+  new RegExp(
+    `<a [^>]*href="#/ticket/${id}"[^>]*target="_blank"[^>]*>${id}</a>`,
+  );
+// insideButton finds a link nested in a button, which is not allowed.
+const linkInButton = /<button[^>]*>(?:(?!<\/button>)[\s\S])*<a /;
+
 const order = (markup: string, ...parts: string[]) =>
   parts.map((part) => {
     const at = markup.indexOf(part);
@@ -72,6 +80,13 @@ const order = (markup: string, ...parts: string[]) =>
   });
 
 describe("TicketCard", () => {
+  it("links its id to the ticket's full page, outside the card's button", () => {
+    const markup = render();
+    expect(markup).toMatch(idLink("FH-7"));
+    expect(markup).not.toMatch(linkInButton);
+    expect(markup).toContain('data-ticket="FH-7"');
+  });
+
   it("opens with the id and running time, then the title, then the tags", () => {
     const markup = render();
     const [id, time, title, tag] = order(
@@ -91,6 +106,15 @@ describe("TicketCard", () => {
     const [criteria, priority] = order(markup, ">1/3", ">High<");
     expect(criteria).toBeLessThan(priority ?? 0);
     expect(markup).toContain('data-row="footer"');
+  });
+
+  it("says Rejected on a rejected ticket in Done, at every density (FH-58)", () => {
+    for (const density of ["compact", "normal", "detailed"] as const) {
+      const markup = render({ column: "done", rejected: true }, density);
+      expect(markup).toContain(">Rejected<");
+      expect(markup).toContain(", rejected");
+    }
+    expect(render({ column: "done" })).not.toContain("Rejected");
   });
 
   it("keeps type and priority in Compact, and drops criteria", () => {
@@ -148,5 +172,42 @@ describe("TicketCard", () => {
     expect(markup).not.toContain("heading-cut");
     // The full title stays in the tooltip and the accessible name.
     expect(markup).toContain(`title="${"A".repeat(200)}"`);
+  });
+});
+
+// The live badge (VIEW-8) names the plan step only when the run has a plan
+// (FH-54).
+describe("TicketCard live badge", () => {
+  const live = {
+    run: "claude:3f2a9c1e",
+    short: "claude:3f2a9c1e",
+    agent: "claude",
+    state: "working" as const,
+    done: 0,
+    total: 0,
+    step: "",
+    permission: "",
+    waitingOn: "",
+    question: "" as const,
+    questionAnswered: false,
+    lastActivity: "2026-10-06T11:58:00Z",
+  };
+  // badge is the live badge's markup, up to the card's footer.
+  const badge = (markup: string) =>
+    markup.slice(markup.indexOf("data-live="), markup.indexOf("data-row="));
+
+  it("shows no plan step for a run with no plan", () => {
+    const markup = render({ live });
+    expect(badge(markup)).toContain("Claude");
+    expect(badge(markup)).not.toMatch(/\d+\/\d+/);
+    expect(markup).not.toContain("plan");
+  });
+
+  it("shows the current step of a run with a plan", () => {
+    const markup = render({
+      live: { ...live, done: 3, total: 7, step: "Fix header" },
+    });
+    expect(badge(markup)).toContain("3/7 · Fix header");
+    expect(markup).toContain("plan 3 of 7: Fix header");
   });
 });

@@ -2,8 +2,8 @@
 
 Owns the view toolbar shown above the Board and Table (FH-39): the type,
 priority, workstream and state filter buttons and their menus, Clear
-filters, and the Board's View options menu (which virtual columns are shown,
-VIEW-2; card density and Colour by, VIEW-6); and the Board's chip row
+filters, and the Board's View options menu (whether the Backlog is shown,
+FH-41; card density and Colour by, VIEW-6); and the Board's chip row
 (`FilterChips`): workstream chips and the Colour by value chips as filters,
 kept to one line (VIEW-7).
 

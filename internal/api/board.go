@@ -64,6 +64,9 @@ type ProjectSummary struct {
 	Workstreams  []WorkstreamBrief `json:"workstreams"`
 	// Archived counts the project's archived tickets (EDIT-8).
 	Archived int `json:"archived"`
+	// Rejected counts the tickets in Done whose status is rejected (FH-58),
+	// so the Overview's pipeline can count accepted work (FH-63).
+	Rejected int `json:"rejected"`
 	// Runs counts the project's agent runs by state (PRJ-6).
 	Runs RunCountsJSON `json:"runs"`
 }
@@ -104,10 +107,12 @@ type ReasonJSON struct {
 
 // Card is a ticket as shown on a board (VIEW-6).
 type Card struct {
-	Project     string       `json:"project"`
-	ID          string       `json:"id"`
-	Slug        string       `json:"slug"`
-	Column      string       `json:"column"`
+	Project string `json:"project"`
+	ID      string `json:"id"`
+	Slug    string `json:"slug"`
+	Column  string `json:"column"`
+	// Rejected marks a ticket in Done whose status is rejected (FH-58).
+	Rejected    bool         `json:"rejected"`
 	Title       string       `json:"title"`
 	Type        string       `json:"type"`
 	Priority    string       `json:"priority"`
@@ -129,13 +134,16 @@ type Card struct {
 	Warnings    []string     `json:"warnings"`
 	SearchText  string       `json:"searchText,omitempty"`
 	// Live is the linked run that most needs attention (VIEW-8); NeedsYou
-	// places the card in the Needs you column (VIEW-2), and AgentWorking
+	// answers the band's Needs you filter (VIEW-2, FH-44), and AgentWorking
 	// answers the Agent working State filter (FH-42).
 	Live         *LiveJSON `json:"live,omitempty"`
 	NeedsYou     bool      `json:"needsYou"`
 	AgentWorking bool      `json:"agentWorking"`
 	// OpenQuestions counts open questions about the ticket (CARD-6).
 	OpenQuestions int `json:"openQuestions"`
+	// Sessions summarises the runs working for the ticket (RUN-9); absent
+	// when none is linked and the ticket is not in progress.
+	Sessions *SessionsJSON `json:"sessions,omitempty"`
 }
 
 // BoardResponse is GET /api/projects/{project}/board.
@@ -216,10 +224,11 @@ type TicketResponse struct {
 
 // WorkstreamTicket is one ticket in a workstream swimlane, in order.
 type WorkstreamTicket struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Column  string `json:"column"`
-	Blocked bool   `json:"blocked"`
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Column   string `json:"column"`
+	Rejected bool   `json:"rejected"`
+	Blocked  bool   `json:"blocked"`
 	// Held means blocked by something other than a ticket on this line or
 	// its workstream-level dependencies.
 	Held    bool `json:"held"`
@@ -515,7 +524,7 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 				ref := board.Ref{Project: owner.Name, ID: id}
 				reasons := snapshot.Analysis.Blocked[ref]
 				entry = WorkstreamTicket{
-					ID: id, Title: ticket.Title, Column: string(ticket.Column),
+					ID: id, Title: ticket.Title, Column: string(ticket.Column), Rejected: ticket.Rejected,
 					Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream),
 					DependsOn: []string{}, Outside: []string{},
 				}
@@ -611,7 +620,7 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 	ref := board.Ref{Project: project.Name, ID: ticket.ID}
 	blockedBy := reasons(project.Name, snapshot.Analysis.Blocked[ref])
 	result := Card{
-		Project: project.Name, ID: ticket.ID, Slug: ticket.Slug, Column: string(ticket.Column),
+		Project: project.Name, ID: ticket.ID, Slug: ticket.Slug, Column: string(ticket.Column), Rejected: ticket.Rejected,
 		Title: ticket.Title, Type: ticket.Type, Priority: ticket.Priority, Workstream: ticket.Workstream,
 		Tags: nonNil(ticket.Tags), Created: ticket.Created, Updated: ticket.Updated,
 		Modified: timestamp(ticket.Modified), Branch: ticket.Branch, DependsOn: nonNil(ticket.DependsOn),
@@ -630,6 +639,7 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 		result.HandoffNext = ticket.Handoff.Next[0]
 	}
 	liveBadge(snapshot, &result)
+	result.Sessions = sessionsJSON(snapshot, ticket)
 	if withSearch {
 		text := []rune(ticket.Body)
 		if len(text) > searchTextRunes {
@@ -696,6 +706,9 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 	}
 	for _, ticket := range project.Tickets {
 		result.Counts[string(ticket.Column)]++
+		if ticket.Rejected {
+			result.Rejected++
+		}
 		if ticket.NeedsRepair() {
 			result.NeedsRepair++
 		}
