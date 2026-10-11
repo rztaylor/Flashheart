@@ -40,6 +40,10 @@ All notable changes to this project are documented here. The project follows
 
 - The Overview fills the main area like Board, Workstreams and Table
   instead of sitting in a centred 56rem column (FH-60).
+- Hooks in an archived project's repository no longer wait for the root
+  lock to learn the project is archived (FH-27). They used to wait up to
+  5 s behind a long write such as a permanent project delete; they now
+  return at once and still record and print nothing.
 
 - Files changed through shell commands now count toward the handoff
   (FH-53). A run used to be dirty only after the edit tools, though agents
