@@ -121,9 +121,12 @@ export function fetchPreferences(
   );
 }
 
+// savePreferences replaces the saved preferences. keepalive sends a save the
+// page is unloading on (FH-48).
 export async function savePreferences(
   fetcher: AuthenticatedFetch,
   preferences: Preferences,
+  options: { keepalive?: boolean } = {},
 ) {
-  await sendJSON(fetcher, "PUT", "/api/preferences", preferences);
+  await sendJSON(fetcher, "PUT", "/api/preferences", preferences, options);
 }
