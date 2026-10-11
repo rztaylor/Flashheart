@@ -211,7 +211,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
 			return next, err
 		}
-		return mdfile.AppendToSection(next, "Notes", board.BlockedStartNote(reason))
+		return mdfile.AppendToSection(next, board.SectionNotes, board.BlockedStartNote(reason))
 	}
 	// A move sets only status (and a note), so without a hash it merges
 	// with the file as it is then (STO-3); with one it must still match.
@@ -404,7 +404,7 @@ func (b boardAPI) setCriterion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hash, err := writer.UpdateTicket(project.Name, ticket.ID, store.Unchanged(request.Base), func(data []byte) ([]byte, error) {
-		return mdfile.SetCheckbox(data, "Acceptance Criteria", request.Index, request.Checked)
+		return mdfile.SetCheckbox(data, board.SectionCriteria, request.Index, request.Checked)
 	})
 	if err != nil {
 		writeStoreError(w, err)

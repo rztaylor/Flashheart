@@ -130,7 +130,7 @@ func (s *Store) SetTicketWorkstream(project, id string, pre Precondition, workst
 	if err := s.checkTicket(project, id); err != nil {
 		return "", err
 	}
-	if workstream != "" && !ValidName(workstream) {
+	if workstream != "" && !board.ValidSlug(workstream) {
 		return "", fmt.Errorf("workstream %q: %w", workstream, ErrInvalidName)
 	}
 	release, err := s.lock(project)
@@ -159,14 +159,7 @@ func (s *Store) SetTicketWorkstream(project, id string, pre Precondition, workst
 }
 
 // NewWorkstream is the content of a workstream created from the template.
-type NewWorkstream struct {
-	Title, Goal, Priority string
-	// Tickets are live ticket ids of the project, in order; each joins the
-	// new workstream and leaves any other.
-	Tickets              []string
-	DependsOnWorkstreams []string
-	Tags                 []string
-}
+type NewWorkstream = board.NewWorkstream
 
 // CreatedWorkstream reports a new workstream.
 type CreatedWorkstream struct {
@@ -182,23 +175,8 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 	if err := s.checkProject(project); err != nil {
 		return CreatedWorkstream{}, err
 	}
-	input.Title = strings.Join(strings.Fields(input.Title), " ")
-	if input.Title == "" {
-		return CreatedWorkstream{}, fmt.Errorf("%w: a workstream needs a title", ErrInvalidInput)
-	}
-	if input.Priority == "" {
-		input.Priority = "medium"
-	}
-	if !slices.Contains(board.Priorities, input.Priority) {
-		return CreatedWorkstream{}, fmt.Errorf("%w: priority must be one of %s", ErrInvalidInput, strings.Join(board.Priorities, ", "))
-	}
-	for index, id := range input.Tickets {
-		if _, _, ok := board.ParseID(id); !ok {
-			return CreatedWorkstream{}, fmt.Errorf("%w: %q is not a ticket id", ErrInvalidInput, id)
-		}
-		if slices.Contains(input.Tickets[:index], id) {
-			return CreatedWorkstream{}, fmt.Errorf("%w: %s is listed twice", ErrInvalidInput, id)
-		}
+	if err := input.Normalize(); err != nil {
+		return CreatedWorkstream{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 	release, err := s.lock(project)
 	if err != nil {
@@ -220,7 +198,7 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 	for n := 2; slices.Contains(slugs, slug) || s.Exists(path.Join(project, "workstreams", slug+".md")); n++ {
 		slug = base + "-" + strconv.Itoa(n)
 	}
-	data, err := s.workstreamTemplate(slug, input)
+	data, err := board.RenderWorkstream(slug, input, s.now())
 	if err != nil {
 		return CreatedWorkstream{}, err
 	}
@@ -241,41 +219,4 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 		return CreatedWorkstream{}, err
 	}
 	return CreatedWorkstream{Slug: slug, Hash: Hash(data)}, nil
-}
-
-func (s *Store) workstreamTemplate(slug string, w NewWorkstream) ([]byte, error) {
-	body := []string{"", "# " + w.Title, "", "## Goal", ""}
-	if goal := strings.TrimSpace(w.Goal); goal != "" {
-		body = append(body, goal, "")
-	}
-	body = append(body, "## Scope", "", "## Success Criteria", "", "- [ ] Every ticket in the line reviewed", "", "## Notes", "", "None.", "")
-	// The skeleton fixes the field order and writes tickets as a block list,
-	// as board-format shows it; SetList keeps that style.
-	data := []byte("---\nslug: x\nstatus: x\npriority: x\ncreated: x\ntickets:\n  - x\ndepends-on-workstreams: []\ntags: []\n---\n" + strings.Join(body, "\n"))
-	steps := []struct {
-		key    string
-		value  string
-		list   []string
-		isList bool
-	}{
-		{key: "slug", value: slug},
-		{key: "status", value: board.StatusActive},
-		{key: "priority", value: w.Priority},
-		{key: "created", value: s.now().Format("2006-01-02")},
-		{key: "tickets", list: w.Tickets, isList: true},
-		{key: "depends-on-workstreams", list: w.DependsOnWorkstreams, isList: true},
-		{key: "tags", list: w.Tags, isList: true},
-	}
-	var err error
-	for _, step := range steps {
-		if step.isList {
-			data, err = mdfile.SetList(data, step.key, step.list)
-		} else {
-			data, err = mdfile.SetScalar(data, step.key, step.value)
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-	return data, nil
 }

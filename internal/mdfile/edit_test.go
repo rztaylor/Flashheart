@@ -267,3 +267,41 @@ func TestSetTitle(t *testing.T) {
 		t.Errorf("SetTitle(missing) = %q, %v", got, err)
 	}
 }
+
+// Written content stays inside its section: its headings cannot end it
+// and an open code fence cannot hide the sections after it (FH-87, the
+// FH-4 truncation).
+func TestSectionWritesKeepTheirContentInside(t *testing.T) {
+	t.Parallel()
+
+	ticket := "---\nid: FH-4\n---\n# T\n\n## Handoff\n\nOld.\n\n## Notes\n\nNone.\n"
+	count := func(data []byte) int { return len(Sections(Parse(data).Body)) }
+	for _, content := range []string{
+		"Done.\n## Handoff\nInjected.",
+		"# Title\n\n## Notes\n\nfake",
+		"  ## Indented",
+		"```go\nfunc x() {}\n\n## Inside a fence",
+		"~~~\nopen fence\n## Notes",
+	} {
+		for name, write := range map[string]func([]byte) ([]byte, error){
+			"replace": func(data []byte) ([]byte, error) { return ReplaceSection(data, "Handoff", content) },
+			"append":  func(data []byte) ([]byte, error) { return AppendToSection(data, "Handoff", content) },
+		} {
+			out, err := write([]byte(ticket))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := count(out); got != 2 {
+				t.Errorf("%s %q: %d sections:\n%s", name, content, got, out)
+			}
+			if notes, ok := FindSection(Parse(out).Body, "Notes"); !ok || strings.TrimSpace(notes.Content) != "None." {
+				t.Errorf("%s %q: Notes = %q", name, content, notes.Content)
+			}
+		}
+	}
+	// A fenced heading is code, left as written.
+	out, _ := ReplaceSection([]byte(ticket), "Handoff", "```\n## kept\n```")
+	if !strings.Contains(string(out), "```\n## kept\n```\n") {
+		t.Errorf("fenced heading changed:\n%s", out)
+	}
+}
