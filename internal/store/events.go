@@ -159,7 +159,8 @@ func repoSuffix(repo string) string {
 // created (PRJ-4). A name with nothing usable becomes repo-<6 hex>. A v1
 // project is left for migrate (ErrNeedsMigration). A repository whose
 // project is archived gets that project's name with ErrProjectArchived, and
-// nothing is created. Only creating or adopting takes the root lock.
+// nothing is created. Neither a project that already records the
+// repository nor an archived one takes the root lock.
 func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 	if repo == "" {
 		return "", ErrNoProject
