@@ -49,7 +49,7 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    An Overview tab for a project manager replaces the Agents view: decisions,
    reviews, risks and progress by ticket, with sessions as evidence and
    headline metrics since your last change; hooks record less (D32, FH-47;
-   workstream FH-49–FH-55). Built: FH-49, FH-50, FH-51, FH-54; open: FH-52,
+   workstream FH-49–FH-55). Built: FH-49, FH-50, FH-51, FH-52, FH-54; open:
    FH-53, FH-55. No roadmap dependencies.
 
 ## Later possibilities (not scheduled)
