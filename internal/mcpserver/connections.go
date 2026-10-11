@@ -163,7 +163,7 @@ func (c *call) recordStart(project string) error {
 }
 
 // followBranch restates a started run's run.start when its agent has
-// switched branches, so its link (RUN-5), handoff and Agents row follow.
+// switched branches, so its link (RUN-5), handoff and Overview row follow.
 func (c *call) followBranch() error {
 	r := c.set.Get(c.run)
 	if c.where.Branch == "" || r == nil || r.Branch == c.where.Branch || r.Project == "" {
