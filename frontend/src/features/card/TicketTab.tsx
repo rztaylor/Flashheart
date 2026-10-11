@@ -2,6 +2,7 @@ import type { Reason, TicketDetail, TicketRef } from "../../api/board";
 import { Aside } from "../../components/Aside";
 import { Icon } from "../../components/Icon";
 import { Markdown } from "../../components/Markdown";
+import { AttentionDisc } from "../../components/NeedsYou";
 import { BlockerPill } from "../../components/Pill";
 import { QuestionCard } from "../../components/QuestionCard";
 import { StateNote } from "../../components/StateNote";
@@ -128,9 +129,9 @@ export function TicketTab({
             id="questions-heading"
             className="flex items-center gap-2 text-md heading-cut"
           >
-            <span className="grid size-5 place-items-center rounded-full bg-attention text-on-attention">
+            <AttentionDisc>
               <Icon name="warning" size={12} />
-            </span>
+            </AttentionDisc>
             {detail.questions.length === 1
               ? "Question for you"
               : `${detail.questions.length} questions for you`}

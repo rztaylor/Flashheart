@@ -4,8 +4,9 @@ import { COLUMNS, type ProjectSummary } from "../../api/board";
 import { noRuns, type RunCounts } from "../../api/runs";
 import type { Scope } from "../../app/route";
 import { Icon } from "../../components/Icon";
+import { NeedsYouPlate } from "../../components/NeedsYou";
 import { RouteBar } from "../../components/RouteBar";
-import { RunStateMark } from "../../components/RunState";
+import { needsYouPhrase } from "../../model/runs";
 
 interface ProjectRailProps {
   projects: ProjectSummary[];
@@ -156,13 +157,10 @@ function RailItem({
           className={`flex items-center gap-3 text-2xs whitespace-nowrap ${active ? "text-on-rail-active-muted" : "text-on-rail-muted"}`}
         >
           {runs.needsYou > 0 ? (
-            <span className="flex items-center gap-1 rounded-full bg-attention px-1.5 font-semibold text-on-attention">
-              <RunStateMark state="needs-you" size={8} />
+            <NeedsYouPlate size="rail">
               {runs.needsYou}
-              <span className="sr-only">
-                {runs.needsYou === 1 ? " agent needs" : " agents need"} you
-              </span>
-            </span>
+              <span className="sr-only">{` ${needsYouPhrase(runs.needsYou, true)}`}</span>
+            </NeedsYouPlate>
           ) : null}
           <span>{counts["in-progress"]} in progress</span>
           {blocked > 0 ? (
