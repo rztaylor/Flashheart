@@ -84,6 +84,14 @@ describe("describeEntry", () => {
     expect(describeEntry(entry({ kind: "run.start", detail: "resume" }))).toBe(
       "Session resumed",
     );
+    expect(describeEntry(entry({ kind: "run.start", detail: "mcp" }))).toBe(
+      "Connected without hooks (MCP only)",
+    );
+    expect(
+      describeEntry(
+        entry({ kind: "run.start", detail: "mcp", branch: "feature/next" }),
+      ),
+    ).toBe("Switched to branch feature/next");
     expect(
       describeEntry(entry({ kind: "run.end", detail: "prompt_input_exit" })),
     ).toBe("Ended (prompt input exit)");

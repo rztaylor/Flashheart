@@ -194,6 +194,7 @@ export function describeEntry(entry: TimelineEntry): string {
     case "permission.resolved":
       return `Permission ${entry.detail || "resolved"}`;
     case "run.start":
+      if (entry.branch) return `Switched to branch ${entry.branch}`;
       return (
         source[entry.detail ?? ""] ??
         (entry.detail ? `Subagent started (${entry.detail})` : "Started")

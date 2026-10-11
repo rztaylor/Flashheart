@@ -64,7 +64,8 @@ const (
 // Entry is one timeline event of a run, with the fields worth showing.
 // An activity record's entry counts its tool uses (Tools) and failures and
 // names the first path it recorded; a ticket.moved entry's Detail is the
-// status the ticket moved to.
+// status the ticket moved to; Branch marks a hookless run's restated
+// run.start as its switch to that branch.
 type Entry struct {
 	Time     time.Time `json:"time"`
 	Kind     string    `json:"kind"`
@@ -75,6 +76,7 @@ type Entry struct {
 	Failures int       `json:"failures,omitempty"`
 	Detail   string    `json:"detail,omitempty"`
 	Ticket   string    `json:"ticket,omitempty"`
+	Branch   string    `json:"branch,omitempty"`
 }
 
 // Run is everything the events say about one session or subagent (RUN-2).
@@ -317,6 +319,12 @@ func (s *Set) Apply(e events.Event) {
 	case events.RunStart:
 		var data events.RunStartData
 		_ = e.Decode(&data)
+		// The MCP server restates a started run's start, still connected,
+		// when its agent switches branches (agent-protocol §7.1): a branch
+		// switch, not a second connection.
+		if data.Source == events.SourceMCP && r.Source == events.SourceMCP && !r.ended {
+			entry.Branch = data.Branch
+		}
 		if r.ended || r.Started.After(e.Time) {
 			r.Started = e.Time
 		}
