@@ -64,6 +64,13 @@ describe("FilterBar", () => {
     expect(markup).toContain("Clear filters");
   });
 
+  it("offers Rejected as a State, labelled and badged like the others (FH-59)", () => {
+    const markup = render({ ...emptyFilters, state: "rejected" });
+    expect(markup).toContain('aria-label="State: Rejected"');
+    expect(markup).toContain("<span>State: Rejected</span>");
+    expect(markup).toContain("Clear filters");
+  });
+
   it("counts chip-only filters toward Clear filters", () => {
     expect(
       render({ ...emptyFilters, age: { include: ["today"], exclude: [] } }),

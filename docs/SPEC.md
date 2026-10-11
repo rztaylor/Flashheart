@@ -265,7 +265,8 @@ Full format: `docs/dev/specs/board-format.md`.
   the value in a tag, with colour chips on the board that also filter; the colour is never the
   only carrier of meaning and never uses the workstream line colours.
 - `VIEW-7` Filters and search across title, slug, body, tags, type, priority,
-  workstream, blocked/unblocked, has-run, has-question. Type, priority,
+  workstream, state (blocked, not blocked, needs repair, agent working or
+  rejected, FH-59), has-run, has-question. Type, priority,
   workstream and the Colour by value can each show only some values or hide
   some (FH-39). Filters and view choices are remembered per project
   (`CFG-2`).
@@ -501,6 +502,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   nothing, reports each check as ok, warning or problem with the fix (a
   missing hook, a configured binary that no longer exists, an out-of-date
   skill, hook errors of the last day), and exits 1 when it finds a problem.
+  An MCP server registered at local or project scope instead of setup's
+  user scope is a warning naming the scope, not "not registered".
 
 ### 6.11 Review and attachments (`REV`)
 

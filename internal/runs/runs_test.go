@@ -290,6 +290,41 @@ func TestTimelineIsBounded(t *testing.T) {
 	}
 }
 
+// The ticket events the MCP tools record name their ticket in the
+// timeline, and a move names the status it moved to (FH-70).
+func TestTicketEventsInTheTimeline(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		kind string
+		data any
+		want Entry
+	}{
+		{"a claim", events.Claim, events.TicketData{Ticket: "AL-1"}, Entry{Kind: events.Claim, Ticket: "AL-1"}},
+		{"a move names its column", events.TicketMoved, events.TicketData{Ticket: "AL-1", From: "backlog", To: "in-progress"}, Entry{Kind: events.TicketMoved, Ticket: "AL-1", Detail: "in-progress"}},
+		{"a rejection", events.TicketMoved, events.TicketData{Ticket: "AL-1", From: "review", To: "rejected"}, Entry{Kind: events.TicketMoved, Ticket: "AL-1", Detail: "rejected"}},
+		{"an update", events.TicketUpdated, events.TicketData{Ticket: "AL-1", Fields: []string{"title"}}, Entry{Kind: events.TicketUpdated, Ticket: "AL-1"}},
+		{"a new ticket", events.TicketCreated, events.TicketData{Ticket: "AL-2"}, Entry{Kind: events.TicketCreated, Ticket: "AL-2"}},
+		{"a review", events.ReviewWritten, events.TicketData{Ticket: "AL-1"}, Entry{Kind: events.ReviewWritten, Ticket: "AL-1"}},
+		{"an attachment", events.AttachmentAdded, events.AttachmentData{Ticket: "AL-1", File: "files/shot.png", Kind: "screenshot"}, Entry{Kind: events.AttachmentAdded, Ticket: "AL-1"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			set := NewSet()
+			set.Apply(start(0))
+			set.Apply(ev(1, session, tc.kind, tc.data))
+			timeline := set.Get(session).Timeline
+			got := timeline[len(timeline)-1]
+			tc.want.Time = at(1)
+			if got != tc.want {
+				t.Errorf("entry = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestLinks(t *testing.T) {
 	t.Parallel()
 

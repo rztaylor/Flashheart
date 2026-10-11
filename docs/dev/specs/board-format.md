@@ -329,7 +329,9 @@ ui:
 Each of a scope's `type`, `priority`, `workstream` and `age` (today, week or
 older) filters lists the values shown only (`include`, any of them) and the
 values hidden (`exclude`), at most 100 each. A bare value, the form before
-FH-39, reads as one included value; `hide_later` is ignored. The
+FH-39, reads as one included value; `hide_later` is ignored. A scope's
+`state` is one of `all`, `blocked`, `unblocked`, `repair`, `working` or
+`rejected` (FH-59); empty means all. The
 `virtual_columns` list of earlier versions
 is ignored, and dropped when preferences are next saved.
 

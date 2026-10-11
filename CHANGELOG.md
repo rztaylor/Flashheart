@@ -25,6 +25,10 @@ All notable changes to this project are documented here. The project follows
   it anywhere else, Done included, clears it. Agents see `rejected` in
   `list_tickets` and `get_ticket` and can filter by it, but `move` refuses
   it, as it refuses `done` (protocol version unchanged).
+- The State filter's **Rejected** option shows only rejected tickets, on
+  the Board and the Table, for one project or All projects, and is
+  remembered like the other states (FH-59). The Done limit still applies,
+  so older rejected tickets need *Show all*.
 
 ### Security
 
@@ -38,6 +42,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A run's Activity in the Runs tab names every ticket event in plain
+  words instead of its raw event name (FH-70): "Moved FH-1 to In
+  progress", "Updated FH-1", "Attached a file to FH-1", where it showed
+  "ticket.moved FH-1" after most claims.
+- A run without hooks whose agent switches branches shows "Switched to
+  branch …" in its Activity instead of a second "Connected without hooks
+  (MCP only)" line, as if it had connected again (FH-71).
 - A preference changed just before a reload or tab close is no longer lost
   (FH-48). Preferences are saved 400 ms after the last change; a save still
   waiting when the page is hidden or unloaded is now sent at once, through
@@ -49,6 +60,11 @@ All notable changes to this project are documented here. The project follows
   lock to learn the project is archived (FH-27). They used to wait up to
   5 s behind a long write such as a permanent project delete; they now
   return at once and still record and print nothing.
+
+- `flashheart doctor` no longer reports a `flashheart` MCP server
+  registered at local or project scope as "not registered" (FH-35). It is
+  a warning naming the scope, with `setup claude --write` as the fix to
+  register it for every project.
 
 - Files changed through shell commands now count toward the handoff
   (FH-53). A run used to be dirty only after the edit tools, though agents

@@ -204,8 +204,19 @@ func TestAStartedRunFollowsABranchSwitch(t *testing.T) {
 	e.okOn(codex, "claim", map[string]any{"ticket": id})
 	e.okOn(codex, "checkpoint", map[string]any{"ticket": id, "done": []string{"Panel"}, "next": []string{"Tests"}})
 	contains(t, e.file(id), "branch: feature/next", "(run) on feature/next._")
-	if r := e.fold().Get(run); r.Branch != "feature/next" || len(e.started()) != 1 {
+	r := e.fold().Get(run)
+	if r.Branch != "feature/next" || len(e.started()) != 1 {
 		t.Fatalf("run branch = %q, started %d runs", r.Branch, len(e.started()))
+	}
+	// The timeline shows one connection and the switch (FH-71).
+	var starts []string
+	for _, entry := range r.Timeline {
+		if entry.Kind == events.RunStart {
+			starts = append(starts, entry.Detail+" "+entry.Branch)
+		}
+	}
+	if !slices.Equal(starts, []string{"mcp ", "mcp feature/next"}) {
+		t.Fatalf("run.start entries = %q", starts)
 	}
 }
 

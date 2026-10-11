@@ -71,7 +71,10 @@ Priority, Workstream and State, then *Clear filters* while any filter or chip
 applies; right-aligned, Board only, one icon button, *View options* (⋯),
 whose menu holds Show columns (Backlog), Colour by and
 Density (FH-39, FH-41). An applied filter's button takes the select border and ring
-and a count badge (*State: Blocked* for the one-choice State). Type,
+and a count badge (*State: Blocked* for the one-choice State). State
+offers All states, Blocked, Not blocked, Needs repair, Agent working and
+Rejected (tickets in Done whose status is rejected, FH-59; the Done limit
+still applies, so older ones need *Show all*). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
 click shows only that value (with any others shown), a Cmd click (Ctrl off
 macOS) or Cmd/Ctrl with Enter hides it, struck through, and a click on a
@@ -190,9 +193,13 @@ reorders them.
    short id, link, branch and time, then its detail and its subagents as a
    tree on a spur: each row its state, type, the ticket it claimed when that
    is another, and its plan step (or tool and edit counts), opening to its
-   own plan, files and activity (agent-protocol §10). A run's plan shows
-   only when it has one; a run with no plan shows no plan section. A
-   subagent listed on its own ticket names the session it belongs to.
+   own plan, files and activity (agent-protocol §10). Activity names each
+   event in plain words, never by its event kind: "Claimed FH-1", "Moved
+   FH-1 to In progress", "Wrote the review of FH-1"; a hookless run's
+   branch switch reads "Switched to branch feature/next", not as a second
+   connection. A run's plan shows only when it has one; a run with no
+   plan shows no plan section. A subagent listed on its own ticket names
+   the session it belongs to.
 6. **Attachments tab** (shown when the ticket has files): a two-column grid
    of thumbnails (screenshots) and file tiles, each with caption, file name
    and kind; a thumbnail opens a lightbox dialog (Escape closes, arrows and

@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -768,6 +768,10 @@ test("an agent without hooks gets a run from its first write, and its answers wi
     await expect(
       panel.getByText("Connected without hooks (MCP only)"),
     ).toBeVisible();
+    // Its claim moved the ticket, named in plain words (FH-70).
+    await expect(panel.getByText("Claimed BE-1")).toBeVisible();
+    await expect(panel.getByText("Moved BE-1 to In progress")).toBeVisible();
+    await expect(panel.getByText(/ticket\.moved/)).toHaveCount(0);
     for (const [width, height, theme] of sizes.slice(0, 4)) {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
@@ -792,6 +796,29 @@ test("an agent without hooks gets a run from its first write, and its answers wi
       "Greet in English",
     );
     await expect(decision.getByText("Greet in English only?")).toHaveCount(0);
+
+    // Its agent switches branches: the run follows, and its Activity says
+    // so once, not as a second connection (FH-71).
+    const head = join(seeded.beta, ".git", "HEAD");
+    await writeFile(head, "ref: refs/heads/feature/next\n");
+    try {
+      await codex.call("list_tickets", {});
+      await open("#/p/beta/board", { width: 1280, height: 800 });
+      await page.getByRole("button", { name: /^Hello, BE-1/ }).click();
+      await page.getByRole("tab", { name: /^Runs/ }).click();
+      await expect(
+        panel.getByText("Switched to branch feature/next"),
+      ).toBeVisible();
+      await expect(
+        panel.getByText("Connected without hooks (MCP only)"),
+      ).toHaveCount(1);
+      await panel
+        .getByText("Switched to branch feature/next")
+        .scrollIntoViewIfNeeded();
+      await shot("runs-tab-mcp-branch-switch-1280-light");
+    } finally {
+      await writeFile(head, "ref: refs/heads/main\n");
+    }
   } finally {
     await codex.close();
   }
