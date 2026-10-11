@@ -125,15 +125,22 @@ func TestProjectForCreatesAdoptsAndSeparatesRepositories(t *testing.T) {
 		t.Fatal("delta was created")
 	}
 
-	// Activity outside git goes to _scratch, and names are made safe.
-	if name, err := s.ProjectFor("", "", true); err != nil || name != ScratchProject {
-		t.Fatalf("scratch ProjectFor = %q, %v", name, err)
+	// Activity outside git has no project (PRJ-4): nothing is created.
+	if name, err := s.ProjectFor("", "", true); !errors.Is(err, ErrNoProject) || name != "" {
+		t.Fatalf("outside git ProjectFor = %q, %v, want ErrNoProject", name, err)
 	}
+	if name, err := s.FindProject("", ""); !errors.Is(err, ErrNoProject) || name != "" {
+		t.Fatalf("outside git FindProject = %q, %v, want ErrNoProject", name, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "_scratch")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("_scratch was created")
+	}
+	// Names are made safe.
 	if name, err := s.ProjectFor("My Repo!", "/src/My Repo!", true); err != nil || name != "My-Repo" {
 		t.Fatalf("unsafe name ProjectFor = %q, %v", name, err)
 	}
 	projects, _ := s.Projects()
-	for _, want := range []string{"gamma", other, ScratchProject, "My-Repo"} {
+	for _, want := range []string{"gamma", other, "My-Repo"} {
 		if !slices.Contains(projects, want) {
 			t.Errorf("Projects() = %v, missing %s", projects, want)
 		}
@@ -156,8 +163,7 @@ func TestProjectForLeavesV1ProjectsAlone(t *testing.T) {
 	}
 }
 
-// Repository names that are not usable as directories get a derived name,
-// never the reserved _scratch project.
+// Repository names that are not usable as directories get a derived name.
 func TestProjectForUnusableNames(t *testing.T) {
 	t.Parallel()
 
@@ -170,11 +176,8 @@ func TestProjectForUnusableNames(t *testing.T) {
 		t.Fatalf("non-ASCII = %q, %v", first, err)
 	}
 	second, err := s.ProjectFor("中文", "/src/中文", true)
-	if err != nil || second == first || second == ScratchProject {
+	if err != nil || second == first {
 		t.Fatalf("second non-ASCII = %q, %v", second, err)
-	}
-	if repos, _ := s.projectRepos(ScratchProject); len(repos) != 0 {
-		t.Fatalf("_scratch adopted a repository: %v", repos)
 	}
 }
 

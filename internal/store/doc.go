@@ -10,7 +10,8 @@
 // (EDIT-8), archives, restores and permanently deletes projects with their
 // references and retired keys (PRJ-5), copies allow-listed local files into a ticket (REV-1, REV-5),
 // writes reviews (REV-4) and ticks their How to Verify steps (REV-3), finds or creates a repository's project
-// (PRJ-2–PRJ-5), resolves working directories through the cwd cache, and
+// (PRJ-2–PRJ-5; outside git there is none, ErrNoProject), resolves working
+// directories through the cwd cache (never caching one outside git), and
 // keeps event files, answers inboxes and the hooks' per-session activity
 // state (read, appended with and replaced under one project lock).
 //

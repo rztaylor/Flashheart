@@ -23,9 +23,6 @@ import (
 // MaxFileBytes bounds every markdown or YAML file read from the root.
 const MaxFileBytes = 1 << 20
 
-// ScratchProject is the reserved project for activity outside git (PRJ-4).
-const ScratchProject = "_scratch"
-
 // V1Columns are the column folders of board format v1, read only to migrate.
 var V1Columns = []string{"todo", "in-progress", "ready-to-review", "done"}
 
@@ -101,10 +98,7 @@ func (s *Store) Close() error {
 
 // ValidProject reports whether name can be a project directory name.
 func ValidProject(name string) bool {
-	if !safeName.MatchString(name) && name != ScratchProject {
-		return false
-	}
-	return !strings.Contains(name, "..")
+	return ValidName(name)
 }
 
 // ValidName reports whether name is a safe single path segment (a ticket

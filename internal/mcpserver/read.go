@@ -40,6 +40,9 @@ func (srv *server) boardContext(input BoardContextInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if input.Project == "" && c.outside {
+		return c.noProjectNote(), nil
+	}
 	if input.Project == "" && c.project == "" && c.missing != "" {
 		return fmt.Sprintf("[Flashheart] project %q is not on the board yet; your first write creates it. "+
 			"Choose 2–5 capital letters people would call it by and pass them as project_key to create_ticket, or set them with set_project_key. "+
@@ -255,6 +258,9 @@ func (srv *server) listTickets(input ListTicketsInput) (string, error) {
 	c, err := srv.read(input.Run)
 	if err != nil {
 		return "", err
+	}
+	if input.Project == "" && c.outside {
+		return c.noProjectNote(), nil
 	}
 	project, err := c.projectArg(input.Project)
 	if err != nil {

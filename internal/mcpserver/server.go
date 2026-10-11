@@ -113,6 +113,8 @@ func asToolError(err error) *toolError {
 		return fail("key_taken", "choose another key; keys in use: "+strings.Join(taken.InUse, ", "), "%s", taken.Error())
 	case errors.As(err, &conflict):
 		return fail("conflict", "read the ticket again with get_ticket and retry", "the ticket changed while it was being edited")
+	case errors.Is(err, store.ErrNoProject):
+		return noProjectError()
 	case errors.Is(err, store.ErrKeyFixed):
 		return fail("key_fixed", "keep the project's key; it is fixed once the project has tickets", "%v", err)
 	case errors.Is(err, store.ErrNotFound), errors.Is(err, mdfile.ErrNotFound):
