@@ -9,6 +9,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/store"
 )
 
 // AnswerRequest is POST /api/questions/{id}/answer (RUN-8, CARD-6).
@@ -74,7 +75,7 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 	if question.Ticket != "" {
 		if project, ticket, found := snapshot.FindTicket(question.Ticket); found {
 			note := fmt.Sprintf("- %s · Question from %s — %q Answer (%s): %q.", now.Format("2006-01-02"), protocol.ShortRun(run.ID), question.Text, answeredBy, answer)
-			if _, err := b.write.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
+			if _, err := b.write.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 				return mdfile.AppendToSection(data, "Notes", note)
 			}); err != nil {
 				warnings = append(warnings, "The answer was sent, but it could not be added to "+ticket.ID+"'s notes: "+err.Error())

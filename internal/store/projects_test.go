@@ -128,7 +128,7 @@ func TestDeleteArchivedProject(t *testing.T) {
 	}
 
 	// A referencing ticket changed since the plan: nothing happens.
-	if _, err := s.UpdateTicket("beta", "BE-1", "", setStatus("up-next")); err != nil {
+	if _, err := s.UpdateTicket("beta", "BE-1", Merge, setStatus("up-next")); err != nil {
 		t.Fatal(err)
 	}
 	var conflict *ConflictError

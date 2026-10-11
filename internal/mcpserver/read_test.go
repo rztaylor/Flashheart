@@ -68,7 +68,7 @@ func TestBoardContextStaysWithinItsTokenBudget(t *testing.T) {
 			e.setStatus(id, board.InProgress, fmt.Sprintf("feature/%d", i))
 		}
 	}
-	_, err := e.store.UpdateTicket("demo", mine, "", func(data []byte) ([]byte, error) {
+	_, err := e.store.UpdateTicket("demo", mine, store.Merge, func(data []byte) ([]byte, error) {
 		return []byte(string(data) + "\n## Handoff\n\n**Next**\n\n" + strings.Repeat("- "+long+"\n", 20) + "\n**Open questions**\n\n" + strings.Repeat("- "+long+"\n", 20)), nil
 	})
 	if err != nil {
@@ -298,7 +298,7 @@ func TestDependenciesAreFoundByIDNotByKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.store.UpdateTicket("other", done.ID, "", func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "status", "done") }); err != nil {
+	if _, err := e.store.UpdateTicket("other", done.ID, store.Merge, func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "status", "done") }); err != nil {
 		t.Fatal(err)
 	}
 	// An empty project whose derived key (initials) is also OT, sorting

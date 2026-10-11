@@ -145,14 +145,37 @@ included, writes that status and so clears the rejection.
 
 A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content
-hash they read. Every ticket write by Flashheart stamps `updated`; archiving
-stamps it too, which dates the archive. The folder never moves except to
+hash they read. Every ticket write by Flashheart stamps `updated`, except
+one that leaves the frontmatter unparseable, which is written as it is;
+archiving stamps it too, which dates the archive. The folder never moves except to
 `.archive/` and back, and is removed only by a permanent delete of an
 archived ticket (`EDIT-8`): the delete takes the root lock and the lock of
 every project it rewrites (in name order), removes the id from every
 ticket's `depends-on` and the project's workstream `tickets:` lists, adds
 it to `retired` in `project.yaml`, and removes the folder. It takes an id,
 never a path, and refuses any symbolic link on the folder's path.
+
+### Multi-file writes
+
+A write that changes several files (creating a ticket, joining or leaving
+a workstream, creating a workstream, placing a ticket that ranks its
+neighbours) reads and checks every file under the project lock first and
+writes nothing if any check or edit fails. It then replaces each file
+atomically, one at a time, in this order:
+
+- creating a ticket: the ticket, then `project.yaml` (`next_id`, and the
+  key when it is chosen), then its workstream's `tickets:` list;
+- a ticket joining or leaving a workstream: the workstreams' lists, then
+  the ticket's `workstream:` field;
+- creating a workstream: its file, then the other lists giving up its
+  initial tickets, then those tickets' fields;
+- placing a ticket: the neighbours it ranks, then the ticket.
+
+A crash between two of these leaves the files written so far. Each such
+state is readable: a ticket number above `next_id` is never reused
+(`next_id` is never lower than one past the highest existing number), a
+field and lists that disagree show a warning until the next write puts
+them back in step, and a ranked neighbour keeps its place.
 
 ### Order within a column
 

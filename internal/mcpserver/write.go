@@ -137,7 +137,7 @@ func (srv *server) claim(inv *invocation, input ClaimInput) (string, error) {
 	}
 	setBranch := ticket.Branch == "" && c.where.Branch != ""
 	if moves || setBranch || len(notes) > 0 {
-		_, err := srv.store.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
+		_, err := srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 			var err error
 			if moves {
 				if data, err = mdfile.SetScalar(data, "status", string(column)); err != nil {
@@ -281,7 +281,7 @@ func (srv *server) checkpoint(inv *invocation, input CheckpointInput) (string, e
 		slices.Equal(board.HandoffList(ticket.Handoff.Markdown, "Files"), orNone(files)) &&
 		slices.Equal(board.HandoffList(ticket.Handoff.Markdown, "Open questions"), orNone(questions))
 	if !same || note != "" {
-		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
+		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 			if !same {
 				var err error
 				if data, err = mdfile.ReplaceSection(data, "Handoff", section); err != nil {
@@ -466,9 +466,9 @@ func (srv *server) updateTicket(inv *invocation, input UpdateTicketInput) (strin
 		return data, nil
 	}
 	if workstream >= 0 {
-		_, err = srv.store.SetTicketWorkstream(project.Name, ticket.ID, base, changes[workstream].value, edit)
+		_, err = srv.store.SetTicketWorkstream(project.Name, ticket.ID, store.Unchanged(base), changes[workstream].value, edit)
 	} else {
-		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, base, edit)
+		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, store.Unchanged(base), edit)
 	}
 	if err != nil {
 		return "", err
@@ -578,7 +578,7 @@ func (srv *server) move(inv *invocation, input MoveInput) (string, error) {
 			return "", fail("blocked", "claim it with force and a reason to start it anyway", "%s is blocked: %s", ticket.ID, strings.Join(reasons, "; "))
 		}
 	}
-	if _, err := srv.store.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
+	if _, err := srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 		return mdfile.SetScalar(data, "status", string(to))
 	}); err != nil {
 		return "", err
