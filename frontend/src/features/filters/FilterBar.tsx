@@ -56,6 +56,7 @@ const STATES: { value: StateFilter; label: string }[] = [
   { value: "unblocked", label: "Not blocked" },
   { value: "repair", label: "Needs repair" },
   { value: "working", label: "Agent working" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 // FilterBar is the view toolbar (ui-layout.md §1, FH-39): one button per

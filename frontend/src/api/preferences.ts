@@ -20,7 +20,8 @@ export type SavedState =
   | "blocked"
   | "unblocked"
   | "repair"
-  | "working";
+  | "working"
+  | "rejected";
 // ScopePreferences is the remembered view and filters of one project, or of
 // All projects under the key "all".
 export interface ScopePreferences {
@@ -72,6 +73,7 @@ const isState = oneOf<SavedState>([
   "unblocked",
   "repair",
   "working",
+  "rejected",
 ]);
 
 const isStrings = (value: unknown): value is string[] =>

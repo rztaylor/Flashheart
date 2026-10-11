@@ -71,7 +71,10 @@ Priority, Workstream and State, then *Clear filters* while any filter or chip
 applies; right-aligned, Board only, one icon button, *View options* (⋯),
 whose menu holds Show columns (Backlog), Colour by and
 Density (FH-39, FH-41). An applied filter's button takes the select border and ring
-and a count badge (*State: Blocked* for the one-choice State). Type,
+and a count badge (*State: Blocked* for the one-choice State). State
+offers All states, Blocked, Not blocked, Needs repair, Agent working and
+Rejected (tickets in Done whose status is rejected, FH-59; the Done limit
+still applies, so older ones need *Show all*). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
 click shows only that value (with any others shown), a Cmd click (Ctrl off
 macOS) or Cmd/Ctrl with Enter hides it, struck through, and a click on a

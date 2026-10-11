@@ -152,6 +152,17 @@ describe("applyFilters", () => {
     ).toEqual(["AL-1"]);
   });
 
+  it("shows only rejected tickets (FH-59)", () => {
+    const done = [
+      card({ id: "AL-1", column: "done", rejected: true }),
+      card({ id: "AL-2", column: "done" }),
+      card({ id: "AL-3" }),
+    ];
+    const rejected = { ...emptyFilters, state: "rejected" as const };
+    expect(ids(applyFilters(done, rejected))).toEqual(["AL-1"]);
+    expect(isFiltered(rejected)).toBe(true);
+  });
+
   it("keeps a card matching any included value of a dimension", () => {
     expect(
       ids(applyFilters(cards, { ...emptyFilters, type: only("bug", "spike") })),

@@ -263,7 +263,8 @@ Full format: `docs/dev/specs/board-format.md`.
   the value in a tag, with colour chips on the board that also filter; the colour is never the
   only carrier of meaning and never uses the workstream line colours.
 - `VIEW-7` Filters and search across title, slug, body, tags, type, priority,
-  workstream, blocked/unblocked, has-run, has-question. Type, priority,
+  workstream, state (blocked, not blocked, needs repair, agent working or
+  rejected, FH-59), has-run, has-question. Type, priority,
   workstream and the Colour by value can each show only some values or hide
   some (FH-39). Filters and view choices are remembered per project
   (`CFG-2`).

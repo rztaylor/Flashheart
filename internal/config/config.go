@@ -47,7 +47,7 @@ var (
 	hiddenColumns = []string{"backlog"}
 	colourBys     = []string{"type", "priority", "age", "none"}
 	views         = []string{"", "board", "overview", "workstreams", "table"}
-	states        = []string{"", "all", "blocked", "unblocked", "repair", "working"}
+	states        = []string{"", "all", "blocked", "unblocked", "repair", "working", "rejected"}
 	ages          = []string{"today", "week", "older"}
 	scopeName     = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,254}$`)
 )

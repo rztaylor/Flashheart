@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The project follows
   it anywhere else, Done included, clears it. Agents see `rejected` in
   `list_tickets` and `get_ticket` and can filter by it, but `move` refuses
   it, as it refuses `done` (protocol version unchanged).
+- The State filter's **Rejected** option shows only rejected tickets, on
+  the Board and the Table, for one project or All projects, and is
+  remembered like the other states (FH-59). The Done limit still applies,
+  so older rejected tickets need *Show all*.
 
 ### Security
 

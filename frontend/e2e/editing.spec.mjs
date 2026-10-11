@@ -419,6 +419,50 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
   });
   await page.setViewportSize({ width: 1440, height: 900 });
 
+  // The State filter's Rejected option shows it alone, on the Board and the
+  // Table, for the project and for All projects (FH-59).
+  const cards = page.getByRole("button", { name: /, [A-Z][A-Z0-9]*-\d+,/ });
+  await open("#/p/flashheart/board");
+  const states = await filterMenu(page, "State");
+  const option = states.getByRole("button", { name: "Rejected" });
+  await expect(option).toBeVisible();
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`state menu ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `state-menu-rejected-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await option.click();
+  await expect(filterButton(page, "State")).toHaveAccessibleName(
+    "State: Rejected",
+  );
+  await expect(rejected).toBeVisible();
+  await expect(cards).toHaveCount(1);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(`rejected filter ${theme}`);
+    await page.screenshot({
+      path: resolve(screenshotDir, `state-rejected-board-1440-${theme}.png`),
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await open("#/p/flashheart/table");
+  await expect(page.getByRole("row")).toHaveCount(2);
+  await expect(row).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(filterButton(page, "State")).toHaveAccessibleName("State");
+  await expect(page.getByRole("row")).not.toHaveCount(2);
+  await open("#/all/board");
+  await (await filterMenu(page, "State"))
+    .getByRole("button", { name: "Rejected" })
+    .click();
+  await expect(rejected).toBeVisible();
+  await expect(cards).toHaveCount(1);
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(cards).not.toHaveCount(1);
+
   // Moving it to Done clears the rejection.
   await open("#/p/flashheart/board?t=FH-5");
   await panel.getByLabel("Move to").selectOption("done");
