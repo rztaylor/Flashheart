@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FH-63 · Outline and line</title>
+<link rel="stylesheet" href="assets/mock.css">
+<style>
+  .shell { max-width: 94rem; margin: 0 auto; padding: 0 32px 80px; display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr) 21.5rem; column-gap: 40px; }
+  .hdr { grid-column: 2 / 4; padding-top: 18px; }
+  .hdr h1 { font-size: 2.25rem; line-height: 2.5rem; margin-top: 8px; max-width: 60rem; text-wrap: balance; }
+  .hdr .row { display: flex; align-items: center; justify-content: space-between; }
+
+  /* Signature: the ticket's place on its workstream line. */
+  .line-strip { margin: 20px 0 26px; padding: 12px 18px 12px 14px; border-radius: 0.875rem; border: 1px solid var(--fh-rule);
+    background: color-mix(in srgb, var(--fh-line-4) var(--fh-route-wash), var(--fh-card)); display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; }
+  .line-name { display: flex; align-items: center; gap: 10px; }
+  .line-name .bullet { width: 30px; height: 30px; font-size: 0.6875rem; }
+  .line-name b { display: block; font-stretch: 80%; font-weight: 800; font-size: 1.125rem; line-height: 1.2rem; }
+  .line-name span.meta { color: var(--fh-ink-muted); }
+  .stations { position: relative; display: flex; justify-content: space-between; padding: 0 6px; }
+  .stations::before { content: ""; position: absolute; left: 14px; right: 14px; top: 9px; height: 4px; border-radius: 4px; background: var(--fh-line-4); }
+  .st { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 40px; text-decoration: none; }
+  .st .disc { width: 22px; height: 22px; border-radius: 99px; background: var(--fh-line-4); color: var(--fh-line-ink-4); display: grid; place-items: center;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--fh-line-4) var(--fh-route-wash), var(--fh-card)); }
+  .st .disc svg.i { width: 12px; height: 12px; stroke-width: 2.5; }
+  .st .id { color: var(--fh-ink-muted); }
+  .st.here .disc { width: 26px; height: 26px; margin-top: -2px; background: var(--fh-card); border: 5px solid var(--fh-line-4); }
+  .st.here .disc::after { content: ""; width: 6px; height: 6px; border-radius: 99px; background: var(--fh-line-4); }
+  .st.here .id { color: var(--fh-ink); font-weight: 700; }
+  .st:hover .id { color: var(--fh-ink); text-decoration: underline; }
+
+  /* Outline */
+  .outline { grid-column: 1; grid-row: 2; }
+  .hdr { grid-row: 1; }
+  .doc { grid-column: 2; grid-row: 2; }
+  .side { grid-column: 3; grid-row: 2; }
+  .outline nav { position: sticky; top: 76px; }
+  .outline a { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: 0.5rem; text-decoration: none;
+    color: var(--fh-ink-muted); font-size: 0.8125rem; }
+  .outline a:hover { background: var(--fh-well); color: var(--fh-ink); }
+  .outline a.cur { background: var(--fh-select-surface); color: var(--fh-ink); font-weight: 600; }
+  .outline a .n { margin-left: auto; font-size: 0.6875rem; color: var(--fh-ink-faint); font-weight: 600; }
+  .outline a .n.ok { color: var(--fh-state-done-ink); }
+  .outline a.empty { color: var(--fh-ink-faint); font-style: italic; }
+  .outline .grp { margin: 14px 10px 4px; font-stretch: 87.5%; font-weight: 700; font-size: 0.75rem; color: var(--fh-ink); display: flex; gap: 6px; align-items: center; }
+  .outline .grp svg.i { width: 14px; height: 14px; color: var(--fh-state-review-ink); }
+  .outline .sub a { padding-left: 22px; }
+
+  .doc { min-width: 0; }
+  .doc > .sec + .sec { margin-top: 32px; }
+  .part { margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--fh-rule); }
+  .part-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+  .part-head h2 { font-size: 1.375rem; line-height: 1.75rem; }
+  .part-head .muted { font-size: 0.75rem; }
+  .part .sec + .sec { margin-top: 28px; }
+
+  /* Properties: a well beside the text */
+  .side { position: relative; }
+  .side .well { position: sticky; top: 76px; background: var(--fh-column); border: 1px solid var(--fh-rule); border-radius: 0.875rem; padding: 14px 16px; }
+  .side .status { width: 100%; background: var(--fh-state-review); color: var(--fh-state-review-ink); border-color: transparent; font-weight: 600; height: 36px; }
+  .side .status svg.i { color: currentColor; }
+  .side .props dd.editable:hover { background: var(--fh-card); }
+  .side .foot { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--fh-rule); }
+
+  /* Activity timeline */
+  .tl { list-style: none; position: relative; }
+  .tl::before { content: ""; position: absolute; left: 13px; top: 6px; bottom: 6px; width: 2px; background: var(--fh-rule); }
+  .tl > li { position: relative; display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding-bottom: 18px; }
+  .tl .node { width: 28px; height: 28px; border-radius: 99px; display: grid; place-items: center; background: var(--fh-card); border: 1px solid var(--fh-rule); color: var(--fh-ink-muted); position: relative; }
+  .tl .node svg.i { width: 14px; height: 14px; }
+  .tl .node.handoff { color: var(--fh-callout-handoff-edge); background: var(--fh-callout-handoff); }
+  .tl .node.q { color: var(--fh-callout-question-edge); background: var(--fh-callout-question); }
+  .tl .ev-head { display: flex; align-items: center; gap: 6px; min-height: 28px; font-size: 0.75rem; color: var(--fh-ink-muted); }
+  .tl .ev-head b { color: var(--fh-ink); font-weight: 600; }
+  .tl .ev-body { font-size: 0.8125rem; line-height: 1.25rem; max-width: 80ch; }
+  .tl .reply { margin-top: 8px; display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: 0.625rem; background: var(--fh-select-surface); border: 1px solid color-mix(in srgb, var(--fh-select) 18%, transparent); }
+  .composer { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: center; }
+  .composer .field { height: 38px; border: 1px solid var(--fh-rule); border-radius: 0.5rem; background: var(--fh-card); display: flex; align-items: center; padding: 0 12px; color: var(--fh-ink-faint); font-size: 0.8125rem; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="outline" aria-label="On this page">
+    <nav>
+      <a class="cur" href="#handoff">Handoff</a>
+      <a href="#criteria">Acceptance criteria <span class="n ok">6/6</span></a>
+      <a href="#description">Description</a>
+      <a href="#testplan">Test plan</a>
+      <a class="empty" href="#">Context, empty</a>
+      <div class="grp"><i data-i="review"></i>Review</div>
+      <div class="sub">
+        <a href="#summary">Summary</a>
+        <a href="#evidence">Evidence <span class="n">6</span></a>
+        <a href="#verify">How to verify <span class="n">0/5</span></a>
+        <a href="#risks">Risks <span class="n">4</span></a>
+        <a href="#keyfiles">Key files <span class="n">9</span></a>
+        <a href="#tests">Tests</a>
+      </div>
+      <div class="grp" style="margin-top:14px">Activity</div>
+      <div class="sub">
+        <a href="#activity">Notes and questions <span class="n">4</span></a>
+      </div>
+    </nav>
+  </aside>
+
+  <header class="hdr">
+    <div class="row">
+      <a class="crumb" href="#"><i data-i="board"></i>Show on the Flashheart board</a>
+      <span style="display:flex;gap:4px"><button class="icon-btn" aria-label="Copy link"><i data-i="link"></i></button><button class="icon-btn" aria-label="More actions"><i data-i="more"></i></button></span>
+    </div>
+    <div class="ticket-key" style="margin-top:14px"><span class="badge-key">FH</span><b>FH-63</b><span class="muted">Flashheart</span></div>
+    <h1 class="display" style="margin-bottom:26px">Overview headline is a pipeline of the project's columns, replacing the since-your-last-change metrics</h1>
+  </header>
+
+  <main class="doc">
+    <section class="sec" id="handoff">
+      <div class="handoff">
+        <div class="h-title"><i data-i="next"></i>Handoff</div>
+        <div class="meta muted" style="margin-top:6px">Next</div>
+        <p class="next">Human verifies per the review and merges; address CI or review comments on <a href="#">PR #38</a> if any</p>
+        <button class="disclosure"><i data-i="chevronDown"></i>Full handoff</button>
+        <div class="h-meta"><span class="avatar" style="width:16px;height:16px;font-size:.5rem">C</span>claude:bf8c1187 · 11 Oct, 11:29 · on feature/overview-pipeline</div>
+      </div>
+    </section>
+    <section class="sec" id="criteria">
+      <div class="sec-head" data-edit="acceptance criteria"><h2>Acceptance criteria</h2><span class="aside">6 of 6</span></div>
+      <div data-c="criteria"></div>
+    </section>
+    <section class="sec" id="description">
+      <div class="sec-head" data-edit="description"><h2>Description</h2></div>
+      <div class="prose" data-c="description"></div>
+    </section>
+    <section class="sec" id="testplan">
+      <div class="sec-head" data-edit="test plan"><h2>Test plan</h2></div>
+      <div class="prose" data-c="testPlan"></div>
+    </section>
+
+    <section class="part" id="review">
+      <div class="part-head"><h2 class="display">Review</h2><span class="muted">by claude:bf8c1187 · 11 Oct, 11:29 · <a href="#">review.md</a></span></div>
+      <section class="sec" id="summary"><div class="sec-head"><h3>Summary</h3></div><div class="prose" data-c="summary"></div></section>
+      <section class="sec" id="evidence"><div class="sec-head"><h3>Evidence</h3><span class="aside">6 screenshots</span></div><div data-c="shots"></div></section>
+      <section class="sec" id="verify">
+        <div class="sec-head"><h3>How to verify</h3><span class="aside">0 of 5</span></div>
+        <div class="prose" data-c="prereq" style="margin-bottom:10px"></div>
+        <div data-c="steps"></div>
+        <h4 class="head" style="font-size:.8125rem;margin:16px 0 6px">Expected results</h4>
+        <div class="prose" data-c="expected"></div>
+      </section>
+      <section class="sec" id="risks"><div class="sec-head"><h3>Risks to watch</h3></div><div class="prose" data-c="risks"></div></section>
+      <section class="sec" id="keyfiles"><div class="sec-head"><h3>Key files</h3></div><div data-c="keyFiles"></div></section>
+      <section class="sec" id="tests"><div class="sec-head"><h3>Tests</h3></div><div class="prose" data-c="tests"></div></section>
+    </section>
+
+    <section class="part" id="activity">
+      <div class="part-head"><h2 class="display">Activity</h2><span class="muted">notes, questions and handoffs, oldest first</span></div>
+      <ol class="tl">
+        <li><span class="node"><i data-i="note"></i></span><div><div class="ev-head"><b>claude:bf8c1187</b> added a note · 11 Oct</div>
+          <div class="ev-body">All six criteria met. Evidence: PipelineHeadline and pipelineStages unit tests; the rewritten e2e test in <code>frontend/e2e/runs.spec.mjs</code>; <code>scripts/check.sh</code> and <code>scripts/e2e.sh</code> (55/55) pass. Committed 644c0d0 on feature/overview-pipeline and pushed; PR not opened yet.</div></div></li>
+        <li><span class="node q"><i data-i="question"></i></span><div><div class="ev-head"><b>claude:bf8c1187</b> asked you · 11 Oct</div>
+          <div class="ev-body">FH-63 is built, tested and pushed, and the review has screenshots. Shall I run the pre-PR review, open the PR, and move FH-63 to Ready to review? Also: Done currently counts Rejected tickets. Keep that, or count accepted work only?</div>
+          <div class="reply"><span class="avatar human">RT</span><div class="ev-body"><b style="font-weight:600">Robert Taylor</b> answered: Done excludes rejected. Run the /pre-pr-review and then open the PR.</div></div></div></li>
+        <li><span class="node"><i data-i="note"></i></span><div><div class="ev-head"><b>claude:bf8c1187</b> added a note · 11 Oct</div>
+          <div class="ev-body">The user decided that Done excludes Rejected tickets. Project summaries now carry <code>rejected</code>, and pipelineStages subtracts it from Done (d75681b). Pre-PR review: the styles boundary now names the chevron utilities (76c8420).</div></div></li>
+        <li><span class="node handoff"><i data-i="next"></i></span><div><div class="ev-head"><b>claude:bf8c1187</b> updated the handoff · 11 Oct, 11:29</div>
+          <div class="ev-body">Next: human verifies per the review and merges.</div></div></li>
+      </ol>
+      <div class="composer"><span class="avatar human" style="width:28px;height:28px">RT</span><div class="field">Add a note for the next session…</div></div>
+    </section>
+  </main>
+
+  <aside class="side" aria-label="Details">
+    <div class="well">
+      <span class="select status" role="button" aria-label="Status: Ready to review"><span style="display:inline-flex;gap:6px;align-items:center"><i data-i="review"></i>Ready to review</span><i data-i="chevronDown"></i></span>
+      <dl class="props" style="margin-top:10px">
+        <dt>Priority</dt><dd class="editable">Medium</dd>
+        <dt>Type</dt><dd class="editable">Feature</dd>
+        <dt>Workstream</dt><dd class="editable"><span class="bullet">PO</span>Project overview</dd>
+        <dt>Branch</dt><dd class="editable"><span class="mono">feature/overview-pipeline</span></dd>
+        <dt>Depends on</dt><dd class="editable faint">None</dd>
+        <dt>Tags</dt><dd class="editable"><span class="tag">ui</span><span class="tag">overview</span></dd>
+        <dt>Agent</dt><dd><span class="agent"><span class="avatar">C</span>claude:bf8c1187</span></dd>
+        <dt>Created</dt><dd>11 Oct 2026</dd>
+        <dt>Changed</dt><dd>7 min ago</dd>
+      </dl>
+      <div class="foot">
+        <button class="btn" style="flex:1"><i data-i="archive"></i>Archive</button>
+        <button class="btn" aria-label="Open the ticket file"><i data-i="file"></i>File</button>
+      </div>
+    </div>
+  </aside>
+</div>
+<script src="assets/mock.js"></script>
+</body>
+</html>
