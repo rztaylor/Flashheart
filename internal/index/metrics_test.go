@@ -98,13 +98,22 @@ func TestSnapshotCountsChangesSinceTheHumansLastChange(t *testing.T) {
 	clock.now = now.Add(12 * time.Hour)
 	check("a new day", "", Metrics{Since: old, LastChange: true, ChangeCounts: all})
 
-	// An agent's change arrives incrementally; the human's own move then
-	// becomes the anchor and leaves nothing since.
-	if err := log.Append(moved(clock.now.Add(-time.Minute), "alpha", "AL-3", "done")); err != nil {
+	// A checkpoint arrives incrementally. A session homed in beta records it
+	// in both projects' logs (agent-protocol §3); it counts once, in the
+	// project of its ticket. The human's own activity then becomes the
+	// anchor and leaves nothing since.
+	at := clock.now.Add(-time.Minute)
+	checkpoint := func(project string) events.Event {
+		return events.Event{Time: at, Run: "claude:s1", Agent: "claude", Kind: events.Checkpoint, Project: project, Data: events.CheckpointData{Ticket: "AL-3", Done: 1}}
+	}
+	if err := log.Append(checkpoint("beta"), checkpoint("alpha")); err != nil {
 		t.Fatal(err)
 	}
-	alpha.Done++
-	check("a new change", "alpha", Metrics{Since: old, LastChange: true, ChangeCounts: alpha})
+	alpha.Checkpoints++
+	all.Checkpoints++
+	check("a checkpoint", "alpha", Metrics{Since: old, LastChange: true, ChangeCounts: alpha})
+	check("a checkpoint", "", Metrics{Since: old, LastChange: true, ChangeCounts: all})
+	check("a checkpoint", "beta", Metrics{Since: clock.now.Add(-24 * time.Hour), ChangeCounts: events.ChangeCounts{Criteria: 1}})
 	answered := clock.now
 	if err := log.Append(events.Event{Time: answered, Run: "claude:s2", Agent: "claude", Kind: events.QuestionAnswered, Project: "beta", Data: events.AnswerData{ID: "q-1", Answer: "Yes", By: "Robert"}}); err != nil {
 		t.Fatal(err)

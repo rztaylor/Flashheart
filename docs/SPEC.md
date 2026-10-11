@@ -224,11 +224,12 @@ Full format: `docs/dev/specs/board-format.md`.
   board, for *All projects* or one project, about tickets with agent
   sessions as evidence. Under the title, headline metrics (FH-52): *Since
   your last change · <day and time>* over tiles counting, since the
-  human's latest board activity in the scope (`EDIT-10`), tickets moved to
-  Done, tickets moved to Ready to review and tickets created (each ticket
-  once per tile) and criteria updates that ticked criteria, by agents or
-  the human; the human's own changes are that activity, so only what came
-  after it counts. With no human activity recorded in the scope they count
+  human's latest board activity in the scope (`EDIT-10`), checkpoints
+  (handoffs recorded by agents and their subagents on the scope's tickets,
+  each once), tickets moved to Ready to review and tickets created (each
+  ticket once per tile) and criteria updates that ticked criteria (one per
+  update, however many it ticked); the human's own changes are that
+  activity, so only what came after it counts. With no human activity recorded in the scope they count
   the last 24 hours and say so. Needs you is not among them (the band shows
   it). One column of section cards, in order: *Needs your
   decision* (open questions, answered in place as on the card, `CARD-6`,

@@ -9,8 +9,8 @@
 // question.delivered events that record taking them, and the human's board
 // activity: the shape of a board write's event (run `human`, EDIT-10) and
 // which events count as the human acting on the board; and which events the
-// Overview's headline metrics count and how (VIEW-3: moves to review and
-// done, new tickets, criteria updates).
+// Overview's headline metrics count and how (VIEW-3: checkpoints, moves to
+// review, new tickets, criteria updates).
 //
 // File access goes through store, which confines, locks and names the files.
 // What events mean for a run belongs to runs; turning hook payloads into

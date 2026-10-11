@@ -19,7 +19,8 @@ func TestMetricsEndpointCountsSinceTheHumansLastChange(t *testing.T) {
 		`{"v":1,"ts":"2026-10-04T13:11:00Z",`+agent+`,"kind":"ticket.updated","data":{"ticket":"AL-3","fields":["criteria","notes"]}}`,
 		`{"v":1,"ts":"2026-10-04T13:12:00Z",`+agent+`,"kind":"ticket.moved","data":{"ticket":"AL-3","from":"in-progress","to":"review","by":"claude:s9"}}`,
 	)
-	want := MetricsResponse{Since: "2026-10-04T12:30:00Z", LastChange: true, Review: 1, Created: 1, CriteriaTicked: 1}
+	// The sample's session also checkpointed AL-3 at 13:20.
+	want := MetricsResponse{Since: "2026-10-04T12:30:00Z", LastChange: true, Checkpoints: 1, Review: 1, Created: 1, CriteriaTicked: 1}
 	for _, path := range []string{"/api/metrics", "/api/metrics?project=alpha"} {
 		var got MetricsResponse
 		getJSON(t, handler, path, http.StatusOK, &got)
@@ -31,7 +32,7 @@ func TestMetricsEndpointCountsSinceTheHumansLastChange(t *testing.T) {
 
 	var beta MetricsResponse
 	getJSON(t, handler, "/api/metrics?project=beta", http.StatusOK, &beta)
-	if beta.Revision == 0 || beta.Since != "2026-10-03T13:30:00Z" || beta.LastChange || beta.Review+beta.Done+beta.Created+beta.CriteriaTicked != 0 {
+	if beta.Revision == 0 || beta.Since != "2026-10-03T13:30:00Z" || beta.LastChange || beta.Checkpoints+beta.Review+beta.Created+beta.CriteriaTicked != 0 {
 		t.Errorf("beta = %+v, want the last day and nothing", beta)
 	}
 	getJSON(t, handler, "/api/metrics?project=gamma", http.StatusNotFound, nil)

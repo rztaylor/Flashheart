@@ -56,8 +56,12 @@ type tracker struct {
 }
 
 type changeKey struct {
-	at           int64
-	kind, ticket string
+	at                int64
+	kind, ticket, run string
+}
+
+func keyOf(change events.Change) changeKey {
+	return changeKey{change.Time.UnixNano(), change.Kind, change.Ticket, change.Run}
 }
 
 type projectEvents struct {
@@ -157,7 +161,7 @@ func (t *tracker) note(e events.Event) {
 	if !ok || !change.Time.After(t.humans[e.Project].Time) {
 		return
 	}
-	key := changeKey{change.Time.UnixNano(), change.Kind, change.Ticket}
+	key := keyOf(change)
 	if t.counted[e.Project] == nil {
 		t.counted[e.Project] = map[changeKey]bool{}
 	}
@@ -173,7 +177,7 @@ func (t *tracker) dropChanges(project string, since time.Time) {
 		if change.Time.After(since) {
 			return false
 		}
-		delete(t.counted[project], changeKey{change.Time.UnixNano(), change.Kind, change.Ticket})
+		delete(t.counted[project], keyOf(change))
 		return true
 	})
 }

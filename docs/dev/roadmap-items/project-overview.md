@@ -28,7 +28,7 @@ card need.
   with no ticket on the board (D31) opens the Overview. `VIEW-3`, SPEC §7,
   `docs/dev/specs/ui-layout.md` §5 and the Agents feature boundary change.
 - FH-52: headline metrics under the Overview title since your last change
-  (done, to review, new tickets, criteria ticked), falling back to the
+  (checkpoints, to review, new tickets, criteria ticked), falling back to the
   last 24 hours.
 - FH-53: "no handoff" and handoff enforcement count edits made through
   shell commands.
