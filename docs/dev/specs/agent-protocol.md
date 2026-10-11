@@ -453,7 +453,7 @@ one run.
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
-| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call"); the `flashheart await` command for it (§7.5) |
+| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call", and that a reply in the chat does not reach the board, so the user answers there too); the `flashheart await` command for it (§7.5) |
 
 Errors are `{code, message, fix}`, rendered as `error <code>: <message>`
 and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
@@ -619,7 +619,8 @@ kept current by the session-start hook (§5.4). It covers, briefly:
 - use `ask_human` when blocked on a human decision instead of waiting in chat
   only, including a question that ends the turn: a question asked only in
   chat leaves the run in Waiting, not Needs you (§4); without Flashheart's
-  hooks the answer comes with the next Flashheart tool result (§7.1); where
+  hooks the answer comes with the next Flashheart tool result and a reply
+  in the chat does not settle the question (§7.1); where
   the agent can run background commands that wake it, run the `flashheart await` command
   `ask_human` returns (§7.5);
 - finishing: evidence in the review (§11): captioned screenshots of every

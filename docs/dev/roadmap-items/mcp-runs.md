@@ -11,9 +11,12 @@ protocol and skill text. Evidence: the MCP contract tests
 (`internal/mcpserver/mcpruns_test.go`), the run-fold table
 (`internal/runs/mcp_test.go`), the stdio test through the real `mcp`
 command (`TestHooklessSessionOverStdio`) and the runs e2e driving a
-hookless `codex-mcp-client` session. Open: a real Codex session without
-Flashheart hooks (the last criterion), met by dogfooding; it also confirms
-that Codex starts one MCP server per session and closes it at the end.
+hookless `codex-mcp-client` session. A real Codex session without
+Flashheart hooks (ChatGPT app, 2026-10-11) claimed, asked, received the
+answer with its next tool call and ended on closing its thread; a second
+thread got its own run. The app starts one MCP server per thread, in the
+project folder, and stops it when the thread closes. Open: the user's
+review of FH-15.
 
 ## Goal
 

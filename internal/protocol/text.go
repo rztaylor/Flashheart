@@ -91,8 +91,10 @@ instructions.
   review or blocked, with options when there are clear choices). The board
   shows the user; the answer arrives in a later prompt, or, where
   Flashheart's hooks are not installed, with your next flashheart tool
-  result. Carry on with other work if you can. If the user replies in this chat instead, that reply is
-  the answer: the board stops showing the question.
+  result. Carry on with other work if you can. If the user
+  replies in this chat instead, that reply is the answer: with hooks, the
+  board stops showing the question; without them, ask the user to answer
+  it on the board too.
 - ` + "`ask_human`" + ` also returns a ` + "`flashheart await`" + ` command. If you can run
   a background command that wakes you when it exits (in Claude Code, Bash
   with ` + "`run_in_background`" + `), run it: the answer then reaches you as soon

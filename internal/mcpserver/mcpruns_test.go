@@ -89,8 +89,10 @@ func TestAWriteWithoutAHookRunStartsOne(t *testing.T) {
 	contains(t, e.okOn(codex, "release", map[string]any{"ticket": id}), "Released DM-1")
 	asked := e.okOn(codex, "ask_human", map[string]any{"ticket": id, "kind": "question", "text": "Which schema?"})
 	contains(t, asked, "the answer will arrive with the result of your next flashheart tool call", "ok question=q-")
-	if strings.Contains(asked, "later prompt") {
-		t.Fatalf("a run without hooks was told to wait for a prompt:\n%s", asked)
+	// No prompt hook sees a reply in the chat, so only the board settles it.
+	contains(t, asked, "answer it on the board")
+	if strings.Contains(asked, "later prompt") || strings.Contains(asked, "settles it") {
+		t.Fatalf("a run without hooks was told a prompt or a chat reply settles it:\n%s", asked)
 	}
 	if state := e.fold().State(run, e.now, runs.DefaultSettings()); state != runs.NeedsYou {
 		t.Fatalf("state = %s", state)

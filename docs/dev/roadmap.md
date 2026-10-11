@@ -19,8 +19,8 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    dogfooding Flashheart's own sessions.
 3. [`mcp-runs`](roadmap-items/mcp-runs.md) — **Partial**. The MCP server
    starts a run for an agent without hooks, so claims, questions and
-   attribution work and it shows on the Overview. Built (FH-15, D34);
-   open: a real Codex session without hooks, by dogfooding. Depends on
+   attribution work and it shows on the Overview. Built and checked in a
+   real Codex session (FH-15, D34); open: the user's review. Depends on
    `mcp-protocol`.
 4. [`codex-support`](roadmap-items/codex-support.md) — **Pending**. Codex
    hook adapter, `setup codex`, AGENTS.md protocol text. Depends on

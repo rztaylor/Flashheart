@@ -963,12 +963,13 @@ func (srv *server) askHuman(inv *invocation, input AskHumanInput) (string, error
 	// The await command wakes an agent that can run background commands
 	// as soon as the answer is given (agent-protocol §7.5).
 	command := protocol.AwaitCommand(srv.options.Binary, srv.options.Root, project, id)
-	arrives := "in a later prompt"
+	arrives := "the answer will arrive in a later prompt, or the user replies in this chat, which settles it"
 	if started, _ := inv.conn.current(); started == run {
-		// No prompt hook delivers to a run the server started (HOOK-5).
-		arrives = "with the result of your next flashheart tool call"
+		// No prompt hook delivers to a run the server started (HOOK-5), or
+		// sees a reply in its chat (§4).
+		arrives = "the answer will arrive with the result of your next flashheart tool call. A reply in this chat does not reach the board, so if the user answers here, ask them to answer it on the board too"
 	}
-	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; the answer will arrive %s, or the user replies in this chat, which settles it. Carry on with other work if you can.\n"+
+	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; %s. Carry on with other work if you can.\n"+
 		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits (Claude Code: Bash with run_in_background):\n%s\nok question=%s\n", kind, arrives, command, id), nil
 }
 
