@@ -318,7 +318,7 @@ export function headlineLabel(
 }
 
 export interface HeadlineTile {
-  id: "done" | "review" | "created" | "criteria";
+  id: "checkpoints" | "review" | "created" | "criteria";
   value: number;
   word: string;
 }
@@ -329,7 +329,11 @@ export function headlineTiles(metrics: Metrics): HeadlineTile[] {
   const word = (count: number, one: string, many: string) =>
     count === 1 ? one : many;
   return [
-    { id: "done", value: metrics.done, word: "Done" },
+    {
+      id: "checkpoints",
+      value: metrics.checkpoints,
+      word: word(metrics.checkpoints, "Checkpoint", "Checkpoints"),
+    },
     { id: "review", value: metrics.review, word: "To review" },
     {
       id: "created",

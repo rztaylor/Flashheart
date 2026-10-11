@@ -268,9 +268,10 @@ direction). Page header; then one column, filling Main with the same gutter
 as the other views, opening with the headline metrics (FH-52): a muted line
 *Since your last change · yesterday 18:00* (*In the last 24 hours* when no
 change of yours is recorded) over four equal hairline tiles, each a large
-tabular number over a muted word: Done, To review, New tickets, Criteria
-ticked (singular for one). Ink only: no colour carries meaning. Four across
-from 40rem, two by two below. Then the rounded section cards in fixed order:
+tabular number over a muted word: Checkpoints, To review, New tickets,
+Criteria ticked (singular for one). Ink only: no colour carries meaning.
+Four across from 40rem, two by two below. Then the rounded section cards in
+fixed order:
 
 1. **Needs your decision**: questions, each a question card answerable in
    place (`CARD-6`), and permission prompts, which say *Answer in the

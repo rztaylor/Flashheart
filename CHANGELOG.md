@@ -184,10 +184,11 @@ All notable changes to this project are documented here. The project follows
 ### Added
 
 - Headline metrics under the Overview's title (FH-52): a quiet row saying
-  *Since your last change · yesterday 18:00* over four tiles, Done, To
-  review, New tickets and Criteria ticked, for All projects or the project
-  shown. They count tickets moved to Done and to Ready to review and tickets
-  created (each ticket once) and criteria updates, since your latest change
+  *Since your last change · yesterday 18:00* over four tiles, Checkpoints,
+  To review, New tickets and Criteria ticked, for All projects or the
+  project shown. They count agents' checkpoints (handoffs), tickets moved to
+  Ready to review and tickets created (each ticket once) and criteria
+  updates (one per update, however many it ticked), since your latest change
   on the board there (a board edit, move, new ticket or answer; editor edits
   do not count). With none recorded the row counts the last 24 hours and
   says so. Served by `GET /api/metrics?project=`; counted from the event

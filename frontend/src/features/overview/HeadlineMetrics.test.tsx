@@ -9,7 +9,7 @@ const metrics: Metrics = {
   revision: 1,
   since: "2026-10-08T18:00:00Z",
   lastChange: true,
-  done: 0,
+  checkpoints: 0,
   review: 3,
   created: 6,
   criteriaTicked: 9,
@@ -29,7 +29,7 @@ describe("HeadlineMetrics", () => {
     );
     expect(text(html)).toBe(
       `Since your last change · ${dayAndTime(metrics.since, now)} ` +
-        "Done 0 To review 3 New tickets 6 Criteria ticked 9",
+        "Checkpoints 0 To review 3 New tickets 6 Criteria ticked 9",
     );
     expect(html).toContain(`dateTime="${metrics.since}"`);
     // The word names each number for assistive technology; the tiles read
@@ -43,7 +43,7 @@ describe("HeadlineMetrics", () => {
     const html = renderToStaticMarkup(
       <HeadlineMetrics metrics={{ ...metrics, lastChange: false }} now={now} />,
     );
-    expect(text(html)).toMatch(/^In the last 24 hours Done 0/);
+    expect(text(html)).toMatch(/^In the last 24 hours Checkpoints 0/);
     expect(html).not.toContain("<time");
   });
 

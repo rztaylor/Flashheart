@@ -6,7 +6,7 @@ const metrics = {
   revision: 4,
   since: "2026-10-08T18:00:00Z",
   lastChange: true,
-  done: 0,
+  checkpoints: 0,
   review: 3,
   created: 6,
   criteriaTicked: 9,
@@ -20,7 +20,7 @@ describe("isMetrics", () => {
 
   it("rejects a missing or malformed field", () => {
     expect(isMetrics({ ...metrics, criteriaTicked: undefined })).toBe(false);
-    expect(isMetrics({ ...metrics, done: -1 })).toBe(false);
+    expect(isMetrics({ ...metrics, checkpoints: -1 })).toBe(false);
     expect(isMetrics({ ...metrics, review: "3" })).toBe(false);
     expect(isMetrics({ ...metrics, lastChange: "yes" })).toBe(false);
     expect(isMetrics(null)).toBe(false);
