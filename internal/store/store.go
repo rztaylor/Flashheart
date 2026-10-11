@@ -539,16 +539,6 @@ func (r *reader) readProjectFile(project *board.Project) {
 	}
 }
 
-type attachmentEntry struct {
-	File    string `yaml:"file"`
-	Caption string `yaml:"caption"`
-	Kind    string `yaml:"kind"`
-	Source  string `yaml:"source"`
-	Run     string `yaml:"run"`
-	Added   string `yaml:"added"`
-	SHA256  string `yaml:"sha256,omitempty"`
-}
-
 func (r *reader) readFilesIndex(project *board.Project, id, name string) {
 	if !r.exists(name) {
 		return
@@ -558,12 +548,12 @@ func (r *reader) readFilesIndex(project *board.Project, id, name string) {
 		project.Warnings = append(project.Warnings, fmt.Sprintf("%s files index: %s", id, problem))
 		return
 	}
-	var items []attachmentEntry
-	if err := yaml.Unmarshal(data, &items); err != nil {
+	index, err := parseFilesIndex(data)
+	if err != nil {
 		project.Warnings = append(project.Warnings, fmt.Sprintf("%s files index is not a list of files", id))
 		return
 	}
-	for _, item := range items {
+	for _, item := range index.entries {
 		if !ValidName(item.File) {
 			continue
 		}

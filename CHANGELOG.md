@@ -42,6 +42,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Attaching a file keeps a ticket's `files/index.yaml` as it was written
+  (FH-88). Before, keys Flashheart does not know and comments were
+  dropped from the whole index.
 - A run's Activity in the Runs tab names every ticket event in plain
   words instead of its raw event name (FH-70): "Moved FH-1 to In
   progress", "Updated FH-1", "Attached a file to FH-1", where it showed

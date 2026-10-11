@@ -848,9 +848,6 @@ type AttachInput struct {
 	Kind    string `json:"kind,omitempty" jsonschema:"screenshot, log or other; default: from the file type"`
 }
 
-// attachKinds are the kinds a copied file can have.
-var attachKinds = []string{"screenshot", "log", "other"}
-
 func (srv *server) attach(inv *invocation, input AttachInput) (string, error) {
 	c, err := srv.begin(inv, input.Run)
 	if err != nil {
@@ -864,7 +861,7 @@ func (srv *server) attach(inv *invocation, input AttachInput) (string, error) {
 	if kind == "" {
 		kind = kindOf(path)
 	}
-	if !slices.Contains(attachKinds, kind) {
+	if !slices.Contains(board.AttachmentKinds, kind) {
 		return "", fail("invalid_input", "use kind screenshot, log or other", "%q is not a kind", kind)
 	}
 	project, ticket, err := c.find(input.Ticket)
