@@ -34,8 +34,9 @@ type Pending struct {
 	// Run is the full run id (<agent>:<session>[/<agent id>]).
 	Run  string
 	Kind string
-	// Data is one of the events *Data types. Edit paths in ToolData may be
-	// absolute; hooks makes them repository-relative. A tool.used is an
+	// Data is one of the events *Data types. A ToolData is classified by
+	// the adapter (Shell, Paths); its edit paths may be absolute and hooks
+	// makes them repository-relative. A tool.used is an
 	// observation: hooks records it as throttled activity (activity.go).
 	Data any
 }
@@ -401,7 +402,11 @@ func clean(data any, info gitinfo.Info, cwd string) any {
 		return d
 	case events.ToolData:
 		d.Tool = text(d.Tool, events.MaxNameLength)
-		d.Path = text(info.Relative(d.Path), 500)
+		paths := make([]string, 0, min(len(d.Paths), events.MaxToolPaths))
+		for _, path := range d.Paths[:min(len(d.Paths), events.MaxToolPaths)] {
+			paths = append(paths, text(info.Relative(path), 500))
+		}
+		d.Paths, d.Path = paths, text(info.Relative(d.Path), 500)
 		d.Summary = text(d.Summary, events.MaxSummary)
 		return d
 	case events.PlanData:

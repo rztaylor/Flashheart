@@ -242,3 +242,19 @@ func TestStopEnforcesHandoffAfterShellChanges(t *testing.T) {
 		})
 	}
 }
+
+// A shell command is whatever the adapter classifies as one: the fake's is
+// exec_command, a name hooks has never heard of (FH-90).
+func TestTheAdapterSaysWhatIsAShellCommand(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), gitRepo(t)
+	play(t, root, cwd, "0 SessionStart", "1 Prompt", "2 touch a.txt", "3 Bash", "10 End")
+	_, data, _ := recorded(t, root)
+	if len(data) != 1 || len(data[0].Shell) != 1 {
+		t.Fatalf("activity = %+v, want one shell window", data)
+	}
+	if _, ends := changedFlags(t, root); !slices.Equal(ends, []bool{true}) {
+		t.Fatalf("run.end worktree_changed = %v, want the worktree checked and changed", ends)
+	}
+}

@@ -272,3 +272,24 @@ func TestConcurrentToolResultsAllCount(t *testing.T) {
 		t.Fatalf("records count %d tools, want 40", tools)
 	}
 }
+
+// One result that edits several files is one tool use that records every
+// path (FH-90: Codex's apply_patch).
+func TestAMultiFileEditIsOneToolUse(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), repo(t)
+	play(t, root, cwd, "0 SessionStart", "0 Prompt", "0.1 Patch:src/a.ts,src/b.ts,src/a.ts", "0.2 Patch:src/b.ts,src/c.ts", "0.3 Stop")
+	_, data, set := recorded(t, root)
+	tools := 0
+	var paths []string
+	for _, d := range data {
+		tools, paths = tools+d.Tools, append(paths, d.Paths...)
+	}
+	if tools != 2 || !slices.Equal(paths, []string{"src/a.ts", "src/b.ts", "src/c.ts"}) {
+		t.Fatalf("records count %d tools with paths %v, want 2 with each path once", tools, paths)
+	}
+	if run := set.Get("fake:s1"); run.Tools != 2 || run.Edits != 3 || !slices.Equal(run.Files, []string{"src/c.ts", "src/b.ts", "src/a.ts"}) {
+		t.Fatalf("run: tools %d edits %d files %v", run.Tools, run.Edits, run.Files)
+	}
+}

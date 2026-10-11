@@ -37,22 +37,36 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	if rest, sub := strings.CutPrefix(event, "Sub:"); sub {
 		event, actor = rest, run+"/a1"
 	}
-	tool := func(name string, ok bool, path string) []Pending {
-		return []Pending{{Run: actor, Kind: events.ToolUsed, Data: events.ToolData{Tool: name, OK: ok, Path: path}}}
+	tool := func(name string, ok bool, paths ...string) []Pending {
+		return []Pending{{Run: actor, Kind: events.ToolUsed, Data: events.ToolData{Tool: name, OK: ok, Paths: paths}}}
 	}
-	// "Edit:<file>" edits a file of the checkout.
+	// The fake's shell tool has no Claude Code name: hooks knows a shell
+	// command only from the adapter's classification (FH-90).
+	shell := func(ok bool) []Pending {
+		return []Pending{{Run: actor, Kind: events.ToolUsed, Data: events.ToolData{Tool: "exec_command", OK: ok, Shell: true}}}
+	}
+	// "Edit:<file>" edits a file of the checkout; "Patch:<file>,<file>…"
+	// edits several in one result.
 	if file, edit := strings.CutPrefix(event, "Edit:"); edit {
 		input.Events = tool("Edit", true, filepath.Join(cwd, file))
 		return input, nil
 	}
+	if files, patch := strings.CutPrefix(event, "Patch:"); patch {
+		var paths []string
+		for _, file := range strings.Split(files, ",") {
+			paths = append(paths, filepath.Join(cwd, file))
+		}
+		input.Events = tool("apply_patch", true, paths...)
+		return input, nil
+	}
 	switch event {
 	case "Read":
-		input.Events = tool("Read", true, "")
+		input.Events = tool("Read", true)
 	case "Fail":
-		input.Events = tool("Bash", false, "")
+		input.Events = shell(false)
 	case "Checkpointed":
 		// The checkpoint tool's own result (agent-protocol §5.2).
-		input.Events, input.Settled = tool("mcp__flashheart__checkpoint", true, ""), true
+		input.Events, input.Settled = tool("mcp__flashheart__checkpoint", true), true
 	case "Background":
 		// A turn the agent's own background task started, not a prompt.
 		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{Background: true}}}
@@ -68,7 +82,7 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	case "Edit":
 		input.Events = tool("Edit", true, filepath.Join(cwd, "src", "a.ts"))
 	case "Bash":
-		input.Events = tool("Bash", true, "")
+		input.Events = shell(true)
 	case "End":
 		input.Events = []Pending{{Run: run, Kind: events.RunEnd, Data: events.RunEndData{Reason: "other"}}}
 	case "Plan":
