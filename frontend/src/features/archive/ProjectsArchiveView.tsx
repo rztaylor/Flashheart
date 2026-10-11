@@ -7,6 +7,7 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { KeyBadge } from "../../components/KeyBadge";
+import { HeadCell, Row, Table } from "../../components/Table";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
@@ -100,86 +101,80 @@ export function ProjectsArchiveView({
           </EmptyState>
         ) : null}
         {archived.length > 0 ? (
-          <table className="w-full border-separate border-spacing-0 overflow-hidden rounded-panel border border-rule bg-card text-sm shadow-card">
-            <caption className="sr-only">Archived projects</caption>
-            <thead className="bg-column">
-              <tr className="[&>th]:border-b [&>th]:border-rule [&>th]:px-3 [&>th]:py-2.5 [&>th]:text-left [&>th]:heading-cut">
-                <th scope="col">Project</th>
-                <th scope="col">Repositories</th>
-                <th scope="col" className="text-right">
-                  Tickets
-                </th>
-                <th scope="col">Archived</th>
-                <th scope="col">
+          <Table
+            caption="Archived projects"
+            head={
+              <>
+                <HeadCell>Project</HeadCell>
+                <HeadCell>Repositories</HeadCell>
+                <HeadCell className="text-right">Tickets</HeadCell>
+                <HeadCell>Archived</HeadCell>
+                <HeadCell>
                   <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {archived.map((project) => (
-                <tr
-                  key={project.name}
-                  className="hover:bg-well [&>td]:border-b [&>td]:border-rule last:[&>td]:border-b-0"
+                </HeadCell>
+              </>
+            }
+          >
+            {archived.map((project) => (
+              <Row key={project.name}>
+                <td className="px-3 py-2">
+                  <span className="flex items-center gap-2.5">
+                    <KeyBadge>{project.key}</KeyBadge>
+                    <span className="flex flex-col">
+                      <span className="font-semibold">
+                        {project.displayName}
+                      </span>
+                      <span className="text-2xs text-ink-muted">
+                        {project.name}
+                      </span>
+                    </span>
+                  </span>
+                </td>
+                <td className="max-w-[20rem] px-3 py-2 text-xs text-ink-muted">
+                  {project.repos.map((repo) => (
+                    <span
+                      key={repo}
+                      className="block truncate text-left font-mono [direction:rtl]"
+                      title={repo}
+                    >
+                      <bdi>{repo}</bdi>
+                    </span>
+                  ))}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {project.tickets}
+                </td>
+                <td
+                  className="px-3 py-2 whitespace-nowrap text-ink-muted"
+                  title={absoluteTime(project.archived)}
                 >
-                  <td className="px-3 py-2">
-                    <span className="flex items-center gap-2.5">
-                      <KeyBadge>{project.key}</KeyBadge>
-                      <span className="flex flex-col">
-                        <span className="font-semibold">
-                          {project.displayName}
-                        </span>
-                        <span className="text-2xs text-ink-muted">
-                          {project.name}
-                        </span>
-                      </span>
-                    </span>
-                  </td>
-                  <td className="max-w-[20rem] px-3 py-2 text-xs text-ink-muted">
-                    {project.repos.map((repo) => (
-                      <span
-                        key={repo}
-                        className="block truncate text-left font-mono [direction:rtl]"
-                        title={repo}
-                      >
-                        <bdi>{repo}</bdi>
-                      </span>
-                    ))}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {project.tickets}
-                  </td>
-                  <td
-                    className="px-3 py-2 whitespace-nowrap text-ink-muted"
-                    title={absoluteTime(project.archived)}
-                  >
-                    {runningTime(project.archived)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className="flex items-center justify-end gap-1">
-                      <Button
-                        className="h-8 py-0 text-xs"
-                        aria-label={`Restore ${project.displayName}`}
-                        onClick={() =>
-                          void restore(project.name, project.displayName)
-                        }
-                      >
-                        <Icon name="undo" size={14} />
-                        Restore
-                      </Button>
-                      <Button
-                        variant="danger-quiet"
-                        className="h-8 py-0 text-xs"
-                        aria-label={`Delete permanently ${project.displayName}`}
-                        onClick={() => setDeleting(project.name)}
-                      >
-                        Delete permanently
-                      </Button>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {runningTime(project.archived)}
+                </td>
+                <td className="px-3 py-2">
+                  <span className="flex items-center justify-end gap-1">
+                    <Button
+                      className="h-8 py-0 text-xs"
+                      aria-label={`Restore ${project.displayName}`}
+                      onClick={() =>
+                        void restore(project.name, project.displayName)
+                      }
+                    >
+                      <Icon name="undo" size={14} />
+                      Restore
+                    </Button>
+                    <Button
+                      variant="danger-quiet"
+                      className="h-8 py-0 text-xs"
+                      aria-label={`Delete permanently ${project.displayName}`}
+                      onClick={() => setDeleting(project.name)}
+                    >
+                      Delete permanently
+                    </Button>
+                  </span>
+                </td>
+              </Row>
+            ))}
+          </Table>
         ) : null}
       </section>
       <section

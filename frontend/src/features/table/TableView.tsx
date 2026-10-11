@@ -10,6 +10,7 @@ import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Pill, StatusPill, Tag } from "../../components/Pill";
 import { RunStateLabel } from "../../components/RunState";
+import { HeadCell, Row, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { priorityLabel } from "../../model/status";
@@ -98,146 +99,136 @@ export function TableView({
   const now = new Date();
   return (
     <div className="h-full overflow-auto px-4 pt-1 pb-10 md:px-6">
-      <table className="w-full border-separate border-spacing-0 overflow-hidden rounded-panel border border-rule bg-card text-sm shadow-card">
-        <thead className="sticky top-0 z-10 bg-column">
-          <tr>
-            {columns.map((column) => {
-              const active = sort.key === column.key;
-              return (
-                <th
-                  key={column.key}
-                  scope="col"
-                  aria-sort={
-                    active
-                      ? sort.descending
-                        ? "descending"
-                        : "ascending"
-                      : "none"
-                  }
-                  className={`border-b border-rule px-3 py-2.5 text-left text-sm heading-cut ${column.className ?? ""}`}
-                >
+      <Table
+        head={columns.map((column) => {
+          const active = sort.key === column.key;
+          return (
+            <HeadCell
+              key={column.key}
+              aria-sort={
+                active ? (sort.descending ? "descending" : "ascending") : "none"
+              }
+              className={column.className}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setSort({
+                    key: column.key,
+                    descending: active ? !sort.descending : false,
+                  })
+                }
+                className={`inline-flex items-center gap-1 ${active ? "text-ink" : "text-ink-muted hover:text-ink"}`}
+              >
+                {column.label}
+                {active ? (
+                  <Icon
+                    name="chevronDown"
+                    size={11}
+                    className={sort.descending ? "" : "rotate-180"}
+                  />
+                ) : null}
+              </button>
+            </HeadCell>
+          );
+        })}
+      >
+        {rows.map((card) => {
+          const isSelected = selected?.id === card.id;
+          const title =
+            workstreams
+              .get(card.project)
+              ?.find((item) => item.slug === card.workstream)?.title ??
+            card.workstream;
+          return (
+            <Row
+              key={`${card.project}/${card.id}/${card.column}`}
+              selected={isSelected}
+            >
+              <td className="max-w-[28rem] px-3 py-2">
+                {/* The title opens the panel; the id, the full page. */}
+                <span className="flex flex-col items-start">
                   <button
                     type="button"
-                    onClick={() =>
-                      setSort({
-                        key: column.key,
-                        descending: active ? !sort.descending : false,
-                      })
-                    }
-                    className={`inline-flex items-center gap-1 ${active ? "text-ink" : "text-ink-muted hover:text-ink"}`}
+                    onClick={() => onOpen({ id: card.id })}
+                    className="text-left font-semibold text-ink hover:underline"
                   >
-                    {column.label}
-                    {active ? (
-                      <Icon
-                        name="chevronDown"
-                        size={11}
-                        className={sort.descending ? "" : "rotate-180"}
-                      />
-                    ) : null}
+                    {card.title}
                   </button>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((card) => {
-            const isSelected = selected?.id === card.id;
-            const title =
-              workstreams
-                .get(card.project)
-                ?.find((item) => item.slug === card.workstream)?.title ??
-              card.workstream;
-            return (
-              <tr
-                key={`${card.project}/${card.id}/${card.column}`}
-                className={`[&>td]:border-b [&>td]:border-rule last:[&>td]:border-b-0 ${isSelected ? "bg-select-surface" : "hover:bg-well"}`}
-              >
-                <td className="max-w-[28rem] px-3 py-2">
-                  {/* The title opens the panel; the id, the full page. */}
-                  <span className="flex flex-col items-start">
-                    <button
-                      type="button"
-                      onClick={() => onOpen({ id: card.id })}
-                      className="text-left font-semibold text-ink hover:underline"
-                    >
-                      {card.title}
-                    </button>
-                    <TicketLink
-                      id={card.id}
-                      className="text-2xs text-ink-muted hover:text-ink"
-                    />
-                  </span>
+                  <TicketLink
+                    id={card.id}
+                    className="text-2xs text-ink-muted hover:text-ink"
+                  />
+                </span>
+              </td>
+              {projectNames ? (
+                <td className="px-3 py-2 text-ink-muted">
+                  {projectNames.get(card.project) ?? card.project}
                 </td>
-                {projectNames ? (
-                  <td className="px-3 py-2 text-ink-muted">
-                    {projectNames.get(card.project) ?? card.project}
-                  </td>
+              ) : null}
+              <td className="px-3 py-2 whitespace-nowrap">
+                <StatusPill column={card.column} rejected={card.rejected} />
+              </td>
+              <td className="px-3 py-2">
+                {card.type ? <Tag>{card.type}</Tag> : null}
+              </td>
+              <td className="px-3 py-2">
+                {card.priority ? (
+                  <Tag strong={card.priority === "high"}>
+                    {priorityLabel(card.priority)}
+                  </Tag>
                 ) : null}
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <StatusPill column={card.column} rejected={card.rejected} />
-                </td>
-                <td className="px-3 py-2">
-                  {card.type ? <Tag>{card.type}</Tag> : null}
-                </td>
-                <td className="px-3 py-2">
-                  {card.priority ? (
-                    <Tag strong={card.priority === "high"}>
-                      {priorityLabel(card.priority)}
-                    </Tag>
-                  ) : null}
-                </td>
-                <td className="px-3 py-2">
-                  {card.workstream ? (
-                    <span className="flex items-center gap-1.5 whitespace-nowrap">
-                      <LineBullet
-                        line={lines.get(card.project)?.get(card.workstream)}
-                        size="sm"
-                      />
-                      {title}
+              </td>
+              <td className="px-3 py-2">
+                {card.workstream ? (
+                  <span className="flex items-center gap-1.5 whitespace-nowrap">
+                    <LineBullet
+                      line={lines.get(card.project)?.get(card.workstream)}
+                      size="sm"
+                    />
+                    {title}
+                  </span>
+                ) : null}
+              </td>
+              <td className="px-3 py-2 whitespace-nowrap">
+                <span className="flex items-center gap-2">
+                  {card.needsRepair.length > 0 ? (
+                    <span className="flex items-center gap-1 font-semibold">
+                      <Icon name="repair" size={12} />
+                      Needs repair
+                    </span>
+                  ) : card.blocked ? (
+                    <span
+                      title={card.blockedBy
+                        .map((reason) => reason.text)
+                        .join("\n")}
+                    >
+                      <Pill tone="blocked">Blocked</Pill>
                     </span>
                   ) : null}
-                </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <span className="flex items-center gap-2">
-                    {card.needsRepair.length > 0 ? (
-                      <span className="flex items-center gap-1 font-semibold">
-                        <Icon name="repair" size={12} />
-                        Needs repair
-                      </span>
-                    ) : card.blocked ? (
-                      <span
-                        title={card.blockedBy
-                          .map((reason) => reason.text)
-                          .join("\n")}
-                      >
-                        <Pill tone="blocked">Blocked</Pill>
-                      </span>
-                    ) : null}
-                    {card.live ? (
-                      <RunStateLabel
-                        state={card.live.state}
-                        className="text-2xs"
-                      />
-                    ) : null}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-right text-ink-muted">
-                  {card.criteria.total > 0
-                    ? `${card.criteria.done}/${card.criteria.total}`
-                    : ""}
-                </td>
-                <td
-                  className="px-3 py-2 text-right whitespace-nowrap text-ink-muted"
-                  title={card.modified}
-                >
-                  {runningTime(card.modified, now)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  {card.live ? (
+                    <RunStateLabel
+                      state={card.live.state}
+                      className="text-2xs"
+                    />
+                  ) : null}
+                </span>
+              </td>
+              <td className="px-3 py-2 text-right text-ink-muted">
+                {card.criteria.total > 0
+                  ? `${card.criteria.done}/${card.criteria.total}`
+                  : ""}
+              </td>
+              <td
+                className="px-3 py-2 text-right whitespace-nowrap text-ink-muted"
+                title={card.modified}
+              >
+                {runningTime(card.modified, now)}
+              </td>
+            </Row>
+          );
+        })}
+      </Table>
     </div>
   );
 }
