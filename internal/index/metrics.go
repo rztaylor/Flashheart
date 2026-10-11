@@ -22,12 +22,25 @@ type Metrics struct {
 
 // Metrics counts a project's changes, or every project's when project is
 // "", since the human's latest board activity there. The human's own
-// changes are that activity, so only what came after it counts.
+// changes are that activity, so only what came after it counts. A
+// checkpoint belongs to its ticket's project, wherever it was recorded.
 func (s *Snapshot) Metrics(project string) Metrics {
 	metrics := Metrics{Since: s.BuiltAt.Add(-MetricsFallback)}
 	if activity, ok := s.LatestHuman(project); ok {
 		metrics.Since, metrics.LastChange = activity.Time, true
 	}
-	metrics.ChangeCounts = events.CountChanges(s.changes, project, metrics.Since)
+	changes := s.changes
+	if project != "" {
+		changes = make([]events.Change, 0, len(s.changes))
+		for _, change := range s.changes {
+			if change.Kind == events.ChangeCheckpoint {
+				if home, _, ok := s.FindTicket(change.Ticket); ok {
+					change.Project = home.Name
+				}
+			}
+			changes = append(changes, change)
+		}
+	}
+	metrics.ChangeCounts = events.CountChanges(changes, project, metrics.Since)
 	return metrics
 }

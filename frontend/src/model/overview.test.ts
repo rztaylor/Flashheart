@@ -493,7 +493,7 @@ describe("headline metrics", () => {
     revision: 1,
     since: new Date(2026, 9, 8, 18, 0).toISOString(),
     lastChange: true,
-    done: 4,
+    checkpoints: 4,
     review: 1,
     created: 6,
     criteriaTicked: 1,
@@ -517,14 +517,23 @@ describe("headline metrics", () => {
 
   it("draws four tiles in order, without Needs you, singular or plural", () => {
     expect(headlineTiles(metrics)).toEqual([
-      { id: "done", value: 4, word: "Done" },
+      { id: "checkpoints", value: 4, word: "Checkpoints" },
       { id: "review", value: 1, word: "To review" },
       { id: "created", value: 6, word: "New tickets" },
       { id: "criteria", value: 1, word: "Criterion ticked" },
     ]);
-    const words = headlineTiles({ ...metrics, created: 1, criteriaTicked: 0 })
-      .slice(2)
-      .map((tile) => tile.word);
-    expect(words).toEqual(["New ticket", "Criteria ticked"]);
+    const words = headlineTiles({
+      ...metrics,
+      checkpoints: 1,
+      review: 0,
+      created: 1,
+      criteriaTicked: 0,
+    }).map((tile) => tile.word);
+    expect(words).toEqual([
+      "Checkpoint",
+      "To review",
+      "New ticket",
+      "Criteria ticked",
+    ]);
   });
 });

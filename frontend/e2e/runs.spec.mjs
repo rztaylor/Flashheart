@@ -642,7 +642,7 @@ test("the Overview's headline metrics count agents' changes since your last chan
     /^Since your last change · today \d/,
   );
   await expect(row.locator("dt")).toHaveText([
-    "Done",
+    /^Checkpoints?$/,
     "To review",
     /^New tickets?$/,
     /^Criteri(a|on) ticked$/,
@@ -650,11 +650,11 @@ test("the Overview's headline metrics count agents' changes since your last chan
   const value = (metric) =>
     row.locator(`[data-metric="${metric}"] dd`).textContent();
   const before = {};
-  for (const metric of ["done", "review", "created", "criteria"])
+  for (const metric of ["checkpoints", "review", "created", "criteria"])
     before[metric] = Number(await value(metric));
 
-  // An agent creates a ticket, ticks a criterion and moves it to review
-  // through the real MCP server.
+  // An agent creates a ticket, ticks a criterion, moves it to review and
+  // records a handoff on the ticket it holds, through the real MCP server.
   const created = await callTool(sandbox.root, claimed.cwd, "create_ticket", {
     run: claimed.run,
     type: "feature",
@@ -674,15 +674,22 @@ test("the Overview's headline metrics count agents' changes since your last chan
     ticket: id,
     to: "review",
   });
+  await callTool(sandbox.root, claimed.cwd, "checkpoint", {
+    run: claimed.run,
+    ticket: "FH-25",
+    done: ["Lock acquisition"],
+    next: ["Release on exit"],
+    files: [],
+  });
   await expect
     .poll(async () => [
-      Number(await value("done")),
+      Number(await value("checkpoints")),
       Number(await value("review")),
       Number(await value("created")),
       Number(await value("criteria")),
     ])
     .toEqual([
-      before.done,
+      before.checkpoints + 1,
       before.review + 1,
       before.created + 1,
       before.criteria + 1,

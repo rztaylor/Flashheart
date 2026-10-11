@@ -623,3 +623,10 @@ a turn end or end. FH-53's shell command windows are kept in a small
 per-session state file under the project lock and travel in the records,
 so the worktree check sees every command. Readers still fold `tool.used`
 from older logs. Replaying this board's logs: 6,475 events become 2,132.
+
+Built (FH-52): the headline metrics are Checkpoints, To review, New
+tickets and Criteria ticked. The concept's Done tile gave way to
+Checkpoints (user, 2026-10-11): only the human moves tickets to Done, and
+that move is the human's latest change, so Done since it was always 0.
+Criteria ticked counts updates, since the event does not say how many were
+ticked.
