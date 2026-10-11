@@ -240,8 +240,9 @@ test("shell is keyboard reachable, accessible and renders in both themes", async
     await expectRunning(page);
     await expect(page.getByText(sandbox.root, { exact: true })).toBeVisible();
 
+    // The first stop is the first view tab, Overview (FH-61).
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("link", { name: "Board" })).toBeFocused();
+    await expect(page.getByRole("link", { name: "Overview" })).toBeFocused();
     await page.getByRole("button", { name: "Quit" }).focus();
     await expect(page.getByRole("button", { name: "Quit" })).toBeFocused();
     // Screenshots show the resting state, not the keyboard focus ring.

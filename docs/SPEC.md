@@ -586,8 +586,8 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
 (D18), which replaced the Transit Line Map of D14.
 
 - **Shell**: left rail of projects (with Needs you badges) and **All
-  projects**; top bar with view switcher (Board · Overview · Workstreams ·
-  Table), search, filters, density, virtual-column toggles; quiet backend
+  projects**; top bar with view switcher (Overview · Workstreams · Table ·
+  Board), search, filters, density, virtual-column toggles; quiet backend
   status and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.

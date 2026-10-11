@@ -53,6 +53,8 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The view tabs read Overview, Workstreams, Table, Board (FH-61).
+
 - An Overview replaces the Agents view (FH-51, D32). The band's tabs read
   Board, Overview, Workstreams, Table. The Overview is about tickets, for
   All projects or one project, in one calm column: Needs your decision

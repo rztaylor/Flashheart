@@ -14,11 +14,11 @@ resolution under *Corrections to the references*.
 
 ## 1. Shell
 
-One shell for Board, Overview, Workstreams and Table, in both themes.
+One shell for Overview, Workstreams, Table and Board, in both themes.
 
 ```
 ┌ Band ─────────────────────────────────────────────────────────────────┐
-│ ⚡ Flashheart │ Board  Overview  Workstreams  Table │ [● N need you] [Search] status [Quit] │
+│ ⚡ Flashheart │ Overview  Workstreams  Table  Board │ [● N need you] [Search] status [Quit] │
 ├ Rail ────────┬ Main ──────────────────────────────────────┬ Panel ────┤
 │ All projects │ Page header: scope identity · view summary │ (ticket)  │
 │ ──────────── │ View toolbar (Board, Table)                │           │
@@ -30,7 +30,7 @@ One shell for Board, Overview, Workstreams and Table, in both themes.
 ```
 
 **Band** (3.5rem tall, left to right): the bolt and the *Flashheart*
-wordmark in sentence case; the view tabs Board, Overview, Workstreams, Table,
+wordmark in sentence case; the view tabs Overview, Workstreams, Table, Board,
 each an icon and a label, the current one marked; then, right-aligned, the
 Needs you plate while any run anywhere needs the user (disc mark, count and
 "need(s) you"). It is the Needs you filter (`VIEW-2`, FH-44), a toggle:
