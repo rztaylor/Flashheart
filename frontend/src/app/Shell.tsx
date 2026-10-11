@@ -773,6 +773,18 @@ export function Shell({
                     lines={lines}
                     revision={revision}
                     editing={editing}
+                    expanded={preferences.expandedWorkstreams}
+                    onExpanded={(project, slugs) =>
+                      updatePreferences((current) => {
+                        const expandedWorkstreams = {
+                          ...current.expandedWorkstreams,
+                        };
+                        if (slugs.length > 0)
+                          expandedWorkstreams[project] = slugs;
+                        else delete expandedWorkstreams[project];
+                        return { ...current, expandedWorkstreams };
+                      })
+                    }
                     onOpen={openTicket}
                   />
                 ) : (

@@ -16,6 +16,7 @@ import { StateNote } from "../../components/StateNote";
 import type { Line } from "../../model/lines";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
+import { isFinished, keptExpanded } from "./collapse";
 import { TransitLine } from "./TransitLine";
 
 interface WorkstreamsViewProps {
@@ -26,17 +27,24 @@ interface WorkstreamsViewProps {
   revision: number;
   // editing enables reordering stations (EDIT-4); absent when read-only.
   editing?: Editing;
+  // expanded lists per project name the finished workstreams the user
+  // expanded, a saved preference (FH-68); onExpanded replaces a project's.
+  expanded: Record<string, string[]>;
+  onExpanded(project: string, slugs: string[]): void;
   onOpen(ticket: TicketRef): void;
 }
 
 // WorkstreamsView draws every workstream of the given projects as a route
-// card, one section per project (VIEW-4, ui-layout.md §4).
+// card, one section per project (VIEW-4, ui-layout.md §4). A finished
+// workstream shows collapsed to its head unless the user expanded it.
 export function WorkstreamsView({
   projects,
   fetcher,
   lines,
   revision,
   editing,
+  expanded,
+  onExpanded,
   onOpen,
 }: WorkstreamsViewProps) {
   const withLines = projects.filter(
@@ -64,12 +72,16 @@ export function WorkstreamsView({
           lines={lines.get(project.name) ?? new Map()}
           revision={revision}
           editing={editing}
+          expanded={expanded[project.name] ?? noSlugs}
+          onExpanded={(slugs) => onExpanded(project.name, slugs)}
           onOpen={onOpen}
         />
       ))}
     </div>
   );
 }
+
+const noSlugs: string[] = [];
 
 function ProjectLines({
   project,
@@ -78,6 +90,8 @@ function ProjectLines({
   lines,
   revision,
   editing,
+  expanded,
+  onExpanded,
   onOpen,
 }: {
   project: ProjectSummary;
@@ -86,6 +100,8 @@ function ProjectLines({
   lines: Map<string, Line>;
   revision: number;
   editing?: Editing;
+  expanded: string[];
+  onExpanded(slugs: string[]): void;
   onOpen(ticket: TicketRef): void;
 }) {
   const load = useCallback(
@@ -98,6 +114,14 @@ function ProjectLines({
   const data = resource.status === "ready" ? resource.data : undefined;
   // biome-ignore lint/correctness/useExhaustiveDependencies: clear once fresh lines arrive.
   useEffect(() => setOrders({}), [data]);
+  // An expanded choice lasts only while its workstream stays finished: one
+  // that reopens shows in full and collapses again once it finishes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: onExpanded is a fresh closure each render; run when the lines or the choices change.
+  useEffect(() => {
+    if (!data) return;
+    const kept = keptExpanded(data, expanded);
+    if (kept !== expanded) onExpanded(kept);
+  }, [data, expanded]);
   const reorder = editing
     ? (workstream: Workstream) => (ids: string[]) => {
         setOrders((current) => ({ ...current, [workstream.slug]: ids }));
@@ -159,6 +183,14 @@ function ProjectLines({
               project={project.name}
               workstream={ordered(workstream)}
               line={lines.get(workstream.slug)}
+              expanded={expanded.includes(workstream.slug)}
+              onToggle={() =>
+                onExpanded(
+                  expanded.includes(workstream.slug)
+                    ? expanded.filter((slug) => slug !== workstream.slug)
+                    : [...expanded, workstream.slug],
+                )
+              }
               onOpen={onOpen}
               onReorder={reorder?.(workstream)}
             />
@@ -180,11 +212,15 @@ const statusIcon = {
   completed: "check",
 } as const;
 
-function WorkstreamLine({
+// WorkstreamLine is one route card. A finished workstream's head is a
+// disclosure button and its body shows only when expanded (FH-68).
+export function WorkstreamLine({
   project,
   workstream,
   line,
   headingLevel,
+  expanded,
+  onToggle,
   onOpen,
   onReorder,
 }: {
@@ -192,10 +228,17 @@ function WorkstreamLine({
   project: string;
   workstream: Workstream;
   line?: Line;
+  // expanded is the user's choice for a finished workstream.
+  expanded: boolean;
+  onToggle(): void;
   onOpen(ticket: TicketRef): void;
   onReorder?(ids: string[]): void;
 }) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
+  const titleId = `ws-${project}-${workstream.slug}`;
+  const bodyId = `${titleId}-body`;
+  const collapsible = isFinished(workstream);
+  const open = !collapsible || expanded;
   // The route card takes a wash of its line colour (none in dark), and its
   // stations sit on that surface.
   const colour = line ? `var(--fh-line-${line.colour})` : "var(--fh-ink-faint)";
@@ -205,60 +248,97 @@ function WorkstreamLine({
       ? `var(--fh-line-ink-${line.colour})`
       : "var(--fh-card)",
   } as CSSProperties;
-  return (
-    <article
-      aria-labelledby={`ws-${project}-${workstream.slug}`}
-      style={surface}
-      className="rounded-panel border border-rule bg-(--route-surface) px-5 pt-5 pb-3 shadow-card"
-    >
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <LineBullet line={line} size="xl" />
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <Heading
-            id={`ws-${project}-${workstream.slug}`}
-            className="text-2xl leading-tight display-cut"
-          >
+  // The head reads the same collapsed or not; only a finished workstream's
+  // is a button, holding phrasing content only. The title alone names the
+  // card.
+  const Stack = collapsible ? "span" : "div";
+  const head = (
+    <>
+      <LineBullet line={line} size="xl" />
+      <Stack className="flex min-w-0 flex-col gap-0.5">
+        {collapsible ? (
+          <span id={titleId} className="text-2xl leading-tight display-cut">
+            {workstream.title}
+          </span>
+        ) : (
+          <Heading id={titleId} className="text-2xl leading-tight display-cut">
             {workstream.title}
           </Heading>
-          <span
-            className={`flex items-center gap-1 text-xs ${workstream.status === "blocked" ? "font-semibold text-ink" : "text-ink-muted"}`}
-          >
-            <Icon name={statusIcon[workstream.status]} size={12} />
-            {statusLabel[workstream.status]}
-          </span>
-        </div>
-        <span className="ml-auto text-sm text-ink-muted">
-          <span className="font-semibold text-ink">{workstream.done}</span> of{" "}
-          {workstream.total} served
+        )}
+        <span
+          className={`flex items-center gap-1 text-xs ${workstream.status === "blocked" ? "font-semibold text-ink" : "text-ink-muted"}`}
+        >
+          <Icon name={statusIcon[workstream.status]} size={12} />
+          {statusLabel[workstream.status]}
         </span>
-      </header>
-      {workstream.blockedBy.length > 0 ||
-      workstream.needsRepair.length > 0 ||
-      workstream.warnings.length > 0 ? (
-        <div className="mt-2 flex flex-col gap-1">
-          {workstream.needsRepair.map((problem) => (
-            <StateNote key={problem} kind="repair">
-              {problem}
-            </StateNote>
-          ))}
-          {workstream.blockedBy.map((reason) => (
-            <StateNote key={reason.text} kind="blocked">
-              {reason.text}
-            </StateNote>
-          ))}
-          {workstream.warnings.map((warning) => (
-            <StateNote key={warning} kind="warning">
-              {warning}
-            </StateNote>
-          ))}
+      </Stack>
+      <span className="ml-auto text-sm text-ink-muted">
+        <span className="font-semibold text-ink">{workstream.done}</span> of{" "}
+        {workstream.total} served
+      </span>
+    </>
+  );
+  return (
+    <article
+      aria-labelledby={titleId}
+      style={surface}
+      className={`rounded-panel border border-rule bg-(--route-surface) px-5 pt-5 shadow-card ${open ? "pb-3" : "pb-5"}`}
+    >
+      {collapsible ? (
+        <header>
+          <Heading>
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls={bodyId}
+              onClick={onToggle}
+              className="group -m-2 flex w-[calc(100%+1rem)] flex-wrap items-center gap-x-4 gap-y-1 rounded-control p-2 text-left"
+            >
+              {head}
+              <Icon
+                name="chevronDown"
+                size={20}
+                className={`text-ink-muted transition-transform ease-out-expo group-hover:text-ink ${open ? "" : "-rotate-90"}`}
+              />
+            </button>
+          </Heading>
+        </header>
+      ) : (
+        <header className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {head}
+        </header>
+      )}
+      {open ? (
+        <div id={bodyId}>
+          {workstream.blockedBy.length > 0 ||
+          workstream.needsRepair.length > 0 ||
+          workstream.warnings.length > 0 ? (
+            <div className="mt-2 flex flex-col gap-1">
+              {workstream.needsRepair.map((problem) => (
+                <StateNote key={problem} kind="repair">
+                  {problem}
+                </StateNote>
+              ))}
+              {workstream.blockedBy.map((reason) => (
+                <StateNote key={reason.text} kind="blocked">
+                  {reason.text}
+                </StateNote>
+              ))}
+              {workstream.warnings.map((warning) => (
+                <StateNote key={warning} kind="warning">
+                  {warning}
+                </StateNote>
+              ))}
+            </div>
+          ) : null}
+          <TransitLine
+            workstream={workstream}
+            line={line}
+            onOpen={onOpen}
+            onReorder={onReorder}
+          />
         </div>
       ) : null}
-      <TransitLine
-        workstream={workstream}
-        line={line}
-        onOpen={onOpen}
-        onReorder={onReorder}
-      />
     </article>
   );
 }

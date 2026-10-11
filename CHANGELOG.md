@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Finished workstreams collapse on the Workstreams view (FH-68). A
+  workstream whose tickets are all Done, Rejected or Archived shows only
+  its route card head (name, *Completed*, `d of t served`) with a chevron;
+  click it, or press Enter or Space, to show the full line. Flashheart
+  remembers your choice in `config.yaml` (`ui.expanded_workstreams`) while
+  the workstream stays finished. A workstream with work still in Ready to
+  review or earlier always shows in full.
+
 - A **Rejected** status for tickets closed without being accepted (FH-58).
   `status: rejected` is a Done state: the ticket sits in the Done column
   and counts as done for blocking and workstream progress, but its card,
