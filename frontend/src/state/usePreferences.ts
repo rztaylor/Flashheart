@@ -32,9 +32,14 @@ export function preferenceSaver(fetcher: AuthenticatedFetch) {
     const preferences = pending;
     pending = undefined;
     if (preferences === undefined) return;
-    void savePreferences(fetcher, preferences, { keepalive }).catch(
-      () => undefined,
-    );
+    // A refused kept-alive save (a body over the browser's 64 KiB keepalive
+    // cap) is retried as an ordinary one, which a hidden page still sends.
+    void savePreferences(fetcher, preferences, { keepalive })
+      .catch((error: unknown) => {
+        if (keepalive) return savePreferences(fetcher, preferences);
+        throw error;
+      })
+      .catch(() => undefined);
   };
   const cancel = () => {
     clearTimeout(timer);

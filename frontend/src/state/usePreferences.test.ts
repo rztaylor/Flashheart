@@ -134,6 +134,24 @@ describe("preferenceSaver", () => {
     stop();
   });
 
+  it("retries a refused kept-alive save as an ordinary one", async () => {
+    const { fetcher, saver, stop, hide } = harness();
+    // Browsers refuse keepalive bodies over 64 KiB; the page is still alive
+    // when it is only hidden.
+    fetcher.mockImplementation(async (_path, init) => {
+      if (init?.keepalive) throw new TypeError("keepalive body too large");
+      return new Response(null, { status: 204 });
+    });
+    saver.schedule(withColour("age"));
+    hide();
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+    expect(sent(fetcher)).toEqual([
+      expect.objectContaining({ keepalive: true, body: withColour("age") }),
+      expect.objectContaining({ keepalive: false, body: withColour("age") }),
+    ]);
+    stop();
+  });
+
   it("stops listening and drops a pending save when stopped", () => {
     const { fetcher, page, saver, stop, hide } = harness();
     saver.schedule(withColour("priority"));
