@@ -1,5 +1,6 @@
 // Pure view models for agent runs: why a run needs you, timeline wording
 // and plan stations, for cards, the Runs tab and the Overview.
+import { STATUSES } from "../api/board";
 import type {
   Live,
   PlanItem,
@@ -164,6 +165,12 @@ const asked: Record<string, string> = {
 
 const on = (ticket?: string) => (ticket ? ` on ${ticket}` : "");
 
+// movedTo names the status a ticket moved to, by its title.
+const movedTo = (status?: string) =>
+  status
+    ? ` to ${STATUSES.find((item) => item.id === status)?.title ?? status}`
+    : "";
+
 // describeEntry says what one timeline entry was, in plain words.
 export function describeEntry(entry: TimelineEntry): string {
   switch (entry.kind) {
@@ -187,6 +194,7 @@ export function describeEntry(entry: TimelineEntry): string {
     case "permission.resolved":
       return `Permission ${entry.detail || "resolved"}`;
     case "run.start":
+      if (entry.branch) return `Switched to branch ${entry.branch}`;
       return (
         source[entry.detail ?? ""] ??
         (entry.detail ? `Subagent started (${entry.detail})` : "Started")
@@ -210,11 +218,15 @@ export function describeEntry(entry: TimelineEntry): string {
     case "release":
       return `Released ${entry.ticket ?? "a ticket"}`;
     case "ticket.moved":
-      return `Moved ${entry.ticket ?? "a ticket"}`;
+      return `Moved ${entry.ticket ?? "a ticket"}${movedTo(entry.detail)}`;
+    case "ticket.updated":
+      return `Updated ${entry.ticket ?? "a ticket"}`;
     case "ticket.created":
       return `Created ${entry.ticket ?? "a ticket"}`;
     case "review.written":
       return `Wrote the review of ${entry.ticket ?? "a ticket"}`;
+    case "attachment.added":
+      return `Attached a file to ${entry.ticket ?? "a ticket"}`;
     case "question.asked":
       return `${asked[entry.detail ?? ""] ?? "Asked a question"}${on(entry.ticket)}`;
     case "question.answered":

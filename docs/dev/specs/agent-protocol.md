@@ -409,7 +409,8 @@ mcp`, recorded in the caller's project. A run found from hooks, or named by
 two connections in one worktree get two runs. When the connection's agent
 has switched branches since, the server records `run.start` again with the
 new branch, as a hook run's next prompt would, so the run's link and
-handoff follow it. Each tool call the
+handoff follow it; the run's timeline shows that restated start as the
+branch switch, not as a second connection. Each tool call the
 connection's run makes, read or write, counts as a tool result, recorded as
 hooks record them: in an `activity` record at most once per
 `activity_seconds` (`tools`, `failed`; never `paths` or `shell`), with what

@@ -42,6 +42,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A run's Activity in the Runs tab names every ticket event in plain
+  words instead of its raw event name (FH-70): "Moved FH-1 to In
+  progress", "Updated FH-1", "Attached a file to FH-1", where it showed
+  "ticket.moved FH-1" after most claims.
+- A run without hooks whose agent switches branches shows "Switched to
+  branch …" in its Activity instead of a second "Connected without hooks
+  (MCP only)" line, as if it had connected again (FH-71).
+
 - The Overview fills the main area like Board, Workstreams and Table
   instead of sitting in a centred 56rem column (FH-60).
 - Hooks in an archived project's repository no longer wait for the root

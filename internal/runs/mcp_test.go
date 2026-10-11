@@ -2,6 +2,7 @@ package runs
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
 )
@@ -67,6 +68,58 @@ func TestMCPStartedRuns(t *testing.T) {
 			r := set.Get(mcpRun)
 			if r.Source != events.SourceMCP || r.Kind != events.KindSession || len(r.Plan) != 0 || r.Edits != 0 || r.Permission != "" {
 				t.Errorf("run = %+v", r)
+			}
+		})
+	}
+}
+
+// A started run's agent that switches branches has its run.start restated
+// with the new branch (agent-protocol §7.1): the timeline shows that as a
+// branch switch, not a second connection (FH-71). A hook run's own
+// restarts keep their source.
+func TestRestatedStartsInTheTimeline(t *testing.T) {
+	t.Parallel()
+
+	restated := mcpEvent(2, events.RunStart, events.RunStartData{Kind: events.KindSession, Cwd: "/src/alpha", Branch: "feature/next", Worktree: "/src/alpha", Source: events.SourceMCP})
+	hook := func(minutes float64, source string) events.Event {
+		return ev(minutes, session, events.RunStart, events.RunStartData{Kind: events.KindSession, Branch: "feature/y", Source: source})
+	}
+	ended := mcpEvent(1, events.RunEnd, events.RunEndData{Reason: events.RunEndDisconnected})
+	cases := []struct {
+		name   string
+		run    string
+		events []events.Event
+		want   []Entry
+	}{
+		{"a branch switch", mcpRun, []events.Event{mcpStart(0), mcpCall(1, 1), restated},
+			[]Entry{{Kind: events.RunStart, Detail: events.SourceMCP}, {Kind: events.Activity, Tools: 1}, {Kind: events.RunStart, Detail: events.SourceMCP, Branch: "feature/next"}}},
+		{"the first start", mcpRun, []events.Event{mcpStart(0)},
+			[]Entry{{Kind: events.RunStart, Detail: events.SourceMCP}}},
+		{"a start after the run ended", mcpRun, []events.Event{mcpStart(0), ended, restated},
+			[]Entry{{Kind: events.RunStart, Detail: events.SourceMCP}, {Kind: events.RunEnd, Detail: events.RunEndDisconnected}, {Kind: events.RunStart, Detail: events.SourceMCP}}},
+		{"a hook run resumed", session, []events.Event{start(0), ev(1, session, events.RunEnd, events.RunEndData{Reason: "other"}), hook(2, "resume")},
+			[]Entry{{Kind: events.RunStart, Detail: "startup"}, {Kind: events.RunEnd, Detail: "other"}, {Kind: events.RunStart, Detail: "resume"}}},
+		{"a hook run resumed without an end", session, []events.Event{start(0), hook(2, "resume")},
+			[]Entry{{Kind: events.RunStart, Detail: "startup"}, {Kind: events.RunStart, Detail: "resume"}}},
+		{"a hook run compacted", session, []events.Event{start(0), hook(2, "compact")},
+			[]Entry{{Kind: events.RunStart, Detail: "startup"}, {Kind: events.RunStart, Detail: "compact"}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			set := NewSet()
+			for _, e := range tc.events {
+				set.Apply(e)
+			}
+			timeline := set.Get(tc.run).Timeline
+			if len(timeline) != len(tc.want) {
+				t.Fatalf("timeline = %+v", timeline)
+			}
+			for index, entry := range timeline {
+				entry.Time = time.Time{}
+				if entry != tc.want[index] {
+					t.Errorf("entry %d = %+v, want %+v", index, entry, tc.want[index])
+				}
 			}
 		})
 	}

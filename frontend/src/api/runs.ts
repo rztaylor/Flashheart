@@ -113,6 +113,9 @@ export interface TimelineEntry {
   failures?: number;
   detail?: string;
   ticket?: string;
+  // branch marks a hookless run's restated start: its branch switch
+  // (FH-71).
+  branch?: string;
 }
 
 export interface Run {

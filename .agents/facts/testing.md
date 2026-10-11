@@ -52,7 +52,7 @@
 - The runs e2e asks questions through the real `flashheart mcp` and
   answers them in the card panel and on the Overview
   (`frontend/e2e/agent-runs.mjs`), and drives a hookless Codex session
-  through it (`connectMCP`) to its answer and end.
+  through it (`connectMCP`) to its answer, a branch switch and its end.
 - Runs the MCP server starts (D34) are tested over the in-memory transport
   with several client connections (`env.dial`), and over stdio by
   `TestHooklessSessionOverStdio` in `internal/cli`.
