@@ -159,7 +159,7 @@ func repoSuffix(repo string) string {
 // created (PRJ-4). A name with nothing usable becomes repo-<6 hex>. A v1
 // project is left for migrate (ErrNeedsMigration). A repository whose
 // project is archived gets that project's name with ErrProjectArchived, and
-// nothing is created.
+// nothing is created. Only creating or adopting takes the root lock.
 func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 	if repo == "" {
 		return "", ErrNoProject
@@ -170,6 +170,12 @@ func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 		if repos, ok := s.projectRepos(candidate); ok && slices.Contains(repos, repo) {
 			return candidate, nil
 		}
+	}
+	// Nor for an archived project's repository, which only waits for a
+	// restore: FindProject walks the candidates as projectForLocked does, so
+	// hooks there never wait behind the root lock (NFR-4).
+	if candidate, err := s.FindProject(name, repo); errors.Is(err, ErrProjectArchived) {
+		return candidate, err
 	}
 	return s.projectForLocked(candidates, repo, create)
 }
