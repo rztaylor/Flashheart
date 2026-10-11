@@ -2,7 +2,6 @@ package runs
 
 import (
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -254,9 +253,9 @@ func (s *Set) run(e events.Event) *Run {
 	r, ok := s.runs[e.Run]
 	if !ok {
 		r = &Run{ID: e.Run, Agent: e.Agent, Project: e.Project, Kind: events.KindSession, Started: e.Time}
-		if parent, _, isChild := strings.Cut(e.Run, "/"); isChild {
+		if id := events.RunOf(e.Run); id.IsSubagent() {
 			r.Kind = events.KindSubagent
-			r.Parent = parent
+			r.Parent = id.Session().String()
 			r.turnOpen = true
 		}
 		s.runs[e.Run] = r
@@ -286,7 +285,7 @@ func (s *Set) Apply(e events.Event) {
 	// A subagent first seen ending did nothing visible (Claude Code's
 	// desktop app stops internal helper agents it never reported starting),
 	// so it is not a run.
-	if _, known := s.runs[e.Run]; !known && e.Kind == events.RunEnd && strings.Contains(e.Run, "/") {
+	if _, known := s.runs[e.Run]; !known && e.Kind == events.RunEnd && events.RunOf(e.Run).IsSubagent() {
 		return
 	}
 	r := s.run(e)

@@ -18,8 +18,6 @@ const Agent = "claude"
 // Adapter maps Claude Code hook payloads.
 type Adapter struct{}
 
-var safeID = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
-
 // payload holds the fields Flashheart reads. Prompts, messages, tool
 // responses and transcripts are never decoded beyond what is listed here,
 // and a prompt is only checked for the background-task marker, never kept.
@@ -76,17 +74,19 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 	if err := json.Unmarshal(data, &p); err != nil {
 		return hooks.Input{}, fmt.Errorf("payload is not JSON: %w", err)
 	}
-	if !safeID.MatchString(p.SessionID) {
+	sessionRun, err := events.SessionRun(Agent, p.SessionID)
+	if err != nil {
 		return hooks.Input{}, errors.New("payload has no usable session_id")
 	}
-	if p.AgentID != "" && !safeID.MatchString(p.AgentID) {
-		return hooks.Input{}, errors.New("payload has an unusable agent_id")
-	}
-	session := Agent + ":" + p.SessionID
+	session := sessionRun.String()
 	// Tool and permission events from inside a subagent carry its agent_id.
 	actor := session
 	if p.AgentID != "" {
-		actor = session + "/" + p.AgentID
+		subagent, err := sessionRun.Subagent(p.AgentID)
+		if err != nil {
+			return hooks.Input{}, errors.New("payload has an unusable agent_id")
+		}
+		actor = subagent.String()
 	}
 	input := hooks.Input{Cwd: p.Cwd}
 	add := func(run, kind string, data any) {
