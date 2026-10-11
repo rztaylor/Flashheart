@@ -118,6 +118,25 @@ ui:
 	}
 }
 
+func TestScopesRememberTheRejectedState(t *testing.T) {
+	t.Parallel()
+
+	// The State filter's Rejected option is saved like any other (FH-59).
+	ui := Defaults().UI
+	ui.Scopes = map[string]Scope{"alpha": {View: "board", State: "rejected"}}
+	data, err := SetUI(nil, ui)
+	if err != nil {
+		t.Fatalf("SetUI(): %v", err)
+	}
+	got, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse(): %v", err)
+	}
+	if got.UI.Scopes["alpha"].State != "rejected" {
+		t.Errorf("scopes = %+v", got.UI.Scopes)
+	}
+}
+
 func TestParseEmptyDocumentUsesDefaults(t *testing.T) {
 	t.Parallel()
 
