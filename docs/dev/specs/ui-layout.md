@@ -233,7 +233,7 @@ id a separate link.
 - Route card head: large bullet, name in the display cut, derived status in
   words with its mark (*Running*, *Blocked* with diamond, *Completed* with
   check), and `d of t served` right. Repair, blocker and warning notes follow.
-- **Finished lines collapse** (FH-68). A workstream whose tickets are all
+- **Finished lines collapse** (FH-68, D35). A workstream whose tickets are all
   Done, Rejected or Archived, with nothing to repair, shows only its head
   with a chevron at the right (pointing right when collapsed, down when
   expanded). The head is then a disclosure button inside the heading
