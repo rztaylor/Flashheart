@@ -214,7 +214,7 @@ func TestEndsRecordWhatIsPending(t *testing.T) {
 	list = readEvents(t, root, "demo")
 	var kinds []string
 	for _, e := range list[len(list)-3:] {
-		kinds = append(kinds, e.Run+" "+e.Kind)
+		kinds = append(kinds, e.Run+" "+string(e.Kind))
 	}
 	if want := []string{"fake:s1 activity", "fake:s1/a1 activity", "fake:s1 turn.end"}; !slices.Equal(kinds, want) {
 		t.Fatalf("turn end events = %v, want %v", kinds, want)

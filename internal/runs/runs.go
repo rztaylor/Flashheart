@@ -66,16 +66,16 @@ const (
 // status the ticket moved to; Branch marks a hookless run's restated
 // run.start as its switch to that branch.
 type Entry struct {
-	Time     time.Time `json:"time"`
-	Kind     string    `json:"kind"`
-	Tool     string    `json:"tool,omitempty"`
-	Path     string    `json:"path,omitempty"`
-	Failed   bool      `json:"failed,omitempty"`
-	Tools    int       `json:"tools,omitempty"`
-	Failures int       `json:"failures,omitempty"`
-	Detail   string    `json:"detail,omitempty"`
-	Ticket   string    `json:"ticket,omitempty"`
-	Branch   string    `json:"branch,omitempty"`
+	Time     time.Time   `json:"time"`
+	Kind     events.Kind `json:"kind"`
+	Tool     string      `json:"tool,omitempty"`
+	Path     string      `json:"path,omitempty"`
+	Failed   bool        `json:"failed,omitempty"`
+	Tools    int         `json:"tools,omitempty"`
+	Failures int         `json:"failures,omitempty"`
+	Detail   string      `json:"detail,omitempty"`
+	Ticket   string      `json:"ticket,omitempty"`
+	Branch   string      `json:"branch,omitempty"`
 }
 
 // Run is everything the events say about one session or subagent (RUN-2).
