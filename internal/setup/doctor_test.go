@@ -173,3 +173,22 @@ func TestDiagnoseAnUnknownRegistration(t *testing.T) {
 		t.Fatalf("problems %q, warnings %q", problems, warnings)
 	}
 }
+
+// A server registered only at local or project scope works in that project
+// but is not setup's user-scope registration: doctor warns, naming the
+// scope, instead of reporting it as not registered (FH-35).
+func TestDiagnoseAServerInAnotherScope(t *testing.T) {
+	t.Parallel()
+
+	for scope, name := range map[string]string{
+		"Local config (private to you in this project)": "local",
+		"Project config (shared via .mcp.json)":         "project",
+	} {
+		m := installed(t)
+		m.scope = scope
+		problems, warnings, _ := diagnose(t, m.options)
+		if len(problems) != 0 || len(warnings) != 1 || !strings.HasPrefix(warnings[0], "MCP server: registered at "+name+" scope, not ") || !strings.Contains(warnings[0], fix) {
+			t.Fatalf("%s: problems %q, warnings %q", name, problems, warnings)
+		}
+	}
+}

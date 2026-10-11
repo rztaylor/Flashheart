@@ -160,3 +160,12 @@ except the recovery note, answers and Flashheart's own tool stamping.
 Problems are logged to `<root>/.flashheart/hook-errors.log`. MCP tool errors
 come back to the model with a fix, such as passing its `run` when two
 sessions work in the same worktree.
+
+`flashheart doctor` checks the board root, the hooks, the MCP server and
+the skill against what `setup claude` writes, and the last day's hook
+errors. It changes nothing; each line is ok, a warning or a problem with
+its fix, and it exits 1 only for a problem. Run it in a project's
+directory: a `flashheart` MCP server you registered yourself at local or
+project scope (`claude mcp add --scope local|project`) is reported as a
+warning naming that scope, because it serves only that project, where
+setup's user-scope server serves every one.

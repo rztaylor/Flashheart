@@ -33,6 +33,11 @@ All notable changes to this project are documented here. The project follows
 - The Overview fills the main area like Board, Workstreams and Table
   instead of sitting in a centred 56rem column (FH-60).
 
+- `flashheart doctor` no longer reports a `flashheart` MCP server
+  registered at local or project scope as "not registered" (FH-35). It is
+  a warning naming the scope, with `setup claude --write` as the fix to
+  register it for every project.
+
 - Files changed through shell commands now count toward the handoff
   (FH-53). A run used to be dirty only after the edit tools, though agents
   edit mostly through shell commands, so "no handoff", the At risk reason
