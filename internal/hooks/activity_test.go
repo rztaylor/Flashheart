@@ -140,6 +140,32 @@ func TestEditPathsAreRecordedOncePerRunBetweenCheckpoints(t *testing.T) {
 	}
 }
 
+// A prompt (not a background task's turn) also lets the session record its
+// paths again, and a subagent's start its own, so a lost checkpoint signal
+// costs at most one turn: a path is recorded once per run per turn, and
+// again after a checkpoint.
+func TestEditPathsAreRecordedAgainEachTurn(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), repo(t)
+	play(t, root, cwd, "0 SessionStart",
+		"0 Prompt", "0.1 Edit:src/a.ts", "0.2 Edit:src/a.ts", "0.3 Stop",
+		"0.4 Prompt", "0.5 Edit:src/a.ts", "0.55 Stop",
+		"0.6 Background", "0.7 Edit:src/a.ts", "0.75 Stop",
+		"0.8 SubagentStart", "0.85 Sub:Edit:src/a.ts", "0.9 SubagentStart", "0.95 Sub:Edit:src/a.ts", "1 Sub:Edit:src/a.ts")
+	list, data, _ := recorded(t, root)
+	var got []string
+	for i, d := range data {
+		for _, path := range d.Paths {
+			got = append(got, fmt.Sprintf("%v %s %s", list[i].Time.Sub(now).Minutes(), list[i].Run, path))
+		}
+	}
+	want := []string{"0.1 fake:s1 src/a.ts", "0.5 fake:s1 src/a.ts", "0.85 fake:s1/a1 src/a.ts", "0.95 fake:s1/a1 src/a.ts"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("recorded paths =\n%v\nwant\n%v", got, want)
+	}
+}
+
 // A permission request waits on the run's next tool result, so that result
 // is recorded at once, however recent the run's last record.
 func TestAPermissionRequestRecordsTheNextToolResult(t *testing.T) {
