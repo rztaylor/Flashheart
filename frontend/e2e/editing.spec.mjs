@@ -1059,6 +1059,29 @@ test("preferences are saved through the backend and survive a reload", async () 
   await page.getByRole("button", { name: "Clear filters" }).click();
 });
 
+test("a preference changed just before a reload is saved (FH-48)", async () => {
+  const config = () =>
+    readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
+  await open("#/p/flashheart/board");
+  // A burst of changes keeps the save waiting; the reload comes at once.
+  await viewOption(page, "Colour by", "None");
+  await viewOption(page, "Colour by", "Age");
+  await page.reload();
+  await expect.poll(config).toContain("colour_by: age");
+  await expect(
+    page.getByRole("button", { name: "Backend connected. Check connection" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "View options" }).click();
+  await expect(
+    page
+      .getByRole("group", { name: "Colour by" })
+      .getByRole("radio", { name: "Age" }),
+  ).toBeChecked();
+  await page.keyboard.press("Escape");
+  await viewOption(page, "Colour by", "Priority");
+  await expect.poll(config).toContain("colour_by: priority");
+});
+
 test("the theme choice is saved", async () => {
   await open("#/p/flashheart/board");
   const theme = page.getByRole("group", { name: "Theme" });

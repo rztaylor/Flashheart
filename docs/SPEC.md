@@ -539,6 +539,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `CFG-2` UI preferences (theme, density, colour by, hidden columns, each
   project's view and filters, and the finished workstreams expanded) are
   saved through the backend in the global config, never in browser storage.
+  A change is saved shortly after it is made, and at once when the page is
+  hidden or closed, so a reload does not lose it.
 
 ### 6.13 Lifecycle (`LIFE`)
 

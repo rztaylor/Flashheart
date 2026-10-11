@@ -49,6 +49,10 @@ All notable changes to this project are documented here. The project follows
 - A run without hooks whose agent switches branches shows "Switched to
   branch …" in its Activity instead of a second "Connected without hooks
   (MCP only)" line, as if it had connected again (FH-71).
+- A preference changed just before a reload or tab close is no longer lost
+  (FH-48). Preferences are saved 400 ms after the last change; a save still
+  waiting when the page is hidden or unloaded is now sent at once, through
+  the authenticated session with `keepalive`, instead of being dropped.
 
 - The Overview fills the main area like Board, Workstreams and Table
   instead of sitting in a centred 56rem column (FH-60).

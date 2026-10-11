@@ -55,18 +55,22 @@ export async function getJSON<T>(
 }
 
 // sendJSON performs a write with a JSON body and returns the parsed response
-// body (undefined for 204), throwing ApiError for error statuses.
+// body (undefined for 204), throwing ApiError for error statuses. keepalive
+// lets the request outlive the page (a save flushed as the page unloads);
+// browsers cap such bodies at 64 KiB.
 export async function sendJSON(
   fetcher: AuthenticatedFetch,
   method: "POST" | "PUT" | "PATCH",
   path: string,
   body?: unknown,
+  options: { keepalive?: boolean } = {},
 ): Promise<unknown> {
   const response = await fetcher(path, {
     method,
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
+    ...(options.keepalive ? { keepalive: true } : {}),
   });
   if (response.status === 204) return undefined;
   const payload: unknown = await response.json().catch(() => undefined);
