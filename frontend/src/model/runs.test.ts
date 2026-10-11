@@ -115,6 +115,12 @@ describe("describeEntry", () => {
         entry({ kind: "question.answered-in-session", ticket: "FH-1" }),
       ),
     ).toBe("Question on FH-1 answered in the session");
+    expect(describeEntry(entry({ kind: "claim", ticket: "FH-1" }))).toBe(
+      "Claimed FH-1",
+    );
+    expect(describeEntry(entry({ kind: "release", ticket: "FH-1" }))).toBe(
+      "Released FH-1",
+    );
     expect(describeEntry(entry({ kind: "ticket.moved", ticket: "FH-1" }))).toBe(
       "Moved FH-1",
     );
@@ -122,9 +128,59 @@ describe("describeEntry", () => {
       describeEntry(entry({ kind: "ticket.created", ticket: "FH-2" })),
     ).toBe("Created FH-2");
     expect(
+      describeEntry(entry({ kind: "ticket.updated", ticket: "FH-1" })),
+    ).toBe("Updated FH-1");
+    expect(
       describeEntry(entry({ kind: "review.written", ticket: "FH-1" })),
     ).toBe("Wrote the review of FH-1");
+    expect(
+      describeEntry(entry({ kind: "attachment.added", ticket: "FH-1" })),
+    ).toBe("Attached a file to FH-1");
     expect(describeEntry(entry({ kind: "future.kind" }))).toBe("future.kind");
+  });
+
+  it("names the status a ticket moved to (FH-70)", () => {
+    const moved = (detail: string) =>
+      describeEntry(entry({ kind: "ticket.moved", ticket: "FH-1", detail }));
+    expect(moved("in-progress")).toBe("Moved FH-1 to In progress");
+    expect(moved("up-next")).toBe("Moved FH-1 to Up next");
+    expect(moved("review")).toBe("Moved FH-1 to Ready to review");
+    expect(moved("rejected")).toBe("Moved FH-1 to Rejected");
+    expect(moved("someday")).toBe("Moved FH-1 to someday");
+  });
+
+  it("names every kind the backend records (FH-70)", () => {
+    // Every events kind (internal/events) and the fold's own
+    // question.answered-in-session.
+    const kinds = [
+      "run.start",
+      "run.end",
+      "turn.start",
+      "turn.end",
+      "tool.used",
+      "activity",
+      "plan.updated",
+      "permission.requested",
+      "permission.resolved",
+      "notification",
+      "compact",
+      "claim",
+      "release",
+      "checkpoint",
+      "ticket.moved",
+      "ticket.updated",
+      "ticket.created",
+      "review.written",
+      "attachment.added",
+      "question.asked",
+      "question.answered",
+      "question.delivered",
+      "question.answered-in-session",
+    ];
+    for (const kind of kinds) {
+      const text = describeEntry(entry({ kind, ticket: "FH-1" }));
+      expect(text.startsWith(kind), `${kind}: ${text}`).toBe(false);
+    }
   });
 
   it("summarises activity records (FH-55)", () => {

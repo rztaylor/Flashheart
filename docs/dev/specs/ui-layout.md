@@ -190,7 +190,9 @@ reorders them.
    short id, link, branch and time, then its detail and its subagents as a
    tree on a spur: each row its state, type, the ticket it claimed when that
    is another, and its plan step (or tool and edit counts), opening to its
-   own plan, files and activity (agent-protocol §10). A run's plan shows
+   own plan, files and activity (agent-protocol §10). Activity names each
+   event in plain words, never by its event kind: "Claimed FH-1", "Moved
+   FH-1 to In progress", "Wrote the review of FH-1". A run's plan shows
    only when it has one; a run with no plan shows no plan section. A
    subagent listed on its own ticket names the session it belongs to.
 6. **Attachments tab** (shown when the ticket has files): a two-column grid
