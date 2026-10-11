@@ -330,6 +330,39 @@ func TestPreferencesHideTheBacklog(t *testing.T) {
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 
+// Finished workstreams the user expanded are remembered per project (FH-68);
+// a config without the setting has none.
+func TestPreferencesRememberExpandedWorkstreams(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	var prefs Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
+	if prefs.ExpandedWorkstreams == nil || len(prefs.ExpandedWorkstreams) != 0 {
+		t.Fatalf("default expanded workstreams = %#v", prefs.ExpandedWorkstreams)
+	}
+	prefs.ExpandedWorkstreams = map[string][]string{"alpha": {"lines"}}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	var again Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
+	if !slices.Equal(again.ExpandedWorkstreams["alpha"], []string{"lines"}) {
+		t.Errorf("saved expanded workstreams = %#v", again.ExpandedWorkstreams)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
+	if !strings.Contains(string(data), "alpha: [lines]") {
+		t.Errorf("config.yaml lacks expanded_workstreams:\n%s", data)
+	}
+	// Collapsing the last one leaves no setting behind.
+	prefs.ExpandedWorkstreams = map[string][]string{}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	data, _ = os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
+	if strings.Contains(string(data), "expanded_workstreams") {
+		t.Errorf("config.yaml kept expanded_workstreams:\n%s", data)
+	}
+	prefs.ExpandedWorkstreams = map[string][]string{"alpha": {"Not a slug"}}
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+}
+
 func TestReadOnlyServerRefusesWrites(t *testing.T) {
 	t.Parallel()
 

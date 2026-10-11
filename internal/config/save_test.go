@@ -25,6 +25,7 @@ ui:
 	ui.Density = DensityCompact
 	ui.ColourBy = "priority"
 	ui.HiddenColumns = []string{"backlog"}
+	ui.ExpandedWorkstreams = map[string][]string{"flashheart": {"foundation", "board-ui"}}
 	ui.Scopes = map[string]Scope{
 		"all":        {View: "board", State: "working"},
 		"flashheart": {View: "table", Type: Choice{Include: []string{"bug", "spike"}}, Workstream: Choice{Exclude: []string{"board-ui"}}, Age: Choice{Include: []string{"today"}}, State: "blocked"},
@@ -33,7 +34,7 @@ ui:
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  hidden_columns: [backlog]\n"} {
+	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  hidden_columns: [backlog]\n", "    flashheart: [foundation, board-ui]\n"} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("SetUI lost %q:\n%s", want, got)
 		}
@@ -78,6 +79,9 @@ func TestUIPreferencesAreValidated(t *testing.T) {
 		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Age: Choice{Include: []string{"decade"}}}}},
 		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Type: Choice{Exclude: []string{strings.Repeat("x", 201)}}}}},
 		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Priority: Choice{Include: make([]string, 101)}}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", ExpandedWorkstreams: map[string][]string{"../x": {"lines"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", ExpandedWorkstreams: map[string][]string{"alpha": {"Not A Slug"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", ExpandedWorkstreams: map[string][]string{"alpha": make([]string, 501)}},
 	} {
 		if _, err := SetUI(nil, ui); err == nil {
 			t.Errorf("SetUI(%+v) accepted invalid preferences", ui)

@@ -322,6 +322,8 @@ ui:
   hidden_columns: []      # real columns left off the Board: backlog (FH-41); absent shows all
   scopes:                 # remembered view and filters, per project or "all"
     flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked}   # view: board, agents, workstreams or table
+  expanded_workstreams:   # finished workstreams shown expanded, per project (FH-68); absent: all collapsed
+    flashheart: [foundation]
 ```
 
 Each of a scope's `type`, `priority`, `workstream` and `age` (today, week or
@@ -330,6 +332,10 @@ values hidden (`exclude`), at most 100 each. A bare value, the form before
 FH-39, reads as one included value; `hide_later` is ignored. The
 `virtual_columns` list of earlier versions
 is ignored, and dropped when preferences are next saved.
+
+`expanded_workstreams` lists at most 500 workstream slugs per project. The
+Workstreams view drops a slug once its workstream is no longer finished or
+no longer exists, so the choice lasts only while the workstream stays finished.
 
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
 other settings, unknown keys and comments.
