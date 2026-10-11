@@ -253,7 +253,9 @@ Full format: `docs/dev/specs/board-format.md`.
   old routes and a remembered Agents view open the Overview.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
   tickets as a railway graph of their `depends-on` links, with status,
-  blocked state and progress.
+  blocked state and progress. A finished workstream (every ticket Done,
+  Rejected or Archived) shows collapsed to its head until the user expands
+  it; any other workstream always shows in full.
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
 - `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
   workstream, blocked, live badge, criteria progress), *Detailed* (+
@@ -531,9 +533,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `CFG-1` Settings live in `<root>/.flashheart/config.yaml` (global) and
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
-- `CFG-2` UI preferences (theme, density, colour by, hidden columns, and
-  each project's view and filters) are saved through the backend in the
-  global config, never in browser storage.
+- `CFG-2` UI preferences (theme, density, colour by, hidden columns, each
+  project's view and filters, and the finished workstreams expanded) are
+  saved through the backend in the global config, never in browser storage.
 
 ### 6.13 Lifecycle (`LIFE`)
 
