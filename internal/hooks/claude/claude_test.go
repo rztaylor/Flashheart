@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -246,5 +247,122 @@ func TestStopAndPromptAskForTheirChecks(t *testing.T) {
 	out = Adapter{}.Render("UserPromptSubmit", hooks.Output{Context: "answers"})
 	if !strings.Contains(string(out), `"hookEventName":"UserPromptSubmit","additionalContext":"answers"`) && !strings.Contains(string(out), `"additionalContext":"answers","hookEventName":"UserPromptSubmit"`) {
 		t.Fatalf("prompt output = %s", out)
+	}
+}
+
+// gitDemoRepo is demoRepo as a real git checkout, for hooks that ask git
+// whether the worktree changed.
+func gitDemoRepo(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(base, "src", "demo")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("git", "init", "-q", "-b", "feature/demo")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	return dir
+}
+
+// FH-55: a recorded session's tool results, replayed through the adapter as
+// 200 calls in ten minutes, append about ten activity records (one a
+// minute, one for each newly edited path, one at the stop) with every tool
+// use and failure counted, instead of 200 tool.used events.
+func TestManyToolResultsAreRecordedAsAboutTenActivityRecords(t *testing.T) {
+	t.Parallel()
+
+	root, repo := t.TempDir(), gitDemoRepo(t)
+	const session = "340b083f-5d70-41b2-8cff-ec700908097a"
+	load := func(name string) string {
+		raw, err := os.ReadFile(filepath.Join(fixtures, name+".json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var fields map[string]any
+		if err := json.Unmarshal(raw, &fields); err != nil {
+			t.Fatal(err)
+		}
+		fields["session_id"] = session
+		data, _ := json.Marshal(fields)
+		return strings.ReplaceAll(string(data), placeholder, repo)
+	}
+	send := func(name string, at time.Time) {
+		hooks.Run(hooks.Options{Root: root, Event: strings.Split(name, "/")[0], Stdin: strings.NewReader(load(name)), Now: func() time.Time { return at }, Adapter: Adapter{}, ChangeTimeout: 10 * time.Second})
+	}
+
+	send("UserPromptSubmit/prompt", now)
+	mix := []string{"PostToolUse/read", "PostToolUse/bash", "PostToolUse/edit", "PostToolUseFailure/read-missing", "PostToolUse/read", "PostToolUse/write", "PostToolUse/agent", "PostToolUse/bash"}
+	failures := 0
+	for i := range 200 {
+		name := mix[i%len(mix)]
+		if strings.HasPrefix(name, "PostToolUseFailure") {
+			failures++
+		}
+		send(name, now.Add(time.Duration(i+1)*3*time.Second))
+	}
+	send("Stop/stop", now.Add(10*time.Minute+time.Second))
+	if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); len(data) > 0 {
+		t.Fatalf("hook-errors.log: %s", data)
+	}
+
+	s, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	records, tools, failed, shell := 0, 0, 0, 0
+	var paths []string
+	err = events.New(s).Read("demo", time.Time{}, func(e events.Event) {
+		switch e.Kind {
+		case events.ToolUsed:
+			t.Errorf("a tool.used was recorded: %+v", e)
+		case events.Activity:
+			var data events.ActivityData
+			_ = e.Decode(&data)
+			records++
+			tools, failed, shell = tools+data.Tools, failed+data.Failed, shell+len(data.Shell)
+			paths = append(paths, data.Paths...)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tools != 200 || failed != failures {
+		t.Fatalf("records count %d tools and %d failures, want 200 and %d", tools, failed, failures)
+	}
+	if !slices.Equal(paths, []string{"README.md", "notes.txt"}) {
+		t.Fatalf("paths = %v, want each edited path once", paths)
+	}
+	t.Logf("%d activity records for 200 tool results in ten minutes", records)
+	if most := 10 + len(paths) + 1; records > most {
+		t.Fatalf("%d activity records, want at most %d", records, most)
+	}
+	if shell == 0 {
+		t.Fatal("the shell commands' windows were not recorded")
+	}
+}
+
+// The checkpoint tool's own result tells hooks the session's edit paths are
+// settled, so the next edit of each is recorded again (FH-55).
+func TestTheCheckpointToolSettlesRecordedPaths(t *testing.T) {
+	t.Parallel()
+
+	for tool, want := range map[string]bool{"mcp__flashheart__checkpoint": true, "mcp__flashheart__claim": false, "mcp__other__checkpoint": false, "Bash": false} {
+		for _, event := range []string{"PostToolUse", "PostToolUseFailure"} {
+			input, err := Adapter{}.Parse(event, []byte(`{"session_id":"s1","cwd":"/x","tool_name":"`+tool+`","tool_input":{}}`))
+			if err != nil || input.Settled != want || len(input.Events) != 1 {
+				t.Errorf("%s %s: settled %v, events %d, %v; want settled %v", event, tool, input.Settled, len(input.Events), err, want)
+			}
+		}
 	}
 }

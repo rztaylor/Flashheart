@@ -1,6 +1,8 @@
 // Package events owns the event log (STO-5, agent-protocol §3): the envelope
 // and its kinds with their data shapes, encoding one event per JSONL line,
-// appending to a project's daily file under the project lock, tolerant and
+// appending to a project's daily file under the project lock (alone, or
+// with a session's hook activity state, whose format belongs to hooks),
+// tolerant and
 // incremental reading (malformed lines and unknown kinds are skipped),
 // expiring files after the retention period, and the answers inbox's line
 // format (answers queued for a session's next prompt, HOOK-5) with the

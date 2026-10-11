@@ -10,9 +10,9 @@ import (
 func TestVersionMatchesAgentProtocolSpec(t *testing.T) {
 	t.Parallel()
 
-	// docs/dev/specs/agent-protocol.md §14 declares PROTOCOL_VERSION = 1.
-	if Version != 1 {
-		t.Fatalf("Version = %d, want 1; bump only with a non-additive protocol change", Version)
+	// docs/dev/specs/agent-protocol.md §14 declares PROTOCOL_VERSION = 2.
+	if Version != 2 {
+		t.Fatalf("Version = %d, want 2; bump only with a non-additive protocol change", Version)
 	}
 }
 
@@ -20,7 +20,7 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 	t.Parallel()
 
 	skill := Skill()
-	if !strings.HasPrefix(skill, "---\nname: flashheart\ndescription: ") || !strings.Contains(skill, "flashheart-protocol: 1\n---\n\n# Flashheart board") {
+	if !strings.HasPrefix(skill, "---\nname: flashheart\ndescription: ") || !strings.Contains(skill, "flashheart-protocol: 2\n---\n\n# Flashheart board") {
 		t.Fatalf("skill frontmatter:\n%s", skill[:min(len(skill), 400)])
 	}
 	// Every MCP tool is explained.
@@ -44,7 +44,7 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 	if len(skill) > 8<<10 {
 		t.Errorf("skill is %d bytes; keep it under 8 KiB", len(skill))
 	}
-	if !strings.Contains(Instructions(), "protocol 1") || len(Instructions()) > 400 {
+	if !strings.Contains(Instructions(), "protocol 2") || len(Instructions()) > 400 {
 		t.Errorf("instructions = %q", Instructions())
 	}
 }

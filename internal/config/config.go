@@ -59,6 +59,10 @@ type Config struct {
 	QuietMinutes       int  `yaml:"quiet_minutes"`
 	// LeaseMinutes is how long a claim outlives its run's activity.
 	LeaseMinutes int `yaml:"lease_minutes"`
+	// ActivitySeconds is the least time between a run's activity records
+	// (agent-protocol §3): its tool results in between are counted, not
+	// recorded one by one.
+	ActivitySeconds int `yaml:"activity_seconds"`
 	// EnforceHandoff blocks a stop once for a checkpoint (HOOK-6); a
 	// project's settings.enforce_handoff overrides it.
 	EnforceHandoff     bool        `yaml:"enforce_handoff"`
@@ -165,6 +169,7 @@ func Defaults() Config {
 		AutoCreateProjects: true,
 		QuietMinutes:       10,
 		LeaseMinutes:       30,
+		ActivitySeconds:    60,
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
@@ -245,6 +250,7 @@ func (c Config) validate() error {
 	}
 	atLeastOne("quiet_minutes", int64(c.QuietMinutes))
 	atLeastOne("lease_minutes", int64(c.LeaseMinutes))
+	atLeastOne("activity_seconds", int64(c.ActivitySeconds))
 	atLeastOne("event_retention_days", int64(c.EventRetentionDays))
 	atLeastOne("done_column_limit", int64(c.DoneColumnLimit))
 	atLeastOne("attachments.max_bytes", c.Attachments.MaxBytes)

@@ -2,8 +2,10 @@
 
 Golden payloads for `internal/hooks/claude` (agent-protocol §13). Each
 `<Event>/<case>.json` is one hook payload as Claude Code sends it on stdin;
-`<case>.events.json` lists the events Flashheart must append for it (run,
-kind and data; `ts` and `project` are checked by the test harness), and an
+`<case>.events.json` lists the events Flashheart must append for it on an
+empty board (run, kind and data; `ts` and `project` are checked by the test
+harness; a run's first tool result is recorded at once as an `activity`,
+agent-protocol §3), and an
 optional `<case>.output.json` is the hook output it must print (otherwise
 none).
 
@@ -23,7 +25,7 @@ Checked 2026-10-05 against Claude Code 2.1.288.
 | Recorded from Claude Code 2.1.288 (CLI, 2026-10-05 and 2026-10-06) | `SessionStart/startup`, `SessionStart/startup-model`, `UserPromptSubmit/prompt`, `PreToolUse/bash`, `PostToolUse/edit`, `PostToolUse/write`, `PostToolUse/read`, `PostToolUse/bash`, `PostToolUse/agent`, `PostToolUse/subagent-bash`, `PostToolUseFailure/read-missing`, `PermissionRequest/bash`, `PreCompact/manual`, `Stop/stop`, `SubagentStart/explore`, `SubagentStop/explore`, `SubagentStop/helper`, `SessionEnd/other`, `SessionEnd/prompt-input-exit` |
 | Recorded from Claude Code 2.1.291 (CLI `-p`, 2026-10-08): the prompt a finished background command submits | `UserPromptSubmit/task-notification` |
 | Recorded, then given a fake secret to prove commands are never stored | `PostToolUse/bash-secret` |
-| Documented schema, not yet recorded | `SessionStart/compact`, `SessionStart/resume`, `PreToolUse/flashheart-tool`, `PostToolUse/multiedit`, `PostToolUse/notebookedit`, `PostToolUse/edit-outside-repo`, `PostToolUse/subagent-edit`, `PostToolUse/todowrite`, `PostToolUse/taskcreate`, `PostToolUse/taskupdate`, `PostToolUse/taskupdate-deleted`, `PostToolUseFailure/edit-failed`, `PermissionDenied/bash`, `Notification/*`, `TaskCreated/created`, `TaskCompleted/completed`, `PostCompact/manual` |
+| Documented schema, not yet recorded | `SessionStart/compact`, `SessionStart/resume`, `PreToolUse/flashheart-tool`, `PostToolUse/flashheart-checkpoint`, `PostToolUse/multiedit`, `PostToolUse/notebookedit`, `PostToolUse/edit-outside-repo`, `PostToolUse/subagent-edit`, `PostToolUse/todowrite`, `PostToolUse/taskcreate`, `PostToolUse/taskupdate`, `PostToolUse/taskupdate-deleted`, `PostToolUseFailure/edit-failed`, `PermissionDenied/bash`, `Notification/*`, `TaskCreated/created`, `TaskCompleted/completed`, `PostCompact/manual` |
 
 Not seen in the recordings: `Notification` (no idle or permission
 notification reached the CLI hooks, though the desktop app's live check saw

@@ -30,15 +30,20 @@ const (
 	MaxAnswerText   = 1000
 	MaxOptions      = 10
 	MaxOptionText   = 200
+	// MaxActivitySpans bounds an activity record's shell windows.
+	MaxActivitySpans = 20
 )
 
-// Event kinds (agent-protocol §3).
+// Event kinds (agent-protocol §3). ToolUsed is one tool call: since
+// protocol 2 (FH-55) hooks write throttled Activity records instead, and
+// readers still fold tool.used from older logs.
 const (
 	RunStart            = "run.start"
 	RunEnd              = "run.end"
 	TurnStart           = "turn.start"
 	TurnEnd             = "turn.end"
 	ToolUsed            = "tool.used"
+	Activity            = "activity"
 	PlanUpdated         = "plan.updated"
 	PermissionRequested = "permission.requested"
 	PermissionResolved  = "permission.resolved"
@@ -58,7 +63,7 @@ const (
 )
 
 var known = map[string]bool{
-	RunStart: true, RunEnd: true, TurnStart: true, TurnEnd: true, ToolUsed: true,
+	RunStart: true, RunEnd: true, TurnStart: true, TurnEnd: true, ToolUsed: true, Activity: true,
 	PlanUpdated: true, PermissionRequested: true, PermissionResolved: true,
 	Notification: true, Compact: true, Claim: true, Release: true, Checkpoint: true,
 	TicketMoved: true, TicketUpdated: true, TicketCreated: true, ReviewWritten: true,
@@ -124,6 +129,26 @@ type ToolData struct {
 	OK      bool   `json:"ok"`
 	Path    string `json:"path,omitempty"`
 	Summary string `json:"summary,omitempty"`
+}
+
+// ActivityData is activity's data: a run's tool use since its previous
+// activity record, recorded at most once per activity interval unless an
+// edit names a path the run has not recorded since its last checkpoint, or
+// a permission request waits on the next tool result (agent-protocol §3).
+// Paths are those newly edited paths, repository-relative; Shell holds the
+// windows of the run's successful shell commands, each from the run's
+// previous event to the command's result, merged where they meet.
+type ActivityData struct {
+	Tools  int      `json:"tools"`
+	Failed int      `json:"failed,omitempty"`
+	Paths  []string `json:"paths,omitempty"`
+	Shell  []Span   `json:"shell,omitempty"`
+}
+
+// Span is a stretch of time, ends included.
+type Span struct {
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
 }
 
 // PlanItem is one entry of a run's plan. ID is set by agents whose plan
@@ -320,22 +345,9 @@ func New(s *store.Store) *Log { return &Log{store: s} }
 // Append writes events to their projects' daily files. Each file gets one
 // locked append, so a batch lands together.
 func (l *Log) Append(list ...Event) error {
-	type target struct{ project, file string }
-	batches := map[target][]byte{}
-	var order []target
-	for _, e := range list {
-		if e.Run == "" || e.Project == "" || !known[e.Kind] {
-			return fmt.Errorf("event %q for run %q in project %q is incomplete", e.Kind, e.Run, e.Project)
-		}
-		line, err := e.MarshalLine()
-		if err != nil {
-			return err
-		}
-		key := target{e.Project, FileName(e.Time)}
-		if _, seen := batches[key]; !seen {
-			order = append(order, key)
-		}
-		batches[key] = append(batches[key], line...)
+	batches, order, err := encode(list)
+	if err != nil {
+		return err
 	}
 	for _, key := range order {
 		if err := l.store.AppendEventLines(key.project, key.file, batches[key]); err != nil {
@@ -343,6 +355,56 @@ func (l *Log) Append(list ...Event) error {
 		}
 	}
 	return nil
+}
+
+type target struct{ project, file string }
+
+// encode groups the events' lines by project and file, in first-seen order.
+func encode(list []Event) (map[target][]byte, []target, error) {
+	batches := map[target][]byte{}
+	var order []target
+	for _, e := range list {
+		if e.Run == "" || e.Project == "" || !known[e.Kind] {
+			return nil, nil, fmt.Errorf("event %q for run %q in project %q is incomplete", e.Kind, e.Run, e.Project)
+		}
+		line, err := e.MarshalLine()
+		if err != nil {
+			return nil, nil, err
+		}
+		key := target{e.Project, FileName(e.Time)}
+		if _, seen := batches[key]; !seen {
+			order = append(order, key)
+		}
+		batches[key] = append(batches[key], line...)
+	}
+	return batches, order, nil
+}
+
+// AppendWithState appends events together with replacing a session's hook
+// activity state, under the project lock that guards both, so concurrent
+// hooks of one session see each other's state (FH-55). update gets the
+// state (nil when there is none) and returns the new state (nil removes
+// it) and the events to append, all in project. The state's format belongs
+// to hooks.
+func (l *Log) AppendWithState(project, session string, update func(state []byte) ([]byte, []Event, error)) error {
+	return l.store.UpdateActivity(project, session, func(state []byte) ([]byte, map[string][]byte, error) {
+		next, list, err := update(state)
+		if err != nil {
+			return nil, nil, err
+		}
+		batches, _, err := encode(list)
+		if err != nil {
+			return nil, nil, err
+		}
+		lines := map[string][]byte{}
+		for key, batch := range batches {
+			if key.project != project {
+				return nil, nil, fmt.Errorf("event for project %q appended with %q's state", key.project, project)
+			}
+			lines[key.file] = batch
+		}
+		return next, lines, nil
+	})
 }
 
 // Files lists a project's event files in date order.
