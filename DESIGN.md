@@ -519,7 +519,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 
 ## Layout
 
-See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 248px rail, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem); below 1440px an open panel collapses the rail to 64px of key badges. Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; the Overview stacks section cards 16px apart in one centred column of at most 56rem; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
+See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 248px rail, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem); below 1440px an open panel collapses the rail to 64px of key badges. Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; the Overview stacks section cards 16px apart in one column filling Main; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
 
 ## Elevation & Depth
 
