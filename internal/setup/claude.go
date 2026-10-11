@@ -331,11 +331,25 @@ func (o Options) installedSettings(data []byte, tree *value) []byte {
 	return encodeLike(tree, data)
 }
 
-// registered reads the user-scope flashheart MCP server through the claude
-// CLI (claude mcp get), so setup never parses ~/.claude.json, which Claude
-// Code owns. Without the CLI it reads that file, read only; problem says
-// why the registration could not be read.
-func (o Options) registered() (command string, args []string, found bool, problem string) {
+// registration is the flashheart MCP server as Claude Code has it.
+type registration struct {
+	// found is set for a user-scope server, setup's own, which runs
+	// command with args.
+	found   bool
+	command string
+	args    []string
+	// scope names the other scope the server was found in instead (local
+	// or project): the user's own registration, which setup leaves alone.
+	scope string
+	// problem says why the registration could not be read.
+	problem string
+}
+
+// registered reads the flashheart MCP server through the claude CLI
+// (claude mcp get), so setup never parses ~/.claude.json, which Claude
+// Code owns. Without the CLI it reads that file, read only, which tells
+// only the user scope.
+func (o Options) registered() registration {
 	if o.Claude == "" {
 		return o.registeredInFile()
 	}
@@ -343,10 +357,11 @@ func (o Options) registered() (command string, args []string, found bool, proble
 	text := string(output)
 	if err != nil {
 		if strings.Contains(text, "No MCP server named") {
-			return "", nil, false, ""
+			return registration{}
 		}
-		return "", nil, false, fmt.Sprintf("Could not ask claude for the MCP registration (%v); setup registers the server again.", err)
+		return registration{problem: fmt.Sprintf("Could not ask claude for the MCP registration (%v); setup registers the server again.", err)}
 	}
+	var r registration
 	scope := ""
 	for _, line := range strings.Split(text, "\n") {
 		key, value, ok := strings.Cut(strings.TrimSpace(line), ":")
@@ -356,34 +371,36 @@ func (o Options) registered() (command string, args []string, found bool, proble
 		case key == "Scope":
 			scope = value
 		case key == "Command":
-			command, found = value, true
+			r.command, r.found = value, true
 		case key == "Args":
 			// The CLI prints the arguments joined by spaces, so ours are
 			// compared as printed: a root with spaces stays one argument.
 			if value == strings.Join(o.serverArgs(), " ") {
-				args = o.serverArgs()
+				r.args = o.serverArgs()
 			} else {
-				args = strings.Fields(value)
+				r.args = strings.Fields(value)
 			}
 		}
 	}
 	// Only the user-scope registration is setup's; one in a project or
-	// local scope is the user's own and is left alone.
+	// local scope is the user's own and is left alone. The CLI names the
+	// scope first, as in "Local config (private to you in this project)".
 	if !strings.HasPrefix(scope, "User") {
-		return "", nil, false, ""
+		name, _, _ := strings.Cut(scope, " ")
+		return registration{scope: strings.ToLower(name)}
 	}
-	return command, args, found, ""
+	return r
 }
 
 // registeredInFile reads the registration from ~/.claude.json when the
 // claude CLI is not available.
-func (o Options) registeredInFile() (command string, args []string, found bool, problem string) {
+func (o Options) registeredInFile() registration {
 	data, err := readFile(o.claudeJSONPath())
 	if err != nil {
-		return "", nil, false, fmt.Sprintf("Could not read ~/.claude.json (%v), so the MCP registration is unknown.", err)
+		return registration{problem: fmt.Sprintf("Could not read ~/.claude.json (%v), so the MCP registration is unknown.", err)}
 	}
 	if data == nil {
-		return "", nil, false, ""
+		return registration{}
 	}
 	var parsed struct {
 		MCPServers map[string]struct {
@@ -392,10 +409,10 @@ func (o Options) registeredInFile() (command string, args []string, found bool, 
 		} `json:"mcpServers"`
 	}
 	if err := json.Unmarshal(data, &parsed); err != nil {
-		return "", nil, false, "Could not read ~/.claude.json (it is not valid JSON), so the MCP registration is unknown."
+		return registration{problem: "Could not read ~/.claude.json (it is not valid JSON), so the MCP registration is unknown."}
 	}
 	server, found := parsed.MCPServers[serverName]
-	return server.Command, server.Args, found, ""
+	return registration{found: found, command: server.Command, args: server.Args}
 }
 
 // run runs a command through Options.Run, or os/exec.
@@ -436,13 +453,13 @@ func Install(o Options) (*Plan, error) {
 		p.notes = append(p.notes, "The Flashheart skill replaces kanban-tracker; --uninstall puts it back.")
 	}
 	config, _ := json.Marshal(map[string]any{"type": "stdio", "command": o.Binary, "args": o.serverArgs()})
-	command, args, found, problem := o.registered()
-	if problem != "" {
-		p.notes = append(p.notes, problem)
+	server := o.registered()
+	if server.problem != "" {
+		p.notes = append(p.notes, server.problem)
 	}
 	switch {
-	case found && command == o.Binary && slices.Equal(args, o.serverArgs()):
-	case found:
+	case server.found && server.command == o.Binary && slices.Equal(server.args, o.serverArgs()):
+	case server.found:
 		p.commands = append(p.commands, []string{"mcp", "remove", "--scope", "user", serverName})
 		fallthrough
 	default:
@@ -490,11 +507,11 @@ func Uninstall(o Options) (*Plan, error) {
 			p.moves = append(p.moves, move{from: saved, to: o.replacedPath()})
 		}
 	}
-	_, _, found, problem := o.registered()
-	if problem != "" {
-		p.notes = append(p.notes, problem)
+	server := o.registered()
+	if server.problem != "" {
+		p.notes = append(p.notes, server.problem)
 	}
-	if found {
+	if server.found {
 		p.commands = append(p.commands, []string{"mcp", "remove", "--scope", "user", serverName})
 	}
 	return p, nil

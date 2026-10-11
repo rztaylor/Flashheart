@@ -710,3 +710,19 @@ Versions: `PROTOCOL_VERSION` stays 2 (additive: a new `source` and `reason`
 value, `activity` written by the server, answers in tool results); board
 format stays 2. The protocol skill says that without hooks the answer
 arrives with the next Flashheart tool result.
+
+## 2026-10-11 — D35: Only finished workstreams collapse
+
+The Workstreams view collapses a workstream to its route card head only
+when every one of its tickets is Done, Rejected or Archived and it needs no
+repair (FH-68, user decision). The derived *Completed* status is unchanged
+and is reached earlier, once every ticket is at least Ready to review; the
+collapse rule is stricter on purpose, so work awaiting the user's review
+stays in view. The user's choice to expand a finished workstream is a saved
+preference (`ui.expanded_workstreams`, CFG-2) that lasts only while the
+workstream stays finished: a reopened workstream shows in full, and it
+collapses again once finished.
+
+Options: collapse on the derived Completed status (hides work waiting for
+review); collapse nothing and filter finished lines out (loses progress at
+a glance); collapse on all tickets finished (chosen).

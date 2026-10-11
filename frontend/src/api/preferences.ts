@@ -40,6 +40,9 @@ export interface Preferences {
   // hiddenColumns lists the real columns hidden from the board (FH-41).
   hiddenColumns: HideableColumn[];
   scopes: Record<string, ScopePreferences>;
+  // expandedWorkstreams lists per project name the finished workstreams
+  // shown expanded on the Workstreams view (FH-68).
+  expandedWorkstreams: Record<string, string[]>;
 }
 
 export const defaultPreferences: Preferences = {
@@ -48,6 +51,7 @@ export const defaultPreferences: Preferences = {
   colourBy: "type",
   hiddenColumns: [],
   scopes: {},
+  expandedWorkstreams: {},
 };
 
 const oneOf =
@@ -106,7 +110,9 @@ export function isPreferences(value: unknown): value is Preferences {
     Array.isArray(value.hiddenColumns) &&
     value.hiddenColumns.every(isHideableColumn) &&
     isRecord(value.scopes) &&
-    Object.values(value.scopes).every(isScope)
+    Object.values(value.scopes).every(isScope) &&
+    isRecord(value.expandedWorkstreams) &&
+    Object.values(value.expandedWorkstreams).every(isStrings)
   );
 }
 

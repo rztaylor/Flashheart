@@ -192,8 +192,25 @@ describe("run validators", () => {
       colourBy: "type",
       hiddenColumns: [],
       scopes: {},
+      expandedWorkstreams: {},
     };
     expect(isPreferences(preferences)).toBe(true);
+    // Expanded finished workstreams, per project (FH-68).
+    expect(
+      isPreferences({
+        ...preferences,
+        expandedWorkstreams: { flashheart: ["foundation"] },
+      }),
+    ).toBe(true);
+    expect(
+      isPreferences({
+        ...preferences,
+        expandedWorkstreams: { flashheart: [1] },
+      }),
+    ).toBe(false);
+    expect(
+      isPreferences({ ...preferences, expandedWorkstreams: undefined }),
+    ).toBe(false);
     // Only the Backlog can be hidden (FH-41).
     expect(isPreferences({ ...preferences, hiddenColumns: ["backlog"] })).toBe(
       true,
