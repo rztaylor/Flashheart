@@ -45,6 +45,11 @@ All notable changes to this project are documented here. The project follows
   5 s behind a long write such as a permanent project delete; they now
   return at once and still record and print nothing.
 
+- `flashheart doctor` no longer reports a `flashheart` MCP server
+  registered at local or project scope as "not registered" (FH-35). It is
+  a warning naming the scope, with `setup claude --write` as the fix to
+  register it for every project.
+
 - Files changed through shell commands now count toward the handoff
   (FH-53). A run used to be dirty only after the edit tools, though agents
   edit mostly through shell commands, so "no handoff", the At risk reason

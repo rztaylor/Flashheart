@@ -123,17 +123,21 @@ func (o Options) diagnoseProgram(what, program string) Finding {
 }
 
 func (o Options) diagnoseServer() []Finding {
-	command, args, found, problem := o.registered()
-	command = o.resolve(command)
+	server := o.registered()
+	command := o.resolve(server.command)
 	switch {
-	case problem != "":
-		return []Finding{{Warning, "MCP server: unknown. " + problem}}
-	case !found:
+	case server.problem != "":
+		return []Finding{{Warning, "MCP server: unknown. " + server.problem}}
+	case server.scope != "":
+		// The user's own registration works in its project; setup's
+		// user-scope one would serve every project (FH-35).
+		return []Finding{{Warning, fmt.Sprintf("MCP server: registered at %s scope, not the user scope setup writes; %s to register it for every project", server.scope, fix)}}
+	case !server.found:
 		return []Finding{{Problem, "MCP server: not registered; " + fix}}
 	case command != o.Binary:
 		return []Finding{o.diagnoseProgram("MCP server: runs", command)}
-	case !slices.Equal(args, o.serverArgs()):
-		return []Finding{{Warning, fmt.Sprintf("MCP server: runs with %q, not %q; %s", strings.Join(args, " "), strings.Join(o.serverArgs(), " "), fix)}}
+	case !slices.Equal(server.args, o.serverArgs()):
+		return []Finding{{Warning, fmt.Sprintf("MCP server: runs with %q, not %q; %s", strings.Join(server.args, " "), strings.Join(o.serverArgs(), " "), fix)}}
 	}
 	return []Finding{{OK, "MCP server: registered"}}
 }
