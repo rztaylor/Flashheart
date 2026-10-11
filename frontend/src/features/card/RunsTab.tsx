@@ -6,9 +6,10 @@ import { Icon } from "../../components/Icon";
 import { RunStateLabel } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import {
-  agentName,
   counted,
+  mcpOnly,
   needsReason,
+  runAgentName,
   sessionsOf,
   shortID,
 } from "../../model/runs";
@@ -103,8 +104,15 @@ function RunCard({
             </>
           ) : (
             <>
-              <span className="font-medium text-ink">
-                {agentName(run.agent)}
+              <span
+                className="font-medium text-ink"
+                title={
+                  mcpOnly(run)
+                    ? "Started by Flashheart's MCP server: without hooks it reports tool calls, claims and questions, never a plan, edits or permission prompts"
+                    : undefined
+                }
+              >
+                {runAgentName(run)}
               </span>
               <span className="font-normal text-ink-muted" title={run.id}>
                 {shortID(run.id)}

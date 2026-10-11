@@ -165,7 +165,7 @@ func TestAClaimElsewhereIsRenewedByWorkAtHome(t *testing.T) {
 		t.Fatal(err)
 	}
 	away := *e
-	away.cwd, away.client = there, nil
+	away.cwd, away.client, away.server = there, nil, nil
 	away.fails("claim", map[string]any{"ticket": "OT-1", "run": rival}, "claimed")
 	contains(t, away.ok("get_ticket", map[string]any{"ticket": "OT-1", "run": rival}), "Held by claude:5b0c7e2a")
 }

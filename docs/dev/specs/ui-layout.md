@@ -300,7 +300,8 @@ in the display head cut and a count badge. At risk and In progress open
 when they have something, the tiles start closed, and each of those four
 toggles with a chevron; the choice is not remembered. An empty section is
 its head with one calm sentence and nothing to open. Rows align from 48rem
-(id · title over one line of words · agent chip · meta · action) and stack
+(id · title over one line of words · agent chip, with *MCP only* beneath it
+for a session without hooks (D34) · meta · action) and stack
 under the title below. The id opens the full page, the title the panel.
 No coloured edge strips; the attention colour stays with Needs you.
 

@@ -668,3 +668,45 @@ board ignores, and the user can delete them.
 Versions: board format stays 2; `PROTOCOL_VERSION` stays 2, since
 `no_project` is a new coded error with a fix, added as `project_archived`
 was, and no event or tool changes shape (agent-protocol §14).
+
+## 2026-10-11 — D34: The MCP server starts a run for a session without hooks
+
+Decision (FH-15, `mcp-runs`): when a write reaches the `flashheart` MCP
+server and no run is found (agent-protocol §7.1), the server starts one for
+its connection, `<agent>:mcp-<random>`, with `run.start` source `mcp`. One
+stdio server process serves one agent session and is closed with it
+(documented for Claude Code; Codex spawns its MCP servers per session and
+names its client `codex-mcp-client`), so the connection is the session. On
+2026-10-06 Codex, with no Flashheart hooks, created and checkpointed
+tickets through the tools, but `claim` failed with `ambiguous_run`, its
+writes said "unknown", and nothing reached the Agents view.
+
+The run reads as Waiting unless it needs you: it has no turns, so it is
+never Working or Quiet, and it has no plan, edits or permission prompts.
+Every Flashheart tool call it makes, reads included, counts as a tool
+result in a throttled `activity` record, as protocol 2's hooks count them,
+which renews its claim's lease; closing the connection records
+`run.end` with reason `disconnected`, and a server that dies leaves it to
+the stale rule. Answers waiting for it are appended to its next tool result
+and marked delivered, standing in for the prompt hook; `board_context`
+stands in for the recovery note. Hooks stay the deterministic layer: a run
+found from hooks, or named by `run`, always wins: no run starts while a
+live hook session of the caller's agent works in the worktree, even on
+another branch (an unreported branch switch), and the call asks for `run`
+instead. Once started, the connection's run is its caller for the
+connection's life, never another connection's, and follows the agent's
+branch. The caller's agent comes from the
+client's `clientInfo` name, so a Codex session without hooks is not taken
+for a Claude Code session working in the same worktree.
+
+Options: a run per server process minted at initialize (every read-only
+session would show as a run, even one that never touches the board);
+requiring the model to pass a run id it invents (models copy ids
+unreliably, and attribution would depend on it); a run started by the first
+write (chosen). Reads are activity once the run exists but never start one,
+so a session that only reads leaves no trace.
+
+Versions: `PROTOCOL_VERSION` stays 2 (additive: a new `source` and `reason`
+value, `activity` written by the server, answers in tool results); board
+format stays 2. The protocol skill says that without hooks the answer
+arrives with the next Flashheart tool result.

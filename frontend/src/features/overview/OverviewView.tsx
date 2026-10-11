@@ -29,7 +29,7 @@ import {
   type SectionId,
   sectionOpen,
 } from "../../model/overview";
-import { agentName, shortID, shortRun } from "../../model/runs";
+import { agentName, agentNote, shortID, shortRun } from "../../model/runs";
 import { absoluteTime, durationWords } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
@@ -378,6 +378,7 @@ function Row({
   title,
   sub,
   agent,
+  agentNote,
   meta,
   action,
   children,
@@ -386,6 +387,8 @@ function Row({
   title: ReactNode;
   sub?: ReactNode;
   agent?: string;
+  // agentNote qualifies the agent in a word or two, under its pill.
+  agentNote?: string;
   meta?: ReactNode;
   action?: ReactNode;
   children?: ReactNode;
@@ -405,10 +408,15 @@ function Row({
           ) : null}
         </div>
         <div className="col-start-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 md:contents">
-          <div className="max-md:empty:hidden md:justify-self-start">
+          <div className="flex flex-col items-start gap-0.5 max-md:empty:hidden md:justify-self-start">
             {agent ? (
               <span className="rounded-mark border border-rule bg-well px-1.5 py-0.5 text-2xs font-semibold whitespace-nowrap text-ink">
                 {agent}
+              </span>
+            ) : null}
+            {agent && agentNote ? (
+              <span className="text-2xs whitespace-nowrap text-ink-muted">
+                {agentNote}
               </span>
             ) : null}
           </div>
@@ -507,6 +515,7 @@ export function DecisionRow({
         title={title}
         sub={ticket ? undefined : place}
         agent={agentName(run.agent)}
+        agentNote={agentNote(run)}
         meta={<Ago iso={item.since} now={now} before="Asked " after=" ago" />}
       >
         <QuestionCard
@@ -527,6 +536,7 @@ export function DecisionRow({
       title={title}
       sub={item.reason}
       agent={agentName(run.agent)}
+      agentNote={agentNote(run)}
       meta={<Ago iso={item.since} now={now} before="Waiting " />}
       action={<span>Answer in the session · {place}</span>}
     />
@@ -654,6 +664,7 @@ export function UnticketedRow({
       title={`Session ${shortID(run.id)}`}
       sub={where(run, projectNames)}
       agent={agentName(run.agent)}
+      agentNote={agentNote(run)}
       meta={
         <span className="flex flex-wrap items-center gap-x-2">
           <RunStateLabel state={run.state} />

@@ -29,6 +29,8 @@ type env struct {
 	store  *store.Store
 	now    time.Time
 	client *mcp.ClientSession
+	server *mcp.Server
+	srv    *server
 }
 
 func newEnv(t testing.TB, key string) *env {
@@ -71,25 +73,39 @@ func write(t testing.TB, name, data string) {
 }
 
 // connect starts the server and a client; call it after setting up files.
+// The client names itself as Claude Code does.
 func (e *env) connect() {
 	e.t.Helper()
-	server, err := New(Options{Root: e.root, Cwd: e.cwd, Now: func() time.Time { return e.now }})
-	if err != nil {
-		e.t.Fatal(err)
+	e.client = e.dial("claude-code")
+}
+
+// dial connects another client, named as an agent names itself at
+// initialize, to the env's server, starting the server on first use.
+func (e *env) dial(name string) *mcp.ClientSession {
+	e.t.Helper()
+	if e.server == nil {
+		srv, server, err := newServer(Options{Root: e.root, Cwd: e.cwd, Now: func() time.Time { return e.now }})
+		if err != nil {
+			e.t.Fatal(err)
+		}
+		e.server, e.srv = server, srv
+		// Runs after the connections close: their runs' ends are written
+		// before the board's directory is removed.
+		e.t.Cleanup(srv.ending.Wait)
 	}
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	ctx := context.Background()
-	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	serverSession, err := e.server.Connect(ctx, serverTransport, nil)
 	if err != nil {
 		e.t.Fatal(err)
 	}
 	e.t.Cleanup(func() { serverSession.Close() })
-	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
-	e.client, err = client.Connect(ctx, clientTransport, nil)
+	client, err := mcp.NewClient(&mcp.Implementation{Name: name, Version: "1"}, nil).Connect(ctx, clientTransport, nil)
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	e.t.Cleanup(func() { e.client.Close() })
+	e.t.Cleanup(func() { client.Close() })
+	return client
 }
 
 // call runs a tool and returns its text and whether it was an error.
@@ -98,7 +114,13 @@ func (e *env) call(tool string, args map[string]any) (string, bool) {
 	if e.client == nil {
 		e.connect()
 	}
-	result, err := e.client.CallTool(context.Background(), &mcp.CallToolParams{Name: tool, Arguments: args})
+	return e.callOn(e.client, tool, args)
+}
+
+// callOn runs a tool over one client's connection.
+func (e *env) callOn(client *mcp.ClientSession, tool string, args map[string]any) (string, bool) {
+	e.t.Helper()
+	result, err := client.CallTool(context.Background(), &mcp.CallToolParams{Name: tool, Arguments: args})
 	if err != nil {
 		e.t.Fatalf("%s: protocol error: %v", tool, err)
 	}

@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   callTool,
+  connectMCP,
   IDLE_SESSION,
   promptHook,
   seedClaimedRun,
@@ -708,4 +709,100 @@ test("the Overview's pipeline counts every column of the scope (FH-63)", async (
     .getByRole("link", { name: "Ready to review: 0 tickets" })
     .click();
   await expect(page).toHaveURL(/#\/p\/quiet\/board$/);
+});
+
+test("an agent without hooks gets a run from its first write, and its answers with its next call (FH-15)", async () => {
+  // Codex without Flashheart's hooks, in a real `flashheart mcp` session.
+  const codex = await connectMCP(sandbox.root, seeded.beta, "codex-mcp-client");
+  try {
+    expect(
+      await codex.call("claim", {
+        ticket: "BE-1",
+        force: true,
+        reason: "synthetic: its dependency is nearly done",
+      }),
+    ).toContain("ok ticket=BE-1 column=in-progress");
+    const asked = await codex.call("ask_human", {
+      ticket: "BE-1",
+      kind: "question",
+      text: "Greet in English only?",
+    });
+    expect(asked).toContain(
+      "with the result of your next flashheart tool call",
+    );
+
+    // The Overview asks for the decision, naming the session MCP only.
+    const decision = section("Needs your decision");
+    const question = decision.getByRole("region", { name: "Has a question" });
+    // Screenshots at the project's widths, both themes, and a phone.
+    const sizes = [
+      [1280, 800, "light"],
+      [1280, 800, "dark"],
+      [1920, 1080, "light"],
+      [1920, 1080, "dark"],
+      [390, 844, "light"],
+    ];
+    for (const [width, height, theme] of sizes) {
+      await open("#/all/overview", { width, height, theme });
+      await expect(question.getByText("Greet in English only?")).toBeVisible();
+      await expect(
+        decision.getByText("MCP only", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        question.getByText(
+          "It reaches the session with its next Flashheart tool call.",
+        ),
+      ).toBeVisible();
+      if (width === 1280 && theme === "light")
+        await expectNoAxeViolations("question from a run without hooks");
+      await question.scrollIntoViewIfNeeded();
+      await shot(`overview-mcp-only-${width}-${theme}`);
+    }
+
+    // The ticket's Runs tab shows the run and what it did.
+    await open("#/p/beta/board");
+    await page.getByRole("button", { name: /^Hello, BE-1/ }).click();
+    await page.getByRole("tab", { name: /^Runs/ }).click();
+    const panel = page.getByRole("complementary", { name: "Ticket BE-1" });
+    await expect(panel.getByText("Codex (MCP only)")).toBeVisible();
+    await expect(
+      panel.getByText("Connected without hooks (MCP only)"),
+    ).toBeVisible();
+    for (const [width, height, theme] of sizes.slice(0, 4)) {
+      await page.setViewportSize({ width, height });
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+      await expect(panel.getByText("Codex (MCP only)")).toBeVisible();
+      await shot(`runs-tab-mcp-only-${width}-${theme}`);
+    }
+
+    // Answered on the Overview, the answer reaches the session with its
+    // next tool call, once.
+    await open("#/all/overview");
+    await question.getByRole("textbox", { name: "Your answer" }).fill("Yes");
+    await question.getByRole("button", { name: "Send answer" }).click();
+    await expect(
+      decision.getByRole("region", {
+        name: "Answer waits for its next tool call",
+      }),
+    ).toContainText("“Yes”");
+    expect(await codex.call("list_tickets", {})).toContain(
+      'BE-1: "Greet in English only?" → "Yes" (Robin)',
+    );
+    expect(await codex.call("list_tickets", {})).not.toContain(
+      "Greet in English",
+    );
+    await expect(decision.getByText("Greet in English only?")).toHaveCount(0);
+  } finally {
+    await codex.close();
+  }
+  // Closing the session ends its run.
+  await page.reload();
+  await open("#/p/beta/board");
+  await page.getByRole("button", { name: /^Hello, BE-1/ }).click();
+  await page.getByRole("tab", { name: /^Runs/ }).click();
+  await expect(
+    page
+      .getByRole("complementary", { name: "Ticket BE-1" })
+      .getByText("Ended (disconnected)"),
+  ).toBeVisible();
 });
