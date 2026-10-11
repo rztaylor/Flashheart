@@ -4,7 +4,9 @@ import { type Paint, paintVars } from "../model/paint";
 import { type StateTone, statusOf } from "../model/status";
 import { Icon, type IconName } from "./Icon";
 
-const toneClass: Record<StateTone, string> = {
+// stateToneClass and stateToneIcon are a state's colour role and its icon,
+// for the pill and the Overview's pipeline (FH-63).
+export const stateToneClass: Record<StateTone, string> = {
   neutral: "bg-(--fh-state-neutral) text-(--fh-state-neutral-ink)",
   progress: "bg-(--fh-state-progress) text-(--fh-state-progress-ink)",
   review: "bg-(--fh-state-review) text-(--fh-state-review-ink)",
@@ -12,7 +14,7 @@ const toneClass: Record<StateTone, string> = {
   blocked: "bg-(--fh-state-blocked) text-(--fh-state-blocked-ink)",
 };
 
-const toneIcon: Record<StateTone, IconName> = {
+export const stateToneIcon: Record<StateTone, IconName> = {
   neutral: "ring",
   progress: "half",
   review: "review",
@@ -39,9 +41,9 @@ export function Pill({
   return (
     <span
       data-tone={tone}
-      className={`${pillBase} text-2xs ${toneClass[tone]} ${className ?? ""}`}
+      className={`${pillBase} text-2xs ${stateToneClass[tone]} ${className ?? ""}`}
     >
-      <Icon name={icon ?? toneIcon[tone]} size={11} />
+      <Icon name={icon ?? stateToneIcon[tone]} size={11} />
       {children}
     </span>
   );
@@ -93,7 +95,7 @@ export function BlockerPill({
     <span
       data-tone="blocked"
       title={title ?? (typeof children === "string" ? children : undefined)}
-      className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${toneClass.blocked} ${className ?? ""}`}
+      className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${stateToneClass.blocked} ${className ?? ""}`}
     >
       <Icon name="diamond" size={12} className="mt-[0.15em]" />
       <span className={clamp[lines]}>

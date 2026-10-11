@@ -148,11 +148,7 @@ human's events are no run: run derivation (§4) skips them. With
 `question.answered` (recorded on the asking run), they are the human's
 board activity, which `serve` reads per project and across projects from
 the whole retained log. Agents' MCP writes are unchanged and are never the
-human's. The Overview's headline metrics (`VIEW-3`) count the events
-recorded after that activity: `checkpoint` (once, though it can be recorded
-in two projects), moves to `review`, `ticket.created`, and `ticket.updated`
-naming `criteria` (one per update, since the event does not say how many
-were ticked).
+human's.
 
 ## 4. Run state
 

@@ -265,13 +265,13 @@ id a separate link.
 
 The project manager's view (`VIEW-3`, D32; approved concept: FH-47's Calm
 direction). Page header; then one column, filling Main with the same gutter
-as the other views, opening with the headline metrics (FH-52): a muted line
-*Since your last change · yesterday 18:00* (*In the last 24 hours* when no
-change of yours is recorded) over four equal hairline tiles, each a large
-tabular number over a muted word: Checkpoints, To review, New tickets,
-Criteria ticked (singular for one). Ink only: no colour carries meaning.
-Four across from 40rem, two by two below. Then the rounded section cards in
-fixed order:
+as the other views, opening with the pipeline (FH-63): one row of five
+interlocking chevron cards, pointing left to right, one per board column in
+order (Backlog, Up next, In progress, Ready to review, Done), each a large
+tabular count over the column's word with its status icon, in the State
+role (§7). Each card leads to the Board for the scope. The row stays one row
+at every width; below 40rem the icons go and the words wrap. Then the
+rounded section cards in fixed order:
 
 1. **Needs your decision**: questions, each a question card answerable in
    place (`CARD-6`), and permission prompts, which say *Answer in the
@@ -323,7 +323,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | Attention | A run or question that needs the user | Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark | Disc mark and words |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
 | Paint | The Colour by value | Card header tint, filled tag, colour chip bullet | The value's word |
-| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done) | Icon and column word |
+| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages | Icon and column word |
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |

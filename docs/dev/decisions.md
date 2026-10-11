@@ -630,3 +630,11 @@ Checkpoints (user, 2026-10-11): only the human moves tickets to Done, and
 that move is the human's latest change, so Done since it was always 0.
 Criteria ticked counts updates, since the event does not say how many were
 ticked.
+
+Superseded (FH-63, user, 2026-10-11): the metrics confused more than they
+helped. To review counted tickets that arrived since your last change, so
+it read 0 above a Ready for your review section listing four. The headline
+is now the pipeline: every board column's whole count, which can never
+disagree with the sections, as interlocking chevrons in the State role.
+Throughput figures (done this week, time in review) were left out because
+each needs a time window again.

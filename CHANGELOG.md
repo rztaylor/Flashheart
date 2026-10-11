@@ -186,16 +186,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
-- Headline metrics under the Overview's title (FH-52): a quiet row saying
-  *Since your last change · yesterday 18:00* over four tiles, Checkpoints,
-  To review, New tickets and Criteria ticked, for All projects or the
-  project shown. They count agents' checkpoints (handoffs), tickets moved to
-  Ready to review and tickets created (each ticket once) and criteria
-  updates (one per update, however many it ticked), since your latest change
-  on the board there (a board edit, move, new ticket or answer; editor edits
-  do not count). With none recorded the row counts the last 24 hours and
-  says so. Served by `GET /api/metrics?project=`; counted from the event
-  log the server already reads, with no new events.
+- The Overview opens with the pipeline (FH-63): Backlog, Up next, In
+  progress, Ready to review and Done as a row of interlocking chevron
+  cards, each the column's whole count in its status colour, for All
+  projects or the project shown. Each stage opens the Board. It replaced
+  FH-52's *Since your last change* tiles, whose To review counted tickets
+  arriving since your last change and so could read 0 above a Ready for
+  your review section listing four; `GET /api/metrics` is gone.
 - Each card in the board API carries a `sessions` summary of the runs
   working for its ticket (FH-50, RUN-9): the live agent and its state, the
   last activity, whether the handoff is behind the session's work, and its

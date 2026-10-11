@@ -222,16 +222,12 @@ Full format: `docs/dev/specs/board-format.md`.
   with the State filter's *Agent working* option (D27, FH-42).
 - `VIEW-3` **Overview** (D32, FH-51): what a project manager asks of the
   board, for *All projects* or one project, about tickets with agent
-  sessions as evidence. Under the title, headline metrics (FH-52): *Since
-  your last change · <day and time>* over tiles counting, since the
-  human's latest board activity in the scope (`EDIT-10`), checkpoints
-  (handoffs recorded by agents and their subagents on the scope's tickets,
-  each once), tickets moved to Ready to review and tickets created (each
-  ticket once per tile) and criteria updates that ticked criteria (one per
-  update, however many it ticked); the human's own changes are that
-  activity, so only what came after it counts. With no human activity recorded in the scope they count
-  the last 24 hours and say so. Needs you is not among them (the band shows
-  it). One column of section cards, in order: *Needs your
+  sessions as evidence. Under the title, the pipeline (FH-63): every board
+  column in order (Backlog, Up next, In progress, Ready to review, Done)
+  with its whole count in the scope, each leading to the Board. Done counts
+  everything finished, Rejected included; archived tickets are not counted.
+  The other stages are what sits there now, so they agree with the
+  sections below. One column of section cards, in order: *Needs your
   decision* (open questions, answered in place as on the card, `CARD-6`,
   and kept until the session takes the answer; permission prompts, which
   name the project and branch of the session to answer them in, since
@@ -605,7 +601,7 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
   status and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.
-- **Overview**: headline metrics since your last change on the board, then
+- **Overview**: the pipeline of the board's columns and their counts, then
   one calm column of section cards about tickets: Needs your decision,
   Ready for your review, At risk, In progress, then collapsed Work with no
   ticket and Up next (`VIEW-3`).

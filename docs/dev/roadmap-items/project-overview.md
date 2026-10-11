@@ -1,8 +1,8 @@
 # project-overview
 
 **Status:** Partial. Workstream: `project-overview`. Spike: FH-47.
-Built: all of it, FH-49 to FH-55 (FH-55: agent protocol 2). Open: the
-user's review.
+Built: all of it, FH-49 to FH-55 (FH-55: agent protocol 2) and FH-63.
+Open: the user's review.
 Decision: D32.
 
 ## Goal
@@ -27,9 +27,8 @@ card need.
   stays on the card's Runs tab; the Needs you filter's notice of runs
   with no ticket on the board (D31) opens the Overview. `VIEW-3`, SPEC §7,
   `docs/dev/specs/ui-layout.md` §5 and the Agents feature boundary change.
-- FH-52: headline metrics under the Overview title since your last change
-  (checkpoints, to review, new tickets, criteria ticked), falling back to the
-  last 24 hours.
+- FH-52: headline metrics under the Overview title since your last change;
+  replaced by FH-63's pipeline of the board's columns and their counts.
 - FH-53: "no handoff" and handoff enforcement count edits made through
   shell commands.
 - FH-54: plan displays show only when a run has a plan.
