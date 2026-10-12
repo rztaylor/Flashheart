@@ -60,6 +60,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Changing a ticket's workstream in the card's Edit tab moves it between
+  the workstreams' ticket lists too (FH-80). Before, only the ticket
+  changed: the old workstream still listed it, the new one did not, and
+  the ticket showed a "not listed in workstream" warning and did not count
+  toward the new workstream's progress. Clearing the workstream removes
+  the ticket from its list. An edit based on a stale copy of the ticket,
+  or naming a workstream the project does not have, changes no file.
 - Text written into a ticket section can no longer split it (FH-87).
   This covers a handoff, a note, a new ticket's description or plan from
   the board or an agent, and a workstream's goal. A level-1 or level-2

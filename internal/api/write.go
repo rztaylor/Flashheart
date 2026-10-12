@@ -21,6 +21,7 @@ import (
 type Writer interface {
 	ReadTicket(project, id string) ([]byte, string, error)
 	UpdateTicket(project, id string, pre store.Precondition, edit store.Edit) (string, error)
+	SetTicketWorkstream(project, id string, pre store.Precondition, workstream string, edit store.Edit) (string, error)
 	UpdateReview(project, id string, pre store.Precondition, edit store.Edit) (string, error)
 	PlaceTicket(project, id string, pre store.Precondition, after string, edit store.Edit) (string, bool, error)
 	UpdateWorkstream(project, slug string, pre store.Precondition, edit store.Edit) (string, error)
@@ -315,10 +316,12 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	hash, err := writer.UpdateTicket(project.Name, ticket.ID, store.Unchanged(request.Base), func(data []byte) ([]byte, error) {
+	edit := func(data []byte) ([]byte, error) {
 		var err error
 		for _, c := range changes {
 			switch {
+			case c.key == "workstream":
+				continue
 			case c.key == "title":
 				data, err = mdfile.SetTitle(data, c.value)
 			case c.isList:
@@ -331,7 +334,18 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		return data, nil
-	})
+	}
+	// A workstream change also moves the ticket between the workstreams'
+	// tickets lists, in the same write under the same base hash, so a stale
+	// base changes no file (board-format.md, Workstream membership).
+	pre := store.Unchanged(request.Base)
+	var hash string
+	var err error
+	if index := slices.IndexFunc(changes, func(c change) bool { return c.key == "workstream" }); index >= 0 {
+		hash, err = writer.SetTicketWorkstream(project.Name, ticket.ID, pre, changes[index].value, edit)
+	} else {
+		hash, err = writer.UpdateTicket(project.Name, ticket.ID, pre, edit)
+	}
 	if err != nil {
 		writeStoreError(w, err)
 		return

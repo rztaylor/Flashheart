@@ -8,7 +8,8 @@
 // headers (SEC-4).
 //
 // Reads come from index snapshots and, for review and attachment files,
-// store's checks. Writes (moves, field and raw edits, criteria, new tickets,
+// store's checks. Writes (moves, field edits, a workstream change with its
+// workstreams' tickets lists, raw edits, criteria, new tickets,
 // archive and restore, permanent delete of archived tickets with its preview
 // token (EDIT-8), project archive, restore and delete (PRJ-5), placement
 // in manual order (EDIT-9), workstream order,
