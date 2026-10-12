@@ -2,9 +2,11 @@ package mcpserver
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
@@ -138,7 +140,16 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 	if err := c.record(project.Name, events.Event{Kind: events.TicketUpdated, Data: events.TicketData{Ticket: ticket.ID, Fields: fields}}); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("ok ticket=%s changed=%s\n", ticket.ID, strings.Join(fields, ",")), nil
+	text := ""
+	for _, ch := range changes {
+		if ch.key != "title" {
+			continue
+		}
+		if advice := titleAdvice(ch.value); advice != "" {
+			text = "warning: " + advice + "\n"
+		}
+	}
+	return text + fmt.Sprintf("ok ticket=%s changed=%s\n", ticket.ID, strings.Join(fields, ",")), nil
 }
 
 // settable lists the fields update_ticket sets (status changes with move).
@@ -251,8 +262,8 @@ func (srv *server) move(c *call, input MoveInput) (string, error) {
 type CreateTicketInput struct {
 	Attribution
 	Type        string   `json:"type" jsonschema:"feature, bug, test, refactor, infra, docs or spike"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
+	Title       string   `json:"title" jsonschema:"what a person would notice or gain, in plain words and under 80 characters; no file, function or test names"`
+	Description string   `json:"description" jsonschema:"for someone who has not read the code: the problem, why it matters and the proposed change, in plain words"`
 	Criteria    []string `json:"criteria" jsonschema:"testable acceptance criteria"`
 	Priority    string   `json:"priority" jsonschema:"high, medium or low"`
 	Status      string   `json:"status,omitempty" jsonschema:"backlog (default) or up-next"`
@@ -260,6 +271,7 @@ type CreateTicketInput struct {
 	DependsOn   []string `json:"depends_on,omitempty" jsonschema:"ids of tickets this one needs first"`
 	Tags        []string `json:"tags,omitempty"`
 	PlanOrRepro string   `json:"plan_or_repro,omitempty" jsonschema:"the Test Plan (features) or Reproduction (bugs)"`
+	Context     string   `json:"context,omitempty" jsonschema:"implementation detail for whoever builds it (files, functions, design notes), saved under ## Context below the description"`
 	ProjectKey  string   `json:"project_key,omitempty" jsonschema:"only for a project with no key yet: the key to record first"`
 }
 
@@ -284,8 +296,8 @@ func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error
 			key = ""
 		}
 	}
-	if len(input.Description) > maxDescription || len(input.PlanOrRepro) > maxDescription {
-		return "", fail("too_large", "keep the description and plan under 16 KiB; link to longer documents", "the text is too long")
+	if len(input.Description) > maxDescription || len(input.PlanOrRepro) > maxDescription || len(input.Context) > maxDescription {
+		return "", fail("too_large", "keep the description, plan and context under 16 KiB each; link to longer documents", "the text is too long")
 	}
 	for _, id := range input.DependsOn {
 		if _, _, ok := board.ParseID(id); !ok {
@@ -296,7 +308,7 @@ func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error
 		Title: scrub.Text(input.Title, 300), Type: input.Type, Priority: input.Priority, Status: status,
 		Workstream: strings.TrimSpace(input.Workstream), Description: scrub.Secrets(input.Description),
 		Criteria: items(input.Criteria), DependsOn: input.DependsOn, Tags: items(input.Tags),
-		Session: c.by(), PlanOrRepro: scrub.Secrets(input.PlanOrRepro), Key: key,
+		Session: c.by(), PlanOrRepro: scrub.Secrets(input.PlanOrRepro), Context: scrub.Secrets(input.Context), Key: key,
 	})
 	if err != nil {
 		return "", err
@@ -312,7 +324,35 @@ func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error
 	if created.Key != "" {
 		text += fmt.Sprintf(" Project %s now uses key %s.", project.Name, created.Key)
 	}
+	if advice := titleAdvice(input.Title); advice != "" {
+		text += "\nwarning: " + advice
+	}
 	return text + fmt.Sprintf("\nok ticket=%s\n", created.ID), nil
+}
+
+// maxTitle is the length past which a title no longer reads at a glance on
+// a card.
+const maxTitle = 80
+
+// codeLike matches a word of a title that is a name from the code rather
+// than words a person uses: a path or file name, snake_case, a call,
+// package.Name, lowerCamel (but not iPhone or macOS) or UpperCamel of
+// three or more humps (but not GitHub or JavaScript).
+var codeLike = regexp.MustCompile("`|/.*\\.[A-Za-z]+$|^[a-z][\\w-]+\\.[a-z]{1,4}$|[A-Za-z0-9]_[A-Za-z0-9]|\\(\\)|^[a-z]+\\.[A-Z]|^[a-z]{2,}[A-Z][a-z]|^(?:[A-Z][a-z0-9]+){3,}")
+
+// titleAdvice says how to improve a title that reads like code or runs
+// long (FH-113); the title is saved either way. "" when it reads well.
+func titleAdvice(title string) string {
+	title = strings.Join(strings.Fields(title), " ")
+	for _, word := range strings.Fields(title) {
+		if word = strings.Trim(word, `"',;:!?.“”‘’`); codeLike.MatchString(word) {
+			return fmt.Sprintf("The title reads like code (%q): name what a person would notice or gain, and keep names from the code for the description or Context.", word)
+		}
+	}
+	if length := utf8.RuneCountInString(title); length > maxTitle {
+		return fmt.Sprintf("The title is %d characters: keep it to %d or fewer so it reads at a glance on a card.", length, maxTitle)
+	}
+	return ""
 }
 
 // SetProjectKeyInput is set_project_key's input.

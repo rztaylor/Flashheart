@@ -858,3 +858,30 @@ before any question (the same, for the session's own question), or the
 run's own blocker first (chosen). For short ids: a subagent's own id
 (tells subagents apart, but disagrees with the ticket's notes and names
 no session to answer in) or the session's (chosen).
+
+## 2026-10-12 — D40: Tickets are written for a person first
+
+Agent-written tickets tended to describe the code: titles named test
+functions or internal mechanisms (FH-111 was titled after a Go test) and
+descriptions opened with file paths, so the board could not be read
+without decoding each card. The board is how the user sees and steers
+every project, so a ticket now leads with what a person would notice or
+gain: the title in plain words, under 80 characters; the description
+gives the problem, why it matters and the proposed change; implementation
+detail, still wanted by whoever builds it, goes in `## Context`
+(FH-113, agent-protocol §7.2).
+
+The advice sits in three places because the skill is not always loaded
+(another client, a session that never triggers it, or a long session that
+compacted it away): the skill holds the full text and an example; the
+`create_ticket` and `update_ticket` descriptions and hints repeat it in a
+line, where the agent reads it as it writes; and a title that reads like
+code or runs long is saved with a `warning:` saying how to improve it,
+which agents act on in the same turn. `create_ticket` takes `context` so
+the detail has a place other than the description.
+
+Options: the skill only (missed whenever it is not loaded); refuse
+code-like titles (a heuristic should not block a write, and hooks and
+tools fail open); warn (chosen). Titles a human types in the browser are
+not judged. The `find-tech-debt` skill's ticket template, which leads with
+code locations, lives outside this repository.

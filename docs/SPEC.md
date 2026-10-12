@@ -468,7 +468,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `set_project_key`, `create_workstream`,
   `write_review`, `attach`, `ask_human`. Tickets are named by id. No delete
   tool exists. Setting a ticket's workstream through a tool keeps the
-  ticket's field and the workstreams' `tickets:` lists in step.
+  ticket's field and the workstreams' `tickets:` lists in step. The
+  ticket tools ask agents to write titles and descriptions for a person,
+  with implementation detail under Context, and warn about a title that
+  reads like code (agent-protocol §7.2).
 - `MCP-3` Tool outputs are compact text designed for model context;
   `board_context` stays under about 1,500 tokens.
 - `MCP-4` Each call is attributed to a run: from a run id stamped into the
