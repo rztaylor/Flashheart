@@ -12,7 +12,8 @@ wording (`runs`), the Overview's sections, their
 order, at-risk reasons and wording, and its pipeline stages (`overview`,
 VIEW-3), keyboard grid movement, and
 manual-order placements and display sorts (`order`, EDIT-9), archive
-search and the delete gate (`archive`, EDIT-8), and the marginal remarks
+search and the delete gate (`archive`, EDIT-8), a ticket's sections in
+order with their counts (`ticketSections`, CARD-1), and the marginal remarks
 catalogue (`remarks.md`), placements and selection (`remarks`).
 Everything here is a plain function or type, unit-tested with Vitest.
 

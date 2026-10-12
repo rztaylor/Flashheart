@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/rztaylor/flashheart/internal/health"
 )
 
 // installed is a machine set up by a flashheart binary that exists.
@@ -31,11 +33,11 @@ func binary(t *testing.T, home, name string) string {
 
 func diagnose(t *testing.T, o Options) (problems, warnings, ok []string) {
 	t.Helper()
-	for _, finding := range Diagnose(o) {
+	for _, finding := range (Claude{}).Diagnose(o) {
 		switch finding.Level {
-		case Problem:
+		case health.Problem:
 			problems = append(problems, finding.Text)
-		case Warning:
+		case health.Warning:
 			warnings = append(warnings, finding.Text)
 		default:
 			ok = append(ok, finding.Text)

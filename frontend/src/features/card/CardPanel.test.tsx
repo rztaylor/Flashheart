@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import type { TicketDetail } from "../../api/board";
 import { TicketLinksInPlace } from "../../components/TicketLink";
-import { PanelActions, PanelHeader, ReviewTab, TicketTab } from "./CardPanel";
+import { PanelHeader } from "./CardPanel";
+import { ReviewTab } from "./ReviewTab";
+import { TicketActions } from "./TicketHeader";
+import { TicketTab } from "./TicketTab";
 
 // The card panel of docs/dev/specs/ui-layout.md §3.
 function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
@@ -116,7 +119,7 @@ describe("a rejected ticket (FH-58)", () => {
 
   it("offers Rejected in Move to, chosen while the ticket is rejected", () => {
     const markup = renderToStaticMarkup(
-      <PanelActions
+      <TicketActions
         detail={rejected}
         onMove={() => undefined}
         onArchive={() => undefined}

@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/mdfile"
@@ -38,24 +37,6 @@ func (e *WorkstreamNotFoundError) Error() string {
 // Unwrap lets errors.Is match ErrNotFound.
 func (e *WorkstreamNotFoundError) Unwrap() error { return ErrNotFound }
 
-// pending is one file's prepared content, written only when it changed.
-type pending struct {
-	name    string
-	data    []byte
-	changed bool
-}
-
-func writeAll(s *Store, files []pending) error {
-	for _, file := range files {
-		if file.changed {
-			if err := s.WriteFileAtomic(file.name, file.data); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // workstreamSlugs lists the project's workstream slugs in sorted order.
 // Callers hold the project lock.
 func (s *Store) workstreamSlugs(project string) ([]string, error) {
@@ -76,29 +57,28 @@ func (s *Store) workstreamSlugs(project string) ([]string, error) {
 	return slugs, nil
 }
 
-// membership prepares the workstream files so that ids are listed by target
+// membership stages the workstream files so that ids are listed by target
 // alone ("" for none): appended to its list in order when missing, removed
 // from every other list. A broken workstream file other than the target is
 // left alone, since its list cannot be read. Callers hold the project lock.
-func (s *Store) membership(project string, ids []string, target string) ([]pending, error) {
+func (s *Store) membership(t *tx, project string, ids []string, target string) error {
 	slugs, err := s.workstreamSlugs(project)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if target != "" && !slices.Contains(slugs, target) {
-		return nil, &WorkstreamNotFoundError{Project: project, Slug: target, Available: slugs}
+		return &WorkstreamNotFoundError{Project: project, Slug: target, Available: slugs}
 	}
-	var files []pending
 	for _, slug := range slugs {
 		name := path.Join(project, "workstreams", slug+".md")
-		data, err := s.ReadFile(name)
+		data, err := t.read(name)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		doc := mdfile.Parse(data)
 		if doc.FrontmatterError != nil {
 			if slug == target {
-				return nil, fmt.Errorf("workstream %s: %w", slug, doc.FrontmatterError)
+				return fmt.Errorf("workstream %s: %w", slug, doc.FrontmatterError)
 			}
 			continue
 		}
@@ -115,58 +95,42 @@ func (s *Store) membership(project string, ids []string, target string) ([]pendi
 			continue
 		}
 		if data, err = mdfile.SetList(data, "tickets", next); err != nil {
-			return nil, fmt.Errorf("workstream %s: %w", slug, err)
+			return fmt.Errorf("workstream %s: %w", slug, err)
 		}
-		files = append(files, pending{name: name, data: data, changed: true})
+		t.put(name, data)
 	}
-	return files, nil
+	return nil
 }
 
-// prepareTicket applies edit (which may be nil) to a ticket and sets its
-// workstream field, checking base like updateLocked. Callers hold the
-// project lock.
-func (s *Store) prepareTicket(project, id, base, workstream string, edit Edit) (pending, error) {
+// joinTicket stages edit (which may be nil) to a ticket, once pre holds,
+// with its workstream field set. Callers hold the project lock.
+func (s *Store) joinTicket(t *tx, project, id string, pre Precondition, workstream string, edit Edit) (string, error) {
 	name, err := s.TicketFile(project, id)
 	if err != nil {
-		return pending{}, err
+		return "", err
 	}
-	current, err := s.ReadFile(name)
-	if err != nil {
-		return pending{}, err
-	}
-	if hash := Hash(current); base != "" && base != hash {
-		return pending{}, &ConflictError{Name: name, Hash: hash, Current: current}
-	}
-	next := current
-	if edit != nil {
-		if next, err = edit(current); err != nil {
-			return pending{}, err
+	return t.edit(name, pre, func(current []byte) ([]byte, error) {
+		next := current
+		if edit != nil {
+			if next, err = edit(current); err != nil {
+				return nil, err
+			}
 		}
-	}
-	if next, err = mdfile.SetScalar(next, "workstream", workstream); err != nil {
-		return pending{}, err
-	}
-	file := pending{name: name, data: next, changed: string(next) != string(current)}
-	if file.changed {
-		if file.data, err = mdfile.SetScalar(next, "updated", s.now().Format(time.RFC3339)); err != nil {
-			return pending{}, err
-		}
-	}
-	return file, nil
+		return mdfile.SetScalar(next, "workstream", workstream)
+	}, true)
 }
 
 // SetTicketWorkstream applies edit (nil for none) to a ticket and makes
 // workstream ("" for none) the one workstream that lists it: the ticket's
 // field and every workstream's tickets list change together under the
-// project lock (board-format §Blocking). A non-empty base must match the
-// ticket's hash. A workstream the project does not have is a
-// *WorkstreamNotFoundError and nothing is written. It returns the ticket's
-// hash after the call.
-func (s *Store) SetTicketWorkstream(project, id, base, workstream string, edit Edit) (string, error) {
+// project lock (board-format §Blocking), once pre holds for the ticket. A
+// workstream the project does not have is a *WorkstreamNotFoundError and
+// nothing is written. It returns the ticket's hash after the call.
+func (s *Store) SetTicketWorkstream(project, id string, pre Precondition, workstream string, edit Edit) (string, error) {
 	if err := s.checkTicket(project, id); err != nil {
 		return "", err
 	}
-	if workstream != "" && !ValidName(workstream) {
+	if workstream != "" && !board.ValidSlug(workstream) {
 		return "", fmt.Errorf("workstream %q: %w", workstream, ErrInvalidName)
 	}
 	release, err := s.lock(project)
@@ -174,29 +138,28 @@ func (s *Store) SetTicketWorkstream(project, id, base, workstream string, edit E
 		return "", err
 	}
 	defer release()
-	ticket, err := s.prepareTicket(project, id, base, workstream, edit)
+	// The lists, then the ticket (board-format.md, Multi-file writes); the
+	// ticket's precondition is checked before anything is staged.
+	name, err := s.TicketFile(project, id)
 	if err != nil {
 		return "", err
 	}
-	files, err := s.membership(project, []string{id}, workstream)
+	t := s.begin()
+	if _, err := t.require(name, pre); err != nil {
+		return "", err
+	}
+	if err := s.membership(t, project, []string{id}, workstream); err != nil {
+		return "", err
+	}
+	hash, err := s.joinTicket(t, project, id, pre, workstream, edit)
 	if err != nil {
 		return "", err
 	}
-	if err := writeAll(s, append(files, ticket)); err != nil {
-		return "", err
-	}
-	return Hash(ticket.data), nil
+	return hash, t.commit()
 }
 
 // NewWorkstream is the content of a workstream created from the template.
-type NewWorkstream struct {
-	Title, Goal, Priority string
-	// Tickets are live ticket ids of the project, in order; each joins the
-	// new workstream and leaves any other.
-	Tickets              []string
-	DependsOnWorkstreams []string
-	Tags                 []string
-}
+type NewWorkstream = board.NewWorkstream
 
 // CreatedWorkstream reports a new workstream.
 type CreatedWorkstream struct {
@@ -212,23 +175,8 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 	if err := s.checkProject(project); err != nil {
 		return CreatedWorkstream{}, err
 	}
-	input.Title = strings.Join(strings.Fields(input.Title), " ")
-	if input.Title == "" {
-		return CreatedWorkstream{}, fmt.Errorf("%w: a workstream needs a title", ErrInvalidInput)
-	}
-	if input.Priority == "" {
-		input.Priority = "medium"
-	}
-	if !slices.Contains(board.Priorities, input.Priority) {
-		return CreatedWorkstream{}, fmt.Errorf("%w: priority must be one of %s", ErrInvalidInput, strings.Join(board.Priorities, ", "))
-	}
-	for index, id := range input.Tickets {
-		if _, _, ok := board.ParseID(id); !ok {
-			return CreatedWorkstream{}, fmt.Errorf("%w: %q is not a ticket id", ErrInvalidInput, id)
-		}
-		if slices.Contains(input.Tickets[:index], id) {
-			return CreatedWorkstream{}, fmt.Errorf("%w: %s is listed twice", ErrInvalidInput, id)
-		}
+	if err := input.Normalize(); err != nil {
+		return CreatedWorkstream{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 	release, err := s.lock(project)
 	if err != nil {
@@ -250,65 +198,25 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 	for n := 2; slices.Contains(slugs, slug) || s.Exists(path.Join(project, "workstreams", slug+".md")); n++ {
 		slug = base + "-" + strconv.Itoa(n)
 	}
-	data, err := s.workstreamTemplate(slug, input)
+	data, err := board.RenderWorkstream(slug, input, s.now())
 	if err != nil {
 		return CreatedWorkstream{}, err
 	}
-	var tickets []pending
+	// The new file, then the other lists, which give up the initial tickets
+	// (the new file already lists them), then the tickets' fields
+	// (board-format.md, Multi-file writes).
+	t := s.begin()
+	t.put(path.Join(project, "workstreams", slug+".md"), data)
+	if err := s.membership(t, project, input.Tickets, ""); err != nil {
+		return CreatedWorkstream{}, err
+	}
 	for _, id := range input.Tickets {
-		ticket, err := s.prepareTicket(project, id, "", slug, nil)
-		if err != nil {
+		if _, err := s.joinTicket(t, project, id, Merge, slug, nil); err != nil {
 			return CreatedWorkstream{}, err
 		}
-		tickets = append(tickets, ticket)
 	}
-	// Other workstreams give up the initial tickets; the new file already
-	// lists them.
-	others, err := s.membership(project, input.Tickets, "")
-	if err != nil {
-		return CreatedWorkstream{}, err
-	}
-	name := path.Join(project, "workstreams", slug+".md")
-	files := append([]pending{{name: name, data: data, changed: true}}, others...)
-	if err := writeAll(s, append(files, tickets...)); err != nil {
+	if err := t.commit(); err != nil {
 		return CreatedWorkstream{}, err
 	}
 	return CreatedWorkstream{Slug: slug, Hash: Hash(data)}, nil
-}
-
-func (s *Store) workstreamTemplate(slug string, w NewWorkstream) ([]byte, error) {
-	body := []string{"", "# " + w.Title, "", "## Goal", ""}
-	if goal := strings.TrimSpace(w.Goal); goal != "" {
-		body = append(body, goal, "")
-	}
-	body = append(body, "## Scope", "", "## Success Criteria", "", "- [ ] Every ticket in the line reviewed", "", "## Notes", "", "None.", "")
-	// The skeleton fixes the field order and writes tickets as a block list,
-	// as board-format shows it; SetList keeps that style.
-	data := []byte("---\nslug: x\nstatus: x\npriority: x\ncreated: x\ntickets:\n  - x\ndepends-on-workstreams: []\ntags: []\n---\n" + strings.Join(body, "\n"))
-	steps := []struct {
-		key    string
-		value  string
-		list   []string
-		isList bool
-	}{
-		{key: "slug", value: slug},
-		{key: "status", value: board.StatusActive},
-		{key: "priority", value: w.Priority},
-		{key: "created", value: s.now().Format("2006-01-02")},
-		{key: "tickets", list: w.Tickets, isList: true},
-		{key: "depends-on-workstreams", list: w.DependsOnWorkstreams, isList: true},
-		{key: "tags", list: w.Tags, isList: true},
-	}
-	var err error
-	for _, step := range steps {
-		if step.isList {
-			data, err = mdfile.SetList(data, step.key, step.list)
-		} else {
-			data, err = mdfile.SetScalar(data, step.key, step.value)
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-	return data, nil
 }

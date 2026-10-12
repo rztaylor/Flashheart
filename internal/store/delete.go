@@ -251,7 +251,7 @@ func (s *Store) DeleteArchived(project, id, token string) (DeletePlan, error) {
 	}
 
 	for _, reference := range plan.Tickets {
-		_, err := s.updateLocked(reference.file, reference.hash, func(data []byte) ([]byte, error) {
+		_, err := s.update(reference.file, Unchanged(reference.hash), func(data []byte) ([]byte, error) {
 			return mdfile.SetList(data, "depends-on", without(mdfile.Parse(data).List("depends-on"), id))
 		}, true)
 		if err != nil {
@@ -259,7 +259,7 @@ func (s *Store) DeleteArchived(project, id, token string) (DeletePlan, error) {
 		}
 	}
 	for _, slug := range plan.Workstreams {
-		_, err := s.updateLocked(path.Join(project, "workstreams", slug+".md"), "", func(data []byte) ([]byte, error) {
+		_, err := s.update(path.Join(project, "workstreams", slug+".md"), Merge, func(data []byte) ([]byte, error) {
 			return mdfile.SetList(data, "tickets", without(mdfile.Parse(data).List("tickets"), id))
 		}, false)
 		if err != nil {

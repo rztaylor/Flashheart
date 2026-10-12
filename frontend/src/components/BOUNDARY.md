@@ -9,7 +9,10 @@ disclosure menu on the lifted popover surface), `FilterChip` (the one
 filter chip: show only, Cmd or Ctrl click to hide), `Dialog`, `Toast`,
 `Markdown` (block or one inline line), `Lightbox` (one image of a set in a
 dialog), `RouteBar`, `EmptyState`, `RunState` (run state as a mark and
-words, Needs you as the attention plate),
+words), `NeedsYou` (the one attention plate, ui-layout.md §7: the
+attention colour, `NeedsYouPlate` inline and on the rail, `plateClass` for
+the band's toggle, and `AttentionDisc`; nothing else uses the attention
+colour),
 `QuestionCard` (an
 agent's question with its answer box), `TicketLink` (a ticket id as a link
 to its full page, a new tab unless inside `TicketLinksInPlace`, and

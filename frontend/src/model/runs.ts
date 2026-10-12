@@ -18,6 +18,14 @@ export const STATE_LABEL: Record<RunState, string> = {
   ended: "Ended",
 };
 
+// needsYouPhrase words how many runs need you, after their count: "needs
+// you" or "need you", and with agents "agent needs you" or "agents need
+// you" (the one attention plate's words, ui-layout.md §7).
+export function needsYouPhrase(count: number, agents = false): string {
+  if (agents) return count === 1 ? "agent needs you" : "agents need you";
+  return count === 1 ? "needs you" : "need you";
+}
+
 // permissionReason says what a run waiting on permission needs, in words.
 export function permissionReason(tool: string): string {
   return tool && tool !== "?"

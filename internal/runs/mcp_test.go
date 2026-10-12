@@ -11,7 +11,7 @@ import (
 // events: its tool calls are its only activity (agent-protocol §4, FH-15).
 const mcpRun = "codex:mcp-0a1b2c3d4e5f"
 
-func mcpEvent(minutes float64, kind string, data any) events.Event {
+func mcpEvent(minutes float64, kind events.Kind, data any) events.Event {
 	e := ev(minutes, mcpRun, kind, data)
 	e.Agent = "codex"
 	return e

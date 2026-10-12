@@ -216,7 +216,7 @@ func TestEditsThroughFlashheartAreLeftAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.files.UpdateTicket("alpha", "AL-2", hash, func(data []byte) ([]byte, error) {
+	if _, err := f.files.UpdateTicket("alpha", "AL-2", store.Unchanged(hash), func(data []byte) ([]byte, error) {
 		return append(data, "\n[statement]("+secret+")\n"...), nil
 	}); err != nil {
 		t.Fatal(err)

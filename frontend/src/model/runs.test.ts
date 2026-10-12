@@ -10,6 +10,7 @@ import {
   liveReason,
   mcpOnly,
   needsReason,
+  needsYouPhrase,
   permissionReason,
   questionReason,
   runAgentName,
@@ -402,4 +403,17 @@ it("treats a subagent whose session is missing as a session", () => {
     "claude:a",
     "claude:gone/y",
   ]);
+});
+
+describe("needsYouPhrase", () => {
+  it("agrees with the count", () => {
+    expect(needsYouPhrase(1)).toBe("needs you");
+    expect(needsYouPhrase(3)).toBe("need you");
+    expect(needsYouPhrase(0)).toBe("need you");
+  });
+
+  it("names agents when asked", () => {
+    expect(needsYouPhrase(1, true)).toBe("agent needs you");
+    expect(needsYouPhrase(2, true)).toBe("agents need you");
+  });
 });

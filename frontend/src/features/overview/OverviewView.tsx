@@ -12,6 +12,8 @@ import { fetchRuns, type Run } from "../../api/runs";
 import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { Icon, type IconName } from "../../components/Icon";
+import { attentionClass } from "../../components/NeedsYou";
+import { stateToneClass, stateToneIcon } from "../../components/Pill";
 import { QuestionCard } from "../../components/QuestionCard";
 import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import { TicketLink } from "../../components/TicketLink";
@@ -255,21 +257,12 @@ export function OverviewSections({
 // The section's mark: a disc in its role's colour (Needs you in attention,
 // review and in progress in their status colours), or an ink icon.
 const marks: Record<SectionId, { icon?: IconName; disc: string }> = {
-  decision: { disc: "bg-attention text-on-attention" },
-  review: {
-    icon: "review",
-    disc: "bg-(--fh-state-review) text-(--fh-state-review-ink)",
-  },
+  decision: { disc: attentionClass },
+  review: { icon: stateToneIcon.review, disc: stateToneClass.review },
   risk: { icon: "warning", disc: "bg-card text-ink shadow-card" },
-  progress: {
-    icon: "half",
-    disc: "bg-(--fh-state-progress) text-(--fh-state-progress-ink)",
-  },
+  progress: { icon: stateToneIcon.progress, disc: stateToneClass.progress },
   unticketed: { icon: "branch", disc: "bg-card text-ink shadow-card" },
-  upNext: {
-    icon: "ring",
-    disc: "bg-(--fh-state-neutral) text-(--fh-state-neutral-ink)",
-  },
+  upNext: { icon: stateToneIcon.neutral, disc: stateToneClass.neutral },
 };
 
 function SectionMark({ id, count }: { id: SectionId; count: number }) {

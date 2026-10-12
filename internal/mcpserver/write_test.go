@@ -32,7 +32,7 @@ func TestClaimStartsTheTicketAndHoldsIt(t *testing.T) {
 	if status(t, file) != "in-progress" || !strings.Contains(file, "branch: feature/demo") {
 		t.Fatalf("ticket after claim:\n%s", file)
 	}
-	if kinds := e.kinds(session); !slices.Equal(kinds[len(kinds)-2:], []string{events.Claim, events.TicketMoved}) {
+	if kinds := e.kinds(session); !slices.Equal(kinds[len(kinds)-2:], []events.Kind{events.Claim, events.TicketMoved}) {
 		t.Fatalf("events = %v", kinds)
 	}
 	// Claiming what you hold changes nothing (MCP-5).
@@ -206,14 +206,14 @@ func TestAgentWritesAreNeverTheHumans(t *testing.T) {
 	e.ok("claim", map[string]any{"ticket": "DM-1"})
 	e.ok("update_ticket", map[string]any{"ticket": "DM-1", "set": map[string]any{"priority": "high"}, "check": []string{"1"}})
 	e.ok("move", map[string]any{"ticket": "DM-1", "to": "review"})
-	kinds := map[string]bool{}
+	kinds := map[events.Kind]bool{}
 	for _, ev := range e.log() {
 		kinds[ev.Kind] = true
 		if activity, ok := events.HumanActivityOf(ev); ok || ev.Run == events.Human {
 			t.Errorf("an agent's %s is the human's: %+v", ev.Kind, activity)
 		}
 	}
-	for _, kind := range []string{events.TicketCreated, events.TicketUpdated, events.TicketMoved} {
+	for _, kind := range []events.Kind{events.TicketCreated, events.TicketUpdated, events.TicketMoved} {
 		if !kinds[kind] {
 			t.Errorf("no %s recorded", kind)
 		}

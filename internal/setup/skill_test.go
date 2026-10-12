@@ -31,7 +31,7 @@ func TestRefreshSkillRewritesAStaleFlashheartSkill(t *testing.T) {
 	t.Parallel()
 
 	home, path := installedSkill(t, staleSkill)
-	updated, err := RefreshSkill(home)
+	updated, err := Claude{}.RefreshSkill(home)
 	if err != nil || !updated {
 		t.Fatalf("updated = %v, err = %v", updated, err)
 	}
@@ -49,7 +49,7 @@ func TestRefreshSkillLeavesACurrentSkillAlone(t *testing.T) {
 	if err := os.Chtimes(path, old, old); err != nil {
 		t.Fatal(err)
 	}
-	updated, err := RefreshSkill(home)
+	updated, err := Claude{}.RefreshSkill(home)
 	if err != nil || updated {
 		t.Fatalf("updated = %v, err = %v", updated, err)
 	}
@@ -69,7 +69,7 @@ func TestRefreshSkillNeverInstalls(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			home, path := installedSkill(t, content)
-			updated, err := RefreshSkill(home)
+			updated, err := Claude{}.RefreshSkill(home)
 			if err != nil || updated {
 				t.Fatalf("updated = %v, err = %v", updated, err)
 			}
@@ -99,7 +99,7 @@ func TestRefreshSkillReportsAWriteFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
-	if updated, err := RefreshSkill(home); err == nil || updated {
+	if updated, err := (Claude{}).RefreshSkill(home); err == nil || updated {
 		t.Fatalf("updated = %v, err = %v", updated, err)
 	}
 }

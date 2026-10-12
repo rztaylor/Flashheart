@@ -14,7 +14,7 @@ import (
 // in-progress AL-3 is on branch feature/x.
 var sessionsNow = time.Date(2026, 10, 5, 14, 0, 0, 0, time.UTC)
 
-func sessionEvent(minutesAgo float64, run, kind string, data any) events.Event {
+func sessionEvent(minutesAgo float64, run string, kind events.Kind, data any) events.Event {
 	at := sessionsNow.Add(-time.Duration(minutesAgo * float64(time.Minute)))
 	return events.Event{Time: at, Run: run, Agent: "claude", Kind: kind, Project: "alpha", Data: data}
 }

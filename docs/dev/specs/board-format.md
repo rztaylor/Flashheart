@@ -145,14 +145,37 @@ included, writes that status and so clears the rejection.
 
 A move is a frontmatter edit of `status` under the lock, applied to the file
 as it is then (`STO-3`); other edits from the UI and agents carry the content
-hash they read. Every ticket write by Flashheart stamps `updated`; archiving
-stamps it too, which dates the archive. The folder never moves except to
+hash they read. Every ticket write by Flashheart stamps `updated`, except
+one that leaves the frontmatter unparseable, which is written as it is;
+archiving stamps it too, which dates the archive. The folder never moves except to
 `.archive/` and back, and is removed only by a permanent delete of an
 archived ticket (`EDIT-8`): the delete takes the root lock and the lock of
 every project it rewrites (in name order), removes the id from every
 ticket's `depends-on` and the project's workstream `tickets:` lists, adds
 it to `retired` in `project.yaml`, and removes the folder. It takes an id,
 never a path, and refuses any symbolic link on the folder's path.
+
+### Multi-file writes
+
+A write that changes several files (creating a ticket, joining or leaving
+a workstream, creating a workstream, placing a ticket that ranks its
+neighbours) reads and checks every file under the project lock first and
+writes nothing if any check or edit fails. It then replaces each file
+atomically, one at a time, in this order:
+
+- creating a ticket: the ticket, then `project.yaml` (`next_id`, and the
+  key when it is chosen), then its workstream's `tickets:` list;
+- a ticket joining or leaving a workstream: the workstreams' lists, then
+  the ticket's `workstream:` field;
+- creating a workstream: its file, then the other lists giving up its
+  initial tickets, then those tickets' fields;
+- placing a ticket: the neighbours it ranks, then the ticket.
+
+A crash between two of these leaves the files written so far. Each such
+state is readable: a ticket number above `next_id` is never reused
+(`next_id` is never lower than one past the highest existing number), a
+field and lists that disagree show a warning until the next write puts
+them back in step, and a ranked neighbour keeps its place.
 
 ### Order within a column
 
@@ -185,7 +208,16 @@ Relative links to a ticket file (`FH-42-card-panel.md` in the same folder,
 ### Handoff section
 
 Written only by `checkpoint` (or a human). Replaced as a whole each time; the
-log keeps history.
+log keeps history. `Done` and `Next` are left out when empty; empty `Files`
+and `Open questions` are written as the item `None` and read back as
+empty (`board.RenderHandoff` and `board.ParseHandoff` round-trip). A
+hand-written section without the `_Updated …_` line is read for its lists
+alone.
+
+Text Flashheart writes into any section (a handoff, a note, a ticket's
+description or plan, a workstream's goal) stays inside it: a level-1 or -2
+heading outside code fences becomes level 3, and a code fence left open is
+closed, so it cannot start or hide a section (FH-4).
 
 ```markdown
 ## Handoff
@@ -235,7 +267,10 @@ id counts as done only when every copy does. Only tickets in `backlog`,
 
 ## Workstream
 
-`workstreams/<slug>.md`:
+`workstreams/<slug>.md`, where a slug is lower-case letters, digits, `.`,
+`_` and `-`, starting with a letter or digit, at most 100 characters (the
+same rule wherever a slug is given: a ticket's `workstream:`, MCP tools,
+the UI):
 
 ```markdown
 ---
@@ -286,6 +321,10 @@ to Verify, Risks, PR Notes). Screenshots are referenced as
 Stored names are `<UTC timestamp>-<sanitised original name>`. Files are always
 copies (`REV-1`); agents' own files may be cleaned up at any time, so anything
 a ticket or review refers to is copied in before it is recorded (`REV-5`).
+Adding a file appends one entry and keeps the rest of the index as written,
+keys Flashheart does not know and comments included; an index that is not a
+list of files is reported and never replaced. A file added from its bytes
+(not a local path) has no `source`.
 
 ## project.yaml
 
