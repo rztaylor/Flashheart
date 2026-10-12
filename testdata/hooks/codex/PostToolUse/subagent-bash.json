@@ -1,0 +1,17 @@
+{
+  "session_id": "019a7c00-0000-7000-8000-000000000001",
+  "turn_id": "019a7c00-0000-7000-8000-000000000102",
+  "agent_id": "019a7c00-0000-7000-8000-000000000002",
+  "agent_type": "default",
+  "transcript_path": "/Users/example/.codex/sessions/2026/10/12/rollout-2026-10-12T18-57-31-019a7c00-0000-7000-8000-000000000002.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "hook_event_name": "PostToolUse",
+  "model": "gpt-6.1-sol",
+  "permission_mode": "bypassPermissions",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "rg --files --hidden -g '!.git'"
+  },
+  "tool_response": "README.md\nnotes.txt\n",
+  "tool_use_id": "exec-5e41de4d-60f1-4a8a-bc06-93debce98a7b"
+}

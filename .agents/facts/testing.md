@@ -45,7 +45,10 @@
 - Hook adapters are tested against recorded, scrubbed payloads in
   `testdata/hooks/<agent>/<event>/` with expected events beside each; the
   agent's `MANIFEST.md` says which are recorded. Re-record with
-  `scripts/record-claude-hooks.sh` when an agent changes.
+  `scripts/record-claude-hooks.sh` or `scripts/record-codex-hooks.sh` when
+  an agent changes; the Codex recorder runs with a scratch `CODEX_HOME`
+  (Codex saves project trust to its config even with
+  `--ignore-user-config`), so it never changes `~/.codex`.
 - Hook latency: `scripts/hook-bench.sh` (developer tool, not in CI) fails
   when p95 over 1,000 warm invocations exceeds 50 ms and prints how many
   events were recorded. `-agent` picks the payloads

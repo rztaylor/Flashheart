@@ -1,0 +1,41 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "_meta": {
+      "callId": "exec-50caf4cb-576f-417d-8ab6-62b8a3650a49",
+      "x-codex-turn-metadata": {
+        "session_id": "019a7c00-0000-7000-8000-000000000001",
+        "thread_id": "019a7c00-0000-7000-8000-000000000001",
+        "reasoning_effort": "low",
+        "turn_id": "019a7c00-0000-7000-8000-000000000101",
+        "model": "gpt-6.1-sol",
+        "thread_source": "user",
+        "turn_trigger": "exec",
+        "sandbox": "seatbelt",
+        "sandbox_mode": "workspace-write",
+        "auto_review_enabled": false,
+        "node_repl_auto_review_required": true,
+        "node_repl_disabled": false,
+        "workspaces": {
+          "/Users/example/src/demo": {
+            "latest_git_commit_hash": "0000000000000000000000000000000000000000",
+            "has_changes": false
+          }
+        },
+        "turn_started_at_unix_ms": 1791827933481,
+        "codex_version": "0.160.0"
+      },
+      "threadId": "019a7c00-0000-7000-8000-000000000001",
+      "sessionId": "019a7c00-0000-7000-8000-000000000001",
+      "windowId": "019a7c00-0000-7000-8000-000000000001:0",
+      "itemId": "ctc_04d371797ebd4802016acd1ffc550c8191911c1937234bf261",
+      "progressToken": 1
+    },
+    "name": "board_context",
+    "arguments": {
+      "run": "codex:recorded-stamp"
+    }
+  }
+}
