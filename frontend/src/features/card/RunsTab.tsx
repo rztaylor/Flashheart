@@ -7,6 +7,12 @@ import { Icon } from "../../components/Icon";
 import { RunStateLabel } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import {
+  focusHeading,
+  focusItem,
+  focusList,
+  useKeepFocus,
+} from "../../components/useKeepFocus";
+import {
   counted,
   mcpOnly,
   needsReason,
@@ -21,7 +27,8 @@ import { RunDetail } from "./RunDetail";
 // RunsTab lists the agent runs linked to a ticket, most recent first (CARD-1):
 // each session with its state, plan, edited files and activity, and its
 // subagents beneath it as a tree (agent-protocol §10), each opening to its
-// own plan, files and checkpoints.
+// own plan, files and checkpoints. A focused subagent row keeps focus as
+// its session moves down the list, and hands it on when it goes (FH-84).
 export function RunsTab({
   detail,
   onOpen,
@@ -30,6 +37,7 @@ export function RunsTab({
   onOpen?(ticket: TicketRef): void;
 }) {
   const now = useNow();
+  const keepFocus = useKeepFocus();
   const sessions = sessionsOf(detail.runs);
   if (sessions.length === 0) {
     return (
@@ -47,9 +55,13 @@ export function RunsTab({
     );
   }
   return (
-    <ol className="flex flex-col gap-8">
+    <ol
+      ref={keepFocus}
+      {...focusList("sessions")}
+      className="flex flex-col gap-8"
+    >
       {sessions.map((run) => (
-        <li key={run.id}>
+        <li key={run.id} {...focusItem(run.id)}>
           <RunCard
             run={run}
             ticket={detail.id}
@@ -148,8 +160,12 @@ function RunCard({
         headingLevel={4}
       />
       {subagents.length > 0 ? (
-        <section className="text-xs">
-          <h4 className="mb-1.5 text-sm heading-cut">
+        <section className="text-xs" {...focusList(`subagents ${run.id}`)}>
+          <h4
+            {...focusHeading}
+            tabIndex={-1}
+            className="mb-1.5 text-sm heading-cut"
+          >
             Subagents{" "}
             <span className="font-normal text-ink-muted">
               {subagents.length}
@@ -162,6 +178,7 @@ function RunCard({
             {subagents.map((child) => (
               <li
                 key={child.id}
+                {...focusItem(child.id)}
                 className="relative pl-5 before:absolute before:top-[1.05rem] before:left-0 before:h-px before:w-3.5 before:bg-ink/40"
               >
                 <SubagentRow
