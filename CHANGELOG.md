@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- A ticket's pull request shows on its card panel and full page (FH-114).
+  Tickets gain a `pr:` frontmatter field beside `branch:`; agents set it
+  with `update_ticket` when they open a pull request, as the flashheart
+  skill now asks, and you can edit it on the Edit tab. An `http(s)` address
+  shows as a link (*PR #7* for a numbered pull request) that opens in a new
+  tab; anything else shows as plain text (protocol version unchanged).
+
 - Agents write tickets a person can read at a glance (FH-113). The
   flashheart skill gains a *Writing tickets* section: a title says what a
   person would notice or gain, in plain words; the description gives the

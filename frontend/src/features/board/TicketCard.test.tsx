@@ -23,6 +23,7 @@ function card(overrides: Partial<Card> = {}): Card {
     updated: "",
     modified: "2026-10-06T10:00:00Z",
     branch: "",
+    pr: "",
     dependsOn: [],
     criteria: { done: 1, total: 3 },
     excerpt: "Write through a temp file and rename.",

@@ -174,7 +174,8 @@ reorders them.
    title in the display cut; a pill row
    (status pill for its column, the blocker pill when blocked, priority tag,
    type tag); a meta row (workstream bullet and name, created date, branch in
-   monospace, changed time); actions (Move to, Archive) when editable. Top
+   monospace, the pull request as *PR #7* or its address, a link in a new
+   tab only for an `http(s)` URL (FH-114), changed time); actions (Move to, Archive) when editable. Top
    right, *Open full page in a new tab* (expand icon) and close; Escape
    closes.
 2. **Tabs**: Ticket, Edit (editable only), Runs (with its session count),

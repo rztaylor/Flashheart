@@ -10,6 +10,7 @@ import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Pill, StatusPill, Tag } from "../../components/Pill";
+import { PullRequestLabel } from "../../components/PullRequestLabel";
 import { idCut, TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import type { Step } from "../../model/order";
@@ -47,7 +48,7 @@ export function TicketIdentity({
 }
 
 // TicketProperties is the pill row (column, blocker, priority, type) and
-// the meta row (workstream, created, branch, last change).
+// the meta row (workstream, created, branch, pull request, last change).
 export function TicketProperties({
   detail,
   line,
@@ -81,6 +82,7 @@ export function TicketProperties({
         ) : null}
         {detail.created ? <span>created {detail.created}</span> : null}
         <BranchLabel branch={detail.branch} />
+        <PullRequestLabel pr={detail.pr} />
         <span title={absoluteTime(detail.modified)}>
           {changedLabel(detail.modified)}
         </span>

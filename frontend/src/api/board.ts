@@ -76,6 +76,9 @@ export interface Card {
   updated: string;
   modified: string;
   branch: string;
+  // pr is the ticket's pull request as written (FH-114): free text, linked
+  // only when it is an http(s) URL.
+  pr: string;
   dependsOn: string[];
   criteria: { done: number; total: number };
   excerpt: string;

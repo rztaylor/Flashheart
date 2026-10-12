@@ -11,7 +11,7 @@ neither branches on the other's layout:
 - `TicketHeader`: `TicketIdentity` (id and project, the title as the panel's
   h2 with the id linking to the full page, or as the page's h1),
   `TicketProperties` (status, blocker, priority and type pills; workstream,
-  created, branch and last change) and `TicketActions` (Move to, Position
+  created, branch, pull request and last change) and `TicketActions` (Move to, Position
   buttons (EDIT-9) and Archive).
 - `TicketSections`: `SectionBody` renders one section and `SectionTabs`
   shows the sections (in `model/ticketSections` order, with counts) as

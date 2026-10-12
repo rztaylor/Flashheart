@@ -41,14 +41,14 @@ func TestParseIDAndKeys(t *testing.T) {
 func TestParseTicketReadsFieldsAndBody(t *testing.T) {
 	t.Parallel()
 
-	data := ticketMD(fullFront+"branch: feature/x\nworkstream: board-ui\ndepends-on: [FH-12, NG-3]\ndepends-on-workstreams: ws\ntags: [ui]\nupdated: 2026-10-04T14:12:09Z\n",
+	data := ticketMD(fullFront+"branch: feature/x\npr: https://github.com/o/r/pull/7\nworkstream: board-ui\ndepends-on: [FH-12, NG-3]\ndepends-on-workstreams: ws\ntags: [ui]\nupdated: 2026-10-04T14:12:09Z\n",
 		"\n# Card panel\n\n## Description\n\nFirst paragraph of the\ndescription.\n\nSecond paragraph.\n\n## Acceptance Criteria\n\n- [x] One\n- [ ] Two\n\n## Handoff\n\n_Updated by run._\n\n**Done**\n- Thing\n**Next**\n- Review tab\n- Then tests\n**Files**\n- a.go\n")
 	ticket := ParseTicket("FH-42-card-panel", data)
 
 	if ticket.ID != "FH-42" || ticket.Slug != "card-panel" || ticket.Folder != "FH-42-card-panel" || ticket.Column != InProgress {
 		t.Errorf("identity = %q %q %q %q", ticket.ID, ticket.Slug, ticket.Folder, ticket.Column)
 	}
-	if ticket.Title != "Card panel" || ticket.Type != "feature" || ticket.Priority != "high" || ticket.Branch != "feature/x" {
+	if ticket.Title != "Card panel" || ticket.Type != "feature" || ticket.Priority != "high" || ticket.Branch != "feature/x" || ticket.PR != "https://github.com/o/r/pull/7" {
 		t.Errorf("ticket = %+v", ticket)
 	}
 	if !reflect.DeepEqual(ticket.DependsOn, []string{"FH-12", "NG-3"}) || !reflect.DeepEqual(ticket.DependsOnWorkstreams, []string{"ws"}) {

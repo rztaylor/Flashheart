@@ -47,6 +47,9 @@ func TestValidateField(t *testing.T) {
 		{"depends-on", "fh-42", false},
 		{"branch", "feature/x", true},
 		{"branch", "two\nlines", false},
+		{"pr", "https://github.com/o/r/pull/7", true},
+		{"pr", "", true},
+		{"pr", "two\nlines", false},
 		{"tags", strings.Repeat("t", 201), false},
 	}
 	for _, tc := range cases {
@@ -54,7 +57,7 @@ func TestValidateField(t *testing.T) {
 			t.Errorf("ValidateField(%q, %q) = %v, want ok=%v", tc.key, tc.value, err, tc.ok)
 		}
 	}
-	if !slices.Contains(ScalarFields, "branch") || !slices.Contains(ListFields, "tags") || slices.Contains(ScalarFields, "id") {
+	if !slices.Contains(ScalarFields, "branch") || !slices.Contains(ScalarFields, "pr") || !slices.Contains(ListFields, "tags") || slices.Contains(ScalarFields, "id") {
 		t.Errorf("editable fields: scalar %v list %v", ScalarFields, ListFields)
 	}
 }

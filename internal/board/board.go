@@ -180,9 +180,12 @@ type Ticket struct {
 	// Rejected marks a ticket in Done whose status is rejected.
 	Rejected bool
 
-	Title, Type, Created, Priority        string
-	Session, GitRef, Branch, Workstream   string
-	Updated                               string
+	Title, Type, Created, Priority      string
+	Session, GitRef, Branch, Workstream string
+	Updated                             string
+	// PR is the ticket's pull request as written: usually its URL, but free
+	// text, so readers link it only when it is an http(s) URL.
+	PR                                    string
 	DependsOn, DependsOnWorkstreams, Tags []string
 	// Rank is the manual board order within a column (EDIT-9); empty when
 	// unranked.
@@ -288,6 +291,7 @@ func ParseTicket(folder string, data []byte) (ticket Ticket) {
 	ticket.Session, _ = doc.String("session")
 	ticket.GitRef, _ = doc.String("git-ref")
 	ticket.Branch, _ = doc.String("branch")
+	ticket.PR, _ = doc.String("pr")
 	ticket.Workstream, _ = doc.String("workstream")
 	ticket.Updated, _ = doc.String("updated")
 	ticket.DependsOn = doc.List("depends-on")

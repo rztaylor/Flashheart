@@ -5,6 +5,7 @@ type: bug
 priority: high
 created: 2026-10-11
 branch:
+pr:
 workstream: board-ui
 depends-on: [FH-1, FH-2]
 depends-on-workstreams: []

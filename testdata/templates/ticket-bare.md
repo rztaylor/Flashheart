@@ -5,6 +5,7 @@ type: feature
 priority: medium
 created: 2026-10-11
 branch:
+pr:
 workstream:
 depends-on: []
 depends-on-workstreams: []
