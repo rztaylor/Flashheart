@@ -1,14 +1,17 @@
-import { join, resolve } from "node:path";
-import AxeBuilder from "@axe-core/playwright";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
+  card,
+  column,
+  expectNoAxeViolations,
   filterButton,
   filterMenu,
   launch,
   makeSandbox,
-  screenshotDir,
+  open,
+  shot,
   stopIfRunning,
   viewOption,
   waitForManualURL,
@@ -42,53 +45,14 @@ test.afterAll(async () => {
   await sandbox?.cleanup();
 });
 
-async function open(
-  page,
-  hash = "#/all/board",
-  { width = 1440, height = 900, theme = "light" } = {},
-) {
-  await page.setViewportSize({ width, height });
-  await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-  await page.evaluate((target) => {
-    window.location.hash = target;
-  }, hash);
-  await expect(
-    page.getByRole("button", { name: "Backend connected. Check connection" }),
-  ).toBeVisible();
-}
-
-function column(page, name) {
-  return page.getByRole("region", { name });
-}
-
 async function colourBy(page, option) {
   await viewOption(page, "Colour by", option);
-}
-
-function card(page, title) {
-  return page.getByRole("button", { name: new RegExp(`^${title},`) });
 }
 
 // cardFace is what a card shows: its button covers the drawing, which sits
 // beside it in the card (CARD-7).
 function cardFace(page, title) {
   return card(page, title).locator("xpath=..");
-}
-
-async function expectNoAxeViolations(page, label) {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(
-    results.violations,
-    `${label}: ${results.violations.map((v) => `${v.id} (${v.nodes.length})`).join(", ")}`,
-  ).toEqual([]);
-}
-
-async function shot(page, name) {
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-  });
-  await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
 }
 
 test("sample tickets land in the right columns with blocked reasons and repairs", async () => {

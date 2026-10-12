@@ -1,6 +1,5 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import AxeBuilder from "@axe-core/playwright";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import {
@@ -8,17 +7,20 @@ import {
   connectMCP,
   IDLE_SESSION,
   promptHook,
+  seedBranchRun,
   seedClaimedRun,
   seedRuns,
   TASK_NOTIFICATION,
 } from "./agent-runs.mjs";
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
+  expectNoAxeViolations,
   filterButton,
   filterMenu,
   launch,
   makeSandbox,
-  screenshotDir,
+  open,
+  shot,
   stopIfRunning,
   waitForManualURL,
 } from "./support.mjs";
@@ -64,40 +66,10 @@ test.afterAll(async () => {
   await sandbox?.cleanup();
 });
 
-async function open(
-  hash,
-  { width = 1440, height = 900, theme = "light" } = {},
-) {
-  await page.setViewportSize({ width, height });
-  await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-  await page.evaluate((target) => {
-    window.location.hash = target;
-  }, hash);
-  await expect(
-    page.getByRole("button", { name: "Backend connected. Check connection" }),
-  ).toBeVisible();
-}
-
-async function expectNoAxeViolations(label) {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(
-    results.violations,
-    `${label}: ${results.violations.map((v) => `${v.id} (${v.nodes.length})`).join(", ")}`,
-  ).toEqual([]);
-}
-
-async function shot(name) {
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-  });
-  await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
-}
-
 const section = (name) => page.getByRole("region", { name, exact: true });
 
 test("the Overview puts tickets first: decisions, review, risk, progress, then tiles (FH-51)", async () => {
-  await open("#/all/overview");
+  await open(page, "#/all/overview");
   // The band's tabs, Overview first and Board last (FH-61); Agents is gone.
   await expect(
     page.getByRole("navigation", { name: "Views" }).getByRole("link"),
@@ -152,36 +124,36 @@ test("the Overview puts tickets first: decisions, review, risk, progress, then t
       .getByText("Top of Up next · blocked by AL-3"),
   ).toBeVisible();
   await expect(risk.getByText("Claude", { exact: true })).toHaveCount(0);
-  await expectNoAxeViolations("overview light");
+  await expectNoAxeViolations(page, "overview light");
 
   for (const [width, height] of [
     [1280, 800],
     [1920, 1080],
   ]) {
     for (const theme of ["light", "dark"]) {
-      await open("#/all/overview", { width, height, theme });
-      await shot(`overview-${width}-${theme}`);
+      await open(page, "#/all/overview", { width, height, theme });
+      await shot(page, `overview-${width}-${theme}`);
     }
   }
   // The whole page, for review against the approved concept.
   for (const theme of ["light", "dark"]) {
-    await open("#/all/overview", { width: 1440, height: 2000, theme });
-    await shot(`overview-full-1440-${theme}`);
+    await open(page, "#/all/overview", { width: 1440, height: 2000, theme });
+    await shot(page, `overview-full-1440-${theme}`);
   }
-  await open("#/all/overview", { theme: "dark" });
-  await expectNoAxeViolations("overview dark");
+  await open(page, "#/all/overview", { theme: "dark" });
+  await expectNoAxeViolations(page, "overview dark");
   // A phone stacks each row under its title; nothing scrolls sideways.
   for (const theme of ["light", "dark"]) {
-    await open("#/all/overview", { width: 390, height: 844, theme });
+    await open(page, "#/all/overview", { width: 390, height: 844, theme });
     const overflow = await page.evaluate(
       () => document.scrollingElement.scrollWidth - window.innerWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
-    await shot(`overview-390-${theme}`);
-    await open("#/all/overview", { width: 390, height: 3000, theme });
-    await shot(`overview-full-390-${theme}`);
+    await shot(page, `overview-390-${theme}`);
+    await open(page, "#/all/overview", { width: 390, height: 3000, theme });
+    await shot(page, `overview-full-390-${theme}`);
   }
-  await expectNoAxeViolations("overview at phone width");
+  await expectNoAxeViolations(page, "overview at phone width");
 
   // Review results opens the ticket on its Review tab.
   const review = section("Ready for your review");
@@ -208,10 +180,10 @@ test("the Overview puts tickets first: decisions, review, risk, progress, then t
   await upNext.getByRole("button", { name: /Up next/ }).click();
   await expect(upNext.locator('[data-row="AL-4"]')).toBeVisible();
   for (const theme of ["light", "dark"]) {
-    await open("#/all/overview", { width: 1440, height: 2600, theme });
-    await shot(`overview-tiles-open-1440-${theme}`);
+    await open(page, "#/all/overview", { width: 1440, height: 2600, theme });
+    await shot(page, `overview-tiles-open-1440-${theme}`);
   }
-  await open("#/all/overview");
+  await open(page, "#/all/overview");
   await beta.getByRole("button", { name: "Create ticket" }).click();
   const dialog = page.getByRole("dialog", { name: "New ticket" });
   // The new ticket goes to the session's project.
@@ -225,7 +197,7 @@ test("the Overview puts tickets first: decisions, review, risk, progress, then t
   await page.getByRole("button", { name: "Dismiss" }).click();
 
   // An old Agents route lands on the Overview.
-  await open("#/p/alpha/agents");
+  await open(page, "#/p/alpha/agents");
   await expect(page).toHaveURL(/#\/p\/alpha\/overview$/);
   await expect(page.getByRole("link", { name: "Overview" })).toHaveAttribute(
     "aria-current",
@@ -236,7 +208,7 @@ test("the Overview puts tickets first: decisions, review, risk, progress, then t
 
 test("every Overview section has a calm empty state (FH-51)", async () => {
   for (const theme of ["light", "dark"]) {
-    await open("#/p/quiet/overview", { theme });
+    await open(page, "#/p/quiet/overview", { theme });
     for (const sentence of [
       "Nothing needs your decision.",
       "Nothing is waiting for your review.",
@@ -248,15 +220,15 @@ test("every Overview section has a calm empty state (FH-51)", async () => {
       await expect(page.getByText(sentence)).toBeVisible();
     // Empty sections have nothing to open.
     await expect(page.locator("main [aria-expanded]")).toHaveCount(0);
-    await expectNoAxeViolations(`empty overview ${theme}`);
-    await shot(`overview-empty-1440-${theme}`);
-    await open("#/p/quiet/overview", { width: 390, height: 1100, theme });
-    await shot(`overview-empty-390-${theme}`);
+    await expectNoAxeViolations(page, `empty overview ${theme}`);
+    await shot(page, `overview-empty-1440-${theme}`);
+    await open(page, "#/p/quiet/overview", { width: 390, height: 1100, theme });
+    await shot(page, `overview-empty-390-${theme}`);
   }
 });
 
 test("the band's Needs you pill opens the Board, filtered, from other views (FH-44)", async () => {
-  await open("#/all/overview");
+  await open(page, "#/all/overview");
   const pill = page.getByRole("button", { name: "1 needs you", exact: true });
   await expect(pill).toHaveAttribute("aria-pressed", "false");
   await pill.click();
@@ -271,7 +243,7 @@ test("the band's Needs you pill opens the Board, filtered, from other views (FH-
 });
 
 test("cards carry live runs and the band's Needs you pill filters to them (FH-44)", async () => {
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   const real = page
     .getByRole("region", { name: /^In progress/ })
     .getByRole("button", { name: /^Card panel, AL-3, Claude needs you/ });
@@ -314,17 +286,17 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
     page.getByRole("region", { name: "Agents without a ticket" }),
   ).toHaveCount(0);
   for (const theme of ["light", "dark"]) {
-    await open("#/all/board", { theme });
-    await shot(`board-needs-you-1440-${theme}`);
+    await open(page, "#/all/board", { theme });
+    await shot(page, `board-needs-you-1440-${theme}`);
   }
   for (const theme of ["light", "dark"]) {
-    await open("#/all/board", { width: 390, height: 844, theme });
+    await open(page, "#/all/board", { width: 390, height: 844, theme });
     await expect(
       page.getByRole("button", { name: "1 agent needs you", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
-    await shot(`board-needs-you-390-${theme}`);
+    await shot(page, `board-needs-you-390-${theme}`);
   }
-  await open("#/all/board");
+  await open(page, "#/all/board");
 
   // A second press goes back to the project it was pressed in.
   await pill.click();
@@ -334,7 +306,7 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
 
   // On the Table it opens All projects' Table; Clear filters switches it
   // off too, staying put.
-  await open("#/p/alpha/table");
+  await open(page, "#/p/alpha/table");
   await pill.click();
   await expect(page).toHaveURL(/#\/all\/table/);
   await expect(page.getByRole("row")).toHaveCount(2);
@@ -356,14 +328,14 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
   await expect(page).toHaveURL(/#\/p\/alpha\//);
 
   // It is a lens, not a saved filter: a reload starts with it off.
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   await pill.click();
   await page.waitForTimeout(600);
   expect(
     await readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
   ).not.toContain("needs");
   await page.reload();
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   await expect(pill).toHaveAttribute("aria-pressed", "false");
   await expect(cards).toHaveCount(total);
 
@@ -377,16 +349,16 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
   await expect(real).toHaveCount(0);
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(real).toBeVisible();
-  await expectNoAxeViolations("board with runs");
+  await expectNoAxeViolations(page, "board with runs");
   for (const theme of ["light", "dark"]) {
     await page.reload();
-    await open("#/p/alpha/board", { theme });
+    await open(page, "#/p/alpha/board", { theme });
     await expect(real).toBeInViewport();
-    await shot(`board-runs-1440-${theme}`);
+    await shot(page, `board-runs-1440-${theme}`);
   }
 
   // The Runs tab shows the ticket's runs and the handoff warning.
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   await real.click();
   await page.getByRole("tab", { name: /^Runs/ }).click();
   const panel = page.getByRole("complementary", { name: "Ticket AL-3" });
@@ -423,21 +395,21 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
     tree.getByRole("heading", { name: /^Edited/, level: 5 }),
   ).toBeVisible();
   await expect(tree.getByText(/RunsTab\.test\.tsx$/).first()).toBeVisible();
-  await expectNoAxeViolations("runs tab");
-  await shot("runs-tab-1440-light");
+  await expectNoAxeViolations(page, "runs tab");
+  await shot(page, "runs-tab-1440-light");
   await helper.scrollIntoViewIfNeeded();
-  await shot("runs-tab-subagents-1440-light");
-  await open("#/p/alpha/board?t=AL-3", { theme: "dark" });
+  await shot(page, "runs-tab-subagents-1440-light");
+  await open(page, "#/p/alpha/board?t=AL-3", { theme: "dark" });
   await page.getByRole("tab", { name: /^Runs/ }).click();
   const darkHelper = panel
     .getByRole("list", { name: /^Subagents of/ })
     .getByRole("button", { name: "general-purpose" });
   // The row stays open across the theme change.
   await expect(darkHelper).toHaveAttribute("aria-expanded", "true");
-  await expectNoAxeViolations("runs tab dark");
-  await shot("runs-tab-1440-dark");
+  await expectNoAxeViolations(page, "runs tab dark");
+  await shot(page, "runs-tab-1440-dark");
   await darkHelper.scrollIntoViewIfNeeded();
-  await shot("runs-tab-subagents-1440-dark");
+  await shot(page, "runs-tab-subagents-1440-dark");
 });
 
 test("a question from an agent is answered on the board and delivered with its next prompt", async () => {
@@ -451,7 +423,7 @@ test("a question from an agent is answered on the board and delivered with its n
   });
   expect(asked).toContain("the answer will arrive in a later prompt");
 
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   const card = page.getByRole("button", {
     name: /^Project skeleton, AL-1, needs you: question waiting/,
   });
@@ -466,22 +438,22 @@ test("a question from an agent is answered on the board and delivered with its n
     ),
   ).toBeVisible();
   await expect(question.getByText(/from claude:e2d8f6a4/)).toBeVisible();
-  await expectNoAxeViolations("card panel with a question");
+  await expectNoAxeViolations(page, "card panel with a question");
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await shot(`card-question-1440-${theme}`);
+    await shot(page, `card-question-1440-${theme}`);
   }
   // The Overview asks for the same decision, answerable in place.
   for (const theme of ["light", "dark"]) {
-    await open("#/all/overview", { width: 1440, height: 2000, theme });
+    await open(page, "#/all/overview", { width: 1440, height: 2000, theme });
     await expect(
       section("Needs your decision").getByRole("region", {
         name: "Needs a decision",
       }),
     ).toBeVisible();
-    await shot(`overview-question-full-1440-${theme}`);
+    await shot(page, `overview-question-full-1440-${theme}`);
   }
-  await open("#/p/alpha/board?t=AL-1");
+  await open(page, "#/p/alpha/board?t=AL-1");
 
   // A choice fills the answer; sending it says it is on its way.
   await question.getByRole("button", { name: "Keep it" }).click();
@@ -496,7 +468,7 @@ test("a question from an agent is answered on the board and delivered with its n
 
   // The Overview keeps it under Needs your decision until the session
   // takes the answer.
-  await open("#/all/overview");
+  await open(page, "#/all/overview");
   await expect(
     section("Needs your decision").getByRole("region", {
       name: "Answer waits for its next prompt",
@@ -509,7 +481,7 @@ test("a question from an agent is answered on the board and delivered with its n
     'AL-1: \\"Keep the old project skeleton, or start from the new template?\\" → \\"Keep it\\" (Robin)',
   );
   expect(promptHook(sandbox.root, IDLE_SESSION, seeded.gamma)).toBe("");
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   await expect(card).toHaveCount(0);
 });
 
@@ -522,7 +494,7 @@ test("a question is answered from the Overview, and fits a phone (FH-51)", async
   });
 
   // At phone width the question card fits without sideways scrolling.
-  await open("#/all/overview", { width: 390, height: 844 });
+  await open(page, "#/all/overview", { width: 390, height: 844 });
   const decision = section("Needs your decision");
   const question = decision.getByRole("region", { name: "Has a question" });
   await expect(
@@ -535,9 +507,9 @@ test("a question is answered from the Overview, and fits a phone (FH-51)", async
   const box = await question.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
-  await expectNoAxeViolations("question card at phone width");
+  await expectNoAxeViolations(page, "question card at phone width");
   await question.scrollIntoViewIfNeeded();
-  await shot("overview-question-390-light");
+  await shot(page, "overview-question-390-light");
 
   // Answering in place records it like the panel does.
   await question.getByRole("textbox", { name: "Your answer" }).fill("Yes");
@@ -559,7 +531,7 @@ test("a question answered in the session's own chat leaves Needs you", async () 
     text: "Rename the skeleton package?",
     options: ["Rename", "Keep"],
   });
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   const card = page.getByRole("button", {
     name: /^Project skeleton, AL-1, needs you: question waiting/,
   });
@@ -568,21 +540,21 @@ test("a question answered in the session's own chat leaves Needs you", async () 
   // A background command finishing is not the user answering.
   promptHook(sandbox.root, IDLE_SESSION, seeded.gamma, TASK_NOTIFICATION);
   await page.reload();
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   await expect(card).toBeVisible();
 
   // The user replies in the session's chat instead of on the board.
   expect(promptHook(sandbox.root, IDLE_SESSION, seeded.gamma)).toBe("");
   await expect(card).toHaveCount(0);
   for (const theme of ["light", "dark"]) {
-    await open("#/p/alpha/board", { theme });
+    await open(page, "#/p/alpha/board", { theme });
     await expect(card).toHaveCount(0);
-    await shot(`board-answered-in-session-1440-${theme}`);
+    await shot(page, `board-answered-in-session-1440-${theme}`);
   }
 
   // The Overview no longer asks for it.
   for (const theme of ["light", "dark"]) {
-    await open("#/all/overview", { theme });
+    await open(page, "#/all/overview", { theme });
     await expect(
       section("Needs your decision").getByText("Rename the skeleton package?"),
     ).toHaveCount(0);
@@ -596,7 +568,7 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
     kind: "question",
     text: "Which repository should the offline spike live in?",
   });
-  await open("#/p/alpha/board");
+  await open(page, "#/p/alpha/board");
   const pill = page.getByRole("button", { name: "2 need you", exact: true });
   await pill.click();
   await expect(page).toHaveURL(/#\/all\/board/);
@@ -606,14 +578,14 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
   );
   // AL-3's card still shows; the gamma agent cannot.
   await expect(page.locator("[data-ticket]")).toHaveCount(1);
-  await expectNoAxeViolations("needs you notice");
+  await expectNoAxeViolations(page, "needs you notice");
   for (const theme of ["light", "dark"]) {
-    await open("#/all/board", { theme });
-    await shot(`board-needs-you-unticketed-1440-${theme}`);
+    await open(page, "#/all/board", { theme });
+    await shot(page, `board-needs-you-unticketed-1440-${theme}`);
   }
-  await open("#/all/board", { width: 390, height: 844 });
-  await shot("board-needs-you-unticketed-390-light");
-  await open("#/all/board");
+  await open(page, "#/all/board", { width: 390, height: 844 });
+  await shot(page, "board-needs-you-unticketed-390-light");
+  await open(page, "#/all/board");
   await notice.getByRole("button", { name: "Open Overview" }).click();
   await expect(page).toHaveURL(/#\/all\/overview/);
   await expect(
@@ -627,14 +599,14 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
 
   // Answered in the session's own chat, it no longer needs you.
   promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
-  await open("#/all/board");
+  await open(page, "#/all/board");
   await expect(notice).toHaveCount(0);
   await page.getByRole("button", { name: "1 needs you", exact: true }).click();
   await expect(page).toHaveURL(/#\/p\/alpha\/board/);
 });
 
 test("the Overview's pipeline counts every column of the scope (FH-63)", async () => {
-  await open("#/all/overview");
+  await open(page, "#/all/overview");
   const pipeline = page.getByRole("navigation", { name: "Pipeline" });
   const stages = pipeline.getByRole("link");
   await expect(stages).toHaveText([
@@ -677,14 +649,14 @@ test("the Overview's pipeline counts every column of the scope (FH-63)", async (
   const review = pipeline.locator('[data-stage="review"]');
   await expect(review).toHaveCSS("clip-path", /^polygon/);
   await expect(review).toHaveAttribute("data-tone", "review");
-  await expectNoAxeViolations("pipeline");
+  await expectNoAxeViolations(page, "pipeline");
   for (const theme of ["light", "dark"]) {
     for (const width of [1280, 1920]) {
-      await open("#/all/overview", { width, theme });
-      await shot(`overview-pipeline-${width}-${theme}`);
+      await open(page, "#/all/overview", { width, theme });
+      await shot(page, `overview-pipeline-${width}-${theme}`);
     }
     // At phone width the five stages stay on one row with no page scroll.
-    await open("#/all/overview", { width: 390, height: 844, theme });
+    await open(page, "#/all/overview", { width: 390, height: 844, theme });
     const overflow = await page.evaluate(
       () => document.scrollingElement.scrollWidth - window.innerWidth,
     );
@@ -693,11 +665,11 @@ test("the Overview's pipeline counts every column of the scope (FH-63)", async (
       links.map((link) => link.getBoundingClientRect().top),
     );
     expect(new Set(tops).size).toBe(1);
-    await shot(`overview-pipeline-390-${theme}`);
+    await shot(page, `overview-pipeline-390-${theme}`);
   }
 
   // One project counts only its own tickets, and leads to its own board.
-  await open("#/p/quiet/overview");
+  await open(page, "#/p/quiet/overview");
   await expect(stages).toHaveText([
     "0Backlog",
     "0Up next",
@@ -743,7 +715,7 @@ test("an agent without hooks gets a run from its first write, and its answers wi
       [390, 844, "light"],
     ];
     for (const [width, height, theme] of sizes) {
-      await open("#/all/overview", { width, height, theme });
+      await open(page, "#/all/overview", { width, height, theme });
       await expect(question.getByText("Greet in English only?")).toBeVisible();
       await expect(
         decision.getByText("MCP only", { exact: true }),
@@ -754,13 +726,13 @@ test("an agent without hooks gets a run from its first write, and its answers wi
         ),
       ).toBeVisible();
       if (width === 1280 && theme === "light")
-        await expectNoAxeViolations("question from a run without hooks");
+        await expectNoAxeViolations(page, "question from a run without hooks");
       await question.scrollIntoViewIfNeeded();
-      await shot(`overview-mcp-only-${width}-${theme}`);
+      await shot(page, `overview-mcp-only-${width}-${theme}`);
     }
 
     // The ticket's Runs tab shows the run and what it did.
-    await open("#/p/beta/board");
+    await open(page, "#/p/beta/board");
     await page.getByRole("button", { name: /^Hello, BE-1/ }).click();
     await page.getByRole("tab", { name: /^Runs/ }).click();
     const panel = page.getByRole("complementary", { name: "Ticket BE-1" });
@@ -776,12 +748,12 @@ test("an agent without hooks gets a run from its first write, and its answers wi
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
       await expect(panel.getByText("Codex (MCP only)")).toBeVisible();
-      await shot(`runs-tab-mcp-only-${width}-${theme}`);
+      await shot(page, `runs-tab-mcp-only-${width}-${theme}`);
     }
 
     // Answered on the Overview, the answer reaches the session with its
     // next tool call, once.
-    await open("#/all/overview");
+    await open(page, "#/all/overview");
     await question.getByRole("textbox", { name: "Your answer" }).fill("Yes");
     await question.getByRole("button", { name: "Send answer" }).click();
     await expect(
@@ -803,7 +775,7 @@ test("an agent without hooks gets a run from its first write, and its answers wi
     await writeFile(head, "ref: refs/heads/feature/next\n");
     try {
       await codex.call("list_tickets", {});
-      await open("#/p/beta/board", { width: 1280, height: 800 });
+      await open(page, "#/p/beta/board", { width: 1280, height: 800 });
       await page.getByRole("button", { name: /^Hello, BE-1/ }).click();
       await page.getByRole("tab", { name: /^Runs/ }).click();
       await expect(
@@ -815,7 +787,7 @@ test("an agent without hooks gets a run from its first write, and its answers wi
       await panel
         .getByText("Switched to branch feature/next")
         .scrollIntoViewIfNeeded();
-      await shot("runs-tab-mcp-branch-switch-1280-light");
+      await shot(page, "runs-tab-mcp-branch-switch-1280-light");
     } finally {
       await writeFile(head, "ref: refs/heads/main\n");
     }
@@ -824,7 +796,7 @@ test("an agent without hooks gets a run from its first write, and its answers wi
   }
   // Closing the session ends its run.
   await page.reload();
-  await open("#/p/beta/board");
+  await open(page, "#/p/beta/board");
   await page.getByRole("button", { name: /^Hello, BE-1/ }).click();
   await page.getByRole("tab", { name: /^Runs/ }).click();
   await expect(
@@ -832,4 +804,79 @@ test("an agent without hooks gets a run from its first write, and its answers wi
       .getByRole("complementary", { name: "Ticket BE-1" })
       .getByText("Ended (disconnected)"),
   ).toBeVisible();
+});
+
+// tailOf says, for each element showing text, whether the box that clips
+// it cuts the text, whether its first and last characters lie inside that
+// box, and the full value its title keeps.
+function tailOf(locator) {
+  return locator.evaluateAll((elements) =>
+    elements.map((element) => {
+      let clip = element;
+      while (clip && getComputedStyle(clip).overflowX === "visible")
+        clip = clip.parentElement;
+      const box = clip.getBoundingClientRect();
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const text = walker.nextNode();
+      const range = document.createRange();
+      const inside = (start) => {
+        range.setStart(text, start);
+        range.setEnd(text, start + 1);
+        const glyph = range.getBoundingClientRect();
+        return glyph.left >= box.left - 0.5 && glyph.right <= box.right + 0.5;
+      };
+      return {
+        cut: clip.scrollWidth > clip.clientWidth,
+        first: inside(0),
+        last: inside(text.length - 1),
+        title: element.closest("[title]")?.getAttribute("title"),
+      };
+    }),
+  );
+}
+
+test("a long branch keeps its tail visible in the panel and the Runs tab (FH-83)", async () => {
+  const branch =
+    "feature/a-very-long-branch-name-that-overflows-the-panel-fh83-tail";
+  const file = join(
+    sandbox.root,
+    "flashheart",
+    "tickets",
+    "FH-26-slow-index-nfs",
+    "FH-26-slow-index-nfs.md",
+  );
+  // A run links by branch to a ticket in progress on it.
+  const ticket = await readFile(file, "utf8");
+  await writeFile(
+    file,
+    ticket
+      .replace(/^status: .*$/m, "status: in-progress")
+      .replace(/^branch: .*$/m, `branch: ${branch}`),
+  );
+  await seedBranchRun(sandbox.home, sandbox.root, "flashheart", branch);
+
+  const panel = page.getByRole("complementary", { name: "Ticket FH-26" });
+  const shown = panel.getByText(branch, { exact: true });
+  for (const theme of ["light", "dark"]) {
+    await open(page, "#/p/flashheart/board?t=FH-26", {
+      width: 1280,
+      height: 800,
+      theme,
+    });
+    await page.getByRole("tab", { name: /^Runs/ }).click();
+    await expect(panel.getByText("linked by branch")).toBeVisible();
+    // The panel header, the run's card and its open detail show it, each
+    // cut from the start so its distinguishing tail stays in view, the
+    // full name in its title.
+    await expect(shown).toHaveCount(3);
+    for (const where of await tailOf(shown))
+      expect(where).toEqual({
+        cut: true,
+        first: false,
+        last: true,
+        title: branch,
+      });
+    if (theme === "light") await expectNoAxeViolations(page, "long branch");
+    await shot(page, `branch-tail-runs-1280-${theme}`);
+  }
 });

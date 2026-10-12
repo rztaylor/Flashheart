@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 )
 
 // Answers inbox: answers to a session's questions waiting for its next
@@ -43,6 +44,13 @@ func (s *Store) AppendInbox(project, run string, lines []byte) error {
 		return err
 	}
 	return s.WriteFileAtomic(name, append(current, lines...))
+}
+
+// PruneInboxes removes a project's inboxes last written before before
+// (FH-82), each checked again under the project lock, and reports how many
+// it removed. Which inboxes may go is events' rule (events.Log.Prune).
+func (s *Store) PruneInboxes(project string, before time.Time) (int, error) {
+	return s.pruneSessionFiles(project, "answers", ".jsonl", before)
 }
 
 // TakeInbox returns and removes a session's inbox; nil when it is empty.

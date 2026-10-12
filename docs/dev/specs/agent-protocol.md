@@ -141,9 +141,18 @@ recorded since the last checkpoint live in
 under the project lock together with the log, so tool results arriving
 together all count. It is a disposable cache: an unreadable one starts
 afresh, a run's entry goes with its end, and the session's file with the
-session's end (a session that never reports its end leaves a small file
-behind). Logs written before protocol 2 hold one `tool.used` per tool
-call; readers fold both.
+session's end. A session that never reports its end (a crash; Codex has no
+end hook) leaves nothing behind for long, and nothing it had pending is
+kept silently (FH-82): a run that starts again (a resumed session) first
+records what its last life left pending, as before an end; a run whose
+latest hook event is `stale_hours` old, which the stale rule has ended
+(§4), is dropped from the state by the session's next hook, its pending
+activity with it, since recording it then would misdate it and reopen the
+run; and `serve`'s retention, at startup and daily, removes a session's
+file no hook has written for `stale_hours`. Pending activity is otherwise
+recorded at the session's next turn end or end, at the latest. Logs
+written before protocol 2 hold one `tool.used` per tool call; readers fold
+both.
 
 ### The human's board writes
 
@@ -257,7 +266,27 @@ started, which has no prompt hook, its connection's next tool result)
 empties the inbox and appends `question.delivered`. The
 inbox is a delivery queue derived from the log, so the prompt hook costs one
 `stat` when nothing is waiting; the answer itself lives in the log and the
-ticket's `## Notes`.
+ticket's `## Notes`. Every one of these paths shows the model what it took
+even when appending `question.delivered` fails (the failure is logged), so
+an answer is never lost; the log then still shows it answered and not
+delivered, and the readers that fold the log (the recovery note,
+`board_context`, `flashheart await`) deliver such an answer even when its
+inbox is gone, so it may be shown twice but never not at all (FH-78). An
+answer waiting in the inbox goes with any prompt, whatever its `origin`:
+the origin decides only whether the prompt answers questions in the
+session (D41), and a board answer should reach the agent whenever it gets
+a turn.
+
+An inbox is never removed while an answer in it could still be delivered
+(FH-82). Delivery takes the inbox, so one that is left belongs to a session
+that has had no prompt, recovery note, `board_context` or `await` since its
+last answer was queued. `serve`'s retention removes it together with the
+event file of the UTC day it was last written, once that file is older than
+`event_retention_days` (STO-5): the `question.answered` events of every
+answer in it have then expired with it, so no reader of the log can deliver
+them (the run window is far shorter), and its session has been silent, and
+so Ended by the stale rule, for the whole retention period. The answers
+stay in their tickets' `## Notes`.
 
 ## 5. Hooks
 
@@ -389,6 +418,22 @@ touches the user's other hooks.
   (`EDIT-2` applies to agents too).
 - A run holds at most one explicit claim; claiming another releases the
   first (with an event).
+- A run's **project** is its home: where it records its own events
+  (`run.start`, turns, activity, plans, questions), or the `home` its claim
+  names; never the project of a ticket it claimed, released, moved,
+  updated, reviewed, attached to or checkpointed elsewhere, whose events
+  sit in that ticket's log. The latest such event wins; a run seen only
+  through a ticket's events elsewhere keeps the project it was first seen
+  in. Its branch link (`RUN-5`) looks for in-progress tickets in its home,
+  so a session that releases a claim on another project's ticket links by
+  branch to its own again (FH-32); the MCP server reads the home project
+  for `board_context` when it is not the caller's.
+- Handoff enforcement (§9) and the recovery note (§8) read only the home
+  project's log and tickets, to stay within the hook budget (`HOOK-1`):
+  they see a claim on a home ticket, and otherwise link by branch in the
+  home project. A claim on another project's ticket is not seen there, so
+  such a session is held to a checkpoint only on the home ticket its
+  branch links it to, if any.
 - `release` ends the lease; it does not move the ticket.
 
 ## 7. MCP server
@@ -555,7 +600,10 @@ Code: Bash with `run_in_background`) runs it after asking:
   is empty); when the inbox holds answers it takes them all, appends
   `question.delivered` for each and prints the answers note (§8, framed as
   information), then exits 0, which wakes the agent;
-- it re-reads the log every 15 s, and if the answer was delivered another
+- it re-reads the log every 15 s; if the log (there or at the start)
+  shows the answer given but not delivered while the inbox is empty (a
+  delivery took the inbox and could not record it), it delivers the answer
+  from the log as above; if the answer was delivered another
   way (the user prompted after answering on the board) it prints a
   one-line note and exits 0; if the user answered in the session's chat
   instead (§4) it prints a one-line note saying so and exits 0;
@@ -605,6 +653,9 @@ When `enforce_handoff` is on for the project, at `Stop`:
   output `{"decision":"block","reason":"Flashheart: record a checkpoint on <ticket> (done, next, files) before stopping."}`
   and record `turn.end` with `blocked_for_handoff: true`;
 - otherwise allow.
+
+The hook reads only the project's own log: a claim the session made on
+another project's ticket is not seen, so it links by branch only (§6).
 
 ## 10. Orchestrators and subagents
 
@@ -768,6 +819,13 @@ without `origin` reads as before; `background` keeps its meaning, a turn
 the user did not start, which answers nothing (it now also marks agents'
 messages, which older readers took for the user's); and no tool, refusal
 or skill text changes. The version stays 2.
+
+Additive change within version 2 (FH-78, 2026-10-12): one delivery
+routine serves every path that hands answers over (§4). It shows what it
+took even when recording delivery fails, and `flashheart await` also
+delivers an answer the log shows given and not delivered (§7.5) instead
+of waiting for its timeout. No event, tool or skill text changes shape, so
+the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

@@ -1,11 +1,13 @@
 package hooks
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -160,6 +162,24 @@ func TestStopEnforcesHandoffOnceWhenEnabled(t *testing.T) {
 			t.Fatalf("stop output = %q, want a block", out)
 		}
 	})
+	t.Run("a claim on another project's ticket is not read: it links by branch at home", func(t *testing.T) {
+		t.Parallel()
+		root, cwd := setup(t, "settings:\n  enforce_handoff: true\n")
+		writeTicket(t, root, "other", "OT-1-elsewhere", "---\nid: OT-1\nstatus: in-progress\ntype: bug\npriority: high\ncreated: 2026-10-01\nbranch: feature/demo\n---\n# Elsewhere\n")
+		if err := os.WriteFile(filepath.Join(root, "other", "project.yaml"), []byte("name: other\nkey: OT\nnext_id: 2\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		s, _ := store.Open(root)
+		err := events.New(s).Append(events.Event{Time: now, Run: "fake:s1", Agent: "fake", Kind: events.Claim, Project: "other", Data: events.TicketData{Ticket: "OT-1", Home: "demo"}})
+		s.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := run(t, root, "Stop", "s1 "+cwd, fake{})
+		if out != "block:Flashheart: record a checkpoint on DM-1 (done, next, files) before stopping." {
+			t.Fatalf("stop output = %q", out)
+		}
+	})
 	t.Run("off by default", func(t *testing.T) {
 		t.Parallel()
 		root, cwd := setup(t, "")
@@ -216,4 +236,44 @@ func TestAStopIsRecordedEvenWhenEnforcementCannotBeChecked(t *testing.T) {
 	if ends != 1 || !strings.Contains(errorLog(t, root), "enforce_handoff") {
 		t.Fatalf("turn ends = %d, error log = %q", ends, errorLog(t, root))
 	}
+}
+
+// failingMark is an inbox whose record of delivery cannot be written.
+type failingMark struct{ events.Inbox }
+
+func (failingMark) MarkDelivered(string, []events.Delivery, time.Time) error {
+	return errors.New("disk full")
+}
+
+// Not parallel: it swaps the package's inbox.
+func TestAnswersTakenAreShownWhenRecordingDeliveryFails(t *testing.T) {
+	saved := inboxOf
+	inboxOf = func(log *events.Log) events.Inbox { return failingMark{log} }
+	t.Cleanup(func() { inboxOf = saved })
+
+	t.Run("session start", func(t *testing.T) {
+		root, cwd := t.TempDir(), repo(t)
+		asked(t, root, cwd, "s1")
+		out := run(t, root, "SessionStart", "s1 "+cwd, fake{})
+		if !strings.Contains(out, `Answered: "Which schema?" → "v2" (Robert).`) {
+			t.Fatalf("recovery note = %q", out)
+		}
+		if !strings.Contains(errorLog(t, root), "disk full") {
+			t.Fatalf("error log = %q", errorLog(t, root))
+		}
+	})
+	t.Run("a new session takes the previous one's answers", func(t *testing.T) {
+		root, cwd := t.TempDir(), repo(t)
+		asked(t, root, cwd, "s1")
+		if out := run(t, root, "SessionStart", "s2 "+cwd, fake{}); !strings.Contains(out, `Answered: "Which schema?"`) {
+			t.Fatalf("recovery note = %q", out)
+		}
+	})
+	t.Run("prompt", func(t *testing.T) {
+		root, cwd := t.TempDir(), repo(t)
+		asked(t, root, cwd, "s1")
+		if out := run(t, root, "Prompt", "s1 "+cwd, fake{}); !strings.Contains(out, `- DM-1: "Which schema?" → "v2" (Robert)`) {
+			t.Fatalf("prompt output = %q", out)
+		}
+	})
 }

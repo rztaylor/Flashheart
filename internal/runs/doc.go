@@ -5,7 +5,8 @@
 // subagents' and where a turn end or end that found the worktree changed
 // counts as one, the time windows of shell commands since checkpoint (as
 // adapters classify them; Bash and PowerShell in older tool.used), within
-// which such a change is the run's, claims and the claimant's home project, questions and their
+// which such a change is the run's, claims and the claimant's home project, the run's home project (never
+// where it only wrote to another project's ticket), questions and their
 // answers, on the board or in the session, subagents, a bounded timeline) and derives each run's state (Working,
 // Needs you, Waiting, Quiet, Ended) with why a run in Needs you needs you
 // (Reason: typed, first match wins, never words), its link to a ticket, a ticket's live

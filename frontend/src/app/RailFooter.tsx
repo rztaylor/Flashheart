@@ -1,4 +1,5 @@
 import type { ThemePreference } from "../api/info";
+import { TailText } from "../components/TailText";
 import type { ServerInfoState } from "./useServerInfo";
 
 const themes: { value: ThemePreference; label: string }[] = [
@@ -53,13 +54,9 @@ export function RailFooter({
       </fieldset>
       <dl>
         <dt className="sr-only">Board root</dt>
-        {/* Truncated from the start so the meaningful tail stays visible. */}
-        <dd
-          className="truncate text-left font-mono [direction:rtl]"
-          title={root}
-        >
-          <bdi>{root}</bdi>
-        </dd>
+        <TailText as="dd" className="font-mono">
+          {root}
+        </TailText>
         {info.status === "ready" ? (
           <>
             <dt className="sr-only">Version</dt>

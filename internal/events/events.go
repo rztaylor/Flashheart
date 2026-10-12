@@ -504,13 +504,19 @@ func (l *Log) lines(project, file string, offset int64, fn func(line []byte)) (i
 }
 
 // Prune deletes a project's event files dated more than days before now's
-// UTC date and reports how many it removed.
+// UTC date, and the answers inboxes last written on those days, and reports
+// how many files it removed. An inbox goes with its day's events (FH-82):
+// the question.answered events behind its answers have expired, so no
+// reader of the log can deliver them any more, and no prompt of its session
+// has come since it was written, or the prompt hook would have taken it;
+// the answers stay in their tickets' Notes.
 func (l *Log) Prune(project string, now time.Time, days int) (int, error) {
 	files, err := l.store.EventFiles(project)
 	if err != nil {
 		return 0, err
 	}
-	cutoff := FileName(now.UTC().AddDate(0, 0, -days))
+	day := now.UTC().AddDate(0, 0, -days)
+	cutoff := FileName(day)
 	removed := 0
 	for _, file := range files {
 		if file >= cutoff {
@@ -521,7 +527,8 @@ func (l *Log) Prune(project string, now time.Time, days int) (int, error) {
 		}
 		removed++
 	}
-	return removed, nil
+	inboxes, err := l.store.PruneInboxes(project, time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC))
+	return removed + inboxes, err
 }
 
 // Delivery is one answer waiting in a session's inbox for its next prompt
@@ -533,6 +540,49 @@ type Delivery struct {
 	Question string `json:"question"`
 	Answer   string `json:"answer"`
 	By       string `json:"by"`
+}
+
+// Inbox is the answers inbox as delivery uses it: taking a session's
+// queued answers and recording that they reached their runs. *Log is one.
+type Inbox interface {
+	TakeAnswers(project, session string) ([]Delivery, error)
+	MarkDelivered(project string, list []Delivery, at time.Time) error
+}
+
+// Deliver hands over the answers waiting for sessions (HOOK-5): it takes
+// each session's inbox, adds pending (answered questions the fold shows
+// undelivered, whose inbox may be gone), keeps each question once, and
+// records question.delivered for them all at at. It returns everything it
+// took even when an inbox or the record fails, so the caller shows them:
+// an answer must never be lost, and one whose record failed is still
+// undelivered in the log, so a later delivery shows it again.
+func Deliver(in Inbox, project string, sessions []string, pending []Delivery, at time.Time) ([]Delivery, error) {
+	var list []Delivery
+	var problems error
+	seen := map[string]bool{}
+	add := func(d Delivery) {
+		if d.ID != "" && !seen[d.ID] {
+			seen[d.ID] = true
+			list = append(list, d)
+		}
+	}
+	for _, session := range sessions {
+		if session == "" {
+			continue
+		}
+		taken, err := in.TakeAnswers(project, session)
+		problems = errors.Join(problems, err)
+		for _, d := range taken {
+			add(d)
+		}
+	}
+	for _, d := range pending {
+		add(d)
+	}
+	if len(list) > 0 {
+		problems = errors.Join(problems, in.MarkDelivered(project, list, at))
+	}
+	return list, problems
 }
 
 // QueueAnswer puts an answer in the inbox of the asking run's session.

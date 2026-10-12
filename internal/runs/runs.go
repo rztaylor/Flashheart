@@ -82,11 +82,13 @@ type Entry struct {
 
 // Run is everything the events say about one session or subagent (RUN-2).
 type Run struct {
-	ID        string
-	Agent     string
-	Kind      string
-	Parent    string
-	Children  []string
+	ID       string
+	Agent    string
+	Kind     string
+	Parent   string
+	Children []string
+	// Project is the run's home project, where it works (agent-protocol
+	// §6), never one where it only wrote to a ticket.
 	Project   string
 	Cwd       string
 	Branch    string
@@ -191,6 +193,12 @@ type Question struct {
 // Answered reports whether a human answered the question.
 func (q Question) Answered() bool { return !q.AnsweredAt.IsZero() }
 
+// Delivery is the question's board answer as delivery hands it over, the
+// same as the answers inbox carries it (HOOK-5).
+func (q Question) Delivery() events.Delivery {
+	return events.Delivery{ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Answer: q.Answer, By: q.AnsweredBy}
+}
+
 // Open reports whether the question still needs the human: unanswered, or
 // answered but not yet delivered to the run (agent-protocol §4).
 func (q Question) Open() bool { return !q.Delivered }
@@ -279,6 +287,15 @@ func (s *Set) run(e events.Event) *Run {
 	return r
 }
 
+// recordedElsewhere lists the kinds a run records in a ticket's project,
+// which may be another project than the one it works in (agent-protocol
+// §6); it records every other kind at home.
+var recordedElsewhere = map[events.Kind]bool{
+	events.Claim: true, events.Release: true, events.Checkpoint: true,
+	events.TicketMoved: true, events.TicketUpdated: true, events.TicketCreated: true,
+	events.ReviewWritten: true, events.AttachmentAdded: true,
+}
+
 // Apply folds one event into the set. Unknown or malformed data is ignored.
 func (s *Set) Apply(e events.Event) {
 	// The human's board writes have no run (agent-protocol §3).
@@ -292,6 +309,12 @@ func (s *Set) Apply(e events.Event) {
 		return
 	}
 	r := s.run(e)
+	// A run's Project is its home: the project of its latest event recorded
+	// at home or claim naming it (below); a run seen only through a ticket's
+	// events elsewhere keeps the project it was first seen in (FH-32).
+	if !recordedElsewhere[e.Kind] && e.Project != "" {
+		r.Project = e.Project
+	}
 	// previous is the run's last event before this one, where a shell
 	// command's window starts.
 	previous := r.LastActivity
@@ -445,6 +468,9 @@ func (s *Set) Apply(e events.Event) {
 		var data events.TicketData
 		_ = e.Decode(&data)
 		entry.Ticket = data.Ticket
+		if e.Kind == events.Claim && data.Home != "" {
+			r.Project = data.Home
+		}
 		if e.Kind == events.TicketMoved {
 			entry.Detail = data.To
 		}
@@ -667,6 +693,18 @@ func (s *Set) PendingAnswers(session string) []Question {
 	}
 	slices.SortStableFunc(pending, func(a, b Question) int { return a.AnsweredAt.Compare(b.AnsweredAt) })
 	return pending
+}
+
+// PendingDeliveries is PendingAnswers of each session, as the deliveries
+// events.Deliver hands over with what it takes from the inboxes.
+func (s *Set) PendingDeliveries(sessions ...string) []events.Delivery {
+	var list []events.Delivery
+	for _, session := range sessions {
+		for _, q := range s.PendingAnswers(session) {
+			list = append(list, q.Delivery())
+		}
+	}
+	return list
 }
 
 // family is a run's session and the session's subagents.

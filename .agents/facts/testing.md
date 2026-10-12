@@ -10,15 +10,36 @@
   `-race`, `go vet ./...`, and `gofmt -l cmd internal` must be empty.
 - Frontend: `npm --prefix frontend run lint`, `npm --prefix frontend test`,
   `npm --prefix frontend run build`.
+- Frontend unit tests run as two Vitest projects (D42): `unit` in node
+  (view models, static markup with `renderToStaticMarkup`) and `dom` in
+  happy-dom for files named `*.dom.test.ts(x)`, which use Testing Library
+  (`render`, `renderHook`, `user-event`) to press keys, tab, click and
+  check `document.activeElement` (Popover, Dialog, Tabs, `useResource`,
+  `useRevision`). `src/test/dom-setup.ts` unmounts after each test.
+  A hook test drives time with Vitest's fake timers and a fake fetcher or
+  loader whose promises the test settles.
 - Browser: `scripts/e2e.sh` builds the binary and runs Playwright with
   `PLAYWRIGHT_BROWSERS_PATH=$PWD/.cache/ms-playwright` (pinned Chromium is
   downloaded once) for lifecycle, screenshots (1280/1920, light/dark, in
   `.cache/playwright-screenshots/`) and axe-core; required for visible UI
   changes. It drives the real binary with `PATH=/nonexistent` so the
   manual-URL path opens the page, against a copy of `testdata/boards/sample`.
+  Specs share `open`, `card`, `column`, `expectConnected`,
+  `expectNoAxeViolations` and `shot` from `frontend/e2e/support.mjs`
+  rather than redefining them.
+- Visual regression (D42): `scripts/e2e-visual.sh` compares the stable
+  screenshot set (`frontend/e2e/visual.spec.mjs`: board, panel, table,
+  workstreams, Overview and ticket page over the demo board, at a fixed
+  clock and file times) with the baselines in
+  `frontend/e2e/__screenshots__/`, in the Playwright Docker image matching
+  the pinned `@playwright/test`, on amd64; `scripts/e2e.sh` skips the set.
+  After an intended visual change, run
+  `scripts/e2e-visual.sh --update-snapshots`, look at the changed PNGs and
+  commit them with the change. Diffs of a failure are in
+  `.cache/playwright-results` (a CI artifact).
 - CI runs `scripts/check.sh` on ubuntu-latest and macos-latest and
-  `scripts/e2e.sh` on ubuntu-latest for every pull request and push to
-  `main`.
+  `scripts/e2e.sh` then `scripts/e2e-visual.sh` on ubuntu-latest for every
+  pull request and push to `main`.
 - Tests never touch the real board root or real agent configuration: use
   temporary directories, `testdata/boards/` copies, and fixture config files.
 - Hook adapters are tested against recorded, scrubbed payloads in
