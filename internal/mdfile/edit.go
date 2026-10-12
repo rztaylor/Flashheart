@@ -229,10 +229,11 @@ func SetCheckbox(data []byte, sectionName string, index int, checked bool) ([]by
 }
 
 // ReplaceSection replaces the content of a level-2 section, adding the
-// section at the end of the file when it is missing.
+// section at the end of the file when it is missing. The content stays
+// inside the section (SectionSafe).
 func ReplaceSection(data []byte, sectionName, content string) ([]byte, error) {
 	f := split(data)
-	content = strings.Trim(strings.ReplaceAll(content, "\r\n", "\n"), "\n") + "\n"
+	content = SectionSafe(strings.Trim(strings.ReplaceAll(content, "\r\n", "\n"), "\n")) + "\n"
 	start, end, ok := f.section(sectionName)
 	if !ok {
 		f.lines = appendSection(f.lines, sectionName, content)
@@ -253,7 +254,7 @@ func ReplaceSection(data []byte, sectionName, content string) ([]byte, error) {
 // section when it is missing.
 func AppendToSection(data []byte, sectionName, text string) ([]byte, error) {
 	f := split(data)
-	text = strings.Trim(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+	text = SectionSafe(strings.Trim(strings.ReplaceAll(text, "\r\n", "\n"), "\n"))
 	start, end, ok := f.section(sectionName)
 	if !ok {
 		f.lines = appendSection(f.lines, sectionName, text+"\n")
@@ -264,6 +265,46 @@ func AppendToSection(data []byte, sectionName, text string) ([]byte, error) {
 		return ReplaceSection(data, sectionName, text)
 	}
 	return ReplaceSection(data, sectionName, existing+"\n\n"+text)
+}
+
+// SectionSafe keeps written content inside its section: a level-1 or -2
+// heading outside code fences, which would end the section, becomes a
+// level-3 one, and a code fence left open, which would hide the headings
+// after it, is closed.
+func SectionSafe(content string) string {
+	var out strings.Builder
+	for _, line := range scan(content) {
+		text := line.text
+		if !line.inFence {
+			if match := heading.FindStringSubmatch(strings.TrimRight(text, "\n")); match != nil && len(match[1]) <= 2 {
+				text = strings.Repeat("#", 3-len(match[1])) + strings.TrimLeft(text, " ")
+			}
+		}
+		out.WriteString(text)
+	}
+	if marker := openFence(content); marker != "" {
+		out.WriteString("\n" + marker)
+	}
+	return out.String()
+}
+
+// openFence is the marker of a code fence content leaves open, or "".
+func openFence(content string) string {
+	fence := ""
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimLeft(line, " ")
+		if len(line)-len(trimmed) > 3 || len(trimmed) < 3 {
+			continue
+		}
+		switch marker := trimmed[:3]; {
+		case marker != "```" && marker != "~~~":
+		case fence == "":
+			fence = marker
+		case fence == marker:
+			fence = ""
+		}
+	}
+	return fence
 }
 
 func placeholder(text string) bool {

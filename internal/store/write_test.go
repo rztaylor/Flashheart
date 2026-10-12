@@ -38,7 +38,7 @@ func TestUpdateTicketWritesStampsAndChecksTheHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	next, err := s.UpdateTicket("alpha", "AL-4", hash, setStatus("in-progress"))
+	next, err := s.UpdateTicket("alpha", "AL-4", Unchanged(hash), setStatus("in-progress"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestUpdateTicketWritesStampsAndChecksTheHash(t *testing.T) {
 	}
 
 	// The old hash is now stale: the write is refused with the current file.
-	_, err = s.UpdateTicket("alpha", "AL-4", hash, setStatus("done"))
+	_, err = s.UpdateTicket("alpha", "AL-4", Unchanged(hash), setStatus("done"))
 	var conflict *ConflictError
 	if !errors.As(err, &conflict) || !errors.Is(err, ErrConflict) || conflict.Hash != next || string(conflict.Current) != string(written) {
 		t.Fatalf("stale write error = %v", err)
@@ -75,7 +75,7 @@ func TestUnchangedEditWritesNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	before, _ := os.ReadFile(name)
-	hash, err := s.UpdateTicket("alpha", "AL-3", "", setStatus("in-progress"))
+	hash, err := s.UpdateTicket("alpha", "AL-3", Merge, setStatus("in-progress"))
 	if err != nil || hash != Hash(before) {
 		t.Fatalf("UpdateTicket = %s, %v", hash, err)
 	}
@@ -91,16 +91,16 @@ func TestWritesRefuseUnsafeNames(t *testing.T) {
 
 	s, _ := writable(t)
 	for _, call := range []func() error{
-		func() error { _, err := s.UpdateTicket("../alpha", "AL-1", "", setStatus("done")); return err },
-		func() error { _, err := s.UpdateTicket("alpha", "../AL-1", "", setStatus("done")); return err },
-		func() error { _, err := s.UpdateWorkstream("alpha", "../x", "", setStatus("done")); return err },
+		func() error { _, err := s.UpdateTicket("../alpha", "AL-1", Merge, setStatus("done")); return err },
+		func() error { _, err := s.UpdateTicket("alpha", "../AL-1", Merge, setStatus("done")); return err },
+		func() error { _, err := s.UpdateWorkstream("alpha", "../x", Merge, setStatus("done")); return err },
 		func() error { return s.Archive("alpha", "AL-1/..") },
 	} {
 		if err := call(); !errors.Is(err, ErrInvalidName) {
 			t.Errorf("error = %v, want ErrInvalidName", err)
 		}
 	}
-	if _, err := s.UpdateTicket("alpha", "AL-99", "", setStatus("done")); !errors.Is(err, ErrNotFound) {
+	if _, err := s.UpdateTicket("alpha", "AL-99", Merge, setStatus("done")); !errors.Is(err, ErrNotFound) {
 		t.Errorf("missing ticket error = %v", err)
 	}
 }
@@ -227,7 +227,7 @@ func TestWorkstreamOrderKeepsBlockStyle(t *testing.T) {
 	t.Parallel()
 
 	s, root := writable(t)
-	_, err := s.UpdateWorkstream("alpha", "board-ui", "", func(data []byte) ([]byte, error) {
+	_, err := s.UpdateWorkstream("alpha", "board-ui", Merge, func(data []byte) ([]byte, error) {
 		return mdfile.SetList(data, "tickets", []string{"AL-3", "AL-2", "AL-4"})
 	})
 	if err != nil {
@@ -276,7 +276,7 @@ func TestHelperProcess(t *testing.T) {
 	}
 	switch mode {
 	case "update":
-		_, err = s.UpdateTicket("alpha", "AL-4", args[2], func(data []byte) ([]byte, error) {
+		_, err = s.UpdateTicket("alpha", "AL-4", Unchanged(args[2]), func(data []byte) ([]byte, error) {
 			time.Sleep(20 * time.Millisecond) // hold the lock while the other waits
 			return mdfile.SetScalar(data, "branch", args[3])
 		})
@@ -446,7 +446,7 @@ func TestUpdateReviewChecksTheHash(t *testing.T) {
 	name := filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "review.md")
 	before, _ := os.ReadFile(name)
 	tick := func(data []byte) ([]byte, error) { return append(data, "x\n"...), nil }
-	hash, err := s.UpdateReview("alpha", "AL-2", Hash(before), tick)
+	hash, err := s.UpdateReview("alpha", "AL-2", Unchanged(Hash(before)), tick)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,10 +455,10 @@ func TestUpdateReviewChecksTheHash(t *testing.T) {
 		t.Fatalf("review = %q", after)
 	}
 	var conflict *ConflictError
-	if _, err := s.UpdateReview("alpha", "AL-2", Hash(before), tick); !errors.As(err, &conflict) {
+	if _, err := s.UpdateReview("alpha", "AL-2", Unchanged(Hash(before)), tick); !errors.As(err, &conflict) {
 		t.Errorf("stale hash: %v", err)
 	}
-	if _, err := s.UpdateReview("alpha", "AL-3", "", tick); !errors.Is(err, ErrNotFound) {
+	if _, err := s.UpdateReview("alpha", "AL-3", Merge, tick); !errors.Is(err, ErrNotFound) {
 		t.Errorf("no review: %v", err)
 	}
 }
@@ -476,7 +476,7 @@ func TestWroteLastTellsOwnWritesFromOthers(t *testing.T) {
 	if s.WroteLast(name, data) {
 		t.Fatal("a file this store never wrote counts as its own")
 	}
-	if _, err := s.UpdateTicket("alpha", "AL-2", hash, func(data []byte) ([]byte, error) { return append(data, "More.\n"...), nil }); err != nil {
+	if _, err := s.UpdateTicket("alpha", "AL-2", Unchanged(hash), func(data []byte) ([]byte, error) { return append(data, "More.\n"...), nil }); err != nil {
 		t.Fatal(err)
 	}
 	data, _, _ = s.ReadTicket("alpha", "AL-2")

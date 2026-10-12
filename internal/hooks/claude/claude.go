@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -16,8 +17,6 @@ const Agent = "claude"
 
 // Adapter maps Claude Code hook payloads.
 type Adapter struct{}
-
-var safeID = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
 
 // payload holds the fields Flashheart reads. Prompts, messages, tool
 // responses and transcripts are never decoded beyond what is listed here,
@@ -75,17 +74,19 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 	if err := json.Unmarshal(data, &p); err != nil {
 		return hooks.Input{}, fmt.Errorf("payload is not JSON: %w", err)
 	}
-	if !safeID.MatchString(p.SessionID) {
+	sessionRun, err := events.SessionRun(Agent, p.SessionID)
+	if err != nil {
 		return hooks.Input{}, errors.New("payload has no usable session_id")
 	}
-	if p.AgentID != "" && !safeID.MatchString(p.AgentID) {
-		return hooks.Input{}, errors.New("payload has an unusable agent_id")
-	}
-	session := Agent + ":" + p.SessionID
+	session := sessionRun.String()
 	// Tool and permission events from inside a subagent carry its agent_id.
 	actor := session
 	if p.AgentID != "" {
-		actor = session + "/" + p.AgentID
+		subagent, err := sessionRun.Subagent(p.AgentID)
+		if err != nil {
+			return hooks.Input{}, errors.New("payload has an unusable agent_id")
+		}
+		actor = subagent.String()
 	}
 	input := hooks.Input{Cwd: p.Cwd}
 	add := func(run, kind string, data any) {
@@ -103,7 +104,7 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		input.Reply = stamp(p.ToolName, p.ToolInput, actor)
 	case "PostToolUse", "PostToolUseFailure":
 		ok := event == "PostToolUse"
-		add(actor, events.ToolUsed, events.ToolData{Tool: p.ToolName, OK: ok, Path: editPath(p.ToolName, p.ToolInput)})
+		add(actor, events.ToolUsed, toolResult(p.ToolName, ok, p.ToolInput))
 		// A checkpoint settles the session's edits, so the paths it recorded
 		// may be recorded again; a failed one may still have been written,
 		// and recording a path twice is harmless.
@@ -188,6 +189,20 @@ func notificationType(value string) string {
 		return value
 	}
 	return "other"
+}
+
+// shellTools are Claude Code's shell command tools, whose edits name no
+// path.
+var shellTools = []string{"Bash", "PowerShell"}
+
+// toolResult classifies a tool result for hooks: a shell command, or an
+// edit and the file it changed.
+func toolResult(tool string, ok bool, input json.RawMessage) events.ToolData {
+	data := events.ToolData{Tool: tool, OK: ok, Shell: slices.Contains(shellTools, tool)}
+	if path := editPath(tool, input); path != "" {
+		data.Paths = []string{path}
+	}
+	return data
 }
 
 // editPath returns the file an edit tool changed, as given (absolute).

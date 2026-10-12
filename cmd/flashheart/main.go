@@ -29,7 +29,7 @@ func main() {
 		OpenServeLog:    func(root string) io.Writer { return logfile.ServeLog(root) },
 		Stdin:           os.Stdin,
 		Getwd:           os.Getwd,
-		FindClaude:      setup.FindClaude,
+		FindCLI:         func(agent setup.Agent, home string) string { return agent.FindCLI(home) },
 		OpenHandshake: func() (cli.Handshake, error) {
 			return background.OpenHandshake()
 		},

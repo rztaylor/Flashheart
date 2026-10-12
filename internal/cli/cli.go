@@ -18,8 +18,8 @@ import (
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/doctor"
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/health"
 	"github.com/rztaylor/flashheart/internal/hooks"
-	"github.com/rztaylor/flashheart/internal/hooks/claude"
 	"github.com/rztaylor/flashheart/internal/logfile"
 	"github.com/rztaylor/flashheart/internal/mcpserver"
 	"github.com/rztaylor/flashheart/internal/migrate"
@@ -56,8 +56,9 @@ type Dependencies struct {
 	Stdin io.Reader
 	// Getwd returns the process's working directory.
 	Getwd func() (string, error)
-	// FindClaude locates the claude CLI that registers MCP servers.
-	FindClaude func(home string) string
+	// FindCLI locates an agent's own command-line program, which setup
+	// runs (setup.Agent.FindCLI); nil finds none.
+	FindCLI func(agent setup.Agent, home string) string
 	// RunCommand runs an external command for setup; nil runs it directly.
 	RunCommand func(name string, args ...string) ([]byte, error)
 }
@@ -450,9 +451,6 @@ func serveBackgroundChild(ctx context.Context, env *environment, options app.Opt
 	return err
 }
 
-// hookAdapters are the agents whose hook payloads Flashheart reads (HOOK-7).
-var hookAdapters = map[string]hooks.Adapter{claude.Agent: claude.Adapter{}}
-
 // runHook records one hook event. It always succeeds: a hook must never
 // break the agent's session (HOOK-1), so problems are logged and reported
 // on stderr only, which agents do not show the model.
@@ -464,14 +462,15 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	}
 	args := flags.Args()
 	problem := ""
-	var adapter hooks.Adapter
+	var registered agent
 	switch {
 	case len(args) != 2:
 		problem = "usage: flashheart hook <agent> <event>"
-	case hookAdapters[args[0]] == nil:
-		problem = fmt.Sprintf("unknown agent %q (known: %s)", args[0], claude.Agent)
 	default:
-		adapter = hookAdapters[args[0]]
+		var found bool
+		if registered, found = findAgent(args[0]); !found {
+			problem = fmt.Sprintf("unknown agent %q (known: %s)", args[0], knownAgents())
+		}
 	}
 	if problem != "" {
 		reportHookProblem(env, globals, problem, args)
@@ -481,14 +480,15 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	if stdin == nil {
 		stdin = strings.NewReader("")
 	}
-	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: adapter, RefreshSkill: skillRefresher(args[0], env.deps)})
+	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: registered.hooks, RefreshSkill: skillRefresher(registered.setup, env.deps)})
 	return nil
 }
 
 // skillRefresher keeps the agent's installed protocol skill current at
-// session start (agent-protocol §5.4); only Claude Code has one.
-func skillRefresher(agent string, deps Dependencies) func() (bool, error) {
-	if agent != claude.Agent || deps.HomeDir == nil {
+// session start (agent-protocol §5.4), for agents that have one.
+func skillRefresher(a setup.Agent, deps Dependencies) func() (bool, error) {
+	refresher, ok := a.(setup.SkillRefresher)
+	if !ok || deps.HomeDir == nil {
 		return nil
 	}
 	return func() (bool, error) {
@@ -496,7 +496,7 @@ func skillRefresher(agent string, deps Dependencies) func() (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		return setup.RefreshSkill(home)
+		return refresher.RefreshSkill(home)
 	}
 }
 
@@ -580,27 +580,28 @@ func runMCP(ctx context.Context, env *environment, flags *flag.FlagSet, globals 
 // runSetup shows, or with --write applies, an agent's configuration
 // (SET-1–SET-3, D9).
 func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
+	registered, found := findAgent(flags.Arg(0))
 	switch {
 	case flags.NArg() == 0:
-		return usageError{"setup needs an agent: flashheart setup claude"}
+		return usageError{fmt.Sprintf("setup needs an agent: flashheart setup <agent> (known: %s)", knownAgents())}
 	case flags.NArg() > 1:
 		return usageError{"setup takes one agent"}
 	case flags.Arg(0) == "codex":
 		return errNotYetAvailable
-	case flags.Arg(0) != "claude":
-		return usageError{fmt.Sprintf("unknown agent %q (known: claude)", flags.Arg(0))}
+	case !found:
+		return usageError{fmt.Sprintf("unknown agent %q (known: %s)", flags.Arg(0), knownAgents())}
 	}
 	root, err := resolveRoot(globals, env.deps)
 	if err != nil {
 		return err
 	}
-	options, err := claudeOptions(env, root)
+	options, err := agentOptions(env, root, registered.setup)
 	if err != nil {
 		return err
 	}
-	plan := setup.Install
+	plan := registered.setup.Install
 	if env.setup.uninstall {
-		plan = setup.Uninstall
+		plan = registered.setup.Uninstall
 	}
 	changes, err := plan(options)
 	if err != nil {
@@ -615,14 +616,14 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 		if env.setup.uninstall {
 			again = "--uninstall --write"
 		}
-		fmt.Fprintf(env.stdout, "\nNothing was changed. Run flashheart setup claude %s to apply these changes.\n", again)
+		fmt.Fprintf(env.stdout, "\nNothing was changed. Run flashheart setup %s %s to apply these changes.\n", registered.setup.Name(), again)
 	}
 	return nil
 }
 
-// claudeOptions describe this machine's Claude Code configuration for the
-// running binary and root (SET-3).
-func claudeOptions(env *environment, root string) (setup.Options, error) {
+// agentOptions describe this machine for an agent's configuration, for
+// the running binary and root (SET-3).
+func agentOptions(env *environment, root string, a setup.Agent) (setup.Options, error) {
 	if env.deps.HomeDir == nil || env.deps.Executable == nil {
 		return setup.Options{}, errors.New("setup needs the home directory and the flashheart binary's path")
 	}
@@ -638,8 +639,8 @@ func claudeOptions(env *environment, root string) (setup.Options, error) {
 	if root != filepath.Join(home, "reports", "Kanban") {
 		options.Root = root
 	}
-	if env.deps.FindClaude != nil {
-		options.Claude = env.deps.FindClaude(home)
+	if env.deps.FindCLI != nil {
+		options.CLI = env.deps.FindCLI(a, home)
 	}
 	return options, nil
 }
@@ -652,11 +653,18 @@ func runDoctor(_ context.Context, env *environment, flags *flag.FlagSet, globals
 	if err != nil {
 		return err
 	}
-	options, err := claudeOptions(env, root)
-	if err != nil {
-		return err
+	checks := doctor.Options{Root: root}
+	for _, registered := range agents {
+		options, err := agentOptions(env, root, registered.setup)
+		if err != nil {
+			return err
+		}
+		checks.Agents = append(checks.Agents, doctor.Agent{
+			Title:    registered.setup.Title(),
+			Diagnose: func() []health.Finding { return registered.setup.Diagnose(options) },
+		})
 	}
-	switch problems := doctor.Render(env.stdout, doctor.Check(doctor.Options{Root: root, Claude: options})); problems {
+	switch problems := doctor.Render(env.stdout, doctor.Check(checks)); problems {
 	case 0:
 		return nil
 	case 1:

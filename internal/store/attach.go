@@ -269,9 +269,9 @@ func (s *Store) WriteReview(project, id string, data []byte) error {
 }
 
 // UpdateReview applies edit to a ticket's review.md under the project lock,
-// with the content-hash precondition of UpdateTicket (REV-3: ticking How to
-// Verify steps). A ticket with no review is ErrNotFound.
-func (s *Store) UpdateReview(project, id, base string, edit Edit) (string, error) {
+// once pre holds, as UpdateTicket does (REV-3: ticking How to Verify
+// steps). A ticket with no review is ErrNotFound.
+func (s *Store) UpdateReview(project, id string, pre Precondition, edit Edit) (string, error) {
 	if err := s.checkTicket(project, id); err != nil {
 		return "", err
 	}
@@ -288,5 +288,5 @@ func (s *Store) UpdateReview(project, id, base string, edit Edit) (string, error
 	if !s.Exists(name) {
 		return "", fmt.Errorf("review of %s: %w", id, ErrNotFound)
 	}
-	return s.updateLocked(name, base, edit, false)
+	return s.update(name, pre, edit, false)
 }

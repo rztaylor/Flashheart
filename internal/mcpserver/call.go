@@ -184,25 +184,25 @@ const fullSession = 16
 // connection's caller.
 func (c *call) attribute(inv *invocation, runArg string) error {
 	if runArg != "" {
-		session, agent, _ := strings.Cut(runArg, "/")
+		arg := events.RunOf(runArg)
 		var matches []string
 		for _, r := range c.set.Runs() {
 			if r.ID == runArg {
 				c.run = r.ID
 				return nil
 			}
-			rSession, rAgent, _ := strings.Cut(r.ID, "/")
-			if strings.HasPrefix(rSession, session) && rAgent == agent {
+			id := events.RunOf(r.ID)
+			if strings.HasPrefix(id.Session().String(), arg.Session().String()) && id.SubagentID() == arg.SubagentID() {
 				matches = append(matches, r.ID)
 			}
 		}
-		_, sessionID, _ := strings.Cut(session, ":")
+		_, invalid := events.ParseRunID(runArg)
 		switch {
 		case len(matches) == 1:
 			c.run = matches[0]
 		case len(matches) > 1:
 			return fail("ambiguous_run", "pass your full run id, one of "+strings.Join(matches, ", "), "run %q names %d runs", runArg, len(matches))
-		case len(sessionID) < fullSession:
+		case invalid != nil || len(arg.SessionID()) < fullSession:
 			return fail("invalid_input", "pass the run id from your recovery note, or leave run out", "no run matches %q", runArg)
 		default:
 			// A full id not seen yet: a session whose hooks have not reported.
@@ -308,8 +308,7 @@ func (c *call) runLabel() string {
 
 // session is the caller's top-level session run.
 func (c *call) session() string {
-	session, _, _ := strings.Cut(c.run, "/")
-	return session
+	return events.RunOf(c.run).Session().String()
 }
 
 // load reads projects in full, with the projects their tickets depend on
