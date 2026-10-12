@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/scrub"
 )
 
@@ -50,17 +51,7 @@ type PreviousRun struct {
 
 // ShortRun shortens a run id to the agent and the first 8 characters of
 // the session id (agent-protocol §2).
-func ShortRun(id string) string {
-	agent, session, found := strings.Cut(id, ":")
-	if !found {
-		return id
-	}
-	session, _, _ = strings.Cut(session, "/")
-	if len(session) > 8 {
-		session = session[:8]
-	}
-	return agent + ":" + session
-}
+func ShortRun(id string) string { return events.RunOf(id).Short() }
 
 // RecoveryNote renders the note returned at session start, or "" when there
 // is no linked ticket and no earlier run that left edits. Ticket text is

@@ -45,7 +45,7 @@ func newMachine(t *testing.T) *machine {
 	m.write(".claude/skills/kanban-tracker/SKILL.md", "---\nname: kanban-tracker\n---\n# Kanban\n")
 	clock := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
 	m.options = Options{
-		Home: home, Binary: "/opt/Flash Heart/bin/flashheart", Claude: "/usr/local/bin/claude",
+		Home: home, Binary: "/opt/Flash Heart/bin/flashheart", CLI: "/usr/local/bin/claude",
 		Now: func() time.Time { clock = clock.Add(time.Second); return clock },
 		Run: func(name string, args ...string) ([]byte, error) {
 			// Mimic the claude CLI's user-scope MCP registry.
@@ -114,9 +114,9 @@ func (m *machine) plan(install bool) *Plan {
 	var plan *Plan
 	var err error
 	if install {
-		plan, err = Install(m.options)
+		plan, err = Claude{}.Install(m.options)
 	} else {
-		plan, err = Uninstall(m.options)
+		plan, err = Claude{}.Uninstall(m.options)
 	}
 	if err != nil {
 		m.t.Fatal(err)
@@ -304,7 +304,7 @@ func TestAnUnreadableClaudeJSONIsReported(t *testing.T) {
 	t.Parallel()
 
 	m := newMachine(t)
-	m.options.Claude = ""
+	m.options.CLI = ""
 	m.write(".claude.json", "{ not json")
 	if out := render(m.plan(true)); !strings.Contains(out, "Could not read ~/.claude.json") {
 		t.Fatalf("plan:\n%s", out)
@@ -319,7 +319,7 @@ func TestWithoutTheClaudeCLITheCommandsArePrinted(t *testing.T) {
 	t.Parallel()
 
 	m := newMachine(t)
-	m.options.Claude = ""
+	m.options.CLI = ""
 	out := m.apply(true)
 	if !strings.Contains(out, "The claude command was not found, so register the MCP server yourself:\n  claude mcp add-json --scope user flashheart") || len(m.ran) > 0 {
 		t.Fatalf("output:\n%s", out)
@@ -342,7 +342,7 @@ func TestBrokenSettingsAreRefused(t *testing.T) {
 
 	m := newMachine(t)
 	m.write(".claude/settings.json", "{ not json")
-	if _, err := Install(m.options); err == nil || !strings.Contains(err.Error(), "settings.json is not a JSON object") {
+	if _, err := (Claude{}).Install(m.options); err == nil || !strings.Contains(err.Error(), "settings.json is not a JSON object") {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -401,7 +401,7 @@ func TestHooksSetupCannotReadAreRefused(t *testing.T) {
 	} {
 		m := newMachine(t)
 		m.write(".claude/settings.json", settings)
-		if _, err := Install(m.options); err == nil || !strings.Contains(err.Error(), "hooks") {
+		if _, err := (Claude{}).Install(m.options); err == nil || !strings.Contains(err.Error(), "hooks") {
 			t.Errorf("%s: err = %v", name, err)
 		}
 	}

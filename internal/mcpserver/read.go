@@ -232,10 +232,7 @@ func bullets(items []string, limit int, text func(string) string) []string {
 
 func ptr[T any](v T) *T { return &v }
 
-func agentOf(run string) string {
-	agent, _, _ := strings.Cut(run, ":")
-	return agent
-}
+func agentOf(run string) string { return events.RunOf(run).Agent() }
 
 // ListTicketsInput is list_tickets' input (MCP-7).
 type ListTicketsInput struct {

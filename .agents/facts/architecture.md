@@ -43,13 +43,21 @@ Intended layout (packages are created when they get real content):
 - `internal/await`: `flashheart await`: wait for one question's answer in
   its session's inbox, deliver it, notice delivery elsewhere or an answer
   in the session (from the `runs` fold), time out.
-- `internal/setup`: agent configuration diff, write with backup, uninstall,
-  skill/AGENTS.md rendering, and refreshing an installed Claude skill (called
-  by the session-start hook through `cli`; `hooks` never imports `setup`).
-- `internal/doctor`: `flashheart doctor` (SET-4): root checks, each
-  agent's configuration through `setup.Diagnose`, recent hook errors, the
+- `internal/setup`: an agent-neutral plan engine (`plan.go`: diff, write
+  with backup, uninstall moves, commands through the agent's CLI) and the
+  `setup.Agent` interface (install, uninstall, diagnose, find its CLI;
+  optional `SkillRefresher`), implemented per agent (`claude.go`; refreshing
+  an installed Claude skill is called by the session-start hook through
+  `cli`; `hooks` never imports `setup`).
+- `internal/health`: a check's `Finding` and `Level`, shared by setup's
+  diagnoses and doctor.
+- `internal/doctor`: `flashheart doctor` (SET-4): root checks, a section per
+  agent it is given (each agent's own checks), recent hook errors, the
   report. Reads only (a probe file proves the root writable only where
   there is no access(2)).
+- Agents are listed once, in `cli`'s registry (`internal/cli/agents.go`):
+  each pairs its hook adapter with its `setup.Agent`, and hook, setup,
+  doctor and their usage errors read it.
 - `internal/references`: serve's copying of files that directly edited
   tickets and reviews link to (REV-5), after each new snapshot, through
   `store`; link syntax is `board.RewriteLocalLinks`, shared with the MCP
