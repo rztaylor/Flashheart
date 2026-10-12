@@ -10,6 +10,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SearchField } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { StatusPill, Tag } from "../../components/Pill";
+import { HeadCell, Row, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
 import { filterArchived } from "../../model/archive";
 import { priorityLabel } from "../../model/status";
@@ -126,92 +127,88 @@ export function ArchiveView({
       ) : null}
       {shown.length > 0 ? (
         <div className="min-h-0 flex-1 overflow-auto px-4 pt-3 pb-10 md:px-6">
-          <table className="w-full border-separate border-spacing-0 overflow-hidden rounded-panel border border-rule bg-card text-sm shadow-card">
-            <caption className="sr-only">Archived tickets</caption>
-            <thead className="sticky top-0 z-10 bg-column">
-              <tr className="[&>th]:border-b [&>th]:border-rule [&>th]:px-3 [&>th]:py-2.5 [&>th]:text-left [&>th]:heading-cut">
-                <th scope="col">Ticket</th>
-                <th scope="col">Restores to</th>
-                <th scope="col">Type</th>
-                <th scope="col">Priority</th>
-                <th scope="col">Archived</th>
-                <th scope="col">
+          <Table
+            caption="Archived tickets"
+            head={
+              <>
+                <HeadCell>Ticket</HeadCell>
+                <HeadCell>Restores to</HeadCell>
+                <HeadCell>Type</HeadCell>
+                <HeadCell>Priority</HeadCell>
+                <HeadCell>Archived</HeadCell>
+                <HeadCell>
                   <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-well [&>td]:border-b [&>td]:border-rule last:[&>td]:border-b-0"
+                </HeadCell>
+              </>
+            }
+          >
+            {shown.map((item) => (
+              <Row key={item.id}>
+                <td className="max-w-[28rem] px-3 py-2">
+                  <span className="flex flex-col">
+                    <span className="font-semibold text-ink">
+                      {item.title || item.id}
+                    </span>
+                    <span className="flex items-center gap-2 text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
+                      <TicketLink id={item.id} className="hover:text-ink" />
+                      {item.hasReview ? (
+                        <span className="flex items-center gap-0.5 font-normal">
+                          <Icon name="review" size={11} />
+                          review
+                        </span>
+                      ) : null}
+                      {item.attachments > 0 ? (
+                        <span className="flex items-center gap-0.5 font-normal">
+                          <Icon name="attachment" size={11} />
+                          {item.attachments}{" "}
+                          {item.attachments === 1 ? "file" : "files"}
+                        </span>
+                      ) : null}
+                    </span>
+                  </span>
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <StatusPill column={item.column} rejected={item.rejected} />
+                </td>
+                <td className="px-3 py-2">
+                  {item.type ? <Tag>{item.type}</Tag> : null}
+                </td>
+                <td className="px-3 py-2">
+                  {item.priority ? (
+                    <Tag strong={item.priority === "high"}>
+                      {priorityLabel(item.priority)}
+                    </Tag>
+                  ) : null}
+                </td>
+                <td
+                  className="px-3 py-2 whitespace-nowrap text-ink-muted"
+                  title={absoluteTime(item.archived)}
                 >
-                  <td className="max-w-[28rem] px-3 py-2">
-                    <span className="flex flex-col">
-                      <span className="font-semibold text-ink">
-                        {item.title || item.id}
-                      </span>
-                      <span className="flex items-center gap-2 text-2xs font-semibold tracking-[0.02em] tabular-nums text-ink-muted">
-                        <TicketLink id={item.id} className="hover:text-ink" />
-                        {item.hasReview ? (
-                          <span className="flex items-center gap-0.5 font-normal">
-                            <Icon name="review" size={11} />
-                            review
-                          </span>
-                        ) : null}
-                        {item.attachments > 0 ? (
-                          <span className="flex items-center gap-0.5 font-normal">
-                            <Icon name="attachment" size={11} />
-                            {item.attachments}{" "}
-                            {item.attachments === 1 ? "file" : "files"}
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <StatusPill column={item.column} rejected={item.rejected} />
-                  </td>
-                  <td className="px-3 py-2">
-                    {item.type ? <Tag>{item.type}</Tag> : null}
-                  </td>
-                  <td className="px-3 py-2">
-                    {item.priority ? (
-                      <Tag strong={item.priority === "high"}>
-                        {priorityLabel(item.priority)}
-                      </Tag>
-                    ) : null}
-                  </td>
-                  <td
-                    className="px-3 py-2 whitespace-nowrap text-ink-muted"
-                    title={absoluteTime(item.archived)}
-                  >
-                    {runningTime(item.archived)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className="flex items-center justify-end gap-1">
-                      <Button
-                        className="h-8 py-0 text-xs"
-                        aria-label={`Restore ${item.id}`}
-                        onClick={() => void restore(item)}
-                      >
-                        <Icon name="undo" size={14} />
-                        Restore
-                      </Button>
-                      <Button
-                        variant="danger-quiet"
-                        className="h-8 py-0 text-xs"
-                        aria-label={`Delete permanently ${item.id}`}
-                        onClick={() => setDeleting(item.id)}
-                      >
-                        Delete permanently
-                      </Button>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {runningTime(item.archived)}
+                </td>
+                <td className="px-3 py-2">
+                  <span className="flex items-center justify-end gap-1">
+                    <Button
+                      className="h-8 py-0 text-xs"
+                      aria-label={`Restore ${item.id}`}
+                      onClick={() => void restore(item)}
+                    >
+                      <Icon name="undo" size={14} />
+                      Restore
+                    </Button>
+                    <Button
+                      variant="danger-quiet"
+                      className="h-8 py-0 text-xs"
+                      aria-label={`Delete permanently ${item.id}`}
+                      onClick={() => setDeleting(item.id)}
+                    >
+                      Delete permanently
+                    </Button>
+                  </span>
+                </td>
+              </Row>
+            ))}
+          </Table>
         </div>
       ) : null}
       {archivingProject ? (
