@@ -87,7 +87,7 @@ writing.
 |---|---|---|
 | `run.start` | session start / subagent start hook; MCP server (§7.1) | `kind` (session/subagent), `parent`, `cwd`, `branch`, `worktree`, `source` (startup/resume/clear/compact; `mcp` for a run the MCP server started), `agent_type` for subagents |
 | `run.end` | session end / subagent stop; MCP server | `reason` (`disconnected` when a started run's connection closes); optional `worktree_changed: true` (§4) |
-| `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `background: true` when the agent's own background task finishing started the turn, not the user (Claude Code: a prompt starting `<task-notification>`); prompt text is never stored |
+| `turn.start` | prompt submit | optional `cwd`, `branch`, `worktree` (so a run first seen mid-session has them, and a branch switch is noticed); optional `origin`, who started the turn, classified by the adapter from the prompt: `user` (a prompt the user typed), `task` (a notice the agent's harness submitted: a background command or agent finished, or the app reports an event) or `agent` (a subagent's hand-back or another agent's message); `background: true` on every turn whose origin is not `user`, so a reader without `origin` treats it the same. A turn without `origin` (older logs) is the user's unless `background`; an origin a reader does not know is not the user's. Prompt text is never stored |
 | `turn.end` | stop | `blocked_for_handoff` (bool); optional `worktree_changed: true` (§4) |
 | `activity` | post tool use, throttled (below); MCP server, for the Flashheart tool calls of a run it started, throttled the same way (§7.1) | `tools` (tool results since the run's previous `activity`), optional `failed` (how many of them failed), `paths` (the repo-relative edit paths the run had not recorded in this turn or since its last checkpoint; omitted outside the worktree), `shell` (≤20 `{from, to}` windows of its successful shell commands, §4, merged where they meet) |
 | `tool.used` | post tool use, before protocol 2; still read | `tool`, `ok`, optional `path` (repo-relative, edits only), optional `summary` (≤120 chars) |
@@ -117,8 +117,8 @@ tool result is recorded at once when:
 
 - it edits a path the run has not recorded in this turn or since its last
   checkpoint, so dirty (§4) is never late. Each path is recorded once per
-  run per turn, and again after a checkpoint: a prompt (a `turn.start`
-  that is not `background`) lets the session record its paths again, a
+  run per turn, and again after a checkpoint: the user's prompt (a
+  `turn.start` from the user, §3) lets the session record its paths again, a
   subagent's start its own, and the result of the agent's own `checkpoint`
   tool call every run of its session. Should the hook miss that result, a
   path edited again is recorded from the next prompt, so the loss is at
@@ -192,8 +192,10 @@ pending permission is cleared by the run's next `activity` (or
 `tool.used`), `turn.start`,
 `turn.end`, `permission.resolved` or `run.end`. A question not yet answered
 on the board is **answered in the session**, without an event, by its
-session's next `turn.start` that is not `background`: the user replied in
-the session's own chat, so it no longer waits. This covers the session's
+session's next `turn.start` from the user (origin `user`, or, without an
+origin, not `background`; §3): the user replied in the session's own chat,
+so it no longer waits. A task's notice or another agent's message, such
+as a subagent's hand-back, is not a reply (FH-57). This covers the session's
 subagents' questions, never another session's; a question already answered
 on the board keeps waiting for its delivery, which the same prompt's hook
 makes. The board refuses a later board answer (`answered_in_session`), and
@@ -279,7 +281,7 @@ ticket's `## Notes`.
 | Hook event | Flashheart action | Output |
 |---|---|---|
 | `SessionStart` (`source`: startup, resume, clear, compact) | `run.start` | Recovery note as `hookSpecificOutput.additionalContext` (§8) |
-| `UserPromptSubmit` | `turn.start` (resolves a pending permission and, unless `background`, answers open questions in the session, §4); `question.delivered` for each answer handed over | Answered questions as `additionalContext` (`HOOK-5`), from the session's answers inbox |
+| `UserPromptSubmit` | `turn.start` with its `origin` (resolves a pending permission and, from the user, answers open questions in the session, §4): `task` for a prompt starting `<task-notification>` (a background command or agent finished) or `<ci-monitor-event>` (the desktop app's pull request monitor), `agent` for one starting `<agent-message`, alone or after the desktop app's line `Another Claude session sent a message:` (a subagent's hand-back or another agent's message), otherwise `user` (also when the app put a `<system-reminder>` first); `question.delivered` for each answer handed over | Answered questions as `additionalContext` (`HOOK-5`), from the session's answers inbox |
 | `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping: `hookSpecificOutput.updatedInput` is the tool input with `run` set to the calling run (the subagent's when `agent_id` is present), and no permission decision (§7.1) |
 | `PostToolUse` | a tool use counted into `activity` (throttled, §3); `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`); `mcp__flashheart__checkpoint` lets the session record its edited paths again. A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
 | `PostToolUseFailure` | a failed tool use counted into `activity` | — |
@@ -306,7 +308,7 @@ small.
 | Hook event | Flashheart action |
 |---|---|
 | `SessionStart` | `run.start`; recovery note as additional context |
-| `UserPromptSubmit` | `turn.start`; answered questions |
+| `UserPromptSubmit` | `turn.start` with its `origin` (§3), classified from recorded Codex prompts (FH-73); answered questions |
 | `PostToolUse` | a tool use counted into `activity` (§3); `plan.updated` for `update_plan`; edit paths from `apply_patch` file headers |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs |
@@ -754,6 +756,18 @@ the skill gains a Writing tickets section and the server's instructions
 point to it. Nothing is refused that was accepted, no event changes shape,
 and an older agent that sends no `context` writes the same ticket, so the
 version stays 2.
+
+Additive change within version 2 (D41, FH-57, 2026-10-12): `turn.start`
+gains the optional `origin` (`user`, `task` or `agent`, §3), and only the
+user's prompt answers the session's questions (§4), so a subagent's
+hand-back or another agent's message no longer does. Additive, because
+the new field is optional and every existing reading holds: the adapter
+still writes `background: true` on every turn the user did not start, so
+a reader that predates `origin` keeps such turns from answering; an event
+without `origin` reads as before; `background` keeps its meaning, a turn
+the user did not start, which answers nothing (it now also marks agents'
+messages, which older readers took for the user's); and no tool, refusal
+or skill text changes. The version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

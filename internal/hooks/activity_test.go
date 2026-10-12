@@ -140,10 +140,10 @@ func TestEditPathsAreRecordedOncePerRunBetweenCheckpoints(t *testing.T) {
 	}
 }
 
-// A prompt (not a background task's turn) also lets the session record its
-// paths again, and a subagent's start its own, so a lost checkpoint signal
-// costs at most one turn: a path is recorded once per run per turn, and
-// again after a checkpoint.
+// The user's prompt (not a background task's notice or an agent's message)
+// also lets the session record its paths again, and a subagent's start its
+// own, so a lost checkpoint signal costs at most one turn: a path is
+// recorded once per run per turn, and again after a checkpoint.
 func TestEditPathsAreRecordedAgainEachTurn(t *testing.T) {
 	t.Parallel()
 
@@ -152,6 +152,7 @@ func TestEditPathsAreRecordedAgainEachTurn(t *testing.T) {
 		"0 Prompt", "0.1 Edit:src/a.ts", "0.2 Edit:src/a.ts", "0.3 Stop",
 		"0.4 Prompt", "0.5 Edit:src/a.ts", "0.55 Stop",
 		"0.6 Background", "0.7 Edit:src/a.ts", "0.75 Stop",
+		"0.76 Agent", "0.77 Edit:src/a.ts", "0.78 Stop",
 		"0.8 SubagentStart", "0.85 Sub:Edit:src/a.ts", "0.9 SubagentStart", "0.95 Sub:Edit:src/a.ts", "1 Sub:Edit:src/a.ts")
 	list, data, _ := recorded(t, root)
 	var got []string

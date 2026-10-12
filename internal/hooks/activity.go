@@ -159,10 +159,10 @@ func throttle(state *sessionState, list []events.Event, at time.Time, interval t
 			switch {
 			case e.Kind == events.PermissionRequested:
 				r.Logged = time.Time{}
-			case e.Kind == events.RunStart, e.Kind == events.TurnStart && !background(e):
-				// A prompt (a subagent: its start) begins a turn whose paths
-				// are recorded afresh, so a lost checkpoint signal costs at
-				// most one turn.
+			case e.Kind == events.RunStart, e.Kind == events.TurnStart && fromUser(e):
+				// The user's prompt (a subagent: its start) begins a turn
+				// whose paths are recorded afresh, so a lost checkpoint
+				// signal costs at most one turn.
 				r.Paths = nil
 			}
 			continue
@@ -210,13 +210,13 @@ func throttle(state *sessionState, list []events.Event, at time.Time, interval t
 	return out
 }
 
-// background reports a turn the agent's own background task started.
-func background(e events.Event) bool {
+// fromUser reports a turn the user's prompt started (FH-57).
+func fromUser(e events.Event) bool {
 	data, ok := e.Data.(events.TurnStartData)
 	if !ok {
 		_ = e.Decode(&data)
 	}
-	return data.Background
+	return data.FromUser()
 }
 
 // flushRuns records the pending activity of the runs an end settles.

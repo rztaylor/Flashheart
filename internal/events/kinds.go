@@ -136,6 +136,7 @@ func (d RunEndData) bound() Data {
 }
 
 func (d TurnStartData) bound() Data {
+	d.Origin = line(d.Origin, maxWord)
 	d.Cwd, d.Branch, d.Worktree = block(d.Cwd, maxPath), line(d.Branch, MaxNameLength), block(d.Worktree, maxPath)
 	return d
 }

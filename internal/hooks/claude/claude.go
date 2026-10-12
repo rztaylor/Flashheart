@@ -20,7 +20,7 @@ type Adapter struct{}
 
 // payload holds the fields Flashheart reads. Prompts, messages, tool
 // responses and transcripts are never decoded beyond what is listed here,
-// and a prompt is only checked for the background-task marker, never kept.
+// and a prompt is only classified by who sent it (origin), never kept.
 type payload struct {
 	SessionID        string          `json:"session_id"`
 	Prompt           string          `json:"prompt"`
@@ -44,10 +44,39 @@ const toolPrefix = "mcp__flashheart__"
 // checkpointTool is Flashheart's checkpoint tool in Claude Code.
 const checkpointTool = toolPrefix + "checkpoint"
 
-// taskNotification starts the prompt Claude Code submits when one of the
-// agent's background commands finishes (recorded, Claude Code 2.1.291): a
-// turn the user did not start.
-const taskNotification = "<task-notification>"
+// Prompts the user did not type start with one of these (agent-protocol
+// §5.2; testdata/hooks/claude/MANIFEST.md). Claude Code submits
+// <task-notification> when one of the agent's background commands or
+// agents finishes (recorded, 2.1.291), and the Claude desktop app submits
+// <ci-monitor-event> for its pull request monitor. A subagent's hand-back
+// and a message from another agent arrive as <agent-message>, which the
+// desktop app introduces with agentMessageLead (both from session
+// transcripts, 2026-10). A prompt the user types may begin with a
+// <system-reminder> the app adds; it stays the user's.
+var taskPrefixes = []string{"<task-notification>", "<ci-monitor-event>"}
+
+const (
+	agentPrefix      = "<agent-message"
+	agentMessageLead = "Another Claude session sent a message:"
+)
+
+// origin classifies who started a turn from its prompt, which is read for
+// nothing else and never kept.
+func origin(prompt string) string {
+	prompt = strings.TrimSpace(prompt)
+	for _, prefix := range taskPrefixes {
+		if strings.HasPrefix(prompt, prefix) {
+			return events.OriginTask
+		}
+	}
+	if rest, ok := strings.CutPrefix(prompt, agentMessageLead); ok {
+		prompt = strings.TrimSpace(rest)
+	}
+	if strings.HasPrefix(prompt, agentPrefix) {
+		return events.OriginAgent
+	}
+	return events.OriginUser
+}
 
 // flexibleID accepts a string or a number.
 type flexibleID string
@@ -98,7 +127,8 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		add(session, events.RunStart, events.RunStartData{Kind: events.KindSession, Source: p.Source})
 		input.Recovery = true
 	case "UserPromptSubmit":
-		add(session, events.TurnStart, events.TurnStartData{Background: strings.HasPrefix(strings.TrimSpace(p.Prompt), taskNotification)})
+		from := origin(p.Prompt)
+		add(session, events.TurnStart, events.TurnStartData{Origin: from, Background: from != events.OriginUser})
 		input.Answers = session
 	case "PreToolUse":
 		input.Reply = stamp(p.ToolName, p.ToolInput, actor)

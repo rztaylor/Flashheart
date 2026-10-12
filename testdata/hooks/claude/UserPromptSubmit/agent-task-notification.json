@@ -1,0 +1,10 @@
+{
+  "session_id": "e8d9eb02-6534-4065-ae10-3e032e231c24",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/e8d9eb02-6534-4065-ae10-3e032e231c24.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/e8d9eb02-6534-4065-ae10-3e032e231c24/scratchpad",
+  "prompt_id": "0d9e8f7a-6b5c-4d3e-8f2a-1b0c9d8e7f6a",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<task-notification>\n<task-id>a1b2c3d4e5f6a7b8c</task-id>\n<tool-use-id>toolu_01AbCdEfGhIjKlMnOpQrStUv</tool-use-id>\n<output-file>/Users/example/tmp/claude/e8d9eb02-6534-4065-ae10-3e032e231c24/tasks/a1b2c3d4e5f6a7b8c.output</output-file>\n<status>completed</status>\n<summary>Agent \"Fix the demo\" finished</summary>\n<note>A task-notification fires each time this agent stops with no live background children of its own.</note>\n<result>This agent's report was delivered to you as a message from \"a1b2c3d4e5f6a7b8c\" (its SubagentHandback call). Read it there; it is not repeated here.\n</result>\n<usage><subagent_tokens>12345</subagent_tokens><tool_uses>7</tool_uses><duration_ms>65432</duration_ms></usage>\n</task-notification>"
+}
