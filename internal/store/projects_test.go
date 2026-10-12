@@ -176,6 +176,66 @@ func TestDeleteArchivedProject(t *testing.T) {
 	}
 }
 
+// TestDeleteArchivedProjectRefusesAPlanMadeBeforeAnyChange: a ticket that
+// starts to refer to one of the project's tickets after the preview, or a
+// ticket added to the archived project, refuses the delete as a change to
+// a listed reference does (PRJ-5).
+func TestDeleteArchivedProjectRefusesAPlanMadeBeforeAnyChange(t *testing.T) {
+	t.Parallel()
+
+	for _, change := range []struct {
+		name   string
+		change func(t *testing.T, s *Store, root string)
+	}{
+		{"a new live ticket refers to it", func(t *testing.T, s *Store, root string) {
+			if _, err := s.CreateTicket("beta", NewTicket{Title: "Needs offline", Type: "feature", Priority: "low", DependsOn: []string{"AL-6"}}); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"a referring ticket refers to another of its tickets", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "beta", "tickets", "BE-1-hello", "BE-1-hello.md"), "depends-on: [AL-3]", "depends-on: [AL-3, AL-5]")
+		}},
+		{"an archived ticket elsewhere starts to refer to it", func(t *testing.T, s *Store, root string) {
+			write(t, filepath.Join(root, "beta", ".archive", "tickets", "BE-9-old", "BE-9-old.md"), "---\nid: BE-9\nstatus: done\ndepends-on: [AL-2]\n---\n\n# Old\n")
+		}},
+		{"a referring ticket stops referring to it", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "beta", "tickets", "BE-1-hello", "BE-1-hello.md"), "depends-on: [AL-3]", "depends-on: []")
+		}},
+		{"the archived project gains a ticket", func(t *testing.T, s *Store, root string) {
+			write(t, filepath.Join(root, ".archive", "alpha", "tickets", "AL-20-late", "AL-20-late.md"), "---\nid: AL-20\nstatus: backlog\n---\n\n# Late\n")
+		}},
+	} {
+		t.Run(change.name, func(t *testing.T) {
+			t.Parallel()
+
+			s, root := writable(t)
+			if err := s.ArchiveProject("alpha"); err != nil {
+				t.Fatal(err)
+			}
+			plan, err := s.PlanProjectDelete("alpha")
+			if err != nil {
+				t.Fatal(err)
+			}
+			change.change(t, s, root)
+			var conflict *ConflictError
+			// The check under the locks, as when the change lands between
+			// the delete's own plan and its locks.
+			if err := s.deleteProjectLocked(plan); !errors.As(err, &conflict) {
+				t.Fatalf("locked delete after the change: %v, want a conflict", err)
+			}
+			if err := s.DeleteArchivedProject("alpha", plan.Token); !errors.As(err, &conflict) {
+				t.Fatalf("delete after the change: %v, want a conflict", err)
+			}
+			if _, err := os.Stat(filepath.Join(root, ".archive", "alpha")); err != nil {
+				t.Errorf("deleted despite the conflict: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(root, ".flashheart", "retired.yaml")); !errors.Is(err, os.ErrNotExist) {
+				t.Errorf("key retired despite the conflict: %v", err)
+			}
+		})
+	}
+}
+
 func TestArchivedProjectsRepositoryIsNotRecreated(t *testing.T) {
 	t.Parallel()
 

@@ -247,69 +247,46 @@ func (s *Store) PlanProjectDelete(project string) (ProjectDeletePlan, error) {
 	plan := ProjectDeletePlan{Name: project, DisplayName: archived.DisplayName, Key: archived.Key, Tickets: len(archived.IDs)}
 	token := sha256.New()
 	fmt.Fprintf(token, "delete project %s %s %s\n", project, archived.Key, strings.Join(archived.IDs, ","))
-	names, err := s.Projects()
+	// The archived project is not a live one, so the scan leaves it out.
+	references, err := s.scanReferences(archived.IDs, "", token)
 	if err != nil {
 		return ProjectDeletePlan{}, err
 	}
-	for _, name := range names {
-		info, err := s.ReadProject(name)
-		if err != nil {
-			continue
-		}
-		tickets := slices.Clone(info.Tickets)
-		dirs := slices.Repeat([]string{path.Join(name, "tickets")}, len(tickets))
-		if items, err := s.ReadArchived(name); err == nil {
-			for _, item := range items {
-				tickets = append(tickets, item.Ticket)
-				dirs = append(dirs, path.Join(name, ".archive", "tickets"))
-			}
-		}
-		for index, ticket := range tickets {
-			var matched []string
-			for _, id := range ticket.DependsOn {
-				if slices.Contains(archived.IDs, id) {
-					matched = append(matched, id)
-				}
-			}
-			if len(matched) == 0 {
-				continue
-			}
-			file, err := s.ticketFile(name, dirs[index], ticket.ID)
-			if err != nil {
-				return ProjectDeletePlan{}, err
-			}
-			data, err := s.ReadFile(file)
-			if err != nil {
-				return ProjectDeletePlan{}, err
-			}
-			reference := ProjectReference{Project: name, ID: ticket.ID, Title: ticket.Title, DependsOn: matched, file: file, hash: Hash(data)}
-			plan.References = append(plan.References, reference)
-			fmt.Fprintf(token, "ticket %s %s\n", file, reference.hash)
-		}
+	for _, found := range references {
+		plan.References = append(plan.References, ProjectReference{Project: found.project, ID: found.id, Title: found.title, DependsOn: found.matched, file: found.file, hash: found.hash})
 	}
 	plan.Token = hex.EncodeToString(token.Sum(nil))
 	return plan, nil
 }
 
 // DeleteArchivedProject permanently deletes an archived project. token must
-// be the Token of a plan made since nothing it lists changed, or the result
-// is a *ConflictError and nothing is written. It holds the root lock and the
-// lock of every project it rewrites, in name order.
+// be the Token of a plan made since nothing it covers changed, or the result
+// is a *ConflictError and nothing is written. It plans again without a lock,
+// so a stale token is refused at once, then deletes under the locks.
 func (s *Store) DeleteArchivedProject(project, token string) error {
-	if _, err := s.archivedProjectDir(project); err != nil {
+	preview, err := s.PlanProjectDelete(project)
+	if err != nil {
 		return err
 	}
+	if preview.Token != token {
+		return &ConflictError{Name: "delete", Hash: preview.Token}
+	}
+	return s.deleteProjectLocked(preview)
+}
+
+// deleteProjectLocked deletes what preview lists. It holds the root lock and
+// the lock of every project preview rewrites, in name order, plans again
+// under them and writes only when that plan's token is preview's, as
+// deleteLocked does.
+func (s *Store) deleteProjectLocked(preview ProjectDeletePlan) error {
+	project := preview.Name
 	releaseRoot, err := s.lock(".")
 	if err != nil {
 		return err
 	}
 	defer releaseRoot()
-	first, err := s.PlanProjectDelete(project)
-	if err != nil {
-		return err
-	}
 	var locked []string
-	for _, reference := range first.References {
+	for _, reference := range preview.References {
 		locked = append(locked, reference.Project)
 	}
 	slices.Sort(locked)
@@ -324,7 +301,7 @@ func (s *Store) DeleteArchivedProject(project, token string) error {
 	if err != nil {
 		return err
 	}
-	if plan.Token != token || plan.Token != first.Token {
+	if plan.Token != preview.Token {
 		return &ConflictError{Name: "delete", Hash: plan.Token}
 	}
 	for _, reference := range plan.References {

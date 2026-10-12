@@ -92,3 +92,8 @@
 - MCP scale (NFR-1, developer tool, not in CI): `go test ./internal/mcpserver
   -run '^$' -bench ToolsAtScale -benchtime 5x` times tools on 50 projects of
   1,000 tickets (about 0.2 s a call on an M-series Mac, 2026-10-07).
+- Permanent deletes (FH-26, developer tool, not in CI): `go test
+  ./internal/store -run '^$' -bench DeleteArchivedLargeArchive -benchtime
+  20x` times the preview, the whole delete and the part under the root
+  lock with 2,000 archived tickets (about 80, 170 and 90 ms on an M4 Max,
+  2026-10-12).

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io/fs"
 	"path"
 	"slices"
@@ -85,7 +86,10 @@ type Reference struct {
 }
 
 // DeletePlan is everything a permanent delete touches. Token fingerprints
-// all of it: a delete is refused when any of it has changed since.
+// all of it (the folder's files and sizes, and the path and content hash of
+// each referring ticket and listing workstream), so a delete is refused
+// when any of it has changed since, or when another ticket or workstream
+// has started to refer to the id.
 type DeletePlan struct {
 	Project, ID string
 	// Folder is the archived folder, relative to the root; Files are its
@@ -125,7 +129,8 @@ func (s *Store) archivedFolder(project, id string) (string, error) {
 	return "", fmt.Errorf("archived ticket %s in %s: %w", id, project, ErrNotFound)
 }
 
-// PlanDelete lists what deleting an archived ticket would touch.
+// PlanDelete lists what deleting an archived ticket would touch. It takes
+// no lock; the delete checks it again under its locks (references.go).
 func (s *Store) PlanDelete(project, id string) (DeletePlan, error) {
 	return s.planDelete(project, id)
 }
@@ -159,79 +164,80 @@ func (s *Store) planDelete(project, id string) (DeletePlan, error) {
 		return DeletePlan{}, err
 	}
 
-	projects, err := s.Projects()
+	references, err := s.scanReferences([]string{id}, folder, token)
 	if err != nil {
 		return DeletePlan{}, err
 	}
-	for _, name := range projects {
-		info, err := s.ReadProject(name)
-		if err != nil {
-			continue
-		}
-		tickets := slices.Clone(info.Tickets)
-		dirs := slices.Repeat([]string{path.Join(name, "tickets")}, len(tickets))
-		if archived, err := s.ReadArchived(name); err == nil {
-			for _, item := range archived {
-				tickets = append(tickets, item.Ticket)
-				dirs = append(dirs, path.Join(name, ".archive", "tickets"))
-			}
-		}
-		for index, ticket := range tickets {
-			if ticket.ID == id || !slices.Contains(ticket.DependsOn, id) {
-				continue
-			}
-			file, err := s.ticketFile(name, dirs[index], ticket.ID)
-			if err != nil {
-				return DeletePlan{}, err
-			}
-			data, err := s.ReadFile(file)
-			if err != nil {
-				return DeletePlan{}, err
-			}
-			reference := Reference{Project: name, ID: ticket.ID, Title: ticket.Title, file: file, hash: Hash(data)}
-			plan.Tickets = append(plan.Tickets, reference)
-			fmt.Fprintf(token, "ticket %s %s\n", file, reference.hash)
-		}
-		if name != project {
-			continue
-		}
-		for _, workstream := range info.Workstreams {
-			if !slices.Contains(workstream.Tickets, id) {
-				continue
-			}
-			file := path.Join(project, "workstreams", workstream.Slug+".md")
-			data, err := s.ReadFile(file)
-			if err != nil {
-				return DeletePlan{}, err
-			}
-			plan.Workstreams = append(plan.Workstreams, workstream.Slug)
-			fmt.Fprintf(token, "workstream %s %s\n", file, Hash(data))
-		}
+	for _, found := range references {
+		plan.Tickets = append(plan.Tickets, Reference{Project: found.project, ID: found.id, Title: found.title, file: found.file, hash: found.hash})
+	}
+	if plan.Workstreams, err = s.workstreamsListing(project, id, token); err != nil {
+		return DeletePlan{}, err
 	}
 	plan.Token = hex.EncodeToString(token.Sum(nil))
 	return plan, nil
 }
 
+// workstreamsListing returns the slugs of the project's workstreams whose
+// tickets list names id, and writes a "workstream <file> <hash>" line for
+// each to token.
+func (s *Store) workstreamsListing(project, id string, token hash.Hash) ([]string, error) {
+	dir := path.Join(project, "workstreams")
+	entries, err := s.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var slugs []string
+	for _, entry := range entries {
+		slug, ok := strings.CutSuffix(entry.Name(), ".md")
+		if !ok || strings.HasPrefix(slug, ".") || entry.IsDir() {
+			continue
+		}
+		file := path.Join(dir, entry.Name())
+		data, err := s.ReadFile(file)
+		if err != nil || !slices.Contains(mdfile.Parse(data).List("tickets"), id) {
+			continue
+		}
+		slugs = append(slugs, slug)
+		fmt.Fprintf(token, "workstream %s %s\n", file, Hash(data))
+	}
+	return slugs, nil
+}
+
 // DeleteArchived permanently deletes an archived ticket. token must be the
-// Token of a plan made since nothing it lists changed, or the result is a
-// *ConflictError and nothing is written. It holds the root lock, so deletes
-// do not overlap, and the lock of every project it rewrites.
+// Token of a plan made since nothing it covers changed, or the result is a
+// *ConflictError and nothing is written. It plans again without a lock, so
+// a stale token is refused at once, then deletes under the locks.
 func (s *Store) DeleteArchived(project, id, token string) (DeletePlan, error) {
-	if _, err := s.archivedFolder(project, id); err != nil {
+	preview, err := s.planDelete(project, id)
+	if err != nil {
 		return DeletePlan{}, err
 	}
+	if preview.Token != token {
+		return DeletePlan{}, &ConflictError{Name: "delete", Hash: preview.Token}
+	}
+	return s.deleteLocked(preview)
+}
+
+// deleteLocked deletes what preview lists. It holds the root lock, so
+// deletes do not overlap, and the locks of the project and of every project
+// preview rewrites, in name order. Under them it plans again, one reference
+// scan, and writes only when that plan's token is preview's: then it
+// rewrites the files preview listed, unchanged, and no ticket or workstream
+// has started to refer to the id since.
+func (s *Store) deleteLocked(preview DeletePlan) (DeletePlan, error) {
+	project, id := preview.Project, preview.ID
 	releaseRoot, err := s.lock(".")
 	if err != nil {
 		return DeletePlan{}, err
 	}
 	defer releaseRoot()
-	first, err := s.planDelete(project, id)
-	if err != nil {
-		return DeletePlan{}, err
-	}
 	// Projects are locked in name order; no other writer holds two.
 	locked := []string{project}
-	for _, reference := range first.Tickets {
+	for _, reference := range preview.Tickets {
 		locked = append(locked, reference.Project)
 	}
 	slices.Sort(locked)
@@ -246,7 +252,7 @@ func (s *Store) DeleteArchived(project, id, token string) (DeletePlan, error) {
 	if err != nil {
 		return DeletePlan{}, err
 	}
-	if plan.Token != token || plan.Token != first.Token {
+	if plan.Token != preview.Token {
 		return DeletePlan{}, &ConflictError{Name: "delete", Hash: plan.Token}
 	}
 

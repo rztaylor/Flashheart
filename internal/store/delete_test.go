@@ -185,3 +185,91 @@ func TestDeleteArchivedRefusals(t *testing.T) {
 		t.Errorf("BE-1 rewritten despite the conflict:\n%s", be1)
 	}
 }
+
+// TestDeleteArchivedRefusesAPlanMadeBeforeAnyChange: the token covers more
+// than the files the plan listed. A ticket or workstream that starts to
+// refer to the deleted ticket after the preview, and a change to its
+// folder, refuse the delete too, so nothing is left pointing at a deleted
+// id the user was not shown (EDIT-8).
+func TestDeleteArchivedRefusesAPlanMadeBeforeAnyChange(t *testing.T) {
+	t.Parallel()
+
+	for _, change := range []struct {
+		name   string
+		change func(t *testing.T, s *Store, root string)
+	}{
+		{"a new live ticket refers to it", func(t *testing.T, s *Store, root string) {
+			if _, err := s.CreateTicket("beta", NewTicket{Title: "Needs the panel", Type: "feature", Priority: "low", DependsOn: []string{"AL-3"}}); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"a live ticket starts to refer to it", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", "AL-2-board-columns.md"), "depends-on: []", "depends-on: [AL-3]")
+		}},
+		{"an archived ticket starts to refer to it", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "alpha", ".archive", "tickets", "AL-8-old-idea", "AL-8-old-idea.md"), "priority: low\n", "priority: low\ndepends-on: [AL-3]\n")
+		}},
+		{"a referring ticket stops referring to it", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "beta", "tickets", "BE-1-hello", "BE-1-hello.md"), "depends-on: [AL-3]", "depends-on: []")
+		}},
+		{"a referring ticket changes elsewhere", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "alpha", "tickets", "AL-4-drag-and-drop", "AL-4-drag-and-drop.md"), "\n# ", "\n# Edited ")
+		}},
+		{"a new workstream lists it", func(t *testing.T, s *Store, root string) {
+			write(t, filepath.Join(root, "alpha", "workstreams", "later.md"), "---\nslug: later\nstatus: active\ntickets: [AL-3]\n---\n\n# Later\n")
+		}},
+		{"a listed workstream changes", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "alpha", "workstreams", "board-ui.md"), "  - AL-2\n", "")
+		}},
+		{"a file is added to its folder", func(t *testing.T, s *Store, root string) {
+			write(t, filepath.Join(root, "alpha", ".archive", "tickets", "AL-3-card-panel", "review.md"), "# Review\n")
+		}},
+		{"its ticket file changes size", func(t *testing.T, s *Store, root string) {
+			edit(t, filepath.Join(root, "alpha", ".archive", "tickets", "AL-3-card-panel", "AL-3-card-panel.md"), "Fixture ticket.", "Fixture ticket, edited.")
+		}},
+	} {
+		t.Run(change.name, func(t *testing.T) {
+			t.Parallel()
+
+			s, root := writable(t)
+			if err := s.Archive("alpha", "AL-3"); err != nil {
+				t.Fatal(err)
+			}
+			plan, err := s.PlanDelete("alpha", "AL-3")
+			if err != nil {
+				t.Fatal(err)
+			}
+			change.change(t, s, root)
+			var conflict *ConflictError
+			// The check under the locks, as when the change lands between
+			// the delete's own plan and its locks.
+			if _, err := s.deleteLocked(plan); !errors.As(err, &conflict) {
+				t.Fatalf("locked delete after the change: %v, want a conflict", err)
+			}
+			if _, err := s.DeleteArchived("alpha", "AL-3", plan.Token); !errors.As(err, &conflict) {
+				t.Fatalf("delete after the change: %v, want a conflict", err)
+			}
+			if _, err := os.Stat(filepath.Join(root, "alpha", ".archive", "tickets", "AL-3-card-panel")); err != nil {
+				t.Errorf("folder removed despite the conflict: %v", err)
+			}
+			if project, _ := os.ReadFile(filepath.Join(root, "alpha", "project.yaml")); strings.Contains(string(project), "retired") {
+				t.Errorf("id retired despite the conflict:\n%s", project)
+			}
+		})
+	}
+}
+
+// edit replaces old with new in a file, which must contain old.
+func edit(t *testing.T, name, old, new string) {
+	t.Helper()
+	data, err := os.ReadFile(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), old) {
+		t.Fatalf("%s does not contain %q", name, old)
+	}
+	if err := os.WriteFile(name, []byte(strings.Replace(string(data), old, new, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
