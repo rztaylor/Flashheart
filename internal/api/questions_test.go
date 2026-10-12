@@ -192,3 +192,61 @@ func TestAQuestionAnsweredInTheSessionNoLongerNeedsYou(t *testing.T) {
 		t.Fatalf("refusal = %+v", refusal)
 	}
 }
+
+// A subagent that asked a question and finished leaves it with its session
+// (agent-protocol §4): while the session is live the question needs you, so
+// the session's reason, the card's question count and the Overview's
+// decisions (the runs API's open questions) agree (FH-112). Once the
+// session ends, none of them counts it.
+func TestASubagentsQuestionNeedsYouWhileItsSessionIsLive(t *testing.T) {
+	t.Parallel()
+
+	child := sampleSession + "/e1"
+	lines := []string{
+		// The session's tool use settles its permission prompt.
+		`{"v":1,"ts":"2026-10-04T13:27:00.000Z","run":"` + sampleSession + `","agent":"claude","kind":"tool.used","project":"alpha","data":{"tool":"Bash","ok":true}}`,
+		`{"v":1,"ts":"2026-10-04T13:28:00.000Z","run":"` + child + `","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"subagent","parent":"` + sampleSession + `","agent_type":"Explore"}}`,
+		`{"v":1,"ts":"2026-10-04T13:28:30.000Z","run":"` + child + `","agent":"claude","kind":"question.asked","project":"alpha","data":{"id":"q-7","ticket":"AL-3","kind":"decision","text":"Which layout?"}}`,
+		`{"v":1,"ts":"2026-10-04T13:29:00.000Z","run":"` + child + `","agent":"claude","kind":"run.end","project":"alpha","data":{"reason":"completed"}}`,
+	}
+	ended := `{"v":1,"ts":"2026-10-04T13:29:30.000Z","run":"` + sampleSession + `","agent":"claude","kind":"run.end","project":"alpha","data":{"reason":"other"}}`
+	now := time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC)
+
+	type agreement struct {
+		reason    runs.Reason
+		cardCount int
+		overview  int
+	}
+	observe := func(handler http.Handler) agreement {
+		t.Helper()
+		var seen agreement
+		var response RunsResponse
+		getJSON(t, handler, "/api/runs", http.StatusOK, &response)
+		for _, run := range response.Runs {
+			if run.ID == sampleSession {
+				seen.reason = run.Reason
+			}
+			// The Overview's Needs your decision lists a run's questions
+			// that are neither delivered, answered in the session nor
+			// from an ended session (frontend model/overview.ts).
+			for _, q := range run.Questions {
+				if q.ID == "q-7" && !q.Delivered && !q.AnsweredInSession && !q.SessionEnded {
+					seen.overview++
+				}
+			}
+		}
+		var board BoardResponse
+		getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+		seen.cardCount = cardByID(t, board.Cards, "AL-3").OpenQuestions
+		return seen
+	}
+
+	live := observe(runsAPI(t, now, lines...))
+	want := agreement{reason: runs.Reason{Kind: runs.ReasonQuestion, Question: "decision", WaitingOn: child, AgentType: "Explore"}, cardCount: 1, overview: 1}
+	if live != want {
+		t.Fatalf("with the session live: %+v, want %+v", live, want)
+	}
+	if over := observe(runsAPI(t, now, append(lines, ended)...)); over != (agreement{}) {
+		t.Fatalf("with the session ended: %+v, want nothing", over)
+	}
+}

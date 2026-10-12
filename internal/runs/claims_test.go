@@ -153,6 +153,41 @@ func TestPendingAnswersCoverTheSessionAndItsSubagents(t *testing.T) {
 	}
 }
 
+// A question waits on its session: a finished subagent's question is not
+// SessionEnded while its session is live, and is once the session ends;
+// a subagent whose session was never seen is its own session (FH-112).
+func TestAQuestionsSessionEndsWithTheSessionNotTheSubagent(t *testing.T) {
+	t.Parallel()
+
+	sub, orphan := session+"/a1", "claude:gone/a2"
+	set := NewSet()
+	for _, e := range []events.Event{
+		start(0), turn(1),
+		ev(1.5, sub, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}),
+		ask(2, sub, "q1", "question"), ev(3, sub, events.RunEnd, events.RunEndData{Reason: "completed"}),
+		ev(3.5, orphan, events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: "claude:gone"}),
+		ask(4, orphan, "q2", "question"), ev(5, orphan, events.RunEnd, events.RunEndData{}),
+	} {
+		set.Apply(e)
+	}
+	ended := func(views []View) map[string]bool {
+		marks := map[string]bool{}
+		for _, v := range views {
+			for _, q := range v.Questions {
+				marks[q.ID] = q.SessionEnded
+			}
+		}
+		return marks
+	}
+	if got := ended(set.Views(at(6), DefaultSettings(), nil)); got["q1"] || !got["q2"] {
+		t.Fatalf("session live: SessionEnded = %v, want q1 false, q2 true", got)
+	}
+	set.Apply(ev(7, session, events.RunEnd, events.RunEndData{}))
+	if got := ended(set.Views(at(8), DefaultSettings(), nil)); !got["q1"] || !got["q2"] {
+		t.Fatalf("session ended: SessionEnded = %v, want both", got)
+	}
+}
+
 func TestQuestionsAreBounded(t *testing.T) {
 	t.Parallel()
 

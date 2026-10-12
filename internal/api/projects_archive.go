@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/board"
-	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -110,11 +109,11 @@ func (b boardAPI) archiveCheck(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for _, run := range snapshot.Runs {
-		if run.Project != project.Name || run.State == runs.Ended {
+		if run.Project != project.Name {
 			continue
 		}
 		for _, question := range run.Questions {
-			if question.Open() {
+			if question.Open() && !question.SessionEnded {
 				check.OpenQuestions++
 			}
 		}
