@@ -1,3 +1,5 @@
+import type { WorkstreamBrief } from "../api/board";
+
 // Workstream line assignment: each workstream in a project gets one line
 // colour (index into the --line-N tokens) and a bullet label.
 
@@ -69,4 +71,17 @@ export function linesByProject(
     result.set(project.project, assignLines(project.workstreams));
   }
   return result;
+}
+
+// workstreamTitle names a project's workstream by its title, or by its slug
+// when the project lists no such workstream.
+export function workstreamTitle(
+  workstreams: Map<string, WorkstreamBrief[]>,
+  project: string,
+  slug: string,
+): string {
+  return (
+    workstreams.get(project)?.find((workstream) => workstream.slug === slug)
+      ?.title ?? slug
+  );
 }

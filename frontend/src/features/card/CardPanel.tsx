@@ -4,7 +4,7 @@ import type { AuthenticatedFetch } from "../../api/client";
 import { Icon } from "../../components/Icon";
 import { SidePanel } from "../../components/SidePanel";
 import { TicketLink } from "../../components/TicketLink";
-import type { Line } from "../../model/lines";
+import { type Line, workstreamTitle } from "../../model/lines";
 import type { Step } from "../../model/order";
 import { type SectionId, ticketSections } from "../../model/ticketSections";
 import type { Editing } from "../editing/useEditing";
@@ -25,7 +25,8 @@ export interface CardPanelProps {
   ticket: TicketRef;
   fetcher: AuthenticatedFetch;
   lines: Map<string, Map<string, Line>>;
-  workstreamTitle(project: string, slug: string): string;
+  // workstreams are each project's workstreams, by project name.
+  workstreams: Map<string, WorkstreamBrief[]>;
   // Project keys, so ticket ids in markdown become links (KEY-3).
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
@@ -40,7 +41,6 @@ export interface CardPanelProps {
   onStep?: (step: Step) => void;
   // answers: the server records answers to agents' questions (RUN-8).
   answers?: boolean;
-  workstreamsOf(project: string): WorkstreamBrief[];
   // initialTab is the tab the ticket opens on (the Overview's Review
   // results opens Review); the Ticket tab when absent or not offered.
   initialTab?: PanelTab;
@@ -55,7 +55,7 @@ export function CardPanel({
   ticket: ref,
   fetcher,
   lines,
-  workstreamTitle,
+  workstreams,
   keys,
   onOpen,
   onClose,
@@ -63,7 +63,6 @@ export function CardPanel({
   editing,
   onStep,
   answers = false,
-  workstreamsOf,
   initialTab = "ticket",
 }: CardPanelProps) {
   const ticket = useTicket({
@@ -104,7 +103,11 @@ export function CardPanel({
           <PanelHeader
             detail={detail}
             line={lines.get(detail.project)?.get(detail.workstream)}
-            workstreamTitle={workstreamTitle(detail.project, detail.workstream)}
+            workstreamTitle={workstreamTitle(
+              workstreams,
+              detail.project,
+              detail.workstream,
+            )}
             actions={
               editing && ticket.editable ? (
                 <TicketActions
@@ -133,7 +136,7 @@ export function CardPanel({
               fetcher={fetcher}
               keys={keys}
               onOpen={onOpen}
-              workstreamsOf={workstreamsOf}
+              workstreams={workstreams}
             />
           </SectionTabs>
         </>

@@ -1,6 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { durationWords, runningTime } from "./time";
+import { compareTimes, durationWords, runningTime } from "./time";
+
+describe("compareTimes", () => {
+  it("orders by time, not text, when the server drops trailing zeros", () => {
+    // The server writes RFC 3339 with trimmed fractions: .3 is 300 ms,
+    // before .315, though it sorts after it as text.
+    const first = "2026-10-12T13:35:37.3Z";
+    const second = "2026-10-12T13:35:37.315Z";
+    expect(first.localeCompare(second)).toBeGreaterThan(0);
+    expect(compareTimes(first, second)).toBeLessThan(0);
+    expect([second, "2026-10-12T13:35:37Z", first].sort(compareTimes)).toEqual([
+      "2026-10-12T13:35:37Z",
+      first,
+      second,
+    ]);
+  });
+
+  it("puts missing or invalid times first, as equals", () => {
+    expect(compareTimes("", "not a time")).toBe(0);
+    expect(compareTimes("", "2026-10-12T13:35:37Z")).toBeLessThan(0);
+  });
+});
 
 const now = new Date("2026-10-04T12:00:00Z");
 

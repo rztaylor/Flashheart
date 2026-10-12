@@ -13,7 +13,7 @@ import {
   sessionsOf,
   shortID,
 } from "../../model/runs";
-import { absoluteTime, runningTime } from "../../model/time";
+import { absoluteTime, compareTimes, runningTime } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { BranchLabel, RunDetail } from "./RunDetail";
 
@@ -54,7 +54,7 @@ export function RunsTab({
             ticket={detail.id}
             subagents={detail.runs
               .filter((child) => child.parent === run.id)
-              .sort((a, b) => a.started.localeCompare(b.started))}
+              .sort((a, b) => compareTimes(a.started, b.started))}
             now={now}
             onOpen={onOpen}
           />

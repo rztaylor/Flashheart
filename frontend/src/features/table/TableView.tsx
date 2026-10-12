@@ -12,9 +12,9 @@ import { Pill, StatusPill, Tag } from "../../components/Pill";
 import { RunStateLabel } from "../../components/RunState";
 import { HeadCell, Row, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
-import type { Line } from "../../model/lines";
+import { type Line, workstreamTitle } from "../../model/lines";
 import { priorityLabel } from "../../model/status";
-import { runningTime } from "../../model/time";
+import { compareTimes, runningTime } from "../../model/time";
 
 type SortKey =
   | "title"
@@ -56,7 +56,7 @@ function compare(a: Card, b: Card, key: SortKey): number {
         b.criteria.done / (b.criteria.total || 1)
       );
     case "modified":
-      return b.modified.localeCompare(a.modified);
+      return compareTimes(b.modified, a.modified);
     default:
       return String(a[key]).localeCompare(String(b[key]));
   }
@@ -135,11 +135,11 @@ export function TableView({
       >
         {rows.map((card) => {
           const isSelected = selected?.id === card.id;
-          const title =
-            workstreams
-              .get(card.project)
-              ?.find((item) => item.slug === card.workstream)?.title ??
-            card.workstream;
+          const title = workstreamTitle(
+            workstreams,
+            card.project,
+            card.workstream,
+          );
           return (
             <Row
               key={`${card.project}/${card.id}/${card.column}`}

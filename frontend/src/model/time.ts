@@ -1,3 +1,10 @@
+// compareTimes orders two server timestamps by time, earliest first; missing
+// or invalid ones come first. Never compare them as text: the server trims
+// trailing zeros (RFC 3339), so "…37.3Z" sorts after "…37.315Z".
+export function compareTimes(a: string, b: string): number {
+  return (Date.parse(a) || 0) - (Date.parse(b) || 0);
+}
+
 // runningTime formats the age of a timestamp as a compact running time.
 export function runningTime(iso: string, now: Date = new Date()): string {
   if (!iso) return "";

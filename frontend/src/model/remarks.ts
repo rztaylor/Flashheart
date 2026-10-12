@@ -175,3 +175,30 @@ const progressGap = 10 * 60_000;
 export function progressDue(last: number | undefined, now: number): boolean {
   return last === undefined || now - last >= progressGap;
 }
+
+interface Moving {
+  id: string;
+  column: string;
+}
+
+// moveRemark is the placement of the remark a successful move earns in its
+// toast, if any (FH-22): completion when a move to Done finishes the ticket's workstream,
+// otherwise progress when one is due. cards is the board as shown, which
+// already places the move, so completion is judged from the ticket's column
+// before it. lastProgress is when progress was last remarked on.
+export function moveRemark(
+  cards: Ticketish[],
+  ticket: Moving,
+  to: string,
+  lastProgress: number | undefined,
+  now: number,
+): "completion" | "progress" | undefined {
+  if (to !== "done" || ticket.column === "done") return undefined;
+  const card = cards.find((item) => item.id === ticket.id);
+  if (
+    card &&
+    completesWorkstream(cards, { ...card, column: ticket.column }, to)
+  )
+    return "completion";
+  return progressDue(lastProgress, now) ? "progress" : undefined;
+}
