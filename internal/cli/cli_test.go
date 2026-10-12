@@ -17,6 +17,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/setup"
 )
 
 type harness struct {
@@ -207,7 +208,7 @@ func TestDoctorReportsAndExitsOneOnProblems(t *testing.T) {
 	}
 	deps := h.deps()
 	deps.Executable = func() (string, error) { return binary, nil }
-	deps.FindClaude = func(string) string { return "/usr/bin/claude" }
+	deps.FindCLI = func(setup.Agent, string) string { return "/usr/bin/claude" }
 	registered := false
 	deps.RunCommand = func(_ string, args ...string) ([]byte, error) {
 		// A claude CLI with a user-scope MCP registry: get reads it.
@@ -753,7 +754,7 @@ func TestSetupClaudeShowsThenWritesThenUninstalls(t *testing.T) {
 	var ran [][]string
 	registered := false
 	deps := h.deps()
-	deps.FindClaude = func(string) string { return "/usr/bin/claude" }
+	deps.FindCLI = func(setup.Agent, string) string { return "/usr/bin/claude" }
 	deps.RunCommand = func(name string, args ...string) ([]byte, error) {
 		// A claude CLI with a user-scope MCP registry: get reads it.
 		switch args[1] {

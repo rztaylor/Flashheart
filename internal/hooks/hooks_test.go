@@ -37,22 +37,36 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	if rest, sub := strings.CutPrefix(event, "Sub:"); sub {
 		event, actor = rest, run+"/a1"
 	}
-	tool := func(name string, ok bool, path string) []Pending {
-		return []Pending{{Run: actor, Kind: events.ToolUsed, Data: events.ToolData{Tool: name, OK: ok, Path: path}}}
+	tool := func(name string, ok bool, paths ...string) []Pending {
+		return []Pending{{Run: actor, Kind: events.ToolUsed, Data: events.ToolData{Tool: name, OK: ok, Paths: paths}}}
 	}
-	// "Edit:<file>" edits a file of the checkout.
+	// The fake's shell tool has no Claude Code name: hooks knows a shell
+	// command only from the adapter's classification (FH-90).
+	shell := func(ok bool) []Pending {
+		return []Pending{{Run: actor, Kind: events.ToolUsed, Data: events.ToolData{Tool: "exec_command", OK: ok, Shell: true}}}
+	}
+	// "Edit:<file>" edits a file of the checkout; "Patch:<file>,<file>…"
+	// edits several in one result.
 	if file, edit := strings.CutPrefix(event, "Edit:"); edit {
 		input.Events = tool("Edit", true, filepath.Join(cwd, file))
 		return input, nil
 	}
+	if files, patch := strings.CutPrefix(event, "Patch:"); patch {
+		var paths []string
+		for _, file := range strings.Split(files, ",") {
+			paths = append(paths, filepath.Join(cwd, file))
+		}
+		input.Events = tool("apply_patch", true, paths...)
+		return input, nil
+	}
 	switch event {
 	case "Read":
-		input.Events = tool("Read", true, "")
+		input.Events = tool("Read", true)
 	case "Fail":
-		input.Events = tool("Bash", false, "")
+		input.Events = shell(false)
 	case "Checkpointed":
 		// The checkpoint tool's own result (agent-protocol §5.2).
-		input.Events, input.Settled = tool("mcp__flashheart__checkpoint", true, ""), true
+		input.Events, input.Settled = tool("mcp__flashheart__checkpoint", true), true
 	case "Background":
 		// A turn the agent's own background task started, not a prompt.
 		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{Background: true}}}
@@ -68,7 +82,7 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	case "Edit":
 		input.Events = tool("Edit", true, filepath.Join(cwd, "src", "a.ts"))
 	case "Bash":
-		input.Events = tool("Bash", true, "")
+		input.Events = shell(true)
 	case "End":
 		input.Events = []Pending{{Run: run, Kind: events.RunEnd, Data: events.RunEndData{Reason: "other"}}}
 	case "Plan":
@@ -79,6 +93,17 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	case "Stop", "StopActive":
 		input.Stop, input.StopActive = true, event == "StopActive"
 		input.Events = []Pending{{Run: run, Kind: events.TurnEnd, Data: events.TurnEndData{}}}
+	case "Foreign", "Malformed":
+		// An adapter bug: a run of another agent, or outside the grammar,
+		// beside a good event (FH-91).
+		bad := "other:" + session
+		if event == "Malformed" {
+			bad = "fake:" + session + " x"
+		}
+		input.Events = []Pending{
+			{Run: bad, Kind: events.TurnStart, Data: events.TurnStartData{}},
+			{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{}},
+		}
 	case "Stamp":
 		input.Reply = &Output{Context: "stamped " + run}
 	case "Nothing":
@@ -446,5 +471,28 @@ func TestSessionStartRefreshesTheSkill(t *testing.T) {
 	}
 	if list := readEvents(t, root, "demo"); len(list) != 4 {
 		t.Fatalf("events = %d, want 4 (every session start recorded)", len(list))
+	}
+}
+
+// hooks drops, and logs, an event whose run id is malformed or names
+// another agent, and records the rest (FH-91, HOOK-1).
+func TestPendingEventsNeedTheAdaptersOwnRunIDs(t *testing.T) {
+	t.Parallel()
+
+	for _, event := range []string{"Foreign", "Malformed"} {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			root, cwd := t.TempDir(), repo(t)
+			if out := run(t, root, event, "s1 "+cwd, fake{}); out != "" {
+				t.Fatalf("output %q", out)
+			}
+			list := readEvents(t, root, "demo")
+			if len(list) != 1 || list[0].Run != "fake:s1" {
+				t.Fatalf("recorded %+v, want only the fake:s1 turn start", list)
+			}
+			if log := errorLog(t, root); !strings.Contains(log, "invalid run id") && !strings.Contains(log, "not a fake run") {
+				t.Fatalf("hook-errors.log = %q", log)
+			}
+		})
 	}
 }
