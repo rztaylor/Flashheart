@@ -67,6 +67,20 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Undo after two quick moves of a card now undoes the latest one (FH-115).
+  While the second move was saving, the first move's toast still offered
+  Undo with the same words, and choosing it put the card back where it was
+  before both moves. A move's toast now goes as the next move starts, and
+  a move saved after a later one started is announced without Undo.
+- Keyboard focus no longer jumps to the top of the page when the board
+  changes under it (FH-84). A focused card that a live reload or a filter
+  moves to another column, an Overview row that moves to another section
+  and a Runs-tab subagent row whose session moves down the list keep
+  focus; one that disappears hands focus to the next item in its list,
+  else the previous one, else the column or section heading. Focus in a
+  dialog, the panel or the search box stays put. The board, the Overview,
+  the Runs tab and independent stations share one way of doing this.
+
 - Sessions that crash, and Codex sessions, which never report their end,
   no longer leave their working files in the board folder forever (FH-82).
   `serve`'s regular cleanup, at startup and daily, now removes a session's

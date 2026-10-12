@@ -21,7 +21,9 @@ neither branches on the other's layout:
   warning when a run has edited since it (CARD-5) and its marginal remark,
   blocked by with links, tickable acceptance criteria, warnings and the
   rendered markdown), `EditTab` (typed fields and the raw file, EDIT-6),
-  `RunsTab` (the ticket's linked runs with their subagents as a tree, and
+  `RunsTab` (the ticket's linked runs with their subagents as a tree,
+  keeping a focused subagent row's focus as its session moves or goes
+  through `components/useKeepFocus`, and
   `RunDetail`: what one run did, its questions, plan, edited files and
   activity), `Attachments` (a grid of thumbnails and file tiles, opening
   screenshots in the lightbox) and `ReviewTab` (screenshots, then the

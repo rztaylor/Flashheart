@@ -18,6 +18,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -37,6 +38,11 @@ import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
+import {
+  focusItem,
+  focusList,
+  useKeepFocus,
+} from "../../components/useKeepFocus";
 import { neighbourColumn, shownColumns } from "../../model/columns";
 import { type Line, workstreamTitle } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
@@ -152,8 +158,17 @@ export function BoardView(props: BoardViewProps) {
     };
   }, [dragging]);
   const refs = useRef(new Map<string, HTMLButtonElement>());
-  const refocus = useRef("");
   const grid = useRef<HTMLDivElement>(null);
+  // A focused card keeps focus when it moves, by the keyboard, a live
+  // reload or a filter, and hands it on when it goes (FH-84).
+  const keepFocus = useKeepFocus();
+  const gridRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      grid.current = node;
+      return keepFocus(node);
+    },
+    [keepFocus],
+  );
   const now = useNow();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -206,17 +221,6 @@ export function BoardView(props: BoardViewProps) {
     });
   }, [selectedID]);
 
-  // A ticket moved with the keyboard keeps focus in its new column.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs after each change of cards.
-  useEffect(() => {
-    if (!refocus.current) return;
-    const node = findCard(refocus.current);
-    if (node) {
-      refocus.current = "";
-      node.focus();
-    }
-  }, [cards]);
-
   const onKey = (card: Card) => (event: KeyboardEvent<HTMLButtonElement>) => {
     if (
       event.shiftKey &&
@@ -233,7 +237,6 @@ export function BoardView(props: BoardViewProps) {
         event.key === "ArrowUp" ? "up" : "down",
       );
       if (after !== null) {
-        refocus.current = card.id;
         onMove(card, card.column, after);
       }
       return;
@@ -250,7 +253,6 @@ export function BoardView(props: BoardViewProps) {
         event.key === "ArrowLeft" ? -1 : 1,
       );
       if (target) {
-        refocus.current = card.id;
         onMove(card, target);
       }
       return;
@@ -370,7 +372,7 @@ export function BoardView(props: BoardViewProps) {
     >
       <div className="flex h-full min-h-0 flex-col">
         <div
-          ref={grid}
+          ref={gridRef}
           // The column count is a variable, not an inline template, so the
           // narrow-width rule in index.css (one chosen column) still wins.
           // The grid is the board's one scroller in both directions: columns
@@ -385,6 +387,7 @@ export function BoardView(props: BoardViewProps) {
               {/* The title alone names the column region. */}
               <WellHead
                 sticky
+                focusTarget
                 titleId={`column-${column.id}`}
                 title={column.title}
                 count={
@@ -428,6 +431,7 @@ export function BoardView(props: BoardViewProps) {
                   return (
                     <div
                       key={`${card.project}/${card.id}`}
+                      {...focusItem(`${card.project}/${card.id}`)}
                       className="relative"
                     >
                       {before ? <DropLine edge="top" /> : null}
@@ -512,6 +516,7 @@ function DropColumn({
     <section
       ref={setNodeRef}
       data-column={id}
+      {...focusList(id)}
       aria-labelledby={`column-${id}`}
       className={`${wellSurface} snap-start transition-[border-color,box-shadow] ${
         isOver

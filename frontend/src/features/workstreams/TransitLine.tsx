@@ -24,6 +24,11 @@ import type { TicketRef, Workstream, WorkstreamTicket } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { Pill, StatusPill } from "../../components/Pill";
 import { TicketLink } from "../../components/TicketLink";
+import {
+  focusItem,
+  focusList,
+  useKeepFocus,
+} from "../../components/useKeepFocus";
 import type { Line } from "../../model/lines";
 import { statusOf } from "../../model/status";
 import { type Edge, layoutGraph, moveFree } from "./graph";
@@ -349,22 +354,12 @@ function FreeStations({
   station(ticket: WorkstreamTicket, drag?: Record<string, unknown>): ReactNode;
   onReorder?(ids: string[]): void;
 }) {
-  const list = useRef<HTMLUListElement>(null);
-  const refocus = useRef("");
+  // A station moved with the keyboard keeps focus at its new place (FH-84).
+  const keepFocus = useKeepFocus();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
   const ids = tickets.map((ticket) => ticket.id);
-
-  // A station moved with the keyboard keeps focus at its new place.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs after the order changes.
-  useEffect(() => {
-    if (!refocus.current) return;
-    list.current
-      ?.querySelector<HTMLButtonElement>(`[data-station="${refocus.current}"]`)
-      ?.focus();
-    refocus.current = "";
-  }, [workstream.tickets]);
 
   const save = (from: number, to: number) =>
     onReorder?.(
@@ -382,7 +377,6 @@ function FreeStations({
     const to = index + step;
     if (step === 0 || to < 0 || to >= ids.length) return;
     event.preventDefault();
-    refocus.current = ids[index] ?? "";
     save(index, to);
   };
   const onDragEnd = (event: DragEndEvent) => {
@@ -392,7 +386,7 @@ function FreeStations({
   };
 
   return (
-    <div>
+    <div ref={keepFocus}>
       {separated ? <hr className="mt-1 mb-3 border-rule" /> : null}
       <DndContext
         sensors={sensors}
@@ -410,7 +404,7 @@ function FreeStations({
           disabled={!onReorder}
         >
           <ul
-            ref={list}
+            {...focusList(workstream.slug)}
             aria-label={`${workstream.title} stations with no dependencies on the line`}
             className="flex flex-wrap gap-y-4 pt-1 pb-2"
           >
@@ -454,6 +448,7 @@ function SortableStation({
   return (
     <li
       ref={setNodeRef}
+      {...focusItem(id)}
       onKeyDown={onKeyDown}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={`relative flex w-44 shrink-0 flex-col items-center px-2 ${isDragging ? "z-30 opacity-80" : ""}`}

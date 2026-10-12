@@ -394,6 +394,23 @@ Focus is always visible; reduced motion removes transitions, the panel
 reveal and the Working beat; every control has an accessible name; contrast
 meets WCAG 2.2 AA in both palettes (`NFR-3`).
 
+**Keeping focus** (FH-84). Board cards, Overview rows, Runs-tab subagent
+rows and independent stations keep keyboard focus when the data under them
+changes, whether by a live reload, a filter or the view's own keyboard
+move. A focused item that re-renders elsewhere (a card in another column, a
+row in another section, a session lower in the list) keeps focus on the
+same control. One that disappears hands focus to a neighbour by one rule:
+the next item in its list (column, section or subagent tree) as the list
+stood before the change, else the previous one, else the list's heading
+(the column or section title); the neighbour takes the same kind of
+control (a card's button, a row's title). An item whose list went with it
+hands over as its enclosing item would (a subagent row whose session
+unlinked goes to the next session). Focus moves without scrolling the page
+and is then brought into view only as far as needed; nothing else is
+announced. Nothing moves when focus was not in that list: focus in a
+dialog, the panel, the search box or anywhere else stays put, and focus
+the user let go of is not taken back.
+
 ## 9. Corrections to the references
 
 The references are images, not specifications. Where they show something

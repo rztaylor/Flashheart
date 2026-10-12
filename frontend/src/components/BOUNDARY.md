@@ -25,8 +25,11 @@ colour),
 `QuestionCard` (an
 agent's question with its answer box), `TicketLink` (a ticket id as a link
 to its full page, a new tab unless inside `TicketLinksInPlace`, and
-`LinkedText` for ids in plain text) and `Aside` (a marginal remark, at
-most one per screen through `AsideProvider`). Components take typed props and callbacks, use token-backed
+`LinkedText` for ids in plain text), `Aside` (a marginal remark, at
+most one per screen through `AsideProvider`) and `useKeepFocus` (the one
+way a list keeps keyboard focus when its items move or go, ui-layout.md §8
+"Keeping focus": callers mark lists, items and headings with `focusList`,
+`focusItem` and `focusHeading`; the neighbour rule is `model/navigation`). Components take typed props and callbacks, use token-backed
 utilities only, and carry their own accessibility semantics.
 
 Does not own API calls, lifecycle or session state, data loading or feature
