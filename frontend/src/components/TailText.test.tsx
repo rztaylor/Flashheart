@@ -24,6 +24,14 @@ describe("TailText", () => {
     );
     expect(markup).toMatch(/^<dd class="[^"]*font-mono/);
   });
+
+  it("renders as a list item, keeping the list's semantics", () => {
+    const path = "frontend/src/features/card/RunDetail.tsx";
+    const markup = renderToStaticMarkup(<TailText as="li">{path}</TailText>);
+    expect(markup).toMatch(/^<li /);
+    expect(markup).toContain(`title="${path}"`);
+    expect(markup).toContain(`<bdi>${path}</bdi>`);
+  });
 });
 
 describe("BranchLabel", () => {
