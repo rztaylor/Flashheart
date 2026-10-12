@@ -60,6 +60,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Keyboard focus no longer jumps to the top of the page when the board
+  changes under it (FH-84). A focused card that a live reload or a filter
+  moves to another column, an Overview row that moves to another section
+  and a Runs-tab subagent row whose session moves down the list keep
+  focus; one that disappears hands focus to the next item in its list,
+  else the previous one, else the column or section heading. Focus in a
+  dialog, the panel or the search box stays put. The board, the Overview,
+  the Runs tab and independent stations share one way of doing this.
 - A long branch name keeps its distinguishing end in view in the ticket
   panel's header and the Runs tab (FH-83). It is cut from the start, as
   the board root, run ids, worktrees and archived projects' repositories

@@ -10,7 +10,8 @@ shared question card; permission prompts saying which session to answer
 in, never a button), Ready for your review (Review results), At risk, In
 progress, and the collapsed Work with no ticket (Create ticket) and Up next
 tiles, with their open and closed state, rows, empty sentences and quiet
-remarks; and its load states (ui-layout.md §8): `OverviewSkeleton`, which
+remarks; a focused row keeps focus as it moves between sections or goes
+(through `components/useKeepFocus`, the section head the last place); and its load states (ui-layout.md §8): `OverviewSkeleton`, which
 the shell also shows while the projects load, the shared error with Try
 again and the last-good-copy note.
 

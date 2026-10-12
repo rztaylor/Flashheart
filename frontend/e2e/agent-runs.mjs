@@ -209,6 +209,14 @@ export function promptHook(root, sessionID, cwd, prompt = "synthetic") {
   ).toString();
 }
 
+// startSubagent records a subagent of a session starting and using a tool.
+export function startSubagent(root, sessionID, cwd, agentID, type) {
+  const sub = { agent_id: agentID, agent_type: type };
+  const run = session(root, sessionID, cwd);
+  run.send("SubagentStart", sub);
+  run.tool("Read", {}, sub);
+}
+
 // callTool calls one tool of the real `flashheart mcp` server, as Claude
 // Code would from a session working in cwd, and returns its text.
 export function callTool(root, cwd, name, args) {
