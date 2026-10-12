@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
@@ -326,4 +327,32 @@ func TestBoardContextNamesTheProjectAWriteWouldCreate(t *testing.T) {
 	write(t, e.root+"/demo/project.yaml", "key: DM\nname: demo\nrepos:\n  - /elsewhere/demo\n")
 	out := e.ok("board_context", nil)
 	contains(t, out, `project "demo-`, "Keys in use: DM")
+}
+
+// A session's ticket is found in its home project, which a server working
+// elsewhere reads for it, even when all that server's own log knows of the
+// session is a claim it made there and released (FH-32).
+func TestBoardContextLinksARunByBranchInItsHome(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	mine := e.ticket(store.NewTicket{Title: "Card panel"})
+	e.setStatus(mine, board.InProgress, "feature/demo")
+	there := filepath.Join(filepath.Dir(e.cwd), "rival")
+	write(t, filepath.Join(there, ".git", "HEAD"), "ref: refs/heads/main\n")
+	write(t, filepath.Join(e.root, "rival", "project.yaml"), "key: RV\nrepos:\n  - "+there+"\n")
+	if _, err := e.store.CreateTicket("rival", store.NewTicket{Title: "Elsewhere"}); err != nil {
+		t.Fatal(err)
+	}
+	e.startSession(session)
+	e.ok("claim", map[string]any{"ticket": "RV-1"})
+	e.now = e.now.Add(time.Minute)
+	e.ok("release", map[string]any{"ticket": "RV-1"})
+	e.now = e.now.Add(time.Minute)
+
+	away := *e
+	away.cwd, away.client, away.server = there, nil, nil
+	contains(t, away.ok("board_context", map[string]any{"run": session}),
+		"[Flashheart] project=rival key=RV run=claude:5b0c7e2a",
+		`Your ticket DM-1 "Card panel" (in-progress, medium, linked by branch).`)
 }

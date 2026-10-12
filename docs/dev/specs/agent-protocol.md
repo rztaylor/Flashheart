@@ -150,8 +150,9 @@ latest hook event is `stale_hours` old, which the stale rule has ended
 activity with it, since recording it then would misdate it and reopen the
 run; and `serve`'s retention, at startup and daily, removes a session's
 file no hook has written for `stale_hours`. Pending activity is otherwise
-recorded at the session's next turn end or end, at the latest. Logs written before protocol 2 hold one `tool.used` per tool
-call; readers fold both.
+recorded at the session's next turn end or end, at the latest. Logs
+written before protocol 2 hold one `tool.used` per tool call; readers fold
+both.
 
 ### The human's board writes
 
@@ -417,6 +418,22 @@ touches the user's other hooks.
   (`EDIT-2` applies to agents too).
 - A run holds at most one explicit claim; claiming another releases the
   first (with an event).
+- A run's **project** is its home: where it records its own events
+  (`run.start`, turns, activity, plans, questions), or the `home` its claim
+  names; never the project of a ticket it claimed, released, moved,
+  updated, reviewed, attached to or checkpointed elsewhere, whose events
+  sit in that ticket's log. The latest such event wins; a run seen only
+  through a ticket's events elsewhere keeps the project it was first seen
+  in. Its branch link (`RUN-5`) looks for in-progress tickets in its home,
+  so a session that releases a claim on another project's ticket links by
+  branch to its own again (FH-32); the MCP server reads the home project
+  for `board_context` when it is not the caller's.
+- Handoff enforcement (§9) and the recovery note (§8) read only the home
+  project's log and tickets, to stay within the hook budget (`HOOK-1`):
+  they see a claim on a home ticket, and otherwise link by branch in the
+  home project. A claim on another project's ticket is not seen there, so
+  such a session is held to a checkpoint only on the home ticket its
+  branch links it to, if any.
 - `release` ends the lease; it does not move the ticket.
 
 ## 7. MCP server
@@ -636,6 +653,9 @@ When `enforce_handoff` is on for the project, at `Stop`:
   output `{"decision":"block","reason":"Flashheart: record a checkpoint on <ticket> (done, next, files) before stopping."}`
   and record `turn.end` with `blocked_for_handoff: true`;
 - otherwise allow.
+
+The hook reads only the project's own log: a claim the session made on
+another project's ticket is not seen, so it links by branch only (§6).
 
 ## 10. Orchestrators and subagents
 
