@@ -4,6 +4,8 @@ import {
   readdir,
   readFile,
   realpath,
+  rename,
+  rm,
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -832,6 +834,20 @@ test("projects archive, restore and delete for good", async () => {
       .filter({ hasText: "Deleted project Alpha permanently." }),
   ).toBeVisible();
   await expect(page.getByText("No archived projects")).toBeVisible();
+
+  // Archived projects changed outside Flashheart show within about a
+  // second, in the list and in All projects' archive count (FH-28).
+  const archive = join(sandbox.root, ".archive");
+  await mkdir(join(archive, "gamma", "tickets"), { recursive: true });
+  await expect(archived).toContainText("gamma", { timeout: 1_500 });
+  await rename(join(archive, "gamma"), join(archive, "zeta"));
+  await expect(archived).toContainText("zeta", { timeout: 1_500 });
+  await expect(archived).not.toContainText("gamma");
+  await open("#/all/board");
+  const archiveLink = page.getByRole("link", { name: /^Archive/ });
+  await expect(archiveLink).toHaveText(/^Archive\s*1$/);
+  await rm(join(archive, "zeta"), { recursive: true });
+  await expect(archiveLink).toHaveText(/^Archive\s*0$/, { timeout: 1_500 });
 });
 
 // remarksIn reads the reviewed remarks with ids in [from, to].

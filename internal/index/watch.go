@@ -13,7 +13,8 @@ import (
 
 // Watching (STO-7). fsnotify watches are per directory (and, with kqueue on
 // macOS, per file in it), so the watcher covers the board's structure (the
-// root, each project, tickets/, workstreams/, .archive/tickets/) plus, up to
+// root, the archived projects' <root>/.archive/ but not the projects in it
+// (FH-28), each project, tickets/, workstreams/, .archive/tickets/) plus, up to
 // FolderBudget, each project's event log (.flashheart/events/, or
 // .flashheart/ until the log exists) and the most recently changed ticket
 // folders. After a short debounce a board change reads the board, and an
@@ -235,7 +236,8 @@ func (p pending) plan(covered, added bool) action {
 	return nothing
 }
 
-// watchSet lists the directories to watch: the root, each project and its
+// watchSet lists the directories to watch: the root, <root>/.archive (when
+// it is a directory, not a link), each project and its
 // tickets, workstreams and archive folders, then, within budget, each
 // project's event log (.flashheart/events, or .flashheart until it exists)
 // and the most recently modified ticket folders.
@@ -247,6 +249,11 @@ func watchSet(root string, budget int) map[string]bool {
 		return want
 	}
 	want[root] = true
+	// The archived projects' folder, so one added, renamed or removed there
+	// is seen (FH-28); not the projects in it, and not through a link.
+	if archive := filepath.Join(root, ".archive"); isRealDir(archive) {
+		want[archive] = true
+	}
 	type folder struct {
 		path     string
 		modified time.Time
@@ -297,5 +304,11 @@ func watchSet(root string, budget int) map[string]bool {
 
 func isDir(path string) bool {
 	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+// isRealDir is isDir without following a symbolic link.
+func isRealDir(path string) bool {
+	info, err := os.Lstat(path)
 	return err == nil && info.IsDir()
 }
