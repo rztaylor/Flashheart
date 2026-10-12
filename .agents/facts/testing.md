@@ -50,6 +50,14 @@
   `flashheart hook claude`
   against the sandbox (`frontend/e2e/agent-runs.mjs`).
 - Run-state and blocking logic are table tests with a fake clock.
+- Serve's freshness cost is tested by counting board reads through a
+  wrapping `index.Source` (`countingSource` in `internal/index` and
+  `internal/api`, FH-96): event appends refold with no read, `Current`
+  does not read while watching, a board write reads once. The watcher's
+  choice of work is a table test (`TestPendingChangesPlanTheLeastWork`),
+  not a timing test. Watcher tests start `Watch` through the `watch`
+  helper, whose cleanup waits for it to return before the temporary
+  directory is removed (FH-110).
 - Every MCP write tool's run and claim policy (agent-protocol §7.1) is one
   table test, tool × caller (`TestWriteToolPolicies`); a new tool adds its
   row there. Attribution precedence is tested apart from the tools

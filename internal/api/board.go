@@ -26,9 +26,11 @@ import (
 const searchTextRunes = 1000
 
 // BoardSource supplies the current board snapshot and waits for changes.
+// Rebuild reads the board after a write; RefreshRuns refolds only the runs.
 type BoardSource interface {
 	Current() (*index.Snapshot, error)
 	Rebuild() (*index.Snapshot, error)
+	RefreshRuns() (*index.Snapshot, error)
 	Wait(ctx context.Context, since uint64) uint64
 }
 

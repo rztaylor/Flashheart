@@ -50,9 +50,19 @@ type projectEvents struct {
 	offsets map[string]int64
 }
 
+// boardKinds are the events recorded with a write to a ticket, review or
+// attachment. A runs-only refold that reads one has the board read too:
+// the file written may be in a folder the watcher does not watch (FH-96).
+var boardKinds = map[events.Kind]bool{
+	events.Claim: true, events.Release: true, events.Checkpoint: true,
+	events.TicketMoved: true, events.TicketUpdated: true, events.TicketCreated: true,
+	events.ReviewWritten: true, events.AttachmentAdded: true, events.QuestionAnswered: true,
+}
+
 // update reads new events for the given projects, folds them, and returns
-// a fingerprint of what has been read.
-func (t *tracker) update(projects []string, now time.Time) string {
+// a fingerprint of what has been read and whether a new event is one of
+// boardKinds.
+func (t *tracker) update(projects []string, now time.Time) (string, bool) {
 	refold := t.set == nil
 	if day := events.FileName(now); day != t.day {
 		// A new day: start again from the window, so old runs fall away.
@@ -77,6 +87,7 @@ func (t *tracker) update(projects []string, now time.Time) string {
 		}
 	}
 	var fresh []events.Event
+	writes := false
 	for _, project := range slices.Sorted(slices.Values(projects)) {
 		files, err := t.source.Files(project)
 		if err != nil || len(files) == 0 {
@@ -99,6 +110,7 @@ func (t *tracker) update(projects []string, now time.Time) string {
 				state.events = append(state.events, e)
 				t.noteHuman(e)
 				fresh = append(fresh, e)
+				writes = writes || boardKinds[e.Kind]
 			})
 			state.offsets[file] = offset
 			parts = append(parts, fmt.Sprintf("%s/%s:%d", project, file, offset))
@@ -125,7 +137,7 @@ func (t *tracker) update(projects []string, now time.Time) string {
 		}
 	}
 	sort.Strings(parts)
-	return strings.Join(parts, ",")
+	return strings.Join(parts, ","), writes
 }
 
 // noteHuman keeps e if it is the human's latest board activity in its
@@ -248,32 +260,115 @@ func (s *Snapshot) onBoard(id string) bool {
 // needs attention first.
 var statePriority = map[runs.State]int{runs.NeedsYou: 0, runs.Working: 1, runs.Quiet: 2, runs.Waiting: 3}
 
+// runIndex finds a snapshot's runs without scanning them all: built once
+// per snapshot, so a board of cards looks each one's runs up (FH-96).
+// Positions are into Runs and keep its order.
+type runIndex struct {
+	byID map[string]int
+	// byTicket lists the runs linked to each ticket.
+	byTicket map[string][]int
+	// family lists each run with its subagents.
+	family map[string][]int
+	// questions holds each ticket's open questions, oldest first, marked
+	// SessionEnded when their run has ended.
+	questions map[string][]runs.Question
+	// question finds a question by id: run and question position.
+	question map[string][2]int
+}
+
+func indexRuns(views []runs.View) runIndex {
+	index := runIndex{
+		byID: make(map[string]int, len(views)), byTicket: map[string][]int{}, family: make(map[string][]int, len(views)),
+		questions: map[string][]runs.Question{}, question: map[string][2]int{},
+	}
+	for position, run := range views {
+		if _, seen := index.byID[run.ID]; !seen {
+			index.byID[run.ID] = position
+		}
+		if run.Link.Ticket != "" {
+			index.byTicket[run.Link.Ticket] = append(index.byTicket[run.Link.Ticket], position)
+		}
+		index.family[run.ID] = append(index.family[run.ID], position)
+		if run.Parent != "" {
+			index.family[run.Parent] = append(index.family[run.Parent], position)
+		}
+		for n, q := range run.Questions {
+			if _, seen := index.question[q.ID]; !seen {
+				index.question[q.ID] = [2]int{position, n}
+			}
+			if q.Open() && q.Ticket != "" {
+				q.SessionEnded = run.State == runs.Ended
+				index.questions[q.Ticket] = append(index.questions[q.Ticket], q)
+			}
+		}
+	}
+	for _, list := range index.questions {
+		sort.SliceStable(list, func(a, b int) bool { return list[a].Asked.Before(list[b].Asked) })
+	}
+	return index
+}
+
+// linked returns the runs linked to a ticket, in Runs order.
+func (s *Snapshot) linked(id string) []runs.View {
+	positions := s.runIndex.byTicket[id]
+	if id == "" || len(positions) == 0 {
+		return nil
+	}
+	list := make([]runs.View, len(positions))
+	for n, position := range positions {
+		list[n] = s.Runs[position]
+	}
+	return list
+}
+
+// Run finds a run by id.
+func (s *Snapshot) Run(id string) (runs.View, bool) {
+	position, ok := s.runIndex.byID[id]
+	if !ok {
+		return runs.View{}, false
+	}
+	return s.Runs[position], true
+}
+
+// Family returns a run and its subagents, in the snapshot's order.
+func (s *Snapshot) Family(id string) []runs.View {
+	positions := s.runIndex.family[id]
+	list := make([]runs.View, 0, len(positions))
+	for _, position := range positions {
+		list = append(list, s.Runs[position])
+	}
+	return list
+}
+
+// Subagents returns a run's subagents, in the snapshot's order.
+func (s *Snapshot) Subagents(id string) []runs.View {
+	var list []runs.View
+	for _, run := range s.Family(id) {
+		if run.Parent == id {
+			list = append(list, run)
+		}
+	}
+	return list
+}
+
 // TicketRun returns the live session run linked to a ticket that most needs
 // attention (VIEW-8), preferring the most recently active.
 func (s *Snapshot) TicketRun(id string) (runs.View, bool) {
-	best := -1
-	for i, run := range s.Runs {
-		if run.Link.Ticket != id || run.State == runs.Ended || run.Parent != "" {
+	best, found := runs.View{}, false
+	for _, run := range s.linked(id) {
+		if run.State == runs.Ended || run.Parent != "" {
 			continue
 		}
-		if best < 0 || leads(run, s.Runs[best]) {
-			best = i
+		if !found || leads(run, best) {
+			best, found = run, true
 		}
 	}
-	if best < 0 {
-		return runs.View{}, false
-	}
-	return s.Runs[best], true
+	return best, found
 }
 
 // TicketRuns returns every run linked to a ticket, most recent first.
 func (s *Snapshot) TicketRuns(id string) []runs.View {
-	var list []runs.View
-	for _, run := range s.Runs {
-		if run.Link.Ticket == id {
-			list = append(list, run)
-		}
-	}
+	list := s.linked(id)
 	sort.SliceStable(list, func(a, b int) bool { return list[a].LastActivity.After(list[b].LastActivity) })
 	return list
 }
@@ -284,27 +379,15 @@ func (s *Snapshot) TicketRuns(id string) []runs.View {
 // and the answer waits for the session to resume, but they do not need you
 // (VIEW-2, RUN-8).
 func (s *Snapshot) Questions(ticket string) []runs.Question {
-	var list []runs.Question
-	for _, run := range s.Runs {
-		for _, q := range run.Questions {
-			if q.Ticket == ticket && q.Open() {
-				q.SessionEnded = run.State == runs.Ended
-				list = append(list, q)
-			}
-		}
-	}
-	sort.SliceStable(list, func(a, b int) bool { return list[a].Asked.Before(list[b].Asked) })
-	return list
+	return slices.Clone(s.runIndex.questions[ticket])
 }
 
 // Question finds a question by id among the snapshot's runs.
 func (s *Snapshot) Question(id string) (runs.Question, runs.View, bool) {
-	for _, run := range s.Runs {
-		for _, q := range run.Questions {
-			if q.ID == id {
-				return q, run, true
-			}
-		}
+	position, ok := s.runIndex.question[id]
+	if !ok {
+		return runs.Question{}, runs.View{}, false
 	}
-	return runs.Question{}, runs.View{}, false
+	run := s.Runs[position[0]]
+	return run.Questions[position[1]], run, true
 }

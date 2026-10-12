@@ -782,3 +782,35 @@ fold still adds to it), a deadline from the hook's start (chosen), or
 skip the check on a busy log (misses shell edits). Assumption: a
 subagent's parent is the session its run id names, as every adapter
 records it (agent-protocol §2).
+
+## 2026-10-12 — D38: Serve's watcher is its freshness source; events refold runs only
+
+Serve's index fingerprints the board files and the runs apart (FH-96). A
+watched event-log append refolds the runs over the board already read, with
+no `ReadBoard`; at hook cadence that used to reparse every ticket per
+batch, so NFR-1's 5,000-ticket budget was paid per event. A new event that
+records a ticket write (claim, release, checkpoint, ticket, review,
+attachment or answer events) still reads the board, because the ticket's
+folder may be beyond `FolderBudget`, where an event append used to catch
+the edit by accident. While `Watch` runs, `Current` serves the snapshot as
+it is instead of rebuilding one older than `MaxAge` (2 s); without a
+watcher (tests, a server before its watcher starts, a watcher that
+returned) it still does. An API write's own rebuild covers the watcher's
+next one: each board change the watcher sees is marked with the count of
+board reads started, and it reads again only when no read began after the
+mark succeeded, or when it added a watch (FH-36's watch-then-read order).
+A change seen after the write's read began is read again: about one write
+in thirty under the race detector, none in thirty without it. Event logs
+count against `FolderBudget`, before ticket folders; a project's
+`.flashheart/` is watched only until its log exists. The revision stays
+single: splitting board and runs revisions for the frontend is left to a
+later change.
+
+Options: keep `MaxAge` rebuilds alongside the watcher (simple, but every
+GET after 2 s reads every ticket); have writes wait for the watcher instead
+of rebuilding (one read, but a write to an unwatched folder or a
+preference waits for a timeout); compare file modification times to the
+read's start (filesystem timestamps are too coarse to be safe); mark
+changes by reads started (chosen). For unwatched folders: rely on the 10 s
+sweep alone (cheapest, but agents' writes to old tickets show late), or
+read the board for events that record ticket writes (chosen).

@@ -68,7 +68,14 @@ Intended layout (packages are created when they get real content):
   (`flashheart migrate`, MIG-1): plan, number, rewrite references, move v1
   files to `.flashheart/backup/`. Writes only through `store` primitives.
 - `internal/index`: in-memory, revisioned index of the root for `serve`;
-  fsnotify watching.
+  fsnotify watching. Board and runs are fingerprinted apart: event appends
+  refold runs over the board already read (no `ReadBoard`), and while
+  `Watch` runs it is the freshness source (`Current` skips the `MaxAge`
+  rebuild, a board change a write's own rebuild already read is not read
+  again). Without a watcher `Current` rebuilds on `MaxAge`. Event logs count
+  against `FolderBudget`. Snapshots index runs by ticket, id and parent
+  once; API read paths use those lookups, never a scan of `Runs` per card
+  (FH-96, D38).
 - `internal/api`: HTTP JSON handlers and request validation; no filesystem
   rules.
 - `internal/app`: Singleserve composition and lifecycle, shutdown guard.

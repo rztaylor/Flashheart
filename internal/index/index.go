@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -12,7 +13,8 @@ import (
 	"github.com/rztaylor/flashheart/internal/runs"
 )
 
-// DefaultMaxAge is how old a snapshot may be before Current rebuilds it.
+// DefaultMaxAge is how old a snapshot's board may be before Current
+// rebuilds it, when Watch is not keeping it fresh.
 const DefaultMaxAge = 2 * time.Second
 
 // Source reads the whole board with a fingerprint of the files read, and
@@ -46,6 +48,8 @@ type Snapshot struct {
 
 	// human is each project's latest human board activity (LatestHuman).
 	human map[string]events.HumanActivity
+	// runIndex finds Runs by ticket, id and parent (FH-96).
+	runIndex runIndex
 
 	projects map[string]int
 	tickets  map[string][2]int // id → project index, ticket index (first copy)
@@ -100,9 +104,22 @@ type Index struct {
 	runs   runs.Settings
 	events *tracker
 
-	mu          sync.Mutex
-	current     *Snapshot
-	fingerprint string
+	// reads counts board reads started, so the watcher can tell whether one
+	// began after a change it saw (FH-96).
+	reads atomic.Uint64
+
+	mu      sync.Mutex
+	current *Snapshot
+	// boardPrint and runsPrint fingerprint current's board files and its
+	// runs; the revision advances when either changes.
+	boardPrint, runsPrint string
+	// boardAt is when current's board was read, and boardRead which read
+	// that was (a value of reads).
+	boardAt   time.Time
+	boardRead uint64
+	// watching is set while Watch keeps the snapshot fresh: Current then
+	// serves it without checking its age.
+	watching bool
 	// changed is closed and replaced whenever the revision advances.
 	changed chan struct{}
 }
@@ -125,27 +142,72 @@ func New(source Source, options Options) *Index {
 	return index
 }
 
-// Current returns the snapshot, rebuilding it first if it is older than
-// MaxAge. If a rebuild fails the previous snapshot is returned with the error.
+// Current returns the snapshot. While Watch runs it is served as it is: the
+// watcher keeps it fresh. Otherwise it is rebuilt first if its board is
+// older than MaxAge. If a rebuild fails the previous snapshot is returned
+// with the error.
 func (i *Index) Current() (*Snapshot, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	if i.current != nil && i.now().Sub(i.current.BuiltAt) < i.maxAge {
+	if i.current != nil && (i.watching || i.now().Sub(i.boardAt) < i.maxAge) {
 		return i.current, nil
 	}
 	return i.rebuildLocked()
 }
 
-// Rebuild reads the board now.
+// Rebuild reads the board and the new events now.
 func (i *Index) Rebuild() (*Snapshot, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	return i.rebuildLocked()
 }
 
+// RefreshRuns folds the events appended since the last read into the runs,
+// over the board already read: no ticket is read. The board is read as
+// Current would, when there is none yet or it is stale and Watch is not
+// running.
+func (i *Index) RefreshRuns() (*Snapshot, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if i.current == nil || i.current.RootMissing || (!i.watching && i.now().Sub(i.boardAt) >= i.maxAge) {
+		return i.rebuildLocked()
+	}
+	snapshot, _ := i.refoldLocked()
+	return snapshot, nil
+}
+
+// refold is the watcher's RefreshRuns. It reports whether a new event
+// records a write to the board, which the watcher then reads: the write
+// may be in a folder it does not watch.
+func (i *Index) refold() bool {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if i.current == nil || i.current.RootMissing {
+		_, _ = i.rebuildLocked()
+		return false
+	}
+	_, board := i.refoldLocked()
+	return board
+}
+
+// covered reports whether the current board was read by a read that began
+// after mark, a value of reads.
+func (i *Index) covered(mark uint64) bool {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	return i.current != nil && i.boardRead > mark
+}
+
+func (i *Index) setWatching(watching bool) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.watching = watching
+}
+
 const missingFingerprint = "\x00root-missing"
 
 func (i *Index) rebuildLocked() (*Snapshot, error) {
+	read := i.reads.Add(1)
 	b, fingerprint, err := i.source.ReadBoard()
 	missing := errors.Is(err, fs.ErrNotExist)
 	if err != nil && !missing {
@@ -163,34 +225,11 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 		}
 	}
 	now := i.now()
-	var views []runs.View
-	var human map[string]events.HumanActivity
-	if i.events != nil && !missing {
-		names := make([]string, 0, len(b.Projects))
-		for _, project := range b.Projects {
-			names = append(names, project.Name)
-		}
-		read := i.events.update(names, now)
-		views = i.events.views(b, now, i.runs)
-		human = i.events.human()
-		fingerprint += "\x00runs:" + read + "\x00" + signature(views)
-	}
-	revision := uint64(1)
-	if i.current != nil {
-		revision = i.current.Revision
-		if fingerprint != i.fingerprint {
-			revision++
-		}
-	}
 	snapshot := &Snapshot{
-		Revision:    revision,
-		BuiltAt:     now,
 		RootMissing: missing,
 		V1Projects:  v1,
 		Board:       b,
 		Analysis:    board.Analyze(b),
-		Runs:        views,
-		human:       human,
 		projects:    make(map[string]int, len(b.Projects)),
 		tickets:     map[string][2]int{},
 		archived:    map[string]bool{},
@@ -206,11 +245,51 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 			snapshot.archived[id] = true
 		}
 	}
-	advanced := i.current == nil || snapshot.Revision != i.current.Revision
-	i.current, i.fingerprint = snapshot, fingerprint
+	i.boardAt, i.boardRead = now, read
+	snapshot, _ = i.publishLocked(snapshot, fingerprint, now)
+	return snapshot, nil
+}
+
+// refoldLocked publishes the current board with its runs refolded from the
+// new events, and reports whether one records a write to the board.
+func (i *Index) refoldLocked() (*Snapshot, bool) {
+	if i.events == nil {
+		return i.current, false
+	}
+	next := *i.current
+	return i.publishLocked(&next, i.boardPrint, i.now())
+}
+
+// publishLocked derives next's runs at now over its board, advances the
+// revision if the board or the runs changed, and makes next current.
+func (i *Index) publishLocked(next *Snapshot, boardPrint string, now time.Time) (*Snapshot, bool) {
+	next.BuiltAt, next.Runs, next.human = now, nil, nil
+	var runsPrint string
+	var boardEvents bool
+	if i.events != nil && !next.RootMissing {
+		names := make([]string, 0, len(next.Board.Projects))
+		for _, project := range next.Board.Projects {
+			names = append(names, project.Name)
+		}
+		var read string
+		read, boardEvents = i.events.update(names, now)
+		next.Runs = i.events.views(next.Board, now, i.runs)
+		next.human = i.events.human()
+		runsPrint = read + "\x00" + signature(next.Runs)
+	}
+	next.runIndex = indexRuns(next.Runs)
+	next.Revision = 1
+	if i.current != nil {
+		next.Revision = i.current.Revision
+		if boardPrint != i.boardPrint || runsPrint != i.runsPrint {
+			next.Revision++
+		}
+	}
+	advanced := i.current == nil || next.Revision != i.current.Revision
+	i.current, i.boardPrint, i.runsPrint = next, boardPrint, runsPrint
 	if advanced && i.changed != nil {
 		close(i.changed)
 		i.changed = nil
 	}
-	return snapshot, nil
+	return next, boardEvents
 }
