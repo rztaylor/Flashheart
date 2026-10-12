@@ -11,7 +11,9 @@
 // workstreams, creates tickets with the next id (KEY-2) and keys under a root lock (KEY-5), from board's templates, archives tickets,
 // lists them and deletes archived ones permanently with their references
 // (EDIT-8), archives, restores and permanently deletes projects with their
-// references and retired keys (PRJ-5), stores allow-listed, bounded,
+// references and retired keys (PRJ-5) (both deletes share one reference
+// scan, run without a lock for the preview and again under the root lock
+// to check its token), stores allow-listed, bounded,
 // scrubbed files in a ticket from their bytes (AddAttachment) or a local
 // path (CopyIntoTicket), with one reader and writer of files/index.yaml
 // that keeps what it does not write (REV-1, REV-5),

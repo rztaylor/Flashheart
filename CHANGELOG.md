@@ -81,6 +81,13 @@ All notable changes to this project are documented here. The project follows
   lock to learn the project is archived (FH-27). They used to wait up to
   5 s behind a long write such as a permanent project delete; they now
   return at once and still record and print nothing.
+- Permanently deleting an archived ticket or project no longer holds up
+  new tickets and hooks in new repositories while it reads every ticket
+  (FH-26). With 2,000 archived tickets the delete held the root lock for
+  about 1 s, reading every ticket twice; it now holds it for about 0.1 s,
+  for one quicker check and the writes. The preview opens about six times
+  faster. A delete is still refused when anything the preview listed has
+  changed, or another ticket has started to refer to what is deleted.
 
 - `flashheart doctor` no longer reports a `flashheart` MCP server
   registered at local or project scope as "not registered" (FH-35). It is

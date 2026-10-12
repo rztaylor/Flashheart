@@ -149,11 +149,25 @@ hash they read. Every ticket write by Flashheart stamps `updated`, except
 one that leaves the frontmatter unparseable, which is written as it is;
 archiving stamps it too, which dates the archive. The folder never moves except to
 `.archive/` and back, and is removed only by a permanent delete of an
-archived ticket (`EDIT-8`): the delete takes the root lock and the lock of
-every project it rewrites (in name order), removes the id from every
+archived ticket (`EDIT-8`): the delete removes the id from every
 ticket's `depends-on` and the project's workstream `tickets:` lists, adds
 it to `retired` in `project.yaml`, and removes the folder. It takes an id,
 never a path, and refuses any symbolic link on the folder's path.
+
+Its preview and its check share one reference scan: every live and
+archived ticket file in every live project (not through a symbolic link),
+read once and matched on its frontmatter `depends-on`, plus the project's
+workstream files. The preview takes no lock. Its token covers the folder's
+files and sizes and the path and content hash of every referring ticket and
+listing workstream, so it changes when any of them changes and when a
+ticket or workstream starts or stops referring to the id. The delete scans
+without a lock first, refusing a stale token at once; then takes the root
+lock and the locks of the project and of every project it rewrites (in name
+order), scans once more and writes only if the token is unchanged. Under
+the root lock it reads each ticket file but parses only its frontmatter
+(the whole file only for a referring ticket), and rewrites only what the
+preview showed. A project it does not lock can gain a reference after that
+scan, as after the delete; it names a retired id, which counts as done.
 
 ### Multi-file writes
 
@@ -403,8 +417,11 @@ the root lock and sets the directory's time, which dates the archive.
 Restoring moves it back, refused while a live project has that name. An
 archived project's ticket ids (live and archived inside it) count as done
 for other projects' blocking, and its key stays taken. A permanent delete
-takes the root lock and the lock of each project it rewrites (in name
-order), removes other projects' `depends-on` entries naming its tickets,
+checks its preview as a ticket's does (§Columns): the same reference scan,
+for any of the project's ids, without a lock and again under the root lock
+and the lock of each project it rewrites, in name order; its token also
+covers the project's key and ticket ids. It removes other projects'
+`depends-on` entries naming its tickets,
 adds its key to `<root>/.flashheart/retired.yaml` (`keys: [AL]`), and
 removes the directory. All of it is by project name, never a path, and a
 symbolic link anywhere on the project's path is refused. A writer that was waiting for a
