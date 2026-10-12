@@ -14,7 +14,9 @@
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
   Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
-  FilterChip, TicketLink, LoadError, StaleNote) → `features/<feature>/` (board,
+  FilterChip, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
+  one owner of keeping keyboard focus on a moved or removed list item,
+  ui-layout.md §8) → `features/<feature>/` (board,
   card, editing, overview, workstreams, table, projects, filters, archive; later
   settings) → `app/`
   (shell, hash routing, composition). Shared layers never import features

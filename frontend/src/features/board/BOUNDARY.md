@@ -6,7 +6,9 @@ rounded wells, less a hidden Backlog (FH-41), ticket cards in the one anatomy of
 and bullets, the
 "Colour by" header tint and tag, blocked proof and running
 times, the done-column limit
-toggle, arrow-key movement between cards, moving tickets between columns by
+toggle, arrow-key movement between cards, keeping a focused card's focus
+as it moves or goes (through `components/useKeepFocus`, its column head the
+last place focus goes), moving tickets between columns by
 drag or Shift and an arrow (EDIT-1), placing them in a column's manual
 order with a drop line or Shift with Up or Down (EDIT-9), keeping the selected card's column
 in view when the panel opens, live run badges on cards (VIEW-8), and drawing each card

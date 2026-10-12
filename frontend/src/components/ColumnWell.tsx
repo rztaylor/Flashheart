@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { focusHeading } from "./useKeepFocus";
+
 // The column well (ui-layout.md §2): the rounded surface of a board column.
 // Callers add the border colour (rule, or select while a drop hovers).
 export const wellSurface =
@@ -9,23 +11,27 @@ export const wellSurface =
 // heading's words) and the title in the display cut. titleId names the
 // title alone, for a region labelled by it. A sticky head stays at the top
 // of a well that scrolls with its neighbours, so the board keeps its column
-// names and counts in view.
+// names and counts in view. A focusTarget head takes focus when its well's
+// last focused card goes (FH-84).
 export function WellHead({
   id,
   titleId,
   title,
   count,
   sticky = false,
+  focusTarget = false,
 }: {
   id?: string;
   titleId?: string;
   title: string;
   count: ReactNode;
   sticky?: boolean;
+  focusTarget?: boolean;
 }) {
   return (
     <h2
       id={id}
+      {...(focusTarget ? { ...focusHeading, tabIndex: -1 } : {})}
       className={`flex items-center gap-2.5 px-1 pt-1 pb-3 text-xl leading-tight display-cut ${
         sticky
           ? "sticky -top-1 z-[1] -mx-2.5 -mt-2.5 rounded-t-panel bg-column px-3.5 pt-3.5"
