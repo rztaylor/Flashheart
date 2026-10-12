@@ -70,15 +70,19 @@ func TestWatchFoldsAppendedEventsWithoutReadingTheBoard(t *testing.T) {
 	appendNow(t, log, events.RunStart, events.RunStartData{Kind: events.KindSession, Branch: "feature/x"})
 	started := waitPast(t, index, before.Revision)
 	appendNow(t, log, events.TurnStart, events.TurnStartData{})
+	// Past the debounce, so the two appends may fold in separate windows,
+	// as they can on a loaded machine (FH-111).
+	time.Sleep(3 * debounce)
 	appendNow(t, log, events.ToolUsed, events.ToolData{Tool: "Edit", OK: true, Path: "a.go"})
-	waitPast(t, index, started)
 
-	snapshot, _ := index.Current()
-	if len(snapshot.Runs) != 1 || snapshot.Runs[0].State != runs.Working || snapshot.Runs[0].Link.Ticket != "AL-3" {
-		t.Fatalf("runs = %+v", snapshot.Runs)
+	// Each window publishes a revision, so wait for the run, not for one.
+	folded := func(snapshot *Snapshot) bool {
+		live, ok := snapshot.TicketRun("AL-3")
+		return len(snapshot.Runs) == 1 && snapshot.Runs[0].State == runs.Working && ok && live.Tools == 1
 	}
-	if live, ok := snapshot.TicketRun("AL-3"); !ok || live.Tools != 1 {
-		t.Fatalf("AL-3's run = %+v, %v", live, ok)
+	snapshot, _ := index.Current()
+	for revision := started; !folded(snapshot); snapshot, _ = index.Current() {
+		revision = waitPast(t, index, revision)
 	}
 	if got := source.reads.Load() - reads; got != 0 {
 		t.Errorf("appending events read the board %d times, want 0", got)
