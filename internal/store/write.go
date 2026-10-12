@@ -227,11 +227,11 @@ func (s *Store) ReadTicket(project, id string) ([]byte, string, error) {
 // Edit computes a file's new content from its current content.
 type Edit func(current []byte) ([]byte, error)
 
-// UpdateTicket applies edit to a ticket under the project lock. A non-empty
-// base must match the file's current hash or the result is a *ConflictError.
-// A changed ticket gets `updated:` stamped; an edit that changes nothing
-// writes nothing. It returns the file's hash after the call.
-func (s *Store) UpdateTicket(project, id, base string, edit Edit) (string, error) {
+// UpdateTicket applies edit to a ticket under the project lock, once pre
+// holds (a hash that no longer matches is a *ConflictError). A changed
+// ticket gets `updated:` stamped; an edit that changes nothing writes
+// nothing. It returns the file's hash after the call.
+func (s *Store) UpdateTicket(project, id string, pre Precondition, edit Edit) (string, error) {
 	if err := s.checkTicket(project, id); err != nil {
 		return "", err
 	}
@@ -244,16 +244,16 @@ func (s *Store) UpdateTicket(project, id, base string, edit Edit) (string, error
 	if err != nil {
 		return "", err
 	}
-	return s.updateLocked(name, base, edit, true)
+	return s.update(name, pre, edit, true)
 }
 
 // UpdateWorkstream applies edit to workstreams/<slug>.md under the project
-// lock, with the same precondition as UpdateTicket (EDIT-4).
-func (s *Store) UpdateWorkstream(project, slug, base string, edit Edit) (string, error) {
+// lock, once pre holds, as UpdateTicket does (EDIT-4).
+func (s *Store) UpdateWorkstream(project, slug string, pre Precondition, edit Edit) (string, error) {
 	if err := s.checkProject(project); err != nil {
 		return "", err
 	}
-	if !ValidName(slug) {
+	if !board.ValidSlug(slug) {
 		return "", fmt.Errorf("workstream %q: %w", slug, ErrInvalidName)
 	}
 	release, err := s.lock(project)
@@ -265,53 +265,21 @@ func (s *Store) UpdateWorkstream(project, slug, base string, edit Edit) (string,
 	if !s.Exists(name) {
 		return "", fmt.Errorf("workstream %s in %s: %w", slug, project, ErrNotFound)
 	}
-	return s.updateLocked(name, base, edit, false)
+	return s.update(name, pre, edit, false)
 }
 
-func (s *Store) updateLocked(name, base string, edit Edit, stamp bool) (string, error) {
-	current, err := s.ReadFile(name)
+// update is a transaction of one file's edit; callers hold the lock.
+func (s *Store) update(name string, pre Precondition, edit Edit, stamp bool) (string, error) {
+	t := s.begin()
+	hash, err := t.edit(name, pre, edit, stamp)
 	if err != nil {
 		return "", err
 	}
-	hash := Hash(current)
-	if base != "" && base != hash {
-		return "", &ConflictError{Name: name, Hash: hash, Current: current}
-	}
-	next, err := edit(current)
-	if err != nil {
-		return "", err
-	}
-	if bytes.Equal(next, current) {
-		return hash, nil
-	}
-	if stamp && mdfile.Parse(next).FrontmatterError == nil {
-		if stamped, err := mdfile.SetScalar(next, "updated", s.now().Format(time.RFC3339)); err == nil {
-			next = stamped
-		}
-	}
-	if err := s.WriteFileAtomic(name, next); err != nil {
-		return "", err
-	}
-	return Hash(next), nil
+	return hash, t.commit()
 }
 
 // NewTicket is the content of a ticket created from the template (EDIT-5).
-type NewTicket struct {
-	Title       string
-	Type        string
-	Priority    string
-	Status      board.Column
-	Workstream  string
-	Description string
-	Criteria    []string
-	DependsOn   []string
-	Tags        []string
-	Session     string
-	// PlanOrRepro fills the Test Plan section, or Reproduction for a bug.
-	PlanOrRepro string
-	// Key is used only when the project has no key yet (KEY-5).
-	Key string
-}
+type NewTicket = board.NewTicket
 
 // Created reports a new ticket.
 type Created struct {
@@ -320,40 +288,6 @@ type Created struct {
 	Hash   string
 	// Key is set when creating the ticket also chose the project's key.
 	Key string
-}
-
-func (t *NewTicket) validate() error {
-	t.Title = strings.Join(strings.Fields(t.Title), " ")
-	if t.Title == "" {
-		return fmt.Errorf("%w: a ticket needs a title", ErrInvalidInput)
-	}
-	if t.Type == "" {
-		t.Type = "feature"
-	}
-	if !slices.Contains(board.TicketTypes, t.Type) {
-		return fmt.Errorf("%w: type must be one of %s", ErrInvalidInput, strings.Join(board.TicketTypes, ", "))
-	}
-	if t.Priority == "" {
-		t.Priority = "medium"
-	}
-	if !slices.Contains(board.Priorities, t.Priority) {
-		return fmt.Errorf("%w: priority must be one of %s", ErrInvalidInput, strings.Join(board.Priorities, ", "))
-	}
-	if t.Status == "" {
-		t.Status = board.Backlog
-	}
-	if _, ok := board.ParseColumn(string(t.Status)); !ok {
-		return fmt.Errorf("%w: status %q is not a column", ErrInvalidInput, t.Status)
-	}
-	if t.Workstream != "" && !ValidName(t.Workstream) {
-		return fmt.Errorf("%w: workstream %q", ErrInvalidInput, t.Workstream)
-	}
-	for _, id := range t.DependsOn {
-		if _, _, ok := board.ParseID(id); !ok {
-			return fmt.Errorf("%w: depends-on %q is not a ticket id", ErrInvalidInput, id)
-		}
-	}
-	return nil
 }
 
 // CreateTicket writes a new ticket folder with the project's next id
@@ -365,8 +299,8 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if err := s.checkProject(project); err != nil {
 		return Created{}, err
 	}
-	if err := input.validate(); err != nil {
-		return Created{}, err
+	if err := input.Normalize(); err != nil {
+		return Created{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 	releaseRoot, err := s.lock(".")
 	if err != nil {
@@ -400,93 +334,29 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if s.Exists(path.Dir(name)) {
 		return Created{}, fmt.Errorf("ticket folder %s already exists", created.Folder)
 	}
-	data, err := s.ticketTemplate(created.ID, input)
+	data, err := board.RenderTicket(created.ID, input, s.now())
 	if err != nil {
 		return Created{}, err
 	}
-	// Prepare project.yaml first, so a file that cannot be edited stops the
-	// create before anything is written.
-	projectFile, err := s.projectFields(project, key, number+1)
-	if err != nil {
+	// The ticket, then project.yaml's next_id, then its workstream's list
+	// (board-format.md, Multi-file writes). A project.yaml that cannot be
+	// edited, or a missing workstream (the ticket joins its list,
+	// board-format §Blocking), stops the create before anything is written.
+	t := s.begin()
+	t.put(name, data)
+	if err := s.projectFields(t, project, key, number+1); err != nil {
 		return Created{}, err
 	}
-	// So is a missing workstream: the ticket joins its list (board-format
-	// §Blocking) or is not created.
-	var lists []pending
 	if input.Workstream != "" {
-		if lists, err = s.membership(project, []string{created.ID}, input.Workstream); err != nil {
+		if err := s.membership(t, project, []string{created.ID}, input.Workstream); err != nil {
 			return Created{}, err
 		}
 	}
-	if err := s.WriteFileAtomic(name, data); err != nil {
+	if err := t.commit(); err != nil {
 		return Created{}, err
 	}
 	created.Hash = Hash(data)
-	if err := projectFile.write(s); err != nil {
-		return created, err
-	}
-	return created, writeAll(s, lists)
-}
-
-func (s *Store) ticketTemplate(id string, t NewTicket) ([]byte, error) {
-	now := s.now()
-	body := []string{"# " + t.Title, "", "## Description", ""}
-	if description := strings.TrimSpace(t.Description); description != "" {
-		body = append(body, description, "")
-	}
-	body = append(body, "## Acceptance Criteria", "")
-	criteria := 0
-	for _, criterion := range t.Criteria {
-		if criterion = strings.Join(strings.Fields(criterion), " "); criterion != "" {
-			body = append(body, "- [ ] "+criterion)
-			criteria++
-		}
-	}
-	if criteria > 0 {
-		body = append(body, "")
-	}
-	if t.Type == "bug" {
-		body = append(body, "## Reproduction", "")
-	} else {
-		body = append(body, "## Test Plan", "")
-	}
-	if plan := strings.TrimSpace(t.PlanOrRepro); plan != "" {
-		body = append(body, plan, "")
-	}
-	body = append(body, "## Context", "", "## Notes", "", "None.", "")
-	data := []byte("---\n---\n" + strings.Join(body, "\n"))
-
-	steps := []struct {
-		key    string
-		value  string
-		list   []string
-		isList bool
-	}{
-		{key: "id", value: id},
-		{key: "status", value: string(t.Status)},
-		{key: "type", value: t.Type},
-		{key: "priority", value: t.Priority},
-		{key: "created", value: now.Format("2006-01-02")},
-		{key: "branch"},
-		{key: "workstream", value: t.Workstream},
-		{key: "depends-on", list: t.DependsOn, isList: true},
-		{key: "depends-on-workstreams", isList: true},
-		{key: "tags", list: t.Tags, isList: true},
-		{key: "session", value: t.Session},
-		{key: "updated", value: now.Format(time.RFC3339)},
-	}
-	var err error
-	for _, step := range steps {
-		if step.isList {
-			data, err = mdfile.SetList(data, step.key, step.list)
-		} else {
-			data, err = mdfile.SetScalar(data, step.key, step.value)
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-	return data, nil
+	return created, nil
 }
 
 // Slugify makes a folder slug from a title: lowercase words joined by
@@ -638,27 +508,13 @@ func (s *Store) SetProjectKey(project, key string) error {
 	return s.setProjectFields(project, chosen, 0)
 }
 
-// projectEdit is project.yaml's new content, written only when it changed.
-type projectEdit struct {
-	name    string
-	data    []byte
-	changed bool
-}
-
-func (e projectEdit) write(s *Store) error {
-	if !e.changed {
-		return nil
-	}
-	return s.WriteFileAtomic(e.name, e.data)
-}
-
-// projectFields computes project.yaml with key and, when positive, next_id
+// projectFields stages project.yaml with key and, when positive, next_id
 // set, keeping its other lines and line endings.
-func (s *Store) projectFields(project, key string, nextID int) (projectEdit, error) {
+func (s *Store) projectFields(t *tx, project, key string, nextID int) error {
 	name := path.Join(project, "project.yaml")
-	data, err := s.ReadFile(name)
+	data, err := t.read(name)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return projectEdit{}, err
+		return err
 	}
 	crlf := bytes.Contains(data, []byte("\r\n"))
 	text := strings.ReplaceAll(string(data), "\r\n", "\n")
@@ -668,27 +524,30 @@ func (s *Store) projectFields(project, key string, nextID int) (projectEdit, err
 	// project.yaml is plain YAML; edit it as frontmatter of an empty body.
 	doc := []byte("---\n" + text + "---\n")
 	if doc, err = mdfile.SetScalar(doc, "key", key); err != nil {
-		return projectEdit{}, fmt.Errorf("%s: %w", name, err)
+		return fmt.Errorf("%s: %w", name, err)
 	}
 	if nextID > 0 {
 		if doc, err = mdfile.SetScalar(doc, "next_id", strconv.Itoa(nextID)); err != nil {
-			return projectEdit{}, fmt.Errorf("%s: %w", name, err)
+			return fmt.Errorf("%s: %w", name, err)
 		}
 	}
 	out := strings.TrimSuffix(strings.TrimPrefix(string(doc), "---\n"), "---\n")
 	if crlf {
 		out = strings.ReplaceAll(out, "\n", "\r\n")
 	}
-	return projectEdit{name: name, data: []byte(out), changed: out != string(data)}, nil
+	if out != string(data) {
+		t.put(name, []byte(out))
+	}
+	return nil
 }
 
 // setProjectFields writes key and next_id into project.yaml.
 func (s *Store) setProjectFields(project, key string, nextID int) error {
-	edit, err := s.projectFields(project, key, nextID)
-	if err != nil {
+	t := s.begin()
+	if err := s.projectFields(t, project, key, nextID); err != nil {
 		return err
 	}
-	return edit.write(s)
+	return t.commit()
 }
 
 // Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8),
@@ -717,9 +576,7 @@ func (s *Store) moveTicket(project, id, from, to string, stamp bool) error {
 	}
 	if stamp {
 		// A ticket whose frontmatter does not parse is archived unstamped.
-		_, _ = s.updateLocked(file, "", func(data []byte) ([]byte, error) {
-			return mdfile.SetScalar(data, "updated", s.now().Format(time.RFC3339))
-		}, false)
+		_, _ = s.update(file, Merge, func(data []byte) ([]byte, error) { return s.stamp(data), nil }, false)
 	}
 	folder := path.Dir(file)
 	return s.Move(folder, path.Join(to, path.Base(folder)))
@@ -760,13 +617,12 @@ func (s *Store) UpdateConfig(edit Edit) error {
 
 // PlaceTicket applies edit to a ticket (a move sets its status) and ranks it
 // so it directly follows after ("" for the top) in its resulting column
-// (EDIT-9), all under one hold of the project lock. A non-empty base must
-// match the ticket's current hash; it is checked before anything is
-// written. Placing may also rank unranked tickets above it, in their current
-// order (board.PlanPlacement). When after is no longer in that column, or
-// the column is Done, the edit is applied without a placement and placed is
+// (EDIT-9), all in one transaction under the project lock, once pre holds.
+// Placing may also rank unranked tickets above it, in their current order
+// (board.PlanPlacement). When after is no longer in that column, or the
+// column is Done, the edit is applied without a placement and placed is
 // false. It returns the ticket's new hash.
-func (s *Store) PlaceTicket(project, id, base, after string, edit Edit) (hash string, placed bool, err error) {
+func (s *Store) PlaceTicket(project, id string, pre Precondition, after string, edit Edit) (hash string, placed bool, err error) {
 	if err := s.checkTicket(project, id); err != nil {
 		return "", false, err
 	}
@@ -779,12 +635,10 @@ func (s *Store) PlaceTicket(project, id, base, after string, edit Edit) (hash st
 	if err != nil {
 		return "", false, err
 	}
-	current, err := s.ReadFile(name)
+	t := s.begin()
+	current, err := t.require(name, pre)
 	if err != nil {
 		return "", false, err
-	}
-	if base != "" && base != Hash(current) {
-		return "", false, &ConflictError{Name: name, Hash: Hash(current), Current: current}
 	}
 	next, err := edit(current)
 	if err != nil {
@@ -801,30 +655,32 @@ func (s *Store) PlaceTicket(project, id, base, after string, edit Edit) (hash st
 		slices.SortStableFunc(tickets, board.CompareOrder)
 		writes, placed = board.PlanPlacement(tickets, id, after)
 	}
-	if !placed {
-		hash, err := s.updateLocked(name, base, edit, true)
-		return hash, false, err
+	if placed {
+		for _, write := range writes[:len(writes)-1] {
+			other, err := s.TicketFile(project, write.ID)
+			if err == nil {
+				_, err = t.edit(other, Merge, setRank(write.Rank), true)
+			}
+			// A ticket whose frontmatter does not parse cannot hold a rank;
+			// it stays in the unranked tail.
+			if err != nil && !errors.Is(err, mdfile.ErrBrokenFrontmatter) {
+				return "", false, err
+			}
+		}
+		rank := writes[len(writes)-1].Rank
+		ranked := edit
+		edit = func(data []byte) ([]byte, error) {
+			edited, err := ranked(data)
+			if err != nil {
+				return nil, err
+			}
+			return setRank(rank)(edited)
+		}
 	}
-	rank := writes[len(writes)-1].Rank
-	for _, write := range writes[:len(writes)-1] {
-		other, err := s.TicketFile(project, write.ID)
-		if err == nil {
-			_, err = s.updateLocked(other, "", setRank(write.Rank), true)
-		}
-		// A ticket whose frontmatter does not parse cannot hold a rank; it
-		// stays in the unranked tail.
-		if err != nil && !errors.Is(err, mdfile.ErrBrokenFrontmatter) {
-			return "", false, err
-		}
+	if hash, err = t.edit(name, pre, edit, true); err != nil {
+		return "", false, err
 	}
-	hash, err = s.updateLocked(name, base, func(data []byte) ([]byte, error) {
-		edited, err := edit(data)
-		if err != nil {
-			return nil, err
-		}
-		return setRank(rank)(edited)
-	}, true)
-	return hash, err == nil, err
+	return hash, placed, t.commit()
 }
 
 func setRank(rank string) Edit {

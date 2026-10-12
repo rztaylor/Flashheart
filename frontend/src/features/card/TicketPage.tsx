@@ -1,9 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { TicketDetail } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { TicketLinksInPlace } from "../../components/TicketLink";
-import { type CardPanelProps, TicketView } from "./CardPanel";
+import { type SectionId, ticketSections } from "../../model/ticketSections";
+import type { CardPanelProps } from "./CardPanel";
+import {
+  TicketActions,
+  TicketIdentity,
+  TicketProperties,
+} from "./TicketHeader";
+import {
+  activeSection,
+  SectionBody,
+  SectionTabs,
+  TicketSkeleton,
+} from "./TicketSections";
+import { useTicket } from "./useTicket";
 
 interface TicketPageProps extends Omit<CardPanelProps, "onStep"> {
   // boardLink is the ticket open beside its project's board, and the
@@ -12,14 +24,39 @@ interface TicketPageProps extends Omit<CardPanelProps, "onStep"> {
 }
 
 // TicketPage is a ticket's full page (CARD-7), reached from its id: the
-// card panel's header, tabs and content at reading width, with room for
-// screenshots and, later, editing. Ticket links on it stay in this tab. The
-// browser tab is named after the ticket so several open pages stay apart.
-export function TicketPage({ boardLink, ...props }: TicketPageProps) {
-  const [shown, setShown] = useState<TicketDetail>();
-  const onDetail = useCallback((detail: TicketDetail) => setShown(detail), []);
-  const board = shown ? boardLink(shown.project) : undefined;
-  const title = shown ? `${shown.id} · ${shown.title}` : props.ticket.id;
+// card panel's header, sections and content at reading width, with room
+// for screenshots and, later, editing. The title is the page's h1, so each
+// section sits under an h2 naming it, as the panel's sit under its h2.
+// Ticket links on it stay in this tab. The browser tab is named after the
+// ticket so several open pages stay apart.
+export function TicketPage({
+  boardLink,
+  ticket: ref,
+  fetcher,
+  lines,
+  workstreamTitle,
+  keys,
+  onOpen,
+  onClose,
+  revision,
+  editing,
+  answers = false,
+  workstreamsOf,
+  initialTab = "ticket",
+}: TicketPageProps) {
+  const ticket = useTicket({
+    fetcher,
+    id: ref.id,
+    revision,
+    editing,
+    answers,
+  });
+  const [tab, setTab] = useState<SectionId>(initialTab);
+  const { detail, resource } = ticket;
+  const sections = detail ? ticketSections(detail, ticket.editable) : [];
+  const active = activeSection(sections, tab);
+  const board = detail ? boardLink(detail.project) : undefined;
+  const title = detail ? `${detail.id} · ${detail.title}` : ref.id;
   useEffect(() => {
     const before = document.title;
     document.title = `${title} · Flashheart`;
@@ -41,7 +78,57 @@ export function TicketPage({ boardLink, ...props }: TicketPageProps) {
             </a>
           ) : null}
         </nav>
-        <TicketView {...props} layout="page" onDetail={onDetail} />
+        {resource.status === "loading" ? <TicketSkeleton /> : null}
+        {resource.status === "error" ? (
+          <div className="py-6">
+            <p role="alert" className="text-sm text-danger">
+              This ticket could not be loaded: {resource.error}
+            </p>
+          </div>
+        ) : null}
+        {detail ? (
+          <>
+            <header className="pt-2 pb-4">
+              <TicketIdentity detail={detail} level={1} />
+              <TicketProperties
+                detail={detail}
+                line={lines.get(detail.project)?.get(detail.workstream)}
+                workstreamTitle={workstreamTitle(
+                  detail.project,
+                  detail.workstream,
+                )}
+              />
+              {editing && ticket.editable ? (
+                <TicketActions
+                  detail={detail}
+                  onMove={(to) => void editing.move(detail, to)}
+                  onArchive={() => {
+                    void editing.archive(detail);
+                    onClose();
+                  }}
+                />
+              ) : null}
+            </header>
+            <SectionTabs
+              sections={sections}
+              active={active}
+              onSelect={setTab}
+              tabsClassName=""
+              bodyClassName="pt-6 pb-16"
+              heading
+            >
+              <SectionBody
+                section={active}
+                detail={detail}
+                ticket={ticket}
+                fetcher={fetcher}
+                keys={keys}
+                onOpen={onOpen}
+                workstreamsOf={workstreamsOf}
+              />
+            </SectionTabs>
+          </>
+        ) : null}
       </div>
     </TicketLinksInPlace>
   );

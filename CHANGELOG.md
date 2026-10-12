@@ -42,6 +42,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Text written into a ticket section can no longer split it (FH-87).
+  This covers a handoff, a note, a new ticket's description or plan from
+  the board or an agent, and a workstream's goal. A level-1 or level-2
+  heading in that text becomes level 3, and an unclosed code fence is
+  closed. Before, a `## ` line could start a new section, and later
+  edits and recovery notes read the text as that section (the FH-4
+  truncation). Agents' new tickets were already protected; the board's
+  New ticket dialog and checkpoints were not.
+- Attaching a file keeps a ticket's `files/index.yaml` as it was written
+  (FH-88). Before, keys Flashheart does not know and comments were
+  dropped from the whole index.
 - A run's Activity in the Runs tab names every ticket event in plain
   words instead of its raw event name (FH-70): "Moved FH-1 to In
   progress", "Updated FH-1", "Attached a file to FH-1", where it showed

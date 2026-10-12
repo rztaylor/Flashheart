@@ -154,10 +154,13 @@ Full format: `docs/dev/specs/board-format.md`.
 - `STO-3` All writes are atomic (write temp, fsync, rename) and made under the
   project lock. The one exception is the hooks' per-session activity state
   (agent-protocol §3), a disposable cache written in place under the lock
-  on every tool result. Edits from the UI and MCP carry the content hash they were
-  based on and fail with a conflict if the file changed since. A move sets
-  only `status`, applied to the file as it is under the lock, so it needs no
-  hash and cannot lose another writer's change.
+  on every tool result. Every write names its precondition: an edit built
+  from content the writer read (a form, the raw file, the agent's field
+  changes) carries that content's hash and fails with a conflict if the
+  file changed since; a write without a hash is refused. A merge (a move,
+  which sets only `status`, a note appended, the Handoff replaced, a
+  workstream list reordered) is computed from the file as it is under the
+  lock, so it needs no hash and cannot lose another writer's change.
 - `STO-4` A ticket whose frontmatter cannot be parsed is shown as a
   *needs repair* card with the parse error, never hidden or rewritten
   automatically.
