@@ -206,7 +206,7 @@ func (srv *server) release(inv *invocation, input ReleaseInput) (string, error) 
 	if r := c.set.Get(run); r == nil || r.Claim != ticket.ID {
 		return fmt.Sprintf("You do not hold %s; nothing to release.\nok ticket=%s\n", ticket.ID, ticket.ID), nil
 	}
-	if err := c.record(project.Name, events.Event{Kind: events.Release, Data: events.TicketData{Ticket: ticket.ID, Reason: scrub.Text(input.Reason, events.MaxReasonText)}}); err != nil {
+	if err := c.record(project.Name, events.Event{Kind: events.Release, Data: events.TicketData{Ticket: ticket.ID, Reason: input.Reason}}); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Released %s; it stays in %s.\nok ticket=%s\n", ticket.ID, ticket.Column, ticket.ID), nil

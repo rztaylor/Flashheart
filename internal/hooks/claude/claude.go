@@ -89,7 +89,7 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		actor = subagent.String()
 	}
 	input := hooks.Input{Cwd: p.Cwd}
-	add := func(run, kind string, data any) {
+	add := func(run string, kind events.Kind, data any) {
 		input.Events = append(input.Events, hooks.Pending{Run: run, Kind: kind, Data: data})
 	}
 

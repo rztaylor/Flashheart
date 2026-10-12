@@ -215,8 +215,8 @@ func (e *env) log() []events.Event {
 	return list
 }
 
-func (e *env) kinds(run string) []string {
-	var kinds []string
+func (e *env) kinds(run string) []events.Kind {
+	var kinds []events.Kind
 	for _, ev := range e.log() {
 		if ev.Run == run {
 			kinds = append(kinds, ev.Kind)

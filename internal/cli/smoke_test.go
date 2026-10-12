@@ -186,7 +186,7 @@ func TestHooklessSessionOverStdio(t *testing.T) {
 	if out := mcpCallAs(t, h, root, "codex-mcp-client", "claim", map[string]any{"ticket": "DM-1"}); !strings.Contains(out, "ok ticket=DM-1 column=in-progress") {
 		t.Fatalf("claim: %s", out)
 	}
-	var kinds []string
+	var kinds []events.Kind
 	run := ""
 	if err := events.New(store.New(root)).Read("demo", time.Time{}, func(e events.Event) {
 		if run == "" {
@@ -198,7 +198,7 @@ func TestHooklessSessionOverStdio(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{events.RunStart, events.Claim, events.TicketMoved, events.Activity, events.RunEnd}
+	want := []events.Kind{events.RunStart, events.Claim, events.TicketMoved, events.Activity, events.RunEnd}
 	if !strings.HasPrefix(run, "codex:mcp-") || !slices.Equal(kinds, want) {
 		t.Fatalf("run %q events = %v, want %v", run, kinds, want)
 	}

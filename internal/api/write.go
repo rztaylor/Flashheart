@@ -147,7 +147,7 @@ func (b boardAPI) saved(w http.ResponseWriter, status int, hash string, warnings
 // and at most the columns or field names, never their values (agent-protocol
 // §3). The ticket is already saved and the board files are the source of
 // truth, so a failure to record does not fail the write.
-func (b boardAPI) recordHuman(project, kind string, data events.TicketData) {
+func (b boardAPI) recordHuman(project string, kind events.Kind, data events.TicketData) {
 	if b.events != nil {
 		_ = b.events.Append(events.ByHuman(b.now(), project, kind, data))
 	}
