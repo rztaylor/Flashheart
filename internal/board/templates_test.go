@@ -29,7 +29,7 @@ func TestTemplatesMatchTheirGoldenFiles(t *testing.T) {
 
 	full := NewTicket{Title: "  Drag   and drop ", Type: "bug", Priority: "high", Status: "up-next", Workstream: "board-ui",
 		DependsOn: []string{"FH-1", "FH-2"}, Tags: []string{"ui", "dnd"}, Session: "claude:abc",
-		Description: "  Cards move.\n\nBetween columns.  ", Criteria: []string{"one", "  two  words ", ""}, PlanOrRepro: "Drag a card."}
+		Description: "  Cards move.\n\nBetween columns.  ", Criteria: []string{"one", "  two  words ", ""}, PlanOrRepro: "Drag a card.", Context: " `ui/dnd.ts` owns the drop. "}
 	bare := NewTicket{Title: "Bare"}
 	for name, ticket := range map[string]struct {
 		id string
