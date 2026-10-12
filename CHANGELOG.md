@@ -105,6 +105,12 @@ All notable changes to this project are documented here. The project follows
   `feature/a-very-long-bra…`; the full name stays in its tooltip, and the
   text is whole for screen readers.
 
+- A long path in a run's edited files keeps its file name in view in the
+  Runs tab (FH-117). Edited files are cut from the start like the run's
+  branch and worktree, so `…of-many-parts/RunDetailEditedFile.tsx` shows
+  instead of `frontend/src/features/card/a-dee…`; the full path stays in
+  its tooltip.
+
 - A question a subagent asked before it finished is no longer hidden
   while its session waits on it (FH-112). The session stays in Needs you
   saying, for example, *Explore has a question*; the ticket card now
