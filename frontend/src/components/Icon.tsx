@@ -20,6 +20,9 @@ const paths = {
   table: "M3.5 5h17v14h-17zM3.5 10h17M3.5 14.5h17M9 10v9",
   branch:
     "M6 4v10m0 0a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm12-6a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm0 0c0 5-6 4-12 6",
+  // pullRequest: two commits, the head's line arcing back into the base.
+  pullRequest:
+    "M6 8v8m0-8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm0 8a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm12 0a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm0 0V9a3 3 0 0 0-3-3h-4m2-2.5L10.5 6 13 8.5",
   next: "M5 12h12M13 7l5 5-5 5",
   chevronDown: "M6 9l6 6 6-6",
   plus: "M12 5v14M5 12h14",

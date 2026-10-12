@@ -44,6 +44,7 @@ function card(patch: Partial<Card>): Card {
     updated: "",
     modified: "2026-10-05T09:00:00Z",
     branch: "",
+    pr: "",
     dependsOn: [],
     criteria: { done: 2, total: 5 },
     excerpt: "",

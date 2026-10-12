@@ -82,9 +82,12 @@ func TestSkillAndSpecNameExactlyTheRegisteredTools(t *testing.T) {
 	tools := listTools(t)
 	registered := map[string]bool{}
 	// Words the skill puts in backticks that are not tools: the tools'
-	// inputs, ticket values, the server's name, an error code and Claude
-	// Code's background flag.
+	// inputs, the ticket fields update_ticket sets, ticket values, the
+	// server's name, an error code and Claude Code's background flag.
 	words := map[string]bool{Name: true, "no_project": true, "run_in_background": true}
+	for _, field := range settable {
+		words[field] = true
+	}
 	for _, tool := range tools {
 		registered[tool.Name] = true
 		for _, input := range inputs(t, tool) {

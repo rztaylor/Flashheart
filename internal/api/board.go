@@ -123,6 +123,7 @@ type Card struct {
 	Updated     string       `json:"updated"`
 	Modified    string       `json:"modified"`
 	Branch      string       `json:"branch"`
+	PR          string       `json:"pr"`
 	DependsOn   []string     `json:"dependsOn"`
 	Criteria    Progress     `json:"criteria"`
 	Excerpt     string       `json:"excerpt"`
@@ -627,7 +628,7 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 		Project: project.Name, ID: ticket.ID, Slug: ticket.Slug, Column: string(ticket.Column), Rejected: ticket.Rejected,
 		Title: ticket.Title, Type: ticket.Type, Priority: ticket.Priority, Workstream: ticket.Workstream,
 		Tags: nonNil(ticket.Tags), Created: ticket.Created, Updated: ticket.Updated,
-		Modified: timestamp(ticket.Modified), Branch: ticket.Branch, DependsOn: nonNil(ticket.DependsOn),
+		Modified: timestamp(ticket.Modified), Branch: ticket.Branch, PR: ticket.PR, DependsOn: nonNil(ticket.DependsOn),
 		Excerpt: ticket.Excerpt, Attachments: len(project.Attachments[ticket.ID]), HasReview: project.Reviews[ticket.ID],
 		Blocked: len(blockedBy) > 0, BlockedBy: blockedBy,
 		NeedsRepair: nonNil(ticket.Repair),

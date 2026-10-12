@@ -233,17 +233,18 @@ func TestPatchTicketFields(t *testing.T) {
 		"base": base,
 		"fields": map[string]any{
 			"title": "Drag and drop, keyboard too", "priority": "high", "tags": []string{"ui", " a11y "},
-			"depends-on": []string{"AL-3"}, "branch": "feature/dnd",
+			"depends-on": []string{"AL-3"}, "branch": "feature/dnd", "pr": "https://github.com/o/r/pull/7",
 		},
 	}, http.StatusOK, nil)
 	after := ticketDetail(t, handler, "AL-4")
 	if after.Title != "Drag and drop, keyboard too" || after.Priority != "high" || !slices.Equal(after.Tags, []string{"ui", "a11y"}) ||
-		!slices.Equal(after.DependsOn, []string{"AL-3"}) || after.Branch != "feature/dnd" {
+		!slices.Equal(after.DependsOn, []string{"AL-3"}) || after.Branch != "feature/dnd" ||
+		after.PR != "https://github.com/o/r/pull/7" {
 		t.Errorf("after patch = %+v", after.Card)
 	}
 	for _, fields := range []map[string]any{
 		{"priority": "urgent"}, {"status": "nowhere"}, {"created": "yesterday"}, {"depends-on": []string{"nope"}},
-		{"id": "AL-40"}, {"title": ""}, {"tags": "not a list"},
+		{"id": "AL-40"}, {"title": ""}, {"tags": "not a list"}, {"pr": "two\nlines"},
 	} {
 		send(t, handler, http.MethodPatch, "/api/tickets/AL-4", map[string]any{"fields": fields}, http.StatusBadRequest, nil)
 	}

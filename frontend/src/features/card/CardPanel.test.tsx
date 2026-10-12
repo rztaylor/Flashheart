@@ -35,6 +35,7 @@ function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
     updated: "",
     modified: "2026-10-06T10:00:00Z",
     branch: "feature/mcp-protocol",
+    pr: "",
     dependsOn: [],
     criteria: { done: 1, total: 2 },
     excerpt: "",
@@ -156,6 +157,17 @@ describe("PanelHeader", () => {
 
   it("links the id to the ticket's full page", () => {
     expect(markup).toMatch(idLink("FH-4"));
+  });
+
+  it("links the ticket's pull request (FH-114)", () => {
+    const html = renderToStaticMarkup(
+      <PanelHeader
+        detail={detail({ pr: "https://github.com/o/r/pull/7" })}
+        workstreamTitle=""
+      />,
+    );
+    expect(html).toMatch(/<a [^>]*href="https:\/\/github.com\/o\/r\/pull\/7"/);
+    expect(markup).not.toContain("Pull request");
   });
 
   it("states the column, blocker and priority as pills and tags", () => {

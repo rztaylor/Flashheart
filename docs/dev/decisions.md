@@ -975,3 +975,20 @@ times, locale and time zone, and the temporary board path is masked. A
 deliberate visual change updates the baselines with
 `scripts/e2e-visual.sh --update-snapshots` in the same pull request,
 where the PNG diff is reviewed.
+
+## 2026-10-12 — D43: A ticket's pull request is one frontmatter field
+
+A ticket's pull request lived only in notes and reviews, so the board could
+not link to it. Tickets now carry `pr:` beside `branch:` (FH-114,
+board-format §Frontmatter): one line, usually the pull request's URL, set by
+the agent that opens it through `update_ticket` or edited on the board. It is
+data an agent wrote, so the UI links it only when it is an `http(s)` URL,
+opening a new tab, and shows anything else as plain text; Flashheart never
+fetches it (local only).
+
+Options: a list of pull requests (rarely needed: one branch per ticket opens
+one pull request, and a list is harder to edit in a one-line field and to
+show in the meta row); one value (chosen; a later pull request replaces it,
+and earlier ones stay in notes); derive it from the forge (a network call,
+ruled out). The protocol version stays 2: the field is optional and older
+agents never set it.
