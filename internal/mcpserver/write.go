@@ -66,9 +66,7 @@ func (c *call) note(text string) string {
 
 // related reports whether two runs are one session and its subagents.
 func related(a, b string) bool {
-	sa, _, _ := strings.Cut(a, "/")
-	sb, _, _ := strings.Cut(b, "/")
-	return sa == sb
+	return events.RunOf(a).Session() == events.RunOf(b).Session()
 }
 
 // ClaimInput is claim's input.
