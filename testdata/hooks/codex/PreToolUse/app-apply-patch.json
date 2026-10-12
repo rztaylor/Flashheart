@@ -1,0 +1,14 @@
+{
+  "session_id": "019a7c00-0000-7000-8000-000000000001",
+  "turn_id": "019a7c00-0000-7000-8000-000000000101",
+  "transcript_path": "/Users/example/.codex/sessions/2026/10/12/rollout-2026-10-12T20-55-06-019a7c00-0000-7000-8000-000000000001.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "hook_event_name": "PreToolUse",
+  "model": "gpt-6-astra",
+  "permission_mode": "default",
+  "tool_name": "apply_patch",
+  "tool_input": {
+    "command": "*** Begin Patch\n*** Update File: /Users/example/src/demo/README.md\n@@\n-wibble wibble wibble\n+wobble wobble wobble\n*** End Patch"
+  },
+  "tool_use_id": "exec-d3c34d5f-bebd-47e2-9a2a-538fb4ab596e"
+}

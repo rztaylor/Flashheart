@@ -22,8 +22,8 @@ user's agent configuration; change it deliberately and bump
 | **Handoff enforcement** (opt-in) | Ensures a checkpoint after edits | Deterministic | One extra turn when triggered |
 
 Hooks are the deterministic layer. An agent that reaches the MCP server
-without them (Codex while its hooks are experimental, a user who declined
-hooks, a new agent) still gets a run, which the server starts for its
+without them (Codex before its hooks are set up and trusted, a user who
+declined hooks, a new agent) still gets a run, which the server starts for its
 connection (§7.1): it reports claims, checkpoints, questions and its
 Flashheart tool calls, never turns, plans, edits or permission prompts.
 
@@ -141,9 +141,9 @@ recorded since the last checkpoint live in
 under the project lock together with the log, so tool results arriving
 together all count. It is a disposable cache: an unreadable one starts
 afresh, a run's entry goes with its end, and the session's file with the
-session's end. A session that never reports its end (a crash; Codex has no
-end hook) leaves nothing behind for long, and nothing it had pending is
-kept silently (FH-82): a run that starts again (a resumed session) first
+session's end. A session that never reports its end (a crash; a Codex
+session without `SessionEnd`, §5.3) leaves nothing behind for long, and
+nothing it had pending is kept silently (FH-82): a run that starts again (a resumed session) first
 records what its last life left pending, as before an end; a run whose
 latest hook event is `stale_hours` old, which the stale rule has ended
 (§4), is dropped from the state by the session's next hook, its pending
@@ -328,26 +328,56 @@ tools (noise and latency).
 
 ### 5.3 Codex
 
-Codex's hooks (`~/.codex/hooks.json` or `[hooks]` in `config.toml`) cover
-`SessionStart`, `SubagentStart`, `UserPromptSubmit`, `PreToolUse`,
-`PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`,
-`SubagentStop` and `Stop`. They are marked experimental; keep the adapter
-small.
+Recorded from Codex CLI 0.160.0 and the ChatGPT desktop app on 2026-10-12
+(`testdata/hooks/codex/MANIFEST.md`). Codex reads hooks from `hooks.json`
+or `[hooks]` in `config.toml` in every config layer (`~/.codex`, a trusted
+project's `.codex/`, plugins, managed `requirements.toml`) and runs them
+all. Hooks are on by default, but a hook that is not managed runs only
+after the user trusts it (`/hooks`); trust is tied to the hook's hash, so a
+changed command needs trusting again. The ChatGPT app runs trusted hooks
+but offers no way to trust them and skips untrusted ones silently; trust
+granted with the CLI's `/hooks` (saved in `~/.codex/config.toml`) applies
+to the app. The events are `SessionStart`
+(`source` `startup`, `resume`, `clear` or `compact`), `UserPromptSubmit`,
+`PreToolUse`, `PermissionRequest`, `PostToolUse`, `SubagentStart`,
+`SubagentStop`, `PreCompact`, `PostCompact`, `Stop`, `SessionEnd` and
+`Interrupt`.
 
 | Hook event | Flashheart action |
 |---|---|
-| `SessionStart` | `run.start`; recovery note as additional context |
-| `UserPromptSubmit` | `turn.start` with its `origin` (§3), classified from recorded Codex prompts (FH-73); answered questions |
-| `PostToolUse` | a tool use counted into `activity` (§3); `plan.updated` for `update_plan`; edit paths from `apply_patch` file headers |
+| `SessionStart` | `run.start`; recovery note as `additionalContext` (a developer message) |
+| `UserPromptSubmit` | `turn.start` with its `origin` (§3), classified from recorded Codex prompts (FH-73); answered questions as `additionalContext` |
+| `PreToolUse` | stamps `run` into Flashheart's own tools (`updatedInput`, §7.1) |
+| `PostToolUse` | a tool use counted into `activity` (§3); edit paths from `apply_patch` file headers; `plan.updated` for `update_plan` where Codex offers it |
 | `PermissionRequest` | `permission.requested` |
-| `SubagentStart` / `SubagentStop` | child runs |
+| `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
 | `PreCompact` / `PostCompact` | `compact` |
-| `Stop` | `turn.end`; handoff enforcement where Codex supports blocking |
+| `Stop` | `turn.end`; handoff enforcement by `{"decision":"block","reason":…}` |
+| `Interrupt` | `turn.end` (no output can stop the interrupt) |
+| `SessionEnd` | `run.end` |
 
-Codex has no session-end event in this list: Codex runs end by the
-`stale_hours` rule, or when a new session starts in the same worktree and the
-old one has been silent for `quiet_minutes`. Without these hooks, a Codex
-session's first Flashheart write starts its run (§7.1).
+Every payload carries `session_id`, `cwd`, `hook_event_name` and
+`transcript_path`; tool events add `tool_name`, `tool_use_id` and
+`tool_input`, and `PostToolUse` a `tool_response`. Tool names are `Bash`,
+`apply_patch` (the whole patch in `tool_input.command`), `mcp__<server>__<tool>`
+and the subagent tools (`collaborationspawn_agent`, `collaborationwait_agent`).
+A failed command is an ordinary `PostToolUse`. A `Stop` block continues the
+turn with the reason as a prompt (no `UserPromptSubmit`), and the next `Stop`
+has `stop_hook_active: true`. An interrupted turn (Esc, or a denied
+permission prompt) sends `Interrupt` instead of `Stop`; it ends the turn
+like `Stop`. The CLI offers no planning tool. `SessionEnd` (`reason` `other`)
+comes when `codex exec` finishes, at `/quit`, and when an app thread is
+archived (which moves its transcript, so `transcript_path` goes stale).
+Whether a thread left open, or a quit app, sends one is not recorded; a
+Codex run without `SessionEnd` ends by the `stale_hours` rule, or when a
+new session starts in the same worktree and the old one has been silent
+for `quiet_minutes`.
+
+Every MCP `tools/call` from Codex carries the hook session in its `_meta`
+(`sessionId`, and `session_id` and `turn_id` in `x-codex-turn-metadata`),
+and its `callId` is the `PreToolUse` hook's `tool_use_id`, so a call can be
+tied to its hook run with or without stamping. Without these
+hooks, a Codex session's first Flashheart write starts its run (§7.1).
 
 ### 5.4 Configuration written by setup
 
@@ -747,7 +777,8 @@ kept current by the session-start hook (§5.4). It covers, briefly:
   sessions, scrubbed, in `testdata/hooks/<agent>/<event>/*.json`, with
   expected events (`<case>.events.json`). Each agent's `MANIFEST.md` says
   which cases are recorded and which still follow the documentation;
-  `scripts/record-claude-hooks.sh` records a real Claude Code session.
+  `scripts/record-claude-hooks.sh` and `scripts/record-codex-hooks.sh`
+  record real Claude Code and Codex sessions.
   Re-record when an agent changes.
 - **Hook latency**: `scripts/hook-bench.sh` runs 1,000 warm invocations of
   the built binary with an agent's recorded payloads (`-agent`) and fails

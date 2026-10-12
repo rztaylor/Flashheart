@@ -1,0 +1,15 @@
+{
+  "session_id": "019a7c00-0000-7000-8000-000000000001",
+  "turn_id": "019a7c00-0000-7000-8000-000000000101",
+  "transcript_path": "/Users/example/.codex/sessions/2026/10/12/rollout-2026-10-12T18-57-00-019a7c00-0000-7000-8000-000000000001.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "hook_event_name": "PostToolUse",
+  "model": "gpt-6.1-sol",
+  "permission_mode": "bypassPermissions",
+  "tool_name": "apply_patch",
+  "tool_input": {
+    "command": "*** Begin Patch\n*** Add File: /Users/example/src/demo/notes.txt\n+hello\n*** Update File: /Users/example/src/demo/README.md\n@@\n-# demo\n+# demo app\n*** End Patch"
+  },
+  "tool_response": "Exit code: 0\nWall time: 0 seconds\nOutput:\nSuccess. Updated the following files:\nA /Users/example/src/demo/notes.txt\nM /Users/example/src/demo/README.md\n",
+  "tool_use_id": "exec-118aadfb-5941-452a-9edb-97f256185a2d"
+}

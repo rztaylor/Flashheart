@@ -1,0 +1,15 @@
+{
+  "session_id": "019a7c00-0000-7000-8000-000000000001",
+  "turn_id": "019a7c00-0000-7000-8000-000000000101",
+  "transcript_path": "/Users/example/.codex/sessions/2026/10/12/rollout-2026-10-12T18-57-00-019a7c00-0000-7000-8000-000000000001.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "hook_event_name": "PostToolUse",
+  "model": "gpt-6.1-sol",
+  "permission_mode": "bypassPermissions",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "ls -la"
+  },
+  "tool_response": "total 8\ndrwxr-xr-x  5 example  staff  160 Oct 12 18:57 .\n-rw-r--r--  1 example  staff   11 Oct 12 18:57 README.md\n-rw-r--r--  1 example  staff    6 Oct 12 18:57 notes.txt\n",
+  "tool_use_id": "exec-2853ac74-c92b-4481-b392-12f020129ca8"
+}
