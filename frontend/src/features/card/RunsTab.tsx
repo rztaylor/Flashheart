@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 
 import type { TicketDetail, TicketRef } from "../../api/board";
 import type { Run } from "../../api/runs";
+import { BranchLabel } from "../../components/BranchLabel";
 import { Icon } from "../../components/Icon";
 import { RunStateLabel } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
@@ -15,7 +16,7 @@ import {
 } from "../../model/runs";
 import { absoluteTime, compareTimes, runningTime } from "../../model/time";
 import { useNow } from "../../state/useNow";
-import { BranchLabel, RunDetail } from "./RunDetail";
+import { RunDetail } from "./RunDetail";
 
 // RunsTab lists the agent runs linked to a ticket, most recent first (CARD-1):
 // each session with its state, plan, edited files and activity, and its
@@ -126,7 +127,7 @@ function RunCard({
               ? "linked by branch"
               : "with its session"}
         </span>
-        <BranchLabel branch={run.branch} />
+        <BranchLabel branch={run.branch} className="text-2xs text-ink-muted" />
         <time
           dateTime={run.lastActivity}
           title={`Last activity ${absoluteTime(run.lastActivity)}`}

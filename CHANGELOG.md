@@ -71,6 +71,13 @@ All notable changes to this project are documented here. The project follows
   handoff enforcement and the recovery note read only the home project's
   log, so they see a claim on another project's ticket only by branch.
 
+- A long branch name keeps its distinguishing end in view in the ticket
+  panel's header and the Runs tab (FH-83). It is cut from the start, as
+  the board root, run ids, worktrees and archived projects' repositories
+  already were, so `…overflows-the-panel-fh83-tail` shows instead of
+  `feature/a-very-long-bra…`; the full name stays in its tooltip, and the
+  text is whole for screen readers.
+
 - A question a subagent asked before it finished is no longer hidden
   while its session waits on it (FH-112). The session stays in Needs you
   saying, for example, *Explore has a question*; the ticket card now

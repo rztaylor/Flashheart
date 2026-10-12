@@ -4,6 +4,7 @@ import {
   statusWord,
   type TicketDetail,
 } from "../../api/board";
+import { BranchLabel } from "../../components/BranchLabel";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
@@ -79,12 +80,7 @@ export function TicketProperties({
           </span>
         ) : null}
         {detail.created ? <span>created {detail.created}</span> : null}
-        {detail.branch ? (
-          <span className="flex min-w-0 items-center gap-1 font-mono">
-            <Icon name="branch" size={12} />
-            <span className="truncate">{detail.branch}</span>
-          </span>
-        ) : null}
+        <BranchLabel branch={detail.branch} />
         <span title={absoluteTime(detail.modified)}>
           {changedLabel(detail.modified)}
         </span>

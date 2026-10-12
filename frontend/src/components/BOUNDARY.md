@@ -10,7 +10,10 @@ filter chip: show only, Cmd or Ctrl click to hide), `Dialog`, `Toast`,
 `Markdown` (block or one inline line), `Lightbox` (one image of a set in a
 dialog), `Table` (the one table look, ui-layout.md §6: card surface,
 sticky head, `HeadCell`, `Row` with dividers, hover and selection),
-`RouteBar`, `EmptyState`, `LoadError` (a load failure in words, an alert,
+`RouteBar`, `TailText` (one line of a path, branch or id cut from its
+start so its tail stays visible, ui-layout.md §8; the full value in its
+title, the text in a `<bdi>` so punctuation keeps its order),
+`BranchLabel` (a branch's mark and name on `TailText`), `EmptyState`, `LoadError` (a load failure in words, an alert,
 with Try again) and `StaleNote` (the last good copy's note; ui-layout.md
 §8), `SkeletonTable` (the table look while rows load), `RunState` (run
 state as a mark and words), `NeedsYou` (the one attention plate, ui-layout.md §7: the
