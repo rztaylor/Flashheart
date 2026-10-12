@@ -8,11 +8,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/mdfile"
@@ -144,9 +146,47 @@ func TestMovingABlockedTicketIntoProgressNeedsAReason(t *testing.T) {
 	}
 	send(t, handler, http.MethodPost, "/api/tickets/AL-5/move", MoveRequest{To: "in-progress", Reason: "Hotfix needed\nnow"}, http.StatusOK, nil)
 	data, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-5-column-overflow", "AL-5-column-overflow.md"))
-	if !strings.Contains(string(data), "status: in-progress") || !strings.Contains(string(data), "Started while blocked: Hotfix needed now") {
+	// The note is a dated bullet, as an agent's blocked claim writes it
+	// (board-format §Notes written by Flashheart; FH-81).
+	note := regexp.MustCompile(`\n- \d{4}-\d{2}-\d{2} · Started while blocked: Hotfix needed now\n`)
+	if !strings.Contains(string(data), "status: in-progress") || !note.Match(data) {
 		t.Errorf("ticket =\n%s", data)
 	}
+}
+
+// TestCreatedDescriptionStaysInItsSection: a heading typed into a new
+// ticket's description is demoted, so the ticket keeps its sections, and
+// the description limit is the one agents have (FH-81).
+func TestCreatedDescriptionStaysInItsSection(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	var created CreateResponse
+	send(t, handler, http.MethodPost, "/api/projects/beta/tickets", CreateRequest{
+		Title: "Split me", Type: "feature", Description: "intro\n## Test Plan\nx\n# Title",
+	}, http.StatusCreated, &created)
+	paths, _ := filepath.Glob(filepath.Join(root, "beta", "tickets", created.ID+"-*", created.ID+"-*.md"))
+	if len(paths) != 1 {
+		t.Fatalf("ticket files = %v", paths)
+	}
+	data, _ := os.ReadFile(paths[0])
+	var names []string
+	for _, section := range mdfile.Sections(mdfile.Parse(data).Body) {
+		names = append(names, section.Heading)
+	}
+	if want := []string{board.SectionDescription, board.SectionCriteria, board.SectionTestPlan, board.SectionContext, board.SectionNotes}; !slices.Equal(names, want) {
+		t.Errorf("sections = %q, want %q:\n%s", names, want, data)
+	}
+	if !strings.Contains(string(data), "intro\n### Test Plan\nx\n### Title\n") {
+		t.Errorf("description not demoted:\n%s", data)
+	}
+
+	send(t, handler, http.MethodPost, "/api/projects/beta/tickets", CreateRequest{
+		Title: "At the limit", Description: strings.Repeat("x", board.MaxSectionText),
+	}, http.StatusCreated, nil)
+	send(t, handler, http.MethodPost, "/api/projects/beta/tickets", CreateRequest{
+		Title: "Over the limit", Description: strings.Repeat("x", board.MaxSectionText+1),
+	}, http.StatusRequestEntityTooLarge, nil)
 }
 
 func TestMovingIntoReviewWarnsButMoves(t *testing.T) {

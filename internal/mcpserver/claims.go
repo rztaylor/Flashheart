@@ -52,7 +52,7 @@ func (srv *server) claim(c *call, input ClaimInput) (string, error) {
 			return "", fail("blocked", "work on what blocks it first, or pass force with a reason to start it anyway",
 				"%s is blocked: %s", ticket.ID, strings.Join(reasons, "; "))
 		}
-		notes = append(notes, "- "+c.now.Format("2006-01-02")+" · "+board.BlockedStartNote(reason))
+		notes = append(notes, board.BlockedStartNote(c.now, reason))
 	}
 
 	var list []events.Event

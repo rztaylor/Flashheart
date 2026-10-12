@@ -76,7 +76,7 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 	var warnings []string
 	if question.Ticket != "" {
 		if project, ticket, found := snapshot.FindTicket(question.Ticket); found {
-			note := fmt.Sprintf("- %s · Question from %s — %q Answer (%s): %q.", now.Format("2006-01-02"), protocol.ShortRun(run.ID), question.Text, answeredBy, answer)
+			note := board.Note(now, fmt.Sprintf("Question from %s — %q Answer (%s): %q.", protocol.ShortRun(run.ID), question.Text, answeredBy, answer))
 			if _, err := b.write.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 				return mdfile.AppendToSection(data, board.SectionNotes, note)
 			}); err != nil {

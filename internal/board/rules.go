@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/mdfile"
@@ -86,10 +87,23 @@ func ReviewWarnings(ticket Ticket, review string, hasReview bool) []string {
 	return warnings
 }
 
-// BlockedStartNote is the ## Notes line recording why a blocked ticket was
-// started anyway (EDIT-2).
-func BlockedStartNote(reason string) string {
-	return "Started while blocked: " + OneLine(reason, 500)
+// MaxSectionText is the most bytes a ticket's description, test plan or
+// reproduction, or context, and a workstream's goal, may have when written
+// from the board or by an agent (FH-81); longer text belongs in a linked
+// document.
+const MaxSectionText = 16 << 10
+
+// Note is a dated ## Notes bullet, the form of every note Flashheart writes
+// on the board's or an agent's behalf (board-format §Notes written by
+// Flashheart): "- 2026-10-04 · text".
+func Note(day time.Time, text string) string {
+	return "- " + day.Format("2006-01-02") + " · " + text
+}
+
+// BlockedStartNote is the ## Notes bullet recording why a blocked ticket
+// was started anyway (EDIT-2), from the board or by an agent's claim.
+func BlockedStartNote(day time.Time, reason string) string {
+	return Note(day, "Started while blocked: "+OneLine(reason, 500))
 }
 
 // OneLine joins whitespace and keeps at most limit characters.
