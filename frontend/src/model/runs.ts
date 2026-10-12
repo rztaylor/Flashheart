@@ -168,9 +168,9 @@ export function describeEntry(entry: TimelineEntry): string {
     case "activity":
       return describeActivity(entry);
     case "turn.start":
-      return entry.detail === "background"
-        ? "Background task finished"
-        : "Prompt";
+      if (entry.detail === "background") return "Background task finished";
+      if (entry.detail === "agent") return "Message from an agent";
+      return "Prompt";
     case "turn.end":
       return "Turn finished";
     case "permission.requested":

@@ -79,16 +79,42 @@ type RunEndData struct {
 	WorktreeChanged bool   `json:"worktree_changed,omitempty"`
 }
 
+// Turn origins: who started a turn, classified by the agent's adapter from
+// the prompt, which is never stored (agent-protocol §3).
+const (
+	// OriginUser is a prompt the user typed.
+	OriginUser = "user"
+	// OriginTask is a notice the agent's harness submitted: one of its
+	// background commands or agents finished, or the app reports an event.
+	OriginTask = "task"
+	// OriginAgent is a message from another agent: a subagent's hand-back
+	// or a message between agents.
+	OriginAgent = "agent"
+)
+
 // TurnStartData is turn.start's data. The prompt is never stored; the
 // working directory and branch are repeated so a run first seen mid-session
-// still has them, and a branch switch is noticed. Background marks a turn
-// started by the agent's own background task finishing rather than by the
-// user, so it does not answer the session's questions (agent-protocol §4).
+// still has them, and a branch switch is noticed. Origin says who started
+// the turn; Background marks every turn the user did not start, as it did
+// before Origin existed, so older readers keep such turns from answering
+// the session's questions (agent-protocol §4).
 type TurnStartData struct {
+	Origin     string `json:"origin,omitempty"`
 	Background bool   `json:"background,omitempty"`
 	Cwd        string `json:"cwd,omitempty"`
 	Branch     string `json:"branch,omitempty"`
 	Worktree   string `json:"worktree,omitempty"`
+}
+
+// FromUser reports whether the user started the turn, so it answers the
+// session's open questions (D28). Only OriginUser is the user; a turn
+// without an origin, from a log older than the field, is the user's
+// unless it is marked Background.
+func (d TurnStartData) FromUser() bool {
+	if d.Origin != "" {
+		return d.Origin == OriginUser
+	}
+	return !d.Background
 }
 
 // TurnEndData is turn.end's data. WorktreeChanged is as in RunEndData.

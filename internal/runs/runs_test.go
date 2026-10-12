@@ -292,6 +292,37 @@ func TestTimelineIsBounded(t *testing.T) {
 
 // The ticket events the MCP tools record name their ticket in the
 // timeline, and a move names the status it moved to (FH-70).
+// A turn's timeline entry says who started it: nothing for the user, as in
+// logs older than the origin field (FH-57).
+func TestTurnOriginsInTheTimeline(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		data events.TurnStartData
+		want string
+	}{
+		{"the user's prompt", events.TurnStartData{Origin: events.OriginUser}, ""},
+		{"an older log's prompt", events.TurnStartData{}, ""},
+		{"a task's notice", events.TurnStartData{Origin: events.OriginTask, Background: true}, "background"},
+		{"an older log's background turn", events.TurnStartData{Background: true}, "background"},
+		{"an agent's message", events.TurnStartData{Origin: events.OriginAgent, Background: true}, "agent"},
+		{"an origin this reader does not know", events.TurnStartData{Origin: "scheduler", Background: true}, "background"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			set := NewSet()
+			set.Apply(start(0))
+			set.Apply(ev(1, session, events.TurnStart, tc.data))
+			timeline := set.Get(session).Timeline
+			if got := timeline[len(timeline)-1]; got.Kind != events.TurnStart || got.Detail != tc.want {
+				t.Errorf("entry = %+v, want detail %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestTicketEventsInTheTimeline(t *testing.T) {
 	t.Parallel()
 

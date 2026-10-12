@@ -60,6 +60,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A subagent reporting back no longer answers the question its session
+  asked you (FH-57). Only a prompt you type answers a session's open
+  question in the chat; a subagent's hand-back, a message from another
+  agent, a finished background command or agent, and the desktop app's
+  pull request monitor leave it in Needs you, and `flashheart await`
+  keeps waiting. Before, a session that orchestrated subagents lost every
+  question it asked. The run timeline shows such a turn as *Message from
+  an agent* or *Background task finished*. Hooks record who started each
+  turn (`turn.start` `origin`), never the prompt (protocol version
+  unchanged).
 - Text written into a ticket section can no longer split it (FH-87).
   This covers a handoff, a note, a new ticket's description or plan from
   the board or an agent, and a workstream's goal. A level-1 or level-2

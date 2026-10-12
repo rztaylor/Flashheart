@@ -1,0 +1,10 @@
+{
+  "session_id": "e8d9eb02-6534-4065-ae10-3e032e231c24",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/e8d9eb02-6534-4065-ae10-3e032e231c24.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/e8d9eb02-6534-4065-ae10-3e032e231c24/scratchpad",
+  "prompt_id": "5e4d3c2b-1a09-4f8e-b7d6-c5b4a3928170",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<ci-monitor-event>\"Auto-fix pull requests\" (the desktop app) is watching example/demo PR #7 and reports the following, read from the PR's state on GitHub.\n\nSynthetic report: the check job failed.</ci-monitor-event>"
+}
