@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"path"
@@ -81,6 +80,19 @@ func Prepare(s *store.Store, options Options) (Plan, error) {
 	if len(names) == 0 {
 		return plan, nil // already v2: nothing to do, whatever keys were given
 	}
+	// Apply edits these YAML files in place; one that does not parse would
+	// stop it part way, so it is refused before anything is written.
+	yamlFiles := []string{store.ConfigFile}
+	for _, name := range names {
+		yamlFiles = append(yamlFiles, path.Join(name, "project.yaml"))
+	}
+	for _, name := range yamlFiles {
+		if data, err := s.ReadFile(name); err == nil {
+			if broken := mdfile.ParseYAML(data).FrontmatterError; broken != nil {
+				return Plan{}, fmt.Errorf("%s does not parse (%v); repair it, then run migrate again", name, broken)
+			}
+		}
+	}
 	for name, key := range options.Keys {
 		if !slices.Contains(names, name) {
 			return Plan{}, fmt.Errorf("--key %s=%s: %s is not a v1 project in this root", name, key, name)
@@ -117,6 +129,15 @@ func Prepare(s *store.Store, options Options) (Plan, error) {
 		plan.Projects = append(plan.Projects, project)
 	}
 	for _, project := range plan.Projects {
+		for _, workstream := range project.Workstreams {
+			data, err := s.ReadFile(workstream)
+			if err != nil {
+				return Plan{}, err
+			}
+			if mdfile.Parse(data).FrontmatterError != nil {
+				plan.Warnings = append(plan.Warnings, fmt.Sprintf("%s: %s does not parse; its ticket list is kept as written and still needs repair", project.Name, workstream))
+			}
+		}
 		for _, ticket := range project.Tickets {
 			if ticket.Broken {
 				plan.Warnings = append(plan.Warnings, fmt.Sprintf("%s: %s does not parse; it is copied unchanged and still needs repair", project.Name, ticket.OldPath))
@@ -251,11 +272,32 @@ func resolveSlug(reference, project string, slugs map[string]map[string]string) 
 }
 
 // Apply performs a prepared plan: it writes the v2 tree, then moves every
-// v1 file and folder it replaced into the backup. Nothing is deleted.
+// v1 file and folder it replaced into the backup. Nothing is deleted. It
+// writes under the root lock and the locks of the projects it converts, and
+// refuses a plan whose projects are no longer v1 (another migration ran).
 func Apply(s *store.Store, plan Plan) error {
 	if len(plan.Projects) == 0 {
 		return nil
 	}
+	var names []string
+	for _, project := range plan.Projects {
+		names = append(names, project.Name)
+	}
+	return s.WithRootLock(names, func() error {
+		v1, err := s.V1Projects()
+		if err != nil {
+			return err
+		}
+		for _, name := range names {
+			if !slices.Contains(v1, name) {
+				return fmt.Errorf("%s is no longer a v1 project; run flashheart migrate again", name)
+			}
+		}
+		return apply(s, plan)
+	})
+}
+
+func apply(s *store.Store, plan Plan) error {
 	slugs := map[string]map[string]string{}
 	folderOf := map[string]map[string]string{}
 	for _, project := range plan.Projects {
@@ -282,8 +324,9 @@ func Apply(s *store.Store, plan Plan) error {
 			}
 			target := ticket.Target(project.Name)
 			if !ticket.Broken {
-				data = insertFields(data, ticket.ID, ticket.Status)
-				data = rewriteList(data, "depends-on", ids)
+				if data, err = convertTicket(data, ticket, ids); err != nil {
+					return fmt.Errorf("%s: %w", ticket.OldPath, err)
+				}
 				data = []byte(rewriteLinks(string(data), ticket.Folder, folderOf[project.Name], slugs[project.Name]))
 			}
 			if err := s.WriteFileAtomic(path.Join(target, ticket.Folder+".md"), data); err != nil {
@@ -313,7 +356,10 @@ func Apply(s *store.Store, plan Plan) error {
 			if err := backup(workstream); err != nil {
 				return err
 			}
-			if err := s.WriteFileAtomic(workstream, rewriteList(data, "tickets", ids)); err != nil {
+			if data, err = rewriteList(data, "tickets", ids); err != nil {
+				return fmt.Errorf("%s: %w", workstream, err)
+			}
+			if err := s.WriteFileAtomic(workstream, data); err != nil {
 				return err
 			}
 		}
@@ -327,7 +373,12 @@ func Apply(s *store.Store, plan Plan) error {
 			if err := backup(projectFile); err != nil {
 				return err
 			}
-			content = setTopLevel(setTopLevel(data, "next_id", fmt.Sprint(project.NextID)), "key", project.Key)
+			if data, err = mdfile.SetYAMLScalar(data, "next_id", fmt.Sprint(project.NextID)); err != nil {
+				return fmt.Errorf("%s: %w", projectFile, err)
+			}
+			if content, err = mdfile.SetYAMLScalar(data, "key", project.Key); err != nil {
+				return fmt.Errorf("%s: %w", projectFile, err)
+			}
 		} else {
 			content = []byte(fmt.Sprintf("key: %s\nnext_id: %d\n", project.Key, project.NextID))
 		}
@@ -350,92 +401,42 @@ func Apply(s *store.Store, plan Plan) error {
 		if err := backup(config); err != nil {
 			return err
 		}
-		return s.WriteFileAtomic(config, setTopLevel(data, "version", "2"))
+		if data, err = mdfile.SetYAMLScalar(data, "version", "2"); err != nil {
+			return fmt.Errorf("%s: %w", config, err)
+		}
+		return s.WriteFileAtomic(config, data)
 	}
 	return s.WriteFileAtomic(config, []byte("version: 2\n"))
 }
 
-// insertFields puts id and status at the top of the frontmatter, adding a
-// frontmatter block when there is none.
-func insertFields(data []byte, id string, status board.Column) []byte {
-	fields := fmt.Sprintf("id: %s\nstatus: %s\n", id, status)
-	if bytes.HasPrefix(data, []byte("---\n")) {
-		return append([]byte("---\n"+fields), data[4:]...)
+// convertTicket puts id and status at the top of a v1 ticket's frontmatter
+// (adding a frontmatter when there is none) and maps its depends-on slugs
+// to ids. Every other line, the line endings and a byte-order mark are kept.
+func convertTicket(data []byte, ticket Ticket, ids func(string) string) ([]byte, error) {
+	data, err := mdfile.SetScalarFirst(data, "status", string(ticket.Status))
+	if err != nil {
+		return nil, err
 	}
-	return append([]byte("---\n"+fields+"---\n"), data...)
+	if data, err = mdfile.SetScalarFirst(data, "id", ticket.ID); err != nil {
+		return nil, err
+	}
+	return rewriteList(data, "depends-on", ids)
 }
 
-var flowList = regexp.MustCompile(`^\[(.*)\](\s*(#.*)?)$`)
-
-// rewriteList maps the values of a top-level frontmatter list field (flow,
-// block or scalar form), leaving everything else byte for byte.
-func rewriteList(data []byte, field string, mapValue func(string) string) []byte {
-	lines := strings.SplitAfter(string(data), "\n")
-	if len(lines) == 0 || strings.TrimRight(lines[0], "\n") != "---" {
-		return data
+// rewriteList maps the values of a top-level frontmatter list field. A
+// missing or empty field, and a frontmatter that does not parse, are left
+// as they are.
+func rewriteList(data []byte, field string, mapValue func(string) string) ([]byte, error) {
+	doc := mdfile.Parse(data)
+	items := doc.List(field)
+	if doc.FrontmatterError != nil || len(items) == 0 {
+		return data, nil
 	}
-	mapOne := func(value string) string {
-		trimmed := strings.TrimSpace(value)
-		if mapped := mapValue(trimmed); mapped != "" && trimmed != "" {
-			return strings.Replace(value, trimmed, mapped, 1)
-		}
-		return value
+	mapped := make([]string, len(items))
+	for index, item := range items {
+		mapped[index] = mapValue(item)
 	}
-	prefix := field + ":"
-	for index := 1; index < len(lines); index++ {
-		line := lines[index]
-		if strings.TrimRight(line, "\n") == "---" {
-			break
-		}
-		if !strings.HasPrefix(line, prefix) {
-			continue
-		}
-		rest := strings.TrimRight(strings.TrimPrefix(line, prefix), "\n")
-		value := strings.TrimSpace(rest)
-		switch {
-		case value == "":
-			for next := index + 1; next < len(lines); next++ {
-				item := lines[next]
-				trimmed := strings.TrimLeft(item, " ")
-				if !strings.HasPrefix(trimmed, "- ") {
-					break
-				}
-				indent := item[:len(item)-len(trimmed)]
-				body := strings.TrimRight(trimmed[2:], "\n")
-				comment := ""
-				if at := strings.Index(body, " #"); at >= 0 {
-					body, comment = body[:at], body[at:]
-				}
-				lines[next] = indent + "- " + mapOne(body) + comment + "\n"
-			}
-		case flowList.MatchString(value):
-			match := flowList.FindStringSubmatch(value)
-			var items []string
-			for _, item := range strings.Split(match[1], ",") {
-				if strings.TrimSpace(item) != "" {
-					items = append(items, strings.TrimSpace(mapOne(item)))
-				}
-			}
-			lines[index] = prefix + " [" + strings.Join(items, ", ") + "]" + match[2] + "\n"
-		default:
-			lines[index] = prefix + " " + mapOne(value) + "\n"
-		}
-		break
-	}
-	return []byte(strings.Join(lines, ""))
-}
-
-// setTopLevel replaces a top-level "key: value" line in a YAML document, or
-// adds one at the top.
-func setTopLevel(data []byte, key, value string) []byte {
-	lines := strings.SplitAfter(string(data), "\n")
-	for index, line := range lines {
-		if strings.HasPrefix(line, key+":") {
-			lines[index] = key + ": " + value + "\n"
-			return []byte(strings.Join(lines, ""))
-		}
-	}
-	return append([]byte(key+": "+value+"\n"), data...)
+	return mdfile.SetList(data, field, mapped)
 }
 
 var markdownLink = regexp.MustCompile(`(!?)\[([^\]]*)\]\(([^)\s]+)\)`)

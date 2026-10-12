@@ -60,6 +60,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- `flashheart migrate` keeps tickets with Windows line endings or a
+  byte-order mark intact (FH-79). Before, such a ticket gained a second
+  header and lost its created date and dependencies, and its dependency
+  list and its workstream's ticket list were never rewritten to ids. The
+  migration now edits every header with the shared editor, which keeps
+  each file's line endings and byte-order mark, and writes under the board
+  root's lock (and each converted project's) so no other write lands
+  part way through. A `project.yaml` or `config.yaml` that does not parse
+  is refused before anything is written; a workstream that does not parse
+  is warned about and kept as written.
 - A preference changed just before a reload shows its new value after the
   reload (FH-109). The save flushed as the page unloads reaches the server
   first, but on a slow disk or a busy machine it could still be writing

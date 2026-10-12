@@ -28,7 +28,9 @@
 //
 // It also creates the root folder itself (EnsureRoot), reads and validates
 // config.yaml (ReadConfig, defaults when it or the root is missing) and
-// rewrites it under the root lock (UpdateConfig), and tells its own writes
+// rewrites it under the root lock (UpdateConfig), offers confined file
+// primitives with the root and project locks (WithRootLock) for whole-board
+// conversion by migrate, and tells its own writes
 // of a ticket or review from others' (WroteLast, by project, id and Doc).
 //
 // Callers that need a few projects at scale read every project's identity
