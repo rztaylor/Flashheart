@@ -60,6 +60,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A preference changed just before a reload shows its new value after the
+  reload (FH-109). The save flushed as the page unloads reaches the server
+  first, but on a slow disk or a busy machine it could still be writing
+  when the reloaded page read preferences, so the page showed the old
+  value until the next reload. The server now answers a preference read
+  only once any save in progress has finished.
 - Text written into a ticket section can no longer split it (FH-87).
   This covers a handoff, a note, a new ticket's description or plan from
   the board or an agent, and a workstream's goal. A level-1 or level-2
