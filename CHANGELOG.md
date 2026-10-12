@@ -85,6 +85,12 @@ All notable changes to this project are documented here. The project follows
   toward the new workstream's progress. Clearing the workstream removes
   the ticket from its list. An edit based on a stale copy of the ticket,
   or naming a workstream the project does not have, changes no file.
+- Starting a blocked ticket from the board records the reason as a dated
+  note, `- 2026-10-12 · Started while blocked: …`, like an agent's forced
+  claim (FH-81). Before, the board added a bare, undated line. A new
+  ticket's description from the board is now limited to 16 KiB, the
+  limit agents already had (it was 64 KiB); a heading typed into it stays
+  inside the description (FH-87).
 - Text written into a ticket section can no longer split it (FH-87).
   This covers a handoff, a note, a new ticket's description or plan from
   the board or an agent, and a workstream's goal. A level-1 or level-2
