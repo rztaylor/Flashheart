@@ -511,6 +511,31 @@ describe("overview", () => {
     ]);
   });
 
+  // A finished subagent's question waits on its session: the server marks
+  // it sessionEnded only once the session ends, so the Overview lists it
+  // while the session is live, as the session's reason and the card do
+  // (FH-112).
+  it("lists a finished subagent's question while its session is live", () => {
+    const session = run("claude:s", {
+      state: "needs-you",
+      children: ["claude:s/a1"],
+      reason: reason({
+        kind: "question",
+        question: "decision",
+        waitingOn: "claude:s/a1",
+        agentType: "Explore",
+      }),
+    });
+    const sub = run("claude:s/a1", {
+      state: "ended",
+      agentType: "Explore",
+      questions: [question("q-1", { run: "claude:s/a1" })],
+    });
+    expect(
+      overview(cards, [session, sub]).decision.map((item) => item.key),
+    ).toEqual(["q-1"]);
+  });
+
   it("lists live sessions with no ticket, most recent first", () => {
     const view = overview(cards, [
       run("claude:old", { lastActivity: "2026-10-05T09:00:00Z" }),

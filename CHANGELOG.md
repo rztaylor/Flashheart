@@ -70,6 +70,27 @@ All notable changes to this project are documented here. The project follows
   and `flashheart await` also delivers an answer the log shows given and
   not delivered. Such an answer may now be shown twice, never not at all
   (protocol version unchanged).
+- A long branch name keeps its distinguishing end in view in the ticket
+  panel's header and the Runs tab (FH-83). It is cut from the start, as
+  the board root, run ids, worktrees and archived projects' repositories
+  already were, so `…overflows-the-panel-fh83-tail` shows instead of
+  `feature/a-very-long-bra…`; the full name stays in its tooltip, and the
+  text is whole for screen readers.
+- A question a subagent asked before it finished is no longer hidden
+  while its session waits on it (FH-112). The session stays in Needs you
+  saying, for example, *Explore has a question*; the ticket card now
+  counts the question and the Overview lists it under *Needs your
+  decision*, so you can find and answer it. It stops needing you once the
+  session itself ends, as any ended session's question does. The project
+  archive check counts it the same way.
+
+- Archived projects added, renamed or removed outside Flashheart (by
+  hand, by another Flashheart process, or by restoring a backup) now show
+  in the archived projects list and the All projects archive count within
+  a second, instead of at the next 10 s sweep (FH-28). The watcher now
+  watches `<root>/.archive/` itself, but not the archived projects' own
+  folders, and never through a symbolic link.
+
 - `flashheart migrate` keeps tickets with Windows line endings or a
   byte-order mark intact (FH-79). Before, such a ticket gained a second
   header and lost its created date and dependencies, and its dependency
@@ -86,6 +107,7 @@ All notable changes to this project are documented here. The project follows
   when the reloaded page read preferences, so the page showed the old
   value until the next reload. The server now answers a preference read
   only once any save in progress has finished.
+
 - A project whose `project.yaml` uses Windows line endings or a byte-order
   mark keeps its name and repositories (FH-77). Before, adopting a
   repository and then setting the project key wrote a second header into
@@ -95,6 +117,7 @@ All notable changes to this project are documented here. The project follows
   treats problems alike: a field of the wrong type is shown as a project
   warning and the other fields still count, and a list that cannot be read
   is never replaced.
+
 - A subagent reporting back no longer answers the question its session
   asked you (FH-57). Only a prompt you type answers a session's open
   question in the chat; a subagent's hand-back, a message from another

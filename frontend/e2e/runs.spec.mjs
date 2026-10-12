@@ -8,6 +8,7 @@ import {
   connectMCP,
   IDLE_SESSION,
   promptHook,
+  seedBranchRun,
   seedClaimedRun,
   seedRuns,
   TASK_NOTIFICATION,
@@ -832,4 +833,79 @@ test("an agent without hooks gets a run from its first write, and its answers wi
       .getByRole("complementary", { name: "Ticket BE-1" })
       .getByText("Ended (disconnected)"),
   ).toBeVisible();
+});
+
+// tailOf says, for each element showing text, whether the box that clips
+// it cuts the text, whether its first and last characters lie inside that
+// box, and the full value its title keeps.
+function tailOf(locator) {
+  return locator.evaluateAll((elements) =>
+    elements.map((element) => {
+      let clip = element;
+      while (clip && getComputedStyle(clip).overflowX === "visible")
+        clip = clip.parentElement;
+      const box = clip.getBoundingClientRect();
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const text = walker.nextNode();
+      const range = document.createRange();
+      const inside = (start) => {
+        range.setStart(text, start);
+        range.setEnd(text, start + 1);
+        const glyph = range.getBoundingClientRect();
+        return glyph.left >= box.left - 0.5 && glyph.right <= box.right + 0.5;
+      };
+      return {
+        cut: clip.scrollWidth > clip.clientWidth,
+        first: inside(0),
+        last: inside(text.length - 1),
+        title: element.closest("[title]")?.getAttribute("title"),
+      };
+    }),
+  );
+}
+
+test("a long branch keeps its tail visible in the panel and the Runs tab (FH-83)", async () => {
+  const branch =
+    "feature/a-very-long-branch-name-that-overflows-the-panel-fh83-tail";
+  const file = join(
+    sandbox.root,
+    "flashheart",
+    "tickets",
+    "FH-26-slow-index-nfs",
+    "FH-26-slow-index-nfs.md",
+  );
+  // A run links by branch to a ticket in progress on it.
+  const ticket = await readFile(file, "utf8");
+  await writeFile(
+    file,
+    ticket
+      .replace(/^status: .*$/m, "status: in-progress")
+      .replace(/^branch: .*$/m, `branch: ${branch}`),
+  );
+  await seedBranchRun(sandbox.home, sandbox.root, "flashheart", branch);
+
+  const panel = page.getByRole("complementary", { name: "Ticket FH-26" });
+  const shown = panel.getByText(branch, { exact: true });
+  for (const theme of ["light", "dark"]) {
+    await open("#/p/flashheart/board?t=FH-26", {
+      width: 1280,
+      height: 800,
+      theme,
+    });
+    await page.getByRole("tab", { name: /^Runs/ }).click();
+    await expect(panel.getByText("linked by branch")).toBeVisible();
+    // The panel header, the run's card and its open detail show it, each
+    // cut from the start so its distinguishing tail stays in view, the
+    // full name in its title.
+    await expect(shown).toHaveCount(3);
+    for (const where of await tailOf(shown))
+      expect(where).toEqual({
+        cut: true,
+        first: false,
+        last: true,
+        title: branch,
+      });
+    if (theme === "light") await expectNoAxeViolations("long branch");
+    await shot(`branch-tail-runs-1280-${theme}`);
+  }
 });

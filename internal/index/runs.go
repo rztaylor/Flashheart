@@ -270,7 +270,7 @@ type runIndex struct {
 	// family lists each run with its subagents.
 	family map[string][]int
 	// questions holds each ticket's open questions, oldest first, marked
-	// SessionEnded when their run has ended.
+	// SessionEnded as their run's view says.
 	questions map[string][]runs.Question
 	// question finds a question by id: run and question position.
 	question map[string][2]int
@@ -297,7 +297,6 @@ func indexRuns(views []runs.View) runIndex {
 				index.question[q.ID] = [2]int{position, n}
 			}
 			if q.Open() && q.Ticket != "" {
-				q.SessionEnded = run.State == runs.Ended
 				index.questions[q.Ticket] = append(index.questions[q.Ticket], q)
 			}
 		}
@@ -374,10 +373,11 @@ func (s *Snapshot) TicketRuns(id string) []runs.View {
 }
 
 // Questions returns the open questions about a ticket (answered or not,
-// until delivered), oldest first (CARD-6). Questions of a run that has
-// ended are included and marked SessionEnded: they can still be answered,
-// and the answer waits for the session to resume, but they do not need you
-// (VIEW-2, RUN-8).
+// until delivered), oldest first (CARD-6). Questions whose session has
+// ended are included and marked SessionEnded (runs.View): they can still be
+// answered, and the answer waits for the session to resume, but they do not
+// need you (VIEW-2, RUN-8). A finished subagent's question waits on its
+// session, so it needs you while the session is live (FH-112).
 func (s *Snapshot) Questions(ticket string) []runs.Question {
 	return slices.Clone(s.runIndex.questions[ticket])
 }

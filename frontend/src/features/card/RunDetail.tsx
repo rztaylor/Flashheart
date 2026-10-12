@@ -1,7 +1,7 @@
 import type { PlanItem, Run, TimelineEntry } from "../../api/runs";
 import { Aside } from "../../components/Aside";
-import { Icon } from "../../components/Icon";
 import { QuestionCard } from "../../components/QuestionCard";
+import { TailText } from "../../components/TailText";
 import { compactTimeline, describeEntry } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 
@@ -85,17 +85,23 @@ export function RunDetail({
           </DetailSection>
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-2xs text-ink-muted">
             <dt>Run</dt>
-            <TailText className="text-ink">{run.id}</TailText>
+            <TailText as="dd" className="text-ink">
+              {run.id}
+            </TailText>
             {run.branch ? (
               <>
                 <dt>Branch</dt>
-                <TailText className="font-mono">{run.branch}</TailText>
+                <TailText as="dd" className="font-mono">
+                  {run.branch}
+                </TailText>
               </>
             ) : null}
             {run.worktree ? (
               <>
                 <dt>Worktree</dt>
-                <TailText className="font-mono">{run.worktree}</TailText>
+                <TailText as="dd" className="font-mono">
+                  {run.worktree}
+                </TailText>
               </>
             ) : null}
             <dt>Started</dt>
@@ -155,25 +161,6 @@ export function RunDetail({
         </DetailSection>
       </div>
     </div>
-  );
-}
-
-// TailText cuts a long value from its start, so the meaningful tail of a
-// path or id stays visible (as the rail footer does with the board root).
-function TailText({
-  children,
-  className,
-}: {
-  children: string;
-  className?: string;
-}) {
-  return (
-    <dd
-      className={`truncate text-left [direction:rtl] ${className ?? ""}`}
-      title={children}
-    >
-      <bdi>{children}</bdi>
-    </dd>
   );
 }
 
@@ -240,18 +227,5 @@ function PlanList({ plan }: { plan: PlanItem[] }) {
         );
       })}
     </ol>
-  );
-}
-
-export function BranchLabel({ branch }: { branch: string }) {
-  if (!branch) return null;
-  return (
-    <span
-      className="flex min-w-0 items-center gap-1 text-2xs text-ink-muted"
-      title={branch}
-    >
-      <Icon name="branch" size={12} />
-      <span className="truncate font-mono">{branch}</span>
-    </span>
   );
 }

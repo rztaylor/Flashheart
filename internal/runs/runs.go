@@ -181,7 +181,8 @@ type Question struct {
 	// before answering on the board: the answer went into the session's own
 	// chat, so the question is delivered and no longer waits (§4).
 	AnsweredInSession bool `json:"answeredInSession,omitempty"`
-	// SessionEnded is set by readers when the asking run has ended: the
+	// SessionEnded is set in a View when the session the question waits on
+	// has ended (the asking run's, or for a subagent its session's, §4): the
 	// question can still be answered, and the answer waits for the session
 	// to resume (RUN-8), but it does not need you (VIEW-2).
 	SessionEnded bool `json:"sessionEnded,omitempty"`
@@ -852,17 +853,31 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 			Files:     slices.Clone(r.Files),
 			Plan:      slices.Clone(r.Plan),
 			Progress:  r.Progress(),
-			Questions: cloneQuestions(r.Questions),
+			Questions: cloneQuestions(r.Questions, s.sessionEnded(r, state, now, settings)),
 			Timeline:  slices.Clone(r.Timeline),
 		})
 	}
 	return views
 }
 
-func cloneQuestions(list []Question) []Question {
+// sessionEnded reports whether the session a run's questions wait on has
+// ended: a subagent's questions go to its session (§4), so they wait while
+// the session is live even after the subagent ends (FH-112). A subagent
+// whose session was never seen is its own session. state is the run's.
+func (s *Set) sessionEnded(r *Run, state State, now time.Time, settings Settings) bool {
+	if parent := s.runs[r.Parent]; parent != nil {
+		return s.State(parent.ID, now, settings) == Ended
+	}
+	return state == Ended
+}
+
+// cloneQuestions copies a run's questions, marked SessionEnded when the
+// session they wait on has ended.
+func cloneQuestions(list []Question, ended bool) []Question {
 	out := slices.Clone(list)
 	for index := range out {
 		out[index].Options = slices.Clone(out[index].Options)
+		out[index].SessionEnded = ended
 	}
 	return out
 }
