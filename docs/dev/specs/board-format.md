@@ -469,6 +469,13 @@ project's lock while it was archived finds it gone and writes nothing.
    `.flashheart/backup/v1-<UTC timestamp>/`, and `config.yaml` records
    `version: 2`.
 
+Every frontmatter and YAML edit keeps the file's line endings and
+byte-order mark (`STO-2`). `--write` runs under the root lock and the
+locks of the projects it converts, and stops without writing if those
+projects are no longer v1. A `project.yaml` or `config.yaml` that does
+not parse stops the plan before anything is written; a workstream file
+that does not parse is warned about and kept as written.
+
 `serve` on a v1 root shows the migration command instead of the board and
 writes nothing. Flashheart refuses to write to a root with a newer version
 than it understands.

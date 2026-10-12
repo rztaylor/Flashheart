@@ -60,6 +60,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- `flashheart migrate` keeps tickets with Windows line endings or a
+  byte-order mark intact (FH-79). Before, such a ticket gained a second
+  header and lost its created date and dependencies, and its dependency
+  list and its workstream's ticket list were never rewritten to ids. The
+  migration now edits every header with the shared editor, which keeps
+  each file's line endings and byte-order mark, and writes under the board
+  root's lock (and each converted project's) so no other write lands
+  part way through. A `project.yaml` or `config.yaml` that does not parse
+  is refused before anything is written; a workstream that does not parse
+  is warned about and kept as written.
 - A project whose `project.yaml` uses Windows line endings or a byte-order
   mark keeps its name and repositories (FH-77). Before, adopting a
   repository and then setting the project key wrote a second header into
