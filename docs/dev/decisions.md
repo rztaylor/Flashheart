@@ -928,3 +928,50 @@ hook would read a large file on every prompt, against HOOK-1); an
 Versions: `PROTOCOL_VERSION` stays 2 (additive: an optional field, and
 `background` still marks a turn the user did not start); board format
 unchanged; the protocol skill does not describe it.
+
+## 2026-10-12 — D42: Interaction tests in happy-dom; screenshots compared in a pinned container
+
+Decision (FH-101): component and hook tests that click, type or check
+focus run in **happy-dom** with **Testing Library** (`@testing-library/react`,
+`@testing-library/dom`, `@testing-library/user-event`), all dev
+dependencies pinned in `package-lock.json`. They are named
+`*.dom.test.ts(x)` and run as Vitest's `dom` project; every other unit test
+stays in the `node` project, which starts faster. The browser suite's
+stable screenshot set (`frontend/e2e/visual.spec.mjs`) is compared with
+committed baselines by `toHaveScreenshot`, in the Playwright container whose
+version matches the pinned `@playwright/test`, on amd64
+(`scripts/e2e-visual.sh`, which CI runs after `scripts/e2e.sh`).
+
+Until now Vitest ran in node and every component test rendered static
+markup, so dialogs, popovers, tabs and the data-loading hooks had no tests
+of keys, focus or state over time, and `scripts/e2e.sh` saved screenshots
+that only a person compared. The ticket page (FH-65) and editing (FH-66)
+need focus-return and keep-or-discard tests, and refactors promise
+unchanged screenshots.
+
+DOM options: **jsdom** (the most complete DOM, but 20 direct dependencies
+and a slower start); **happy-dom** (chosen: seven small dependencies,
+released every few weeks, and it covers what these tests check: the
+native `<dialog>`'s `showModal` and `cancel`, focus, `activeElement`,
+`relatedTarget` on blur, and visibility events); a real browser
+through Vitest's browser mode (accurate, but slow to start and a second
+Playwright setup for unit tests). Testing Library is the common way to
+render, query by role and drive keys with real default actions (Tab order,
+focus moves); `user-event` types and tabs as a person does rather than
+firing bare events. Pinned versions are at least two weeks old when added.
+Layout, CSS and true focus trapping stay with the browser suite.
+
+Screenshot options: one set of baselines for every platform (fails, since
+macOS and Linux render fonts differently); baselines per platform (each
+needs regenerating on its own machine, and CI only has Linux); baselines
+made by a CI job and downloaded (a round trip through GitHub for every
+intended change, and they drift with the runner image); the pinned
+container everywhere (chosen: the same browser, fonts and libraries on a
+Mac, a Linux machine and CI, reproducible offline once the image is
+pulled, and on a Mac about 15 s for the set under amd64 emulation).
+`scripts/e2e.sh` skips the comparison, so it still runs on any machine
+without Docker. The set fixes what moves: a fixed browser clock, file
+times, locale and time zone, and the temporary board path is masked. A
+deliberate visual change updates the baselines with
+`scripts/e2e-visual.sh --update-snapshots` in the same pull request,
+where the PNG diff is reviewed.

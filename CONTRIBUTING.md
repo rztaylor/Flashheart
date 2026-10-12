@@ -29,6 +29,7 @@ Requires Go 1.26.6+ and Node.js 22+.
 ```sh
 scripts/check.sh    # frontend lint, unit tests and build; Go format, vet, tests, -race, build
 scripts/e2e.sh      # Playwright lifecycle, accessibility and screenshots (visible UI changes)
+scripts/e2e-visual.sh   # compare the stable screenshots in Docker; --update-snapshots after a visual change
 ```
 
 Tests never touch a real board root or agent configuration; use temporary
