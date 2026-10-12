@@ -12,7 +12,7 @@ import { Pill, StatusPill, Tag } from "../../components/Pill";
 import { RunStateLabel } from "../../components/RunState";
 import { HeadCell, Row, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
-import type { Line } from "../../model/lines";
+import { type Line, workstreamTitle } from "../../model/lines";
 import { priorityLabel } from "../../model/status";
 import { runningTime } from "../../model/time";
 
@@ -135,11 +135,11 @@ export function TableView({
       >
         {rows.map((card) => {
           const isSelected = selected?.id === card.id;
-          const title =
-            workstreams
-              .get(card.project)
-              ?.find((item) => item.slug === card.workstream)?.title ??
-            card.workstream;
+          const title = workstreamTitle(
+            workstreams,
+            card.project,
+            card.workstream,
+          );
           return (
             <Row
               key={`${card.project}/${card.id}/${card.column}`}

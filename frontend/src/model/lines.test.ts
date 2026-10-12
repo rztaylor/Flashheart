@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { assignLines, LINE_COUNT, lineInitials } from "./lines";
+import {
+  assignLines,
+  LINE_COUNT,
+  lineInitials,
+  workstreamTitle,
+} from "./lines";
 
 describe("assignLines", () => {
   it("gives every workstream in a project a distinct line while colours last", () => {
@@ -59,5 +64,35 @@ describe("lineInitials", () => {
     expect(lineInitials("storage")).toBe("S");
     expect(lineInitials("ofqual-regulatory-layer")).toBe("OR");
     expect(lineInitials("")).toBe("?");
+  });
+});
+
+describe("workstreamTitle", () => {
+  const brief = (slug: string, title: string) => ({
+    slug,
+    title,
+    created: "2026-10-01",
+    status: "active" as const,
+    done: 0,
+    total: 1,
+  });
+  const workstreams = new Map([
+    ["flashheart", [brief("board-ui", "Board UI"), brief("sync", "Sync")]],
+    ["other", [brief("board-ui", "Another board")]],
+  ]);
+
+  it("names a workstream by its project's title for the slug", () => {
+    expect(workstreamTitle(workstreams, "flashheart", "board-ui")).toBe(
+      "Board UI",
+    );
+    expect(workstreamTitle(workstreams, "other", "board-ui")).toBe(
+      "Another board",
+    );
+  });
+
+  it("falls back to the slug for a workstream or project it does not know", () => {
+    expect(workstreamTitle(workstreams, "flashheart", "gone")).toBe("gone");
+    expect(workstreamTitle(workstreams, "missing", "sync")).toBe("sync");
+    expect(workstreamTitle(workstreams, "flashheart", "")).toBe("");
   });
 });

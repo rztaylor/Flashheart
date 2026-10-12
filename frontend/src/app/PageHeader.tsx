@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { KeyBadge } from "../components/KeyBadge";
 
@@ -47,5 +48,40 @@ export function PageHeader({
         </div>
       ) : null}
     </header>
+  );
+}
+
+// PageActions are the header's far end: the Archive link with the scope's
+// archived count, and New ticket, each absent where the view has none.
+export function PageActions({
+  archive,
+  onNewTicket,
+}: {
+  archive?: { href: string; count: number; onOpen(): void };
+  onNewTicket?: () => void;
+}) {
+  return (
+    <>
+      {archive ? (
+        <a
+          href={archive.href}
+          onClick={(event) => {
+            event.preventDefault();
+            archive.onOpen();
+          }}
+          className="flex items-center gap-1.5 rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-well hover:text-ink"
+        >
+          <Icon name="archive" size={14} />
+          Archive
+          <span className="tabular-nums">{archive.count}</span>
+        </a>
+      ) : null}
+      {onNewTicket ? (
+        <Button variant="primary" className="h-9 py-0" onClick={onNewTicket}>
+          <Icon name="plus" size={16} />
+          New ticket
+        </Button>
+      ) : null}
+    </>
   );
 }

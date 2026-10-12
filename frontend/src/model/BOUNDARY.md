@@ -1,7 +1,7 @@
 # Model boundary
 
 Owns pure view-model logic shared across features: workstream line
-assignment (`lines`), filters and search with include and exclude choices,
+assignment and the one workstream title lookup (`lines`), filters and search with include and exclude choices,
 chip toggling, workstream chip order and one-line fitting (`filters`,
 VIEW-7, FH-39), running times, markdown
 link resolution, ticket-id linking (KEY-3) and section trimming (CARD-2),
@@ -15,7 +15,8 @@ VIEW-3), keyboard grid movement, and
 manual-order placements and display sorts (`order`, EDIT-9), archive
 search and the delete gate (`archive`, EDIT-8), a ticket's sections in
 order with their counts (`ticketSections`, CARD-1), and the marginal remarks
-catalogue (`remarks.md`), placements and selection (`remarks`).
+catalogue (`remarks.md`), placements, selection and which moves to Done
+earn one (`remarks`).
 Everything here is a plain function or type, unit-tested with Vitest.
 
 Does not own React components, data loading, requests or styling. It may

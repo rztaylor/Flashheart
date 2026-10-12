@@ -24,7 +24,7 @@ export function SectionBody({
   fetcher,
   keys,
   onOpen,
-  workstreamsOf,
+  workstreams,
 }: {
   section: SectionId;
   detail: TicketDetail;
@@ -32,7 +32,7 @@ export function SectionBody({
   fetcher: AuthenticatedFetch;
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
-  workstreamsOf(project: string): WorkstreamBrief[];
+  workstreams: Map<string, WorkstreamBrief[]>;
 }) {
   switch (section) {
     case "review":
@@ -46,7 +46,7 @@ export function SectionBody({
         <EditTab
           detail={detail}
           fetcher={fetcher}
-          workstreams={workstreamsOf(detail.project)}
+          workstreams={workstreams.get(detail.project) ?? []}
           onSaved={ticket.saved}
         />
       );

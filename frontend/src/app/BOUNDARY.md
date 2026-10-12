@@ -11,11 +11,29 @@ identity, the view's summary line and the Archive link, the archive route
 the ticket page route (`#/ticket/<id>`, a ticket's full page under the
 band, CARD-7)
 and the Undo after archiving a project, the screen's one marginal remark
-(`AsideProvider`) and which moves earn one, the brand tooltip, the
+(`AsideProvider`) and wiring which moves earn one, the brand tooltip, the
 shutdown-denial alert, the terminal stopped screen, theme
 application to `<html data-theme>`, live updates and saved preferences
 wired into the views (the view and filters remembered per project), and
 wiring lifecycle, API and features together.
+
+`Shell` is composition only; each concern has one owner beside it:
+
+- `Band`: the band's markup (wordmark, view tabs, Needs you plate, search,
+  status, Quit) and the notices under it.
+- `useBoardData`: loading the projects and the scope's board, live
+  reloads, editing wired to them with pending moves placed at once, the
+  move remark (`model/remarks` `moveRemark`), and the lines, workstreams
+  and keys derived from the projects.
+- `useScopeMemory` over `scopeMemory` (pure, tested): the filters, and the
+  view and filters remembered per scope.
+- `useTicketPanel`: opening the panel (on a tab) and returning focus to its
+  opener when it closes.
+- `ViewOutlet`: the routed view's body (read errors, the v1 notice
+  (`V1Notice`), the missing-root state, archive, Overview, Workstreams, and
+  the Board or Table with their toolbar, filter options and paints).
+- `PageHeader` with `PageActions`, `NarrowControls` (the phone control row)
+  and `RailFooter` (theme, board root, version).
 
 Does not own the Singleserve session (`lifecycle/`), request contracts
 (`api/`), shared primitives (`components/`), loading state (`state/`) or

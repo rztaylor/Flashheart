@@ -38,7 +38,7 @@ import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
 import { EmptyState } from "../../components/EmptyState";
 import { neighbourColumn, shownColumns } from "../../model/columns";
-import type { Line } from "../../model/lines";
+import { type Line, workstreamTitle } from "../../model/lines";
 import { type GridMove, moveInGrid } from "../../model/navigation";
 import {
   afterForIndex,
@@ -263,16 +263,12 @@ export function BoardView(props: BoardViewProps) {
     refs.current.get(keyOf(next.column, next.row))?.focus();
   };
 
-  const workstreamTitle = (card: Card) =>
-    workstreams
-      .get(card.project)
-      ?.find((workstream) => workstream.slug === card.workstream)?.title ??
-    card.workstream;
-
   const cardProps = (card: Card) => ({
     card,
     line: lines.get(card.project)?.get(card.workstream),
-    workstreamTitle: card.workstream ? workstreamTitle(card) : undefined,
+    workstreamTitle: card.workstream
+      ? workstreamTitle(workstreams, card.project, card.workstream)
+      : undefined,
     density,
     paint: paintFor(card, paint, now),
     showProject: projectNames?.get(card.project),

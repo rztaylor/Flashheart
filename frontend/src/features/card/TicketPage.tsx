@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Icon } from "../../components/Icon";
 import { TicketLinksInPlace } from "../../components/TicketLink";
+import { workstreamTitle } from "../../model/lines";
 import { type SectionId, ticketSections } from "../../model/ticketSections";
 import type { CardPanelProps } from "./CardPanel";
 import {
@@ -34,14 +35,13 @@ export function TicketPage({
   ticket: ref,
   fetcher,
   lines,
-  workstreamTitle,
+  workstreams,
   keys,
   onOpen,
   onClose,
   revision,
   editing,
   answers = false,
-  workstreamsOf,
   initialTab = "ticket",
 }: TicketPageProps) {
   const ticket = useTicket({
@@ -94,6 +94,7 @@ export function TicketPage({
                 detail={detail}
                 line={lines.get(detail.project)?.get(detail.workstream)}
                 workstreamTitle={workstreamTitle(
+                  workstreams,
                   detail.project,
                   detail.workstream,
                 )}
@@ -124,7 +125,7 @@ export function TicketPage({
                 fetcher={fetcher}
                 keys={keys}
                 onOpen={onOpen}
-                workstreamsOf={workstreamsOf}
+                workstreams={workstreams}
               />
             </SectionTabs>
           </>

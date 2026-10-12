@@ -5,6 +5,7 @@ import {
   catalogue,
   completesWorkstream,
   DEFERRED,
+  moveRemark,
   PLACEMENTS,
   type Placement,
   pickRemark,
@@ -129,6 +130,63 @@ describe("progress", () => {
     expect(progressDue(undefined, start)).toBe(true);
     expect(progressDue(start, start + 9 * 60_000)).toBe(false);
     expect(progressDue(start, start + 10 * 60_000)).toBe(true);
+  });
+});
+
+describe("moveRemark", () => {
+  const start = Date.UTC(2026, 9, 6, 10, 0);
+  const line = [
+    card("FH-1", { workstream: "sync", column: "done" }),
+    card("FH-2", { workstream: "sync", column: "review" }),
+    card("FH-3", { workstream: "other", column: "backlog" }),
+  ];
+  const review = { id: "FH-2", column: "review" as const };
+
+  it("remarks only on a move into Done", () => {
+    expect(moveRemark(line, review, "review", undefined, start)).toBe(
+      undefined,
+    );
+    expect(moveRemark(line, review, "rejected", undefined, start)).toBe(
+      undefined,
+    );
+    const done = { id: "FH-1", column: "done" as const };
+    expect(moveRemark(line, done, "done", undefined, start)).toBe(undefined);
+  });
+
+  it("marks completion when the move finishes a workstream, however recent the last remark", () => {
+    expect(moveRemark(line, review, "done", start, start + 1)).toBe(
+      "completion",
+    );
+  });
+
+  it("judges completion from where the ticket was, not where the board already shows it", () => {
+    // The board places a move at once, so the moving card already shows in
+    // Done when the save returns.
+    const shown = line.map((item) =>
+      item.id === "FH-2" ? { ...item, column: "done" as const } : item,
+    );
+    expect(moveRemark(shown, review, "done", start, start + 1)).toBe(
+      "completion",
+    );
+    const open = [...shown, card("FH-4", { workstream: "sync" })];
+    expect(moveRemark(open, review, "done", start, start + 1)).toBe(undefined);
+  });
+
+  it("otherwise marks progress at most once every ten minutes", () => {
+    const backlog = { id: "FH-3", column: "backlog" as const };
+    const open = [...line, card("FH-5", { workstream: "other" })];
+    expect(moveRemark(open, backlog, "done", undefined, start)).toBe(
+      "progress",
+    );
+    expect(moveRemark(open, backlog, "done", start, start + 60_000)).toBe(
+      undefined,
+    );
+    expect(moveRemark(open, backlog, "done", start, start + 10 * 60_000)).toBe(
+      "progress",
+    );
+    // A ticket the board does not show can still earn progress.
+    const unseen = { id: "FH-77", column: "review" as const };
+    expect(moveRemark(line, unseen, "done", undefined, start)).toBe("progress");
   });
 });
 
