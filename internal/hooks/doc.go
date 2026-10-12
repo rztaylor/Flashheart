@@ -1,6 +1,7 @@
 // Package hooks handles one agent hook invocation without knowing any
-// agent's payload schema (HOOK-1–HOOK-4): it reads the payload, has the
-// agent's Adapter turn it into events, resolves the project, branch and
+// agent's payload schema or tool names (HOOK-1–HOOK-4): it reads the
+// payload, has the agent's Adapter turn it into events (classifying each
+// tool result as a shell command or an edit of its paths), resolves the project, branch and
 // worktree from the working directory, scrubs and bounds what will be
 // stored, throttles tool results into activity records (at most one per
 // run per activity_seconds, with each newly edited path and permission

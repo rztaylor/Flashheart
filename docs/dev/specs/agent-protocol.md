@@ -208,14 +208,16 @@ Flags:
   `worktree_changed: true`, which counts as one edit. Agents edit mostly
   through shell commands, which name no path, so at a session's turn end
   and end the hook checks its worktree when the session is not already
-  dirty and it or one of its subagents ran a shell command (`Bash` or
-  `PowerShell`, `ok`) since its last checkpoint. Each such command has a
+  dirty and it or one of its subagents ran a shell command (a successful
+  result its adapter classifies as one, §5.1) since its last checkpoint. Each such command has a
   **window**, from its run's previous event to its result, widened by
   2 s either side for clock and flush granularity and cut at the last
   checkpoint. The hook keeps each window in the session's activity state
   until it records it in an `activity`'s `shell` (§3), at the latest
   just before the turn end or end it checks; in older logs a window ends
-  at a `tool.used` and starts at the run's previous event. No hook does
+  at a `tool.used` of `Bash` or `PowerShell` (the one place past the
+  Claude Code adapter that reads a tool name) and starts at the run's
+  previous event. No hook does
   extra work for it. The worktree changed when a file git lists as changed or untracked
   (not ignored), or a file of a commit made since the first window, has a
   modification time inside a window (a deleted file by its directory's).
@@ -255,6 +257,12 @@ ticket's `## Notes`.
   internal error is logged to `hook-errors.log` and swallowed (`HOOK-1`).
 - Tool inputs are read only to extract edited file paths and plan items;
   nothing else from them is stored (`HOOK-2`).
+- The agent's adapter classifies each tool result: whether it is a shell
+  command, and the files it edited. One result that edits several files
+  (Codex's `apply_patch`) is one tool use with every path. Hooks and the
+  run fold read only this classification, never tool names, so an agent's
+  shell tool counts whatever it is called (FH-90; the event format is
+  unchanged).
 
 ### 5.2 Claude Code
 
