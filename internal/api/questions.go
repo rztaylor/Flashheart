@@ -36,10 +36,11 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Check and record under one lock, against a fresh snapshot, so two
-	// tabs answering at once cannot both be accepted.
+	// tabs answering at once cannot both be accepted. Answers are events, so
+	// refolding the runs is fresh enough; the board is read once, after.
 	b.answering.Lock()
 	defer b.answering.Unlock()
-	snapshot, err := b.board.Rebuild()
+	snapshot, err := b.board.RefreshRuns()
 	if err != nil || snapshot == nil {
 		writeError(w, http.StatusServiceUnavailable, "board_unavailable", "The board could not be read")
 		return

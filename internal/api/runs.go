@@ -224,17 +224,16 @@ func (b boardAPI) run(w http.ResponseWriter, r *http.Request) {
 	if snapshot == nil {
 		return
 	}
-	id := r.URL.Query().Get("id")
-	for _, v := range snapshot.Runs {
-		if v.ID == id {
-			writeJSON(w, http.StatusOK, RunResponse{Revision: snapshot.Revision, Run: runJSON(snapshot, v, true)})
-			return
-		}
+	v, ok := snapshot.Run(r.URL.Query().Get("id"))
+	if !ok {
+		writeError(w, http.StatusNotFound, "not_found", "No such run in the last two days")
+		return
 	}
-	writeError(w, http.StatusNotFound, "not_found", "No such run in the last two days")
+	writeJSON(w, http.StatusOK, RunResponse{Revision: snapshot.Revision, Run: runJSON(snapshot, v, true)})
 }
 
-// liveBadge fills a card's live run and virtual-column flags (VIEW-2, VIEW-8).
+// liveBadge fills a card's live run and virtual-column flags (VIEW-2,
+// VIEW-8), looking the ticket's runs up in the snapshot's run index.
 func liveBadge(snapshot *index.Snapshot, card *Card) {
 	// An open question about the ticket needs you whoever asked it, while
 	// the asking session is live (VIEW-2).
@@ -254,8 +253,8 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 		Permission: v.Permission, LastActivity: timestamp(v.LastActivity),
 	}
 	if v.State == runs.NeedsYou && v.Permission == "" {
-		for _, child := range snapshot.Runs {
-			if child.Parent == v.ID && child.State == runs.NeedsYou && child.Permission != "" {
+		for _, child := range snapshot.Subagents(v.ID) {
+			if child.State == runs.NeedsYou && child.Permission != "" {
 				card.Live.Permission, card.Live.WaitingOn = child.Permission, child.AgentType
 				if card.Live.WaitingOn == "" {
 					card.Live.WaitingOn = "Subagent"
@@ -274,10 +273,7 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 // openQuestion is the kind of the first open question of a run or its
 // subagents, and whether it is answered and waiting for delivery.
 func openQuestion(snapshot *index.Snapshot, v runs.View) (string, bool) {
-	for _, run := range snapshot.Runs {
-		if run.ID != v.ID && run.Parent != v.ID {
-			continue
-		}
+	for _, run := range snapshot.Family(v.ID) {
 		for _, q := range run.Questions {
 			if q.Open() {
 				return q.Kind, q.Answered()
@@ -312,14 +308,8 @@ func ticketRuns(snapshot *index.Snapshot, id string) []RunJSON {
 		listed[v.ID] = true
 		list = append(list, runJSON(snapshot, v, true))
 	}
-	children := map[string][]runs.View{}
-	for _, v := range snapshot.Runs {
-		if v.Parent != "" && listed[v.Parent] {
-			children[v.Parent] = append(children[v.Parent], v)
-		}
-	}
 	for _, root := range list {
-		subagents := children[root.ID]
+		subagents := snapshot.Subagents(root.ID)
 		sort.SliceStable(subagents, func(a, b int) bool { return subagents[a].LastActivity.After(subagents[b].LastActivity) })
 		for _, child := range subagents[:min(len(subagents), maxSubagents)] {
 			list = append(list, runJSON(snapshot, child, true))

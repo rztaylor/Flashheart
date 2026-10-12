@@ -100,6 +100,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- `serve` keeps up with busy agents without rereading the board (FH-96, D38).
+  An agent's hook events now only refold the runs over the board already
+  read, where each batch used to reparse every ticket; an event recording
+  a ticket write still rereads it. While the file watcher runs, page loads
+  serve the snapshot it keeps fresh instead of rebuilding one older than
+  2 s, and a change saved on the board is read once, not again by the
+  watcher. Cards find their live runs, subagents and questions through a
+  per-ticket index built once per snapshot. Event logs now count toward
+  the watcher's 1,500-folder budget, and each project's log is watched
+  instead of its whole `.flashheart` folder. The first event logged in a
+  project now shows within a second instead of at the next 10 s sweep.
 - The session-start recovery note and handoff enforcement now look back as
   far as the board and the MCP server do: the daily event files from two
   days ago on, instead of one (FH-95, D37). A claim made the day before,

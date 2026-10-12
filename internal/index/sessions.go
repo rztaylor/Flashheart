@@ -44,9 +44,10 @@ type SubagentCounts struct {
 // another ticket counts only there. ok is false when no run is linked and
 // the ticket is not in progress.
 func (s *Snapshot) Sessions(ticket board.Ticket) (TicketSessions, bool) {
+	linked := s.linked(ticket.ID)
 	var sessions map[string]bool
-	for _, run := range s.Runs {
-		if run.Parent == "" && run.Link.Ticket == ticket.ID {
+	for _, run := range linked {
+		if run.Parent == "" {
 			if sessions == nil {
 				sessions = map[string]bool{}
 			}
@@ -55,10 +56,7 @@ func (s *Snapshot) Sessions(ticket board.Ticket) (TicketSessions, bool) {
 	}
 	var summary TicketSessions
 	lead, found := -1, false
-	for i, run := range s.Runs {
-		if run.Link.Ticket != ticket.ID {
-			continue
-		}
+	for i, run := range linked {
 		subagent := run.Parent != ""
 		found = true
 		if run.LastActivity.After(summary.LastActivity) {
@@ -74,12 +72,12 @@ func (s *Snapshot) Sessions(ticket board.Ticket) (TicketSessions, bool) {
 				summary.Subagents.Running++
 			}
 		}
-		if (!subagent || !sessions[run.Parent]) && (lead < 0 || leads(run, s.Runs[lead])) {
+		if (!subagent || !sessions[run.Parent]) && (lead < 0 || leads(run, linked[lead])) {
 			lead = i
 		}
 	}
 	if lead >= 0 {
-		run := s.Runs[lead]
+		run := linked[lead]
 		summary.Run, summary.Agent, summary.State = run.ID, run.Agent, run.State
 		summary.Dirty, summary.NoHandoff = run.Dirty, run.NoHandoff
 	}

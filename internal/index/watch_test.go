@@ -11,6 +11,26 @@ import (
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
+// watch runs index.Watch on root until the test ends and waits for its
+// first watches. Cleanup stops it and waits for it to return, so it never
+// reads a temporary directory being removed (FH-110); stop ends it early.
+func watch(t *testing.T, index *Index, root string) (stop func()) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	ready, done := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(done)
+		index.Watch(ctx, root, ready)
+	}()
+	stop = func() {
+		cancel()
+		<-done
+	}
+	t.Cleanup(stop)
+	<-ready
+	return stop
+}
+
 func TestWaitReturnsWhenTheRevisionAdvances(t *testing.T) {
 	t.Parallel()
 
@@ -61,13 +81,9 @@ func TestWatchSeesExternalEdits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer files.Close()
+	t.Cleanup(func() { files.Close() })
 	index := New(files, Options{})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ready := make(chan struct{})
-	go index.Watch(ctx, root, ready)
-	<-ready
+	watch(t, index, root)
 
 	expectChange := func(label string, change func()) {
 		t.Helper()
@@ -124,13 +140,9 @@ func TestWatchSeesAnEditRightAfterANewFolderAppears(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer files.Close()
+	t.Cleanup(func() { files.Close() })
 	index := New(files, Options{})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ready := make(chan struct{})
-	go index.Watch(ctx, root, ready)
-	<-ready
+	watch(t, index, root)
 
 	waitPast := func(revision uint64) uint64 {
 		t.Helper()

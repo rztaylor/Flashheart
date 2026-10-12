@@ -16,6 +16,15 @@ import (
 // ticket on branch feature/x, and an index over it with a fake clock.
 func runsBoard(t *testing.T) (*Index, *events.Log, *fakeClock, string) {
 	t.Helper()
+	root, s := runsRoot(t)
+	log := events.New(s)
+	clock := &fakeClock{now: time.Date(2026, 10, 5, 14, 0, 0, 0, time.UTC)}
+	return New(s, Options{MaxAge: time.Hour, Now: clock.Now, Events: log, Runs: runs.DefaultSettings()}), log, clock, root
+}
+
+// runsRoot is runsBoard's temporary root, with its store open.
+func runsRoot(t *testing.T) (string, *store.Store) {
+	t.Helper()
 	root := t.TempDir()
 	dir := filepath.Join(root, "alpha", "tickets", "AL-3-card-panel")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -33,9 +42,7 @@ func runsBoard(t *testing.T) (*Index, *events.Log, *fakeClock, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { s.Close() })
-	log := events.New(s)
-	clock := &fakeClock{now: time.Date(2026, 10, 5, 14, 0, 0, 0, time.UTC)}
-	return New(s, Options{MaxAge: time.Hour, Now: clock.Now, Events: log, Runs: runs.DefaultSettings()}), log, clock, root
+	return root, s
 }
 
 func appendEvent(t *testing.T, log *events.Log, at time.Time, kind events.Kind, data any) {
@@ -123,15 +130,11 @@ func TestWatchSeesAppendedEvents(t *testing.T) {
 
 	index, log, clock, root := runsBoard(t)
 	appendEvent(t, log, clock.now, events.RunStart, events.RunStartData{Kind: events.KindSession})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ready := make(chan struct{})
-	go index.Watch(ctx, root, ready)
-	<-ready
+	watch(t, index, root)
 	before, _ := index.Current()
 
 	appendEvent(t, log, clock.now, events.TurnStart, events.TurnStartData{})
-	waitCtx, stop := context.WithTimeout(ctx, 5*time.Second)
+	waitCtx, stop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stop()
 	if revision := index.Wait(waitCtx, before.Revision); revision <= before.Revision {
 		t.Fatal("appending an event did not move the revision")

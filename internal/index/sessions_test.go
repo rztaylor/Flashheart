@@ -52,7 +52,8 @@ func foldSnapshot(list []events.Event) *Snapshot {
 		}
 		return nil
 	}
-	return &Snapshot{Runs: set.Views(sessionsNow, runs.DefaultSettings(), byBranch)}
+	views := set.Views(sessionsNow, runs.DefaultSettings(), byBranch)
+	return &Snapshot{Runs: views, runIndex: indexRuns(views)}
 }
 
 func concat(lists ...[]events.Event) []events.Event {
