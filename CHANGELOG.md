@@ -60,6 +60,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A question a subagent asked before it finished is no longer hidden
+  while its session waits on it (FH-112). The session stays in Needs you
+  saying, for example, *Explore has a question*; the ticket card now
+  counts the question and the Overview lists it under *Needs your
+  decision*, so you can find and answer it. It stops needing you once the
+  session itself ends, as any ended session's question does. The project
+  archive check counts it the same way.
+
 - Archived projects added, renamed or removed outside Flashheart (by
   hand, by another Flashheart process, or by restoring a backup) now show
   in the archived projects list and the All projects archive count within

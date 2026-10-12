@@ -473,7 +473,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 		CriteriaItems:        nonNil(ticket.Criteria),
 		AttachmentFiles:      []AttachmentJSON{},
 		Runs:                 ticketRuns(snapshot, ticket.ID),
-		Questions:            questionsJSON(snapshot.Questions(ticket.ID), false),
+		Questions:            questionsJSON(snapshot.Questions(ticket.ID)),
 	}
 	if ticket.Handoff != nil {
 		detail.Handoff = &HandoffJSON{Markdown: ticket.Handoff.Markdown, Next: nonNil(ticket.Handoff.Next)}
