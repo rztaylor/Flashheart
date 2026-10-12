@@ -3,9 +3,14 @@ import { cp, mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import AxeBuilder from "@axe-core/playwright";
+import { expect } from "@playwright/test";
 
 export const projectRoot = resolve(import.meta.dirname, "../..");
-export const executable = resolve(projectRoot, "build/flashheart");
+// FLASHHEART_E2E_BINARY names another build: the visual check runs a Linux
+// binary in its container (scripts/e2e-visual.sh).
+export const executable =
+  process.env.FLASHHEART_E2E_BINARY || resolve(projectRoot, "build/flashheart");
 export const screenshotDir = resolve(
   projectRoot,
   ".cache/playwright-screenshots",
@@ -174,4 +179,59 @@ export async function viewOption(page, group, option) {
     .getByText(option, { exact: true })
     .click();
   await page.keyboard.press("Escape");
+}
+
+// expectConnected waits for the shell's quiet healthy-connection button.
+export async function expectConnected(page) {
+  await expect(
+    page.getByRole("button", { name: "Backend connected. Check connection" }),
+  ).toBeVisible();
+}
+
+// open shows hash in an already authenticated page at a viewport size and
+// theme, with reduced motion so a screenshot catches no transition midway.
+export async function open(
+  page,
+  hash = "#/all/board",
+  { width = 1440, height = 900, theme = "light" } = {},
+) {
+  await page.setViewportSize({ width, height });
+  await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+  await page.evaluate((target) => {
+    window.location.hash = target;
+  }, hash);
+  await expectConnected(page);
+}
+
+// column is a board column's region, named after the column ("Backlog").
+export function column(page, name) {
+  return page.getByRole("region", { name });
+}
+
+// card is a card's covering button, whose name starts with its title.
+export function card(page, title) {
+  return page.getByRole("button", { name: new RegExp(`^${title},`) });
+}
+
+// expectNoAxeViolations runs axe-core over the page and names each rule
+// broken and on how many nodes.
+export async function expectNoAxeViolations(page, label) {
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(
+    results.violations,
+    `${label}: ${results.violations.map((v) => `${v.id} (${v.nodes.length})`).join(", ")}`,
+  ).toEqual([]);
+}
+
+// shot saves a review screenshot, .cache/playwright-screenshots/<name>.png.
+// It shows the resting state, without the keyboard focus ring, unless
+// keepFocus asks to keep what is focused (an open dialog or menu).
+export async function shot(page, name, { keepFocus = false } = {}) {
+  if (!keepFocus) {
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement)
+        document.activeElement.blur();
+    });
+  }
+  await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
 }

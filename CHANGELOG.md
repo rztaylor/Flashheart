@@ -206,6 +206,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Development: a visual change to the board now fails the build until its
+  screenshots are updated on purpose (FH-101, D42). `scripts/e2e-visual.sh`
+  compares a stable set of screenshots with committed baselines inside the
+  pinned Playwright container, so a Mac and CI render alike; CI runs it
+  after the browser suite, and `--update-snapshots` rewrites them. Quick
+  tests can now press keys and check focus (happy-dom and Testing Library,
+  in `*.dom.test.tsx`), covering popovers, dialogs, tabs and how views load
+  and reload their data, and the browser specs share one set of helpers.
+
 - Every view shows load errors, stale data and loading the same way
   (FH-103, ui-layout.md §8). When the project list, Workstreams, the card
   panel or a ticket's full page cannot load, they now say why with

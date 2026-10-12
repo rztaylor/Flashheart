@@ -9,16 +9,20 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
+  card,
+  column,
+  expectConnected,
+  expectNoAxeViolations,
   filterButton,
   filterMenu,
   launch,
   makeSandbox,
-  screenshotDir,
+  open,
+  shot,
   stopIfRunning,
   viewOption,
   waitForManualURL,
@@ -58,39 +62,16 @@ const ticketFile = (folder) =>
   join(sandbox.root, "flashheart", "tickets", folder, `${folder}.md`);
 const readTicket = (folder) => readFile(ticketFile(folder), "utf8");
 
-async function open(hash) {
-  await page.evaluate((target) => {
-    window.location.hash = target;
-  }, hash);
-  await expect(
-    page.getByRole("button", { name: "Backend connected. Check connection" }),
-  ).toBeVisible();
-}
-
-function column(name) {
-  return page.getByRole("region", { name });
-}
-
-function card(title) {
-  return page.getByRole("button", { name: new RegExp(`^${title},`) });
-}
-
-async function expectNoAxeViolations(label) {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(
-    results.violations,
-    `${label}: ${results.violations.map((v) => `${v.id} (${v.nodes.length})`).join(", ")}`,
-  ).toEqual([]);
-}
-
 test("Shift and an arrow move a ticket to the next column, with Undo", async () => {
-  await open("#/p/flashheart/board");
-  await card("Release notes template").focus();
+  await open(page, "#/p/flashheart/board");
+  await card(page, "Release notes template").focus();
   await page.keyboard.press("Shift+ArrowRight");
   await expect(
-    column("Up next").getByRole("button", { name: /^Release notes template,/ }),
+    column(page, "Up next").getByRole("button", {
+      name: /^Release notes template,/,
+    }),
   ).toBeVisible();
-  await expect(card("Release notes template")).toBeFocused();
+  await expect(card(page, "Release notes template")).toBeFocused();
   const toast = page
     .getByRole("status")
     .filter({ hasText: "Moved FH-32 to Up next." });
@@ -101,7 +82,9 @@ test("Shift and an arrow move a ticket to the next column, with Undo", async () 
 
   await toast.getByRole("button", { name: "Undo" }).click();
   await expect(
-    column("Backlog").getByRole("button", { name: /^Release notes template,/ }),
+    column(page, "Backlog").getByRole("button", {
+      name: /^Release notes template,/,
+    }),
   ).toBeVisible();
   await expect
     .poll(() => readTicket("FH-32-release-notes"))
@@ -109,10 +92,10 @@ test("Shift and an arrow move a ticket to the next column, with Undo", async () 
 });
 
 test("dragging a card to another column moves it", async () => {
-  await open("#/p/flashheart/board");
-  await card("First-run user guide").scrollIntoViewIfNeeded();
-  const source = await card("First-run user guide").boundingBox();
-  const target = await column("In progress").boundingBox();
+  await open(page, "#/p/flashheart/board");
+  await card(page, "First-run user guide").scrollIntoViewIfNeeded();
+  const source = await card(page, "First-run user guide").boundingBox();
+  const target = await column(page, "In progress").boundingBox();
   await page.mouse.move(source.x + source.width / 2, source.y + 20);
   await page.mouse.down();
   await page.mouse.move(source.x + source.width / 2 + 20, source.y + 30, {
@@ -124,7 +107,7 @@ test("dragging a card to another column moves it", async () => {
   });
   await page.mouse.up();
   await expect(
-    column("In progress").getByRole("button", {
+    column(page, "In progress").getByRole("button", {
       name: /^First-run user guide,/,
     }),
   ).toBeVisible();
@@ -141,7 +124,7 @@ async function ticketById(id) {
 }
 
 function order(name) {
-  return column(name)
+  return column(page, name)
     .locator("[data-ticket]")
     .evaluateAll((nodes) => nodes.map((node) => node.dataset.ticket));
 }
@@ -173,15 +156,15 @@ async function drag(source, x, y) {
 }
 
 test("dragging a card within a column sets its place, and it stays", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   await boardTop();
   const lines = await workstreamFiles();
   const [first, second, third] = await order("Backlog");
-  const target = await column("Backlog")
+  const target = await column(page, "Backlog")
     .locator(`[data-ticket="${first}"]`)
     .boundingBox();
   await drag(
-    column("Backlog").locator(`[data-ticket="${third}"]`),
+    column(page, "Backlog").locator(`[data-ticket="${third}"]`),
     target.x + target.width / 2,
     target.y + 6,
   );
@@ -196,8 +179,8 @@ test("dragging a card within a column sets its place, and it stays", async () =>
 
   // The order is the saved one: it survives a reload and a trip elsewhere.
   await page.reload();
-  await open("#/p/flashheart/table");
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/table");
+  await open(page, "#/p/flashheart/board");
   await boardTop();
   await expect
     .poll(async () => (await order("Backlog")).slice(0, 3))
@@ -205,7 +188,7 @@ test("dragging a card within a column sets its place, and it stays", async () =>
 
   // Undo puts it back where it was.
   await drag(
-    column("Backlog").locator(`[data-ticket="${second}"]`),
+    column(page, "Backlog").locator(`[data-ticket="${second}"]`),
     target.x + target.width / 2,
     target.y + 6,
   );
@@ -223,15 +206,15 @@ test("dragging a card within a column sets its place, and it stays", async () =>
 });
 
 test("a card dropped in another column lands where it was dropped", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   await boardTop();
   const [moving] = await order("Backlog");
   const [top, next] = await order("Up next");
-  const below = await column("Up next")
+  const below = await column(page, "Up next")
     .locator(`[data-ticket="${next}"]`)
     .boundingBox();
   await drag(
-    column("Backlog").locator(`[data-ticket="${moving}"]`),
+    column(page, "Backlog").locator(`[data-ticket="${moving}"]`),
     below.x + below.width / 2,
     below.y + 6,
   );
@@ -242,9 +225,9 @@ test("a card dropped in another column lands where it was dropped", async () => 
 });
 
 test("a drop lands at the pointer after the board scrolls mid-drag", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   await boardTop();
-  const backlog = column("Backlog");
+  const backlog = column(page, "Backlog");
   const ids = await order("Backlog");
   const moving = ids[0];
   const source = await backlog
@@ -292,15 +275,15 @@ test("a drop lands at the pointer after the board scrolls mid-drag", async () =>
 });
 
 test("Shift with Up or Down moves a card within its column, with Undo", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   const [first, second] = await order("Up next");
-  await column("Up next").locator(`[data-ticket="${second}"]`).focus();
+  await column(page, "Up next").locator(`[data-ticket="${second}"]`).focus();
   await page.keyboard.press("Shift+ArrowUp");
   await expect
     .poll(async () => (await order("Up next")).slice(0, 2))
     .toEqual([second, first]);
   await expect(
-    column("Up next").locator(`[data-ticket="${second}"]`),
+    column(page, "Up next").locator(`[data-ticket="${second}"]`),
   ).toBeFocused();
   await page.keyboard.press("Shift+ArrowDown");
   await expect
@@ -317,10 +300,10 @@ test("Shift with Up or Down moves a card within its column, with Undo", async ()
 });
 
 test("the panel moves a ticket within its column", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   const ids = await order("Up next");
   const last = ids.at(-1);
-  await open(`#/p/flashheart/board?t=${last}`);
+  await open(page, `#/p/flashheart/board?t=${last}`);
   const panel = page.getByRole("complementary", { name: `Ticket ${last}` });
   await panel.getByRole("button", { name: "Top of its column" }).click();
   await expect.poll(async () => (await order("Up next"))[0]).toBe(last);
@@ -332,8 +315,8 @@ test("the panel moves a ticket within its column", async () => {
 });
 
 test("starting a blocked ticket asks for a reason and records it", async () => {
-  await open("#/p/flashheart/board");
-  await card("Workstreams as transit lines").focus();
+  await open(page, "#/p/flashheart/board");
+  await card(page, "Workstreams as transit lines").focus();
   await page.keyboard.press("Shift+ArrowRight");
   const dialog = page.getByRole("dialog", {
     name: "Start FH-12 while it is blocked?",
@@ -343,15 +326,13 @@ test("starting a blocked ticket asks for a reason and records it", async () => {
   await expect(
     dialog.getByRole("button", { name: "Start anyway" }),
   ).toBeDisabled();
-  await expectNoAxeViolations("blocked move dialog");
-  await page.screenshot({
-    path: resolve(screenshotDir, "blocked-move-1440-light.png"),
-  });
+  await expectNoAxeViolations(page, "blocked move dialog");
+  await shot(page, "blocked-move-1440-light", { keepFocus: true });
   await dialog.getByRole("textbox").fill("Demo for the review on Friday");
   await dialog.getByRole("button", { name: "Start anyway" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(
-    column("In progress").getByRole("button", {
+    column(page, "In progress").getByRole("button", {
       name: /^Workstreams as transit lines,/,
     }),
   ).toBeVisible();
@@ -361,7 +342,7 @@ test("starting a blocked ticket asks for a reason and records it", async () => {
 });
 
 test("moving into review warns about unticked criteria", async () => {
-  await open("#/p/flashheart/board?t=FH-33");
+  await open(page, "#/p/flashheart/board?t=FH-33");
   const panel = page.getByRole("complementary", { name: "Ticket FH-33" });
   await panel.getByLabel("Move to").selectOption("review");
   const toast = page
@@ -372,13 +353,13 @@ test("moving into review warns about unticked criteria", async () => {
 });
 
 test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", async () => {
-  await open("#/p/flashheart/board?t=FH-5");
+  await open(page, "#/p/flashheart/board?t=FH-5");
   const panel = page.getByRole("complementary", { name: "Ticket FH-5" });
   await panel.getByLabel("Move to").selectOption("rejected");
   const toast = page.getByRole("status").filter({ hasText: "Rejected FH-5." });
   await expect(toast).toBeVisible();
   await expect.poll(() => ticketById("FH-5")).toContain("status: rejected");
-  const rejected = column("Done").getByRole("button", {
+  const rejected = column(page, "Done").getByRole("button", {
     name: /^Log background diagnostics to serve\.log, FH-5, rejected/,
   });
   await expect(rejected).toBeVisible();
@@ -387,15 +368,13 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
   await rejected.scrollIntoViewIfNeeded();
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`rejected ticket ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `rejected-board-1440-${theme}.png`),
-    });
+    await expectNoAxeViolations(page, `rejected ticket ${theme}`);
+    await shot(page, `rejected-board-1440-${theme}`, { keepFocus: true });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await page.keyboard.press("Escape");
 
-  await open("#/p/flashheart/workstreams");
+  await open(page, "#/p/flashheart/workstreams");
   // Foundation is finished, a rejected ticket included, so it shows
   // collapsed until expanded (FH-68).
   const foundation = page.getByRole("button", { name: /^Foundation/ });
@@ -405,41 +384,33 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
   });
   await station.scrollIntoViewIfNeeded();
   await expect(station).toBeVisible();
-  await page.screenshot({
-    path: resolve(screenshotDir, "rejected-workstreams-1440-light.png"),
-  });
+  await shot(page, "rejected-workstreams-1440-light", { keepFocus: true });
   await foundation.click();
   await expect(foundation).toHaveAttribute("aria-expanded", "false");
-  await open("#/p/flashheart/table");
+  await open(page, "#/p/flashheart/table");
   const row = page.getByRole("row", { name: /Log background diagnostics/ });
   await row.scrollIntoViewIfNeeded();
   await expect(row).toContainText("Rejected");
-  await page.screenshot({
-    path: resolve(screenshotDir, "rejected-table-1440-light.png"),
-  });
+  await shot(page, "rejected-table-1440-light", { keepFocus: true });
 
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("combobox", { name: "Column" }).selectOption("done");
   await expect(rejected).toBeVisible();
-  await page.screenshot({
-    path: resolve(screenshotDir, "rejected-board-390-light.png"),
-  });
+  await shot(page, "rejected-board-390-light", { keepFocus: true });
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // The State filter's Rejected option shows it alone, on the Board and the
   // Table, for the project and for All projects (FH-59).
   const cards = page.getByRole("button", { name: /, [A-Z][A-Z0-9]*-\d+,/ });
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   const states = await filterMenu(page, "State");
   const option = states.getByRole("button", { name: "Rejected" });
   await expect(option).toBeVisible();
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`state menu ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `state-menu-rejected-1440-${theme}.png`),
-    });
+    await expectNoAxeViolations(page, `state menu ${theme}`);
+    await shot(page, `state-menu-rejected-1440-${theme}`, { keepFocus: true });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await option.click();
@@ -450,19 +421,17 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
   await expect(cards).toHaveCount(1);
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`rejected filter ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `state-rejected-board-1440-${theme}.png`),
-    });
+    await expectNoAxeViolations(page, `rejected filter ${theme}`);
+    await shot(page, `state-rejected-board-1440-${theme}`, { keepFocus: true });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
-  await open("#/p/flashheart/table");
+  await open(page, "#/p/flashheart/table");
   await expect(page.getByRole("row")).toHaveCount(2);
   await expect(row).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(filterButton(page, "State")).toHaveAccessibleName("State");
   await expect(page.getByRole("row")).not.toHaveCount(2);
-  await open("#/all/board");
+  await open(page, "#/all/board");
   await (await filterMenu(page, "State"))
     .getByRole("button", { name: "Rejected" })
     .click();
@@ -472,7 +441,7 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
   await expect(cards).not.toHaveCount(1);
 
   // Moving it to Done clears the rejection.
-  await open("#/p/flashheart/board?t=FH-5");
+  await open(page, "#/p/flashheart/board?t=FH-5");
   await panel.getByLabel("Move to").selectOption("done");
   await expect.poll(() => ticketById("FH-5")).toContain("status: done");
   await expect(rejected).toHaveCount(0);
@@ -480,7 +449,7 @@ test("the panel rejects a ticket: it stays in Done and says Rejected (FH-58)", a
 });
 
 test("criteria tick in the panel and save to the file", async () => {
-  await open("#/p/flashheart/board?t=FH-33");
+  await open(page, "#/p/flashheart/board?t=FH-33");
   const panel = page.getByRole("complementary", { name: "Ticket FH-33" });
   await panel.getByRole("checkbox", { name: "Behaviour implemented" }).check();
   await expect(
@@ -492,7 +461,7 @@ test("criteria tick in the panel and save to the file", async () => {
 });
 
 test("review steps tick and screenshots open in a lightbox", async () => {
-  await open("#/p/flashheart/board?t=FH-8");
+  await open(page, "#/p/flashheart/board?t=FH-8");
   const panel = page.getByRole("complementary", { name: "Ticket FH-8" });
   await panel.getByRole("tab", { name: "Review" }).click();
   const steps = panel.getByRole("region", { name: /Steps/ });
@@ -522,36 +491,30 @@ test("review steps tick and screenshots open in a lightbox", async () => {
   await expect(lightbox.getByRole("button", { name: "Next" })).toHaveCount(0);
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`lightbox ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `lightbox-1440-${theme}.png`),
-    });
+    await expectNoAxeViolations(page, `lightbox ${theme}`);
+    await shot(page, `lightbox-1440-${theme}`, { keepFocus: true });
   }
   await page.keyboard.press("Escape");
   await expect(lightbox).toHaveCount(0);
   await panel.getByRole("tab", { name: "Review" }).click();
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`review steps ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `review-steps-1440-${theme}.png`),
-    });
+    await expectNoAxeViolations(page, `review steps ${theme}`);
+    await shot(page, `review-steps-1440-${theme}`, { keepFocus: true });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
 });
 
 test("the Edit tab saves fields and shows conflicts side by side", async () => {
-  await open("#/p/flashheart/board?t=FH-36");
+  await open(page, "#/p/flashheart/board?t=FH-36");
   const panel = page.getByRole("complementary", { name: "Ticket FH-36" });
   await panel.getByRole("tab", { name: "Edit" }).click();
   await panel
     .getByRole("textbox", { name: "Title" })
     .fill("Split API handlers by resource and verb");
   await panel.getByRole("combobox", { name: "Priority" }).selectOption("high");
-  await expectNoAxeViolations("edit tab");
-  await page.screenshot({
-    path: resolve(screenshotDir, "edit-tab-1440-light.png"),
-  });
+  await expectNoAxeViolations(page, "edit tab");
+  await shot(page, "edit-tab-1440-light", { keepFocus: true });
   await panel.getByRole("button", { name: "Save changes" }).click();
   await expect(
     panel.getByRole("heading", {
@@ -590,10 +553,8 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
   await expect(
     conflict.getByRole("region", { name: "Now on disk" }),
   ).toContainText("priority: low");
-  await expectNoAxeViolations("conflict dialog");
-  await page.screenshot({
-    path: resolve(screenshotDir, "conflict-1440-light.png"),
-  });
+  await expectNoAxeViolations(page, "conflict dialog");
+  await shot(page, "conflict-1440-light", { keepFocus: true });
   await conflict.getByRole("button", { name: "Overwrite with mine" }).click();
   await expect(conflict).toHaveCount(0);
   await expect
@@ -603,7 +564,7 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
 });
 
 test("an edit made in a text editor appears within a second", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   const name = ticketFile("FH-28-hook-latency");
   const data = await readFile(name, "utf8");
   await writeFile(
@@ -613,13 +574,13 @@ test("an edit made in a text editor appears within a second", async () => {
       "# Measure hook latency, edited outside",
     ),
   );
-  await expect(card("Measure hook latency, edited outside")).toBeVisible({
+  await expect(card(page, "Measure hook latency, edited outside")).toBeVisible({
     timeout: 1_500,
   });
 });
 
 test("a screenshot linked in a text editor is copied into the ticket", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   // Serve copies only from a checkout of the project's repository (SEC-6),
   // so the project records one.
   const repo = join(await realpath(sandbox.home), "src", "flashheart");
@@ -644,13 +605,13 @@ test("a screenshot linked in a text editor is copied into the ticket", async () 
   await expect
     .poll(() => readFile(name, "utf8"), { timeout: 3_000 })
     .toMatch(/!\[Latency chart\]\(files\/[^)]*-latency-chart\.png\)/);
-  await open("#/p/flashheart/board?t=FH-28");
+  await open(page, "#/p/flashheart/board?t=FH-28");
   const panel = page.getByRole("complementary", { name: "Ticket FH-28" });
   await expect(panel.getByRole("tab", { name: "Attachments 1" })).toBeVisible();
 });
 
 test("New ticket creates the next id and opens it", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   await page.getByRole("button", { name: "New ticket", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "New ticket" });
   await dialog
@@ -663,39 +624,39 @@ test("New ticket creates the next id and opens it", async () => {
   await dialog
     .getByRole("textbox", { name: "Acceptance criteria" })
     .fill("Opens with ?\nLists every shortcut");
-  await expectNoAxeViolations("new ticket dialog");
-  await page.screenshot({
-    path: resolve(screenshotDir, "new-ticket-1440-light.png"),
-  });
+  await expectNoAxeViolations(page, "new ticket dialog");
+  await shot(page, "new-ticket-1440-light", { keepFocus: true });
   await dialog.getByRole("button", { name: "Create ticket" }).click();
   const panel = page.getByRole("complementary", { name: "Ticket FH-51" });
   await expect(
     panel.getByRole("heading", { level: 2, name: "Keyboard help overlay" }),
   ).toBeVisible();
   await expect(
-    column("Up next").getByRole("button", { name: /^Keyboard help overlay,/ }),
+    column(page, "Up next").getByRole("button", {
+      name: /^Keyboard help overlay,/,
+    }),
   ).toBeVisible();
   const created = await readTicket("FH-51-keyboard-help-overlay");
   expect(created).toContain("- [ ] Lists every shortcut");
 });
 
 test("archiving hides a ticket and Undo brings it back", async () => {
-  await open("#/p/flashheart/board?t=FH-51");
+  await open(page, "#/p/flashheart/board?t=FH-51");
   const panel = page.getByRole("complementary", { name: "Ticket FH-51" });
   await panel.getByRole("button", { name: "Archive" }).click();
-  await expect(card("Keyboard help overlay")).toHaveCount(0);
+  await expect(card(page, "Keyboard help overlay")).toHaveCount(0);
   const toast = page.getByRole("status").filter({ hasText: "Archived FH-51." });
   await toast.getByRole("button", { name: "Undo" }).click();
-  await expect(card("Keyboard help overlay")).toBeVisible();
+  await expect(card(page, "Keyboard help overlay")).toBeVisible();
 });
 
 test("the archive restores tickets and deletes them for good", async () => {
-  await open("#/p/alpha/board?t=AL-4");
+  await open(page, "#/p/alpha/board?t=AL-4");
   await page
     .getByRole("complementary", { name: "Ticket AL-4" })
     .getByRole("button", { name: "Archive" })
     .click();
-  await expect(card("Drag and drop")).toHaveCount(0);
+  await expect(card(page, "Drag and drop")).toHaveCount(0);
   await page.getByRole("link", { name: /^Archive/ }).click();
   await expect(page).toHaveURL(/#\/p\/alpha\/archive/);
   await page
@@ -705,10 +666,8 @@ test("the archive restores tickets and deletes them for good", async () => {
   await expect(rows.getByRole("row")).toHaveCount(2);
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`archive ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `archive-1440-${theme}.png`),
-    });
+    await expectNoAxeViolations(page, `archive ${theme}`);
+    await shot(page, `archive-1440-${theme}`, { keepFocus: true });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
 
@@ -720,17 +679,17 @@ test("the archive restores tickets and deletes them for good", async () => {
   await expect(rows).toHaveCount(0);
   await page.getByRole("button", { name: "Back to the board" }).click();
   await expect(
-    column("Up next").getByRole("button", { name: /^Drag and drop,/ }),
+    column(page, "Up next").getByRole("button", { name: /^Drag and drop,/ }),
   ).toBeVisible();
 
   // Archive again, then delete it permanently: the dialog lists what it
   // touches and waits for the typed id.
-  await open("#/p/alpha/board?t=AL-4");
+  await open(page, "#/p/alpha/board?t=AL-4");
   await page
     .getByRole("complementary", { name: "Ticket AL-4" })
     .getByRole("button", { name: "Archive" })
     .click();
-  await open("#/p/alpha/archive");
+  await open(page, "#/p/alpha/archive");
   await page.getByRole("button", { name: "Delete permanently AL-4" }).click();
   const dialog = page.getByRole("dialog", {
     name: "Delete AL-4 permanently?",
@@ -744,10 +703,8 @@ test("the archive restores tickets and deletes them for good", async () => {
   await expect(confirm).toBeDisabled();
   await dialog.getByLabel("Type AL-4 to confirm").fill("AL-4");
   await expect(confirm).toBeEnabled();
-  await expectNoAxeViolations("delete dialog");
-  await page.screenshot({
-    path: resolve(screenshotDir, "delete-ticket-1440-light.png"),
-  });
+  await expectNoAxeViolations(page, "delete dialog");
+  await shot(page, "delete-ticket-1440-light", { keepFocus: true });
   await confirm.click();
   await expect(
     page.getByRole("status").filter({ hasText: "Deleted AL-4 permanently." }),
@@ -757,22 +714,22 @@ test("the archive restores tickets and deletes them for good", async () => {
   ).toHaveCount(0);
 
   // The ticket that depended on it no longer waits.
-  await open("#/p/alpha/board");
-  await expect(card("Long titles overflow the column")).toBeVisible();
+  await open(page, "#/p/alpha/board");
+  await expect(card(page, "Long titles overflow the column")).toBeVisible();
   // The card's button covers its drawing, which sits beside it.
   await expect(
-    card("Long titles overflow the column").locator("xpath=.."),
+    card(page, "Long titles overflow the column").locator("xpath=.."),
   ).not.toContainText("AL-4");
 });
 
 test("projects archive, restore and delete for good", async () => {
-  await open("#/all/board");
+  await open(page, "#/all/board");
   await page.getByRole("link", { name: /^Archive/ }).click();
   await expect(page).toHaveURL(/#\/all\/archive/);
   await page.getByRole("button", { name: "Archive beta" }).click();
   const archiveDialog = page.getByRole("dialog", { name: "Archive beta?" });
   await expect(archiveDialog).toContainText("1 ticket");
-  await expectNoAxeViolations("archive project dialog");
+  await expectNoAxeViolations(page, "archive project dialog");
   await archiveDialog.getByRole("button", { name: "Archive project" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Archived project beta." }),
@@ -783,10 +740,8 @@ test("projects archive, restore and delete for good", async () => {
   await expect(archived).toContainText("beta");
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`projects archive ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `projects-archive-1440-${theme}.png`),
-    });
+    await expectNoAxeViolations(page, `projects archive ${theme}`);
+    await shot(page, `projects-archive-1440-${theme}`, { keepFocus: true });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
 
@@ -798,19 +753,19 @@ test("projects archive, restore and delete for good", async () => {
   await expect(rail.getByRole("button", { name: /beta/ })).toBeVisible();
 
   // Archive alpha from its own archive; its tickets no longer block beta.
-  await open("#/p/alpha/archive");
+  await open(page, "#/p/alpha/archive");
   await page.getByRole("button", { name: "Archive project…" }).click();
   await page
     .getByRole("dialog", { name: "Archive Alpha?" })
     .getByRole("button", { name: "Archive project" })
     .click();
   await expect(page).toHaveURL(/#\/all\/archive/);
-  await open("#/p/beta/board");
-  await expect(card("Hello")).not.toHaveAccessibleName(/blocked/);
+  await open(page, "#/p/beta/board");
+  await expect(card(page, "Hello")).not.toHaveAccessibleName(/blocked/);
 
   // Delete it permanently: the dialog lists beta's dependent ticket and
   // waits for the typed name.
-  await open("#/all/archive");
+  await open(page, "#/all/archive");
   await page.getByRole("button", { name: "Delete permanently Alpha" }).click();
   const deleteDialog = page.getByRole("dialog", {
     name: "Delete Alpha permanently?",
@@ -823,10 +778,8 @@ test("projects archive, restore and delete for good", async () => {
   await expect(confirm).toBeDisabled();
   await deleteDialog.getByLabel("Type alpha to confirm").fill("alpha");
   await expect(confirm).toBeEnabled();
-  await expectNoAxeViolations("delete project dialog");
-  await page.screenshot({
-    path: resolve(screenshotDir, "delete-project-1440-light.png"),
-  });
+  await expectNoAxeViolations(page, "delete project dialog");
+  await shot(page, "delete-project-1440-light", { keepFocus: true });
   await confirm.click();
   await expect(
     page
@@ -843,7 +796,7 @@ test("projects archive, restore and delete for good", async () => {
   await rename(join(archive, "gamma"), join(archive, "zeta"));
   await expect(archived).toContainText("zeta", { timeout: 1_500 });
   await expect(archived).not.toContainText("gamma");
-  await open("#/all/board");
+  await open(page, "#/all/board");
   const archiveLink = page.getByRole("link", { name: /^Archive/ });
   await expect(archiveLink).toHaveText(/^Archive\s*1$/);
   await rm(join(archive, "zeta"), { recursive: true });
@@ -880,13 +833,13 @@ test("finishing a workstream earns a remark; progress remarks are rare", async (
     "---\nslug: solo\nstatus: active\npriority: low\ncreated: 2026-10-06\ntickets:\n  - FH-32\ndepends-on-workstreams: []\ntags: []\n---\n\n# Solo\n",
   );
   // The board loads afresh after the Workstreams view has the new line.
-  await open("#/p/flashheart/workstreams");
+  await open(page, "#/p/flashheart/workstreams");
   await expect(page.getByRole("article", { name: "Solo" })).toBeVisible();
   const toast = page.getByRole("status").filter({ hasText: /^Moved/ });
   const completion = await remarksIn(61, 70);
   const progress = await remarksIn(51, 60);
   const moveToDone = async (id) => {
-    await open(`#/p/flashheart/board?t=${id}`);
+    await open(page, `#/p/flashheart/board?t=${id}`);
     await page
       .getByRole("complementary", { name: `Ticket ${id}` })
       .getByLabel("Move to")
@@ -910,12 +863,12 @@ test("finishing a workstream earns a remark; progress remarks are rare", async (
 
   // A fresh load brings no toast and no celebration.
   await page.reload();
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   await expect(toast).toHaveCount(0);
 });
 
 test("independent stations reorder with Shift and an arrow", async () => {
-  await open("#/p/ngplus/workstreams");
+  await open(page, "#/p/ngplus/workstreams");
   const line = page.getByRole("article", { name: "Study UI" });
   await line
     .getByRole("button", { name: /^Flashcards from past papers,/ })
@@ -943,7 +896,7 @@ test("independent stations reorder with Shift and an arrow", async () => {
 test("finished workstreams collapse and remember being expanded (FH-68)", async () => {
   const config = () =>
     readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
-  await open("#/p/flashheart/workstreams");
+  await open(page, "#/p/flashheart/workstreams");
   // Every Foundation ticket is Done: its card is a head with a chevron.
   const foundation = page.getByRole("article", { name: "Foundation" });
   const head = foundation.getByRole("button", { name: /^Foundation/ });
@@ -975,9 +928,9 @@ test("finished workstreams collapse and remember being expanded (FH-68)", async 
   await foundation.scrollIntoViewIfNeeded();
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await expectNoAxeViolations(`collapsed workstream ${theme}`);
-    await page.screenshot({
-      path: resolve(screenshotDir, `workstreams-collapsed-1440-${theme}.png`),
+    await expectNoAxeViolations(page, `collapsed workstream ${theme}`);
+    await shot(page, `workstreams-collapsed-1440-${theme}`, {
+      keepFocus: true,
     });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
@@ -999,28 +952,26 @@ test("finished workstreams collapse and remember being expanded (FH-68)", async 
   await expect(head).toHaveAttribute("aria-expanded", "true");
   await expect(head).toBeFocused();
   await expect.poll(config).toContain("flashheart: [foundation]");
-  await expectNoAxeViolations("expanded finished workstream");
+  await expectNoAxeViolations(page, "expanded finished workstream");
   await foundation.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: resolve(screenshotDir, "workstreams-expanded-1440-light.png"),
-  });
+  await shot(page, "workstreams-expanded-1440-light", { keepFocus: true });
 
   // It stays expanded after a reload.
   await page.reload();
-  await open("#/p/flashheart/workstreams");
+  await open(page, "#/p/flashheart/workstreams");
   await expect(head).toHaveAttribute("aria-expanded", "true");
   await expect(station).toBeVisible();
 
   // A ticket back in Ready to review shows the line in full with no
   // control, though it still reads Completed, and forgets the choice.
-  await open("#/p/flashheart/board?t=FH-5");
+  await open(page, "#/p/flashheart/board?t=FH-5");
   await page
     .getByRole("complementary", { name: "Ticket FH-5" })
     .getByLabel("Move to")
     .selectOption("review");
   await expect.poll(() => ticketById("FH-5")).toContain("status: review");
   await page.keyboard.press("Escape");
-  await open("#/p/flashheart/workstreams");
+  await open(page, "#/p/flashheart/workstreams");
   await expect(station).toBeVisible();
   await expect(
     foundation.getByRole("button", { name: /^Foundation/ }),
@@ -1028,25 +979,23 @@ test("finished workstreams collapse and remember being expanded (FH-68)", async 
   await expect(foundation).toContainText("Completed");
   await expect.poll(config).not.toContain("expanded_workstreams");
   await foundation.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: resolve(screenshotDir, "workstreams-reopened-1440-light.png"),
-  });
+  await shot(page, "workstreams-reopened-1440-light", { keepFocus: true });
 
   // Finished again, it collapses.
-  await open("#/p/flashheart/board?t=FH-5");
+  await open(page, "#/p/flashheart/board?t=FH-5");
   await page
     .getByRole("complementary", { name: "Ticket FH-5" })
     .getByLabel("Move to")
     .selectOption("done");
   await expect.poll(() => ticketById("FH-5")).toContain("status: done");
   await page.keyboard.press("Escape");
-  await open("#/p/flashheart/workstreams");
+  await open(page, "#/p/flashheart/workstreams");
   await expect(head).toHaveAttribute("aria-expanded", "false");
   await expect(stations).toHaveCount(0);
 });
 
 test("preferences are saved through the backend and survive a reload", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   await viewOption(page, "Colour by", "Priority");
   const types = await filterMenu(page, "Type");
   await types.getByRole("button", { name: "bug", exact: true }).click();
@@ -1078,7 +1027,7 @@ test("preferences are saved through the backend and survive a reload", async () 
 test("a preference changed just before a reload is saved (FH-48)", async () => {
   const config = () =>
     readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   // A burst of changes keeps the save waiting; the reload comes at once.
   // The save flushed on unload may still be writing when the reloaded page
   // reads preferences; the server answers that read after it (FH-109).
@@ -1086,9 +1035,7 @@ test("a preference changed just before a reload is saved (FH-48)", async () => {
   await viewOption(page, "Colour by", "Age");
   await page.reload();
   await expect.poll(config).toContain("colour_by: age");
-  await expect(
-    page.getByRole("button", { name: "Backend connected. Check connection" }),
-  ).toBeVisible();
+  await expectConnected(page);
   await page.getByRole("button", { name: "View options" }).click();
   await expect(
     page
@@ -1101,7 +1048,7 @@ test("a preference changed just before a reload is saved (FH-48)", async () => {
 });
 
 test("the theme choice is saved", async () => {
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   const theme = page.getByRole("group", { name: "Theme" });
   await theme.getByText("Dark", { exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -1122,7 +1069,7 @@ test("the Backlog column can be hidden from View options (FH-41)", async () => {
   const config = () =>
     readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
   const backlogBox = page.getByRole("checkbox", { name: "Backlog" });
-  await open("#/p/flashheart/board");
+  await open(page, "#/p/flashheart/board");
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await page.getByRole("button", { name: "View options" }).click();
@@ -1131,25 +1078,23 @@ test("the Backlog column can be hidden from View options (FH-41)", async () => {
     await expect(page.getByRole("checkbox", { name: "Needs you" })).toHaveCount(
       0,
     );
-    await page.screenshot({
-      path: resolve(screenshotDir, `view-options-backlog-1440-${theme}.png`),
-    });
+    await shot(page, `view-options-backlog-1440-${theme}`, { keepFocus: true });
     await page.keyboard.press("Escape");
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await page.getByRole("button", { name: "View options" }).click();
   await backlogBox.uncheck();
   await page.keyboard.press("Escape");
-  await expect(column("Backlog")).toHaveCount(0);
+  await expect(column(page, "Backlog")).toHaveCount(0);
   await expect.poll(config).toContain("hidden_columns: [backlog]");
 
   // Shift with Left from Up next has no column to go to.
-  const first = column("Up next").getByRole("button").first();
+  const first = column(page, "Up next").getByRole("button").first();
   const name = await first.getAttribute("aria-label");
   await first.focus();
   await page.keyboard.press("Shift+ArrowLeft");
   await expect(
-    column("Up next").getByRole("button", { name, exact: true }),
+    column(page, "Up next").getByRole("button", { name, exact: true }),
   ).toBeFocused();
   await expect(
     page.getByRole("status").filter({ hasText: "Moved" }),
@@ -1158,9 +1103,7 @@ test("the Backlog column can be hidden from View options (FH-41)", async () => {
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await page.locator("h1").click();
-    await page.screenshot({
-      path: resolve(screenshotDir, `backlog-hidden-1440-${theme}.png`),
-    });
+    await shot(page, `backlog-hidden-1440-${theme}`, { keepFocus: true });
   }
 
   // The narrow Column picker leaves it out too.
@@ -1174,30 +1117,26 @@ test("the Backlog column can be hidden from View options (FH-41)", async () => {
   ]);
   for (const theme of ["light", "dark"]) {
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    await page.screenshot({
-      path: resolve(screenshotDir, `backlog-hidden-390-${theme}.png`),
-    });
+    await shot(page, `backlog-hidden-390-${theme}`, { keepFocus: true });
   }
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // The choice survives a reload, and showing it again saves that too.
   await page.reload();
-  await expect(
-    page.getByRole("button", { name: "Backend connected. Check connection" }),
-  ).toBeVisible();
-  await expect(column("Up next")).toBeVisible();
-  await expect(column("Backlog")).toHaveCount(0);
+  await expectConnected(page);
+  await expect(column(page, "Up next")).toBeVisible();
+  await expect(column(page, "Backlog")).toHaveCount(0);
   await page.getByRole("button", { name: "View options" }).click();
   await expect(backlogBox).not.toBeChecked();
   await backlogBox.check();
   await page.keyboard.press("Escape");
-  await expect(column("Backlog")).toBeVisible();
+  await expect(column(page, "Backlog")).toBeVisible();
   await expect.poll(config).toContain("hidden_columns: []");
 });
 
 test("switching theme keeps the view, filters, open ticket and scroll", async () => {
-  await open("#/p/flashheart/table?t=FH-36");
+  await open(page, "#/p/flashheart/table?t=FH-36");
   const priorities = await filterMenu(page, "Priority");
   await priorities.getByRole("button", { name: "High", exact: true }).click();
   await page.keyboard.press("Escape");
@@ -1230,20 +1169,15 @@ test("switching theme keeps the view, filters, open ticket and scroll", async ()
 });
 
 test("the Edit tab and dialogs are accessible in dark", async () => {
-  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-  await open("#/p/flashheart/board?t=FH-36");
+  await open(page, "#/p/flashheart/board?t=FH-36", { theme: "dark" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   const panel = page.getByRole("complementary", { name: "Ticket FH-36" });
   await panel.getByRole("tab", { name: "Edit" }).click();
-  await expectNoAxeViolations("edit tab dark");
-  await page.screenshot({
-    path: resolve(screenshotDir, "edit-tab-1440-dark.png"),
-  });
+  await expectNoAxeViolations(page, "edit tab dark");
+  await shot(page, "edit-tab-1440-dark", { keepFocus: true });
   await page.getByRole("button", { name: "New ticket", exact: true }).click();
-  await expectNoAxeViolations("new ticket dark");
-  await page.screenshot({
-    path: resolve(screenshotDir, "new-ticket-1440-dark.png"),
-  });
+  await expectNoAxeViolations(page, "new ticket dark");
+  await shot(page, "new-ticket-1440-dark", { keepFocus: true });
   // Escape closes the dialog only; the panel under it stays open.
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
