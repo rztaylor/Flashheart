@@ -1,7 +1,7 @@
 #!/bin/sh
 # Measure hook latency: p95 must stay under 50 ms over 1,000 warm
 # invocations (HOOK-1). Developer tool; not run in CI.
-# Usage: scripts/hook-bench.sh [-agent claude] [-scenario mix|tools|session-start|stop]
+# Usage: scripts/hook-bench.sh [-agent claude|codex] [-scenario mix|tools|session-start|stop]
 #        [-seed-events PER_DAY] [-n N] [-p95 DURATION]
 # HOOK-1 evidence: -scenario session-start and -scenario stop, each with
 # -seed-events 50000.

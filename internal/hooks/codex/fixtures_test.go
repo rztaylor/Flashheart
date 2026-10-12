@@ -21,7 +21,7 @@ var recorded = []string{
 	"SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "Stop", "SessionEnd", "Interrupt",
 }
 
-type payload struct {
+type recording struct {
 	SessionID string         `json:"session_id"`
 	TurnID    string         `json:"turn_id"`
 	Cwd       string         `json:"cwd"`
@@ -32,13 +32,13 @@ type payload struct {
 	AgentID   string         `json:"agent_id"`
 }
 
-func readPayload(t *testing.T, path string) payload {
+func readPayload(t *testing.T, path string) recording {
 	t.Helper()
 	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var p payload
+	var p recording
 	if err := json.Unmarshal(b, &p); err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
