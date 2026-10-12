@@ -1,0 +1,43 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "_meta": {
+      "callId": "exec-7ddda183-4c64-4d64-b088-64325c85e250",
+      "x-codex-turn-metadata": {
+        "session_id": "019a7c00-0000-7000-8000-000000000001",
+        "thread_id": "019a7c00-0000-7000-8000-000000000001",
+        "workspace_kind": "project",
+        "turn_id": "019a7c00-0000-7000-8000-000000000101",
+        "source": "codex",
+        "thread_source": "user",
+        "turn_trigger": "composer",
+        "sandbox": "seatbelt",
+        "sandbox_mode": "workspace-write",
+        "auto_review_enabled": false,
+        "node_repl_auto_review_required": true,
+        "node_repl_disabled": false,
+        "workspaces": {
+          "/Users/example/src/demo": {
+            "latest_git_commit_hash": "0000000000000000000000000000000000000000",
+            "has_changes": true
+          }
+        },
+        "turn_started_at_unix_ms": 1791834651075,
+        "client_type": "desktop_app",
+        "model": "gpt-6-astra",
+        "reasoning_effort": "medium",
+        "codex_version": "0.160.0",
+        "user_input_requested_during_turn": true
+      },
+      "threadId": "019a7c00-0000-7000-8000-000000000001",
+      "sessionId": "019a7c00-0000-7000-8000-000000000001",
+      "windowId": "019a7c00-0000-7000-8000-000000000001:0",
+      "itemId": "ctc_0c5834da96271e9d016acd3a27f99c8191ab790117ac7d9926",
+      "progressToken": 1
+    },
+    "name": "board_context",
+    "arguments": {}
+  }
+}

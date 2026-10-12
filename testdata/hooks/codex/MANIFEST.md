@@ -19,20 +19,23 @@ agent's (encrypted) task are replaced with synthetic text.
 Recorded with `scripts/record-codex-hooks.sh exec` and `tui` from Codex CLI
 0.160.0 (the copy bundled with the ChatGPT desktop app), model
 `gpt-6.1-sol`, 2026-10-12, in a scratch repository with a scratch
-`CODEX_HOME`.
+`CODEX_HOME`; and with `app` from the ChatGPT desktop app (Codex 0.160.0,
+`originator` `Codex Desktop`), 2026-10-12, in a scratch repository whose
+`.codex/config.toml` held the hooks and the MCP server. The `app-*` cases
+and `mcp/tools-call-app.json` come from the app.
 
 | Event | CLI, `codex exec` | CLI, interactive | ChatGPT app |
 |---|---|---|---|
-| `SessionStart` | recorded: `startup`, `compact` | fired: `startup` | not checked yet |
-| `UserPromptSubmit` | recorded: `prompt` | fired | not checked yet |
-| `PreToolUse` | recorded: `bash`, `apply-patch`, `flashheart-tool`, `spawn-agent`, `subagent-bash` | fired | not checked yet |
-| `PermissionRequest` | recorded: `flashheart-tool` (an MCP tool's approval) | recorded: `bash` (a shell command's prompt, with the model's `description`) | not checked yet |
-| `PostToolUse` | recorded: `bash`, `bash-failed`, `apply-patch`, `spawn-agent`, `wait-agent`, `subagent-bash` | fired | not checked yet |
-| `SubagentStart` / `SubagentStop` | recorded: `default` | fired | not checked yet |
-| `PreCompact` / `PostCompact` | recorded: `auto` (a low `model_auto_compact_token_limit`) | recorded: `PreCompact/manual` (`/compact`); `/quit` interrupted it before `PostCompact` | not checked yet |
-| `Stop` | recorded: `stop` | fired at each turn's end, not for an interrupted turn | not checked yet |
-| `SessionEnd` | recorded: `other`, when `codex exec` finishes | recorded: `quit` (`/quit`, `reason` `other`) | not checked yet |
-| `Interrupt` | not fired (nothing interrupts `exec`) | recorded: `esc` (Esc during a turn), `permission-denied` (denying a permission prompt ends the turn) | not checked yet |
+| `SessionStart` | recorded: `startup`, `compact` | fired: `startup` | recorded: `app-startup` |
+| `UserPromptSubmit` | recorded: `prompt` | fired | recorded: `app-prompt` |
+| `PreToolUse` | recorded: `bash`, `apply-patch`, `flashheart-tool`, `spawn-agent`, `subagent-bash` | fired | recorded: `app-apply-patch`; `Bash` fired |
+| `PermissionRequest` | recorded: `flashheart-tool` (an MCP tool's approval) | recorded: `bash` (a shell command's prompt, with the model's `description`) | not reached (no prompt needed approval) |
+| `PostToolUse` | recorded: `bash`, `bash-failed`, `apply-patch`, `spawn-agent`, `wait-agent`, `subagent-bash` | fired | recorded: `app-apply-patch`; `Bash` fired |
+| `SubagentStart` / `SubagentStop` | recorded: `default` | fired | not checked |
+| `PreCompact` / `PostCompact` | recorded: `auto` (a low `model_auto_compact_token_limit`) | recorded: `PreCompact/manual` (`/compact`); `/quit` interrupted it before `PostCompact` | recorded: `app-manual` (`/compact`), both |
+| `Stop` | recorded: `stop` | fired at each turn's end, not for an interrupted turn | recorded: `app-stop` |
+| `SessionEnd` | recorded: `other`, when `codex exec` finishes | recorded: `quit` (`/quit`, `reason` `other`) | recorded: `app-archive` (archiving the thread, `reason` `other`) |
+| `Interrupt` | not fired (nothing interrupts `exec`) | recorded: `esc` (Esc during a turn), `permission-denied` (denying a permission prompt ends the turn) | not checked |
 
 Neither `codex exec` nor the interactive CLI offers a planning tool
 (`update_plan`): asked to plan with it, the model said it had none. A failed
@@ -41,6 +44,19 @@ event. An interrupted turn sends `Interrupt` and no `Stop`; `/compact` runs
 as a turn of its own with no `UserPromptSubmit`. The interactive CLI starts
 the MCP server when it opens, before the folder-trust prompt and
 `SessionStart`. `resume` and `clear` session starts are not recorded.
+
+The ChatGPT app ran the project's hooks only once they were trusted, and
+it never offered to trust them: untrusted, they were skipped without a
+prompt or a log line, while the same project's MCP server was used.
+Trusting them with `/hooks` in the CLI (same `~/.codex`) made the app run
+them; trust is saved in `~/.codex/config.toml` as `[hooks.state."<config
+file>:<event>:<group>:<handler>"] trusted_hash = "sha256:…"`. The app's
+payloads have the same fields as the CLI's. Archiving a thread sends
+`SessionEnd` and moves its transcript to `~/.codex/archived_sessions/`, so
+`transcript_path` stops existing. The app also starts an MCP server for
+its own helper thread (the one that names a new thread), which never calls
+a tool. Asked to plan, the model asked what to
+plan instead, so whether the app offers `update_plan` is still open.
 
 ## Answers
 

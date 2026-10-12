@@ -144,3 +144,33 @@ func TestFlashheartToolCallsCarryTheHookSession(t *testing.T) {
 		t.Errorf("arguments %v, want the run the PreToolUse hook stamped", call.Params.Arguments)
 	}
 }
+
+// The ChatGPT app's calls carry their session the same way, with no hooks.
+func TestAppToolCallsCarryTheirSession(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(fixtures, "mcp", "tools-call-app.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var call struct {
+		Params struct {
+			Meta struct {
+				SessionID string `json:"sessionId"`
+				Turn      struct {
+					SessionID string `json:"session_id"`
+					TurnID    string `json:"turn_id"`
+					Trigger   string `json:"turn_trigger"`
+				} `json:"x-codex-turn-metadata"`
+			} `json:"_meta"`
+		} `json:"params"`
+	}
+	if err := json.Unmarshal(b, &call); err != nil {
+		t.Fatal(err)
+	}
+	meta := call.Params.Meta
+	if meta.SessionID == "" || meta.Turn.SessionID != meta.SessionID || meta.Turn.TurnID == "" {
+		t.Errorf("_meta session %q / %q turn %q, want one session and a turn", meta.SessionID, meta.Turn.SessionID, meta.Turn.TurnID)
+	}
+	if meta.Turn.Trigger != "composer" {
+		t.Errorf("turn_trigger %q, want the app's composer", meta.Turn.Trigger)
+	}
+}

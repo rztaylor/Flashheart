@@ -14,12 +14,19 @@
 # directory. The hooks and the MCP server are added with -c, and
 # --dangerously-bypass-hook-trust runs the recorder hooks without a trust
 # review. The MCP server writes to the scratch board, never your real one.
-# Recordings of the ChatGPT app cannot use this: see the manifest.
 #
-# Usage: scripts/record-codex-hooks.sh [exec|tui] [OUT_DIR] [CODEX_OPTION...]
+# The ChatGPT app reads only your real ~/.codex, so `app` mode instead makes
+# a scratch repository whose own .codex/config.toml adds the hooks and the
+# MCP server (a project layer Codex loads once you trust the folder). The
+# app never offers to trust hooks and skips untrusted ones silently, so
+# trust them first with /hooks in the CLI, then follow the printed steps.
+# Both trust decisions are saved in ~/.codex/config.toml; remove them after.
+#
+# Usage: scripts/record-codex-hooks.sh [exec|tui|app] [OUT_DIR] [CODEX_OPTION...]
 #   exec  (default) runs a scripted non-interactive session (codex exec);
 #   tui   starts an interactive session for the events exec cannot reach
-#         (permission prompts, /compact, interrupting a turn).
+#         (permission prompts, /compact, interrupting a turn);
+#   app   prepares a scratch repository to open in the ChatGPT app.
 # OUT_DIR defaults to .cache/hook-recordings/codex. Set CODEX to the codex
 # binary if it is not on PATH, and FLASHHEART to the flashheart binary
 # (default: build/flashheart, else flashheart on PATH). Further options go
@@ -34,8 +41,8 @@ mode="${1:-exec}"
 out="${2:-.cache/hook-recordings/codex}"
 shift $(($# < 2 ? $# : 2))
 case "$mode" in
-  exec|tui) ;;
-  *) echo "usage: scripts/record-codex-hooks.sh [exec|tui] [OUT_DIR] [CODEX_OPTION...]" >&2; exit 2 ;;
+  exec|tui|app) ;;
+  *) echo "usage: scripts/record-codex-hooks.sh [exec|tui|app] [OUT_DIR] [CODEX_OPTION...]" >&2; exit 2 ;;
 esac
 
 codex_bin="${CODEX:-codex}"
@@ -46,7 +53,7 @@ if [ -z "${CODEX:-}" ] && ! command -v codex >/dev/null 2>&1; then
     codex_bin="$bundled"
   fi
 fi
-if ! command -v "$codex_bin" >/dev/null 2>&1; then
+if [ "$mode" != app ] && ! command -v "$codex_bin" >/dev/null 2>&1; then
   echo "record-codex-hooks: cannot find '$codex_bin'; set CODEX=/path/to/codex" >&2
   exit 1
 fi
@@ -65,7 +72,12 @@ fi
 
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
-work="$(mktemp -d "${TMPDIR:-/tmp}/flashheart-record-codex.XXXXXX")"
+if [ "$mode" = app ]; then
+  # Beside the recordings, where the app's folder picker can reach it.
+  work="$(mktemp -d "$out-app.XXXXXX")"
+else
+  work="$(mktemp -d "${TMPDIR:-/tmp}/flashheart-record-codex.XXXXXX")"
+fi
 repo="$work/demo"
 board="$work/board"
 mkdir -p "$repo" "$board"
@@ -129,6 +141,39 @@ for event in $events; do
   overrides+=(-c "hooks.$event=[{hooks=[{type=\"command\",command=\"RECORD_OUT='$out' '$recorder' $event\",timeout=5}]}]")
 done
 overrides+=(-c "mcp_servers.flashheart.command=\"$mcp\"")
+
+if [ "$mode" = app ]; then
+  mkdir -p "$repo/.codex"
+  {
+    printf '[mcp_servers.flashheart]\ncommand = "%s"\nargs = []\n' "$mcp"
+    for event in $events; do
+      printf '\n[[hooks.%s]]\n[[hooks.%s.hooks]]\ntype = "command"\n' "$event" "$event"
+      printf "command = \"RECORD_OUT='%s' '%s' %s\"\ntimeout = 5\n" "$out" "$recorder" "$event"
+    done
+  } >"$repo/.codex/config.toml"
+  cat <<EOF
+Recording Codex hook payloads into $out
+Scratch repository: $repo
+Scratch board: $board
+
+First, in a terminal: cd to the folder above, run codex (your own Codex
+home), trust the folder, type /hooks, trust every hook, then /quit.
+
+In the ChatGPT app:
+  1. start a new Codex thread in the folder above;
+  2. ask it to make a three-step plan with its planning tool and work through it;
+  3. ask it to run 'rm -rf build' and answer the permission prompt;
+  4. ask it to write a file and edit README.md;
+  5. ask it to call the flashheart board_context tool;
+  6. ask it to use a subagent to list the files;
+  7. ask for something long, and stop it;
+  8. archive or close the thread.
+Then remove the folder's entries from ~/.codex/config.toml:
+  [projects."$(cd "$repo" && pwd -P)"]
+  [hooks.state."$(cd "$repo" && pwd -P)/.codex/config.toml:<event>:0:0"] (one per hook)
+EOF
+  exit 0
+fi
 
 # Codex saves project trust to $CODEX_HOME/config.toml even with
 # --ignore-user-config or a -c override, so give it a scratch home.

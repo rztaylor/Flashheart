@@ -328,13 +328,16 @@ tools (noise and latency).
 
 ### 5.3 Codex
 
-Recorded from Codex CLI 0.160.0 on 2026-10-12
+Recorded from Codex CLI 0.160.0 and the ChatGPT desktop app on 2026-10-12
 (`testdata/hooks/codex/MANIFEST.md`). Codex reads hooks from `hooks.json`
 or `[hooks]` in `config.toml` in every config layer (`~/.codex`, a trusted
 project's `.codex/`, plugins, managed `requirements.toml`) and runs them
 all. Hooks are on by default, but a hook that is not managed runs only
 after the user trusts it (`/hooks`); trust is tied to the hook's hash, so a
-changed command needs trusting again. The events are `SessionStart`
+changed command needs trusting again. The ChatGPT app runs trusted hooks
+but offers no way to trust them and skips untrusted ones silently; trust
+granted with the CLI's `/hooks` (saved in `~/.codex/config.toml`) applies
+to the app. The events are `SessionStart`
 (`source` `startup`, `resume`, `clear` or `compact`), `UserPromptSubmit`,
 `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SubagentStart`,
 `SubagentStop`, `PreCompact`, `PostCompact`, `Stop`, `SessionEnd` and
@@ -362,11 +365,12 @@ A failed command is an ordinary `PostToolUse`. A `Stop` block continues the
 turn with the reason as a prompt (no `UserPromptSubmit`), and the next `Stop`
 has `stop_hook_active: true`. An interrupted turn (Esc, or a denied
 permission prompt) sends `Interrupt` instead of `Stop`; it ends the turn
-like `Stop`. The CLI offers no planning tool. It sends `SessionEnd`
-(`reason` `other`) when `codex exec` finishes and at `/quit`; whether the
-ChatGPT app ends with one is not recorded yet, so a Codex run without it
-ends by the `stale_hours` rule, or when a new session starts in the same
-worktree and the old one has been silent for `quiet_minutes`.
+like `Stop`. The CLI offers no planning tool. `SessionEnd` (`reason` `other`)
+comes when `codex exec` finishes, at `/quit`, and when an app thread is
+archived (which moves its transcript, so `transcript_path` goes stale). A
+thread left open sends none, so a Codex run without it ends by the
+`stale_hours` rule, or when a new session starts in the same worktree and
+the old one has been silent for `quiet_minutes`.
 
 Every MCP `tools/call` from Codex carries the hook session in its `_meta`
 (`sessionId`, and `session_id` and `turn_id` in `x-codex-turn-metadata`), so
