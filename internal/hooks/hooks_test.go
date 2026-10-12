@@ -70,6 +70,10 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	case "Background":
 		// A turn the agent's own background task started, not a prompt.
 		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{Background: true}}}
+	case "Agent":
+		// A turn another agent's message started (FH-57), told apart by its
+		// origin alone.
+		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{Origin: events.OriginAgent}}}
 	case "Permission":
 		input.Events = []Pending{{Run: actor, Kind: events.PermissionRequested, Data: events.PermissionData{Tool: "Bash"}}}
 	case "SubagentStart":

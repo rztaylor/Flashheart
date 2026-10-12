@@ -885,3 +885,46 @@ code-like titles (a heuristic should not block a write, and hooks and
 tools fail open); warn (chosen). Titles a human types in the browser are
 not judged. The `find-tech-debt` skill's ticket template, which leads with
 code locations, lives outside this repository.
+
+## 2026-10-12 — D41: A turn records who started it; only the user's prompt answers
+
+Decision (FH-57): `turn.start` carries an optional `origin`, classified by
+the agent's adapter from the prompt, which is still never stored: `user`
+(typed by the user), `task` (a notice the harness submitted: a background
+command or agent finished, or the desktop app's pull request monitor) or
+`agent` (a subagent's hand-back or another agent's message). Only `user`
+answers the session's open questions in the session (D28) and lets a
+session record its edited paths afresh; an origin a reader does not know
+is not the user's. A turn without `origin` reads as before: the user's
+unless `background`.
+
+D28 recognised only Claude Code's `<task-notification>` as not the user,
+and runs treated every other turn as the user replying. An orchestrating
+session's subagents report back as prompts (`Another Claude session sent a
+message:` and an `<agent-message>` in the Claude desktop app), so every
+question such a session asked was marked answered in the session, left
+Needs you, and `flashheart await` told the agent the user had answered,
+although the user never replied. Flashheart's own board log holds dozens
+of such hand-backs recorded as prompts.
+
+The adapter still writes `background: true` on every turn whose origin is
+not `user`, so a reader that predates `origin` (a board server not yet
+restarted after an upgrade) also keeps these turns from answering. A
+positive `origin` rather than a wider `background` lets the timeline say
+what started the turn ("Message from an agent") and gives the Codex
+adapter (FH-73) a value to classify into rather than a negative flag.
+
+The prompt shapes come from Claude Code session transcripts (whose
+entries carry the same prompt text and name its origin: `peer` for
+agent messages, `task-notification`, an SDK origin for the monitor's
+events) and the event log's timing, since recording hooks needs an
+interactive session; the fixtures say so (testdata/hooks/claude/MANIFEST.md).
+
+Options: widen `background` to more prefixes (no record of what started
+the turn); read Claude Code's transcript for each prompt's origin (the
+hook would read a large file on every prompt, against HOOK-1); an
+`origin` field (chosen).
+
+Versions: `PROTOCOL_VERSION` stays 2 (additive: an optional field, and
+`background` still marks a turn the user did not start); board format
+unchanged; the protocol skill does not describe it.
