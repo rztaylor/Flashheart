@@ -16,7 +16,7 @@ import (
 // overwritten as setup overwrites them; a missing skill is never created, so
 // an uninstall stays uninstalled. It reports whether it wrote. The Claude
 // Code session-start hook calls it; nothing else does.
-func RefreshSkill(home string) (bool, error) {
+func (Claude) RefreshSkill(home string) (bool, error) {
 	path := Options{Home: home}.skillPath()
 	current, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
