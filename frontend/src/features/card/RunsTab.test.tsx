@@ -87,6 +87,29 @@ describe("RunsTab with subagents", () => {
     expect(tree).toContain("Needs you");
   });
 
+  it("lists the subagents in the order they started, by time not text", () => {
+    // The server trims trailing zeros, so .3 (300 ms) sorts after .315 as
+    // text though it started first.
+    const started = [
+      run(session, { children: [`${session}/b1`, `${session}/b2`] }),
+      run(`${session}/b2`, {
+        agentType: "general-purpose",
+        started: "2026-10-12T13:35:37.315Z",
+      }),
+      run(`${session}/b1`, {
+        state: "ended",
+        started: "2026-10-12T13:35:37.3Z",
+        ended: "2026-10-12T13:35:37.31Z",
+      }),
+    ];
+    const tree = renderToStaticMarkup(
+      <RunsTab detail={{ id: "AL-3", branch: "", runs: started }} />,
+    ).split('aria-label="Subagents of')[1];
+    expect(tree?.indexOf("Ended")).toBeLessThan(
+      tree?.indexOf("general-purpose") ?? -1,
+    );
+  });
+
   it("names the ticket a subagent claimed and its current step", () => {
     expect(markup).toContain("AL-2");
     expect(markup).toContain("Write the tests");

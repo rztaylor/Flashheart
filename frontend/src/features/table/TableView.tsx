@@ -14,7 +14,7 @@ import { HeadCell, Row, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
 import { type Line, workstreamTitle } from "../../model/lines";
 import { priorityLabel } from "../../model/status";
-import { runningTime } from "../../model/time";
+import { compareTimes, runningTime } from "../../model/time";
 
 type SortKey =
   | "title"
@@ -56,7 +56,7 @@ function compare(a: Card, b: Card, key: SortKey): number {
         b.criteria.done / (b.criteria.total || 1)
       );
     case "modified":
-      return b.modified.localeCompare(a.modified);
+      return compareTimes(b.modified, a.modified);
     default:
       return String(a[key]).localeCompare(String(b[key]));
   }
