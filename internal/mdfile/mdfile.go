@@ -21,6 +21,11 @@ type Document struct {
 	BodyLine int
 
 	mapping *yaml.Node
+	// plain is a whole-file YAML mapping (ParseYAML), not frontmatter.
+	plain bool
+	// insert is the 0-based file line a new field is inserted before: the
+	// closing --- of frontmatter, or the end of a plain YAML document.
+	insert int
 }
 
 // Field is one top-level frontmatter key in file order.
@@ -61,36 +66,100 @@ func Parse(data []byte) Document {
 		FrontmatterRaw: strings.Join(lines[1:closing], ""),
 		Body:           strings.Join(lines[closing+1:], ""),
 		BodyLine:       closing + 2,
+		insert:         closing,
 	}
+	mapping, err := parseMapping(doc.FrontmatterRaw, 1)
+	switch {
+	case err != nil && mapping != nil:
+		doc.FrontmatterError = fmt.Errorf("line %d: frontmatter must be a mapping of fields", mapping.Line+1)
+	case err != nil:
+		doc.FrontmatterError = errors.New("frontmatter does not parse: " + err.Error())
+	default:
+		doc.mapping = mapping
+	}
+	return doc
+}
+
+// ParseYAML parses a plain YAML file whose top level is a mapping of
+// fields, such as project.yaml, ignoring a byte-order mark and Windows line
+// endings. It never fails: a file that does not parse, or is not a
+// mapping, has no fields and reports why in FrontmatterError. String, List,
+// Decode and Fields read it as they read frontmatter, with file line
+// numbers; it has no body.
+func ParseYAML(data []byte) Document {
+	data = bytes.TrimPrefix(data, []byte("\ufeff"))
+	text := strings.ReplaceAll(string(data), "\r\n", "\n")
+	doc := Document{plain: true}
+	mapping, err := parseMapping(text, 0)
+	switch {
+	case err != nil && mapping != nil:
+		doc.FrontmatterError = fmt.Errorf("line %d: the file must be a mapping of fields", mapping.Line)
+	case err != nil:
+		doc.FrontmatterError = err
+	default:
+		doc.mapping = mapping
+	}
+	// New fields go at the end of the first YAML document: before a
+	// "---" or "..." marker that follows its start, or at the end of file.
+	lines := strings.SplitAfter(text, "\n")
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	start := 0
+	if mapping != nil {
+		start = mapping.Line // the line after the first key
+	} else {
+		for start < len(lines) && isGap(lines[start]) {
+			start++
+		}
+		if start < len(lines) && strings.TrimRight(lines[start], " \t\n") == "---" {
+			start++
+		}
+	}
+	doc.insert = len(lines)
+	for index := start; index < len(lines); index++ {
+		if marker := strings.TrimRight(lines[index], " \t\n"); marker == "---" || marker == "..." {
+			doc.insert = index
+			break
+		}
+	}
+	return doc
+}
+
+// parseMapping parses YAML text whose first line is file line offset+1.
+// An empty document is a nil mapping and no error; a document that is not
+// a mapping returns its root node with an error.
+func parseMapping(text string, offset int) (*yaml.Node, error) {
 	var root yaml.Node
-	if err := yaml.Unmarshal([]byte(doc.FrontmatterRaw), &root); err != nil {
-		doc.FrontmatterError = frontmatterError(err)
-		return doc
+	if err := yaml.Unmarshal([]byte(text), &root); err != nil {
+		return nil, lineError(err, offset)
 	}
 	if len(root.Content) == 0 {
-		return doc
+		return nil, nil
 	}
-	mapping := root.Content[0]
-	if mapping.Kind != yaml.MappingNode {
-		doc.FrontmatterError = fmt.Errorf("line %d: frontmatter must be a mapping of fields", mapping.Line+1)
-		return doc
+	if mapping := root.Content[0]; mapping.Kind != yaml.MappingNode {
+		return mapping, errors.New("not a mapping")
 	}
-	doc.mapping = mapping
-	return doc
+	return root.Content[0], nil
 }
 
 var yamlLine = regexp.MustCompile(`line (\d+):`)
 
-// frontmatterError rewrites YAML line numbers to file line numbers (the
-// frontmatter starts on line 2).
-func frontmatterError(err error) error {
-	message := strings.TrimPrefix(err.Error(), "yaml: ")
+// lineError rewrites a YAML error's line numbers to file line numbers (YAML
+// line 1 is file line offset+1) and drops its "yaml:" prefix.
+func lineError(err error, offset int) error {
+	message := err.Error()
+	var typeError *yaml.TypeError
+	if errors.As(err, &typeError) {
+		message = strings.Join(typeError.Errors, "; ")
+	}
+	message = strings.TrimPrefix(message, "yaml: ")
 	message = yamlLine.ReplaceAllStringFunc(message, func(match string) string {
 		var line int
 		fmt.Sscanf(match, "line %d:", &line)
-		return fmt.Sprintf("line %d:", line+1)
+		return fmt.Sprintf("line %d:", line+offset)
 	})
-	return errors.New("frontmatter does not parse: " + message)
+	return errors.New(message)
 }
 
 // Fields returns the top-level frontmatter keys in file order, or nil when
@@ -102,9 +171,31 @@ func (d Document) Fields() []Field {
 	fields := make([]Field, 0, len(d.mapping.Content)/2)
 	for index := 0; index+1 < len(d.mapping.Content); index += 2 {
 		key := d.mapping.Content[index]
-		fields = append(fields, Field{Key: key.Value, Line: key.Line + 1, node: d.mapping.Content[index+1]})
+		fields = append(fields, Field{Key: key.Value, Line: key.Line + d.offset(), node: d.mapping.Content[index+1]})
 	}
 	return fields
+}
+
+// offset is the file line before the YAML's first line.
+func (d Document) offset() int {
+	if d.plain {
+		return 0
+	}
+	return 1
+}
+
+// Decode decodes a top-level field into v by YAML's typing rules, as
+// yaml.Unmarshal would. A missing field leaves v unchanged; a field of the
+// wrong type returns an error naming its file line.
+func (d Document) Decode(key string, v any) error {
+	node, ok := d.field(key)
+	if !ok {
+		return nil
+	}
+	if err := node.Decode(v); err != nil {
+		return lineError(err, d.offset())
+	}
+	return nil
 }
 
 func (d Document) field(key string) (*yaml.Node, bool) {

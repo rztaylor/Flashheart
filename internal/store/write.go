@@ -1,7 +1,6 @@
 package store
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -516,27 +515,17 @@ func (s *Store) projectFields(t *tx, project, key string, nextID int) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	crlf := bytes.Contains(data, []byte("\r\n"))
-	text := strings.ReplaceAll(string(data), "\r\n", "\n")
-	if text != "" && !strings.HasSuffix(text, "\n") {
-		text += "\n"
-	}
-	// project.yaml is plain YAML; edit it as frontmatter of an empty body.
-	doc := []byte("---\n" + text + "---\n")
-	if doc, err = mdfile.SetScalar(doc, "key", key); err != nil {
+	out, err := mdfile.SetYAMLScalar(data, "key", key)
+	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
 	if nextID > 0 {
-		if doc, err = mdfile.SetScalar(doc, "next_id", strconv.Itoa(nextID)); err != nil {
+		if out, err = mdfile.SetYAMLScalar(out, "next_id", strconv.Itoa(nextID)); err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
 	}
-	out := strings.TrimSuffix(strings.TrimPrefix(string(doc), "---\n"), "---\n")
-	if crlf {
-		out = strings.ReplaceAll(out, "\n", "\r\n")
-	}
-	if out != string(data) {
-		t.put(name, []byte(out))
+	if string(out) != string(data) {
+		t.put(name, out)
 	}
 	return nil
 }
