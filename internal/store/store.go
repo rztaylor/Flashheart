@@ -15,8 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"go.yaml.in/yaml/v3"
-
 	"github.com/rztaylor/flashheart/internal/board"
 )
 
@@ -504,19 +502,6 @@ func ticketIDs(tickets []board.Ticket) []string {
 	return ids
 }
 
-type projectFile struct {
-	Name   string   `yaml:"name"`
-	Key    string   `yaml:"key"`
-	NextID int      `yaml:"next_id"`
-	Repos  []string `yaml:"repos"`
-	// Retired lists permanently deleted ticket ids (EDIT-8).
-	Retired []string `yaml:"retired"`
-	// Settings are per-project overrides of config.yaml (CFG-1).
-	Settings struct {
-		EnforceHandoff *bool `yaml:"enforce_handoff"`
-	} `yaml:"settings"`
-}
-
 func (r *reader) readProjectFile(project *board.Project) {
 	project.Key, project.KeyDerived = board.DeriveKey(project.Name), true
 	name := path.Join(project.Name, "project.yaml")
@@ -528,23 +513,16 @@ func (r *reader) readProjectFile(project *board.Project) {
 		project.Warnings = append(project.Warnings, "project.yaml: "+problem)
 		return
 	}
-	var parsed projectFile
-	if err := yaml.Unmarshal(data, &parsed); err != nil {
-		project.Warnings = append(project.Warnings, "project.yaml does not parse: "+strings.TrimPrefix(err.Error(), "yaml: "))
-		return
-	}
-	if display := strings.TrimSpace(parsed.Name); display != "" {
-		project.DisplayName = display
+	parsed := parseProjectFile(project.Name, data)
+	project.Warnings = append(project.Warnings, parsed.Warnings...)
+	if parsed.Name != "" {
+		project.DisplayName = parsed.Name
 	}
 	project.Repos = parsed.Repos
 	project.Retired = parsed.Retired
 	project.EnforceHandoff = parsed.Settings.EnforceHandoff
-	switch key := strings.TrimSpace(parsed.Key); {
-	case key == "":
-	case board.ValidKey(key):
-		project.Key, project.KeyDerived = key, false
-	default:
-		project.Warnings = append(project.Warnings, fmt.Sprintf("key %q in project.yaml is not 2–10 uppercase letters or digits starting with a letter; using %s", key, project.Key))
+	if parsed.Key != "" {
+		project.Key, project.KeyDerived = parsed.Key, false
 	}
 	if parsed.NextID > 0 {
 		project.NextID = parsed.NextID
@@ -639,9 +617,9 @@ func (s *Store) EnforceHandoff(project string) (*bool, error) {
 	if err != nil {
 		return nil, err
 	}
-	var parsed projectFile
-	if err := yaml.Unmarshal(data, &parsed); err != nil {
-		return nil, fmt.Errorf("%s/project.yaml settings.enforce_handoff: %w", project, err)
+	parsed := parseProjectFile(project, data)
+	if !parsed.readable("settings") {
+		return nil, fmt.Errorf("%s/project.yaml settings.enforce_handoff cannot be read: %s", project, strings.Join(parsed.Warnings, "; "))
 	}
 	return parsed.Settings.EnforceHandoff, nil
 }
