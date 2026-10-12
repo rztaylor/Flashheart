@@ -164,37 +164,18 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 
 // deliverAnswers hands the caller's waiting answers over: its session's
 // inbox and any answered question the log shows undelivered. They count as
-// delivered once shown (HOOK-5).
+// delivered once shown (HOOK-5), and are shown even if recording that
+// fails: the log then still shows them undelivered, so a later call shows
+// them again rather than losing them.
 func (c *call) deliverAnswers() ([]protocol.Answer, error) {
 	if c.run == "" || c.project == "" {
 		return nil, nil
 	}
-	waiting, err := c.srv.log.TakeAnswers(c.project, c.session())
-	if err != nil {
+	waiting, err := events.Deliver(c.srv.log, c.project, []string{c.session()}, c.set.PendingDeliveries(c.session()), c.now)
+	if len(waiting) == 0 && err != nil {
 		return nil, err
 	}
-	seen := map[string]bool{}
-	for _, d := range waiting {
-		seen[d.ID] = true
-	}
-	for _, q := range c.set.PendingAnswers(c.session()) {
-		if !seen[q.ID] {
-			waiting = append(waiting, events.Delivery{ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Answer: q.Answer, By: q.AnsweredBy})
-		}
-	}
-	if err := c.srv.log.MarkDelivered(c.project, waiting, c.now); err != nil {
-		return nil, err
-	}
-	return answersOf(waiting), nil
-}
-
-// answersOf is what the model is shown of delivered answers.
-func answersOf(list []events.Delivery) []protocol.Answer {
-	answers := make([]protocol.Answer, 0, len(list))
-	for _, d := range list {
-		answers = append(answers, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
-	}
-	return answers
+	return protocol.AnswersOf(waiting), nil
 }
 
 func handoffLines(h board.HandoffNote, limit int, text func(string) string) []string {

@@ -342,3 +342,19 @@ func TestBoardContextDeliversAnswers(t *testing.T) {
 		t.Fatal("answer delivered twice")
 	}
 }
+
+// An answer whose inbox a failed delivery emptied is still undelivered in
+// the log, and board_context delivers it from there (FH-78).
+func TestBoardContextDeliversAnAnswerWhoseInboxWasLost(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	e.startSession(session)
+	out := e.ok("ask_human", map[string]any{"kind": "question", "text": "Ship it?"})
+	id := strings.TrimSpace(out[strings.Index(out, "question=")+len("question="):])
+	e.events(session, events.Event{Kind: events.QuestionAnswered, Data: events.AnswerData{ID: id, Answer: "Not yet", By: "Robert"}})
+	contains(t, e.ok("board_context", nil), `- "Ship it?" → "Not yet" (Robert)`)
+	if strings.Contains(e.ok("board_context", nil), "Ship it?") {
+		t.Fatal("answer delivered twice")
+	}
+}

@@ -274,6 +274,72 @@ func TestAnInboxDeliversEachAnswerOnce(t *testing.T) {
 	}
 }
 
+// Deliver hands over what it took even when an inbox cannot be read or
+// delivery cannot be recorded (FH-78): an answer is never lost.
+func TestDeliverReturnsWhatItTookWhenRecordingFails(t *testing.T) {
+	t.Parallel()
+
+	log, root := newRoot(t, "alpha")
+	mine := Delivery{ID: "q-1", Run: "claude:s/a1", Question: "Q1?", Answer: "A1", By: "human"}
+	theirs := Delivery{ID: "q-2", Run: "claude:p", Question: "Q2?", Answer: "A2", By: "human"}
+	for _, d := range []Delivery{mine, theirs} {
+		if err := log.QueueAnswer("alpha", d.Run, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// An unreadable inbox (a directory) and an event file that cannot be
+	// appended to (a directory too).
+	if err := os.MkdirAll(filepath.Join(root, "alpha", ".flashheart", "answers", "claude--broken.jsonl"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "alpha", ".flashheart", "events", FileName(t0)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	pending := []Delivery{mine, {ID: "q-3", Run: "claude:s", Question: "Q3?", Answer: "A3", By: "human"}}
+	got, err := Deliver(log, "alpha", []string{"claude:s", "claude:broken", "claude:p", ""}, pending, t0)
+	if err == nil {
+		t.Fatal("Deliver reported no error")
+	}
+	var ids []string
+	for _, d := range got {
+		ids = append(ids, d.ID)
+	}
+	if !slices.Equal(ids, []string{"q-1", "q-2", "q-3"}) {
+		t.Fatalf("delivered %v", ids)
+	}
+	// The inboxes it read are emptied: the answers are the caller's now.
+	if again, err := log.TakeAnswers("alpha", "claude:s"); err != nil || len(again) != 0 {
+		t.Fatalf("inbox after delivery = %+v, %v", again, err)
+	}
+}
+
+func TestDeliverRecordsEachAnswerDelivered(t *testing.T) {
+	t.Parallel()
+
+	log, _ := newRoot(t, "alpha")
+	d := Delivery{ID: "q-1", Run: "claude:s/a1", Question: "Q?", Answer: "A", By: "human"}
+	if err := log.QueueAnswer("alpha", d.Run, d); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Deliver(log, "alpha", []string{"claude:s"}, []Delivery{d}, t0); err != nil || len(got) != 1 {
+		t.Fatalf("Deliver = %+v, %v", got, err)
+	}
+	var delivered []string
+	if err := log.Read("alpha", t0, func(e Event) {
+		if e.Kind == QuestionDelivered {
+			delivered = append(delivered, e.Run)
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(delivered, []string{"claude:s/a1"}) {
+		t.Fatalf("delivered on %v", delivered)
+	}
+	if got, err := Deliver(log, "alpha", []string{"claude:s"}, nil, t0); err != nil || len(got) != 0 {
+		t.Fatalf("second Deliver = %+v, %v", got, err)
+	}
+}
+
 // Only the user's prompt is from the user; a turn without an origin, from
 // a log older than the field, is the user's unless marked background
 // (FH-57, agent-protocol §3).

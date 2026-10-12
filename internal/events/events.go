@@ -535,6 +535,49 @@ type Delivery struct {
 	By       string `json:"by"`
 }
 
+// Inbox is the answers inbox as delivery uses it: taking a session's
+// queued answers and recording that they reached their runs. *Log is one.
+type Inbox interface {
+	TakeAnswers(project, session string) ([]Delivery, error)
+	MarkDelivered(project string, list []Delivery, at time.Time) error
+}
+
+// Deliver hands over the answers waiting for sessions (HOOK-5): it takes
+// each session's inbox, adds pending (answered questions the fold shows
+// undelivered, whose inbox may be gone), keeps each question once, and
+// records question.delivered for them all at at. It returns everything it
+// took even when an inbox or the record fails, so the caller shows them:
+// an answer must never be lost, and one whose record failed is still
+// undelivered in the log, so a later delivery shows it again.
+func Deliver(in Inbox, project string, sessions []string, pending []Delivery, at time.Time) ([]Delivery, error) {
+	var list []Delivery
+	var problems error
+	seen := map[string]bool{}
+	add := func(d Delivery) {
+		if d.ID != "" && !seen[d.ID] {
+			seen[d.ID] = true
+			list = append(list, d)
+		}
+	}
+	for _, session := range sessions {
+		if session == "" {
+			continue
+		}
+		taken, err := in.TakeAnswers(project, session)
+		problems = errors.Join(problems, err)
+		for _, d := range taken {
+			add(d)
+		}
+	}
+	for _, d := range pending {
+		add(d)
+	}
+	if len(list) > 0 {
+		problems = errors.Join(problems, in.MarkDelivered(project, list, at))
+	}
+	return list, problems
+}
+
 // QueueAnswer puts an answer in the inbox of the asking run's session.
 func (l *Log) QueueAnswer(project, run string, d Delivery) error {
 	session := RunOf(run).Session().String()

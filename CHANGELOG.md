@@ -60,6 +60,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- An answer to an agent's question is no longer lost when recording its
+  delivery fails (FH-78). A starting session's recovery note showed no
+  answers if that record failed, although the answers had already been
+  taken from the session's waiting list, and `board_context` failed the
+  same way; a waiting `flashheart await` then waited until its 12-hour
+  timeout. Every path that hands answers over now shares one routine that
+  shows what it took even when the record fails (the failure is logged),
+  and `flashheart await` also delivers an answer the log shows given and
+  not delivered. Such an answer may now be shown twice, never not at all
+  (protocol version unchanged).
 - `flashheart migrate` keeps tickets with Windows line endings or a
   byte-order mark intact (FH-79). Before, such a ticket gained a second
   header and lost its created date and dependencies, and its dependency

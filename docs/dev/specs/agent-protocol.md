@@ -257,7 +257,16 @@ started, which has no prompt hook, its connection's next tool result)
 empties the inbox and appends `question.delivered`. The
 inbox is a delivery queue derived from the log, so the prompt hook costs one
 `stat` when nothing is waiting; the answer itself lives in the log and the
-ticket's `## Notes`.
+ticket's `## Notes`. Every one of these paths shows the model what it took
+even when appending `question.delivered` fails (the failure is logged), so
+an answer is never lost; the log then still shows it answered and not
+delivered, and the readers that fold the log (the recovery note,
+`board_context`, `flashheart await`) deliver such an answer even when its
+inbox is gone, so it may be shown twice but never not at all (FH-78). An
+answer waiting in the inbox goes with any prompt, whatever its `origin`:
+the origin decides only whether the prompt answers questions in the
+session (D41), and a board answer should reach the agent whenever it gets
+a turn.
 
 ## 5. Hooks
 
@@ -555,7 +564,10 @@ Code: Bash with `run_in_background`) runs it after asking:
   is empty); when the inbox holds answers it takes them all, appends
   `question.delivered` for each and prints the answers note (§8, framed as
   information), then exits 0, which wakes the agent;
-- it re-reads the log every 15 s, and if the answer was delivered another
+- it re-reads the log every 15 s; if the log (there or at the start)
+  shows the answer given but not delivered while the inbox is empty (a
+  delivery took the inbox and could not record it), it delivers the answer
+  from the log as above; if the answer was delivered another
   way (the user prompted after answering on the board) it prints a
   one-line note and exits 0; if the user answered in the session's chat
   instead (§4) it prints a one-line note saying so and exits 0;
@@ -768,6 +780,13 @@ without `origin` reads as before; `background` keeps its meaning, a turn
 the user did not start, which answers nothing (it now also marks agents'
 messages, which older readers took for the user's); and no tool, refusal
 or skill text changes. The version stays 2.
+
+Additive change within version 2 (FH-78, 2026-10-12): one delivery
+routine serves every path that hands answers over (§4). It shows what it
+took even when recording delivery fails, and `flashheart await` also
+delivers an answer the log shows given and not delivered (§7.5) instead
+of waiting for its timeout. No event, tool or skill text changes shape, so
+the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`
