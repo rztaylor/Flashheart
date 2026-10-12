@@ -21,10 +21,6 @@ type EventSource interface {
 	ReadFrom(project, file string, offset int64, fn func(events.Event)) (int64, error)
 }
 
-// runWindowDays is how many days of event files the index folds: enough for
-// any live run (stale after 12 hours) and a day of ended runs (VIEW-3).
-const runWindowDays = 2
-
 // tracker reads each project's recent event files, only lines appended
 // since the last rebuild, and folds all of them into one set in time order:
 // a run's events can sit in several projects' logs (a claim on another
@@ -62,7 +58,8 @@ func (t *tracker) update(projects []string, now time.Time) string {
 		// A new day: start again from the window, so old runs fall away.
 		t.day, t.projects, refold = day, map[string]*projectEvents{}, true
 	}
-	first := events.FileName(now.AddDate(0, 0, -runWindowDays))
+	// The event files of the run window, as every reader folds them.
+	first := events.FileName(now.Add(-runs.Lookback))
 	var parts []string
 	for name := range t.projects {
 		if !slices.Contains(projects, name) {

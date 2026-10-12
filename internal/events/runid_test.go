@@ -76,10 +76,11 @@ func TestRunOfKeepsRecordedIDs(t *testing.T) {
 		{"human", "human"},
 		{"claude:abc/x1", "claude:abc"},
 		{"odd/sub", "odd"},
+		{"claude:a:b/c/d", "claude:a:b"},
 		{"", ""},
 	} {
 		r := RunOf(tc.id)
-		if r.String() != tc.id || r.Session().String() != tc.session {
+		if r.String() != tc.id || r.Session().String() != tc.session || SessionOf(tc.id) != tc.session {
 			t.Errorf("%q: string %q session %q", tc.id, r, r.Session())
 		}
 	}

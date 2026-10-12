@@ -17,9 +17,6 @@ import (
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
-// runWindow is how far back a call folds the event log, as serve does.
-const runWindow = 48 * time.Hour
-
 // call is one tool call's view of the board: read fresh, so every call sees
 // other writers' changes (no index in mcp mode, NFR-4).
 type call struct {
@@ -143,7 +140,7 @@ func (c *call) fold(project string) error {
 		return nil
 	}
 	c.folded[project] = true
-	err := c.srv.log.Read(project, c.now.Add(-runWindow), func(e events.Event) { c.seen = append(c.seen, e) })
+	err := c.srv.log.Read(project, c.now.Add(-runs.Lookback), func(e events.Event) { c.seen = append(c.seen, e) })
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

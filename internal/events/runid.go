@@ -96,6 +96,13 @@ func (r RunID) IsSubagent() bool { return r.subagent != "" }
 // Session is the session run: the run itself, or a subagent's parent.
 func (r RunID) Session() RunID { return RunID{agent: r.agent, session: r.session} }
 
+// SessionOf is RunOf(s).Session().String() without building a RunID, for
+// readers that ask it of every line (runs.Keep).
+func SessionOf(s string) string {
+	session, _, _ := strings.Cut(s, "/")
+	return session
+}
+
 // Short is the agent and the first 8 characters of the session id, as
 // recovery notes name runs (agent-protocol §2); an id without an agent is
 // returned whole.

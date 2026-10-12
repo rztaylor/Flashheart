@@ -745,3 +745,40 @@ each new tool to copy); refuse only `attach` (`set_project_key` records no
 event, but then it disagrees with `create_ticket`); refuse both (chosen).
 `PROTOCOL_VERSION` stays 2: the code and its fix are already known to
 every agent and no event or tool changes shape.
+
+## 2026-10-12 — D37: Hooks fold only the sessions they ask about, over one run window
+
+Every reader folds the same run window, `runs.Lookback` (48 hours of daily
+event files): the board's index, the MCP server, `flashheart await` and
+the hooks (FH-95). The hooks used to fold one day, so a claim more than
+about a day old was on the board but invisible to handoff enforcement
+and the recovery note. Two days of a busy log (50,000 events a day) took
+a full fold about 180 ms, beyond `HOOK-1`'s 50 ms p95, so the hooks no
+longer fold every event. `events` reads each line's envelope header
+(time, run, kind) without decoding its data when the line is in the
+order Append writes it, and decodes the rest. A stop folds its session's
+events and every claim and release (`runs.Keep`: a claim takes its ticket
+from any other run, and nothing else another run does changes the
+session's state, link, edits or windows). A session start reads the
+window once into memory, finds the previous session in its worktree from
+the headers (`runs.Latest`, decoding only each session's `run.start`s and
+its latest `turn.start` naming a worktree), then folds the two sessions
+and the claims. Tests fold random mixed logs both ways and compare
+everything a hook reads. At 50,000 events a day a session start takes
+about 36 ms and an enforcing stop about 30 ms at p95.
+
+The worktree check's deadline is now counted from the hook's start (75 ms)
+rather than from the check's (50 ms): a stop's slowest path, a long log
+then a slow git, stays within `HOOK-1`'s 100 ms, and the check usually
+gets more time than before. It runs only for a session that ran shell
+commands since its last checkpoint and is not already due.
+
+Options: keep one day for the hooks (cheap, but the surfaces disagree);
+fold two days in full (correct, about four times `HOOK-1`'s budget); keep
+a derived cache of runs per project (fast, but state outside the board
+files that every writer must keep current); fold only the sessions asked
+about (chosen). For the git check: shrink the timeout (simple, but a slow
+fold still adds to it), a deadline from the hook's start (chosen), or
+skip the check on a busy log (misses shell edits). Assumption: a
+subagent's parent is the session its run id names, as every adapter
+records it (agent-protocol §2).

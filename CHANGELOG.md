@@ -100,6 +100,20 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The session-start recovery note and handoff enforcement now look back as
+  far as the board and the MCP server do: the daily event files from two
+  days ago on, instead of one (FH-95, D37). A claim made the day before,
+  more than about 24 hours ago, still links the session to its ticket at
+  a resume and at a stop, and the previous session in a worktree can be
+  up to two days old. The hooks read only the sessions they ask about, so
+  on a busy log (50,000 events a day) a session start takes about 36 ms
+  and a blocked stop about 30 ms at p95, down from 186 ms and 180 ms. The
+  worktree check at a stop now ends at most 75 ms after the hook began,
+  however long reading the log took, so a stop stays within 100 ms.
+  Protocol version unchanged.
+- `scripts/hook-bench.sh` takes `-agent`, `-scenario`
+  (`mix`, `tools`, `session-start`, `stop`) and `-seed-events` to measure
+  session starts and enforcing stops on a seeded log (FH-95).
 - The `attach` and `set_project_key` MCP tools now answer `ambiguous_run`
   when several sessions work in the same worktree and branch and the call
   does not name its `run`, as every other write tool already did (FH-93,
