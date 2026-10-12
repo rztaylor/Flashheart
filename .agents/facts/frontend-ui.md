@@ -12,7 +12,7 @@
   markdown links, grid movement) → `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  RouteBar, EmptyState, RunState, NeedsYou, PlanRoute, QuestionCard, Aside, Popover,
+  RouteBar, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
   FilterChip, TicketLink) → `features/<feature>/` (board,
   card, editing, overview, workstreams, table, projects, filters, archive; later
   settings) → `app/`

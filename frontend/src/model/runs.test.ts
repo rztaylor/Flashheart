@@ -12,7 +12,6 @@ import {
   needsReason,
   needsYouPhrase,
   permissionReason,
-  planStations,
   questionReason,
   runAgentName,
   sessionsOf,
@@ -255,31 +254,6 @@ describe("compactTimeline", () => {
   });
 });
 
-describe("planStations", () => {
-  it("draws the plan as stations with the current stop marked", () => {
-    expect(
-      planStations([
-        { text: "a", status: "completed" },
-        { text: "b", status: "in_progress" },
-        { text: "c", status: "pending" },
-      ]),
-    ).toEqual(["served", "current", "ahead"]);
-    // Nothing in progress: the first pending step is current.
-    expect(
-      planStations([
-        { text: "a", status: "completed" },
-        { text: "b", status: "pending" },
-      ]),
-    ).toEqual(["served", "current"]);
-  });
-  it("is empty for long plans, which show as numbers instead", () => {
-    const long = Array.from({ length: 13 }, () => ({
-      status: "pending" as const,
-    }));
-    expect(planStations(long)).toEqual([]);
-  });
-});
-
 it("marks runs the MCP server started for agents without hooks", () => {
   const hookless = run("codex:mcp-0a1b2c3d4e5f", {
     agent: "codex",
@@ -429,15 +403,6 @@ it("treats a subagent whose session is missing as a session", () => {
     "claude:a",
     "claude:gone/y",
   ]);
-});
-
-it("plans with every step completed have no current stop", () => {
-  expect(
-    planStations([
-      { text: "a", status: "completed" },
-      { text: "b", status: "completed" },
-    ]),
-  ).toEqual(["served", "served"]);
 });
 
 describe("needsYouPhrase", () => {

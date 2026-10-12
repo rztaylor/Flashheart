@@ -13,7 +13,7 @@ words), `NeedsYou` (the one attention plate, ui-layout.md §7: the
 attention colour, `NeedsYouPlate` inline and on the rail, `plateClass` for
 the band's toggle, and `AttentionDisc`; nothing else uses the attention
 colour),
-`PlanRoute` (an agent's plan as a monochrome route), `QuestionCard` (an
+`QuestionCard` (an
 agent's question with its answer box), `TicketLink` (a ticket id as a link
 to its full page, a new tab unless inside `TicketLinksInPlace`, and
 `LinkedText` for ids in plain text) and `Aside` (a marginal remark, at
