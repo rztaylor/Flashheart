@@ -16,7 +16,8 @@
 // project keys, preferences, answers to agents'
 // questions) validate input, apply
 // mdfile edits through store's locked, hash-checked writes, and answer a
-// stale hash with 409 and the current file (STO-3, EDIT-7). Each write that
+// stale hash with 409 and the current file (STO-3, EDIT-7). A preference
+// read waits for any preference save in flight (CFG-2). Each write that
 // changes a ticket appends one event recording that the human did (EDIT-10),
 // best effort once the ticket is saved. An answer is
 // appended to the event log, queued in the asking session's inbox and noted
