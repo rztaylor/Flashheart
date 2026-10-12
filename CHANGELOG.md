@@ -60,6 +60,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Sessions that crash, and Codex sessions, which never report their end,
+  no longer leave their working files in the board folder forever (FH-82).
+  `serve`'s regular cleanup, at startup and daily, now removes a session's
+  activity file once no hook has written it for 12 hours (`stale_hours`),
+  and its answers waiting list with the event log of the day it was last
+  written, after `event_retention_days`, when none of its answers could
+  still be delivered. Tool activity a crashed session had not recorded yet
+  is recorded when the session resumes, or dropped once the session is 12
+  hours stale, never kept.
+
 - An answer to an agent's question is no longer lost when recording its
   delivery fails (FH-78). A starting session's recovery note showed no
   answers if that record failed, although the answers had already been
