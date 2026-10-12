@@ -8,6 +8,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Codex sessions with Flashheart's hooks are recorded on the board like
+  Claude Code ones (FH-73). `flashheart hook codex <Event>` turns Codex's
+  hook events, mapped from payloads recorded from the Codex CLI and the
+  ChatGPT app (Codex 0.160.0), into run starts, turns, tool activity with
+  shell windows, every file an `apply_patch` edits, permission requests,
+  subagents, compaction and run ends; an interrupted turn ends as a stop
+  does. A new session gets the recovery note and a prompt the waiting
+  answers, and a stop is blocked for a handoff where the project enforces
+  it (an interrupt never is). Hooks are installed by hand until `flashheart
+  setup codex` (FH-75); Codex's own `update_plan` is mapped to the plan but
+  was not offered in any recorded session (protocol version unchanged).
+
 - A ticket's pull request shows on its card panel and full page (FH-114).
   Tickets gain a `pr:` frontmatter field beside `branch:`; agents set it
   with `update_ticket` when they open a pull request, as the flashheart

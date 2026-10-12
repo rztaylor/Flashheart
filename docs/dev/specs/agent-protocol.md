@@ -346,9 +346,9 @@ to the app. The events are `SessionStart`
 | Hook event | Flashheart action |
 |---|---|
 | `SessionStart` | `run.start`; recovery note as `additionalContext` (a developer message) |
-| `UserPromptSubmit` | `turn.start` with its `origin` (§3), classified from recorded Codex prompts (FH-73); answered questions as `additionalContext` |
-| `PreToolUse` | stamps `run` into Flashheart's own tools (`updatedInput`, §7.1) |
-| `PostToolUse` | a tool use counted into `activity` (§3); edit paths from `apply_patch` file headers; `plan.updated` for `update_plan` where Codex offers it |
+| `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; answered questions as `additionalContext` |
+| `PreToolUse` | nothing yet; stamping `run` into Flashheart's own tools (`updatedInput`, §7.1) is FH-74 |
+| `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `plan.updated` (the whole plan) for `update_plan` where Codex offers it, read from its `plan` steps (`step`, `status`) |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
 | `PreCompact` / `PostCompact` | `compact` |
@@ -361,7 +361,8 @@ Every payload carries `session_id`, `cwd`, `hook_event_name` and
 `tool_input`, and `PostToolUse` a `tool_response`. Tool names are `Bash`,
 `apply_patch` (the whole patch in `tool_input.command`), `mcp__<server>__<tool>`
 and the subagent tools (`collaborationspawn_agent`, `collaborationwait_agent`).
-A failed command is an ordinary `PostToolUse`. A `Stop` block continues the
+A failed command is an ordinary `PostToolUse`, so a Codex run's
+`activity` never counts a failure. A `Stop` block continues the
 turn with the reason as a prompt (no `UserPromptSubmit`), and the next `Stop`
 has `stop_hook_active: true`. An interrupted turn (Esc, or a denied
 permission prompt) sends `Interrupt` instead of `Stop`; it ends the turn

@@ -1,0 +1,13 @@
+[
+  {
+    "run": "codex:019a7c00-0000-7000-8000-000000000001",
+    "kind": "run.start",
+    "data": {
+      "kind": "session",
+      "source": "startup",
+      "cwd": "/Users/example/src/demo",
+      "branch": "feature/demo",
+      "worktree": "/Users/example/src/demo"
+    }
+  }
+]

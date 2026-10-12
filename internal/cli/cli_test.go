@@ -631,14 +631,16 @@ func TestHookAlwaysExitsZero(t *testing.T) {
 		}
 	}
 	// A malformed payload for a known agent is logged, not reported.
-	h := newHarness(t)
-	root := t.TempDir()
-	h.stdin = "{"
-	if code, stdout, stderr := h.run("hook", "claude", "Stop", "--root", root); code != 0 || stdout != "" || stderr != "" {
-		t.Fatalf("malformed payload = %d, %q, %q", code, stdout, stderr)
-	}
-	if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); !strings.Contains(string(data), "claude Stop: payload is not JSON") {
-		t.Fatalf("hook-errors.log = %q", data)
+	for _, agent := range []string{"claude", "codex"} {
+		h := newHarness(t)
+		root := t.TempDir()
+		h.stdin = "{"
+		if code, stdout, stderr := h.run("hook", agent, "Stop", "--root", root); code != 0 || stdout != "" || stderr != "" {
+			t.Fatalf("%s malformed payload = %d, %q, %q", agent, code, stdout, stderr)
+		}
+		if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); !strings.Contains(string(data), agent+" Stop: payload is not JSON") {
+			t.Fatalf("%s hook-errors.log = %q", agent, data)
+		}
 	}
 }
 
