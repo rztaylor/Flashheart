@@ -162,12 +162,13 @@ else
   cat <<EOF
 
 In the session, please:
-  1. ask it to run 'rm -rf build' and answer the permission prompt (once allow, once deny);
-  2. ask it to write a file and edit README.md;
-  3. ask it to use a subagent to list the files;
-  4. ask for something long, and press Esc to interrupt it;
-  5. run /compact;
-  6. exit with /quit.
+  1. ask it to make a three-step plan with its planning tool and work through it;
+  2. ask it to run 'rm -rf build' and answer the permission prompt (once allow, once deny);
+  3. ask it to write a file and edit README.md;
+  4. ask it to use a subagent to list the files;
+  5. ask for something long, and press Esc to interrupt it;
+  6. run /compact;
+  7. exit with /quit.
 EOF
   "$codex_bin" --dangerously-bypass-hook-trust \
     -a on-request -s read-only "${overrides[@]}" "$@"

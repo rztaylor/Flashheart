@@ -18,7 +18,7 @@ var fixtures = filepath.Join("..", "..", "..", "testdata", "hooks", "codex")
 // (testdata/hooks/codex/MANIFEST.md).
 var recorded = []string{
 	"SessionStart", "UserPromptSubmit", "PreToolUse", "PermissionRequest", "PostToolUse",
-	"SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "Stop", "SessionEnd",
+	"SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "Stop", "SessionEnd", "Interrupt",
 }
 
 type payload struct {

@@ -16,27 +16,31 @@ agent's (encrypted) task are replaced with synthetic text.
 
 ## Provenance
 
-Recorded with `scripts/record-codex-hooks.sh exec` from Codex CLI 0.160.0
-(the copy bundled with the ChatGPT desktop app), model `gpt-6.1-sol`,
-2026-10-12, in a scratch repository with a scratch `CODEX_HOME`.
+Recorded with `scripts/record-codex-hooks.sh exec` and `tui` from Codex CLI
+0.160.0 (the copy bundled with the ChatGPT desktop app), model
+`gpt-6.1-sol`, 2026-10-12, in a scratch repository with a scratch
+`CODEX_HOME`.
 
 | Event | CLI, `codex exec` | CLI, interactive | ChatGPT app |
 |---|---|---|---|
-| `SessionStart` | recorded: `startup`, `compact` | not checked yet | not checked yet |
-| `UserPromptSubmit` | recorded: `prompt` | not checked yet | not checked yet |
-| `PreToolUse` | recorded: `bash`, `apply-patch`, `flashheart-tool`, `spawn-agent`, `subagent-bash` | not checked yet | not checked yet |
-| `PermissionRequest` | recorded: `flashheart-tool` (an MCP tool's approval) | not checked yet | not checked yet |
-| `PostToolUse` | recorded: `bash`, `bash-failed`, `apply-patch`, `spawn-agent`, `wait-agent`, `subagent-bash` | not checked yet | not checked yet |
-| `SubagentStart` / `SubagentStop` | recorded: `default` | not checked yet | not checked yet |
-| `PreCompact` / `PostCompact` | recorded: `auto` (a low `model_auto_compact_token_limit`) | not checked yet | not checked yet |
-| `Stop` | recorded: `stop` | not checked yet | not checked yet |
-| `SessionEnd` | recorded: `other`, when `codex exec` finishes | not checked yet | not checked yet |
-| `Interrupt` | not fired (nothing interrupts `exec`) | not checked yet | not checked yet |
+| `SessionStart` | recorded: `startup`, `compact` | fired: `startup` | not checked yet |
+| `UserPromptSubmit` | recorded: `prompt` | fired | not checked yet |
+| `PreToolUse` | recorded: `bash`, `apply-patch`, `flashheart-tool`, `spawn-agent`, `subagent-bash` | fired | not checked yet |
+| `PermissionRequest` | recorded: `flashheart-tool` (an MCP tool's approval) | recorded: `bash` (a shell command's prompt, with the model's `description`) | not checked yet |
+| `PostToolUse` | recorded: `bash`, `bash-failed`, `apply-patch`, `spawn-agent`, `wait-agent`, `subagent-bash` | fired | not checked yet |
+| `SubagentStart` / `SubagentStop` | recorded: `default` | fired | not checked yet |
+| `PreCompact` / `PostCompact` | recorded: `auto` (a low `model_auto_compact_token_limit`) | recorded: `PreCompact/manual` (`/compact`); `/quit` interrupted it before `PostCompact` | not checked yet |
+| `Stop` | recorded: `stop` | fired at each turn's end, not for an interrupted turn | not checked yet |
+| `SessionEnd` | recorded: `other`, when `codex exec` finishes | recorded: `quit` (`/quit`, `reason` `other`) | not checked yet |
+| `Interrupt` | not fired (nothing interrupts `exec`) | recorded: `esc` (Esc during a turn), `permission-denied` (denying a permission prompt ends the turn) | not checked yet |
 
-`codex exec` offers no planning tool (`update_plan`): the model said so when
-asked to plan. A failed command is an ordinary `PostToolUse` with its output;
-there is no failure event. Manual `/compact`, `resume` and `clear` session
-starts and permission prompts for shell commands need an interactive session.
+Neither `codex exec` nor the interactive CLI offers a planning tool
+(`update_plan`): asked to plan with it, the model said it had none. A failed
+command is an ordinary `PostToolUse` with its output; there is no failure
+event. An interrupted turn sends `Interrupt` and no `Stop`; `/compact` runs
+as a turn of its own with no `UserPromptSubmit`. The interactive CLI starts
+the MCP server when it opens, before the folder-trust prompt and
+`SessionStart`. `resume` and `clear` session starts are not recorded.
 
 ## Answers
 

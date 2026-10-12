@@ -350,6 +350,7 @@ changed command needs trusting again. The events are `SessionStart`
 | `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
 | `PreCompact` / `PostCompact` | `compact` |
 | `Stop` | `turn.end`; handoff enforcement by `{"decision":"block","reason":…}` |
+| `Interrupt` | `turn.end` (no output can stop the interrupt) |
 | `SessionEnd` | `run.end` |
 
 Every payload carries `session_id`, `cwd`, `hook_event_name` and
@@ -359,12 +360,13 @@ Every payload carries `session_id`, `cwd`, `hook_event_name` and
 and the subagent tools (`collaborationspawn_agent`, `collaborationwait_agent`).
 A failed command is an ordinary `PostToolUse`. A `Stop` block continues the
 turn with the reason as a prompt (no `UserPromptSubmit`), and the next `Stop`
-has `stop_hook_active: true`. `codex exec` offers no planning tool and
-sends `SessionEnd` (`reason` `other`) when it finishes; whether an
-interactive session or the ChatGPT app ends with one is not recorded yet,
-so a Codex run without it ends by the `stale_hours` rule, or when a new
-session starts in the same worktree and the old one has been silent for
-`quiet_minutes`.
+has `stop_hook_active: true`. An interrupted turn (Esc, or a denied
+permission prompt) sends `Interrupt` instead of `Stop`; it ends the turn
+like `Stop`. The CLI offers no planning tool. It sends `SessionEnd`
+(`reason` `other`) when `codex exec` finishes and at `/quit`; whether the
+ChatGPT app ends with one is not recorded yet, so a Codex run without it
+ends by the `stale_hours` rule, or when a new session starts in the same
+worktree and the old one has been silent for `quiet_minutes`.
 
 Every MCP `tools/call` from Codex carries the hook session in its `_meta`
 (`sessionId`, and `session_id` and `turn_id` in `x-codex-turn-metadata`), so
