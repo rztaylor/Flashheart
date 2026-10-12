@@ -60,6 +60,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Archived projects added, renamed or removed outside Flashheart (by
+  hand, by another Flashheart process, or by restoring a backup) now show
+  in the archived projects list and the All projects archive count within
+  a second, instead of at the next 10 s sweep (FH-28). The watcher now
+  watches `<root>/.archive/` itself, but not the archived projects' own
+  folders, and never through a symbolic link.
+
 - A subagent reporting back no longer answers the question its session
   asked you (FH-57). Only a prompt you type answers a session's open
   question in the chat; a subagent's hand-back, a message from another
