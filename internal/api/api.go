@@ -74,7 +74,7 @@ func New(options Options) http.Handler {
 		boardAPI{
 			board: options.Board, files: options.Files, root: info.Root, doneLimit: options.DoneLimit,
 			stopping: options.Stopping, longPoll: options.LongPoll, write: options.Writer, events: options.Events,
-			now: options.Now, answering: &sync.Mutex{}, answeredBy: answerer(options.AnsweredBy),
+			now: options.Now, answering: &sync.Mutex{}, preferring: &sync.RWMutex{}, answeredBy: answerer(options.AnsweredBy),
 		}.register(mux)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {

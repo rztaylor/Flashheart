@@ -281,6 +281,9 @@ type boardAPI struct {
 	now       func() time.Time
 	// answering serialises answers, so a question is answered once.
 	answering *sync.Mutex
+	// preferring orders preference reads after any save in flight, so a page
+	// reloaded straight after a change flushed on unload reads it (FH-109).
+	preferring *sync.RWMutex
 	// answeredBy names who answers from the board (RUN-8).
 	answeredBy string
 }

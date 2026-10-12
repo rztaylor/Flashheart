@@ -558,7 +558,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   project's view and filters, and the finished workstreams expanded) are
   saved through the backend in the global config, never in browser storage.
   A change is saved shortly after it is made, and at once when the page is
-  hidden or closed, so a reload does not lose it.
+  hidden or closed, so a reload does not lose it. The server answers a
+  preference read only after any save it is writing, so a page reloaded
+  straight after a change shows it.
 
 ### 6.13 Lifecycle (`LIFE`)
 
