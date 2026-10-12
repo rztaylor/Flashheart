@@ -167,7 +167,9 @@ Full format: `docs/dev/specs/board-format.md`.
   automatically.
 - `STO-5` Runs, events, claims and questions are stored in the project's
   append-only event log (`.flashheart/events/YYYY-MM-DD.jsonl`), rotated daily,
-  retained for 90 days by default.
+  retained for 90 days by default. A session's answers inbox expires with
+  its day's events and its hook activity state after `stale_hours`, so a
+  session that never reports its end leaves nothing behind (FH-82).
 - `STO-6` Durable meaning lands in the ticket, not only the log: handoffs are
   written into the ticket body (`## Handoff`), answered questions into
   `## Notes`. A ticket is understandable with the log deleted.

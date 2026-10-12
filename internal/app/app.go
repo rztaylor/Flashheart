@@ -96,7 +96,7 @@ func Run(ctx context.Context, options Options) error {
 	}()
 	if runtime.board != nil {
 		background.Go(func() { runtime.board.Watch(watchCtx, options.Root, nil) })
-		background.Go(func() { keepEventsPruned(watchCtx, runtime.files, settings.EventRetentionDays, stderr) })
+		background.Go(func() { keepPruned(watchCtx, runtime.files, settings.EventRetentionDays, stderr) })
 		// Files that directly edited tickets link to are copied in (REV-5).
 		background.Go(func() {
 			references.New(runtime.files, options.Root, settings.Attachments.MaxBytes, stderr).Run(watchCtx, runtime.board)
