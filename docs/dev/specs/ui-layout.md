@@ -360,7 +360,7 @@ is dashed and hatched in ink.
 
 | State | Contract |
 | --- | --- |
-| Loading | Skeletons in the shape of the view (columns, section cards, route cards, panel header) |
+| Loading | Skeletons in the shape of the view (columns, less a hidden Backlog; section cards, route cards, a table for the Table and archives, panel header) |
 | Empty | Centred display-cut title and one plain sentence of what fills it |
 | Error | Danger strip with the error in words and *Try again*; the last good copy stays visible with a note |
 | Board root missing | Empty state naming the path |

@@ -4,11 +4,10 @@ import { ApiError } from "../../api/client";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { FormField, TextInput } from "../../components/Field";
+import { LoadError } from "../../components/LoadError";
 import { StateNote } from "../../components/StateNote";
 import { confirmsDelete } from "../../model/archive";
-
-const failure = (error: unknown) =>
-  error instanceof Error ? error.message : "The request failed";
+import { messageOf } from "../../model/errors";
 
 // TypedDeleteDialog is the one shape of a permanent delete (EDIT-8, PRJ-5):
 // it loads a preview of everything the delete touches, shows it, and arms
@@ -49,7 +48,8 @@ export function TypedDeleteDialog<Plan>({
           setError("");
         })
         .catch((reason: unknown) => {
-          if (!signal?.aborted) setError(failure(reason));
+          if (!signal?.aborted)
+            setError(messageOf(reason, "The request failed"));
         }),
     [load],
   );
@@ -72,7 +72,7 @@ export function TypedDeleteDialog<Plan>({
         setTyped("");
         await refresh();
       } else {
-        setError(failure(reason));
+        setError(messageOf(reason, "The request failed"));
       }
     } finally {
       setBusy(false);
@@ -117,15 +117,17 @@ export function TypedDeleteDialog<Plan>({
       ) : error ? null : (
         <p className="text-ink-muted">Checking what the delete touches…</p>
       )}
-      {error ? (
-        <div className="mt-3 flex items-center gap-3">
-          <p role="alert" className="text-danger">
-            {error}
-          </p>
-          {plan ? null : (
-            <Button onClick={() => void refresh()}>Try again</Button>
-          )}
-        </div>
+      {error && plan ? (
+        <p role="alert" className="mt-3 text-danger">
+          {error}
+        </p>
+      ) : null}
+      {error && !plan ? (
+        <LoadError
+          error={error}
+          onRetry={() => void refresh()}
+          className="mt-3"
+        />
       ) : null}
     </Dialog>
   );

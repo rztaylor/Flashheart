@@ -2,7 +2,9 @@ import { type ReactNode, useState } from "react";
 import type { TicketDetail, TicketRef, WorkstreamBrief } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { Icon } from "../../components/Icon";
+import { LoadError } from "../../components/LoadError";
 import { SidePanel } from "../../components/SidePanel";
+import { StaleNote } from "../../components/StaleNote";
 import { TicketLink } from "../../components/TicketLink";
 import { type Line, workstreamTitle } from "../../model/lines";
 import type { Step } from "../../model/order";
@@ -92,11 +94,12 @@ export function CardPanel({
     >
       {resource.status === "loading" ? <TicketSkeleton /> : null}
       {resource.status === "error" ? (
-        <div className="p-6">
-          <p role="alert" className="text-sm text-danger">
-            This ticket could not be loaded: {resource.error}
-          </p>
-        </div>
+        <LoadError
+          what="This ticket could not be loaded"
+          error={resource.error}
+          onRetry={resource.reload}
+          className="p-6"
+        />
       ) : null}
       {detail ? (
         <>
@@ -122,6 +125,9 @@ export function CardPanel({
               ) : null
             }
           />
+          {resource.error ? (
+            <StaleNote error={resource.error} className="px-6 pb-3" />
+          ) : null}
           <SectionTabs
             sections={sections}
             active={active}

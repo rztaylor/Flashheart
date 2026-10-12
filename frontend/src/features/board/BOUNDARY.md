@@ -11,7 +11,8 @@ drag or Shift and an arrow (EDIT-1), placing them in a column's manual
 order with a drop line or Shift with Up or Down (EDIT-9), keeping the selected card's column
 in view when the panel opens, live run badges on cards (VIEW-8), and drawing each card
 under one covering button with its id linked to the full page above it
-(CARD-7).
+(CARD-7), and `BoardSkeleton`, the Board's wells while it loads, less a
+hidden Backlog.
 
 Does not own data loading, filtering (`model/filters`), the toolbar and
 chip row that set filters (`filters/`), what each colour means

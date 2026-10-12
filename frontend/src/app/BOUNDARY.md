@@ -22,14 +22,16 @@ wiring lifecycle, API and features together.
 - `Band`: the band's markup (wordmark, view tabs, Needs you plate, search,
   status, Quit) and the notices under it.
 - `useBoardData`: loading the projects and the scope's board, live
-  reloads, editing wired to them with pending moves placed at once, the
+  reloads, which failed reload the band's last-good-copy note names
+  (`staleError`), editing wired to them with pending moves placed at once, the
   move remark (`model/remarks` `moveRemark`), and the lines, workstreams
   and keys derived from the projects.
 - `useScopeMemory` over `scopeMemory` (pure, tested): the filters, and the
   view and filters remembered per scope.
 - `useTicketPanel`: opening the panel (on a tab) and returning focus to its
   opener when it closes.
-- `ViewOutlet`: the routed view's body (read errors, the v1 notice
+- `ViewOutlet`: the routed view's body (read errors with Try again, each
+  view's own skeleton while the projects load, the v1 notice
   (`V1Notice`), the missing-root state, archive, Overview, Workstreams, and
   the Board or Table with their toolbar, filter options and paints).
 - `PageHeader` with `PageActions`, `NarrowControls` (the phone control row)

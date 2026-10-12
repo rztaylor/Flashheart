@@ -1,20 +1,29 @@
 import { useMemo } from "react";
 
-import { type Card, COLUMNS, type Column, type TicketRef } from "../api/board";
+import type { Card, Column, TicketRef } from "../api/board";
 import type { AuthenticatedFetch } from "../api/client";
 import type { Preferences } from "../api/preferences";
-import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
-import { Icon } from "../components/Icon";
-import { ArchiveView } from "../features/archive/ArchiveView";
+import { LoadError } from "../components/LoadError";
+import { ArchiveSkeleton, ArchiveView } from "../features/archive/ArchiveView";
 import { ProjectsArchiveView } from "../features/archive/ProjectsArchiveView";
-import { BoardView, NoTickets } from "../features/board/BoardView";
+import {
+  BoardSkeleton,
+  BoardView,
+  NoTickets,
+} from "../features/board/BoardView";
 import type { PanelTab } from "../features/card/CardPanel";
 import { FilterBar } from "../features/filters/FilterBar";
 import { FilterChips } from "../features/filters/FilterChips";
-import { OverviewView } from "../features/overview/OverviewView";
-import { TableView } from "../features/table/TableView";
-import { WorkstreamsView } from "../features/workstreams/WorkstreamsView";
+import {
+  OverviewSkeleton,
+  OverviewView,
+} from "../features/overview/OverviewView";
+import { TableSkeleton, TableView } from "../features/table/TableView";
+import {
+  WorkstreamsSkeleton,
+  WorkstreamsView,
+} from "../features/workstreams/WorkstreamsView";
 import {
   choiceCount,
   type Filters,
@@ -60,9 +69,12 @@ export function ViewOutlet(props: ViewOutletProps) {
   return (
     <>
       {projects.status === "error" ? (
-        <p role="alert" className="m-4 text-sm text-danger">
-          The board could not be read: {projects.error}
-        </p>
+        <LoadError
+          what="The board could not be read"
+          error={projects.error}
+          onRetry={projects.reload}
+          className="m-4"
+        />
       ) : null}
       {projects.status === "ready" && projects.data.v1Projects.length > 0 ? (
         <V1Notice
@@ -130,9 +142,10 @@ function ViewBody(props: ViewOutletProps) {
             see All projects › Archive.
           </EmptyState>
         );
-      return <BoardSkeleton />;
+      return projects.status === "loading" ? <ArchiveSkeleton /> : null;
     case "overview":
-      if (!ready) return <BoardSkeleton />;
+      if (!ready)
+        return projects.status === "loading" ? <OverviewSkeleton /> : null;
       return (
         <OverviewView
           fetcher={fetcher}
@@ -147,7 +160,8 @@ function ViewBody(props: ViewOutletProps) {
         />
       );
     case "workstreams":
-      if (!ready) return <BoardSkeleton />;
+      if (!ready)
+        return projects.status === "loading" ? <WorkstreamsSkeleton /> : null;
       return (
         <WorkstreamsView
           projects={current ? [current] : summaries}
@@ -276,17 +290,20 @@ function BoardOutlet({
           onOpenOverview={() => go({ view: "overview", ticket: undefined })}
         />
       ) : null}
-      {board.status === "loading" ? <BoardSkeleton /> : null}
+      {board.status === "loading" ? (
+        route.view === "table" ? (
+          <TableSkeleton />
+        ) : (
+          <BoardSkeleton hiddenColumns={hiddenColumns} />
+        )
+      ) : null}
       {board.status === "error" ? (
-        <div className="m-4 flex items-center gap-3 text-sm">
-          <p role="alert" className="text-danger">
-            This board could not be loaded: {board.error}
-          </p>
-          <Button onClick={board.reload}>
-            <Icon name="refresh" size={14} />
-            Try again
-          </Button>
-        </div>
+        <LoadError
+          what="This board could not be loaded"
+          error={board.error}
+          onRetry={board.reload}
+          className="m-4"
+        />
       ) : null}
       {board.status === "ready" && visible.length === 0 ? (
         <NoTickets filtered={isFiltered(filters)} />
@@ -324,25 +341,5 @@ function BoardOutlet({
         </div>
       ) : null}
     </>
-  );
-}
-
-function BoardSkeleton() {
-  return (
-    <div
-      aria-hidden="true"
-      className="grid grid-cols-5 gap-4 px-4 py-2 md:px-6"
-    >
-      {COLUMNS.map((column) => (
-        <div
-          key={column.id}
-          className="flex flex-col gap-2.5 rounded-panel border border-rule bg-column p-3"
-        >
-          <div className="h-6 w-2/3 rounded-full bg-well" />
-          <div className="h-24 animate-pulse rounded-card bg-card" />
-          <div className="h-20 animate-pulse rounded-card bg-card" />
-        </div>
-      ))}
-    </div>
   );
 }

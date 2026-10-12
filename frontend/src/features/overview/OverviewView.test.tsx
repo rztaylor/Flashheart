@@ -1,6 +1,6 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Card } from "../../api/board";
 import { noReason, type Run } from "../../api/runs";
@@ -12,6 +12,16 @@ import {
   OverviewView,
   UnticketedRow,
 } from "./OverviewView";
+
+// resource is what the view's useResource returns, so a test can show its
+// loading, error and stale states without a server.
+const resource = vi.hoisted(() => ({
+  state: { status: "loading" } as Record<string, unknown>,
+  reload: vi.fn(),
+}));
+vi.mock("../../state/useResource", () => ({
+  useResource: () => ({ ...resource.state, reload: resource.reload }),
+}));
 
 const now = new Date("2026-10-05T12:00:00Z");
 const names = new Map([
@@ -148,6 +158,47 @@ function find(
   }
   return undefined;
 }
+
+const renderView = () =>
+  renderToStaticMarkup(
+    <OverviewView
+      fetcher={() => new Promise<Response>(() => {})}
+      project=""
+      projects={[]}
+      revision={0}
+      boardHref="#/all/board"
+      onOpen={() => {}}
+      onReview={() => {}}
+    />,
+  );
+
+describe("OverviewView load states (ui-layout.md §8)", () => {
+  afterEach(() => {
+    resource.state = { status: "loading" };
+  });
+
+  it("loads in the shape of its section cards", () => {
+    expect(renderView()).toContain('data-skeleton="overview"');
+  });
+
+  it("says why it could not load, with Try again", () => {
+    resource.state = { status: "error", error: "disk full" };
+    const html = renderView();
+    expect(html).toContain("The overview could not be loaded: disk full");
+    expect(html).toContain("Try again");
+  });
+
+  it("keeps the last good copy with a note when a reload fails", () => {
+    resource.state = {
+      status: "ready",
+      data: { cards: [], runs: [] },
+      error: "disk full",
+    };
+    const html = renderView();
+    expect(html).toContain("Showing the last good copy: disk full");
+    expect(html).toContain("Needs your decision");
+  });
+});
 
 describe("OverviewView", () => {
   it("fills the main area's width like the other views (FH-60)", () => {

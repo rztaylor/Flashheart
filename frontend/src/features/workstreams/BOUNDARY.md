@@ -11,7 +11,10 @@ finished and drops stale expanded choices; the choices themselves are a
 preference owned by the shell). Loads each project's workstreams;
 stations open the card panel (one button covering each station, its id
 linked to the full page above it, CARD-7), and independent stations reorder
-by drag or Shift and an arrow (EDIT-4).
+by drag or Shift and an arrow (EDIT-4). Its load states (ui-layout.md §8):
+`WorkstreamsSkeleton` (route cards; the shell shows it while the projects
+load) and a route card skeleton per loading project, the shared error with
+Try again and the last-good-copy note per project.
 
 Does not own line colour assignment (`model/lines`), blocking rules
 (backend), routing, the card panel or the toast (`editing/`).

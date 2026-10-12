@@ -10,7 +10,9 @@ depending tickets, listing workstreams), gates on the typed id and reloads
 the preview when the server reports a change; and the projects archive
 (PRJ-5): archived projects with Restore and Delete permanently (typed
 name), the live projects with Archive…, and the archive confirmation that
-warns about live work.
+warns about live work. Both archives load, fail and go stale in the shared
+way (ui-layout.md §8), loading as `ArchiveSkeleton`, the table shape the
+shell also shows while the projects load.
 
 Does not own requests (`api/archive`, `api/edit`), search and the typed-id
 rule (`model/archive`), archiving from the card panel (`card/`,

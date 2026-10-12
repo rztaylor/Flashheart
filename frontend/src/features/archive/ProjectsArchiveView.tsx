@@ -7,20 +7,21 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { KeyBadge } from "../../components/KeyBadge";
+import { LoadError } from "../../components/LoadError";
+import { StaleNote } from "../../components/StaleNote";
 import { HeadCell, Row, Table } from "../../components/Table";
+import { messageOf } from "../../model/errors";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
 import { ArchiveProjectDialog } from "./ArchiveProjectDialog";
+import { ArchiveSkeleton } from "./ArchiveView";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
 
 const ticketCount = (project: ProjectSummary) => {
   const total = Object.values(project.counts).reduce((a, b) => a + b, 0);
   return `${total} ${total === 1 ? "ticket" : "tickets"}`;
 };
-
-const failure = (error: unknown) =>
-  error instanceof Error ? error.message : "The request failed";
 
 // ProjectsArchiveView is the archive of the All projects scope (PRJ-5): the
 // archived projects with Restore and Delete permanently, and the projects
@@ -61,7 +62,9 @@ export function ProjectsArchiveView({
         action: { label: "Open", run: () => onOpenProject(name) },
       });
     } catch (error) {
-      notify({ text: `${displayName} was not restored: ${failure(error)}` });
+      notify({
+        text: `${displayName} was not restored: ${messageOf(error, "The request failed")}`,
+      });
     }
   };
 
@@ -80,19 +83,16 @@ export function ProjectsArchiveView({
         <h2 id="archived-projects" className="mb-3 text-lg heading-cut">
           Archived projects
         </h2>
-        {archive.status === "loading" ? (
-          <p className="text-sm text-ink-muted">Loading the archive…</p>
-        ) : null}
+        {archive.status === "loading" ? <ArchiveSkeleton className="" /> : null}
         {archive.status === "error" ? (
-          <div className="flex items-center gap-3 text-sm">
-            <p role="alert" className="text-danger">
-              The archive could not be loaded: {archive.error}
-            </p>
-            <Button onClick={archive.reload}>
-              <Icon name="refresh" size={14} />
-              Try again
-            </Button>
-          </div>
+          <LoadError
+            what="The archive could not be loaded"
+            error={archive.error}
+            onRetry={archive.reload}
+          />
+        ) : null}
+        {archive.status === "ready" && archive.error ? (
+          <StaleNote error={archive.error} className="mb-3" />
         ) : null}
         {archive.status === "ready" && archived.length === 0 ? (
           <EmptyState title="No archived projects">

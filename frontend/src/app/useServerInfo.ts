@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import type { AuthenticatedFetch } from "../api/client";
 import { fetchInfo, type ServerInfo } from "../api/info";
+import { messageOf } from "../model/errors";
 
 export type ServerInfoState =
   | { status: "loading" }
@@ -22,10 +23,7 @@ export function useServerInfo(
         if (controller.signal.aborted) return;
         setState({
           status: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Server info is unavailable",
+          message: messageOf(error, "Server info is unavailable"),
         });
       });
     return () => controller.abort();

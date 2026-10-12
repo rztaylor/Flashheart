@@ -30,6 +30,9 @@ neither branches on the other's layout:
 
 `CardPanel` puts the header and tabs in the side panel; `TicketPage` puts
 them at reading width under a link to the board and names the browser tab.
+Both show the ticket's load states (ui-layout.md §8) the same way:
+`TicketSkeleton`, the shared error with Try again, and the last-good-copy
+note under the header.
 A caller may open a ticket on a given tab (the Overview's Review results).
 
 Does not own which sections a ticket offers or their counts

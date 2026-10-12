@@ -16,6 +16,7 @@ import {
   unarchiveTicket,
 } from "../../api/edit";
 import type { ToastMessage } from "../../components/Toast";
+import { messageOf } from "../../model/errors";
 import { markSaved, type PendingMoves, serial, settle } from "./pending";
 
 export interface Movable {
@@ -44,8 +45,8 @@ export type { Pending } from "./pending";
 const statusTitle = (status: Status) =>
   STATUSES.find((item) => item.id === status)?.title ?? status;
 
-const failure = (error: unknown) =>
-  error instanceof Error ? error.message : "The change could not be saved";
+// notSaved is a failed save's words when the error has none.
+const notSaved = "The change could not be saved";
 
 // useEditing coordinates moves and archiving from any view (EDIT-1, EDIT-2,
 // EDIT-3, EDIT-8), rejecting included (a move to the rejected status, which
@@ -129,7 +130,9 @@ export function useEditing(
           setBlocked({ ticket, to, reasons, placement });
           return;
         }
-        notify({ text: `${ticket.id} was not moved: ${failure(error)}` });
+        notify({
+          text: `${ticket.id} was not moved: ${messageOf(error, notSaved)}`,
+        });
       }
     },
     [fetcher, notify, onChanged, remark],
@@ -157,14 +160,16 @@ export function useEditing(
                 .then(onChanged)
                 .catch((error: unknown) =>
                   notify({
-                    text: `${ticket.id} was not restored: ${failure(error)}`,
+                    text: `${ticket.id} was not restored: ${messageOf(error, notSaved)}`,
                   }),
                 ),
           },
         });
         onChanged();
       } catch (error) {
-        notify({ text: `${ticket.id} was not archived: ${failure(error)}` });
+        notify({
+          text: `${ticket.id} was not archived: ${messageOf(error, notSaved)}`,
+        });
       }
     },
     [fetcher, notify, onChanged],
@@ -182,7 +187,7 @@ export function useEditing(
           notify({ text: "Answer sent.", details: saved.warnings });
         return undefined;
       } catch (error) {
-        return `Not sent: ${failure(error)}`;
+        return `Not sent: ${messageOf(error, notSaved)}`;
       } finally {
         onChanged();
       }

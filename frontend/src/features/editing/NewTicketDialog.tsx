@@ -5,6 +5,7 @@ import { type Created, createTicket, keysInUse } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
+import { messageOf } from "../../model/errors";
 import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 
 const ticketCount = (project: ProjectSummary) =>
@@ -72,9 +73,7 @@ export function NewTicketDialog({
       setError(
         inUse
           ? `The key ${key.trim().toUpperCase()} is taken. Keys in use: ${inUse.join(", ")}.`
-          : caught instanceof Error
-            ? caught.message
-            : "The ticket could not be created.",
+          : messageOf(caught, "The ticket could not be created."),
       );
       setSaving(false);
     }

@@ -10,7 +10,9 @@ shared question card; permission prompts saying which session to answer
 in, never a button), Ready for your review (Review results), At risk, In
 progress, and the collapsed Work with no ticket (Create ticket) and Up next
 tiles, with their open and closed state, rows, empty sentences and quiet
-remarks.
+remarks; and its load states (ui-layout.md §8): `OverviewSkeleton`, which
+the shell also shows while the projects load, the shared error with Try
+again and the last-good-copy note.
 
 Does not own grouping, order, reasons or wording (`model/overview`), the
 column counts (backend `api` project summaries), the Board link (`app/`),

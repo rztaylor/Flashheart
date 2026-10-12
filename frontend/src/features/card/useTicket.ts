@@ -7,13 +7,15 @@ import {
   setCriterion,
   setReviewStep,
 } from "../../api/edit";
+import { messageOf } from "../../model/errors";
 import { type Resource, useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
 
 // TicketState is one loaded ticket and the saves its sections make. A save
 // that is not allowed (read-only server, no hash, answers off) is absent.
 export interface TicketState {
-  resource: Resource<TicketDetail>;
+  // resource is the loaded ticket; reload loads it again (Try again).
+  resource: Resource<TicketDetail> & { reload(): void };
   detail?: TicketDetail;
   // editable: the ticket can be moved, archived and edited.
   editable: boolean;
@@ -70,7 +72,7 @@ export function useTicket({
         editing?.notify({
           text: conflictOf(error)
             ? `${id} changed on disk; showing the current ${what}.`
-            : `Not saved: ${error instanceof Error ? error.message : "unknown error"}`,
+            : `Not saved: ${messageOf(error, "unknown error")}`,
         });
         return false;
       });

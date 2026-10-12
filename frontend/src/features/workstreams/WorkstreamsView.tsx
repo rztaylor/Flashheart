@@ -12,7 +12,10 @@ import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { KeyBadge } from "../../components/KeyBadge";
 import { LineBullet } from "../../components/LineBullet";
+import { LoadError } from "../../components/LoadError";
+import { StaleNote } from "../../components/StaleNote";
 import { StateNote } from "../../components/StateNote";
+import { messageOf } from "../../model/errors";
 import type { Line } from "../../model/lines";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
@@ -62,7 +65,7 @@ export function WorkstreamsView({
     );
   }
   return (
-    <div className="flex flex-col gap-10 overflow-y-auto px-4 pt-1 pb-16 md:px-6">
+    <div className={gutter}>
       {withLines.map((project) => (
         <ProjectLines
           key={project.name}
@@ -82,6 +85,52 @@ export function WorkstreamsView({
 }
 
 const noSlugs: string[] = [];
+
+// gutter is the view's column, shared with its skeleton.
+const gutter = "flex flex-col gap-10 overflow-y-auto px-4 pt-1 pb-16 md:px-6";
+
+// WorkstreamsSkeleton holds the view's place while the projects load
+// (ui-layout.md §8): route cards in its column.
+export function WorkstreamsSkeleton() {
+  return (
+    <div data-skeleton="workstreams" className={gutter}>
+      <div className="flex flex-col gap-4">
+        <RouteCardSkeleton />
+        <RouteCardSkeleton />
+      </div>
+    </div>
+  );
+}
+
+// RouteCardSkeleton holds one route card's place while a project's lines
+// load: the bullet, title and progress over a track of stations.
+function RouteCardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      data-skeleton="route-card"
+      className="rounded-panel border border-rule bg-card px-5 pt-5 pb-6 shadow-card"
+    >
+      <div className="flex items-center gap-4">
+        <div className="size-10 shrink-0 animate-pulse rounded-full bg-well" />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="h-6 w-1/3 animate-pulse rounded-card bg-well" />
+          <div className="h-3 w-20 animate-pulse rounded-card bg-well" />
+        </div>
+        <div className="h-4 w-24 animate-pulse rounded-card bg-well" />
+      </div>
+      <div className="relative mt-8 flex items-center justify-between px-2">
+        <div className="absolute inset-x-2 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-well" />
+        {[0, 1, 2, 3, 4].map((station) => (
+          <div
+            key={station}
+            className="relative size-6 rounded-full border-4 border-well bg-card"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ProjectLines({
   project,
@@ -134,7 +183,7 @@ function ProjectLines({
             setOrders({});
             resource.reload();
             editing.notify({
-              text: `${workstream.title} was not reordered: ${error instanceof Error ? error.message : "unknown error"}`,
+              text: `${workstream.title} was not reordered: ${messageOf(error, "unknown error")}`,
             });
           });
       }
@@ -164,16 +213,16 @@ function ProjectLines({
           {project.displayName}
         </h2>
       ) : null}
-      {resource.status === "loading" ? (
-        <div
-          aria-hidden="true"
-          className="h-44 animate-pulse rounded-panel border border-rule bg-card"
+      {resource.status === "loading" ? <RouteCardSkeleton /> : null}
+      {resource.status === "error" ? (
+        <LoadError
+          what="Workstreams could not be loaded"
+          error={resource.error}
+          onRetry={resource.reload}
         />
       ) : null}
-      {resource.status === "error" ? (
-        <p role="alert" className="text-sm text-danger">
-          Workstreams could not be loaded: {resource.error}
-        </p>
+      {resource.status === "ready" && resource.error ? (
+        <StaleNote error={resource.error} />
       ) : null}
       {resource.status === "ready"
         ? resource.data.map((workstream) => (
