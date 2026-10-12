@@ -30,41 +30,30 @@ func TestDefaultsMatchBoardFormat(t *testing.T) {
 	}
 }
 
-func TestLoadSampleBoard(t *testing.T) {
+func TestParseSampleBoard(t *testing.T) {
 	t.Parallel()
 
-	got, err := Load(filepath.Join("..", "..", "testdata", "boards", "sample"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "boards", "sample", ".flashheart", "config.yaml"))
 	if err != nil {
-		t.Fatalf("Load(sample): %v", err)
+		t.Fatal(err)
+	}
+	got, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse(sample): %v", err)
 	}
 	if !reflect.DeepEqual(got, Defaults()) {
 		t.Errorf("sample config = %+v, want the documented defaults", got)
 	}
 }
 
-func TestLoadMissingFileUsesDefaults(t *testing.T) {
+func TestParseEmptyUsesDefaults(t *testing.T) {
 	t.Parallel()
 
-	for _, root := range []string{t.TempDir(), filepath.Join(t.TempDir(), "not-created")} {
-		got, err := Load(root)
-		if err != nil {
-			t.Fatalf("Load(%q): %v", root, err)
+	for _, data := range []string{"", "\n", "# only a comment\n"} {
+		got, err := Parse([]byte(data))
+		if err != nil || !reflect.DeepEqual(got, Defaults()) {
+			t.Errorf("Parse(%q) = %+v, %v; want defaults", data, got, err)
 		}
-		if !reflect.DeepEqual(got, Defaults()) {
-			t.Errorf("Load(%q) = %+v, want defaults", root, got)
-		}
-	}
-}
-
-func TestLoadDoesNotCreateAnything(t *testing.T) {
-	t.Parallel()
-
-	root := filepath.Join(t.TempDir(), "board")
-	if _, err := Load(root); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(root); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("Load created the root (stat err = %v)", err)
 	}
 }
 
@@ -197,39 +186,6 @@ func TestNewerVersionIsDistinguishable(t *testing.T) {
 
 	if _, err := Parse([]byte("version: 4")); !errors.Is(err, ErrNewerVersion) {
 		t.Errorf("err = %v, want ErrNewerVersion", err)
-	}
-}
-
-func TestLoadNamesTheFileOnError(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".flashheart"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(root, ".flashheart", "config.yaml")
-	if err := os.WriteFile(path, []byte("ui: {theme: sepia}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, err := Load(root)
-	if err == nil || !strings.Contains(err.Error(), path) {
-		t.Errorf("Load() error = %v, want it to name %s", err, path)
-	}
-}
-
-func TestLoadRefusesOversizedFile(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".flashheart"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	big := strings.Repeat("# padding\n", (maxConfigBytes/10)+1)
-	if err := os.WriteFile(filepath.Join(root, ".flashheart", "config.yaml"), []byte(big), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Load(root); err == nil || !strings.Contains(err.Error(), "larger than") {
-		t.Errorf("Load() error = %v", err)
 	}
 }
 

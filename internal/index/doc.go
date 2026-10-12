@@ -18,7 +18,10 @@
 // runs, unless it records a ticket write. While Watch runs it is the
 // freshness source and Current serves the snapshot as it is; without it
 // Current rebuilds a snapshot whose board is older than MaxAge. Wait lets
-// long-poll clients block until the revision moves (LIFE-3). Parsing and
-// rules belong to board, run state to runs, file access to store and
-// events, HTTP to api; hook and mcp modes never use index.
+// long-poll clients block until the revision moves (LIFE-3). To add its
+// fsnotify watches, Watch stats and lists the root's directories itself,
+// an accepted exception to store owning the root (architecture.md); it
+// opens no file. Parsing and rules belong to board, run state to runs,
+// file access to store and events, HTTP to api; hook and mcp modes never
+// use index.
 package index

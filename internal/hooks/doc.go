@@ -29,6 +29,8 @@
 // even the root or the skill.
 //
 // Payload schemas and output formats belong to the adapters
-// (hooks/claude); event files to events and store; run derivation to runs;
+// (hooks/claude); the board root, its settings (store.ReadConfig) and its
+// creation (store.EnsureRoot), and event files to events and store; run
+// derivation to runs;
 // git commands to gitchange; note wording to protocol. Hooks never use index, api, app or webui.
 package hooks

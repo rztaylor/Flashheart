@@ -12,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/rztaylor/flashheart/internal/logfile"
 )
 
 const placeholder = "/Users/example/src/demo"
@@ -113,7 +115,7 @@ func run(o options) error {
 			}
 		}
 	}
-	if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); len(data) > 0 {
+	if data, _ := os.ReadFile(logfile.HookErrorsPath(root)); len(data) > 0 {
 		return fmt.Errorf("hook errors:\n%s", data)
 	}
 	slices.Sort(durations)

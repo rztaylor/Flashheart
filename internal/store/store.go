@@ -67,6 +67,18 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
+// EnsureRoot creates the board root folder, and any missing parents, when it
+// does not exist (mode 0755 before the umask: other users must not write
+// the files agents read) and opens it. It creates nothing inside the root;
+// what goes there is created by the write that needs it.
+func (s *Store) EnsureRoot() error {
+	if err := os.MkdirAll(s.path, 0o755); err != nil {
+		return fmt.Errorf("create board root: %w", err)
+	}
+	_, _, err := s.handle()
+	return err
+}
+
 // Path returns the root path the store was created with.
 func (s *Store) Path() string { return s.path }
 

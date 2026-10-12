@@ -69,11 +69,13 @@ func Run(ctx context.Context, options Options) error {
 	}
 	stderr := writerOrDiscard(options.Stderr)
 
-	settings, err := config.Load(options.Root)
+	files := store.New(options.Root)
+	settings, err := files.ReadConfig()
 	if err != nil {
+		files.Close()
 		return err
 	}
-	runtime, err := newRuntime(options, settings, nil)
+	runtime, err := newRuntime(options, files, settings, nil)
 	if err != nil {
 		return err
 	}
@@ -143,13 +145,14 @@ func tolerableBrowserDrain(result singleserve.Result, err error, requests *reque
 	return result.Reason == singleserve.ShutdownBrowserRequest && errors.Is(err, context.DeadlineExceeded) && requests.Empty()
 }
 
-// newRuntime builds the server. apiOverride replaces the /api/ handler in tests.
-func newRuntime(options Options, settings config.Config, apiOverride http.Handler) (*runtime, error) {
+// newRuntime builds the server over files, which it closes when it fails.
+// apiOverride replaces the /api/ handler in tests.
+func newRuntime(options Options, files *store.Store, settings config.Config, apiOverride http.Handler) (*runtime, error) {
 	frontend, err := webui.New()
 	if err != nil {
+		files.Close()
 		return nil, err
 	}
-	files := store.New(options.Root)
 	stopping := newStopSignal()
 	var board *index.Index
 	apiHandler := apiOverride

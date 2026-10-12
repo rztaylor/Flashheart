@@ -28,7 +28,7 @@ type Writer interface {
 	SetProjectKey(project, key string) error
 	Archive(project, id string) error
 	Unarchive(project, id string) error
-	ReadConfig() ([]byte, error)
+	ReadConfig() (config.Config, error)
 	UpdateConfig(edit store.Edit) error
 }
 
@@ -586,12 +586,9 @@ type Preferences struct {
 }
 
 func (b boardAPI) currentUI(w http.ResponseWriter) (config.UI, bool) {
-	data, err := b.write.ReadConfig()
+	settings, err := b.write.ReadConfig()
 	if err == nil {
-		var settings config.Config
-		if settings, err = config.Parse(data); err == nil {
-			return settings.UI, true
-		}
+		return settings.UI, true
 	}
 	writeError(w, http.StatusInternalServerError, "config_unreadable", "Settings could not be read: "+err.Error())
 	return config.UI{}, false

@@ -1,6 +1,7 @@
 // Package cli owns Flashheart's command line: subcommands, flags (which may
 // follow positional arguments), help and version output, board-root
-// resolution and exit codes.
+// resolution (--root, $FLASHHEART_ROOT, else DefaultRoot, its one
+// declaration) and exit codes.
 //
 // It chooses between a detached, foreground or background-child serve,
 // presents the launch outcome, keeps the one registry of agents (each

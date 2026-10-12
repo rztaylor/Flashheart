@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
-	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -31,11 +29,11 @@ const (
 // and an edit, and seeds the log with perDay events a day; it returns how
 // many events it wrote.
 func setUp(root, repo string, o options, session string, now time.Time) (int, error) {
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return 0, err
-	}
 	s := store.New(root)
 	defer s.Close()
+	if err := s.EnsureRoot(); err != nil {
+		return 0, err
+	}
 	project, err := s.ProjectFor(filepath.Base(repo), repo, true)
 	if err != nil {
 		return 0, err
@@ -54,7 +52,7 @@ func setUp(root, repo string, o options, session string, now time.Time) (int, er
 		list = seedEvents(o.agent, project, repo, tickets, o.seedEvents, now)
 	}
 	if session != "" {
-		if err := os.WriteFile(config.Path(root), []byte("enforce_handoff: true\n"), 0o644); err != nil {
+		if err := s.UpdateConfig(func([]byte) ([]byte, error) { return []byte("enforce_handoff: true\n"), nil }); err != nil {
 			return 0, err
 		}
 		list = append(list, enforced(o.agent+":"+session, project, repo, tickets[2], now)...)

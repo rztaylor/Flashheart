@@ -385,27 +385,6 @@ func TestConcurrentKeyChoicesOneWins(t *testing.T) {
 	}
 }
 
-func TestUpdateConfigWritesUnderTheRootLock(t *testing.T) {
-	t.Parallel()
-
-	s, root := writable(t)
-	if err := s.UpdateConfig(func(data []byte) ([]byte, error) {
-		return append(data, []byte("custom: yes\n")...), nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	data, err := s.ReadConfig()
-	if err != nil || !strings.HasSuffix(string(data), "custom: yes\n") {
-		t.Errorf("ReadConfig = %q, %v", data, err)
-	}
-	if err := os.Remove(filepath.Join(root, ".flashheart", "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
-	if data, err := s.ReadConfig(); err != nil || data != nil {
-		t.Errorf("missing config = %q, %v", data, err)
-	}
-}
-
 func TestCreateTicketKeepsACRLFProjectFile(t *testing.T) {
 	t.Parallel()
 
@@ -472,15 +451,32 @@ func TestWroteLastTellsOwnWritesFromOthers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	name, _ := s.TicketFile("alpha", "AL-2")
-	if s.WroteLast(name, data) {
+	if s.WroteLast("alpha", "AL-2", TicketDoc, data) {
 		t.Fatal("a file this store never wrote counts as its own")
 	}
 	if _, err := s.UpdateTicket("alpha", "AL-2", Unchanged(hash), func(data []byte) ([]byte, error) { return append(data, "More.\n"...), nil }); err != nil {
 		t.Fatal(err)
 	}
 	data, _, _ = s.ReadTicket("alpha", "AL-2")
-	if !s.WroteLast(name, data) || s.WroteLast(name, append(data, '!')) {
+	if !s.WroteLast("alpha", "AL-2", TicketDoc, data) || s.WroteLast("alpha", "AL-2", TicketDoc, append(data, '!')) {
 		t.Fatal("WroteLast does not match the store's own write only")
+	}
+	// The same text is neither the ticket's review nor another ticket.
+	if s.WroteLast("alpha", "AL-2", ReviewDoc, data) || s.WroteLast("alpha", "AL-3", TicketDoc, data) {
+		t.Fatal("WroteLast matched another file")
+	}
+
+	review := []byte("# Review\n")
+	if s.WroteLast("alpha", "AL-2", ReviewDoc, review) {
+		t.Fatal("an unwritten review counts as the store's own")
+	}
+	if err := s.WriteReview("alpha", "AL-2", review); err != nil {
+		t.Fatal(err)
+	}
+	if !s.WroteLast("alpha", "AL-2", ReviewDoc, review) || s.WroteLast("alpha", "AL-2", TicketDoc, review) {
+		t.Fatal("WroteLast does not key the review by ticket and kind")
+	}
+	if s.WroteLast("alpha", "../alpha", TicketDoc, data) || s.WroteLast("..", "AL-2", TicketDoc, data) {
+		t.Fatal("WroteLast accepted an invalid name")
 	}
 }

@@ -8,5 +8,6 @@
 // summaries and diagnostics such as a failed expiry (serve.log in the
 // background); CLI parsing and
 // launch presentation belong to cli, detaching to background, endpoints to
-// api, static assets to webui and settings to config.
+// api, static assets to webui and settings to config (read through
+// store.ReadConfig).
 package app

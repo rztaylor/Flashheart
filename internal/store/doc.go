@@ -23,11 +23,20 @@
 // keeps event files, answers inboxes and the hooks' per-session activity
 // state (read, appended with and replaced under one project lock).
 //
+// It also creates the root folder itself (EnsureRoot), reads and validates
+// config.yaml (ReadConfig, defaults when it or the root is missing) and
+// rewrites it under the root lock (UpdateConfig), and tells its own writes
+// of a ticket or review from others' (WroteLast, by project, id and Doc).
+//
 // Callers that need a few projects at scale read every project's identity
 // with ReadHeads; read-only callers find a repository's project with
 // FindProject and its working directory with Locate, which write nothing.
 //
-// Every access goes through an os.Root with validated names (SEC-2).
+// Every access goes through an os.Root with validated names (SEC-2), so a
+// symlink out of the root, config.yaml's included, is refused. No other
+// package opens files under the root (internal/archtest enforces this; the
+// diagnostic logs, fsnotify watches and doctor's probe are the accepted
+// exceptions, architecture.md).
 // Parsing and blocking belong to board, text edits to mdfile, the event
 // and inbox formats to events, revisions to index, and v1 conversion to
 // migrate.

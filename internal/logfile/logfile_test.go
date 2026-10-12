@@ -28,6 +28,25 @@ func TestNothingIsCreatedUntilTheFirstWrite(t *testing.T) {
 	}
 }
 
+// Doctor reads hook errors where hooks write them (FH-108).
+func TestHookErrorsWritesAtHookErrorsPath(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	if path := HookErrorsPath(root); path != filepath.Join(root, ".flashheart", "hook-errors.log") {
+		t.Fatalf("HookErrorsPath = %s", path)
+	}
+	w := HookErrors(root)
+	if _, err := w.Write([]byte("hook failed")); err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+	entries, err := Recent(HookErrorsPath(root), time.Time{})
+	if err != nil || len(entries) != 1 || entries[0].Text != "hook failed" {
+		t.Errorf("Recent(HookErrorsPath) = %+v, %v", entries, err)
+	}
+}
+
 func TestWritesAreTimestampedAndAppended(t *testing.T) {
 	t.Parallel()
 

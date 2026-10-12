@@ -16,6 +16,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/config"
+	"github.com/rztaylor/flashheart/internal/store"
 	"github.com/rztaylor/singleserve"
 )
 
@@ -32,7 +33,7 @@ func startRuntime(t *testing.T, options Options, extra http.Handler) (*runtime, 
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	runtime, err := newRuntime(options, config.Defaults(), extra)
+	runtime, err := newRuntime(options, store.New(options.Root), config.Defaults(), extra)
 	if err != nil {
 		t.Fatalf("newRuntime(): %v", err)
 	}
@@ -356,7 +357,7 @@ func TestRunRejectsAnInvalidConfigBeforeListening(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, ".flashheart"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(config.Path(root), []byte("version: 9\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(store.ConfigFile)), []byte("version: 9\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	err := Run(context.Background(), Options{
