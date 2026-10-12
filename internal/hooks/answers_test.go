@@ -160,6 +160,24 @@ func TestStopEnforcesHandoffOnceWhenEnabled(t *testing.T) {
 			t.Fatalf("stop output = %q, want a block", out)
 		}
 	})
+	t.Run("a claim on another project's ticket is not read: it links by branch at home", func(t *testing.T) {
+		t.Parallel()
+		root, cwd := setup(t, "settings:\n  enforce_handoff: true\n")
+		writeTicket(t, root, "other", "OT-1-elsewhere", "---\nid: OT-1\nstatus: in-progress\ntype: bug\npriority: high\ncreated: 2026-10-01\nbranch: feature/demo\n---\n# Elsewhere\n")
+		if err := os.WriteFile(filepath.Join(root, "other", "project.yaml"), []byte("name: other\nkey: OT\nnext_id: 2\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		s, _ := store.Open(root)
+		err := events.New(s).Append(events.Event{Time: now, Run: "fake:s1", Agent: "fake", Kind: events.Claim, Project: "other", Data: events.TicketData{Ticket: "OT-1", Home: "demo"}})
+		s.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := run(t, root, "Stop", "s1 "+cwd, fake{})
+		if out != "block:Flashheart: record a checkpoint on DM-1 (done, next, files) before stopping." {
+			t.Fatalf("stop output = %q", out)
+		}
+	})
 	t.Run("off by default", func(t *testing.T) {
 		t.Parallel()
 		root, cwd := setup(t, "")

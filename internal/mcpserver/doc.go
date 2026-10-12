@@ -7,7 +7,8 @@
 // {code, message, fix} errors. Every call reads the board fresh, so it sees
 // other writers: every project's identity (store.ReadHeads), then in full
 // only the projects it touches and those their tickets depend on, and the
-// last two days of those projects' event logs and the claim holder's home.
+// last two days of those projects' event logs, the claim holder's home and
+// the caller's run's home, where its branch links it to a ticket.
 // Read-only tools change nothing on disk; files referenced by local path are copied into the ticket
 // (REV-5). A session in an archived project's repository, or a ticket of an
 // archived project, is answered with project_archived (PRJ-5). Outside any

@@ -60,6 +60,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A session that claimed a ticket in another project keeps its link to
+  its own ticket (FH-32). A session's project is now always its home, the
+  project it works in, never the project of a ticket it claimed, moved or
+  checkpointed elsewhere; before, a claim elsewhere seen first could file
+  the session under that project, and once the claim was released the
+  session showed as unlinked instead of linked by branch to its own
+  in-progress ticket. `board_context` also finds a session's ticket in its
+  home when called from another project. The spec now says plainly that
+  handoff enforcement and the recovery note read only the home project's
+  log, so they see a claim on another project's ticket only by branch.
+
 - A question a subagent asked before it finished is no longer hidden
   while its session waits on it (FH-112). The session stays in Needs you
   saying, for example, *Explore has a question*; the ticket card now

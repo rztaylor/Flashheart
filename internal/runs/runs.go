@@ -82,11 +82,13 @@ type Entry struct {
 
 // Run is everything the events say about one session or subagent (RUN-2).
 type Run struct {
-	ID        string
-	Agent     string
-	Kind      string
-	Parent    string
-	Children  []string
+	ID       string
+	Agent    string
+	Kind     string
+	Parent   string
+	Children []string
+	// Project is the run's home project, where it works (agent-protocol
+	// §6), never one where it only wrote to a ticket.
 	Project   string
 	Cwd       string
 	Branch    string
@@ -279,6 +281,15 @@ func (s *Set) run(e events.Event) *Run {
 	return r
 }
 
+// recordedElsewhere lists the kinds a run records in a ticket's project,
+// which may be another project than the one it works in (agent-protocol
+// §6); it records every other kind at home.
+var recordedElsewhere = map[events.Kind]bool{
+	events.Claim: true, events.Release: true, events.Checkpoint: true,
+	events.TicketMoved: true, events.TicketUpdated: true, events.TicketCreated: true,
+	events.ReviewWritten: true, events.AttachmentAdded: true,
+}
+
 // Apply folds one event into the set. Unknown or malformed data is ignored.
 func (s *Set) Apply(e events.Event) {
 	// The human's board writes have no run (agent-protocol §3).
@@ -292,6 +303,12 @@ func (s *Set) Apply(e events.Event) {
 		return
 	}
 	r := s.run(e)
+	// A run's Project is its home: the project of its latest event recorded
+	// at home or claim naming it (below); a run seen only through a ticket's
+	// events elsewhere keeps the project it was first seen in (FH-32).
+	if !recordedElsewhere[e.Kind] && e.Project != "" {
+		r.Project = e.Project
+	}
 	// previous is the run's last event before this one, where a shell
 	// command's window starts.
 	previous := r.LastActivity
@@ -445,6 +462,9 @@ func (s *Set) Apply(e events.Event) {
 		var data events.TicketData
 		_ = e.Decode(&data)
 		entry.Ticket = data.Ticket
+		if e.Kind == events.Claim && data.Home != "" {
+			r.Project = data.Home
+		}
 		if e.Kind == events.TicketMoved {
 			entry.Detail = data.To
 		}
