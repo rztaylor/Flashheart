@@ -76,9 +76,9 @@ export function RunDetail({
             ) : (
               <ul className="flex flex-col gap-0.5 font-mono text-2xs text-ink">
                 {run.files.map((file) => (
-                  <li key={file} className="truncate" title={file}>
+                  <TailText key={file} as="li">
                     {file}
-                  </li>
+                  </TailText>
                 ))}
               </ul>
             )}

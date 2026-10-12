@@ -170,8 +170,9 @@ export async function seedClaimedRun(home, root, ticket) {
 
 // seedBranchRun records a session in a second checkout of project (a
 // repository is named by its folder, PRJ-2) on branch, so the run links by
-// branch to the ticket on it.
-export async function seedBranchRun(home, root, project, branch) {
+// branch to the ticket on it. The session edits each of edits, paths
+// relative to the checkout.
+export async function seedBranchRun(home, root, project, branch, edits = []) {
   const cwd = await repo(home, project, branch, "branch");
   const projectFile = join(root, project, "project.yaml");
   const config = await readFile(projectFile, "utf8");
@@ -183,6 +184,8 @@ export async function seedBranchRun(home, root, project, branch) {
   working.send("SessionStart", { source: "startup" });
   working.send("UserPromptSubmit", { prompt: "synthetic" });
   working.tool("Read", {});
+  for (const path of edits)
+    working.tool("Edit", { file_path: join(cwd, path) });
   return cwd;
 }
 

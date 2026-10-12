@@ -10,7 +10,7 @@ export function TailText({
   className,
 }: {
   children: string;
-  as?: "span" | "dd";
+  as?: "span" | "dd" | "li";
   className?: string;
 }) {
   return (

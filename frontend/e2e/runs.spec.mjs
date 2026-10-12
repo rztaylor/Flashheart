@@ -835,7 +835,7 @@ function tailOf(locator) {
   );
 }
 
-test("a long branch keeps its tail visible in the panel and the Runs tab (FH-83)", async () => {
+test("a long branch and a long edited path keep their tail visible in the panel and the Runs tab (FH-83, FH-117)", async () => {
   const branch =
     "feature/a-very-long-branch-name-that-overflows-the-panel-fh83-tail";
   const file = join(
@@ -853,7 +853,12 @@ test("a long branch keeps its tail visible in the panel and the Runs tab (FH-83)
       .replace(/^status: .*$/m, "status: in-progress")
       .replace(/^branch: .*$/m, `branch: ${branch}`),
   );
-  await seedBranchRun(sandbox.home, sandbox.root, "flashheart", branch);
+  // The run edits a file under a deep path; runs show it relative to the checkout.
+  const edited =
+    "frontend/src/features/card/a-deeply-nested-folder/of-many-parts/RunDetailEditedFile.tsx";
+  await seedBranchRun(sandbox.home, sandbox.root, "flashheart", branch, [
+    edited,
+  ]);
 
   const panel = page.getByRole("complementary", { name: "Ticket FH-26" });
   const shown = panel.getByText(branch, { exact: true });
@@ -876,6 +881,13 @@ test("a long branch keeps its tail visible in the panel and the Runs tab (FH-83)
         last: true,
         title: branch,
       });
+    // The run's edited files are cut from the start too, so the file name
+    // stays in view (FH-117).
+    const file = panel.getByText(edited, { exact: true });
+    await expect(file).toHaveCount(1);
+    expect(await tailOf(file)).toEqual([
+      { cut: true, first: false, last: true, title: edited },
+    ]);
     if (theme === "light") await expectNoAxeViolations(page, "long branch");
     await shot(page, `branch-tail-runs-1280-${theme}`);
   }
