@@ -10,6 +10,7 @@ import { KeyBadge } from "../../components/KeyBadge";
 import { LoadError } from "../../components/LoadError";
 import { StaleNote } from "../../components/StaleNote";
 import { HeadCell, Row, Table } from "../../components/Table";
+import { TailText } from "../../components/TailText";
 import { messageOf } from "../../model/errors";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
@@ -132,13 +133,9 @@ export function ProjectsArchiveView({
                 </td>
                 <td className="max-w-[20rem] px-3 py-2 text-xs text-ink-muted">
                   {project.repos.map((repo) => (
-                    <span
-                      key={repo}
-                      className="block truncate text-left font-mono [direction:rtl]"
-                      title={repo}
-                    >
-                      <bdi>{repo}</bdi>
-                    </span>
+                    <TailText key={repo} className="font-mono">
+                      {repo}
+                    </TailText>
                   ))}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">

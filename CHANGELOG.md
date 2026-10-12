@@ -60,6 +60,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A long branch name keeps its distinguishing end in view in the ticket
+  panel's header and the Runs tab (FH-83). It is cut from the start, as
+  the board root, run ids, worktrees and archived projects' repositories
+  already were, so `…overflows-the-panel-fh83-tail` shows instead of
+  `feature/a-very-long-bra…`; the full name stays in its tooltip, and the
+  text is whole for screen readers.
+
 - A subagent reporting back no longer answers the question its session
   asked you (FH-57). Only a prompt you type answers a session's open
   question in the chat; a subagent's hand-back, a message from another
