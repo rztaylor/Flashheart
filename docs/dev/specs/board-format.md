@@ -270,8 +270,9 @@ only way to say one must wait for another.
 
 A workstream's `tickets:` list defines membership and display order; a ticket whose
 `workstream:` field disagrees with the lists gets a warning. Flashheart's own
-writes (ticket creation and the agent tools) change the field and the lists
-together, appending a joining ticket to the end of its list. A reference to a
+writes (ticket creation, the agent tools and the board's Edit tab) change
+the field and the lists together, appending a joining ticket to the end of
+its list. A reference to a
 missing ticket or workstream (including a missing `workstream:`) is shown as a
 warning and counts as blocking. Archived tickets count as done, and so do
 permanently deleted ids (a project's `retired`) and every id of a deleted
