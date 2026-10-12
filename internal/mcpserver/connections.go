@@ -138,7 +138,11 @@ func (c *call) own(inv *invocation, write bool) error {
 	if agent == "" {
 		agent = "agent"
 	}
-	c.run = agent + ":mcp-" + hex.EncodeToString(random)
+	run, err := events.SessionRun(agent, "mcp-"+hex.EncodeToString(random))
+	if err != nil {
+		return err
+	}
+	c.run = run.String()
 	if err := c.recordStart(c.project); err != nil {
 		c.run = ""
 		return err

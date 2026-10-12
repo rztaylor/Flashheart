@@ -3,7 +3,8 @@
 // tools from activity records and, in older logs, tool.used, edits since
 // checkpoint, which a session counts with its
 // subagents' and where a turn end or end that found the worktree changed
-// counts as one, the time windows of shell commands since checkpoint, within
+// counts as one, the time windows of shell commands since checkpoint (as
+// adapters classify them; Bash and PowerShell in older tool.used), within
 // which such a change is the run's, claims and the claimant's home project, questions and their
 // answers, on the board or in the session, subagents, a bounded timeline) and derives each run's state (Working,
 // Needs you, Waiting, Quiet, Ended), its link to a ticket, a ticket's live

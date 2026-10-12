@@ -31,11 +31,14 @@ const MaxPayloadBytes = 1 << 20
 // Pending is an event an adapter wants recorded; hooks adds the time,
 // agent and project.
 type Pending struct {
-	// Run is the full run id (<agent>:<session>[/<agent id>]).
+	// Run is the full run id (<agent>:<session>[/<agent id>],
+	// events.RunID); an event whose run does not parse or names another
+	// agent is logged and dropped.
 	Run  string
 	Kind string
-	// Data is one of the events *Data types. Edit paths in ToolData may be
-	// absolute; hooks makes them repository-relative. A tool.used is an
+	// Data is one of the events *Data types. A ToolData is classified by
+	// the adapter (Shell, Paths); its edit paths may be absolute and hooks
+	// makes them repository-relative. A tool.used is an
 	// observation: hooks records it as throttled activity (activity.go).
 	Data any
 }
@@ -121,6 +124,26 @@ func logError(options Options, err error) {
 	_, _ = fmt.Fprintf(log, "%s %s: %v", agent, options.Event, err)
 }
 
+// ownRuns keeps the pending events whose run id follows the grammar and
+// names the adapter's agent (agent-protocol §2). The rest are an adapter's
+// bug: each is logged and dropped, and the others are still recorded
+// (HOOK-1).
+func ownRuns(options Options, pending []Pending) []Pending {
+	kept := pending[:0:0]
+	for _, p := range pending {
+		run, err := events.ParseRunID(p.Run)
+		if err == nil && run.Agent() != options.Adapter.Agent() {
+			err = fmt.Errorf("run %q is not a %s run", p.Run, options.Adapter.Agent())
+		}
+		if err != nil {
+			logError(options, fmt.Errorf("dropped a %s event: %w", p.Kind, err))
+			continue
+		}
+		kept = append(kept, p)
+	}
+	return kept
+}
+
 func handle(options Options) error {
 	if options.Adapter == nil {
 		return errors.New("no adapter for this agent")
@@ -140,6 +163,7 @@ func handle(options Options) error {
 	if err != nil {
 		return err
 	}
+	input.Events = ownRuns(options, input.Events)
 	if input.Reply != nil {
 		return write(options, *input.Reply)
 	}
@@ -184,7 +208,7 @@ func handle(options Options) error {
 	list := make([]events.Event, 0, len(input.Events))
 	for _, pending := range input.Events {
 		list = append(list, events.Event{
-			Time: at, Run: scrub.Limit(pending.Run, 300), Agent: options.Adapter.Agent(),
+			Time: at, Run: pending.Run, Agent: options.Adapter.Agent(),
 			Kind: pending.Kind, Project: project, Data: clean(pending.Data, info, input.Cwd),
 		})
 	}
@@ -284,7 +308,7 @@ func toAnswers(list []events.Delivery) []protocol.Answer {
 // sessionEnd is the index of a session's turn end or end in list, or -1.
 func sessionEnd(list []events.Event) int {
 	return slices.IndexFunc(list, func(e events.Event) bool {
-		return (e.Kind == events.TurnEnd || e.Kind == events.RunEnd) && !strings.Contains(e.Run, "/")
+		return (e.Kind == events.TurnEnd || e.Kind == events.RunEnd) && !events.RunOf(e.Run).IsSubagent()
 	})
 }
 
@@ -401,7 +425,11 @@ func clean(data any, info gitinfo.Info, cwd string) any {
 		return d
 	case events.ToolData:
 		d.Tool = text(d.Tool, events.MaxNameLength)
-		d.Path = text(info.Relative(d.Path), 500)
+		paths := make([]string, 0, min(len(d.Paths), events.MaxToolPaths))
+		for _, path := range d.Paths[:min(len(d.Paths), events.MaxToolPaths)] {
+			paths = append(paths, text(info.Relative(path), 500))
+		}
+		d.Paths, d.Path = paths, text(info.Relative(d.Path), 500)
 		d.Summary = text(d.Summary, events.MaxSummary)
 		return d
 	case events.PlanData:

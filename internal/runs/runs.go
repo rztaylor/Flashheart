@@ -2,7 +2,6 @@ package runs
 
 import (
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -127,8 +126,11 @@ type Run struct {
 	windows []Window
 }
 
-// shellTools are the agents' shell command tools, whose edits name no path.
-var shellTools = []string{"Bash", "PowerShell"}
+// legacyShellTools are Claude Code's shell tools, for tool.used records
+// from before protocol 2, which carry no Shell flag. It is the one place
+// past the adapters that knows a tool name; adapters classify every newer
+// result themselves.
+var legacyShellTools = []string{"Bash", "PowerShell"}
 
 // Shell command windows (agent-protocol §4).
 const (
@@ -139,28 +141,13 @@ const (
 )
 
 // Window is when a shell command may have changed files: from the run's
-// previous event to the command's tool.used, widened by ShellSlack.
-type Window struct {
-	From, To time.Time
-}
-
-// Contains reports whether t falls inside the window, ends included.
-func (w Window) Contains(t time.Time) bool { return !t.Before(w.From) && !t.After(w.To) }
+// previous event to the command's result, widened by ShellSlack.
+type Window = events.Span
 
 // addWindow appends w, merging it into the last window when they overlap
 // and the oldest two when there are too many.
 func (r *Run) addWindow(w Window) {
-	if last := len(r.windows) - 1; last >= 0 && !w.From.After(r.windows[last].To) {
-		if w.To.After(r.windows[last].To) {
-			r.windows[last].To = w.To
-		}
-		return
-	}
-	r.windows = append(r.windows, w)
-	if len(r.windows) > MaxWindows {
-		r.windows[1].From = r.windows[0].From
-		r.windows = slices.Delete(r.windows, 0, 1)
-	}
+	r.windows = events.AddSpan(r.windows, w, MaxWindows)
 }
 
 // edited records a successful edit of path since the last checkpoint.
@@ -266,9 +253,9 @@ func (s *Set) run(e events.Event) *Run {
 	r, ok := s.runs[e.Run]
 	if !ok {
 		r = &Run{ID: e.Run, Agent: e.Agent, Project: e.Project, Kind: events.KindSession, Started: e.Time}
-		if parent, _, isChild := strings.Cut(e.Run, "/"); isChild {
+		if id := events.RunOf(e.Run); id.IsSubagent() {
 			r.Kind = events.KindSubagent
-			r.Parent = parent
+			r.Parent = id.Session().String()
 			r.turnOpen = true
 		}
 		s.runs[e.Run] = r
@@ -298,7 +285,7 @@ func (s *Set) Apply(e events.Event) {
 	// A subagent first seen ending did nothing visible (Claude Code's
 	// desktop app stops internal helper agents it never reported starting),
 	// so it is not a run.
-	if _, known := s.runs[e.Run]; !known && e.Kind == events.RunEnd && strings.Contains(e.Run, "/") {
+	if _, known := s.runs[e.Run]; !known && e.Kind == events.RunEnd && events.RunOf(e.Run).IsSubagent() {
 		return
 	}
 	r := s.run(e)
@@ -378,13 +365,17 @@ func (s *Set) Apply(e events.Event) {
 		_ = e.Decode(&data)
 		r.Tools++
 		r.Permission = ""
-		if data.OK && data.Path != "" {
-			r.edited(data.Path)
+		if data.OK {
+			for _, path := range data.EditPaths() {
+				if path != "" {
+					r.edited(path)
+				}
+			}
 		}
-		if data.OK && slices.Contains(shellTools, data.Tool) {
+		if data.OK && (data.Shell || slices.Contains(legacyShellTools, data.Tool)) {
 			r.addWindow(Window{From: previous.Add(-ShellSlack), To: e.Time.Add(ShellSlack)})
 		}
-		entry.Tool, entry.Path, entry.Failed = data.Tool, data.Path, !data.OK
+		entry.Tool, entry.Path, entry.Failed = data.Tool, first(data.EditPaths()...), !data.OK
 	case events.Activity:
 		var data events.ActivityData
 		if e.Decode(&data) != nil || data.Tools < 1 {
@@ -736,18 +727,7 @@ func (s *Set) ShellWindows(id string) []Window {
 			}
 		}
 	}
-	slices.SortFunc(list, func(a, b Window) int { return a.From.Compare(b.From) })
-	var merged []Window
-	for _, w := range list {
-		if last := len(merged) - 1; last >= 0 && !w.From.After(merged[last].To) {
-			if w.To.After(merged[last].To) {
-				merged[last].To = w.To
-			}
-			continue
-		}
-		merged = append(merged, w)
-	}
-	return merged
+	return events.MergeSpans(list)
 }
 
 func (s *Set) children(r *Run) []*Run {
