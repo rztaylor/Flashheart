@@ -321,6 +321,10 @@ to Verify, Risks, PR Notes). Screenshots are referenced as
 Stored names are `<UTC timestamp>-<sanitised original name>`. Files are always
 copies (`REV-1`); agents' own files may be cleaned up at any time, so anything
 a ticket or review refers to is copied in before it is recorded (`REV-5`).
+Adding a file appends one entry and keeps the rest of the index as written,
+keys Flashheart does not know and comments included; an index that is not a
+list of files is reported and never replaced. A file added from its bytes
+(not a local path) has no `source`.
 
 ## project.yaml
 

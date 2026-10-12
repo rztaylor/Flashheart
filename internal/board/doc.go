@@ -5,8 +5,9 @@
 // ranks and placement plans (EDIT-9), and the editing rules
 // the UI and the MCP tools share (editable fields, review warnings, the
 // blocked-start note; EDIT-2, EDIT-3, EDIT-6), a review's How to Verify
-// steps (REV-3), and local links in markdown with attachment kinds, for
-// copying the files they name (REV-5). It owns the file schema: section
+// steps (REV-3), and local links in markdown with the attachment
+// allow-list, its message and the attachment kinds, for copying the files
+// they name (REV-2, REV-5). It owns the file schema: section
 // names (sections.go; nothing else names a section), the workstream slug
 // rule (ValidSlug), new tickets' and workstreams' defaults, checks and
 // templates (templates.go, rendered from values, no clock of its own), and
