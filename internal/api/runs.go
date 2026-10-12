@@ -141,12 +141,12 @@ type QuestionJSON struct {
 	RunShort string `json:"runShort"`
 }
 
-// questionsJSON adds each question's run short id; ended marks them asked
-// by a run that has ended (RUN-8), as Snapshot.Questions already does.
-func questionsJSON(list []runs.Question, ended bool) []QuestionJSON {
+// questionsJSON adds each question's run short id. Whether a question's
+// session has ended is the run view's SessionEnded (RUN-8), so the card,
+// the ticket and the runs the Overview reads agree (FH-112).
+func questionsJSON(list []runs.Question) []QuestionJSON {
 	out := make([]QuestionJSON, len(list))
 	for index, q := range list {
-		q.SessionEnded = q.SessionEnded || ended
 		out[index] = QuestionJSON{Question: q, RunShort: protocol.ShortRun(q.Run)}
 	}
 	return out
@@ -180,7 +180,7 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission, Reason: v.Reason,
 		Started: timestamp(v.Started), LastActivity: timestamp(v.LastActivity), Ended: timestamp(v.EndedAt), EndReason: v.EndReason,
 		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files), Plan: nonNil(v.Plan), Progress: v.Progress,
-		Questions: questionsJSON(v.Questions, v.State == runs.Ended),
+		Questions: questionsJSON(v.Questions),
 	}
 	if v.Link.Ticket != "" {
 		if _, ticket, ok := snapshot.FindTicket(v.Link.Ticket); ok {
