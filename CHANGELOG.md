@@ -60,6 +60,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Codex sessions are no longer told how Claude Code waits for an answer
+  after `ask_human`; only Claude runs see the `run_in_background` hint.
+  `update_ticket`'s description now lists `depends-on-workstreams`, which
+  it already accepted, and a test keeps the skill and the protocol spec's
+  tool table in step with the tools the server offers (FH-94).
+
 - Sessions that crash, and Codex sessions, which never report their end,
   no longer leave their working files in the board folder forever (FH-82).
   `serve`'s regular cleanup, at startup and daily, now removes a session's

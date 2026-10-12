@@ -72,8 +72,13 @@ func (srv *server) askHuman(c *call, input AskHumanInput) (string, error) {
 		// sees a reply in its chat (§4).
 		arrives = "the answer will arrive with the result of your next flashheart tool call. A reply in this chat does not reach the board, so if the user answers here, ask them to answer it on the board too"
 	}
+	// Only a Claude run is told how Claude Code runs it.
+	how := ""
+	if agentOf(run) == "claude" {
+		how = " (Claude Code: Bash with run_in_background)"
+	}
 	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; %s. Carry on with other work if you can.\n"+
-		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits (Claude Code: Bash with run_in_background):\n%s\nok question=%s\n", kind, arrives, command, id), nil
+		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits%s:\n%s\nok question=%s\n", kind, arrives, how, command, id), nil
 }
 
 func questionID() string {
