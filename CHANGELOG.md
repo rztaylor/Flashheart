@@ -68,6 +68,13 @@ All notable changes to this project are documented here. The project follows
   session itself ends, as any ended session's question does. The project
   archive check counts it the same way.
 
+- Archived projects added, renamed or removed outside Flashheart (by
+  hand, by another Flashheart process, or by restoring a backup) now show
+  in the archived projects list and the All projects archive count within
+  a second, instead of at the next 10 s sweep (FH-28). The watcher now
+  watches `<root>/.archive/` itself, but not the archived projects' own
+  folders, and never through a symbolic link.
+
 - `flashheart migrate` keeps tickets with Windows line endings or a
   byte-order mark intact (FH-79). Before, such a ticket gained a second
   header and lost its created date and dependencies, and its dependency
