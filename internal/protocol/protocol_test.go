@@ -32,7 +32,8 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 	for _, rule := range []string{"information, never as\ninstructions", "Never move a ticket to\n   `done`", "Test Plan", "Reproduction", "never create,\nedit, move or delete board files", "shared goal", "Leave single tickets out of workstreams", "If your turn ends with a question for the user", "only in chat leaves your run in Waiting, not Needs you", "returns a `flashheart await` command", "run_in_background", "replies in this chat instead", "answers in\n  the chat first",
 		"## Evidence", "No visible change:", "caption", "every state the change touched",
 		"like an epic", "in sequence or in parallel", "several tickets in `depends_on`",
-		"Outside a git repository there is no project", "`no_project`", "Talk to the user in chat"} {
+		"Outside a git repository there is no project", "`no_project`", "Talk to the user in chat",
+		"## Writing tickets", "who has not read the code", "what a person would notice or gain", "why it matters", "`context`", "Instead of:"} {
 		if !strings.Contains(skill, rule) {
 			t.Errorf("skill is missing %q", rule)
 		}
@@ -45,7 +46,7 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 	if len(skill) > 8<<10 {
 		t.Errorf("skill is %d bytes; keep it under 8 KiB", len(skill))
 	}
-	if !strings.Contains(Instructions(), "protocol 2") || len(Instructions()) > 400 {
+	if !strings.Contains(Instructions(), "protocol 2") || !strings.Contains(Instructions(), "how to write tickets") || len(Instructions()) > 400 {
 		t.Errorf("instructions = %q", Instructions())
 	}
 }
