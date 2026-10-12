@@ -229,6 +229,43 @@ func TestEndsRecordWhatIsPending(t *testing.T) {
 	}
 }
 
+// A session that crashed reports no end (FH-82): what it had not recorded
+// is recorded when it starts again, before its new start, and is dropped
+// once it is stale_hours old, when the stale rule has ended its runs;
+// either way the state keeps none of it.
+func TestLeftoverActivityIsRecordedOnRestartOrDroppedOnceStale(t *testing.T) {
+	t.Parallel()
+
+	t.Run("restarted", func(t *testing.T) {
+		t.Parallel()
+		root, cwd := t.TempDir(), repo(t)
+		play(t, root, cwd, "0 SessionStart", "0 Prompt", "0.1 Read", "0.2 Read", "30 SessionStart")
+		list := readEvents(t, root, "demo")
+		last, record := list[len(list)-1], list[len(list)-2]
+		var d events.ActivityData
+		_ = record.Decode(&d)
+		if last.Kind != events.RunStart || record.Kind != events.Activity || record.Run != "fake:s1" || d.Tools != 2 || !record.Time.Equal(minutes(30)) {
+			t.Fatalf("events at the restart = %+v, %+v (%+v)", record, last, d)
+		}
+		if state, err := os.ReadFile(stateFile(root)); err != nil || strings.Contains(string(state), `"tools"`) {
+			t.Fatalf("state after the restart = %s, %v", state, err)
+		}
+	})
+	t.Run("stale", func(t *testing.T) {
+		t.Parallel()
+		root, cwd := t.TempDir(), repo(t)
+		play(t, root, cwd, "0 SessionStart", "0 Prompt", "0.1 Read", "0.2 SubagentStart", "0.3 Sub:Read")
+		play(t, root, cwd, "721 SessionStart")
+		list, _, _ := recorded(t, root)
+		if len(list) != 0 {
+			t.Fatalf("stale activity was recorded: %+v", list)
+		}
+		if state, err := os.ReadFile(stateFile(root)); err != nil || strings.Contains(string(state), `"tools"`) || strings.Contains(string(state), "a1") {
+			t.Fatalf("state after the stale restart = %s, %v", state, err)
+		}
+	})
+}
+
 // The state is Flashheart's own cache: an unreadable one starts afresh
 // rather than failing the hook (HOOK-1).
 func TestAMalformedActivityStateStartsAfresh(t *testing.T) {

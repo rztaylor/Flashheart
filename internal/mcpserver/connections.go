@@ -174,12 +174,11 @@ func (srv *server) called(inv *invocation, ok bool) string {
 		_ = srv.log.Append(events.Event{Time: now, Run: run, Agent: agentOf(run), Kind: events.Activity, Project: project, Data: activity})
 	}
 	cn.mu.Unlock()
-	waiting, err := srv.log.TakeAnswers(project, run)
-	if err != nil || len(waiting) == 0 {
+	// Taken from the inbox, they are shown even if recording their
+	// delivery fails; board_context would then show them again.
+	waiting, _ := events.Deliver(srv.log, project, []string{run}, nil, now)
+	if len(waiting) == 0 {
 		return ""
 	}
-	// Taken from the inbox, they are shown even if marking them fails;
-	// board_context would then show them again.
-	_ = srv.log.MarkDelivered(project, waiting, now)
-	return "\n" + protocol.AnswersNote(answersOf(waiting))
+	return "\n" + protocol.AnswersNote(protocol.AnswersOf(waiting))
 }

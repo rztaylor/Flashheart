@@ -24,7 +24,9 @@
 // (PRJ-2–PRJ-5; outside git there is none, ErrNoProject), resolves working
 // directories through the cwd cache (never caching one outside git), and
 // keeps event files, answers inboxes and the hooks' per-session activity
-// state (read, appended with and replaced under one project lock).
+// state (read, appended with and replaced under one project lock), and
+// expires those older than retention's cutoffs (FH-82; which ones is
+// events' and app's rule, the lock and the check under it are store's).
 //
 // It also creates the root folder itself (EnsureRoot), reads and validates
 // config.yaml (ReadConfig, defaults when it or the root is missing) and

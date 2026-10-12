@@ -255,3 +255,81 @@ func TestAPromptAnswersTheSessionsOpenQuestionsInTheSession(t *testing.T) {
 		t.Fatalf("state = %s, want working", got)
 	}
 }
+
+// in sets an event's envelope project: the log it was recorded in.
+func in(project string, e events.Event) events.Event {
+	e.Project = project
+	return e
+}
+
+func TestARunsProjectIsItsHome(t *testing.T) {
+	t.Parallel()
+
+	elsewhere := func(minutes float64, kind events.Kind, data events.TicketData) events.Event {
+		return in("other", ev(minutes, session, kind, data))
+	}
+	cases := []struct {
+		name   string
+		events []events.Event
+		want   string
+	}{
+		{"a claim elsewhere first, then work at home", []events.Event{
+			elsewhere(0, events.Claim, events.TicketData{Ticket: "OT-1", Home: "demo"}),
+			in("demo", start(1)), in("demo", turn(2)),
+			elsewhere(3, events.Release, events.TicketData{Ticket: "OT-1"}),
+		}, "demo"},
+		{"only a claim elsewhere: its home", []events.Event{
+			elsewhere(0, events.Claim, events.TicketData{Ticket: "OT-1", Home: "demo"}),
+			elsewhere(1, events.TicketMoved, events.TicketData{Ticket: "OT-1", To: "in-progress"}),
+		}, "demo"},
+		{"a release elsewhere first, then work at home", []events.Event{
+			elsewhere(0, events.Release, events.TicketData{Ticket: "OT-1"}),
+			in("demo", stop(1)),
+		}, "demo"},
+		{"a claim recorded before claims named their home", []events.Event{
+			elsewhere(0, events.Claim, events.TicketData{Ticket: "OT-1"}),
+			in("demo", turn(1)),
+		}, "demo"},
+		{"ticket writes elsewhere after work at home", []events.Event{
+			in("demo", start(0)),
+			elsewhere(1, events.Claim, events.TicketData{Ticket: "OT-1", Home: "demo"}),
+			in("other", ev(2, session, events.Checkpoint, events.CheckpointData{Ticket: "OT-1"})),
+			elsewhere(3, events.TicketUpdated, events.TicketData{Ticket: "OT-1"}),
+		}, "demo"},
+		{"nothing but ticket writes elsewhere: where they were recorded", []events.Event{
+			elsewhere(0, events.TicketUpdated, events.TicketData{Ticket: "OT-1"}),
+		}, "other"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			set := NewSet()
+			for _, e := range tc.events {
+				set.Apply(e)
+			}
+			if got := set.Get(session).Project; got != tc.want {
+				t.Fatalf("project = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestASessionLinksByBranchAtHomeAfterReleasingAClaimElsewhere(t *testing.T) {
+	t.Parallel()
+
+	set := NewSet()
+	set.Apply(in("other", ev(0, session, events.Claim, events.TicketData{Ticket: "OT-1", Home: "demo"})))
+	set.Apply(in("demo", start(1)))
+	set.Apply(in("demo", turn(2)))
+	set.Apply(in("demo", stop(3)))
+	set.Apply(in("other", ev(4, session, events.Release, events.TicketData{Ticket: "OT-1"})))
+	byBranch := func(project, branch string) []string {
+		if project == "demo" && branch == "feature/x" {
+			return []string{"DM-1"}
+		}
+		return nil
+	}
+	if link := set.Link(session, byBranch); link != (Link{Ticket: "DM-1", By: LinkBranch}) {
+		t.Fatalf("link = %+v, want DM-1 by branch", link)
+	}
+}
