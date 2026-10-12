@@ -60,6 +60,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A question a subagent asked before it finished is no longer hidden
+  while its session waits on it (FH-112). The session stays in Needs you
+  saying, for example, *Explore has a question*; the ticket card now
+  counts the question and the Overview lists it under *Needs your
+  decision*, so you can find and answer it. It stops needing you once the
+  session itself ends, as any ended session's question does. The project
+  archive check counts it the same way.
+
 - A subagent reporting back no longer answers the question its session
   asked you (FH-57). Only a prompt you type answers a session's open
   question in the chat; a subagent's hand-back, a message from another

@@ -408,9 +408,12 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   stays in the run's history marked as answered in the session (D28).
   A prompt the user did not type (a subagent's report, another agent's
   message or a background task's notice) answers nothing (D41). A
-  question from a run that has ended stays open and
+  question whose session has ended stays open and
   answerable, marked as waiting for the session to resume; it does not
-  need you (`VIEW-2`). A board that cannot record answers shows questions
+  need you (`VIEW-2`). A subagent's question waits on its session, so
+  after the subagent finishes it still needs you while the session is
+  live: the session's reason, the card's question count and the
+  Overview agree (FH-112). A board that cannot record answers shows questions
   without an answer form.
 - `RUN-9` Each ticket's board data summarises the runs working for it,
   derived from the same events (FH-50): the sessions linked to it, their
