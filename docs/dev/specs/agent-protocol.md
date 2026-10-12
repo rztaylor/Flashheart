@@ -202,8 +202,11 @@ the run's timeline and question keep the mark (D28). `run.start` after `run.end`
 or Quiet; each of its Flashheart tool calls is activity; it ends when its
 connection closes (`run.end`, reason `disconnected`) or, when the server
 died, by the stale rule. A subagent first seen ending (the Claude desktop
-app stops internal helper agents it never reported starting) is not a run. Runs and timelines are derived from the last two
-days of event files.
+app stops internal helper agents it never reported starting) is not a run. Runs and timelines are derived from the **run
+window**: the daily event files from the one holding 48 hours ago on. The
+board, the MCP server, `flashheart await`, the recovery note and handoff
+enforcement all read the same window, so they agree on a run's claim and
+link (FH-95); the hooks fold only the sessions they ask about.
 
 Flags:
 
@@ -235,8 +238,9 @@ Flags:
   (or the model's thinking before it) is under way, and an untracked,
   unignored file a command generates. Missed: what a background command
   writes after its result, and a subagent's own worktree. The check
-  gives up after 50 ms and is then logged, leaving the run as it was
-  (`HOOK-1`).
+  gives up 75 ms after the hook began (with what reading the board and
+  the log left of that, so a stop stays within 100 ms) and is then
+  logged, leaving the run as it was (`HOOK-1`).
 - **no handoff**: Ended, linked to a ticket, and dirty.
 - **linked**: `claim` (explicit) or branch match (provisional, `RUN-5`);
   subagents inherit the parent's link.
@@ -531,7 +535,7 @@ command, `<binary> await <question-id> --project <project> --root <root>`
 run a background command which wakes it when the command exits (Claude
 Code: Bash with `run_in_background`) runs it after asking:
 
-- it finds the question in the project's last two days of events (else exit
+- it finds the question in the project's run window (§4; else exit
   1, "no such question");
 - it polls the asking session's answers inbox (one `stat` a second while it
   is empty); when the inbox holds answers it takes them all, appends
@@ -573,7 +577,7 @@ ticket id or "Next". A previous run that is still open says so instead of
 "ended". Up to three answered questions not yet delivered are listed and
 then count as delivered. A ticket is
 linked to the worktree by branch (`RUN-5`); the previous run is the most
-recent other session in the same worktree in the last day, mentioned only
+recent other session in the same worktree in the run window (§4), mentioned only
 when it left edits since its last checkpoint.
 
 ## 9. Handoff enforcement (`HOOK-6`)
@@ -674,8 +678,12 @@ kept current by the session-start hook (§5.4). It covers, briefly:
   `scripts/record-claude-hooks.sh` records a real Claude Code session.
   Re-record when an agent changes.
 - **Hook latency**: `scripts/hook-bench.sh` runs 1,000 warm invocations of
-  the built binary and fails when p95 exceeds 50 ms (`HOOK-1`); `-tools`
-  measures tool results alone, the throttled path (§3).
+  the built binary with an agent's recorded payloads (`-agent`) and fails
+  when p95 exceeds 50 ms (`HOOK-1`). Scenarios: a session's mix of hooks,
+  tool results alone (the throttled path, §3), session starts (§8) and
+  stops that enforcement blocks (§9); `-seed-events` first fills the run
+  window with that many events a day. Session start and enforcing stop
+  stay under 50 ms at 50,000 events a day.
 - **State table tests** for §4, including clock-driven transitions.
 - **MCP contract tests** through the Go SDK's in-memory transport.
 - **End-to-end smoke**: a scripted sequence (start → claim → edits → stop

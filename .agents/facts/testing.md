@@ -26,9 +26,21 @@
   agent's `MANIFEST.md` says which are recorded. Re-record with
   `scripts/record-claude-hooks.sh` when an agent changes.
 - Hook latency: `scripts/hook-bench.sh` (developer tool, not in CI) fails
-  when p95 over 1,000 warm invocations exceeds 50 ms; `-tools` measures
-  tool results alone (the throttled activity path, FH-55) and both print
-  how many events were recorded.
+  when p95 over 1,000 warm invocations exceeds 50 ms and prints how many
+  events were recorded. `-agent` picks the payloads
+  (`testdata/hooks/<agent>`); `-scenario` is `mix` (default), `tools`
+  (tool results alone, the throttled path, FH-55; also `-tools`),
+  `session-start` (the recovery note) or `stop` (turn ends that handoff
+  enforcement blocks); `-seed-events N` seeds N events a day across the
+  run window first. HOOK-1 evidence is `session-start` and `stop` at
+  `-seed-events 50000` (FH-95): p95 about 36 ms and 30 ms on an M4 Max,
+  2026-10-12. The stop scenario's session is already due, so it does not
+  run the git worktree check.
+- Hook folds read only the sessions they ask about; their equivalence with
+  a full fold is tested on random mixed logs
+  (`TestKeepFoldsTheSessionsAsTheFullFoldDoes`,
+  `TestLatestFindsThePreviousSessionAsTheFullFoldDoes`) and the selective
+  read against `Read` (`TestReadSelectedGivesWhatReadGivesThatKeepAccepts`).
 - Activity throttling (FH-55) is tested by replaying recorded payloads
   through the Claude adapter (200 tool results in ten minutes) and with the
   fake adapter's scripts in `internal/hooks`; the run-state and no-handoff

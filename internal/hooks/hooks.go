@@ -92,13 +92,22 @@ type Options struct {
 	// session start and reports whether it rewrote it (agent-protocol §5.4);
 	// nil for agents without one.
 	RefreshSkill func() (bool, error)
-	// ChangeTimeout bounds the worktree check at a session's turn end and
-	// end; zero means DefaultChangeTimeout.
+	// ChangeTimeout is how long after the invocation began the worktree
+	// check at a session's turn end and end may run; zero means
+	// DefaultChangeTimeout.
 	ChangeTimeout time.Duration
 }
 
-// DefaultChangeTimeout keeps the worktree check within HOOK-1's budget.
-const DefaultChangeTimeout = 50 * time.Millisecond
+// DefaultChangeTimeout keeps a turn end or end within HOOK-1's 100 ms
+// however long the log or git takes: the worktree check ends at most 75 ms
+// after the hook began, with what reading the payload, the board and the
+// log left of them (about 50 ms on a busy log; git status and log take
+// 10–30 ms on a mid-sized repository), which leaves the process's start
+// and exit and the append after the check the rest. A check cut short is
+// logged and the run left as it was (HOOK-1). It runs only for a session
+// that ran shell commands since its last checkpoint and is not already
+// due, so it is rarely in the p95.
+const DefaultChangeTimeout = 75 * time.Millisecond
 
 // Run handles one hook invocation. It never fails: errors and panics go to
 // <root>/.flashheart/hook-errors.log (HOOK-1).
@@ -151,6 +160,8 @@ func handle(options Options) error {
 	if options.Now != nil {
 		now = options.Now
 	}
+	// The worktree check's deadline runs on the real clock, from here.
+	began := time.Now()
 	payload, err := io.ReadAll(io.LimitReader(options.Stdin, MaxPayloadBytes+1))
 	if err != nil {
 		return fmt.Errorf("read payload: %w", err)
@@ -227,7 +238,7 @@ func handle(options Options) error {
 			timeout = DefaultChangeTimeout
 		}
 		var err error
-		out.Block, err = settle(s, log, project, info, &list[index], input.Stop && !input.StopActive, at, settings, timeout)
+		out.Block, err = settle(s, log, project, info, &list[index], input.Stop && !input.StopActive, at, settings, began.Add(timeout))
 		problem = errors.Join(problem, err)
 	}
 	appended, err := record(log, project, list, func(state *sessionState) []events.Event {
@@ -318,7 +329,7 @@ func sessionEnd(list []events.Event) int {
 // checkpoint (HOOK-6, §9), marking the turn end when it does. The log is
 // read only when there is a worktree to check or the project enforces
 // handoffs. A failed worktree check is reported, and enforcement still runs.
-func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, end *events.Event, stop bool, now time.Time, settings config.Config, timeout time.Duration) (string, error) {
+func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, end *events.Event, stop bool, now time.Time, settings config.Config, deadline time.Time) (string, error) {
 	enforcing := false
 	if stop && end.Kind == events.TurnEnd {
 		enforcing = settings.EnforceHandoff
@@ -333,11 +344,13 @@ func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, 
 	if info.Worktree == "" && !enforcing {
 		return "", nil
 	}
+	// Only the session's own events and the claims decide its edits,
+	// windows and link.
 	set := runs.NewSet()
-	if err := log.Read(project, now.Add(-recoveryWindow), set.Apply); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := readRuns(log, project, now, runs.Keep(end.Run), set.Apply); err != nil {
 		return "", err
 	}
-	changed, problem := worktreeChanged(set, end.Run, info, timeout)
+	changed, problem := worktreeChanged(set, end.Run, info, deadline)
 	markEnd(end, changed, false)
 	if !enforcing {
 		return "", problem
@@ -363,7 +376,7 @@ func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, 
 // checkpoint, only when the run is not already due and ran one: the edit
 // tools record their own paths, and a file changed while the session waited
 // is not its doing.
-func worktreeChanged(set *runs.Set, run string, info gitinfo.Info, timeout time.Duration) (bool, error) {
+func worktreeChanged(set *runs.Set, run string, info gitinfo.Info, deadline time.Time) (bool, error) {
 	if info.Worktree == "" || set.Get(run) == nil || set.Dirty(run) {
 		return false, nil
 	}
@@ -381,7 +394,7 @@ func worktreeChanged(set *runs.Set, run string, info gitinfo.Info, timeout time.
 	if info.Head != "" {
 		gitDir = filepath.Dir(info.Head)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 	changed, err := gitchange.ChangedSince(ctx, info.Worktree, gitDir, since, within)
 	if err != nil {
@@ -429,19 +442,36 @@ func clean(data any, info gitinfo.Info, cwd string) any {
 	return data
 }
 
-// recoveryWindow is how far back session start looks for earlier runs.
-const recoveryWindow = 24 * time.Hour
+// readRuns reads the project's events of the run window (runs.Lookback) that
+// keep accepts, without decoding the others; a project without events has
+// none.
+func readRuns(log *events.Log, project string, now time.Time, keep func(events.Header) bool, fn func(events.Event)) error {
+	if err := log.ReadSelected(project, now.Add(-runs.Lookback), keep, fn); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return nil
+}
 
 // recovery gathers the linked ticket and the previous run in this worktree
-// and renders the note (HOOK-3).
+// and renders the note (HOOK-3). It reads the log's lines and headers once,
+// finds the previous session from the headers, then decodes the two
+// sessions' events and the claims, which decide all the note says.
 func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info, appended []events.Event, now time.Time, settings config.Config) (string, error) {
 	if len(appended) == 0 || appended[0].Kind != events.RunStart {
 		return "", nil
 	}
 	current := appended[0].Run
-	set := runs.NewSet()
-	if err := log.Read(project, now.Add(-recoveryWindow), set.Apply); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	headers, err := log.ReadHeaders(project, now.Add(-runs.Lookback))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return "", err
+	}
+	latest, set := runs.NewLatest(), runs.NewSet()
+	previousID := ""
+	if headers != nil {
+		headers.Each(latest.Note)
+		headers.SelectBackward(latest.Wants, latest.Apply)
+		previousID = latest.Session(info.Worktree, current)
+		headers.Select(runs.Keep(current, previousID), set.Apply)
 	}
 	if set.Get(current) == nil {
 		for _, e := range appended {
@@ -468,16 +498,7 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 		}
 	}
 	thresholds := runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes)
-	var previous *runs.Run
-	for _, r := range set.Runs() {
-		if r.ID == current || r.Kind != events.KindSession || r.Worktree == "" || r.Worktree != info.Worktree {
-			continue
-		}
-		if previous == nil || r.LastActivity.After(previous.LastActivity) {
-			previous = r
-		}
-	}
-	if previous != nil {
+	if previous := set.Get(previousID); previous != nil {
 		p := &protocol.PreviousRun{ID: previous.ID, Edits: previous.Edits}
 		if set.State(previous.ID, now, thresholds) == runs.Ended {
 			p.Ended = previous.EndedAt
@@ -493,10 +514,10 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 	if err != nil {
 		return "", err
 	}
-	if previous != nil {
+	if set.Get(previousID) != nil {
 		// The previous session's inbox goes too, so resuming it later does
 		// not deliver the same answers again.
-		theirs, err := log.TakeAnswers(project, previous.ID)
+		theirs, err := log.TakeAnswers(project, previousID)
 		if err != nil {
 			return "", err
 		}
@@ -506,7 +527,7 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 	for _, d := range waiting {
 		seen[d.ID] = true
 	}
-	for _, id := range []string{current, previousID(previous)} {
+	for _, id := range []string{current, previousID} {
 		for _, q := range set.PendingAnswers(id) {
 			if !seen[q.ID] {
 				seen[q.ID] = true
@@ -521,11 +542,4 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 		note.Answered = toAnswers(waiting)
 	}
 	return protocol.RecoveryNote(note), nil
-}
-
-func previousID(r *runs.Run) string {
-	if r == nil {
-		return ""
-	}
-	return r.ID
 }

@@ -402,6 +402,15 @@ func (l *Log) Files(project string) ([]string, error) { return l.store.EventFile
 // Read calls fn for every readable event in files dated on or after since's
 // UTC date, oldest file first. Callers filter by exact time.
 func (l *Log) Read(project string, since time.Time, fn func(Event)) error {
+	return l.read(project, since, func(file string) error {
+		_, err := l.ReadFrom(project, file, 0, fn)
+		return err
+	})
+}
+
+// read calls each for the project's files dated on or after since's UTC
+// date, oldest first.
+func (l *Log) read(project string, since time.Time, each func(file string) error) error {
 	files, err := l.store.EventFiles(project)
 	if err != nil {
 		return err
@@ -414,7 +423,7 @@ func (l *Log) Read(project string, since time.Time, fn func(Event)) error {
 		if file < first {
 			continue
 		}
-		if _, err := l.ReadFrom(project, file, 0, fn); err != nil {
+		if err := each(file); err != nil {
 			return err
 		}
 	}
@@ -425,6 +434,17 @@ func (l *Log) Read(project string, since time.Time, fn func(Event)) error {
 // offset after the last complete line, so a line still being written is
 // read next time.
 func (l *Log) ReadFrom(project, file string, offset int64, fn func(Event)) (int64, error) {
+	return l.lines(project, file, offset, func(line []byte) {
+		if e, ok := parseLine(line); ok {
+			fn(e)
+		}
+	})
+}
+
+// lines calls fn for each complete line from offset on, without its
+// newline, skipping lines too long to be an event; the slice is valid only
+// during the call. It returns the offset after the last complete line.
+func (l *Log) lines(project, file string, offset int64, fn func(line []byte)) (int64, error) {
 	handle, err := l.store.OpenEventFile(project, file)
 	if err != nil {
 		return offset, err
@@ -453,9 +473,7 @@ func (l *Log) ReadFrom(project, file string, offset int64, fn func(Event)) (int6
 			skipping = false
 			continue
 		}
-		if e, ok := parseLine(line[:len(line)-1]); ok {
-			fn(e)
-		}
+		fn(line[:len(line)-1])
 	}
 }
 

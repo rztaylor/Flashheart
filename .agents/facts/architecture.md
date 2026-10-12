@@ -86,6 +86,11 @@ Singleserve.
   `Adapter`; `cli` picks the adapter by agent name.
 - Developer tools: `scripts/hookbench` (Go command behind
   `scripts/hook-bench.sh`), not part of the binary.
+- One run window (`runs.Lookback`, 48 h of daily event files) for every
+  reader: index, MCP server, `await` and hooks. Hooks fold only the
+  sessions they ask about (`runs.Keep`, `runs.Latest`) through
+  `events.Log.ReadSelected`, which judges each line by its envelope before
+  decoding its data (D37).
 - Concurrency model: many processes write the same root. All ticket and event
   writes go through `store`/`events` under the per-project lock
   (`<project>/.flashheart/lock`) with atomic rename; UI and MCP edits carry a

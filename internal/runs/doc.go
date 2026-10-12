@@ -12,6 +12,11 @@
 // from the fold and a clock. The human's board writes (run `human`) are no
 // run and are skipped.
 //
+// It owns the run window every reader folds (Lookback) and what a partial
+// fold needs: the events that derive some sessions exactly as a full fold
+// would (Keep), and the last session in a worktree found from the events'
+// headers (Latest), so hooks decode only the sessions they ask about.
+//
 // It is pure: it reads events' types but no files. Reading the log belongs
 // to events, finding in-progress tickets by branch to the caller (index),
 // and presentation to api and the frontend.

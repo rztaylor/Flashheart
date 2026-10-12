@@ -17,9 +17,6 @@ const (
 	DefaultTimeout = 12 * time.Hour
 	DefaultPoll    = time.Second
 	DefaultRescan  = 15 * time.Second
-	// lookback is how far back the question is searched for: runs are
-	// derived from the last two days of events (agent-protocol §4).
-	lookback = 48 * time.Hour
 )
 
 var (
@@ -64,7 +61,7 @@ func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 		return Result{}, fmt.Errorf("project %q: %w", o.Project, store.ErrInvalidName)
 	}
 	start := o.Now()
-	q, err := find(log, o.Project, o.Question, start.Add(-lookback))
+	q, err := find(log, o.Project, o.Question, start.Add(-runs.Lookback))
 	if err != nil {
 		return Result{}, err
 	}
@@ -99,7 +96,7 @@ func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 			return Result{}, err
 		}
 		if o.Now().Sub(scanned) >= o.Rescan {
-			if q, err = find(log, o.Project, o.Question, start.Add(-lookback)); err != nil {
+			if q, err = find(log, o.Project, o.Question, start.Add(-runs.Lookback)); err != nil {
 				return Result{}, err
 			}
 			scanned = o.Now()

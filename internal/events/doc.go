@@ -8,6 +8,9 @@
 // with a session's hook activity state, whose format belongs to hooks),
 // tolerant and
 // incremental reading (malformed lines and unknown kinds are skipped),
+// selective reading that judges a line by its envelope header before
+// decoding its data (ReadSelected, or ReadHeaders for several passes over
+// lines held in memory),
 // expiring files after the retention period, and the answers inbox's line
 // format (answers queued for a session's next prompt, HOOK-5) with the
 // question.delivered events that record taking them, and the human's board
