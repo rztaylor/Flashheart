@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -66,9 +65,7 @@ func (c *call) note(text string) string {
 
 // related reports whether two runs are one session and its subagents.
 func related(a, b string) bool {
-	sa, _, _ := strings.Cut(a, "/")
-	sb, _, _ := strings.Cut(b, "/")
-	return sa == sb
+	return events.RunOf(a).Session() == events.RunOf(b).Session()
 }
 
 // ClaimInput is claim's input.
@@ -137,7 +134,7 @@ func (srv *server) claim(inv *invocation, input ClaimInput) (string, error) {
 	}
 	setBranch := ticket.Branch == "" && c.where.Branch != ""
 	if moves || setBranch || len(notes) > 0 {
-		_, err := srv.store.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
+		_, err := srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 			var err error
 			if moves {
 				if data, err = mdfile.SetScalar(data, "status", string(column)); err != nil {
@@ -150,7 +147,7 @@ func (srv *server) claim(inv *invocation, input ClaimInput) (string, error) {
 				}
 			}
 			for _, note := range notes {
-				if data, err = mdfile.AppendToSection(data, "Notes", note); err != nil {
+				if data, err = mdfile.AppendToSection(data, board.SectionNotes, note); err != nil {
 					return nil, err
 				}
 			}
@@ -170,7 +167,7 @@ func (srv *server) claim(inv *invocation, input ClaimInput) (string, error) {
 
 	lines := []string{fmt.Sprintf("Claimed %s %q (%s).", ticket.ID, scrub.Limit(ticket.Title, 200), column)}
 	if ticket.Handoff != nil {
-		lines = append(lines, handoffLines(ticket.Handoff.Markdown, 10, func(s string) string { return scrub.Limit(s, 300) })...)
+		lines = append(lines, handoffLines(ticket.Handoff.HandoffNote, 10, func(s string) string { return scrub.Limit(s, 300) })...)
 	}
 	var open []string
 	for _, criterion := range ticket.Criteria {
@@ -209,7 +206,7 @@ func (srv *server) release(inv *invocation, input ReleaseInput) (string, error) 
 	if r := c.set.Get(run); r == nil || r.Claim != ticket.ID {
 		return fmt.Sprintf("You do not hold %s; nothing to release.\nok ticket=%s\n", ticket.ID, ticket.ID), nil
 	}
-	if err := c.record(project.Name, events.Event{Kind: events.Release, Data: events.TicketData{Ticket: ticket.ID, Reason: scrub.Text(input.Reason, events.MaxReasonText)}}); err != nil {
+	if err := c.record(project.Name, events.Event{Kind: events.Release, Data: events.TicketData{Ticket: ticket.ID, Reason: input.Reason}}); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Released %s; it stays in %s.\nok ticket=%s\n", ticket.ID, ticket.Column, ticket.ID), nil
@@ -275,21 +272,19 @@ func (srv *server) checkpoint(inv *invocation, input CheckpointInput) (string, e
 	if r := c.set.Get(c.run); r != nil && r.Branch != "" {
 		branch = r.Branch
 	}
-	section := handoffSection(c.now, protocol.ShortRun(c.by()), branch, done, next, files, questions)
-	same := ticket.Handoff != nil && slices.Equal(board.HandoffList(ticket.Handoff.Markdown, "Done"), done) &&
-		slices.Equal(board.HandoffList(ticket.Handoff.Markdown, "Next"), next) &&
-		slices.Equal(board.HandoffList(ticket.Handoff.Markdown, "Files"), orNone(files)) &&
-		slices.Equal(board.HandoffList(ticket.Handoff.Markdown, "Open questions"), orNone(questions))
+	section := board.RenderHandoff(board.HandoffNote{Updated: c.now, By: protocol.ShortRun(c.by()), Branch: branch, Done: done, Next: next, Files: files, Questions: questions})
+	same := ticket.Handoff != nil && slices.Equal(ticket.Handoff.Done, done) && slices.Equal(ticket.Handoff.Next, next) &&
+		slices.Equal(ticket.Handoff.Files, files) && slices.Equal(ticket.Handoff.Questions, questions)
 	if !same || note != "" {
-		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
+		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 			if !same {
 				var err error
-				if data, err = mdfile.ReplaceSection(data, "Handoff", section); err != nil {
+				if data, err = mdfile.ReplaceSection(data, board.SectionHandoff, section); err != nil {
 					return nil, err
 				}
 			}
 			if note != "" {
-				return mdfile.AppendToSection(data, "Notes", note)
+				return mdfile.AppendToSection(data, board.SectionNotes, note)
 			}
 			return data, nil
 		})
@@ -317,36 +312,6 @@ func (srv *server) checkpoint(inv *invocation, input CheckpointInput) (string, e
 	}
 	lines = append(lines, fmt.Sprintf("ok ticket=%s checkpoint by=%s", ticket.ID, protocol.ShortRun(c.by())))
 	return strings.Join(lines, "\n") + "\n", nil
-}
-
-func orNone(list []string) []string {
-	if len(list) == 0 {
-		return []string{"None"}
-	}
-	return list
-}
-
-// handoffSection renders ## Handoff (board-format §Handoff section).
-func handoffSection(now time.Time, by, branch string, done, next, files, questions []string) string {
-	header := fmt.Sprintf("_Updated %s by %s (run)", now.UTC().Format("2006-01-02 15:04 UTC"), by)
-	if branch != "" {
-		header += " on " + branch
-	}
-	lines := []string{header + "._", ""}
-	for _, part := range []struct {
-		label string
-		items []string
-	}{{"Done", done}, {"Next", next}, {"Files", orNone(files)}, {"Open questions", orNone(questions)}} {
-		if len(part.items) == 0 {
-			continue
-		}
-		lines = append(lines, "**"+part.label+"**", "")
-		for _, item := range part.items {
-			lines = append(lines, "- "+item)
-		}
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
 }
 
 // UpdateTicketInput is update_ticket's input.
@@ -456,19 +421,19 @@ func (srv *server) updateTicket(inv *invocation, input UpdateTicketInput) (strin
 			}
 		}
 		for _, index := range checks {
-			if data, err = mdfile.SetCheckbox(data, "Acceptance Criteria", index, true); err != nil {
+			if data, err = mdfile.SetCheckbox(data, board.SectionCriteria, index, true); err != nil {
 				return nil, err
 			}
 		}
 		if note != "" {
-			return mdfile.AppendToSection(data, "Notes", note)
+			return mdfile.AppendToSection(data, board.SectionNotes, note)
 		}
 		return data, nil
 	}
 	if workstream >= 0 {
-		_, err = srv.store.SetTicketWorkstream(project.Name, ticket.ID, base, changes[workstream].value, edit)
+		_, err = srv.store.SetTicketWorkstream(project.Name, ticket.ID, store.Unchanged(base), changes[workstream].value, edit)
 	} else {
-		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, base, edit)
+		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, store.Unchanged(base), edit)
 	}
 	if err != nil {
 		return "", err
@@ -578,7 +543,7 @@ func (srv *server) move(inv *invocation, input MoveInput) (string, error) {
 			return "", fail("blocked", "claim it with force and a reason to start it anyway", "%s is blocked: %s", ticket.ID, strings.Join(reasons, "; "))
 		}
 	}
-	if _, err := srv.store.UpdateTicket(project.Name, ticket.ID, "", func(data []byte) ([]byte, error) {
+	if _, err := srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 		return mdfile.SetScalar(data, "status", string(to))
 	}); err != nil {
 		return "", err
@@ -694,9 +659,9 @@ func (srv *server) createTicket(inv *invocation, input CreateTicketInput) (strin
 	}
 	created, err := srv.store.CreateTicket(project.Name, store.NewTicket{
 		Title: scrub.Text(input.Title, 300), Type: input.Type, Priority: input.Priority, Status: status,
-		Workstream: strings.TrimSpace(input.Workstream), Description: demoteHeadings(scrub.Secrets(input.Description)),
+		Workstream: strings.TrimSpace(input.Workstream), Description: scrub.Secrets(input.Description),
 		Criteria: items(input.Criteria), DependsOn: input.DependsOn, Tags: items(input.Tags),
-		Session: c.by(), PlanOrRepro: demoteHeadings(scrub.Secrets(input.PlanOrRepro)), Key: key,
+		Session: c.by(), PlanOrRepro: scrub.Secrets(input.PlanOrRepro), Key: key,
 	})
 	if err != nil {
 		return "", err
@@ -766,7 +731,7 @@ func (srv *server) createWorkstream(inv *invocation, input CreateWorkstreamInput
 	}
 	title := scrub.Text(input.Title, 300)
 	created, err := srv.store.CreateWorkstream(project.Name, store.NewWorkstream{
-		Title: title, Goal: demoteHeadings(scrub.Secrets(input.Goal)), Priority: strings.TrimSpace(input.Priority),
+		Title: title, Goal: scrub.Secrets(input.Goal), Priority: strings.TrimSpace(input.Priority),
 		Tickets: tickets, DependsOnWorkstreams: dependencies, Tags: items(input.Tags),
 	})
 	if err != nil {
@@ -848,9 +813,6 @@ type AttachInput struct {
 	Kind    string `json:"kind,omitempty" jsonschema:"screenshot, log or other; default: from the file type"`
 }
 
-// attachKinds are the kinds a copied file can have.
-var attachKinds = []string{"screenshot", "log", "other"}
-
 func (srv *server) attach(inv *invocation, input AttachInput) (string, error) {
 	c, err := srv.begin(inv, input.Run)
 	if err != nil {
@@ -864,7 +826,7 @@ func (srv *server) attach(inv *invocation, input AttachInput) (string, error) {
 	if kind == "" {
 		kind = kindOf(path)
 	}
-	if !slices.Contains(attachKinds, kind) {
+	if !slices.Contains(board.AttachmentKinds, kind) {
 		return "", fail("invalid_input", "use kind screenshot, log or other", "%q is not a kind", kind)
 	}
 	project, ticket, err := c.find(input.Ticket)
@@ -979,29 +941,3 @@ func questionID() string {
 
 // settable lists the fields update_ticket sets (status changes with move).
 var settable = slices.DeleteFunc(append(slices.Clone(board.ScalarFields), board.ListFields...), func(field string) bool { return field == "status" })
-
-// demoteHeadings turns agent-written level-1 and level-2 headings outside
-// code fences into level 3, so text placed inside a ticket section cannot
-// start a section of its own (## Handoff, ## Notes) that later edits and
-// recovery notes would read.
-func demoteHeadings(text string) string {
-	lines := strings.Split(text, "\n")
-	fenced := false
-	for index, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(trimmed, "~~~") {
-			fenced = !fenced
-			continue
-		}
-		if fenced {
-			continue
-		}
-		for _, prefix := range []string{"## ", "# "} {
-			if strings.HasPrefix(line, prefix) {
-				lines[index] = "### " + strings.TrimPrefix(line, prefix)
-				break
-			}
-		}
-	}
-	return strings.Join(lines, "\n")
-}

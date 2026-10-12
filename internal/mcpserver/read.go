@@ -91,7 +91,7 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 				lines = append(lines, "Blocked: "+strings.Join(reasons, "; "))
 			}
 			if ticket.Handoff != nil {
-				lines = append(lines, handoffLines(ticket.Handoff.Markdown, limit, text)...)
+				lines = append(lines, handoffLines(ticket.Handoff.HandoffNote, limit, text)...)
 			}
 			var open []string
 			for _, criterion := range ticket.Criteria {
@@ -201,10 +201,13 @@ func answersOf(list []events.Delivery) []protocol.Answer {
 	return answers
 }
 
-func handoffLines(markdown string, limit int, text func(string) string) []string {
+func handoffLines(h board.HandoffNote, limit int, text func(string) string) []string {
 	var lines []string
-	for _, label := range []string{"Done", "Next", "Open questions"} {
-		items := board.HandoffList(markdown, label)
+	for _, list := range []struct {
+		label string
+		items []string
+	}{{"Done", h.Done}, {"Next", h.Next}, {"Open questions", h.Questions}} {
+		label, items := list.label, slices.Clone(list.items)
 		if len(items) == 0 {
 			continue
 		}
@@ -232,10 +235,7 @@ func bullets(items []string, limit int, text func(string) string) []string {
 
 func ptr[T any](v T) *T { return &v }
 
-func agentOf(run string) string {
-	agent, _, _ := strings.Cut(run, ":")
-	return agent
-}
+func agentOf(run string) string { return events.RunOf(run).Agent() }
 
 // ListTicketsInput is list_tickets' input (MCP-7).
 type ListTicketsInput struct {

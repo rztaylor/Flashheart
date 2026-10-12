@@ -20,10 +20,10 @@ import (
 // content hash the client read; a stale hash is a 409 with the current file.
 type Writer interface {
 	ReadTicket(project, id string) ([]byte, string, error)
-	UpdateTicket(project, id, base string, edit store.Edit) (string, error)
-	UpdateReview(project, id, base string, edit store.Edit) (string, error)
-	PlaceTicket(project, id, base, after string, edit store.Edit) (string, bool, error)
-	UpdateWorkstream(project, slug, base string, edit store.Edit) (string, error)
+	UpdateTicket(project, id string, pre store.Precondition, edit store.Edit) (string, error)
+	UpdateReview(project, id string, pre store.Precondition, edit store.Edit) (string, error)
+	PlaceTicket(project, id string, pre store.Precondition, after string, edit store.Edit) (string, bool, error)
+	UpdateWorkstream(project, slug string, pre store.Precondition, edit store.Edit) (string, error)
 	CreateTicket(project string, input store.NewTicket) (store.Created, error)
 	SetProjectKey(project, key string) error
 	Archive(project, id string) error
@@ -147,7 +147,7 @@ func (b boardAPI) saved(w http.ResponseWriter, status int, hash string, warnings
 // and at most the columns or field names, never their values (agent-protocol
 // §3). The ticket is already saved and the board files are the source of
 // truth, so a failure to record does not fail the write.
-func (b boardAPI) recordHuman(project, kind string, data events.TicketData) {
+func (b boardAPI) recordHuman(project string, kind events.Kind, data events.TicketData) {
 	if b.events != nil {
 		_ = b.events.Append(events.ByHuman(b.now(), project, kind, data))
 	}
@@ -211,19 +211,25 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
 			return next, err
 		}
-		return mdfile.AppendToSection(next, "Notes", board.BlockedStartNote(reason))
+		return mdfile.AppendToSection(next, board.SectionNotes, board.BlockedStartNote(reason))
+	}
+	// A move sets only status (and a note), so without a hash it merges
+	// with the file as it is then (STO-3); with one it must still match.
+	pre := store.Merge
+	if request.Base != "" {
+		pre = store.Unchanged(request.Base)
 	}
 	var warnings []string
 	var hash string
 	var err error
 	if request.After != nil && to != board.Done {
 		var placed bool
-		hash, placed, err = writer.PlaceTicket(project.Name, ticket.ID, request.Base, *request.After, edit)
+		hash, placed, err = writer.PlaceTicket(project.Name, ticket.ID, pre, *request.After, edit)
 		if err == nil && !placed {
 			warnings = append(warnings, fmt.Sprintf("%s is no longer in %s, so %s kept its place.", *request.After, to.Title(), ticket.ID))
 		}
 	} else {
-		hash, err = writer.UpdateTicket(project.Name, ticket.ID, request.Base, edit)
+		hash, err = writer.UpdateTicket(project.Name, ticket.ID, pre, edit)
 	}
 	if err != nil {
 		writeStoreError(w, err)
@@ -309,7 +315,7 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	hash, err := writer.UpdateTicket(project.Name, ticket.ID, request.Base, func(data []byte) ([]byte, error) {
+	hash, err := writer.UpdateTicket(project.Name, ticket.ID, store.Unchanged(request.Base), func(data []byte) ([]byte, error) {
 		var err error
 		for _, c := range changes {
 			switch {
@@ -365,7 +371,7 @@ func (b boardAPI) putRaw(w http.ResponseWriter, r *http.Request) {
 	if doc := mdfile.Parse([]byte(request.Content)); doc.FrontmatterError != nil {
 		warnings = append(warnings, "The frontmatter does not parse, so the ticket now needs repair: "+doc.FrontmatterError.Error())
 	}
-	hash, err := writer.UpdateTicket(project.Name, ticket.ID, request.Base, func([]byte) ([]byte, error) {
+	hash, err := writer.UpdateTicket(project.Name, ticket.ID, store.Unchanged(request.Base), func([]byte) ([]byte, error) {
 		return []byte(request.Content), nil
 	})
 	if err != nil {
@@ -397,8 +403,8 @@ func (b boardAPI) setCriterion(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	hash, err := writer.UpdateTicket(project.Name, ticket.ID, request.Base, func(data []byte) ([]byte, error) {
-		return mdfile.SetCheckbox(data, "Acceptance Criteria", request.Index, request.Checked)
+	hash, err := writer.UpdateTicket(project.Name, ticket.ID, store.Unchanged(request.Base), func(data []byte) ([]byte, error) {
+		return mdfile.SetCheckbox(data, board.SectionCriteria, request.Index, request.Checked)
 	})
 	if err != nil {
 		writeStoreError(w, err)
@@ -523,7 +529,7 @@ func (b boardAPI) reorderWorkstream(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &request) {
 		return
 	}
-	hash, err := writer.UpdateWorkstream(r.PathValue("project"), r.PathValue("slug"), "", func(data []byte) ([]byte, error) {
+	hash, err := writer.UpdateWorkstream(r.PathValue("project"), r.PathValue("slug"), store.Merge, func(data []byte) ([]byte, error) {
 		current := mdfile.Parse(data).List("tickets")
 		// Only a reordering is allowed; any other difference means the list
 		// changed since the client read it.
@@ -663,7 +669,7 @@ func (b boardAPI) setReviewStep(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	hash, err := writer.UpdateReview(project.Name, ticket.ID, request.Base, func(data []byte) ([]byte, error) {
+	hash, err := writer.UpdateReview(project.Name, ticket.ID, store.Unchanged(request.Base), func(data []byte) ([]byte, error) {
 		next, err := board.SetReviewStep(string(data), request.Index, request.Checked)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", store.ErrInvalidInput, err)

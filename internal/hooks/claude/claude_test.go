@@ -116,7 +116,7 @@ func TestGoldenPayloads(t *testing.T) {
 					_ = e.Decode(&data)
 					encoded, _ := json.Marshal(data)
 					_ = json.Unmarshal([]byte(strings.ReplaceAll(string(encoded), repo, placeholder)), &data)
-					got = append(got, expected{Run: e.Run, Kind: e.Kind, Data: data})
+					got = append(got, expected{Run: e.Run, Kind: string(e.Kind), Data: data})
 				})
 				s.Close()
 			}

@@ -37,7 +37,7 @@ func TestPlaceTicketMovesAndRanksItInOneLockedWrite(t *testing.T) {
 	before, _ := os.ReadFile(al5)
 
 	// Up next → top of Backlog.
-	hash, placed, err := s.PlaceTicket("alpha", "AL-4", "", "", setStatus("backlog"))
+	hash, placed, err := s.PlaceTicket("alpha", "AL-4", Merge, "", setStatus("backlog"))
 	if err != nil || !placed {
 		t.Fatalf("place: placed=%v err=%v", placed, err)
 	}
@@ -61,7 +61,7 @@ func TestPlaceTicketMovesAndRanksItInOneLockedWrite(t *testing.T) {
 	}
 
 	// Reorder within the column: AL-6 directly after AL-4.
-	if _, placed, err := s.PlaceTicket("alpha", "AL-6", "", "AL-4", setStatus("backlog")); err != nil || !placed {
+	if _, placed, err := s.PlaceTicket("alpha", "AL-6", Merge, "AL-4", setStatus("backlog")); err != nil || !placed {
 		t.Fatalf("reorder: placed=%v err=%v", placed, err)
 	}
 	if got := columnOrder(t, s, "alpha", board.Backlog); !slices.Equal(got[:3], []string{"AL-4", "AL-6", "AL-5"}) {
@@ -72,7 +72,7 @@ func TestPlaceTicketMovesAndRanksItInOneLockedWrite(t *testing.T) {
 	// and leaves its file alone.
 	broken := filepath.Join(root, "alpha", "tickets", "AL-7-broken-frontmatter", "AL-7-broken-frontmatter.md")
 	brokenBefore, _ := os.ReadFile(broken)
-	if _, _, err := s.PlaceTicket("alpha", "AL-4", "", "AL-5", setStatus("backlog")); err != nil {
+	if _, _, err := s.PlaceTicket("alpha", "AL-4", Merge, "AL-5", setStatus("backlog")); err != nil {
 		t.Fatalf("place after AL-5: %v", err)
 	}
 	if got := columnOrder(t, s, "alpha", board.Backlog); !slices.Equal(got[:3], []string{"AL-6", "AL-5", "AL-4"}) {
@@ -99,7 +99,7 @@ func TestPlaceTicketChecksTheHashBeforeWritingAnything(t *testing.T) {
 		return files
 	}
 	before := snapshot()
-	_, _, err := s.PlaceTicket("alpha", "AL-6", "stale", "AL-5", setStatus("backlog"))
+	_, _, err := s.PlaceTicket("alpha", "AL-6", Unchanged("stale"), "AL-5", setStatus("backlog"))
 	var conflict *ConflictError
 	if !errors.As(err, &conflict) {
 		t.Fatalf("err = %v, want a conflict", err)
@@ -116,7 +116,7 @@ func TestPlaceTicketAfterATicketThatLeftTheColumnKeepsItsRank(t *testing.T) {
 	t.Parallel()
 
 	s, _ := writable(t)
-	_, placed, err := s.PlaceTicket("alpha", "AL-4", "", "AL-3", setStatus("backlog"))
+	_, placed, err := s.PlaceTicket("alpha", "AL-4", Merge, "AL-3", setStatus("backlog"))
 	if err != nil || placed {
 		t.Fatalf("placed=%v err=%v; AL-3 is in progress, not Backlog", placed, err)
 	}
@@ -128,7 +128,7 @@ func TestPlaceTicketAfterATicketThatLeftTheColumnKeepsItsRank(t *testing.T) {
 	if rank, ok := doc.String("rank"); ok {
 		t.Errorf("rank = %q, want none", rank)
 	}
-	if _, _, err := s.PlaceTicket("alpha", "AL-404", "", "", setStatus("backlog")); !errors.Is(err, ErrNotFound) {
+	if _, _, err := s.PlaceTicket("alpha", "AL-404", Merge, "", setStatus("backlog")); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unknown ticket: %v", err)
 	}
 }
@@ -144,7 +144,7 @@ func TestConcurrentPlacementsKeepOneOrder(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			s := open(t, root)
-			if _, _, err := s.PlaceTicket("alpha", id, "", "", setStatus("up-next")); err != nil {
+			if _, _, err := s.PlaceTicket("alpha", id, Merge, "", setStatus("up-next")); err != nil {
 				errs <- fmt.Errorf("%s: %w", id, err)
 			}
 		}()

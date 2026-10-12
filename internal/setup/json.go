@@ -180,7 +180,7 @@ func (v *value) equal(other *value) bool {
 	return fmt.Sprint(a) == fmt.Sprint(b)
 }
 
-// encode writes v the way Claude Code writes its settings: one member per
+// encode writes v the way agents write their JSON settings: one member per
 // line, with the file's indent; empty objects and arrays stay on one line.
 func (v *value) encode(indent string) []byte {
 	var b bytes.Buffer

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rztaylor/flashheart/internal/health"
 	"github.com/rztaylor/flashheart/internal/setup"
 )
 
@@ -22,9 +23,10 @@ func fixture(t *testing.T) Options {
 	if err := os.MkdirAll(filepath.Join(root, ".flashheart"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	claude := setup.Options{Home: home, Binary: filepath.Join(home, "bin", "flashheart")}
 	return Options{
 		Root:   root,
-		Claude: setup.Options{Home: home, Binary: filepath.Join(home, "bin", "flashheart")},
+		Agents: []Agent{{Title: setup.Claude{}.Title(), Diagnose: func() []health.Finding { return setup.Claude{}.Diagnose(claude) }}},
 		Now:    func() time.Time { return now },
 	}
 }
@@ -114,5 +116,26 @@ func TestDoctorIncludesTheClaudeCodeSetup(t *testing.T) {
 	out, _ := report(Check(fixture(t)))
 	if !strings.Contains(out, "Claude Code\n  problem  Hooks: none installed; run flashheart setup claude --write\n") {
 		t.Fatalf("report:\n%s", out)
+	}
+}
+
+// Each agent doctor is given adds its own section, between the root and
+// the hook errors (FH-89).
+func TestDoctorReportsASectionPerAgent(t *testing.T) {
+	t.Parallel()
+
+	o := fixture(t)
+	o.Agents = append(o.Agents, Agent{Title: "Other Agent", Diagnose: func() []health.Finding {
+		return []health.Finding{{Level: health.Problem, Text: "Config: missing"}}
+	}})
+	out, _ := report(Check(o))
+	claude := strings.Index(out, "\nClaude Code\n")
+	other := strings.Index(out, "\nOther Agent\n  problem  Config: missing\n")
+	errors := strings.Index(out, "\nHook errors\n")
+	if claude < 0 || other < claude || errors < other {
+		t.Fatalf("sections out of order:\n%s", out)
+	}
+	if sections := Check(Options{Root: o.Root, Now: o.Now}); len(sections) != 2 {
+		t.Fatalf("with no agents: %d sections", len(sections))
 	}
 }

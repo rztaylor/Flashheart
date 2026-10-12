@@ -15,7 +15,7 @@ const session = "claude:s1"
 
 func at(minutes float64) time.Time { return t0.Add(time.Duration(minutes * float64(time.Minute))) }
 
-func ev(minutes float64, run, kind string, data any) events.Event {
+func ev(minutes float64, run string, kind events.Kind, data any) events.Event {
 	return events.Event{Time: at(minutes), Run: run, Agent: "claude", Kind: kind, Project: "alpha", Data: data}
 }
 
@@ -297,7 +297,7 @@ func TestTicketEventsInTheTimeline(t *testing.T) {
 
 	cases := []struct {
 		name string
-		kind string
+		kind events.Kind
 		data any
 		want Entry
 	}{

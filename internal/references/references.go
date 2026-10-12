@@ -101,7 +101,7 @@ func (c *Copier) ticket(project board.Project, id string) {
 		return
 	}
 	if next := c.rewrite(project, id, string(data)); next != string(data) {
-		_, err := c.files.UpdateTicket(project.Name, id, hash, func([]byte) ([]byte, error) { return []byte(next), nil })
+		_, err := c.files.UpdateTicket(project.Name, id, store.Unchanged(hash), func([]byte) ([]byte, error) { return []byte(next), nil })
 		c.saved(id, err)
 	}
 }
@@ -112,7 +112,7 @@ func (c *Copier) review(project board.Project, id, folder string) {
 		return
 	}
 	if next := c.rewrite(project, id, text); next != text {
-		_, err := c.files.UpdateReview(project.Name, id, store.Hash([]byte(text)), func([]byte) ([]byte, error) { return []byte(next), nil })
+		_, err := c.files.UpdateReview(project.Name, id, store.Unchanged(store.Hash([]byte(text))), func([]byte) ([]byte, error) { return []byte(next), nil })
 		c.saved(id, err)
 	}
 }

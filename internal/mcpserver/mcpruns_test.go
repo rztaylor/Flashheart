@@ -79,7 +79,7 @@ func TestAWriteWithoutAHookRunStartsOne(t *testing.T) {
 		t.Fatalf("run.start = %+v %+v", start, data)
 	}
 	run := start.Run
-	if kinds := e.kinds(run); !slices.Equal(kinds, []string{events.RunStart, events.Claim, events.TicketMoved, events.Activity}) {
+	if kinds := e.kinds(run); !slices.Equal(kinds, []events.Kind{events.RunStart, events.Claim, events.TicketMoved, events.Activity}) {
 		t.Fatalf("events = %v", kinds)
 	}
 	short := run[:len("codex:mcp-0123")]

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -72,7 +71,7 @@ func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 	if q.Run == "" {
 		return Result{}, fmt.Errorf("%s: %w", o.Question, ErrUnknownQuestion)
 	}
-	session, _, _ := strings.Cut(q.Run, "/")
+	session := events.RunOf(q.Run).Session().String()
 	scanned := start
 	for {
 		if q.AnsweredInSession {

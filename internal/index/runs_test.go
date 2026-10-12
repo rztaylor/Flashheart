@@ -38,7 +38,7 @@ func runsBoard(t *testing.T) (*Index, *events.Log, *fakeClock, string) {
 	return New(s, Options{MaxAge: time.Hour, Now: clock.Now, Events: log, Runs: runs.DefaultSettings()}), log, clock, root
 }
 
-func appendEvent(t *testing.T, log *events.Log, at time.Time, kind string, data any) {
+func appendEvent(t *testing.T, log *events.Log, at time.Time, kind events.Kind, data any) {
 	t.Helper()
 	if err := log.Append(events.Event{Time: at, Run: "claude:s1", Agent: "claude", Kind: kind, Project: "alpha", Data: data}); err != nil {
 		t.Fatal(err)
@@ -254,7 +254,7 @@ func TestRunCountsNeedsYouWithoutATicket(t *testing.T) {
 
 	index, log, clock, _ := runsBoard(t)
 	now := clock.now
-	add := func(run, kind string, data any) {
+	add := func(run string, kind events.Kind, data any) {
 		t.Helper()
 		if err := log.Append(events.Event{Time: now.Add(-time.Minute), Run: run, Agent: "claude", Kind: kind, Project: "alpha", Data: data}); err != nil {
 			t.Fatal(err)
