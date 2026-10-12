@@ -12,7 +12,9 @@
 // project lock (agent-protocol §3), appends the events, renders the
 // recovery note at session start
 // (after calling the caller's skill refresh and noting an update),
-// delivers waiting answers with a prompt (HOOK-5), marks a session's turn
+// delivers waiting answers with a prompt and in the recovery note
+// (HOOK-5, through events.Deliver: shown even when recording their
+// delivery fails, which is logged), marks a session's turn
 // end or end when a file in its worktree changed during one of its shell
 // commands since its last checkpoint (asking gitchange, under a deadline
 // counted from the hook's start, only when it ran one; agent-protocol §4),

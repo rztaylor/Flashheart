@@ -167,6 +167,48 @@ func TestWaitStopsQuietlyWhenTheAnswerWasDeliveredElsewhere(t *testing.T) {
 	}
 }
 
+// An answer whose inbox a delivery took but could not record as delivered
+// (a session start whose append failed) is still answered and undelivered
+// in the log; await delivers it from there rather than waiting for its
+// timeout (FH-78).
+func TestWaitDeliversAnAnswerWhoseInboxWasEmptiedByAFailedDelivery(t *testing.T) {
+	t.Parallel()
+
+	for name, at := range map[string]int{"before the wait": 0, "during the wait": 2} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			f := newFixture(t)
+			f.ask(subagent, "q-9")
+			lose := func() {
+				f.answer(subagent, "q-9")
+				if _, err := f.log.TakeAnswers(project, session); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if at == 0 {
+				lose()
+			} else {
+				f.onSleep = func(call int) {
+					if call == at {
+						lose()
+					}
+				}
+			}
+			result, err := Wait(context.Background(), f.log, f.options("q-9"))
+			if err != nil || !strings.Contains(result.Note, `AL-1: "Push it?" → "Push" (Robert)`) {
+				t.Fatalf("result = %+v, %v", result, err)
+			}
+			if got := f.delivered(); len(got) != 1 || got[0] != subagent+" q-9" {
+				t.Fatalf("delivered = %v", got)
+			}
+			// Within one rescan of the loss, not at the timeout.
+			if f.now.Sub(t0) > time.Duration(at)*time.Second+f.options("q-9").Rescan {
+				t.Fatalf("waited %s", f.now.Sub(t0))
+			}
+		})
+	}
+}
+
 func TestWaitStopsWhenTheUserAnsweredInTheSession(t *testing.T) {
 	t.Parallel()
 
