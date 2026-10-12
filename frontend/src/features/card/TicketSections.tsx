@@ -129,7 +129,11 @@ export function activeSection(
 // TicketSkeleton holds the place of a ticket while it loads.
 export function TicketSkeleton() {
   return (
-    <div aria-hidden="true" className="flex flex-col gap-3 p-6">
+    <div
+      aria-hidden="true"
+      data-skeleton="ticket"
+      className="flex flex-col gap-3 p-6"
+    >
       <div className="h-3 w-24 animate-pulse rounded-card bg-well" />
       <div className="h-6 w-3/4 animate-pulse rounded-card bg-well" />
       <div className="h-3 w-1/2 animate-pulse rounded-card bg-well" />

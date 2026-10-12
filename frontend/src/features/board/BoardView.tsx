@@ -569,3 +569,35 @@ export function NoTickets({ filtered }: { filtered: boolean }) {
     </EmptyState>
   );
 }
+
+// BoardSkeleton holds the Board's place while it loads (ui-layout.md §8):
+// a well for each column the Board shows, less a hidden Backlog.
+export function BoardSkeleton({
+  hiddenColumns,
+}: {
+  hiddenColumns: HideableColumn[];
+}) {
+  const columns = shownColumns(hiddenColumns);
+  return (
+    <div
+      aria-hidden="true"
+      data-skeleton="board"
+      className="grid gap-4 px-4 py-2 md:px-6"
+      style={{
+        gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
+      }}
+    >
+      {columns.map((column) => (
+        <div
+          key={column.id}
+          data-skeleton-column
+          className="flex flex-col gap-2.5 rounded-panel border border-rule bg-column p-3"
+        >
+          <div className="h-6 w-2/3 rounded-full bg-well" />
+          <div className="h-24 animate-pulse rounded-card bg-card" />
+          <div className="h-20 animate-pulse rounded-card bg-card" />
+        </div>
+      ))}
+    </div>
+  );
+}

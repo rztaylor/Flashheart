@@ -43,6 +43,31 @@ export function HeadCell({
   );
 }
 
+// SkeletonTable is the table look while its rows load (ui-layout.md §8):
+// the same surface and head band, with rows of placeholder bars.
+export function SkeletonTable({ rows = 5 }: { rows?: number }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="overflow-hidden rounded-panel border border-rule bg-card shadow-card"
+    >
+      <div className="h-10 border-b border-rule bg-column" />
+      {Array.from({ length: rows }, (_, row) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: placeholder rows have no identity.
+          key={row}
+          className="flex items-center gap-6 border-b border-rule px-3 py-3.5 last:border-b-0"
+        >
+          <div className="h-4 w-2/5 animate-pulse rounded-card bg-well" />
+          <div className="h-4 w-20 animate-pulse rounded-full bg-well" />
+          <div className="h-4 w-16 animate-pulse rounded-full bg-well" />
+          <div className="ml-auto h-4 w-12 animate-pulse rounded-card bg-well" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Row is one body row: divided from the next, lit on hover, or marked as
 // the selected one.
 export function Row({

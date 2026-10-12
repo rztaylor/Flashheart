@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { Icon } from "../../components/Icon";
+import { LoadError } from "../../components/LoadError";
+import { StaleNote } from "../../components/StaleNote";
 import { TicketLinksInPlace } from "../../components/TicketLink";
 import { workstreamTitle } from "../../model/lines";
 import { type SectionId, ticketSections } from "../../model/ticketSections";
@@ -80,11 +82,16 @@ export function TicketPage({
         </nav>
         {resource.status === "loading" ? <TicketSkeleton /> : null}
         {resource.status === "error" ? (
-          <div className="py-6">
-            <p role="alert" className="text-sm text-danger">
-              This ticket could not be loaded: {resource.error}
-            </p>
-          </div>
+          <>
+            {/* The page keeps its heading while the ticket cannot load. */}
+            <h1 className="sr-only">{ref.id}</h1>
+            <LoadError
+              what="This ticket could not be loaded"
+              error={resource.error}
+              onRetry={resource.reload}
+              className="py-6"
+            />
+          </>
         ) : null}
         {detail ? (
           <>
@@ -110,6 +117,9 @@ export function TicketPage({
                 />
               ) : null}
             </header>
+            {resource.error ? (
+              <StaleNote error={resource.error} className="pb-3" />
+            ) : null}
             <SectionTabs
               sections={sections}
               active={active}

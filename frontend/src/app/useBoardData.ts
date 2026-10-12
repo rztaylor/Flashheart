@@ -13,7 +13,7 @@ import { type Movable, useEditing } from "../features/editing/useEditing";
 import { linesByProject } from "../model/lines";
 import { placeCard } from "../model/order";
 import { moveRemark, nextRemark } from "../model/remarks";
-import { useResource } from "../state/useResource";
+import { type Resource, useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
 import type { Scope, View } from "./route";
 
@@ -127,6 +127,8 @@ export function useBoardData({
     revision,
     projects,
     board,
+    // stale is why the frame shows the last good copy, if it does.
+    stale: staleError(view, projects, board),
     reloadAll,
     editing,
     doneAll,
@@ -145,3 +147,17 @@ export function useBoardData({
 }
 
 export type BoardDataState = ReturnType<typeof useBoardData>;
+
+// staleError is why the frame shows the last good copy (ui-layout.md §8):
+// the board's failed reload on the Board and Table, else the projects'.
+// The board's state is ignored elsewhere: it is left from the last time
+// the Board or Table showed.
+export function staleError(
+  view: View,
+  projects: Resource<unknown>,
+  board: Resource<unknown>,
+): string | undefined {
+  const boardShown = view === "board" || view === "table";
+  if (boardShown && board.status === "ready" && board.error) return board.error;
+  return projects.status === "ready" ? projects.error : undefined;
+}

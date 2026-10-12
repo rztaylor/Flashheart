@@ -12,6 +12,7 @@ import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { ProjectRail } from "../features/projects/ProjectRail";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
 import { shownColumns } from "../model/columns";
+import { messageOf } from "../model/errors";
 import { applyFilters, isFiltered } from "../model/filters";
 import { afterForStep, predecessor, type Step } from "../model/order";
 import { viewSummary } from "../model/summary";
@@ -137,9 +138,10 @@ export function Shell({
             .then(data.reloadAll)
             .catch((error: unknown) =>
               editing.notify({
-                text: `${displayName} was not restored: ${
-                  error instanceof Error ? error.message : "the request failed"
-                }`,
+                text: `${displayName} was not restored: ${messageOf(
+                  error,
+                  "the request failed",
+                )}`,
               }),
             ),
       },
@@ -203,7 +205,7 @@ export function Shell({
         <BandNotices
           shutdownDenied={state.shutdownDenied}
           onDismiss={lifecycle.dismissDenial}
-          stale={board.status === "ready" ? board.error : undefined}
+          stale={data.stale}
         />
 
         {route.view === "ticket" && route.ticket ? (

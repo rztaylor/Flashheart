@@ -10,8 +10,10 @@ filter chip: show only, Cmd or Ctrl click to hide), `Dialog`, `Toast`,
 `Markdown` (block or one inline line), `Lightbox` (one image of a set in a
 dialog), `Table` (the one table look, ui-layout.md §6: card surface,
 sticky head, `HeadCell`, `Row` with dividers, hover and selection),
-`RouteBar`, `EmptyState`, `RunState` (run state as a mark and
-words), `NeedsYou` (the one attention plate, ui-layout.md §7: the
+`RouteBar`, `EmptyState`, `LoadError` (a load failure in words, an alert,
+with Try again) and `StaleNote` (the last good copy's note; ui-layout.md
+§8), `SkeletonTable` (the table look while rows load), `RunState` (run
+state as a mark and words), `NeedsYou` (the one attention plate, ui-layout.md §7: the
 attention colour, `NeedsYouPlate` inline and on the rail, `plateClass` for
 the band's toggle, and `AttentionDisc`; nothing else uses the attention
 colour),

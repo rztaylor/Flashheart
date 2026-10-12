@@ -12,10 +12,12 @@ import { fetchRuns, type Run } from "../../api/runs";
 import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { Icon, type IconName } from "../../components/Icon";
+import { LoadError } from "../../components/LoadError";
 import { attentionClass } from "../../components/NeedsYou";
 import { stateToneClass, stateToneIcon } from "../../components/Pill";
 import { QuestionCard } from "../../components/QuestionCard";
 import { RunStateLabel, RunStateMark } from "../../components/RunState";
+import { StaleNote } from "../../components/StaleNote";
 import { TicketLink } from "../../components/TicketLink";
 import {
   collapsible,
@@ -104,15 +106,12 @@ export function OverviewView({
   if (resource.status === "loading") return <OverviewSkeleton />;
   if (resource.status === "error" || !data) {
     return (
-      <div className="m-4 flex items-center gap-3 text-sm">
-        <p role="alert" className="text-danger">
-          The overview could not be loaded: {resource.error}
-        </p>
-        <Button onClick={resource.reload}>
-          <Icon name="refresh" size={14} />
-          Try again
-        </Button>
-      </div>
+      <LoadError
+        what="The overview could not be loaded"
+        error={resource.error ?? ""}
+        onRetry={resource.reload}
+        className="m-4"
+      />
     );
   }
   return (
@@ -122,11 +121,7 @@ export function OverviewView({
           stages={pipelineStages(projects, project)}
           boardHref={boardHref}
         />
-        {resource.error ? (
-          <p role="status" className="text-xs text-ink-muted">
-            Showing the last good copy: {resource.error}
-          </p>
-        ) : null}
+        {resource.error ? <StaleNote error={resource.error} /> : null}
         <OverviewSections
           data={data}
           now={now}
@@ -696,9 +691,11 @@ function UpNextRow({
   );
 }
 
-function OverviewSkeleton() {
+// OverviewSkeleton holds the Overview's place while it loads (ui-layout.md
+// §8): its section cards in their one column.
+export function OverviewSkeleton() {
   return (
-    <div aria-hidden="true" className={column}>
+    <div aria-hidden="true" data-skeleton="overview" className={column}>
       {[0, 1, 2].map((section) => (
         <div
           key={section}

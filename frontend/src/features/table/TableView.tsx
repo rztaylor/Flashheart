@@ -10,7 +10,7 @@ import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { Pill, StatusPill, Tag } from "../../components/Pill";
 import { RunStateLabel } from "../../components/RunState";
-import { HeadCell, Row, Table } from "../../components/Table";
+import { HeadCell, Row, SkeletonTable, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
 import { type Line, workstreamTitle } from "../../model/lines";
 import { priorityLabel } from "../../model/status";
@@ -60,6 +60,16 @@ function compare(a: Card, b: Card, key: SortKey): number {
     default:
       return String(a[key]).localeCompare(String(b[key]));
   }
+}
+
+// TableSkeleton holds the Table's place while its tickets load
+// (ui-layout.md §8), in the view's own gutter.
+export function TableSkeleton() {
+  return (
+    <div data-skeleton="table" className="px-4 pt-1 pb-10 md:px-6">
+      <SkeletonTable rows={8} />
+    </div>
+  );
 }
 
 // TableView lists tickets in a sortable table (VIEW-5, ui-layout.md §6):

@@ -1,12 +1,23 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { TicketDetail } from "../../api/board";
 import { TicketLinksInPlace } from "../../components/TicketLink";
-import { PanelHeader } from "./CardPanel";
+import { CardPanel, PanelHeader } from "./CardPanel";
 import { ReviewTab } from "./ReviewTab";
 import { TicketActions } from "./TicketHeader";
+import { TicketPage } from "./TicketPage";
 import { TicketTab } from "./TicketTab";
+
+// resource is what the ticket's useResource returns, so a test can show its
+// loading, error and stale states without a server.
+const resource = vi.hoisted(() => ({
+  state: { status: "loading" } as Record<string, unknown>,
+  reload: vi.fn(),
+}));
+vi.mock("../../state/useResource", () => ({
+  useResource: () => ({ ...resource.state, reload: resource.reload }),
+}));
 
 // The card panel of docs/dev/specs/ui-layout.md §3.
 function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
@@ -82,6 +93,54 @@ const idLink = (id: string) =>
   new RegExp(
     `<a [^>]*href="#/ticket/${id}"[^>]*target="_blank"[^>]*>${id}</a>`,
   );
+
+const panelProps = {
+  ticket: { id: "FH-4" },
+  fetcher: () => new Promise<Response>(() => {}),
+  lines: new Map(),
+  workstreams: new Map(),
+  keys: new Set<string>(),
+  onOpen: () => undefined,
+  onClose: () => undefined,
+  revision: 0,
+};
+
+// The load states of ui-layout.md §8, in the panel and on the full page.
+describe.each([
+  ["the card panel", () => renderToStaticMarkup(<CardPanel {...panelProps} />)],
+  [
+    "the ticket page",
+    () =>
+      renderToStaticMarkup(
+        <TicketPage
+          {...panelProps}
+          boardLink={() => ({ href: "#/p/flashheart/board", label: "x" })}
+        />,
+      ),
+  ],
+])("%s", (_, render) => {
+  afterEach(() => {
+    resource.state = { status: "loading" };
+  });
+
+  it("loads in the shape of its header", () => {
+    expect(render()).toContain('data-skeleton="ticket"');
+  });
+
+  it("says why the ticket could not load, with Try again", () => {
+    resource.state = { status: "error", error: "disk full" };
+    const html = render();
+    expect(html).toContain("This ticket could not be loaded: disk full");
+    expect(html).toContain("Try again");
+  });
+
+  it("keeps the last good copy with a note when a reload fails", () => {
+    resource.state = { status: "ready", data: detail(), error: "disk full" };
+    const html = render();
+    expect(html).toContain("Showing the last good copy: disk full");
+    expect(html).toContain("MCP server, claims, checkpoints and questions");
+  });
+});
 
 describe("PanelHeader", () => {
   const markup = renderToStaticMarkup(

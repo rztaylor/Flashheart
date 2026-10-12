@@ -9,11 +9,12 @@
   a `data-theme` attribute set from the saved preference (system for now).
 - Layers and dependency direction: `styles/` (tokens) and `model/` (pure
   view models: line assignment, filters, paint, status, remembered scopes, times,
-  markdown links, grid movement) → `components/` (primitives and shared
+  markdown links, grid movement, `messageOf` for a failure's words) →
+  `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
   Table, RouteBar, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
-  FilterChip, TicketLink) → `features/<feature>/` (board,
+  FilterChip, TicketLink, LoadError, StaleNote) → `features/<feature>/` (board,
   card, editing, overview, workstreams, table, projects, filters, archive; later
   settings) → `app/`
   (shell, hash routing, composition). Shared layers never import features
@@ -24,6 +25,13 @@
   loading and freshness: `useRevision` long-polls `/api/changes` and
   `useResource` keeps the last good value and reloads when the revision
   moves; `usePreferences` saves UI preferences through the backend.
+- Load states (ui-layout.md §8, FH-103) are one contract: a view whose
+  load fails shows `components/LoadError` (the error in words, an alert,
+  and Try again calling the resource's `reload`); a view whose reload
+  fails keeps its data and shows `components/StaleNote`; while loading,
+  each view shows the one skeleton its feature exports (`BoardSkeleton`,
+  `TableSkeleton`, `OverviewSkeleton`, `WorkstreamsSkeleton`,
+  `ArchiveSkeleton`, `TicketSkeleton`), marked `data-skeleton`.
 - Editing: every edit from the panel carries the ticket's content hash; a
   409 opens the conflict dialog. Moves from the board set only `status`.
   Native `<dialog>` for decisions (blocked move, conflict, new ticket); a

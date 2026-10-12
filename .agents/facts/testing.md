@@ -49,6 +49,12 @@
   live cards, the Runs tab and questions) creates runs by running
   `flashheart hook claude`
   against the sandbox (`frontend/e2e/agent-runs.mjs`).
+- Load states (ui-layout.md §8, FH-103): views are rendered statically with
+  `useResource` mocked for their error, stale and loading states; in the
+  browser, `frontend/e2e/states.spec.mjs` fails requests (500) or holds
+  them with `page.route` to check each view's Try again, last-good-copy
+  note and skeleton, with screenshots named `state-error-*`,
+  `state-stale-*` and `state-loading-*`.
 - Run-state and blocking logic are table tests with a fake clock.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and

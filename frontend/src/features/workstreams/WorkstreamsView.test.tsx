@@ -1,8 +1,27 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Workstream, WorkstreamTicket } from "../../api/board";
-import { WorkstreamLine } from "./WorkstreamsView";
+import type {
+  ProjectSummary,
+  Workstream,
+  WorkstreamTicket,
+} from "../../api/board";
+import { noRuns } from "../../api/runs";
+import {
+  WorkstreamLine,
+  WorkstreamsSkeleton,
+  WorkstreamsView,
+} from "./WorkstreamsView";
+
+// resource is what each project's useResource returns, so a test can show
+// its loading, error and stale states without a server.
+const resource = vi.hoisted(() => ({
+  state: { status: "loading" } as Record<string, unknown>,
+  reload: vi.fn(),
+}));
+vi.mock("../../state/useResource", () => ({
+  useResource: () => ({ ...resource.state, reload: resource.reload }),
+}));
 
 // A finished workstream (every ticket Done, Rejected or Archived) shows as
 // its route card head with a disclosure chevron and no stations until the
@@ -118,5 +137,81 @@ describe("WorkstreamLine", () => {
     const classes = render(finished).match(chevron)?.[1] ?? "";
     expect(classes).toContain("transition-transform");
     expect(classes).not.toMatch(/duration-/);
+  });
+});
+
+const project: ProjectSummary = {
+  name: "flashheart",
+  displayName: "Flashheart",
+  key: "FH",
+  keyDerived: false,
+  repos: [],
+  counts: {
+    backlog: 0,
+    "up-next": 0,
+    "in-progress": 0,
+    review: 0,
+    done: 0,
+  },
+  needsRepair: 0,
+  blocked: 0,
+  warnings: [],
+  lastModified: "",
+  workstreams: [
+    {
+      slug: "foundation",
+      title: "Foundation",
+      created: "2026-10-01",
+      status: "active",
+      done: 0,
+      total: 1,
+    },
+  ],
+  archived: 0,
+  rejected: 0,
+  runs: noRuns,
+};
+
+const renderView = () =>
+  renderToStaticMarkup(
+    <WorkstreamsView
+      projects={[project]}
+      fetcher={() => new Promise<Response>(() => {})}
+      lines={new Map()}
+      revision={0}
+      expanded={{}}
+      onExpanded={() => undefined}
+      onOpen={() => undefined}
+    />,
+  );
+
+describe("WorkstreamsView load states (ui-layout.md §8)", () => {
+  afterEach(() => {
+    resource.state = { status: "loading" };
+  });
+
+  it("loads in the shape of route cards", () => {
+    expect(renderView()).toContain('data-skeleton="route-card"');
+    expect(renderToStaticMarkup(<WorkstreamsSkeleton />)).toContain(
+      'data-skeleton="workstreams"',
+    );
+  });
+
+  it("says why a project's lines could not load, with Try again", () => {
+    resource.state = { status: "error", error: "disk full" };
+    const html = renderView();
+    expect(html).toContain("Workstreams could not be loaded: disk full");
+    expect(html).toContain("Try again");
+  });
+
+  it("keeps the last good lines with a note when a reload fails", () => {
+    resource.state = {
+      status: "ready",
+      data: [workstream([ticket("FH-1", "up-next")], "active")],
+      error: "disk full",
+    };
+    const html = renderView();
+    expect(html).toContain("Showing the last good copy: disk full");
+    expect(html).toContain('data-station="FH-1"');
   });
 });

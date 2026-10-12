@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "../components/Button";
 import { SearchField } from "../components/Field";
 import { Icon, type IconName } from "../components/Icon";
+import { StaleNote } from "../components/StaleNote";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
 import { nextRemark } from "../model/remarks";
 import { BackendStatus } from "./BackendStatus";
@@ -109,8 +110,8 @@ export function Band({
   );
 }
 
-// BandNotices sit under the band: Quit's denial, and a reload that failed
-// while the last good copy shows.
+// BandNotices sit under the band: Quit's denial, and a reload of the
+// projects or the board that failed while the last good copy shows.
 export function BandNotices({
   shutdownDenied,
   onDismiss,
@@ -137,12 +138,10 @@ export function BandNotices({
         </div>
       ) : null}
       {stale ? (
-        <p
-          role="status"
-          className="border-b border-rule bg-well px-4 py-1.5 text-xs text-ink-muted"
-        >
-          Showing the last good copy: {stale}
-        </p>
+        <StaleNote
+          error={stale}
+          className="border-b border-rule bg-well px-4 py-1.5"
+        />
       ) : null}
     </div>
   );

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { messageOf } from "../model/errors";
+
 export type Resource<T> =
   | { status: "loading"; data?: undefined; error?: undefined }
   | { status: "ready"; data: T; error?: string }
@@ -39,8 +41,7 @@ export function useResource<T>(
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        const message =
-          error instanceof Error ? error.message : "Could not load";
+        const message = messageOf(error, "Could not load");
         setState((previous) =>
           previous.status === "ready"
             ? { ...previous, error: message }

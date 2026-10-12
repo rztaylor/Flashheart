@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { connect, type SingleserveSession } from "singleserve-client";
 
 import type { AuthenticatedFetch } from "../api/client";
+import { messageOf } from "../model/errors";
 import {
   initialLifecycleState,
   isTerminal,
@@ -58,10 +59,10 @@ export function useSingleserve(): SingleserveLifecycle {
         if (!disposed) {
           dispatch({
             type: "connect-failed",
-            message:
-              error instanceof Error
-                ? error.message
-                : "The local session could not be established",
+            message: messageOf(
+              error,
+              "The local session could not be established",
+            ),
           });
         }
       });
@@ -126,8 +127,7 @@ export function useSingleserve(): SingleserveLifecycle {
     } catch (error: unknown) {
       dispatch({
         type: "quit-denied",
-        message:
-          error instanceof Error ? error.message : "Flashheart could not quit",
+        message: messageOf(error, "Flashheart could not quit"),
       });
     }
   }, []);

@@ -17,6 +17,7 @@ import {
 import { Button } from "../../components/Button";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
 import { SegmentedControl } from "../../components/SegmentedControl";
+import { messageOf } from "../../model/errors";
 import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 import { ConflictDialog } from "../editing/ConflictDialog";
 
@@ -137,7 +138,7 @@ export function EditTab({
     } catch (caught) {
       const conflict = conflictOf(caught);
       if (conflict) setPending(onConflict(conflict));
-      else setError(caught instanceof Error ? caught.message : "Not saved");
+      else setError(messageOf(caught, "Not saved"));
     } finally {
       setBusy(false);
     }

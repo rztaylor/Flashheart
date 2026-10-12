@@ -9,10 +9,9 @@ import { COLUMNS } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
+import { LoadError } from "../../components/LoadError";
 import { StateNote } from "../../components/StateNote";
-
-const failure = (error: unknown) =>
-  error instanceof Error ? error.message : "The request failed";
+import { messageOf } from "../../model/errors";
 
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`;
@@ -34,16 +33,23 @@ export function ArchiveProjectDialog({
   const [check, setCheck] = useState<ArchiveCheck | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // tries counts the check's loads; Try again after a failed one adds one.
+  const [tries, setTries] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tries is a reload trigger.
   useEffect(() => {
     const controller = new AbortController();
     fetchArchiveCheck(fetcher, project, controller.signal)
-      .then(setCheck)
+      .then((next) => {
+        setCheck(next);
+        setError("");
+      })
       .catch((reason: unknown) => {
-        if (!controller.signal.aborted) setError(failure(reason));
+        if (!controller.signal.aborted)
+          setError(messageOf(reason, "The request failed"));
       });
     return () => controller.abort();
-  }, [fetcher, project]);
+  }, [fetcher, project, tries]);
 
   const confirm = async () => {
     if (!check) return;
@@ -52,7 +58,7 @@ export function ArchiveProjectDialog({
       await archiveProject(fetcher, project);
       onArchived(check.displayName);
     } catch (reason) {
-      setError(failure(reason));
+      setError(messageOf(reason, "The request failed"));
       setBusy(false);
     }
   };
@@ -75,10 +81,20 @@ export function ArchiveProjectDialog({
       ) : error ? null : (
         <p className="text-ink-muted">Checking the project…</p>
       )}
-      {error ? (
+      {error && check ? (
         <p role="alert" className="mt-3 text-danger">
           {error}
         </p>
+      ) : null}
+      {error && !check ? (
+        <LoadError
+          error={error}
+          onRetry={() => {
+            setError("");
+            setTries((count) => count + 1);
+          }}
+          className="mt-3"
+        />
       ) : null}
     </Dialog>
   );

@@ -9,10 +9,13 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchField } from "../../components/Field";
 import { Icon } from "../../components/Icon";
+import { LoadError } from "../../components/LoadError";
 import { StatusPill, Tag } from "../../components/Pill";
-import { HeadCell, Row, Table } from "../../components/Table";
+import { StaleNote } from "../../components/StaleNote";
+import { HeadCell, Row, SkeletonTable, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
 import { filterArchived } from "../../model/archive";
+import { messageOf } from "../../model/errors";
 import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
@@ -24,8 +27,19 @@ const statusTitle = (item: Archived) =>
   STATUSES.find((status) => status.id === statusWord(item))?.title ??
   item.column;
 
-const failure = (error: unknown) =>
-  error instanceof Error ? error.message : "The request failed";
+// ArchiveSkeleton holds an archive's place while it loads (ui-layout.md
+// §8): its table, in the view's gutter unless className places it.
+export function ArchiveSkeleton({
+  className = "px-4 pt-3 md:px-6",
+}: {
+  className?: string;
+}) {
+  return (
+    <div data-skeleton="archive" className={className}>
+      <SkeletonTable rows={4} />
+    </div>
+  );
+}
 
 // ArchiveView lists a project's archived tickets (EDIT-8), searchable, with
 // Restore (back to the column it left) and Delete permanently, which only
@@ -70,7 +84,9 @@ export function ArchiveView({
         action: { label: "Open", run: () => onOpen({ id: item.id }) },
       });
     } catch (error) {
-      notify({ text: `${item.id} was not restored: ${failure(error)}` });
+      notify({
+        text: `${item.id} was not restored: ${messageOf(error, "The request failed")}`,
+      });
     }
   };
 
@@ -99,19 +115,17 @@ export function ArchiveView({
           Back to the board
         </Button>
       </div>
-      {archive.status === "loading" ? (
-        <p className="px-6 py-4 text-sm text-ink-muted">Loading the archive…</p>
-      ) : null}
+      {archive.status === "loading" ? <ArchiveSkeleton /> : null}
       {archive.status === "error" ? (
-        <div className="m-4 flex items-center gap-3 text-sm">
-          <p role="alert" className="text-danger">
-            The archive could not be loaded: {archive.error}
-          </p>
-          <Button onClick={archive.reload}>
-            <Icon name="refresh" size={14} />
-            Try again
-          </Button>
-        </div>
+        <LoadError
+          what="The archive could not be loaded"
+          error={archive.error}
+          onRetry={archive.reload}
+          className="m-4"
+        />
+      ) : null}
+      {archive.status === "ready" && archive.error ? (
+        <StaleNote error={archive.error} className="px-4 pt-3 md:px-6" />
       ) : null}
       {archive.status === "ready" && items.length === 0 ? (
         <EmptyState title="Nothing archived">

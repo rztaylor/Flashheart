@@ -110,6 +110,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Every view shows load errors, stale data and loading the same way
+  (FH-103, ui-layout.md §8). When the project list, Workstreams, the card
+  panel or a ticket's full page cannot load, they now say why with
+  **Try again**, as the Board, Overview and archives already did; so does
+  the Archive project dialog when its check fails. When a reload fails, the
+  project list, Workstreams, both archives, the card panel and the ticket
+  page keep showing the last good copy with a *Showing the last good copy*
+  note, as the Board and Overview did. While loading, the Overview,
+  Workstreams, both archives and the Table each show a placeholder in
+  their own shape (section cards, route cards, a table) instead of the
+  Board's columns or a line of text, and the Board's leaves out a hidden
+  Backlog.
 - A card's live badge, its Runs tab and the Overview now give the same
   reason a run needs you (FH-98, D39). Flashheart derives it once with the
   run's state: the run's own permission prompt, then its own question, then
