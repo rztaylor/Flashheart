@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,5 +168,123 @@ func TestWatchSeesAnEditRightAfterANewFolderAppears(t *testing.T) {
 		if got := waitPast(created); got <= created {
 			t.Fatalf("folder %d: the edit right after creation was missed", n)
 		}
+	}
+}
+
+// Archived projects added, renamed or removed under <root>/.archive/ from
+// outside Flashheart reach waiting clients within the debounce, not the
+// sweep, including after .archive itself appears or returns while watching
+// (FH-28). After the first step every change is made only inside .archive,
+// so neither the root's watch nor a project's sees it.
+func TestWatchSeesArchivedProjectsChange(t *testing.T) {
+	t.Parallel()
+
+	root := filepath.Join(t.TempDir(), "board")
+	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "boards", "sample"))); err != nil {
+		t.Fatal(err)
+	}
+	files, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { files.Close() })
+	index := New(files, Options{})
+	watch(t, index, root)
+
+	archive := filepath.Join(root, ".archive")
+	expectChange := func(label string, change func() error) {
+		t.Helper()
+		snapshot, err := index.Current()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := change(); err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		// Well under the sweep, so only a watch on .archive passes.
+		wait, stop := context.WithTimeout(context.Background(), 2*time.Second)
+		defer stop()
+		if got := index.Wait(wait, snapshot.Revision); got <= snapshot.Revision {
+			t.Fatalf("%s: no new revision within 2 s", label)
+		}
+	}
+	archived := func() string {
+		t.Helper()
+		snapshot, err := index.Current()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var names []string
+		for _, project := range snapshot.Board.ArchivedProjects {
+			names = append(names, project.Name)
+		}
+		return strings.Join(names, " ")
+	}
+
+	// .archive appears with a project in it: the root's watch sees this.
+	expectChange("archive appears", func() error {
+		return os.MkdirAll(filepath.Join(archive, "gamma", "tickets"), 0o755)
+	})
+	expectChange("add by hand", func() error {
+		return os.MkdirAll(filepath.Join(archive, "delta", "tickets"), 0o755)
+	})
+	backup := filepath.Join(t.TempDir(), "epsilon")
+	if err := os.MkdirAll(filepath.Join(backup, "tickets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	expectChange("restore from a backup", func() error {
+		return os.Rename(backup, filepath.Join(archive, "epsilon"))
+	})
+	expectChange("rename", func() error {
+		return os.Rename(filepath.Join(archive, "delta"), filepath.Join(archive, "zeta"))
+	})
+	expectChange("remove", func() error {
+		return os.RemoveAll(filepath.Join(archive, "gamma"))
+	})
+	if got, want := archived(), "epsilon zeta"; got != want {
+		t.Errorf("archived projects = %q, want %q", got, want)
+	}
+	// .archive going and coming back is still watched.
+	expectChange("archive removed", func() error { return os.RemoveAll(archive) })
+	expectChange("archive back", func() error {
+		return os.MkdirAll(filepath.Join(archive, "eta", "tickets"), 0o755)
+	})
+	expectChange("add after it returned", func() error {
+		return os.MkdirAll(filepath.Join(archive, "theta", "tickets"), 0o755)
+	})
+	if got, want := archived(), "eta theta"; got != want {
+		t.Errorf("archived projects = %q, want %q", got, want)
+	}
+}
+
+// The archive folder is watched itself, but not the archived projects in
+// it, and a symbolic link in its place is not followed (FH-28).
+func TestWatchSetCoversTheArchiveFolderOnly(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	archive := filepath.Join(root, ".archive")
+	if err := os.MkdirAll(filepath.Join(archive, "gamma", "tickets", "GA-1-x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	set := watchSet(root, FolderBudget)
+	if !set[archive] {
+		t.Errorf("watch set %v lacks %s", set, archive)
+	}
+	for path := range set {
+		if rel, err := filepath.Rel(archive, path); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			t.Errorf("watch set descends into the archive: %s", path)
+		}
+	}
+
+	linked, elsewhere := t.TempDir(), t.TempDir()
+	if err := os.MkdirAll(filepath.Join(elsewhere, "gamma", "tickets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(elsewhere, filepath.Join(linked, ".archive")); err != nil {
+		t.Fatal(err)
+	}
+	if set := watchSet(linked, FolderBudget); set[filepath.Join(linked, ".archive")] {
+		t.Errorf("watch set follows a symbolic .archive: %v", set)
 	}
 }
