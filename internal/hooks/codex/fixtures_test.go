@@ -28,6 +28,7 @@ type payload struct {
 	Event     string         `json:"hook_event_name"`
 	ToolName  string         `json:"tool_name"`
 	ToolInput map[string]any `json:"tool_input"`
+	ToolUseID string         `json:"tool_use_id"`
 	AgentID   string         `json:"agent_id"`
 }
 
@@ -103,9 +104,11 @@ func TestSubagentPayloadsCarryTheParentSession(t *testing.T) {
 	}
 }
 
-// Codex sends the hook session's id and turn with every MCP tool call, and
+// Codex sends the hook session's id and turn with every MCP tool call, its
+// callId is the hook's tool_use_id, and it
 // keeps input a PreToolUse hook rewrote (the recording stamped run), so
 // either can tie a flashheart call to its session (agent-protocol §5.3).
+// Both payloads come from one recorded session.
 func TestFlashheartToolCallsCarryTheHookSession(t *testing.T) {
 	hook := readPayload(t, filepath.Join(fixtures, "PreToolUse", "flashheart-tool.json"))
 	if !strings.HasPrefix(hook.ToolName, "mcp__flashheart__") {
@@ -121,6 +124,7 @@ func TestFlashheartToolCallsCarryTheHookSession(t *testing.T) {
 			Name      string         `json:"name"`
 			Arguments map[string]any `json:"arguments"`
 			Meta      struct {
+				CallID    string `json:"callId"`
 				SessionID string `json:"sessionId"`
 				Turn      struct {
 					SessionID string `json:"session_id"`
@@ -131,6 +135,9 @@ func TestFlashheartToolCallsCarryTheHookSession(t *testing.T) {
 	}
 	if err := json.Unmarshal(b, &call); err != nil {
 		t.Fatal(err)
+	}
+	if call.Params.Meta.CallID == "" || call.Params.Meta.CallID != hook.ToolUseID {
+		t.Errorf("_meta.callId %q, want the hook's tool_use_id %q", call.Params.Meta.CallID, hook.ToolUseID)
 	}
 	if call.Method != "tools/call" || "mcp__flashheart__"+call.Params.Name != hook.ToolName {
 		t.Errorf("call %s %q, want tools/call of %q", call.Method, call.Params.Name, hook.ToolName)

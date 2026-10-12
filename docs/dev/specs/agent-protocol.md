@@ -142,8 +142,8 @@ under the project lock together with the log, so tool results arriving
 together all count. It is a disposable cache: an unreadable one starts
 afresh, a run's entry goes with its end, and the session's file with the
 session's end. A session that never reports its end (a crash; a Codex
-session without `SessionEnd`, §5.3) leaves nothing behind for long, and nothing it had pending is
-kept silently (FH-82): a run that starts again (a resumed session) first
+session without `SessionEnd`, §5.3) leaves nothing behind for long, and
+nothing it had pending is kept silently (FH-82): a run that starts again (a resumed session) first
 records what its last life left pending, as before an end; a run whose
 latest hook event is `stale_hours` old, which the stale rule has ended
 (§4), is dropped from the state by the session's next hook, its pending
@@ -367,14 +367,16 @@ has `stop_hook_active: true`. An interrupted turn (Esc, or a denied
 permission prompt) sends `Interrupt` instead of `Stop`; it ends the turn
 like `Stop`. The CLI offers no planning tool. `SessionEnd` (`reason` `other`)
 comes when `codex exec` finishes, at `/quit`, and when an app thread is
-archived (which moves its transcript, so `transcript_path` goes stale). A
-thread left open sends none, so a Codex run without it ends by the
-`stale_hours` rule, or when a new session starts in the same worktree and
-the old one has been silent for `quiet_minutes`.
+archived (which moves its transcript, so `transcript_path` goes stale).
+Whether a thread left open, or a quit app, sends one is not recorded; a
+Codex run without `SessionEnd` ends by the `stale_hours` rule, or when a
+new session starts in the same worktree and the old one has been silent
+for `quiet_minutes`.
 
 Every MCP `tools/call` from Codex carries the hook session in its `_meta`
-(`sessionId`, and `session_id` and `turn_id` in `x-codex-turn-metadata`), so
-a call can be tied to its hook run with or without stamping. Without these
+(`sessionId`, and `session_id` and `turn_id` in `x-codex-turn-metadata`),
+and its `callId` is the `PreToolUse` hook's `tool_use_id`, so a call can be
+tied to its hook run with or without stamping. Without these
 hooks, a Codex session's first Flashheart write starts its run (§7.1).
 
 ### 5.4 Configuration written by setup

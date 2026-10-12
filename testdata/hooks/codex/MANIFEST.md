@@ -92,8 +92,9 @@ call that needs approval; a `PermissionRequest` hook answering
 **Do hooks and the MCP server share a session identifier?** Yes. Every
 `tools/call` carries `_meta.sessionId` and `_meta.threadId`, and
 `_meta["x-codex-turn-metadata"]` with `session_id`, `thread_id` and
-`turn_id`; they equal the hooks' `session_id` and `turn_id`. A subagent's
-hooks carry the parent's `session_id` with their own `agent_id`, `turn_id`
+`turn_id`; they equal the hooks' `session_id` and `turn_id`, and
+`_meta.callId` equals the `PreToolUse` hook's `tool_use_id` for that call.
+A subagent's hooks carry the parent's `session_id` with their own `agent_id`, `turn_id`
 and transcript. Neither hooks nor the MCP server get any `CODEX_*`
 environment variable. Codex starts one MCP server per session, in the
 session's working directory, before `SessionStart` fires.
