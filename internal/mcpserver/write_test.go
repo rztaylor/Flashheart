@@ -63,7 +63,7 @@ func TestClaimRespectsOtherHoldersAndBlocking(t *testing.T) {
 	out = e.fails("claim", map[string]any{"ticket": second}, "blocked")
 	contains(t, out, "Depends on DM-1")
 	e.ok("claim", map[string]any{"ticket": second, "force": true, "reason": "the dependency is nearly done"})
-	contains(t, e.file(second), "Started while blocked: the dependency is nearly done")
+	contains(t, e.file(second), " · Started while blocked: the dependency is nearly done")
 	// Claiming the second released the first.
 	kinds := e.kinds(session)
 	if !slices.Contains(kinds, events.Release) {

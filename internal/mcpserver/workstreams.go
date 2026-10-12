@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/scrub"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -25,8 +26,8 @@ func (srv *server) createWorkstream(c *call, input CreateWorkstreamInput) (strin
 	if err != nil {
 		return "", err
 	}
-	if len(input.Goal) > maxDescription {
-		return "", fail("too_large", "keep the goal under 16 KiB; link to longer documents", "the goal is too long")
+	if len(input.Goal) > board.MaxSectionText {
+		return "", fail("too_large", fmt.Sprintf("keep the goal under %d KiB; link to longer documents", board.MaxSectionText>>10), "the goal is too long")
 	}
 	if len(input.Tickets) > maxItems {
 		return "", fail("invalid_input", fmt.Sprintf("list at most %d tickets; add more with update_ticket", maxItems), "too many tickets")

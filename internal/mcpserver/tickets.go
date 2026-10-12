@@ -296,8 +296,8 @@ func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error
 			key = ""
 		}
 	}
-	if len(input.Description) > maxDescription || len(input.PlanOrRepro) > maxDescription || len(input.Context) > maxDescription {
-		return "", fail("too_large", "keep the description, plan and context under 16 KiB each; link to longer documents", "the text is too long")
+	if len(input.Description) > board.MaxSectionText || len(input.PlanOrRepro) > board.MaxSectionText || len(input.Context) > board.MaxSectionText {
+		return "", fail("too_large", fmt.Sprintf("keep the description, plan and context under %d KiB each; link to longer documents", board.MaxSectionText>>10), "the text is too long")
 	}
 	for _, id := range input.DependsOn {
 		if _, _, ok := board.ParseID(id); !ok {

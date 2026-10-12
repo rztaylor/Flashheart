@@ -4,7 +4,23 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
+
+// TestNotesAreDatedBullets: every note Flashheart writes, from the board or
+// an agent, is "- YYYY-MM-DD · text" (board-format §Notes written by
+// Flashheart; FH-81).
+func TestNotesAreDatedBullets(t *testing.T) {
+	t.Parallel()
+
+	day := time.Date(2026, 10, 4, 23, 30, 0, 0, time.UTC)
+	if got := Note(day, "Claimed from claude:3f2a9c1e"); got != "- 2026-10-04 · Claimed from claude:3f2a9c1e" {
+		t.Errorf("Note = %q", got)
+	}
+	if got := BlockedStartNote(day, "  Hotfix\nneeded now "); got != "- 2026-10-04 · Started while blocked: Hotfix needed now" {
+		t.Errorf("BlockedStartNote = %q", got)
+	}
+}
 
 func TestValidateField(t *testing.T) {
 	t.Parallel()
