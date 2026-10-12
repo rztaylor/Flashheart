@@ -169,7 +169,7 @@ func TestDeleteArchivedRefusals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.UpdateTicket("beta", "BE-1", "", setStatus("in-progress")); err != nil {
+	if _, err := s.UpdateTicket("beta", "BE-1", Merge, setStatus("in-progress")); err != nil {
 		t.Fatal(err)
 	}
 	_, err = s.DeleteArchived("alpha", "AL-3", plan.Token)

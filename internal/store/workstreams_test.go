@@ -55,7 +55,7 @@ func TestSetTicketWorkstreamKeepsTheFieldAndListsTogether(t *testing.T) {
 
 	// Join: appended at the end of the list, with the other edit applied too.
 	_, hash, _ := s.ReadTicket("alpha", "AL-5")
-	if _, err := s.SetTicketWorkstream("alpha", "AL-5", hash, "board-ui", setStatus("up-next")); err != nil {
+	if _, err := s.SetTicketWorkstream("alpha", "AL-5", Unchanged(hash), "board-ui", setStatus("up-next")); err != nil {
 		t.Fatal(err)
 	}
 	if got := members(t, root, "board-ui"); !slices.Equal(got, []string{"AL-2", "AL-3", "AL-4", "AL-5"}) {
@@ -67,7 +67,7 @@ func TestSetTicketWorkstreamKeepsTheFieldAndListsTogether(t *testing.T) {
 	noMembershipWarnings(t, s, "AL-5")
 
 	// Change: leaves the old list, joins the new one.
-	if _, err := s.SetTicketWorkstream("alpha", "AL-5", "", "offline", nil); err != nil {
+	if _, err := s.SetTicketWorkstream("alpha", "AL-5", Merge, "offline", nil); err != nil {
 		t.Fatal(err)
 	}
 	if got := members(t, root, "board-ui"); !slices.Equal(got, []string{"AL-2", "AL-3", "AL-4"}) {
@@ -80,7 +80,7 @@ func TestSetTicketWorkstreamKeepsTheFieldAndListsTogether(t *testing.T) {
 
 	// Joining again changes nothing.
 	before := members(t, root, "offline")
-	if _, err := s.SetTicketWorkstream("alpha", "AL-5", "", "offline", nil); err != nil {
+	if _, err := s.SetTicketWorkstream("alpha", "AL-5", Merge, "offline", nil); err != nil {
 		t.Fatal(err)
 	}
 	if got := members(t, root, "offline"); !slices.Equal(got, before) {
@@ -88,7 +88,7 @@ func TestSetTicketWorkstreamKeepsTheFieldAndListsTogether(t *testing.T) {
 	}
 
 	// Leave: out of every list, field cleared.
-	if _, err := s.SetTicketWorkstream("alpha", "AL-5", "", "", nil); err != nil {
+	if _, err := s.SetTicketWorkstream("alpha", "AL-5", Merge, "", nil); err != nil {
 		t.Fatal(err)
 	}
 	if got := members(t, root, "offline"); len(got) != 0 {
@@ -100,7 +100,7 @@ func TestSetTicketWorkstreamKeepsTheFieldAndListsTogether(t *testing.T) {
 	noMembershipWarnings(t, s, "AL-5")
 
 	// A member set to its own workstream keeps its place in the order.
-	if _, err := s.SetTicketWorkstream("alpha", "AL-3", "", "board-ui", nil); err != nil {
+	if _, err := s.SetTicketWorkstream("alpha", "AL-3", Merge, "board-ui", nil); err != nil {
 		t.Fatal(err)
 	}
 	if got := members(t, root, "board-ui"); !slices.Equal(got, []string{"AL-2", "AL-3", "AL-4"}) {
@@ -108,10 +108,10 @@ func TestSetTicketWorkstreamKeepsTheFieldAndListsTogether(t *testing.T) {
 	}
 
 	// A ticket a list holds without the field is repaired by setting it.
-	if _, err := s.UpdateTicket("alpha", "AL-4", "", func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "workstream", "") }); err != nil {
+	if _, err := s.UpdateTicket("alpha", "AL-4", Merge, func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "workstream", "") }); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.SetTicketWorkstream("alpha", "AL-4", "", "board-ui", nil); err != nil {
+	if _, err := s.SetTicketWorkstream("alpha", "AL-4", Merge, "board-ui", nil); err != nil {
 		t.Fatal(err)
 	}
 	noMembershipWarnings(t, s, "AL-4")
@@ -122,7 +122,7 @@ func TestSetTicketWorkstreamRefusesAMissingWorkstreamAndStaleHash(t *testing.T) 
 
 	s, root := writable(t)
 	before, hash, _ := s.ReadTicket("alpha", "AL-5")
-	_, err := s.SetTicketWorkstream("alpha", "AL-5", hash, "offline", nil)
+	_, err := s.SetTicketWorkstream("alpha", "AL-5", Unchanged(hash), "offline", nil)
 	var missing *WorkstreamNotFoundError
 	if !errors.As(err, &missing) || !errors.Is(err, ErrNotFound) || missing.Slug != "offline" || !slices.Equal(missing.Available, []string{"board-ui"}) {
 		t.Fatalf("missing workstream error = %v", err)
@@ -135,10 +135,10 @@ func TestSetTicketWorkstreamRefusesAMissingWorkstreamAndStaleHash(t *testing.T) 
 	}
 
 	// A stale base touches neither file.
-	if _, err := s.UpdateTicket("alpha", "AL-5", "", setStatus("up-next")); err != nil {
+	if _, err := s.UpdateTicket("alpha", "AL-5", Merge, setStatus("up-next")); err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.SetTicketWorkstream("alpha", "AL-5", hash, "board-ui", nil)
+	_, err = s.SetTicketWorkstream("alpha", "AL-5", Unchanged(hash), "board-ui", nil)
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("stale base error = %v", err)
 	}

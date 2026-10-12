@@ -1,8 +1,11 @@
 // Package store is the only package that touches the board root. It reads
 // v2 projects (PRJ-1) with their tickets, workstreams, reviews (and when
 // each last changed), files indexes, keys and archived ids, detects v1 roots and fingerprints what it
-// read. It writes tickets and workstreams under a per-project lock with a
-// content-hash precondition and atomic replace (STO-3), places tickets in
+// read. It writes tickets and workstreams under a per-project lock, each
+// write naming its Precondition (Unchanged with the content hash read, or
+// Merge), in one transaction (tx.go: read, require, edit, stamp, stage,
+// commit, nothing written when a step fails) of atomic replaces (STO-3),
+// places tickets in
 // their column's manual order (EDIT-9), keeps a ticket's
 // workstream field and the workstreams' tickets lists in step and creates
 // workstreams, creates tickets with the next id (KEY-2) and keys under a root lock (KEY-5), archives tickets,
