@@ -13,8 +13,6 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
-
-	"github.com/rztaylor/flashheart/internal/mdfile"
 )
 
 // Event log files and agent-created projects. The event log's format belongs
@@ -267,9 +265,7 @@ func (s *Store) projectRepos(project string) ([]string, bool) {
 	if err != nil {
 		return nil, true
 	}
-	var parsed projectFile
-	_ = yaml.Unmarshal(data, &parsed)
-	return parsed.Repos, true
+	return parseProjectFile(project, data).Repos, true
 }
 
 func (s *Store) addRepo(project, repo string) error {
@@ -283,16 +279,11 @@ func (s *Store) addRepo(project, repo string) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	text := string(data)
-	if text != "" && !strings.HasSuffix(text, "\n") {
-		text += "\n"
+	out, err := addToProjectList(project, data, "repos", repo)
+	if err != nil || string(out) == string(data) {
+		return err
 	}
-	// project.yaml is plain YAML; edit it as frontmatter of an empty body.
-	doc, err := mdfile.SetList([]byte("---\n"+text+"---\n"), "repos", []string{repo})
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-	return s.WriteFileAtomic(name, []byte(strings.TrimSuffix(strings.TrimPrefix(string(doc), "---\n"), "---\n")))
+	return s.WriteFileAtomic(name, out)
 }
 
 func (s *Store) createProject(project, repo string) error {

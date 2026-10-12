@@ -60,6 +60,21 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A preference changed just before a reload shows its new value after the
+  reload (FH-109). The save flushed as the page unloads reaches the server
+  first, but on a slow disk or a busy machine it could still be writing
+  when the reloaded page read preferences, so the page showed the old
+  value until the next reload. The server now answers a preference read
+  only once any save in progress has finished.
+- A project whose `project.yaml` uses Windows line endings or a byte-order
+  mark keeps its name and repositories (FH-77). Before, adopting a
+  repository and then setting the project key wrote a second header into
+  the file, so the board showed the project under its folder name with no
+  repositories, and the next hook adopted the repository again. Every edit
+  of `project.yaml` now keeps the file's line endings, and every reader
+  treats problems alike: a field of the wrong type is shown as a project
+  warning and the other fields still count, and a list that cannot be read
+  is never replaced.
 - A subagent reporting back no longer answers the question its session
   asked you (FH-57). Only a prompt you type answers a session's open
   question in the chat; a subagent's hand-back, a message from another
@@ -77,6 +92,12 @@ All notable changes to this project are documented here. The project follows
   toward the new workstream's progress. Clearing the workstream removes
   the ticket from its list. An edit based on a stale copy of the ticket,
   or naming a workstream the project does not have, changes no file.
+- Starting a blocked ticket from the board records the reason as a dated
+  note, `- 2026-10-12 · Started while blocked: …`, like an agent's forced
+  claim (FH-81). Before, the board added a bare, undated line. A new
+  ticket's description from the board is now limited to 16 KiB, the
+  limit agents already had (it was 64 KiB); a heading typed into it stays
+  inside the description (FH-87).
 - Text written into a ticket section can no longer split it (FH-87).
   This covers a handoff, a note, a new ticket's description or plan from
   the board or an agent, and a workstream's goal. A level-1 or level-2

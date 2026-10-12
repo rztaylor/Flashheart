@@ -212,7 +212,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
 			return next, err
 		}
-		return mdfile.AppendToSection(next, board.SectionNotes, board.BlockedStartNote(reason))
+		return mdfile.AppendToSection(next, board.SectionNotes, board.BlockedStartNote(b.now(), reason))
 	}
 	// A move sets only status (and a note), so without a hash it merges
 	// with the file as it is then (STO-3); with one it must still match.
@@ -506,8 +506,10 @@ func (b boardAPI) createTicket(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &request) {
 		return
 	}
-	if len(request.Description) > 64<<10 {
-		writeError(w, http.StatusRequestEntityTooLarge, "too_large", "The description is limited to 64 KiB")
+	// The board and agents share one limit (FH-81); the heading demotion
+	// that keeps the description in its section is board.RenderTicket's.
+	if len(request.Description) > board.MaxSectionText {
+		writeError(w, http.StatusRequestEntityTooLarge, "too_large", fmt.Sprintf("The description is limited to %d KiB", board.MaxSectionText>>10))
 		return
 	}
 	created, err := writer.CreateTicket(r.PathValue("project"), store.NewTicket{
@@ -612,6 +614,8 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	if b.writer(w) == nil {
 		return
 	}
+	b.preferring.RLock()
+	defer b.preferring.RUnlock()
 	ui, ok := b.currentUI(w)
 	if !ok {
 		return
@@ -627,10 +631,16 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Scopes: scopes, ExpandedWorkstreams: expanded})
 }
 
+// savePreferences holds back preference reads until it answers: the save
+// a page flushes as it unloads reaches the server before the reloaded page
+// asks for preferences, but may take longer to write than that page takes to
+// ask (FH-109).
 func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 	if b.writer(w) == nil {
 		return
 	}
+	b.preferring.Lock()
+	defer b.preferring.Unlock()
 	var request Preferences
 	if !decode(w, r, &request) {
 		return
