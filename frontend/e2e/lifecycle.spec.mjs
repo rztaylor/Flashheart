@@ -1,17 +1,18 @@
 import { existsSync } from "node:fs";
 import { cp } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import AxeBuilder from "@axe-core/playwright";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import {
+  expectConnected,
+  expectNoAxeViolations,
   killDetached,
   launch,
   listening,
   makeSandbox,
   manualURLs,
   projectRoot,
-  screenshotDir,
+  shot,
   stopIfRunning,
   waitForExit,
   waitForManualURL,
@@ -43,9 +44,7 @@ async function expectRunning(page) {
   await expect(
     page.getByRole("navigation", { name: "Projects" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Backend connected. Check connection" }),
-  ).toBeVisible();
+  await expectConnected(page);
 }
 
 test("detached launch returns the terminal; reload, new tab and last-tab close follow the browser", async ({
@@ -147,9 +146,7 @@ test("quit is refused while the guard denies it, then stops the server", async (
     await expect(alert).toContainText(denial.message);
     await expectRunning(page);
     await expect(page.getByRole("button", { name: "Quit" })).toBeEnabled();
-    await page.screenshot({
-      path: resolve(screenshotDir, "quit-denied-1280-light.png"),
-    });
+    await shot(page, "quit-denied-1280-light", { keepFocus: true });
     await page.getByRole("button", { name: "Dismiss" }).click();
     await expect(page.getByRole("alert")).toHaveCount(0);
     expect(child.exitCode).toBeNull();
@@ -165,11 +162,8 @@ test("quit is refused while the guard denies it, then stops the server", async (
     // A clean stop earns one parting remark.
     await expect(page.locator("[data-aside]")).toHaveCount(1);
     expect(await exit, output.stderr).toEqual({ code: 0, signal: null });
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
-    await page.screenshot({
-      path: resolve(screenshotDir, "stopped-1280-light.png"),
-    });
+    await expectNoAxeViolations(page, "stopped-1280-light");
+    await shot(page, "stopped-1280-light", { keepFocus: true });
   } finally {
     await stopIfRunning(child);
     await sandbox.cleanup();
@@ -195,8 +189,7 @@ test("a project in board format v1 shows the migrate command", async ({
     await expect(notice).toContainText(
       `flashheart migrate --root ${sandbox.root}`,
     );
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
+    await expectNoAxeViolations(page, "migrate notice");
   } finally {
     await stopIfRunning(child);
     await sandbox.cleanup();
@@ -245,11 +238,6 @@ test("shell is keyboard reachable, accessible and renders in both themes", async
     await expect(page.getByRole("link", { name: "Overview" })).toBeFocused();
     await page.getByRole("button", { name: "Quit" }).focus();
     await expect(page.getByRole("button", { name: "Quit" })).toBeFocused();
-    // Screenshots show the resting state, not the keyboard focus ring.
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement)
-        document.activeElement.blur();
-    });
     for (const theme of ["light", "dark"]) {
       await page.emulateMedia({ colorScheme: theme });
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
@@ -258,11 +246,9 @@ test("shell is keyboard reachable, accessible and renders in both themes", async
           width,
           height: width === 1280 ? 800 : 1080,
         });
-        const results = await new AxeBuilder({ page }).analyze();
-        expect(results.violations, `${theme} ${width}`).toEqual([]);
-        await page.screenshot({
-          path: resolve(screenshotDir, `lifecycle-${width}-${theme}.png`),
-        });
+        await expectNoAxeViolations(page, `${theme} ${width}`);
+        // The resting state, without the keyboard focus ring.
+        await shot(page, `lifecycle-${width}-${theme}`);
       }
     }
     const exit = waitForExit(child);
@@ -270,11 +256,8 @@ test("shell is keyboard reachable, accessible and renders in both themes", async
     await expect(
       page.getByRole("heading", { name: "Flashheart has stopped" }),
     ).toBeVisible();
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations).toEqual([]);
-    await page.screenshot({
-      path: resolve(screenshotDir, "stopped-1920-dark.png"),
-    });
+    await expectNoAxeViolations(page, "stopped-1920-dark");
+    await shot(page, "stopped-1920-dark", { keepFocus: true });
     expect((await exit).code).toBe(0);
   } finally {
     await stopIfRunning(child);

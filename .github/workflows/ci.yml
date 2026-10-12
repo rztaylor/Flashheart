@@ -1,6 +1,6 @@
 # Validation for every pull request and for main: scripts/check.sh on Linux
 # and macOS (the supported platforms, NFR-2), and the Playwright browser suite
-# on Linux. The workflow only reads the repository.
+# and screenshot comparison on Linux. The workflow only reads the repository.
 name: CI
 
 on:
@@ -58,6 +58,9 @@ jobs:
           npm --prefix frontend ci
           npm --prefix frontend exec -- playwright install-deps chromium
       - run: scripts/e2e.sh
+      # The stable screenshot set against its baselines, in the pinned
+      # Playwright container (D42).
+      - run: scripts/e2e-visual.sh
       - name: Keep screenshots and traces
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
