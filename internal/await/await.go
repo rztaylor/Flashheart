@@ -52,9 +52,10 @@ type Result struct {
 	AnsweredInSession bool
 }
 
-// Wait blocks until the question's answer is in its session's inbox, then
-// takes the inbox, marks its answers delivered and returns them as a note.
-// Other answers waiting for the same session are delivered with it.
+// Wait blocks until the question's answer is in its session's inbox or the
+// log shows it answered and not delivered, then delivers it with the rest
+// of the inbox (events.Deliver) and returns them as a note. Other answers
+// waiting for the same session are delivered with it.
 func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 	o = withDefaults(o)
 	if !store.ValidProject(o.Project) {
@@ -80,14 +81,21 @@ func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 		if err := ctx.Err(); err != nil {
 			return Result{}, err
 		}
-		waiting, err := log.TakeAnswers(o.Project, session)
+		// The log saying the question was answered but not delivered also
+		// delivers it: its inbox may be gone (taken by a delivery whose
+		// record failed), and the answer must not wait for the timeout.
+		var pending []events.Delivery
+		if q.Answered() {
+			pending = append(pending, q.Delivery())
+		}
+		waiting, err := events.Deliver(log, o.Project, []string{session}, pending, o.Now())
+		if len(waiting) > 0 {
+			// Taken answers are returned even if recording their delivery
+			// fails, so they are never lost.
+			return Result{Note: protocol.AnswersNote(protocol.AnswersOf(waiting))}, err
+		}
 		if err != nil {
 			return Result{}, err
-		}
-		if len(waiting) > 0 {
-			// Taken answers are returned even if marking them fails, so they
-			// are never lost (as the prompt hook does).
-			return Result{Note: protocol.AnswersNote(toAnswers(waiting))}, log.MarkDelivered(o.Project, waiting, o.Now())
 		}
 		if o.Now().Sub(start) >= o.Timeout {
 			return Result{}, fmt.Errorf("%s after %s: %w", o.Question, o.Timeout, ErrTimeout)
@@ -149,12 +157,4 @@ func find(log *events.Log, project, id string, since time.Time) (runs.Question, 
 		}
 	}
 	return runs.Question{}, nil
-}
-
-func toAnswers(list []events.Delivery) []protocol.Answer {
-	out := make([]protocol.Answer, 0, len(list))
-	for _, d := range list {
-		out = append(out, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
-	}
-	return out
 }

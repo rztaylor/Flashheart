@@ -71,6 +71,17 @@ All notable changes to this project are documented here. The project follows
   handoff enforcement and the recovery note read only the home project's
   log, so they see a claim on another project's ticket only by branch.
 
+- An answer to an agent's question is no longer lost when recording its
+  delivery fails (FH-78). A starting session's recovery note showed no
+  answers if that record failed, although the answers had already been
+  taken from the session's waiting list, and `board_context` failed the
+  same way; a waiting `flashheart await` then waited until its 12-hour
+  timeout. Every path that hands answers over now shares one routine that
+  shows what it took even when the record fails (the failure is logged),
+  and `flashheart await` also delivers an answer the log shows given and
+  not delivered. Such an answer may now be shown twice, never not at all
+  (protocol version unchanged).
+
 - A long branch name keeps its distinguishing end in view in the ticket
   panel's header and the Runs tab (FH-83). It is cut from the start, as
   the board root, run ids, worktrees and archived projects' repositories

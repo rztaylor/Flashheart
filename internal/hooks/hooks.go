@@ -249,14 +249,17 @@ func handle(options Options) error {
 	}
 	switch {
 	case input.Recovery:
-		if out.Context, err = recovery(s, log, project, info, appended, at, settings); err != nil {
-			return errors.Join(problem, err)
-		}
+		// A note with answers is written even when recording their
+		// delivery failed, so they are never lost; the failure is logged.
+		out.Context, err = recovery(s, log, inboxOf(log), project, info, appended, at, settings)
+		problem = errors.Join(problem, err)
 		out.Context = joinNotes(skillNote, out.Context)
 	case input.Answers != "":
-		// Answers taken from the inbox are shown even if marking them
-		// delivered fails, so they are never lost.
-		out.Context, err = answers(log, project, input.Answers, at)
+		// Every prompt gets the session's waiting answers, the user's or
+		// not: a board answer reaches the agent whenever it gets a turn.
+		// Only who answers a question in the session depends on the
+		// prompt's origin (D41).
+		out.Context, err = answers(inboxOf(log), project, input.Answers, at)
 		problem = errors.Join(problem, err)
 	}
 	return errors.Join(problem, write(options, out))
@@ -297,22 +300,16 @@ func write(options Options, out Output) error {
 	return nil
 }
 
-// answers takes the answers waiting for a session, marks them delivered
-// and renders them for its prompt (HOOK-5).
-func answers(log *events.Log, project, session string, at time.Time) (string, error) {
-	waiting, err := log.TakeAnswers(project, session)
-	if err != nil || len(waiting) == 0 {
-		return "", err
-	}
-	return protocol.AnswersNote(toAnswers(waiting)), log.MarkDelivered(project, waiting, at)
-}
+// inboxOf is the answers inbox delivery uses: the log itself, except in a
+// test that makes recording delivery fail.
+var inboxOf = func(log *events.Log) events.Inbox { return log }
 
-func toAnswers(list []events.Delivery) []protocol.Answer {
-	out := make([]protocol.Answer, 0, len(list))
-	for _, d := range list {
-		out = append(out, protocol.Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
-	}
-	return out
+// answers delivers the answers waiting in a session's inbox and renders
+// them for its prompt (HOOK-5), even when recording their delivery failed.
+// The prompt hook reads no log, so the inbox is all it delivers.
+func answers(inbox events.Inbox, project, session string, at time.Time) (string, error) {
+	waiting, err := events.Deliver(inbox, project, []string{session}, nil, at)
+	return protocol.AnswersNote(protocol.AnswersOf(waiting)), err
 }
 
 // sessionEnd is the index of a session's turn end or end in list, or -1.
@@ -456,7 +453,7 @@ func readRuns(log *events.Log, project string, now time.Time, keep func(events.H
 // and renders the note (HOOK-3). It reads the log's lines and headers once,
 // finds the previous session from the headers, then decodes the two
 // sessions' events and the claims, which decide all the note says.
-func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info, appended []events.Event, now time.Time, settings config.Config) (string, error) {
+func recovery(s *store.Store, log *events.Log, inbox events.Inbox, project string, info gitinfo.Info, appended []events.Event, now time.Time, settings config.Config) (string, error) {
 	if len(appended) == 0 || appended[0].Kind != events.RunStart {
 		return "", nil
 	}
@@ -509,37 +506,15 @@ func recovery(s *store.Store, log *events.Log, project string, info gitinfo.Info
 		note.Previous = p
 	}
 	// Answers waiting for this session or the previous one in this worktree
-	// go in the note and count as delivered (HOOK-5).
-	waiting, err := log.TakeAnswers(project, current)
-	if err != nil {
-		return "", err
-	}
+	// go in the note and count as delivered (HOOK-5). The previous
+	// session's inbox goes too, so resuming it later does not deliver the
+	// same answers again. What was taken is shown even if recording its
+	// delivery failed, so it is never lost.
+	sessions := []string{current}
 	if set.Get(previousID) != nil {
-		// The previous session's inbox goes too, so resuming it later does
-		// not deliver the same answers again.
-		theirs, err := log.TakeAnswers(project, previousID)
-		if err != nil {
-			return "", err
-		}
-		waiting = append(waiting, theirs...)
+		sessions = append(sessions, previousID)
 	}
-	seen := map[string]bool{}
-	for _, d := range waiting {
-		seen[d.ID] = true
-	}
-	for _, id := range []string{current, previousID} {
-		for _, q := range set.PendingAnswers(id) {
-			if !seen[q.ID] {
-				seen[q.ID] = true
-				waiting = append(waiting, events.Delivery{ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Answer: q.Answer, By: q.AnsweredBy})
-			}
-		}
-	}
-	if len(waiting) > 0 {
-		if err := log.MarkDelivered(project, waiting, now); err != nil {
-			return "", err
-		}
-		note.Answered = toAnswers(waiting)
-	}
-	return protocol.RecoveryNote(note), nil
+	waiting, err := events.Deliver(inbox, project, sessions, set.PendingDeliveries(current, previousID), now)
+	note.Answered = protocol.AnswersOf(waiting)
+	return protocol.RecoveryNote(note), err
 }

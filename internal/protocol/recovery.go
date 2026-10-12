@@ -31,6 +31,17 @@ type Answer struct {
 	Ticket string
 }
 
+// AnswersOf is what an agent is shown of delivered answers: every path
+// that delivers them (the prompt and session-start hooks, await, the MCP
+// server) renders through it.
+func AnswersOf(list []events.Delivery) []Answer {
+	out := make([]Answer, 0, len(list))
+	for _, d := range list {
+		out = append(out, Answer{Question: d.Question, Answer: d.Answer, By: d.By, Ticket: d.Ticket})
+	}
+	return out
+}
+
 // RecoveryTicket is the linked ticket.
 type RecoveryTicket struct {
 	ID, Title, Column string
