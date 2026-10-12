@@ -9,7 +9,8 @@
 // answers, on the board or in the session, subagents, a bounded timeline) and derives each run's state (Working,
 // Needs you, Waiting, Quiet, Ended) with why a run in Needs you needs you
 // (Reason: typed, first match wins, never words), its link to a ticket, a ticket's live
-// claim holder (lease, agent-protocol §6), undelivered answers and its flags
+// claim holder (lease, agent-protocol §6), undelivered answers, whether a
+// question's session (a subagent's is its session's) has ended, and its flags
 // from the fold and a clock. The human's board writes (run `human`) are no
 // run and are skipped.
 //
