@@ -31,6 +31,10 @@ import (
 // RootEnv names the environment variable that overrides the default root.
 const RootEnv = "FLASHHEART_ROOT"
 
+// DefaultRoot is the board root when neither --root nor $FLASHHEART_ROOT
+// names one, with ~ for the home directory; the one place it is spelled.
+const DefaultRoot = "~/reports/Kanban"
+
 // backgroundStartTimeout bounds how long the launching process waits for the
 // detached server to start and attempt to open the browser.
 const backgroundStartTimeout = 20 * time.Second
@@ -636,7 +640,7 @@ func agentOptions(env *environment, root string, a setup.Agent) (setup.Options, 
 		return setup.Options{}, fmt.Errorf("find the flashheart binary: %w", err)
 	}
 	options := setup.Options{Home: home, Binary: binary, Run: env.deps.RunCommand}
-	if root != filepath.Join(home, "reports", "Kanban") {
+	if root != underHome(DefaultRoot, home) {
 		options.Root = root
 	}
 	if env.deps.FindCLI != nil {
@@ -745,7 +749,7 @@ func writeManualURL(output io.Writer, browserError, manualURL string) {
 	fmt.Fprintf(output, "Could not open a browser: %s\nOpen this URL within two minutes: %s\n", browserError, manualURL)
 }
 
-// resolveRoot applies the precedence --root, FLASHHEART_ROOT, ~/reports/Kanban
+// resolveRoot applies the precedence --root, FLASHHEART_ROOT, DefaultRoot
 // and returns a clean absolute path with a leading ~ expanded.
 func resolveRoot(globals *globalFlags, deps Dependencies) (string, error) {
 	value := globals.root
@@ -756,7 +760,7 @@ func resolveRoot(globals *globalFlags, deps Dependencies) (string, error) {
 		value = strings.TrimSpace(deps.Getenv(RootEnv))
 	}
 	if value == "" {
-		value = filepath.Join("~", "reports", "Kanban")
+		value = DefaultRoot
 	}
 	if value == "~" || strings.HasPrefix(value, "~/") {
 		if deps.HomeDir == nil {
@@ -766,13 +770,18 @@ func resolveRoot(globals *globalFlags, deps Dependencies) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("cannot expand ~: %w", err)
 		}
-		value = filepath.Join(home, strings.TrimPrefix(value, "~"))
+		value = underHome(value, home)
 	}
 	absolute, err := filepath.Abs(value)
 	if err != nil {
 		return "", fmt.Errorf("resolve board root %q: %w", value, err)
 	}
 	return absolute, nil
+}
+
+// underHome expands value's leading ~ (alone or as ~/) to home.
+func underHome(value, home string) string {
+	return filepath.Join(home, strings.TrimPrefix(value, "~"))
 }
 
 func reportUsage(stderr io.Writer, err usageError) int {
@@ -833,7 +842,7 @@ func writeGlobalOptions(output io.Writer) {
 }
 
 func writeGlobalOptionLines(output io.Writer) {
-	fmt.Fprintf(output, "  --root DIR    board root (default $%s, else ~/reports/Kanban)\n", RootEnv)
+	fmt.Fprintf(output, "  --root DIR    board root (default $%s, else %s)\n", RootEnv, DefaultRoot)
 	fmt.Fprintln(output, "  --debug       print the listener address and lifecycle summaries")
 	fmt.Fprintln(output, "  -h, --help    show help")
 }

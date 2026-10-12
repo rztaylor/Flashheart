@@ -102,9 +102,27 @@ func (s *Store) WriteFileAtomic(name string, data []byte) error {
 	return nil
 }
 
-// WroteLast reports whether data is what this store last wrote to name, so
-// a reader can tell its own writes from edits made elsewhere (REV-5).
-func (s *Store) WroteLast(name string, data []byte) bool {
+// Doc names one of a live ticket's documents.
+type Doc int
+
+const (
+	// TicketDoc is the ticket's own file.
+	TicketDoc Doc = iota
+	// ReviewDoc is the ticket's review.md (REV-4).
+	ReviewDoc
+)
+
+// WroteLast reports whether data is what this store last wrote to a live
+// ticket's document, so a reader can tell its own writes from edits made
+// elsewhere (REV-5). A ticket that cannot be found never matches.
+func (s *Store) WroteLast(project, id string, doc Doc, data []byte) bool {
+	name, err := s.TicketFile(project, id)
+	if err != nil {
+		return false
+	}
+	if doc == ReviewDoc {
+		name = path.Join(path.Dir(name), "review.md")
+	}
 	s.writtenMu.Lock()
 	defer s.writtenMu.Unlock()
 	hash, ok := s.written[path.Clean(name)]

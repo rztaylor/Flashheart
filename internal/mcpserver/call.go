@@ -77,7 +77,7 @@ func (srv *server) start(inv *invocation, runArg string, write bool) (c *call, e
 	if runArg != "" && !runPattern.MatchString(runArg) {
 		return nil, fail("invalid_input", "pass the run id as the recovery note shows it, like claude:3f2a9c1e, or leave it out", "run %q is not a run id", runArg)
 	}
-	settings, err := config.Load(srv.options.Root)
+	settings, err := srv.store.ReadConfig()
 	if err != nil {
 		return nil, err
 	}

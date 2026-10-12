@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/health"
 	"github.com/rztaylor/flashheart/internal/logfile"
+	"github.com/rztaylor/flashheart/internal/store"
 )
 
 // RecentErrors is how far back hook errors are reported.
@@ -83,15 +83,23 @@ func checkRoot(root string) Section {
 	if mode := info.Mode().Perm(); runtime.GOOS != "windows" && mode&0o022 != 0 {
 		add(health.Warning, fmt.Sprintf("other users can write to it (mode %04o); chmod go-w %s", mode, root))
 	}
-	if _, err := config.Load(root); err != nil {
+	if _, err := readSettings(root); err != nil {
 		add(health.Problem, fmt.Sprintf("settings: %v", err))
 	}
 	return section
 }
 
+// readSettings reads the root's config.yaml through the store, as every
+// other reader does, so a file linked out of the root is a problem here too.
+func readSettings(root string) (config.Config, error) {
+	files := store.New(root)
+	defer files.Close()
+	return files.ReadConfig()
+}
+
 func checkHookErrors(root string, now time.Time) Section {
 	section := Section{Title: "Hook errors"}
-	path := filepath.Join(root, ".flashheart", "hook-errors.log")
+	path := logfile.HookErrorsPath(root)
 	entries, err := logfile.Recent(path, now.Add(-RecentErrors))
 	switch {
 	case err != nil:

@@ -4,10 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"os/user"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -20,9 +17,6 @@ import (
 // FormatVersion is the board format version this build writes; version 1
 // roots are read only to migrate them (MIG-1).
 const FormatVersion = 2
-
-// maxConfigBytes bounds config.yaml reads.
-const maxConfigBytes = 1 << 20
 
 // ErrNewerVersion reports a root written by a newer Flashheart.
 var ErrNewerVersion = errors.New("board root format is newer than this flashheart")
@@ -181,36 +175,6 @@ func Defaults() Config {
 		Attachments:        Attachments{MaxBytes: 20 << 20},
 		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", HiddenColumns: []string{}},
 	}
-}
-
-// Path returns the global config file location for a root.
-func Path(root string) string {
-	return filepath.Join(root, ".flashheart", "config.yaml")
-}
-
-// Load reads the root's config.yaml. A missing file or root yields defaults.
-func Load(root string) (Config, error) {
-	path := Path(root)
-	file, err := os.Open(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return Defaults(), nil
-	}
-	if err != nil {
-		return Config{}, fmt.Errorf("read %s: %w", path, err)
-	}
-	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, maxConfigBytes+1))
-	if err != nil {
-		return Config{}, fmt.Errorf("read %s: %w", path, err)
-	}
-	if len(data) > maxConfigBytes {
-		return Config{}, fmt.Errorf("read %s: file is larger than %d bytes", path, maxConfigBytes)
-	}
-	config, err := Parse(data)
-	if err != nil {
-		return Config{}, fmt.Errorf("%s: %w", path, err)
-	}
-	return config, nil
 }
 
 // Parse decodes config.yaml content over the defaults and validates it.

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"runtime/debug"
 	"slices"
@@ -180,14 +179,14 @@ func handle(options Options) error {
 	if len(input.Events) == 0 && !input.Recovery {
 		return nil
 	}
-	settings, err := config.Load(options.Root)
-	if err != nil {
-		return err
-	}
 	// Activity outside git is not recorded (PRJ-4): the store opens the root
 	// lazily, so nothing is written, not even a missing root.
 	s := store.New(options.Root)
 	defer s.Close()
+	settings, err := s.ReadConfig()
+	if err != nil {
+		return err
+	}
 	info := s.Where(input.Cwd, now())
 	if info.Repo == "" {
 		return nil
@@ -198,8 +197,9 @@ func handle(options Options) error {
 	if err != nil {
 		logError(options, err)
 	}
-	if err := os.MkdirAll(options.Root, 0o755); err != nil {
-		return fmt.Errorf("create board root: %w", err)
+	// A root that cannot be created fails the hook open, logged (HOOK-1).
+	if err := s.EnsureRoot(); err != nil {
+		return err
 	}
 
 	project, err := s.ProjectFor(info.Project, info.Repo, settings.AutoCreateProjects)

@@ -25,14 +25,20 @@ type Writer struct {
 	now      func() time.Time
 }
 
+// HookErrorsPath is the path of <root>/.flashheart/hook-errors.log (HOOK-1),
+// the one place it is spelled, for readers such as doctor.
+func HookErrorsPath(root string) string {
+	return filepath.Join(root, ".flashheart", "hook-errors.log")
+}
+
 // ServeLog returns the writer for <root>/.flashheart/serve.log.
 func ServeLog(root string) *Writer {
 	return New(filepath.Join(root, ".flashheart", "serve.log"), DefaultMaxBytes)
 }
 
-// HookErrors returns the writer for <root>/.flashheart/hook-errors.log (HOOK-1).
+// HookErrors returns the writer for HookErrorsPath (HOOK-1).
 func HookErrors(root string) *Writer {
-	return New(filepath.Join(root, ".flashheart", "hook-errors.log"), DefaultMaxBytes)
+	return New(HookErrorsPath(root), DefaultMaxBytes)
 }
 
 // New returns a writer for path that rotates to path+".1" past maxBytes.

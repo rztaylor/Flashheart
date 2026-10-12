@@ -357,7 +357,7 @@ func Apply(s *store.Store, plan Plan) error {
 		}
 	}
 
-	config := ".flashheart/config.yaml"
+	config := store.ConfigFile
 	if s.Exists(config) {
 		data, err := s.ReadFile(config)
 		if err != nil {

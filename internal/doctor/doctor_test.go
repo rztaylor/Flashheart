@@ -61,6 +61,27 @@ func TestDoctorChecksTheRoot(t *testing.T) {
 	}
 }
 
+// Settings are read through the store, so a config.yaml that links out of
+// the root is refused rather than read (SEC-2, FH-108).
+func TestDoctorRefusesSettingsLinkedOutOfTheRoot(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks need privileges on Windows")
+	}
+
+	o := fixture(t)
+	outside := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(outside, []byte("quiet_minutes: 5\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(o.Root, ".flashheart", "config.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if out, _ := report(Check(o)); !strings.Contains(out, "  problem  settings: ") {
+		t.Fatalf("settings linked out of the root were read:\n%s", out)
+	}
+}
+
 func TestDoctorWarnsAboutARootOthersCanWrite(t *testing.T) {
 	t.Parallel()
 	if runtime.GOOS == "windows" {

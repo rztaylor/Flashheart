@@ -42,6 +42,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Security
 
+- A `.flashheart/config.yaml` that is a symlink to a file outside the board
+  root is now refused, like every other board file, instead of being
+  followed (FH-108, SEC-2). If yours is, replace the link with the file:
+  until then `serve` does not start, hooks record nothing (the error is in
+  `hook-errors.log`), the MCP tools fail and `flashheart doctor` reports
+  the settings as a problem. A link that stays inside the root still works.
+  Only the store now opens files under the root; a test lists the few
+  packages allowed to touch files at all, each with its reason.
 - `serve` no longer copies any linked local file into a directly edited
   ticket or review (FH-34, D29). A board synced through git or a sync
   service could receive a link to a private file on this machine, which

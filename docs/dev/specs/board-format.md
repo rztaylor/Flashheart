@@ -395,6 +395,12 @@ no longer exists, so the choice lasts only while the workstream stays finished.
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
 other settings, unknown keys and comments.
 
+`config.yaml` is read through the root like every board file (SEC-2): a
+symlink to a file inside the root is followed, but one that points outside
+it is refused, as unreadable settings (`serve` does not start, hooks log the
+error to `hook-errors.log` and record nothing, MCP tools fail, `doctor`
+reports a problem). A file larger than 1 MiB is refused the same way.
+
 A root without `config.yaml` is version 2 unless a project in it still has v1
 column folders (`todo/`, `in-progress/`, `ready-to-review/`, `done/`).
 

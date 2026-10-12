@@ -10,15 +10,39 @@ Intended layout (packages are created when they get real content):
 - `internal/buildinfo`: version, commit and build date set by linker flags.
 - `internal/logfile`: lazily created, size-rotated diagnostic logs under
   `<root>/.flashheart/` (`serve.log`, `hook-errors.log`).
-- `internal/config`: global `config.yaml` and per-project `project.yaml`
-  defaults, validation and atomic persistence.
+- `internal/config`: global `config.yaml` setting names, defaults,
+  validation and the `ui` rewrite (CFG-2); no file I/O. `store` reads and
+  writes the file (`store.ReadConfig`, `store.UpdateConfig`) and owns its
+  location (`store.ConfigFile`); `project.yaml` is read and written by
+  `store` alone.
 - `internal/mdfile`: pure markdown-with-frontmatter parsing and round-trip
   editing (key order, comments, unknown keys), sections, checkboxes. No I/O.
 - `internal/board`: pure domain model (projects, tickets, workstreams,
   columns), blocking rules with reasons, derived workstream status. No I/O.
 - `internal/store`: the only package that touches the board root: discovery,
   reads, locked atomic writes with hash preconditions, moves, archive,
-  attachments, path confinement.
+  attachments, path confinement, creating the root (`EnsureRoot`), reading
+  `config.yaml` (`ReadConfig`, through the `os.Root`, so a symlink out of
+  the root is refused) and telling its own writes from others'
+  (`WroteLast`, by project, ticket and document).
+- Root confinement rule (FH-108), enforced by
+  `internal/archtest` (`TestOnlyAllowedPackagesTouchFiles`): only
+  allowlisted packages may call the `os`, `io/ioutil` and `path/filepath`
+  functions that open, create, list, stat, change or remove files; every
+  other package reaches the filesystem through `store`. The allowlist, with
+  a reason each: `store` (the root, through an `os.Root`); `setup`
+  (agents' configuration under the home directory), `gitinfo` (`.git` in
+  repositories), `gitchange` (agent worktrees) and `scripts/hookbench`
+  (developer tool, temporary root), none of them under the root; and three
+  accepted exceptions under the root: `logfile` (the diagnostic logs
+  `<root>/.flashheart/serve.log` and `hook-errors.log`, which must record
+  store failures), `index` (stats and lists root directories to add
+  fsnotify watches; opens no file) and `doctor` (stats the root folder
+  itself; without access(2), a probe file it removes). `events` does all
+  its I/O through `store`. A new package that touches files fails the test
+  until it is routed through `store` or allowlisted with its reason.
+- The default root `~/reports/Kanban` is declared once, `cli.DefaultRoot`;
+  `hook-errors.log`'s path is `logfile.HookErrorsPath`.
 - `internal/events`: event envelope and kinds, locked JSONL append (alone
   or with a session's hook activity state, under one project lock), daily
   rotation, retention, tolerant reading.
@@ -78,6 +102,8 @@ Intended layout (packages are created when they get real content):
   against `FolderBudget`. Snapshots index runs by ticket, id and parent
   once; API read paths use those lookups, never a scan of `Runs` per card
   (FH-96, D38).
+- `internal/archtest`: tests over the module's source (the root
+  confinement rule, the one default root); no code outside its tests.
 - `internal/api`: HTTP JSON handlers and request validation; no filesystem
   rules.
 - `internal/app`: Singleserve composition and lifecycle, shutdown guard.
