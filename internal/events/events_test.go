@@ -182,6 +182,43 @@ func TestPruneRemovesOnlyExpiredEventFiles(t *testing.T) {
 	}
 }
 
+// An answers inbox goes with the event file of the day it was last written
+// (FH-82): by then no reader of the log can deliver its answers, and no
+// prompt of its session has come since, or it would have taken them.
+func TestPruneRemovesInboxesWithTheirDaysEvents(t *testing.T) {
+	t.Parallel()
+
+	log, root := newRoot(t, "alpha")
+	dir := filepath.Join(root, "alpha", ".flashheart", "answers")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	inboxes := map[string]time.Time{
+		"claude--expired.jsonl": time.Date(2026, 7, 6, 23, 59, 0, 0, time.UTC),
+		"claude--kept.jsonl":    time.Date(2026, 7, 7, 0, 1, 0, 0, time.UTC),
+	}
+	for name, at := range inboxes {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("{}\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(filepath.Join(dir, name), at, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)
+	if removed, err := log.Prune("alpha", now, 90); err != nil || removed != 1 {
+		t.Fatalf("Prune = %d, %v", removed, err)
+	}
+	entries, _ := os.ReadDir(dir)
+	var names []string
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	if !slices.Equal(names, []string{"claude--kept.jsonl"}) {
+		t.Fatalf("left %v", names)
+	}
+}
+
 func TestEncodeBoundsLines(t *testing.T) {
 	t.Parallel()
 

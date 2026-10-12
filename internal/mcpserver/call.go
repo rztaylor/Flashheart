@@ -194,10 +194,16 @@ func (c *call) holder(id string) *runs.Run {
 }
 
 // linked is the caller's ticket: its claim, else the in-progress ticket on
-// its branch (RUN-5).
+// its branch in its home project (RUN-5). The home, where the run records
+// its branch, is read in full when it is not the caller's project (FH-32);
+// if it cannot be read, the link is judged on what has been.
 func (c *call) linked() runs.Link {
 	if c.run == "" {
 		return runs.Link{}
+	}
+	if r := c.set.Get(c.run); r != nil && r.Project != "" {
+		_ = c.fold(r.Project)
+		_ = c.load(r.Project)
 	}
 	return c.set.Link(c.run, func(project, branch string) []string {
 		if p := c.projectNamed(project); p != nil {

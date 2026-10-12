@@ -97,9 +97,11 @@ func (s *Store) OpenEventFile(project, file string) (*os.File, error) {
 	return root.Open(path.Join(eventDir(project), file))
 }
 
-// RemoveEventFile deletes one event file. Expiring old event files is the
-// only deletion Flashheart performs unasked; the others are permanent
-// deletes the user confirms (board-format.md, Event log).
+// RemoveEventFile deletes one event file. Expiring old event files, with
+// the answers inboxes and hook activity state retention removes
+// (PruneInboxes, PruneActivity), is the only deletion Flashheart performs
+// unasked; the others are permanent deletes the user confirms
+// (board-format.md, Event log).
 func (s *Store) RemoveEventFile(project, file string) error {
 	if err := s.checkEventFile(project, file); err != nil {
 		return err

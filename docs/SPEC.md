@@ -167,7 +167,9 @@ Full format: `docs/dev/specs/board-format.md`.
   automatically.
 - `STO-5` Runs, events, claims and questions are stored in the project's
   append-only event log (`.flashheart/events/YYYY-MM-DD.jsonl`), rotated daily,
-  retained for 90 days by default.
+  retained for 90 days by default. A session's answers inbox expires with
+  its day's events and its hook activity state after `stale_hours`, so a
+  session that never reports its end leaves nothing behind (FH-82).
 - `STO-6` Durable meaning lands in the ticket, not only the log: handoffs are
   written into the ticket body (`## Handoff`), answered questions into
   `## Notes`. A ticket is understandable with the log deleted.
@@ -393,7 +395,9 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
 - `RUN-4` A run's **plan** mirrors the agent's own task list (Claude Code's
   task/todo tools, Codex's plan tool) from hook events, without model effort.
 - `RUN-5` A run links to a ticket by an explicit claim, or provisionally when
-  exactly one *in-progress* ticket has `branch:` equal to the run's branch.
+  exactly one *in-progress* ticket in the run's home project (the one it
+  works in, never one where it only claimed a ticket) has `branch:` equal
+  to the run's branch.
   Subagent runs inherit their parent's link. Unlinked runs show under
   under *Work with no ticket* on the Overview while they are live.
 - `RUN-6` A claim is a lease renewed by any event from the claiming run. A
