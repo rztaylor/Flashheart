@@ -1,6 +1,8 @@
 // Package mdfile parses and edits markdown files with YAML frontmatter: the
 // frontmatter mapping in key order, the body, the H1 title, level-2 sections
-// and top-level task-list checkboxes.
+// and top-level task-list checkboxes. Plain YAML mapping files such as
+// project.yaml are parsed (ParseYAML) and edited (SetYAMLScalar,
+// SetYAMLList) by the same field rules.
 //
 // It is pure (no I/O). Parsing never fails: frontmatter errors are returned
 // on the Document so callers can show the file as needing repair (STO-4).

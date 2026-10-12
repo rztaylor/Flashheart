@@ -1,7 +1,6 @@
 package store
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -296,24 +295,9 @@ func (s *Store) retire(project, id string) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	crlf := bytes.Contains(data, []byte("\r\n"))
-	text := strings.ReplaceAll(string(data), "\r\n", "\n")
-	if text != "" && !strings.HasSuffix(text, "\n") {
-		text += "\n"
+	out, err := addToProjectList(project, data, "retired", id)
+	if err != nil || string(out) == string(data) {
+		return err
 	}
-	// project.yaml is plain YAML; edit it as frontmatter of an empty body.
-	doc := []byte("---\n" + text + "---\n")
-	retired := mdfile.Parse(doc).List("retired")
-	if slices.Contains(retired, id) {
-		return nil
-	}
-	doc, err = mdfile.SetList(doc, "retired", append(retired, id))
-	if err != nil {
-		return fmt.Errorf("%s: %w", name, err)
-	}
-	out := strings.TrimSuffix(strings.TrimPrefix(string(doc), "---\n"), "---\n")
-	if crlf {
-		out = strings.ReplaceAll(out, "\n", "\r\n")
-	}
-	return s.WriteFileAtomic(name, []byte(out))
+	return s.WriteFileAtomic(name, out)
 }

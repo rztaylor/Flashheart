@@ -67,6 +67,16 @@ All notable changes to this project are documented here. The project follows
   watches `<root>/.archive/` itself, but not the archived projects' own
   folders, and never through a symbolic link.
 
+- A project whose `project.yaml` uses Windows line endings or a byte-order
+  mark keeps its name and repositories (FH-77). Before, adopting a
+  repository and then setting the project key wrote a second header into
+  the file, so the board showed the project under its folder name with no
+  repositories, and the next hook adopted the repository again. Every edit
+  of `project.yaml` now keeps the file's line endings, and every reader
+  treats problems alike: a field of the wrong type is shown as a project
+  warning and the other fields still count, and a list that cannot be read
+  is never replaced.
+
 - A subagent reporting back no longer answers the question its session
   asked you (FH-57). Only a prompt you type answers a session's open
   question in the chat; a subagent's hand-back, a message from another

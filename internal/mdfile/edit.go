@@ -18,12 +18,19 @@ import (
 // unchanged, so saving without changes is byte-identical.
 
 var (
-	// ErrBrokenFrontmatter means the frontmatter does not parse, so it cannot
-	// be edited safely; the file needs repair by hand (STO-4).
+	// ErrBrokenFrontmatter means the frontmatter, or a plain YAML file, does
+	// not parse, so it cannot be edited safely; the file needs repair by
+	// hand (STO-4).
 	ErrBrokenFrontmatter = errors.New("frontmatter does not parse")
 	// ErrNotFound means the section or checkbox does not exist.
 	ErrNotFound = errors.New("not found")
 )
+
+// brokenYAML is ErrBrokenFrontmatter for a plain YAML file.
+type brokenYAML struct{ err error }
+
+func (e brokenYAML) Error() string { return "the YAML does not parse: " + e.err.Error() }
+func (e brokenYAML) Unwrap() error { return ErrBrokenFrontmatter }
 
 // file is data split into editable lines with its original encoding.
 type file struct {
@@ -61,7 +68,29 @@ func (f file) bytes() []byte {
 // creating the frontmatter or field when missing. Values are written plain
 // when that reads back identically, otherwise double-quoted.
 func SetScalar(data []byte, key, value string) ([]byte, error) {
-	doc := Parse(data)
+	return setScalar(data, Parse(data), key, value)
+}
+
+// SetList sets a top-level frontmatter field to a list: a flow list ([a, b])
+// unless the field is already a block list, whose style is kept.
+func SetList(data []byte, key string, items []string) ([]byte, error) {
+	return setList(data, Parse(data), key, items)
+}
+
+// SetYAMLScalar is SetScalar for a plain YAML file whose top level is a
+// mapping, such as project.yaml (see ParseYAML): a missing field is added
+// at the end of the mapping. A file that does not parse is refused with
+// ErrBrokenFrontmatter.
+func SetYAMLScalar(data []byte, key, value string) ([]byte, error) {
+	return setScalar(data, ParseYAML(data), key, value)
+}
+
+// SetYAMLList is SetList for a plain YAML file, as SetYAMLScalar.
+func SetYAMLList(data []byte, key string, items []string) ([]byte, error) {
+	return setList(data, ParseYAML(data), key, items)
+}
+
+func setScalar(data []byte, doc Document, key, value string) ([]byte, error) {
 	if node, ok := doc.field(key); ok && node.Kind == yaml.ScalarNode {
 		if current, _ := doc.String(key); current == value {
 			return data, nil
@@ -74,10 +103,7 @@ func SetScalar(data []byte, key, value string) ([]byte, error) {
 	return setField(data, doc, key, line+"\n")
 }
 
-// SetList sets a top-level frontmatter field to a list: a flow list ([a, b])
-// unless the field is already a block list, whose style is kept.
-func SetList(data []byte, key string, items []string) ([]byte, error) {
-	doc := Parse(data)
+func setList(data []byte, doc Document, key string, items []string) ([]byte, error) {
 	// A scalar holding the same single item (tags: ui) already reads the same.
 	if _, ok := doc.field(key); ok && slices.Equal(doc.List(key), items) {
 		return data, nil
@@ -102,14 +128,17 @@ func SetList(data []byte, key string, items []string) ([]byte, error) {
 
 func setField(data []byte, doc Document, key, replacement string) ([]byte, error) {
 	if doc.FrontmatterError != nil {
+		if doc.plain {
+			return nil, brokenYAML{doc.FrontmatterError}
+		}
 		return nil, fmt.Errorf("%w: %v", ErrBrokenFrontmatter, doc.FrontmatterError)
 	}
 	f := split(data)
-	if !doc.HasFrontmatter {
+	if !doc.HasFrontmatter && !doc.plain {
 		f.lines = append([]string{"---\n", replacement, "---\n"}, f.lines...)
 		return f.bytes(), nil
 	}
-	closing := doc.BodyLine - 2 // index of the closing --- line
+	closing := doc.insert // the closing --- line, or the end of the YAML
 	fields := doc.Fields()
 	for index, field := range fields {
 		if field.Key != key {
@@ -126,6 +155,10 @@ func setField(data []byte, doc Document, key, replacement string) ([]byte, error
 		}
 		f.lines = slices.Concat(f.lines[:start], []string{replacement}, f.lines[end:])
 		return f.bytes(), nil
+	}
+	// A field added after a plain file's unterminated last line ends it.
+	if closing > 0 && closing == len(f.lines) && !strings.HasSuffix(f.lines[closing-1], "\n") {
+		f.lines[closing-1] += "\n"
 	}
 	f.lines = slices.Insert(f.lines, closing, replacement)
 	return f.bytes(), nil

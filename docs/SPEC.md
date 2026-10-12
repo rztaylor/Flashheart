@@ -149,8 +149,9 @@ Full format: `docs/dev/specs/board-format.md`.
   ticket with the column in frontmatter. Flashheart owns the format; it stays
   plain markdown readable in any editor. Format v1 (kanban-tracker column
   folders) is read only to migrate it (`MIG-1`).
-- `STO-2` Ticket and workstream frontmatter edits preserve key order, comments
-  and unknown keys, and produce minimal diffs.
+- `STO-2` Ticket and workstream frontmatter edits, and edits to
+  `project.yaml`, preserve key order, comments, unknown keys, line endings
+  and a byte-order mark, and produce minimal diffs.
 - `STO-3` All writes are atomic (write temp, fsync, rename) and made under the
   project lock. The one exception is the hooks' per-session activity state
   (agent-protocol §3), a disposable cache written in place under the lock
