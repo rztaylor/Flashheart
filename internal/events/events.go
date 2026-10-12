@@ -32,43 +32,9 @@ const (
 	MaxOptionText   = 200
 	// MaxActivitySpans bounds an activity record's shell windows.
 	MaxActivitySpans = 20
+	// MaxToolPaths bounds the paths of one tool result.
+	MaxToolPaths = 50
 )
-
-// Event kinds (agent-protocol §3). ToolUsed is one tool call: since
-// protocol 2 (FH-55) hooks write throttled Activity records instead, and
-// readers still fold tool.used from older logs.
-const (
-	RunStart            = "run.start"
-	RunEnd              = "run.end"
-	TurnStart           = "turn.start"
-	TurnEnd             = "turn.end"
-	ToolUsed            = "tool.used"
-	Activity            = "activity"
-	PlanUpdated         = "plan.updated"
-	PermissionRequested = "permission.requested"
-	PermissionResolved  = "permission.resolved"
-	Notification        = "notification"
-	Compact             = "compact"
-	Claim               = "claim"
-	Release             = "release"
-	Checkpoint          = "checkpoint"
-	TicketMoved         = "ticket.moved"
-	TicketUpdated       = "ticket.updated"
-	TicketCreated       = "ticket.created"
-	ReviewWritten       = "review.written"
-	AttachmentAdded     = "attachment.added"
-	QuestionAsked       = "question.asked"
-	QuestionAnswered    = "question.answered"
-	QuestionDelivered   = "question.delivered"
-)
-
-var known = map[string]bool{
-	RunStart: true, RunEnd: true, TurnStart: true, TurnEnd: true, ToolUsed: true, Activity: true,
-	PlanUpdated: true, PermissionRequested: true, PermissionResolved: true,
-	Notification: true, Compact: true, Claim: true, Release: true, Checkpoint: true,
-	TicketMoved: true, TicketUpdated: true, TicketCreated: true, ReviewWritten: true,
-	AttachmentAdded: true, QuestionAsked: true, QuestionAnswered: true, QuestionDelivered: true,
-}
 
 // Plan item statuses; "deleted" appears only in merges and removes the item.
 const (
@@ -131,13 +97,27 @@ type TurnEndData struct {
 	WorktreeChanged   bool `json:"worktree_changed,omitempty"`
 }
 
-// ToolData is tool.used's data. Path is repository-relative and set for
-// edits only.
+// ToolData is tool.used's data: one tool result, classified by the agent's
+// adapter, so nothing past it reads tool names. Shell marks a shell
+// command, whose edits name no path; Paths are the files an edit changed,
+// repository-relative once hooks has cleaned them (one result may edit
+// several). Path is the single edit path of tool.used records in logs from
+// before protocol 2, which carry no Shell either.
 type ToolData struct {
-	Tool    string `json:"tool"`
-	OK      bool   `json:"ok"`
-	Path    string `json:"path,omitempty"`
-	Summary string `json:"summary,omitempty"`
+	Tool    string   `json:"tool"`
+	OK      bool     `json:"ok"`
+	Shell   bool     `json:"shell,omitempty"`
+	Paths   []string `json:"paths,omitempty"`
+	Path    string   `json:"path,omitempty"`
+	Summary string   `json:"summary,omitempty"`
+}
+
+// EditPaths returns the paths the result edited, a legacy Path included.
+func (d ToolData) EditPaths() []string {
+	if d.Path == "" {
+		return d.Paths
+	}
+	return append([]string{d.Path}, d.Paths...)
 }
 
 // ActivityData is activity's data: a run's tool use since its previous
@@ -153,12 +133,6 @@ type ActivityData struct {
 	Failed int      `json:"failed,omitempty"`
 	Paths  []string `json:"paths,omitempty"`
 	Shell  []Span   `json:"shell,omitempty"`
-}
-
-// Span is a stretch of time, ends included.
-type Span struct {
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
 }
 
 // PlanItem is one entry of a run's plan. ID is set by agents whose plan
@@ -265,13 +239,13 @@ type CheckpointData struct {
 	Questions int    `json:"questions"`
 }
 
-// Event is one log record. Data is any of the *Data types when writing;
-// events read from the log keep their raw data for Decode.
+// Event is one log record. Data is its kind's Data type when writing (or
+// nil for none); events read from the log keep their raw data for Decode.
 type Event struct {
 	Time    time.Time
 	Run     string
 	Agent   string
-	Kind    string
+	Kind    Kind
 	Project string
 	Data    any
 
@@ -284,19 +258,24 @@ type envelope struct {
 	TS      string          `json:"ts"`
 	Run     string          `json:"run"`
 	Agent   string          `json:"agent"`
-	Kind    string          `json:"kind"`
+	Kind    Kind            `json:"kind"`
 	Project string          `json:"project"`
 	Data    json.RawMessage `json:"data"`
 }
 
 const timeLayout = "2006-01-02T15:04:05.000Z"
 
-// MarshalLine encodes the event as one JSONL line with its newline.
+// MarshalLine encodes the event as one JSONL line with its newline. The
+// data must be the kind's type (kinds); its strings are bounded and
+// scrubbed here, whoever built the event (SEC-3, HOOK-2).
 func (e Event) MarshalLine() ([]byte, error) {
 	data := e.raw
 	if e.Data != nil {
-		var err error
-		if data, err = json.Marshal(e.Data); err != nil {
+		bounded, err := checkData(e.Kind, e.Data)
+		if err != nil {
+			return nil, err
+		}
+		if data, err = json.Marshal(bounded); err != nil {
 			return nil, err
 		}
 	}
@@ -331,7 +310,7 @@ func (e Event) Decode(v any) error {
 // parseLine decodes one line; ok is false for lines readers skip.
 func parseLine(line []byte) (Event, bool) {
 	var env envelope
-	if err := json.Unmarshal(line, &env); err != nil || env.V < 1 || env.Run == "" || !known[env.Kind] {
+	if err := json.Unmarshal(line, &env); err != nil || env.V < 1 || env.Run == "" || !env.Kind.Known() {
 		return Event{}, false
 	}
 	ts, err := time.Parse(time.RFC3339Nano, env.TS)
@@ -374,7 +353,7 @@ func encode(list []Event) (map[target][]byte, []target, error) {
 	batches := map[target][]byte{}
 	var order []target
 	for _, e := range list {
-		if e.Run == "" || e.Project == "" || !known[e.Kind] {
+		if e.Run == "" || e.Project == "" || !e.Kind.Known() {
 			return nil, nil, fmt.Errorf("event %q for run %q in project %q is incomplete", e.Kind, e.Run, e.Project)
 		}
 		line, err := e.MarshalLine()
@@ -514,7 +493,7 @@ type Delivery struct {
 
 // QueueAnswer puts an answer in the inbox of the asking run's session.
 func (l *Log) QueueAnswer(project, run string, d Delivery) error {
-	session, _, _ := strings.Cut(run, "/")
+	session := RunOf(run).Session().String()
 	line, err := json.Marshal(d)
 	if err != nil {
 		return err
@@ -527,8 +506,7 @@ func (l *Log) QueueAnswer(project, run string, d Delivery) error {
 func (l *Log) MarkDelivered(project string, list []Delivery, at time.Time) error {
 	out := make([]Event, 0, len(list))
 	for _, d := range list {
-		agent, _, _ := strings.Cut(d.Run, ":")
-		out = append(out, Event{Time: at, Run: d.Run, Agent: agent, Kind: QuestionDelivered, Project: project, Data: DeliveredData{ID: d.ID}})
+		out = append(out, Event{Time: at, Run: d.Run, Agent: RunOf(d.Run).Agent(), Kind: QuestionDelivered, Project: project, Data: DeliveredData{ID: d.ID}})
 	}
 	return l.Append(out...)
 }

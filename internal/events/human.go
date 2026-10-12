@@ -10,7 +10,7 @@ const Human = "human"
 // ByHuman returns the event recording that the human changed a ticket on the
 // board: kind is ticket.moved, ticket.updated or ticket.created, and data
 // names the ticket with at most the columns or field names it changed.
-func ByHuman(at time.Time, project, kind string, data TicketData) Event {
+func ByHuman(at time.Time, project string, kind Kind, data TicketData) Event {
 	data.By = Human
 	return Event{Time: at, Run: Human, Agent: Human, Kind: kind, Project: project, Data: data}
 }
@@ -20,7 +20,7 @@ func ByHuman(at time.Time, project, kind string, data TicketData) Event {
 type HumanActivity struct {
 	Time    time.Time `json:"time"`
 	Project string    `json:"project"`
-	Kind    string    `json:"kind"`
+	Kind    Kind      `json:"kind"`
 	Ticket  string    `json:"ticket,omitempty"`
 }
 

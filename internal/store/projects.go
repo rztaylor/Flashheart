@@ -328,7 +328,7 @@ func (s *Store) DeleteArchivedProject(project, token string) error {
 		return &ConflictError{Name: "delete", Hash: plan.Token}
 	}
 	for _, reference := range plan.References {
-		_, err := s.updateLocked(reference.file, reference.hash, func(data []byte) ([]byte, error) {
+		_, err := s.update(reference.file, Unchanged(reference.hash), func(data []byte) ([]byte, error) {
 			list := mdfile.Parse(data).List("depends-on")
 			list = slices.DeleteFunc(list, func(id string) bool { return slices.Contains(reference.DependsOn, id) })
 			return mdfile.SetList(data, "depends-on", list)

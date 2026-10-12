@@ -1,51 +1,25 @@
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
-import {
-  type Attachment,
-  fetchTicket,
-  type Reason,
-  STATUSES,
-  type Status,
-  statusWord,
-  type TicketDetail,
-  type TicketRef,
-  type WorkstreamBrief,
-} from "../../api/board";
+import { type ReactNode, useState } from "react";
+import type { TicketDetail, TicketRef, WorkstreamBrief } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import {
-  conflictOf,
-  type Saved,
-  setCriterion,
-  setReviewStep,
-} from "../../api/edit";
-import { Aside } from "../../components/Aside";
-import { Button } from "../../components/Button";
-import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
-import { Lightbox } from "../../components/Lightbox";
-import { LineBullet } from "../../components/LineBullet";
-import { Markdown } from "../../components/Markdown";
-import { BlockerPill, Pill, StatusPill, Tag } from "../../components/Pill";
-import { QuestionCard } from "../../components/QuestionCard";
 import { SidePanel } from "../../components/SidePanel";
-import { StateNote } from "../../components/StateNote";
-import { panelId, Tabs, tabId } from "../../components/Tabs";
-import { idCut, LinkedText, TicketLink } from "../../components/TicketLink";
+import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
-import { ticketBody } from "../../model/markdown";
 import type { Step } from "../../model/order";
-import { counted, sessionsOf, shortRun } from "../../model/runs";
-import { priorityLabel } from "../../model/status";
-import { absoluteTime, runningTime } from "../../model/time";
-import { useNow } from "../../state/useNow";
-import { useResource } from "../../state/useResource";
+import { type SectionId, ticketSections } from "../../model/ticketSections";
 import type { Editing } from "../editing/useEditing";
-import { AttachmentGrid, isImage } from "./AttachmentGrid";
-import { Checklist } from "./Checklist";
-import { EditTab } from "./EditTab";
-import { RunsTab } from "./RunsTab";
-
-const panelBodyClass =
-  "relative min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10";
+import {
+  TicketActions,
+  TicketIdentity,
+  TicketProperties,
+} from "./TicketHeader";
+import {
+  activeSection,
+  SectionBody,
+  SectionTabs,
+  TicketSkeleton,
+} from "./TicketSections";
+import { useTicket } from "./useTicket";
 
 export interface CardPanelProps {
   ticket: TicketRef;
@@ -72,41 +46,13 @@ export interface CardPanelProps {
   initialTab?: PanelTab;
 }
 
-export type PanelTab = "ticket" | "edit" | "runs" | "attachments" | "review";
+export type PanelTab = SectionId;
 
 // CardPanel shows one ticket beside the board (CARD-1), with a way to its
-// full page in a new tab (CARD-7).
-export function CardPanel(props: CardPanelProps) {
-  const { ticket, onClose } = props;
-  return (
-    <SidePanel
-      label={`Ticket ${ticket.id}`}
-      onClose={onClose}
-      actions={
-        <TicketLink
-          id={ticket.id}
-          label="Open full page in a new tab"
-          className="grid size-9 place-items-center rounded-full text-ink-muted transition-colors hover:bg-well hover:text-ink"
-        >
-          <Icon name="expand" />
-        </TicketLink>
-      }
-    >
-      <TicketView {...props} layout="panel" />
-    </SidePanel>
-  );
-}
-
-// TicketView is one ticket in the panel or on its full page (CARD-1,
-// CARD-7): the Ticket tab with blocked-by (CARD-4), handoff with a warning
-// when a live run has edited since it (CARD-5), tickable criteria (CARD-3)
-// and the rendered markdown; the Edit tab (EDIT-6); the Runs tab (agent
-// runs linked to the ticket); and a Review tab when a review file exists
-// (REV-3). Its header moves and archives the ticket (EDIT-1, EDIT-8). The
-// panel scrolls its tabs under the header; the page scrolls as a whole.
-export function TicketView({
-  layout,
-  ticket,
+// full page in a new tab (CARD-7): its header, which moves and archives the
+// ticket (EDIT-1, EDIT-8), over its sections as tabs that scroll under it.
+export function CardPanel({
+  ticket: ref,
   fetcher,
   lines,
   workstreamTitle,
@@ -119,144 +65,35 @@ export function TicketView({
   answers = false,
   workstreamsOf,
   initialTab = "ticket",
-  onDetail,
-}: CardPanelProps & {
-  layout: "panel" | "page";
-  // onDetail hears each loaded copy of the ticket (the page's tab title).
-  onDetail?(detail: TicketDetail): void;
-}) {
-  const load = useCallback(
-    (signal: AbortSignal) => fetchTicket(fetcher, ticket.id, signal),
-    [fetcher, ticket.id],
-  );
-  const resource = useResource(load, ticket.id, revision);
-  const [tab, setTab] = useState<PanelTab>(initialTab);
-  const tabsId = useId();
-  const detail = resource.status === "ready" ? resource.data : undefined;
-  useEffect(() => {
-    if (detail) onDetail?.(detail);
-  }, [detail, onDetail]);
-  const editable = !!editing && !!detail?.hash;
-  const items: { id: PanelTab; label: string }[] = [
-    { id: "ticket", label: "Ticket" },
-    ...(editable ? [{ id: "edit" as const, label: "Edit" }] : []),
-    {
-      id: "runs",
-      label: detail?.runs.length
-        ? `Runs ${sessionsOf(detail.runs).length}`
-        : "Runs",
-    },
-    ...(detail?.attachmentFiles.length
-      ? [
-          {
-            id: "attachments" as const,
-            label: `Attachments ${detail.attachmentFiles.length}`,
-          },
-        ]
-      : []),
-    ...(detail?.review ? [{ id: "review" as const, label: "Review" }] : []),
-  ];
-  const activeTab = items.some((item) => item.id === tab) ? tab : "ticket";
-  const page = layout === "page";
-
-  const saved = (result: Saved | undefined, what: string) => {
-    resource.reload();
-    if (result && editing)
-      editing.notify({
-        text: `${what} ${ticket.id}.`,
-        details: result.warnings,
-      });
-  };
-  // tick saves a tick and reloads; on failure it says why and resolves
-  // false so the box goes back.
-  const tick = (save: Promise<Saved>, what: string): Promise<boolean> =>
-    save
-      .then(() => {
-        resource.reload();
-        return true;
-      })
-      .catch((error: unknown) => {
-        resource.reload();
-        editing?.notify({
-          text: conflictOf(error)
-            ? `${ticket.id} changed on disk; showing the current ${what}.`
-            : `Not saved: ${error instanceof Error ? error.message : "unknown error"}`,
-        });
-        return false;
-      });
-  const toggle =
-    editable && detail && editing
-      ? (index: number, checked: boolean) =>
-          tick(
-            setCriterion(fetcher, detail.id, detail.hash, index, checked),
-            "criteria",
-          )
-      : undefined;
-  // verify ticks a review's How to Verify step (REV-3).
-  const review = detail?.review;
-  const verify =
-    editing && detail && review?.hash
-      ? (index: number, checked: boolean) =>
-          tick(
-            setReviewStep(fetcher, detail.id, review.hash, index, checked),
-            "review",
-          )
-      : undefined;
-  // answer sends an answer to an agent's question (CARD-6).
-  const answer =
-    editing && detail && answers
-      ? (id: string, text: string) =>
-          editing.answer(id, text).finally(() => resource.reload())
-      : undefined;
-  // On the page the title is the h1, so the tab's own sections (h3) sit
-  // under a heading naming the tab, as they sit under the panel's h2.
-  const body = (current: TicketDetail) => (
-    <>
-      {page ? (
-        <h2 className="sr-only">
-          {items.find((item) => item.id === activeTab)?.label}
-        </h2>
-      ) : null}
-      {tabBody(current)}
-    </>
-  );
-  const tabBody = (current: TicketDetail) => {
-    switch (activeTab) {
-      case "review":
-        return <ReviewTab detail={current} keys={keys} onVerify={verify} />;
-      case "attachments":
-        return <Attachments attachments={current.attachmentFiles} />;
-      case "runs":
-        return <RunsTab detail={current} onOpen={onOpen} />;
-      case "edit":
-        return (
-          <EditTab
-            detail={current}
-            fetcher={fetcher}
-            workstreams={workstreamsOf(current.project)}
-            onSaved={saved}
-          />
-        );
-      default:
-        return (
-          <TicketTab
-            detail={current}
-            keys={keys}
-            onOpen={onOpen}
-            onToggle={toggle}
-            onAnswer={answer}
-          />
-        );
-    }
-  };
-
-  const inset = page ? "" : "px-6";
-  const bodyClass = page ? "pt-6 pb-16" : panelBodyClass;
+}: CardPanelProps) {
+  const ticket = useTicket({
+    fetcher,
+    id: ref.id,
+    revision,
+    editing,
+    answers,
+  });
+  const [tab, setTab] = useState<SectionId>(initialTab);
+  const { detail, resource } = ticket;
+  const sections = detail ? ticketSections(detail, ticket.editable) : [];
+  const active = activeSection(sections, tab);
   return (
-    <>
-      {resource.status === "loading" ? <PanelSkeleton /> : null}
+    <SidePanel
+      label={`Ticket ${ref.id}`}
+      onClose={onClose}
+      actions={
+        <TicketLink
+          id={ref.id}
+          label="Open full page in a new tab"
+          className="grid size-9 place-items-center rounded-full text-ink-muted transition-colors hover:bg-well hover:text-ink"
+        >
+          <Icon name="expand" />
+        </TicketLink>
+      }
+    >
+      {resource.status === "loading" ? <TicketSkeleton /> : null}
       {resource.status === "error" ? (
-        <div className={page ? "py-6" : "p-6"}>
+        <div className="p-6">
           <p role="alert" className="text-sm text-danger">
             This ticket could not be loaded: {resource.error}
           </p>
@@ -266,12 +103,11 @@ export function TicketView({
         <>
           <PanelHeader
             detail={detail}
-            page={page}
             line={lines.get(detail.project)?.get(detail.workstream)}
             workstreamTitle={workstreamTitle(detail.project, detail.workstream)}
             actions={
-              editing && editable ? (
-                <PanelActions
+              editing && ticket.editable ? (
+                <TicketActions
                   detail={detail}
                   onMove={(to) => void editing.move(detail, to)}
                   onStep={onStep}
@@ -283,529 +119,51 @@ export function TicketView({
               ) : null
             }
           />
-          {items.length > 1 ? (
-            <div className={inset}>
-              <Tabs
-                idPrefix={tabsId}
-                label="Ticket views"
-                selected={activeTab}
-                onSelect={(id) => setTab(id as PanelTab)}
-                items={items}
-              />
-            </div>
-          ) : (
-            <div
-              aria-hidden="true"
-              className={`border-b border-rule ${page ? "" : "mx-6"}`}
+          <SectionTabs
+            sections={sections}
+            active={active}
+            onSelect={setTab}
+            tabsClassName="px-6"
+            bodyClassName="relative min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10"
+          >
+            <SectionBody
+              section={active}
+              detail={detail}
+              ticket={ticket}
+              fetcher={fetcher}
+              keys={keys}
+              onOpen={onOpen}
+              workstreamsOf={workstreamsOf}
             />
-          )}
-          {items.length > 1 ? (
-            <div
-              role="tabpanel"
-              // The ARIA tabs pattern makes the panel a tab stop, so a
-              // scrolling panel with no controls (Runs) is still reachable.
-              // biome-ignore lint/a11y/noNoninteractiveTabindex: see above.
-              tabIndex={0}
-              id={panelId(tabsId, activeTab)}
-              aria-labelledby={tabId(tabsId, activeTab)}
-              className={bodyClass}
-            >
-              {body(detail)}
-            </div>
-          ) : (
-            <div className={bodyClass}>{body(detail)}</div>
-          )}
+          </SectionTabs>
         </>
       ) : null}
-    </>
+    </SidePanel>
   );
 }
 
-const steps: { value: Step; short: string; label: string }[] = [
-  { value: "top", short: "Top", label: "Top of its column" },
-  { value: "up", short: "Up", label: "Up one place" },
-  { value: "down", short: "Down", label: "Down one place" },
-  {
-    value: "bottom",
-    short: "Bottom",
-    label: "Bottom of its column",
-  },
-];
-
-// PanelActions moves the ticket to any column, rejects it (FH-58), moves it
-// to a place in its column (the menu alternatives to dragging, EDIT-1,
-// EDIT-9) or archives it (EDIT-8).
-export function PanelActions({
-  detail,
-  onMove,
-  onStep,
-  onArchive,
-}: {
-  detail: TicketDetail;
-  onMove(to: Status): void;
-  onStep?: (step: Step) => void;
-  onArchive(): void;
-}) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      {/* biome-ignore lint/a11y/noLabelWithoutControl: the Select inside is the control. */}
-      <label className="flex items-center gap-2 text-xs text-ink-muted">
-        Move to
-        <Select
-          value={statusWord(detail)}
-          onChange={(value) => onMove(value as Status)}
-        >
-          {STATUSES.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.title}
-            </option>
-          ))}
-        </Select>
-      </label>
-      {onStep ? (
-        <fieldset className="flex items-center gap-1 text-xs text-ink-muted">
-          <legend className="sr-only">Position in its column</legend>
-          <span aria-hidden="true" className="mr-1">
-            Position
-          </span>
-          {steps.map((step) => (
-            <Button
-              key={step.value}
-              variant="quiet"
-              className="h-8 px-2 py-0 text-xs"
-              aria-label={step.label}
-              title={step.label}
-              onClick={() => onStep(step.value)}
-            >
-              {step.short}
-            </Button>
-          ))}
-        </fieldset>
-      ) : null}
-      <Button className="h-8 py-0 text-xs" onClick={onArchive}>
-        <Icon name="archive" size={14} />
-        Archive
-      </Button>
-    </div>
-  );
-}
-
-// PanelHeader: the id and project, the title, a pill row (column, blocker,
-// priority, type), a meta row and the actions (ui-layout.md §3). In the
-// panel the id links to the ticket's full page; on the page, whose own id
-// it is, the title is the page heading.
+// PanelHeader is the panel's header (ui-layout.md §3): the ticket's
+// identity, its id linking to the full page, its properties and actions.
 export function PanelHeader({
   detail,
   line,
   workstreamTitle,
   actions,
-  page = false,
 }: {
   detail: TicketDetail;
   line?: Line;
   workstreamTitle: string;
   actions?: ReactNode;
-  page?: boolean;
 }) {
-  const Heading = page ? "h1" : "h2";
-  const priority = detail.priority
-    ? `${priorityLabel(detail.priority)} priority`
-    : "";
   return (
-    <header className={page ? "pt-2 pb-4" : "px-6 pt-5 pb-4 pr-24"}>
-      <p className="flex items-center gap-2 text-sm text-ink-muted">
-        {page ? (
-          <span className={`${idCut} text-ink`}>{detail.id}</span>
-        ) : (
-          <TicketLink id={detail.id} className="text-ink" />
-        )}
-        <span>{detail.project}</span>
-      </p>
-      <Heading
-        className={`mt-1 leading-tight display-cut ${page ? "text-3xl" : "text-2xl"}`}
-      >
-        {detail.title}
-      </Heading>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <StatusPill column={detail.column} rejected={detail.rejected} />
-        {detail.blockedBy.length > 0 ? (
-          <Pill tone="blocked">Blocked</Pill>
-        ) : null}
-        {priority ? (
-          <Tag strong={detail.priority === "high"}>{priority}</Tag>
-        ) : null}
-        {detail.type ? <Tag>{detail.type}</Tag> : null}
-      </div>
-      <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
-        {detail.workstream ? (
-          <span className="flex items-center gap-1.5 font-medium text-ink">
-            <LineBullet line={line} size="sm" />
-            {workstreamTitle}
-          </span>
-        ) : null}
-        {detail.created ? <span>created {detail.created}</span> : null}
-        {detail.branch ? (
-          <span className="flex min-w-0 items-center gap-1 font-mono">
-            <Icon name="branch" size={12} />
-            <span className="truncate">{detail.branch}</span>
-          </span>
-        ) : null}
-        <span title={absoluteTime(detail.modified)}>
-          {changedLabel(detail.modified)}
-        </span>
-      </p>
+    <header className="px-6 pt-5 pb-4 pr-24">
+      <TicketIdentity detail={detail} level={2} />
+      <TicketProperties
+        detail={detail}
+        line={line}
+        workstreamTitle={workstreamTitle}
+      />
       {actions}
     </header>
   );
-}
-
-// ReasonList explains why a ticket cannot start (CARD-4), each reason a
-// blocked pill.
-function ReasonList({
-  id,
-  title,
-  reasons,
-  keys,
-  onOpen,
-}: {
-  id: string;
-  title: string;
-  reasons: Reason[];
-  keys: Set<string>;
-  onOpen(ticket: TicketRef): void;
-}) {
-  if (reasons.length === 0) return null;
-  return (
-    <section aria-labelledby={id}>
-      <h3
-        id={id}
-        className="mb-2 flex items-center gap-1.5 text-md heading-cut text-ink"
-      >
-        <Icon
-          name="diamond"
-          size={15}
-          className="text-(--fh-state-blocked-ink)"
-        />
-        {title}
-      </h3>
-      <ul className="flex flex-col gap-1.5">
-        {reasons.map((reason) => (
-          <li
-            key={reason.text}
-            className="flex items-start justify-between gap-3 text-sm"
-          >
-            <BlockerPill title={reason.text}>
-              <LinkedText text={reason.text} keys={keys} />
-            </BlockerPill>
-            {reason.ticket && !reason.missing ? (
-              <button
-                type="button"
-                onClick={() =>
-                  reason.ticket && onOpen({ id: reason.ticket.id })
-                }
-                aria-label={`Open ${reason.ticket.id}`}
-                className="mt-1 shrink-0 text-xs font-medium text-ink-muted underline decoration-ink-faint hover:text-ink"
-              >
-                Open
-              </button>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-// TicketTab, in the order of ui-layout.md §3: needs repair, questions for
-// the user, the handoff, blockers, criteria, format warnings and
-// the ticket's own markdown.
-export function TicketTab({
-  detail,
-  keys,
-  onOpen,
-  onToggle,
-  onAnswer,
-}: {
-  detail: TicketDetail;
-  keys: Set<string>;
-  onOpen(ticket: TicketRef): void;
-  // onToggle ticks or unticks a criterion (CARD-3); absent when read-only.
-  onToggle?(index: number, checked: boolean): Promise<boolean>;
-  // onAnswer answers an agent's question (CARD-6); absent when read-only.
-  onAnswer?(question: string, answer: string): Promise<string | undefined>;
-}) {
-  const now = useNow();
-  const stale = staleHandoff(detail);
-  return (
-    <div className="flex flex-col gap-6">
-      {detail.needsRepair.length > 0 ? (
-        <section
-          aria-labelledby="repair-heading"
-          className="relative overflow-hidden rounded-card border border-dashed border-ink-muted p-3 pt-4"
-        >
-          <span
-            aria-hidden="true"
-            className="hatched-strong absolute inset-x-0 top-0 h-1.5"
-          />
-          <h3 id="repair-heading" className="mb-1.5 text-md heading-cut">
-            Needs repair
-          </h3>
-          {detail.needsRepair.map((problem) => (
-            <StateNote key={problem} kind="repair">
-              {problem}
-            </StateNote>
-          ))}
-          <p className="mt-2 text-xs text-ink-muted">
-            Flashheart never rewrites a broken file. Fix it in your editor; the
-            board updates when it parses.
-          </p>
-          {detail.frontmatter ? (
-            <pre className="mt-2 overflow-x-auto rounded-card bg-well p-2 font-mono text-xs">
-              {detail.frontmatter}
-            </pre>
-          ) : null}
-        </section>
-      ) : null}
-
-      {detail.questions.length > 0 ? (
-        <section
-          aria-labelledby="questions-heading"
-          className="flex flex-col gap-3 rounded-card border border-callout-question-edge/30 bg-callout-question p-4"
-        >
-          <h3
-            id="questions-heading"
-            className="flex items-center gap-2 text-md heading-cut"
-          >
-            <span className="grid size-5 place-items-center rounded-full bg-attention text-on-attention">
-              <Icon name="warning" size={12} />
-            </span>
-            {detail.questions.length === 1
-              ? "Question for you"
-              : `${detail.questions.length} questions for you`}
-          </h3>
-          {detail.questions.map((question) => (
-            <QuestionCard
-              key={question.id}
-              question={question}
-              asker={shortRun(question.run)}
-              now={now}
-              onAnswer={
-                onAnswer ? (text) => onAnswer(question.id, text) : undefined
-              }
-            />
-          ))}
-        </section>
-      ) : null}
-
-      {detail.handoff ? (
-        <section
-          aria-labelledby="handoff-heading"
-          className="rounded-card border border-callout-handoff-edge/30 bg-callout-handoff p-4"
-        >
-          <h3
-            id="handoff-heading"
-            className="mb-2 flex items-center gap-2 text-md heading-cut"
-          >
-            <Icon name="next" size={16} className="text-callout-handoff-edge" />
-            Handoff
-          </h3>
-          {stale ? (
-            <div className="mb-3">
-              <StateNote kind="warning">{stale}</StateNote>
-            </div>
-          ) : null}
-          {detail.handoff.next.length > 0 ? (
-            <div className="mb-3">
-              <p className="text-xs text-ink-muted">Next</p>
-              <ul className="mt-1 flex flex-col gap-1">
-                {detail.handoff.next.map((item) => (
-                  <li
-                    key={item}
-                    className="text-lg leading-snug font-semibold text-ink"
-                  >
-                    <LinkedText text={item} keys={keys} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <details className="group text-sm">
-            <summary className="flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-ink-muted hover:text-ink [&::-webkit-details-marker]:hidden">
-              <Icon
-                name="chevronDown"
-                size={12}
-                className="-rotate-90 transition-transform group-open:rotate-0"
-              />
-              Full handoff
-            </summary>
-            <div className="mt-2">
-              <Markdown
-                context={{ project: detail.project, ticket: detail.id }}
-                keys={keys}
-              >
-                {detail.handoff.markdown}
-              </Markdown>
-            </div>
-          </details>
-          {!stale && detail.handoff.next.length > 0 ? (
-            <Aside placement="handoff" className="mt-3" />
-          ) : null}
-        </section>
-      ) : detail.column === "in-progress" ? (
-        <Aside placement="handoff-missing" />
-      ) : null}
-
-      <ReasonList
-        id="blocked-heading"
-        title="Blocked by"
-        reasons={detail.blockedBy}
-        keys={keys}
-        onOpen={onOpen}
-      />
-
-      {detail.criteriaItems.length > 0 ? (
-        <Checklist
-          id="criteria-heading"
-          title="Acceptance criteria"
-          items={detail.criteriaItems}
-          render={(text) => <LinkedText text={text} keys={keys} />}
-          onToggle={onToggle}
-        />
-      ) : null}
-
-      {detail.warnings.length > 0 ? (
-        <section aria-label="Format warnings" className="flex flex-col gap-1">
-          {detail.warnings.map((warning) => (
-            <StateNote key={warning} kind="warning">
-              {warning}
-            </StateNote>
-          ))}
-        </section>
-      ) : null}
-
-      <section aria-label="Ticket text">
-        <Markdown
-          context={{ project: detail.project, ticket: detail.id }}
-          keys={keys}
-        >
-          {ticketBody(detail.body)}
-        </Markdown>
-      </section>
-    </div>
-  );
-}
-
-// Attachments shows a set of a ticket's files in the grid, opening
-// screenshots in the lightbox (REV-1, ui-layout.md §3).
-function Attachments({ attachments }: { attachments: Attachment[] }) {
-  const [open, setOpen] = useState<number | null>(null);
-  const images = attachments.filter(isImage);
-  return (
-    <>
-      <AttachmentGrid attachments={attachments} onOpen={setOpen} />
-      {open !== null ? (
-        <Lightbox
-          items={images.map((image) => ({
-            src: image.url,
-            caption: image.caption,
-            name: image.file,
-          }))}
-          index={open}
-          onIndex={setOpen}
-          onClose={() => setOpen(null)}
-        />
-      ) : null}
-    </>
-  );
-}
-
-// ReviewTab shows the ticket's screenshots above its review, with the How
-// to Verify steps as a checklist (REV-3).
-export function ReviewTab({
-  detail,
-  keys,
-  onVerify,
-}: {
-  detail: TicketDetail;
-  keys: Set<string>;
-  // onVerify ticks or clears a step; absent when read-only.
-  onVerify?(index: number, checked: boolean): Promise<boolean>;
-}) {
-  const screenshots = detail.attachmentFiles.filter(isImage);
-  const review = detail.review;
-  const markdown = (text: string, inline = false) =>
-    text.trim() ? (
-      <Markdown
-        context={{ project: detail.project, ticket: detail.id }}
-        keys={keys}
-        inline={inline}
-      >
-        {text}
-      </Markdown>
-    ) : null;
-  return (
-    <div className="flex flex-col gap-6">
-      {screenshots.length > 0 ? (
-        <section aria-labelledby="screenshots-heading">
-          <h3 id="screenshots-heading" className="mb-2 text-md heading-cut">
-            Screenshots
-          </h3>
-          <Attachments attachments={screenshots} />
-        </section>
-      ) : null}
-      {review && review.steps.length > 0 ? (
-        <>
-          {markdown(review.before)}
-          <section
-            aria-labelledby="verify-heading"
-            className="flex flex-col gap-3"
-          >
-            <h2 id="verify-heading" className="text-lg heading-cut">
-              How to Verify
-            </h2>
-            {markdown(review.intro)}
-            <Checklist
-              id="steps-heading"
-              title="Steps"
-              items={review.steps}
-              render={(text) => markdown(text, true)}
-              onToggle={onVerify}
-            />
-            {markdown(review.outro)}
-          </section>
-          {markdown(review.after)}
-        </>
-      ) : review ? (
-        markdown(review.markdown)
-      ) : null}
-    </div>
-  );
-}
-
-function PanelSkeleton() {
-  return (
-    <div aria-hidden="true" className="flex flex-col gap-3 p-6">
-      <div className="h-3 w-24 animate-pulse rounded-card bg-well" />
-      <div className="h-6 w-3/4 animate-pulse rounded-card bg-well" />
-      <div className="h-3 w-1/2 animate-pulse rounded-card bg-well" />
-      <div className="mt-6 h-24 animate-pulse rounded-card bg-well" />
-    </div>
-  );
-}
-
-function changedLabel(modified: string): string {
-  const age = runningTime(modified);
-  if (!age) return "";
-  return age === "now" ? "changed just now" : `changed ${age} ago`;
-}
-
-// staleHandoff warns when the run working on the ticket has edited files
-// since its last checkpoint, so the handoff may be behind (CARD-5).
-function staleHandoff(detail: TicketDetail): string {
-  const run = detail.runs.find((item) => !item.parent && item.dirty);
-  if (!run) return "";
-  const edits = counted(run.edits, "edit");
-  return run.state === "ended"
-    ? `Run ${run.short} ended after ${edits} without updating this handoff.`
-    : `Run ${run.short} has made ${edits} since this handoff.`;
 }

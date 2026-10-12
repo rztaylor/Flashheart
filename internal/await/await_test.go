@@ -60,7 +60,7 @@ func (f *fixture) options(question string) Options {
 	}
 }
 
-func (f *fixture) append(run string, kind string, data any) {
+func (f *fixture) append(run string, kind events.Kind, data any) {
 	f.t.Helper()
 	agent, _, _ := strings.Cut(run, ":")
 	if err := f.log.Append(events.Event{Time: f.now, Run: run, Agent: agent, Kind: kind, Project: project, Data: data}); err != nil {

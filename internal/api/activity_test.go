@@ -45,9 +45,10 @@ func boardLog(t *testing.T, log *events.Log) []events.Event {
 
 // recorded is what one board write should leave in the log.
 type recorded struct {
-	kind, project, ticket string
-	from, to              string
-	fields                []string
+	kind            events.Kind
+	project, ticket string
+	from, to        string
+	fields          []string
 }
 
 // expectRecorded checks that the log grew by exactly the one event want,

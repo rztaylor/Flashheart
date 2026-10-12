@@ -1,9 +1,8 @@
-// Pure view models for agent runs: why a run needs you, timeline wording
-// and plan stations, for cards, the Runs tab and the Overview.
+// Pure view models for agent runs: why a run needs you and timeline
+// wording, for cards, the Runs tab and the Overview.
 import { STATUSES } from "../api/board";
 import type {
   Live,
-  PlanItem,
   Question,
   QuestionKind,
   Run,
@@ -18,6 +17,14 @@ export const STATE_LABEL: Record<RunState, string> = {
   waiting: "Waiting",
   ended: "Ended",
 };
+
+// needsYouPhrase words how many runs need you, after their count: "needs
+// you" or "need you", and with agents "agent needs you" or "agents need
+// you" (the one attention plate's words, ui-layout.md §7).
+export function needsYouPhrase(count: number, agents = false): string {
+  if (agents) return count === 1 ? "agent needs you" : "agents need you";
+  return count === 1 ? "needs you" : "need you";
+}
 
 // permissionReason says what a run waiting on permission needs, in words.
 export function permissionReason(tool: string): string {
@@ -297,26 +304,4 @@ export function compactTimeline(entries: TimelineEntry[]): CompactEntry[] {
     }
   }
   return folded.reverse();
-}
-
-export type Station = "served" | "current" | "ahead";
-
-// MAX_STATIONS is the longest plan drawn as a route; longer plans show as
-// numbers.
-export const MAX_STATIONS = 12;
-
-// planStations draws a plan as a route: completed steps served, the step in
-// progress (or else the first pending one) current, the rest ahead.
-export function planStations(plan: PlanItem[]): Station[] {
-  if (plan.length > MAX_STATIONS) return [];
-  let current = plan.findIndex((item) => item.status === "in_progress");
-  if (current < 0)
-    current = plan.findIndex((item) => item.status !== "completed");
-  return plan.map((item, index) =>
-    item.status === "completed" && index !== current
-      ? "served"
-      : index === current
-        ? "current"
-        : "ahead",
-  );
 }

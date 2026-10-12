@@ -11,8 +11,11 @@ filter chip: show only, Cmd or Ctrl click to hide), `Dialog`, `Toast`,
 dialog), `Table` (the one table look, ui-layout.md §6: card surface,
 sticky head, `HeadCell`, `Row` with dividers, hover and selection),
 `RouteBar`, `EmptyState`, `RunState` (run state as a mark and
-words, Needs you as the attention plate),
-`PlanRoute` (an agent's plan as a monochrome route), `QuestionCard` (an
+words), `NeedsYou` (the one attention plate, ui-layout.md §7: the
+attention colour, `NeedsYouPlate` inline and on the rail, `plateClass` for
+the band's toggle, and `AttentionDisc`; nothing else uses the attention
+colour),
+`QuestionCard` (an
 agent's question with its answer box), `TicketLink` (a ticket id as a link
 to its full page, a new tab unless inside `TicketLinksInPlace`, and
 `LinkedText` for ids in plain text) and `Aside` (a marginal remark, at

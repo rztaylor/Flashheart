@@ -1,5 +1,9 @@
 // Package events owns the event log (STO-5, agent-protocol §3): the envelope
-// and its kinds with their data shapes, encoding one event per JSONL line,
+// and its kinds, each with its one data type (kinds.go: a kind with the
+// wrong data is refused), bounding and scrubbing every string of every
+// data type on append (SEC-3, HOOK-2; no writer has to remember), the
+// run-id grammar (RunID,
+// agent-protocol §2: nothing else cuts run ids apart), encoding one event per JSONL line,
 // appending to a project's daily file under the project lock (alone, or
 // with a session's hook activity state, whose format belongs to hooks),
 // tolerant and

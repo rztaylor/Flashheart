@@ -164,10 +164,11 @@ type Criterion struct {
 	Done bool   `json:"done"`
 }
 
-// Handoff is a ticket's ## Handoff section.
+// Handoff is a ticket's ## Handoff section: its text as written, for
+// display, and what it says.
 type Handoff struct {
 	Markdown string
-	Next     []string
+	HandoffNote
 }
 
 // Ticket is one parsed ticket.
@@ -226,13 +227,13 @@ func ParseTicket(folder string, data []byte) (ticket Ticket) {
 
 	ticket.Title = mdfile.Title(doc.Body)
 	ticket.Excerpt = excerpt(doc.Body)
-	if section, ok := mdfile.FindSection(doc.Body, "Acceptance Criteria"); ok {
+	if section, ok := mdfile.FindSection(doc.Body, SectionCriteria); ok {
 		for _, box := range mdfile.Checkboxes(section.Content) {
 			ticket.Criteria = append(ticket.Criteria, Criterion{Text: box.Text, Done: box.Checked})
 		}
 	}
-	if section, ok := mdfile.FindSection(doc.Body, "Handoff"); ok {
-		ticket.Handoff = &Handoff{Markdown: strings.TrimSpace(section.Content), Next: HandoffList(section.Content, "Next")}
+	if section, ok := mdfile.FindSection(doc.Body, SectionHandoff); ok {
+		ticket.Handoff = &Handoff{Markdown: strings.TrimSpace(section.Content), HandoffNote: ParseHandoff(section.Content)}
 	}
 	defer func() {
 		if ticket.Title == "" {
@@ -349,7 +350,7 @@ var (
 // after the title) as bounded plain text.
 func excerpt(body string) string {
 	source := body
-	if section, ok := mdfile.FindSection(body, "Description"); ok {
+	if section, ok := mdfile.FindSection(body, SectionDescription); ok {
 		source = section.Content
 	} else if sections := mdfile.Sections(body); len(sections) > 0 {
 		source = body[:strings.Index(body, "## "+sections[0].Heading)]
@@ -373,25 +374,6 @@ func excerpt(body string) string {
 		text = strings.TrimSpace(string(runes[:ExcerptRunes])) + "…"
 	}
 	return text
-}
-
-var boldLabel = regexp.MustCompile(`^\*\*([^*]+)\*\*\s*$`)
-
-// HandoffList returns the bullet items under a **Label** line in a handoff.
-func HandoffList(content, label string) []string {
-	var items []string
-	inList := false
-	for _, line := range strings.Split(content, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if match := boldLabel.FindStringSubmatch(trimmed); match != nil {
-			inList = strings.EqualFold(strings.TrimSpace(match[1]), label)
-			continue
-		}
-		if inList && (strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ")) {
-			items = append(items, strings.TrimSpace(trimmed[2:]))
-		}
-	}
-	return items
 }
 
 // Workstream is one parsed workstream file.

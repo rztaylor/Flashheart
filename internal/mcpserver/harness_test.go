@@ -164,7 +164,7 @@ func (e *env) ticket(input store.NewTicket) string {
 
 func (e *env) setStatus(id string, column board.Column, branch string) {
 	e.t.Helper()
-	_, err := e.store.UpdateTicket("demo", id, "", func(data []byte) ([]byte, error) {
+	_, err := e.store.UpdateTicket("demo", id, store.Merge, func(data []byte) ([]byte, error) {
 		data, err := mdfile.SetScalar(data, "status", string(column))
 		if err != nil {
 			return nil, err
@@ -215,8 +215,8 @@ func (e *env) log() []events.Event {
 	return list
 }
 
-func (e *env) kinds(run string) []string {
-	var kinds []string
+func (e *env) kinds(run string) []events.Kind {
+	var kinds []events.Kind
 	for _, ev := range e.log() {
 		if ev.Run == run {
 			kinds = append(kinds, ev.Kind)

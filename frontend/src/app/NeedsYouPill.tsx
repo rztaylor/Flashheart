@@ -1,5 +1,7 @@
 import { Icon } from "../components/Icon";
+import { plateClass, plateMark } from "../components/NeedsYou";
 import { RunStateMark } from "../components/RunState";
+import { needsYouPhrase } from "../model/runs";
 
 interface NeedsYouPillProps {
   // count is the runs that need you, across every project (SPEC §7).
@@ -25,18 +27,12 @@ export function NeedsYouPill({ count, on, onToggle }: NeedsYouPillProps) {
           : "Show only tickets that need you"
       }
       onClick={onToggle}
-      className={`flex h-8 items-center gap-1.5 rounded-full bg-attention px-2.5 text-xs font-semibold whitespace-nowrap text-on-attention transition-opacity hover:opacity-90 focus-visible:outline-on-band sm:h-9 sm:px-3.5 sm:text-sm ${
-        on ? "shadow-[inset_0_0_0_2px_var(--fh-on-attention)]" : ""
-      }`}
+      className={`${plateClass("band", on)} transition-opacity hover:opacity-90 focus-visible:outline-on-band`}
     >
-      <RunStateMark state="needs-you" size={11} />
+      <RunStateMark state="needs-you" size={plateMark.band} />
       {count}
-      <span className="hidden sm:inline">
-        {count === 1 ? " needs you" : " need you"}
-      </span>
-      <span className="sm:hidden">
-        {count === 1 ? " agent needs you" : " agents need you"}
-      </span>
+      <span className="hidden sm:inline">{` ${needsYouPhrase(count)}`}</span>
+      <span className="sm:hidden">{` ${needsYouPhrase(count, true)}`}</span>
       {/* The ring alone marks it pressed on a phone, where the band is full. */}
       {on ? <Icon name="close" size={12} className="max-sm:hidden" /> : null}
     </button>

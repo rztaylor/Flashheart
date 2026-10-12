@@ -3,7 +3,6 @@ package hooks
 import (
 	"encoding/json"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -20,9 +19,6 @@ import (
 // session's with its subagents'), so the worktree check and handoff
 // enforcement see all of it. The session's state between hooks lives in
 // one small file under the project lock (store.UpdateActivity).
-
-// shellTools are the agents' shell command tools, whose edits name no path.
-var shellTools = []string{"Bash", "PowerShell"}
 
 // Bounds on the state, which is read and written on every tool result.
 const (
@@ -108,9 +104,10 @@ func (s *sessionState) bound() {
 // turn end or end covers the session and its subagents, a subagent's end
 // only itself.
 func (s *sessionState) ending(run string) []string {
+	ended := events.RunOf(run)
 	var ids []string
 	for id := range s.Runs {
-		if id == run || !strings.Contains(run, "/") && strings.HasPrefix(id, run+"/") {
+		if id == run || !ended.IsSubagent() && events.RunOf(id).Session() == ended {
 			ids = append(ids, id)
 		}
 	}
@@ -119,33 +116,14 @@ func (s *sessionState) ending(run string) []string {
 }
 
 // flush returns the run's pending activity as a record at, if it has any,
-// with the newly edited path, and starts counting afresh.
-func (r *runState) flush(e events.Event, at time.Time, path string) (events.Event, bool) {
+// with the newly edited paths, and starts counting afresh.
+func (r *runState) flush(e events.Event, at time.Time, paths []string) (events.Event, bool) {
 	if r.Tools == 0 {
 		return events.Event{}, false
 	}
-	data := events.ActivityData{Tools: r.Tools, Failed: r.Failed, Shell: r.Shell}
-	if path != "" {
-		data.Paths = []string{path}
-	}
+	data := events.ActivityData{Tools: r.Tools, Failed: r.Failed, Shell: r.Shell, Paths: paths}
 	r.Tools, r.Failed, r.Shell, r.Logged = 0, 0, nil, at
 	return events.Event{Time: at, Run: e.Run, Agent: e.Agent, Kind: events.Activity, Project: e.Project, Data: data}, true
-}
-
-// addShell adds a command's window, merging it into the last one when they
-// meet and the oldest two beyond the record's bound.
-func (r *runState) addShell(span events.Span) {
-	if last := len(r.Shell) - 1; last >= 0 && !span.From.After(r.Shell[last].To) {
-		if span.To.After(r.Shell[last].To) {
-			r.Shell[last].To = span.To
-		}
-		return
-	}
-	r.Shell = append(r.Shell, span)
-	if len(r.Shell) > events.MaxActivitySpans {
-		r.Shell[1].From = r.Shell[0].From
-		r.Shell = slices.Delete(r.Shell, 0, 1)
-	}
 }
 
 // remember records an edit path as recorded since the last checkpoint.
@@ -198,21 +176,27 @@ func throttle(state *sessionState, list []events.Event, at time.Time, interval t
 		if !data.OK {
 			r.Failed++
 		}
-		if data.OK && slices.Contains(shellTools, data.Tool) {
+		// The adapter says which results are shell commands; a command's
+		// window runs from the run's previous event to its result.
+		if data.OK && data.Shell {
 			from := r.Last
 			if from.IsZero() || from.After(at) {
 				from = at
 			}
-			r.addShell(events.Span{From: from, To: at})
+			r.Shell = events.AddSpan(r.Shell, events.Span{From: from, To: at}, events.MaxActivitySpans)
 		}
 		r.Last = at
-		path := ""
-		if data.OK && data.Path != "" && !slices.Contains(r.Paths, data.Path) {
-			path = data.Path
-			r.remember(path)
+		var paths []string
+		if data.OK {
+			for _, path := range data.EditPaths() {
+				if path != "" && !slices.Contains(r.Paths, path) {
+					paths = append(paths, path)
+					r.remember(path)
+				}
+			}
 		}
-		if path != "" || r.Logged.IsZero() || at.Sub(r.Logged) >= interval {
-			if record, ok := r.flush(e, at, path); ok {
+		if len(paths) > 0 || r.Logged.IsZero() || at.Sub(r.Logged) >= interval {
+			if record, ok := r.flush(e, at, paths); ok {
 				out = append(out, record)
 			}
 		}
@@ -241,7 +225,7 @@ func flushRuns(state *sessionState, end events.Event, at time.Time) []events.Eve
 	for _, id := range state.ending(end.Run) {
 		source := end
 		source.Run = id
-		if record, ok := state.Runs[id].flush(source, at, ""); ok {
+		if record, ok := state.Runs[id].flush(source, at, nil); ok {
 			out = append(out, record)
 		}
 	}
@@ -255,7 +239,7 @@ func record(log *events.Log, project string, list []events.Event, apply func(*se
 	if len(list) == 0 {
 		return nil, nil
 	}
-	session, _, _ := strings.Cut(list[0].Run, "/")
+	session := events.RunOf(list[0].Run).Session().String()
 	var appended []events.Event
 	err := log.AppendWithState(project, session, func(raw []byte) ([]byte, []events.Event, error) {
 		state := decodeState(raw)

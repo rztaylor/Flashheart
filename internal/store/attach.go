@@ -15,8 +15,6 @@ import (
 	"time"
 	"unicode"
 
-	"go.yaml.in/yaml/v3"
-
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/scrub"
 )
@@ -51,10 +49,9 @@ type StoredFile struct {
 	Reused bool
 }
 
-// CopyIntoTicket copies an allow-listed regular file into
-// tickets/<folder>/files/ under the project lock and records it in
-// files/index.yaml with its sha256. Copying the same content again reuses
-// the earlier copy (MCP-5).
+// CopyIntoTicket copies an allow-listed regular local file into a ticket
+// (AddAttachment): readSource is its input adapter for a path (REV-1,
+// REV-5).
 func (s *Store) CopyIntoTicket(project, id string, input FileCopy) (StoredFile, error) {
 	if err := s.checkTicket(project, id); err != nil {
 		return StoredFile{}, err
@@ -62,6 +59,48 @@ func (s *Store) CopyIntoTicket(project, id string, input FileCopy) (StoredFile, 
 	data, err := readSource(input)
 	if err != nil {
 		return StoredFile{}, err
+	}
+	return s.AddAttachment(project, id, NewAttachment{
+		Name: filepath.Base(input.Source), Data: data, Caption: input.Caption, Kind: input.Kind,
+		Source: input.Source, Run: input.Run, MaxBytes: input.MaxBytes,
+	})
+}
+
+// NewAttachment is a file's content to store in a ticket, from wherever it
+// came (a local path, the browser).
+type NewAttachment struct {
+	// Name is the file's original name; its extension decides whether it
+	// is allowed (REV-2) and its stored name follows it.
+	Name string
+	Data []byte
+	// Caption is one line; Kind is screenshot, log or other (from Name
+	// when empty).
+	Caption, Kind string
+	// Source is where it was copied from, if anywhere; Run who added it.
+	Source, Run string
+	// MaxBytes is the size limit; zero means DefaultMaxFileCopy.
+	MaxBytes int64
+}
+
+// AddAttachment stores a file in tickets/<folder>/files/ under the project
+// lock and records it in files/index.yaml with its sha256, keeping the
+// index's other content. The file must be allow-listed and within its size
+// limit (REV-2, SEC-2), and text is scrubbed of likely secrets first
+// (SEC-3). Adding the same content again reuses the earlier copy (MCP-5).
+func (s *Store) AddAttachment(project, id string, input NewAttachment) (StoredFile, error) {
+	if err := s.checkTicket(project, id); err != nil {
+		return StoredFile{}, err
+	}
+	contentType, ok := board.AttachmentType(input.Name)
+	if !ok {
+		return StoredFile{}, fmt.Errorf("%s: %w (allowed: %s)", input.Name, ErrTypeNotAllowed, board.AllowedAttachments())
+	}
+	if limit := maxBytes(input.MaxBytes); int64(len(input.Data)) > limit {
+		return StoredFile{}, fmt.Errorf("%s is %d bytes; the limit is %d: %w", input.Name, len(input.Data), limit, ErrTooLarge)
+	}
+	data := input.Data
+	if board.AttachmentScrubbed(contentType) {
+		data = []byte(scrub.Secrets(string(data)))
 	}
 	sum := sha256.Sum256(data)
 	digest := hex.EncodeToString(sum[:])
@@ -77,55 +116,57 @@ func (s *Store) CopyIntoTicket(project, id string, input FileCopy) (StoredFile, 
 	}
 	dir := path.Join(path.Dir(ticket), "files")
 	indexName := path.Join(dir, "index.yaml")
-	entries, err := s.readIndex(indexName)
+	index, err := s.readIndex(indexName)
 	if err != nil {
 		return StoredFile{}, err
 	}
-	for _, entry := range entries {
+	for _, entry := range index.entries {
 		if entry.SHA256 == digest && s.Exists(path.Join(dir, entry.File)) {
 			return StoredFile{File: entry.File, Reused: true}, nil
 		}
 	}
 	now := s.now()
-	name := storedName(now, filepath.Base(input.Source), func(name string) bool { return s.Exists(path.Join(dir, name)) })
+	name := storedName(now, input.Name, func(name string) bool { return s.Exists(path.Join(dir, name)) })
 	if err := s.WriteFileAtomic(path.Join(dir, name), data); err != nil {
 		return StoredFile{}, err
 	}
-	kind := input.Kind
-	if kind != "screenshot" && kind != "log" {
-		kind = "other"
-	}
-	entries = append(entries, attachmentEntry{
-		File: name, Caption: board.OneLine(input.Caption, 300), Kind: kind, Source: input.Source,
-		Run: input.Run, Added: now.Format(time.RFC3339), SHA256: digest,
+	err = index.add(attachmentEntry{
+		File: name, Caption: board.OneLine(input.Caption, 300), Kind: board.AttachmentKindFor(input.Kind, input.Name),
+		Source: input.Source, Run: input.Run, Added: now.Format(time.RFC3339), SHA256: digest,
 	})
-	index, err := yaml.Marshal(entries)
 	if err != nil {
 		return StoredFile{}, err
 	}
-	if err := s.WriteFileAtomic(indexName, index); err != nil {
+	encoded, err := index.encode()
+	if err != nil {
+		return StoredFile{}, err
+	}
+	if err := s.WriteFileAtomic(indexName, encoded); err != nil {
 		return StoredFile{}, err
 	}
 	return StoredFile{File: name}, nil
 }
 
-// readSource reads an allow-listed, regular, bounded local file (SEC-2).
+func maxBytes(limit int64) int64 {
+	if limit <= 0 {
+		return DefaultMaxFileCopy
+	}
+	return limit
+}
+
+// readSource reads an allow-listed, regular, bounded local file (SEC-2),
+// the path adapter of AddAttachment, which checks and scrubs the bytes.
 // The file is judged by what it is, not only by the name given: a link's
 // target must be allow-listed too, and anything but a regular file (a
-// directory, a FIFO that would block) is refused before it is opened. Text
-// is scrubbed of likely secrets before it is stored (SEC-3).
+// directory, a FIFO that would block) is refused before it is opened.
 func readSource(input FileCopy) ([]byte, error) {
 	if !filepath.IsAbs(input.Source) {
 		return nil, fmt.Errorf("%w: %q is not an absolute path", ErrInvalidInput, input.Source)
 	}
-	contentType, ok := board.AttachmentType(input.Source)
-	if !ok {
-		return nil, fmt.Errorf("%s: %w (allowed: png, jpeg, gif, webp, pdf, txt, log, md, json)", filepath.Base(input.Source), ErrTypeNotAllowed)
+	if _, ok := board.AttachmentType(input.Source); !ok {
+		return nil, fmt.Errorf("%s: %w (allowed: %s)", filepath.Base(input.Source), ErrTypeNotAllowed, board.AllowedAttachments())
 	}
-	limit := input.MaxBytes
-	if limit <= 0 {
-		limit = DefaultMaxFileCopy
-	}
+	limit := maxBytes(input.MaxBytes)
 	info, err := os.Stat(input.Source)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("%s: %w", input.Source, ErrNotFound)
@@ -161,25 +202,24 @@ func readSource(input FileCopy) ([]byte, error) {
 	if int64(len(data)) > limit {
 		return nil, fmt.Errorf("%s grew past the limit of %d bytes: %w", filepath.Base(input.Source), limit, ErrTooLarge)
 	}
-	if strings.HasPrefix(contentType, "text/") || contentType == "application/json" {
-		data = []byte(scrub.Secrets(string(data)))
-	}
 	return data, nil
 }
 
-func (s *Store) readIndex(name string) ([]attachmentEntry, error) {
+// readIndex reads a files index to add to; one that is not a list of
+// files is refused rather than replaced.
+func (s *Store) readIndex(name string) (filesIndex, error) {
 	data, err := s.ReadFile(name)
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
+		return filesIndex{}, nil
 	}
 	if err != nil {
-		return nil, err
+		return filesIndex{}, err
 	}
-	var entries []attachmentEntry
-	if err := yaml.Unmarshal(data, &entries); err != nil {
-		return nil, fmt.Errorf("%s is not a list of files; fix it before adding more: %w", name, err)
+	index, err := parseFilesIndex(data)
+	if err != nil {
+		return filesIndex{}, fmt.Errorf("%s is not a list of files; fix it before adding more: %w", name, err)
 	}
-	return entries, nil
+	return index, nil
 }
 
 // storedName is <UTC minute>-<sanitised original name>, with -2, -3 …
@@ -229,9 +269,9 @@ func (s *Store) WriteReview(project, id string, data []byte) error {
 }
 
 // UpdateReview applies edit to a ticket's review.md under the project lock,
-// with the content-hash precondition of UpdateTicket (REV-3: ticking How to
-// Verify steps). A ticket with no review is ErrNotFound.
-func (s *Store) UpdateReview(project, id, base string, edit Edit) (string, error) {
+// once pre holds, as UpdateTicket does (REV-3: ticking How to Verify
+// steps). A ticket with no review is ErrNotFound.
+func (s *Store) UpdateReview(project, id string, pre Precondition, edit Edit) (string, error) {
 	if err := s.checkTicket(project, id); err != nil {
 		return "", err
 	}
@@ -248,5 +288,5 @@ func (s *Store) UpdateReview(project, id, base string, edit Edit) (string, error
 	if !s.Exists(name) {
 		return "", fmt.Errorf("review of %s: %w", id, ErrNotFound)
 	}
-	return s.updateLocked(name, base, edit, false)
+	return s.update(name, pre, edit, false)
 }
