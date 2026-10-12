@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/index"
+	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -204,6 +206,93 @@ func TestPatchTicketFields(t *testing.T) {
 		{"id": "AL-40"}, {"title": ""}, {"tags": "not a list"},
 	} {
 		send(t, handler, http.MethodPatch, "/api/tickets/AL-4", map[string]any{"fields": fields}, http.StatusBadRequest, nil)
+	}
+}
+
+// Changing a ticket's workstream on the board moves it between the
+// workstreams' tickets lists too, as agent edits do (FH-80, board-format
+// "Workstream membership").
+func TestPatchWorkstreamKeepsTheListsInStep(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	workstreams := filepath.Join(root, "alpha", "workstreams")
+	writeFile(t, filepath.Join(workstreams, "offline.md"), "---\nslug: offline\nstatus: active\npriority: medium\ncreated: 2026-10-01\ntickets: []\n---\n\n# Offline\n")
+	members := func(slug string) []string {
+		t.Helper()
+		data, err := os.ReadFile(filepath.Join(workstreams, slug+".md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return mdfile.Parse(data).List("tickets")
+	}
+	files := func() map[string]string {
+		t.Helper()
+		out := map[string]string{}
+		for _, name := range []string{
+			filepath.Join(root, "alpha", "tickets", "AL-4-drag-and-drop", "AL-4-drag-and-drop.md"),
+			filepath.Join(workstreams, "board-ui.md"), filepath.Join(workstreams, "offline.md"),
+		} {
+			data, err := os.ReadFile(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out[name] = string(data)
+		}
+		return out
+	}
+	unlisted := func(detail TicketDetail) bool {
+		return slices.ContainsFunc(detail.Warnings, func(warning string) bool { return strings.Contains(warning, "not listed in workstream") })
+	}
+	patch := func(base string, fields map[string]any, status int) WriteResponse {
+		t.Helper()
+		var saved WriteResponse
+		into := any(&saved)
+		if status != http.StatusOK {
+			into = nil
+		}
+		send(t, handler, http.MethodPatch, "/api/tickets/AL-4", map[string]any{"base": base, "fields": fields}, status, into)
+		return saved
+	}
+
+	// Change, with another field in the same save: out of the old list,
+	// appended to the new one.
+	stale := ticketDetail(t, handler, "AL-4").Hash
+	patch(stale, map[string]any{"workstream": "offline", "priority": "high"}, http.StatusOK)
+	if got := members("board-ui"); !slices.Equal(got, []string{"AL-2", "AL-3"}) {
+		t.Errorf("board-ui tickets after the change = %v", got)
+	}
+	if got := members("offline"); !slices.Equal(got, []string{"AL-4"}) {
+		t.Errorf("offline tickets after the change = %v", got)
+	}
+	detail := ticketDetail(t, handler, "AL-4")
+	if detail.Workstream != "offline" || detail.Priority != "high" || unlisted(detail) {
+		t.Errorf("after the change: workstream %q, priority %q, warnings %q", detail.Workstream, detail.Priority, detail.Warnings)
+	}
+
+	// A stale base, or a workstream the project does not have, changes no
+	// ticket or workstream file.
+	before := files()
+	patch(stale, map[string]any{"workstream": "board-ui", "title": "Stale"}, http.StatusConflict)
+	patch(detail.Hash, map[string]any{"workstream": "nowhere", "title": "Lost"}, http.StatusNotFound)
+	if after := files(); !maps.Equal(after, before) {
+		t.Error("a refused edit changed the files")
+	}
+
+	// Clearing it leaves every list; setting it again appends at the end.
+	saved := patch(detail.Hash, map[string]any{"workstream": ""}, http.StatusOK)
+	if got := members("offline"); len(got) != 0 {
+		t.Errorf("offline tickets after clearing = %v", got)
+	}
+	if detail := ticketDetail(t, handler, "AL-4"); detail.Workstream != "" || unlisted(detail) {
+		t.Errorf("after clearing: workstream %q, warnings %q", detail.Workstream, detail.Warnings)
+	}
+	patch(saved.Hash, map[string]any{"workstream": "board-ui"}, http.StatusOK)
+	if got := members("board-ui"); !slices.Equal(got, []string{"AL-2", "AL-3", "AL-4"}) {
+		t.Errorf("board-ui tickets after rejoining = %v", got)
+	}
+	if detail := ticketDetail(t, handler, "AL-4"); detail.Workstream != "board-ui" || unlisted(detail) {
+		t.Errorf("after rejoining: workstream %q, warnings %q", detail.Workstream, detail.Warnings)
 	}
 }
 

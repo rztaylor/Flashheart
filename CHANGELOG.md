@@ -66,6 +66,23 @@ All notable changes to this project are documented here. The project follows
   when the reloaded page read preferences, so the page showed the old
   value until the next reload. The server now answers a preference read
   only once any save in progress has finished.
+- A subagent reporting back no longer answers the question its session
+  asked you (FH-57). Only a prompt you type answers a session's open
+  question in the chat; a subagent's hand-back, a message from another
+  agent, a finished background command or agent, and the desktop app's
+  pull request monitor leave it in Needs you, and `flashheart await`
+  keeps waiting. Before, a session that orchestrated subagents lost every
+  question it asked. The run timeline shows such a turn as *Message from
+  an agent* or *Background task finished*. Hooks record who started each
+  turn (`turn.start` `origin`), never the prompt (protocol version
+  unchanged).
+- Changing a ticket's workstream in the card's Edit tab moves it between
+  the workstreams' ticket lists too (FH-80). Before, only the ticket
+  changed: the old workstream still listed it, the new one did not, and
+  the ticket showed a "not listed in workstream" warning and did not count
+  toward the new workstream's progress. Clearing the workstream removes
+  the ticket from its list. An edit based on a stale copy of the ticket,
+  or naming a workstream the project does not have, changes no file.
 - Text written into a ticket section can no longer split it (FH-87).
   This covers a handoff, a note, a new ticket's description or plan from
   the board or an agent, and a workstream's goal. A level-1 or level-2

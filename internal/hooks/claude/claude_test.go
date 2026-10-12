@@ -14,6 +14,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/hooks"
+	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -128,7 +129,7 @@ func TestGoldenPayloads(t *testing.T) {
 				t.Fatalf("events =\n%s\nwant\n%s", gotJSON, wantRaw)
 			}
 			// Nothing from tool inputs beyond paths and plan items is stored.
-			for _, secret := range []string{"sk-ant-", "rm -rf", "curl", "old_string", "hello", "signed in", "Signed in", "Header overlaps", "Found 3 files", "Done.", "Add a line"} {
+			for _, secret := range []string{"sk-ant-", "rm -rf", "curl", "old_string", "hello", "signed in", "Signed in", "Header overlaps", "Found 3 files", "Done.", "Add a line", "Synthetic report", "Fix the demo"} {
 				if strings.Contains(string(mustRead(t, root)), secret) {
 					t.Fatalf("event log stores %q", secret)
 				}
@@ -138,6 +139,101 @@ func TestGoldenPayloads(t *testing.T) {
 	for _, event := range mapped {
 		if !covered[event] {
 			t.Errorf("no golden payload for %s", event)
+		}
+	}
+}
+
+// FH-57: only a prompt the user typed answers the session's open question
+// in the session (D28); a subagent's hand-back, an agent's task
+// notification, a background command's notice or the app's CI event leaves
+// it waiting on the board.
+func TestOnlyTheUsersPromptAnswersTheSessionsQuestion(t *testing.T) {
+	t.Parallel()
+
+	const session = "claude:e8d9eb02-6534-4065-ae10-3e032e231c24"
+	cases := map[string]bool{
+		"prompt":                  true,
+		"system-reminder-prompt":  true,
+		"task-notification":       false,
+		"agent-task-notification": false,
+		"agent-handback":          false,
+		"ci-monitor-event":        false,
+	}
+	for name, answers := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			root, repo := t.TempDir(), demoRepo(t)
+			send := func(event, file string, at time.Time) {
+				raw, err := os.ReadFile(filepath.Join(fixtures, event, file+".json"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				payload := strings.ReplaceAll(string(raw), placeholder, repo)
+				hooks.Run(hooks.Options{Root: root, Event: event, Stdin: strings.NewReader(payload), Now: func() time.Time { return at }, Adapter: Adapter{}})
+			}
+			send("UserPromptSubmit", "prompt", now)
+			s, err := store.Open(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			asked := events.Event{Time: now.Add(time.Minute), Run: session, Agent: Agent, Kind: events.QuestionAsked, Project: "demo",
+				Data: events.QuestionData{ID: "q-1", Kind: events.QuestionKindDecision, Text: "Which way?"}}
+			if err := events.New(s).Append(asked); err != nil {
+				t.Fatal(err)
+			}
+			s.Close()
+			send("Stop", "stop", now.Add(2*time.Minute))
+			send("UserPromptSubmit", name, now.Add(3*time.Minute))
+			if data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "hook-errors.log")); len(data) > 0 {
+				t.Fatalf("hook-errors.log: %s", data)
+			}
+
+			s, err = store.Open(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer s.Close()
+			set := runs.NewSet()
+			if err := events.New(s).Read("demo", time.Time{}, set.Apply); err != nil {
+				t.Fatal(err)
+			}
+			run := set.Get(session)
+			if run == nil || len(run.Questions) != 1 {
+				t.Fatalf("run = %+v, want one question", run)
+			}
+			if got := run.Questions[0].AnsweredInSession; got != answers {
+				t.Fatalf("answered in the session = %v, want %v", got, answers)
+			}
+			want := runs.NeedsYou
+			if answers {
+				want = runs.Working
+			}
+			if state := set.State(session, now.Add(3*time.Minute), runs.DefaultSettings()); state != want {
+				t.Fatalf("state = %v, want %v", state, want)
+			}
+		})
+	}
+}
+
+// A prompt's origin comes from how it starts, never from tags the user
+// mentions later in it (FH-57).
+func TestPromptOrigin(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		"Fix the build.": events.OriginUser,
+		"":               events.OriginUser,
+		"  \n<task-notification>\n<task-id>b1</task-id>\n</task-notification>":                      events.OriginTask,
+		"<ci-monitor-event>CI failed.</ci-monitor-event>":                                           events.OriginTask,
+		"Another Claude session sent a message:\n<agent-message from=\"a1\">\nhi\n</agent-message>": events.OriginAgent,
+		"<agent-message from=\"a1\">\nhi\n</agent-message>":                                         events.OriginAgent,
+		"Another Claude session sent a message: what does that mean?":                               events.OriginUser,
+		"<system-reminder>\nWorktree.\n</system-reminder>\n\nWhy did <task-notification> fire?":     events.OriginUser,
+		"Please paste the <agent-message> you got.":                                                 events.OriginUser,
+	}
+	for prompt, want := range cases {
+		if got := origin(prompt); got != want {
+			t.Errorf("origin(%q) = %q, want %q", prompt, got, want)
 		}
 	}
 }

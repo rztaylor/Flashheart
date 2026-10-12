@@ -405,7 +405,9 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   name), in the ticket and delivers it to the run at its next prompt or start
   (`HOOK-5`). A prompt the user types in the asking session before
   answering on the board answers it there: the question stops waiting and
-  stays in the run's history marked as answered in the session (D28). A
+  stays in the run's history marked as answered in the session (D28).
+  A prompt the user did not type (a subagent's report, another agent's
+  message or a background task's notice) answers nothing (D41). A
   question from a run that has ended stays open and
   answerable, marked as waiting for the session to resume; it does not
   need you (`VIEW-2`). A board that cannot record answers shows questions

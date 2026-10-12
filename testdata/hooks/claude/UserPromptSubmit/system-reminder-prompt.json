@@ -1,0 +1,10 @@
+{
+  "session_id": "e8d9eb02-6534-4065-ae10-3e032e231c24",
+  "transcript_path": "/Users/example/.claude/projects/-Users-example-src-demo/e8d9eb02-6534-4065-ae10-3e032e231c24.jsonl",
+  "cwd": "/Users/example/src/demo",
+  "scratchpad_dir": "/Users/example/tmp/claude/e8d9eb02-6534-4065-ae10-3e032e231c24/scratchpad",
+  "prompt_id": "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "<system-reminder>\nYou are operating in a git worktree.\nWorktree path: /Users/example/src/demo\n</system-reminder>\n\nAdd a line to the readme. The <task-notification> and <agent-message> tags named here are typed by the user."
+}
