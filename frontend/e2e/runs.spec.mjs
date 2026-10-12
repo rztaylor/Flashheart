@@ -858,7 +858,7 @@ test("a long branch keeps its tail visible in the panel and the Runs tab (FH-83)
   const panel = page.getByRole("complementary", { name: "Ticket FH-26" });
   const shown = panel.getByText(branch, { exact: true });
   for (const theme of ["light", "dark"]) {
-    await open("#/p/flashheart/board?t=FH-26", {
+    await open(page, "#/p/flashheart/board?t=FH-26", {
       width: 1280,
       height: 800,
       theme,
@@ -876,7 +876,7 @@ test("a long branch keeps its tail visible in the panel and the Runs tab (FH-83)
         last: true,
         title: branch,
       });
-    if (theme === "light") await expectNoAxeViolations("long branch");
-    await shot(`branch-tail-runs-1280-${theme}`);
+    if (theme === "light") await expectNoAxeViolations(page, "long branch");
+    await shot(page, `branch-tail-runs-1280-${theme}`);
   }
 });
