@@ -614,6 +614,8 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	if b.writer(w) == nil {
 		return
 	}
+	b.preferring.RLock()
+	defer b.preferring.RUnlock()
 	ui, ok := b.currentUI(w)
 	if !ok {
 		return
@@ -629,10 +631,16 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Scopes: scopes, ExpandedWorkstreams: expanded})
 }
 
+// savePreferences holds back preference reads until it answers: the save
+// a page flushes as it unloads reaches the server before the reloaded page
+// asks for preferences, but may take longer to write than that page takes to
+// ask (FH-109).
 func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 	if b.writer(w) == nil {
 		return
 	}
+	b.preferring.Lock()
+	defer b.preferring.Unlock()
 	var request Preferences
 	if !decode(w, r, &request) {
 		return

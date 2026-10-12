@@ -70,6 +70,12 @@ All notable changes to this project are documented here. The project follows
   part way through. A `project.yaml` or `config.yaml` that does not parse
   is refused before anything is written; a workstream that does not parse
   is warned about and kept as written.
+- A preference changed just before a reload shows its new value after the
+  reload (FH-109). The save flushed as the page unloads reaches the server
+  first, but on a slow disk or a busy machine it could still be writing
+  when the reloaded page read preferences, so the page showed the old
+  value until the next reload. The server now answers a preference read
+  only once any save in progress has finished.
 - A project whose `project.yaml` uses Windows line endings or a byte-order
   mark keeps its name and repositories (FH-77). Before, adopting a
   repository and then setting the project key wrote a second header into
