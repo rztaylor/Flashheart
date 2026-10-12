@@ -89,6 +89,13 @@
   table test, tool × caller (`TestWriteToolPolicies`); a new tool adds its
   row there. Attribution precedence is tested apart from the tools
   (`TestAttributionPrecedence`).
+- The tool list has three hand-kept copies: the registrations, the
+  agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
+  (`internal/mcpserver`) lists tools over the in-memory transport and fails
+  when either copy misses a tool or names one not registered; a word the
+  skill puts in backticks must be a tool, a tool input, a ticket value or
+  in its short list. `update_ticket`'s description lists every field it
+  sets (`TestUpdateTicketDescribesEverySettableField`).
 - MCP tools are tested through the Go SDK's in-memory transport; the
   protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
