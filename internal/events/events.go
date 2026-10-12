@@ -524,7 +524,7 @@ type Delivery struct {
 
 // QueueAnswer puts an answer in the inbox of the asking run's session.
 func (l *Log) QueueAnswer(project, run string, d Delivery) error {
-	session, _, _ := strings.Cut(run, "/")
+	session := RunOf(run).Session().String()
 	line, err := json.Marshal(d)
 	if err != nil {
 		return err
@@ -537,8 +537,7 @@ func (l *Log) QueueAnswer(project, run string, d Delivery) error {
 func (l *Log) MarkDelivered(project string, list []Delivery, at time.Time) error {
 	out := make([]Event, 0, len(list))
 	for _, d := range list {
-		agent, _, _ := strings.Cut(d.Run, ":")
-		out = append(out, Event{Time: at, Run: d.Run, Agent: agent, Kind: QuestionDelivered, Project: project, Data: DeliveredData{ID: d.ID}})
+		out = append(out, Event{Time: at, Run: d.Run, Agent: RunOf(d.Run).Agent(), Kind: QuestionDelivered, Project: project, Data: DeliveredData{ID: d.ID}})
 	}
 	return l.Append(out...)
 }

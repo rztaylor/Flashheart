@@ -3,7 +3,6 @@ package hooks
 import (
 	"encoding/json"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -105,9 +104,10 @@ func (s *sessionState) bound() {
 // turn end or end covers the session and its subagents, a subagent's end
 // only itself.
 func (s *sessionState) ending(run string) []string {
+	ended := events.RunOf(run)
 	var ids []string
 	for id := range s.Runs {
-		if id == run || !strings.Contains(run, "/") && strings.HasPrefix(id, run+"/") {
+		if id == run || !ended.IsSubagent() && events.RunOf(id).Session() == ended {
 			ids = append(ids, id)
 		}
 	}
@@ -239,7 +239,7 @@ func record(log *events.Log, project string, list []events.Event, apply func(*se
 	if len(list) == 0 {
 		return nil, nil
 	}
-	session, _, _ := strings.Cut(list[0].Run, "/")
+	session := events.RunOf(list[0].Run).Session().String()
 	var appended []events.Event
 	err := log.AppendWithState(project, session, func(raw []byte) ([]byte, []events.Event, error) {
 		state := decodeState(raw)

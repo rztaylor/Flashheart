@@ -37,7 +37,12 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   for (§7.1), its agent named from the client's `clientInfo` name at
   initialize (`claude-code` → `claude`, `codex-mcp-client` → `codex`, any
   other name lowercased to letters, digits and hyphens). Displayed shortened
-  to the first 8 characters of the session id.
+  to the first 8 characters of the session id. Agent ids match
+  `[a-z][a-z0-9-]{0,31}`, session and subagent ids `[A-Za-z0-9_.-]{1,128}`
+  (`events.RunID` owns the grammar). Hooks log and drop an event whose run
+  id falls outside it or names another agent than the adapter's, and
+  record the payload's other events (`HOOK-1`); the MCP server takes a full
+  `run` argument it has not seen only when it follows the grammar.
 - **Project**: from the hook payload's `cwd` (`PRJ-2`): find the git common
   directory, take its parent's basename; apply the collision rule (`PRJ-3`).
   A bare repository (`repo.git`) names itself (`repo`); a submodule, whose

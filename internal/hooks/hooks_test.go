@@ -93,6 +93,17 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	case "Stop", "StopActive":
 		input.Stop, input.StopActive = true, event == "StopActive"
 		input.Events = []Pending{{Run: run, Kind: events.TurnEnd, Data: events.TurnEndData{}}}
+	case "Foreign", "Malformed":
+		// An adapter bug: a run of another agent, or outside the grammar,
+		// beside a good event (FH-91).
+		bad := "other:" + session
+		if event == "Malformed" {
+			bad = "fake:" + session + " x"
+		}
+		input.Events = []Pending{
+			{Run: bad, Kind: events.TurnStart, Data: events.TurnStartData{}},
+			{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{}},
+		}
 	case "Stamp":
 		input.Reply = &Output{Context: "stamped " + run}
 	case "Nothing":
@@ -460,5 +471,28 @@ func TestSessionStartRefreshesTheSkill(t *testing.T) {
 	}
 	if list := readEvents(t, root, "demo"); len(list) != 4 {
 		t.Fatalf("events = %d, want 4 (every session start recorded)", len(list))
+	}
+}
+
+// hooks drops, and logs, an event whose run id is malformed or names
+// another agent, and records the rest (FH-91, HOOK-1).
+func TestPendingEventsNeedTheAdaptersOwnRunIDs(t *testing.T) {
+	t.Parallel()
+
+	for _, event := range []string{"Foreign", "Malformed"} {
+		t.Run(event, func(t *testing.T) {
+			t.Parallel()
+			root, cwd := t.TempDir(), repo(t)
+			if out := run(t, root, event, "s1 "+cwd, fake{}); out != "" {
+				t.Fatalf("output %q", out)
+			}
+			list := readEvents(t, root, "demo")
+			if len(list) != 1 || list[0].Run != "fake:s1" {
+				t.Fatalf("recorded %+v, want only the fake:s1 turn start", list)
+			}
+			if log := errorLog(t, root); !strings.Contains(log, "invalid run id") && !strings.Contains(log, "not a fake run") {
+				t.Fatalf("hook-errors.log = %q", log)
+			}
+		})
 	}
 }
