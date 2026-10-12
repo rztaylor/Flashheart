@@ -86,6 +86,7 @@ Requires Go 1.26.6+ and Node.js 22+ (build time only).
 
 ```sh
 scripts/build.sh                    # frontend + binary into build/flashheart
+scripts/deploy.sh                   # build, then install as ~/bin/flashheart
 scripts/check.sh                    # lint, unit tests, builds, vet, race tests
 scripts/e2e.sh                      # Playwright lifecycle, axe and screenshots
 ```
