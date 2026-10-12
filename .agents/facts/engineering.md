@@ -2,7 +2,8 @@
 
 - The board (reading, format v2, editing, live updates), agent runs from
   Claude Code hooks, and the MCP server, protocol skill and `setup claude`
-  are built; Codex support and the review panel are next. Follow
+  are built, and Codex's hooks and `setup codex`; the rest of Codex support
+  and the review panel are next. Follow
   `docs/dev/roadmap.md`.
 - Prefer small, focused standard-library Go packages and explicit TypeScript
   models; use mature libraries for commodity problems (YAML round-tripping,

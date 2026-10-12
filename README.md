@@ -18,8 +18,9 @@ are waiting for you.
 
 **Status: early development.** The board (views, editing, live updates),
 live agent runs from Claude Code hooks, and the MCP server, protocol skill
-and setup for Claude Code work; Codex support and the review panel are
-next. See the
+and setup for Claude Code work, and Codex sessions are recorded and set up
+the same way; the rest of Codex support and the review panel are next. See
+the
 [roadmap](docs/dev/roadmap.md).
 
 ## How it works
@@ -65,8 +66,11 @@ flashheart setup claude             # show the changes as a diff
 flashheart setup claude --write     # apply them, with backups
 ```
 
-See [`docs/user/claude-code.md`](docs/user/claude-code.md);
-`flashheart doctor` checks the result. Planned: `flashheart setup codex`.
+See [`docs/user/claude-code.md`](docs/user/claude-code.md). Connect Codex
+(the CLI, IDE extension and ChatGPT app) the same way with
+`flashheart setup codex`, then trust its hooks with `/hooks` in `codex`; see
+[`docs/user/codex.md`](docs/user/codex.md). `flashheart doctor` checks the
+result.
 
 The board root defaults to `~/reports/Kanban`; override with `--root` or
 `FLASHHEART_ROOT`.

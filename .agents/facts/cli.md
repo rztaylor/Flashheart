@@ -7,9 +7,7 @@
   `--help`.
 - `hook` and `mcp` print only protocol output to stdout; `hook` always exits 0
   (usage problems go to stderr and `hook-errors.log`); handoff enforcement
-  speaks through its JSON output, not the exit code. `hook claude <Event>`,
-  `hook codex <Event>` and `mcp` are implemented; `setup codex` and its
-  doctor checks arrive with `codex-support` (FH-75).
+  speaks through its JSON output, not the exit code.
 - `await` is run by agents in the background after `ask_human`; its stdout
   holds only the answers note (or a one-line "already delivered"), since
   that is what wakes the agent. Exit 0 delivered, 1 timeout or unknown
@@ -26,17 +24,19 @@
 - Normal `serve` startup is quiet. Browser-open failure prints the short-lived
   manual URL once to stderr. `--debug` adds the listener address (and, in the
   foreground, the stop reason) and never prints credentials.
-- Commands that are not implemented yet (`setup codex`) exit 2 with
-  `<command> is not yet available` on stderr.
 - `doctor` prints its report to stdout (sections Board root, Claude Code,
-  Hook errors; each line ok, warning or problem with the fix), changes
-  nothing, and exits 1 with `doctor found N problems` on stderr when it
-  finds one; warnings alone exit 0.
+  Codex, Hook errors; each line ok, warning or problem with the fix),
+  changes nothing, and exits 1 with `doctor found N problems` on stderr when
+  it finds one; warnings alone exit 0. Without a Codex home its Codex
+  section is one ok line, so people who use only Claude Code see no
+  problems.
 - `setup` writes nothing without `--write`; it prints a diff. `--uninstall`
-  previews the reverse and applies it with `--write`. Backups go to
-  `~/.claude/flashheart-backup/<UTC time>/`; the MCP server is registered
-  with `claude mcp add-json --scope user` (printed when no claude CLI is
-  found); the kanban-tracker skill is moved into the backup (user,
-  2026-10-06).
+  previews the reverse and applies it with `--write`. `setup claude`: backups
+  go to `~/.claude/flashheart-backup/<UTC time>/`; the MCP server is
+  registered with `claude mcp add-json --scope user` (printed when no claude
+  CLI is found); the kanban-tracker skill is moved into the backup (user,
+  2026-10-06). `setup codex` works in `$CODEX_HOME` (default `~/.codex`),
+  runs no Codex command, backs up into its `flashheart-backup/`, and ends by
+  telling the user to trust the hooks with `/hooks` in codex.
 - Usage errors exit 2; runtime failures exit 1.
 - No command deletes tickets or projects.

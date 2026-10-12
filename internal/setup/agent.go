@@ -35,6 +35,8 @@ type SkillRefresher interface {
 type Options struct {
 	// Home is the user's home directory.
 	Home string
+	// CodexHome is $CODEX_HOME, Codex's own folder; empty means ~/.codex.
+	CodexHome string
 	// Binary is the absolute path of the flashheart binary (SET-3).
 	Binary string
 	// Root is passed to every command when it is not the default root.

@@ -60,8 +60,11 @@ func newPlan(t target, uninstall bool) *Plan {
 // Empty reports a plan with nothing to do.
 func (p *Plan) Empty() bool { return len(p.files)+len(p.moves)+len(p.commands) == 0 }
 
-func (p *Plan) display(path string) string {
-	if rest, ok := strings.CutPrefix(path, p.target.options.Home+string(filepath.Separator)); ok {
+func (p *Plan) display(path string) string { return p.target.options.display(path) }
+
+// display shows a path under the home directory as ~/….
+func (o Options) display(path string) string {
+	if rest, ok := strings.CutPrefix(path, o.Home+string(filepath.Separator)); ok {
 		return "~/" + filepath.ToSlash(rest)
 	}
 	return path
@@ -110,7 +113,7 @@ func (p *Plan) Render(w io.Writer) {
 
 // Apply makes the plan so: files are backed up, then replaced atomically;
 // moves go into the backup; commands run through the agent's CLI, or are
-// printed for the user when there is none.
+// printed for the user when there is none. The plan's notes follow.
 func (p *Plan) Apply(w io.Writer) error {
 	if p.Empty() {
 		p.Render(w)
@@ -171,11 +174,21 @@ func (p *Plan) Apply(w io.Writer) error {
 	if len(p.files) > 0 {
 		fmt.Fprintf(w, "Backups are in %s\n", p.display(p.backup))
 	}
-	if len(p.commands) == 0 {
-		return nil
+	if err := p.runCommands(w); err != nil {
+		return err
 	}
+	for _, note := range p.notes {
+		fmt.Fprintln(w, note)
+	}
+	fmt.Fprintf(w, "Start a new %s session to pick up the changes.\n", p.target.title)
+	return nil
+}
+
+// runCommands runs the plan's commands through the agent's CLI, or prints
+// them for the user when there is none.
+func (p *Plan) runCommands(w io.Writer) error {
 	options := p.target.options
-	if options.CLI == "" {
+	if len(p.commands) > 0 && options.CLI == "" {
 		fmt.Fprintf(w, "The %s command was not found, so register the MCP server yourself:\n", p.target.command)
 		for _, args := range p.commands {
 			fmt.Fprintf(w, "  %s\n", p.commandLine(args))
@@ -192,7 +205,6 @@ func (p *Plan) Apply(w io.Writer) error {
 		}
 		fmt.Fprintf(w, "Ran %s\n", p.commandLine(args))
 	}
-	fmt.Fprintf(w, "Start a new %s session to pick up the changes.\n", p.target.title)
 	return nil
 }
 

@@ -6,7 +6,7 @@ import (
 )
 
 // hook, setup and doctor know the agents of one registry (FH-89); an agent
-// with hooks only (codex, until FH-75) is known to hook alone.
+// with hooks only would be known to hook alone.
 func TestTheAgentRegistryIsTheKnownAgentList(t *testing.T) {
 	t.Parallel()
 
