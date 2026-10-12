@@ -1080,6 +1080,8 @@ test("a preference changed just before a reload is saved (FH-48)", async () => {
     readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8");
   await open("#/p/flashheart/board");
   // A burst of changes keeps the save waiting; the reload comes at once.
+  // The save flushed on unload may still be writing when the reloaded page
+  // reads preferences; the server answers that read after it (FH-109).
   await viewOption(page, "Colour by", "None");
   await viewOption(page, "Colour by", "Age");
   await page.reload();

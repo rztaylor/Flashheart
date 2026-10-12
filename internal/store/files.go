@@ -9,12 +9,36 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 )
 
 // The functions below are confined file primitives for whole-board
 // operations such as migration. Paths are slash-separated and relative to the
 // root; an os.Root keeps every access inside it (SEC-2). Ticket-level writes
 // with locks and hash preconditions are in write.go.
+
+// WithRootLock runs fn holding the root lock and the locks of the named
+// projects, taken in name order as every multi-project writer takes them,
+// so a whole-board operation such as migration writes through the
+// primitives below while no other writer changes the root. The locks are
+// not reentrant: fn must not call a store method that takes them itself.
+func (s *Store) WithRootLock(projects []string, fn func() error) error {
+	releaseRoot, err := s.lock(".")
+	if err != nil {
+		return err
+	}
+	defer releaseRoot()
+	names := slices.Clone(projects)
+	slices.Sort(names)
+	for _, name := range slices.Compact(names) {
+		release, err := s.lock(name)
+		if err != nil {
+			return err
+		}
+		defer release()
+	}
+	return fn()
+}
 
 // ReadFile reads a file of at most MaxFileBytes.
 func (s *Store) ReadFile(name string) ([]byte, error) {
