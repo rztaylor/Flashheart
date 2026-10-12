@@ -38,6 +38,10 @@
   `flashheart hook claude`
   against the sandbox (`frontend/e2e/agent-runs.mjs`).
 - Run-state and blocking logic are table tests with a fake clock.
+- Every MCP write tool's run and claim policy (agent-protocol §7.1) is one
+  table test, tool × caller (`TestWriteToolPolicies`); a new tool adds its
+  row there. Attribution precedence is tested apart from the tools
+  (`TestAttributionPrecedence`).
 - MCP tools are tested through the Go SDK's in-memory transport; the
   protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs

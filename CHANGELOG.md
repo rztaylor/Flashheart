@@ -100,6 +100,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The `attach` and `set_project_key` MCP tools now answer `ambiguous_run`
+  when several sessions work in the same worktree and branch and the call
+  does not name its `run`, as every other write tool already did (FH-93,
+  D36). Before, an attachment could be recorded as `unknown` and a key set
+  by a session Flashheart could not name. The agent protocol lists each
+  tool's run and claim policy (§7.1); protocol version unchanged.
 - The view tabs read Overview, Workstreams, Table, Board (FH-61).
 
 - **Agent protocol 2** (FH-55, D32): hooks record a run's tool results as

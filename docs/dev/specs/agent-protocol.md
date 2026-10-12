@@ -407,8 +407,8 @@ Every tool accepts an optional `run` argument. The server resolves the caller:
    not the project), else the process's directory;
 4. several such sessions, or none on this branch while one of the caller's
    agent works in this worktree on another (its hooks have not yet seen a
-   branch switch) → error `ambiguous_run` listing them and saying to pass
-   `run`;
+   branch switch) → no run; a tool whose policy needs one (below) answers
+   `ambiguous_run` listing them and saying to pass `run`;
 5. else, for a write, a run the server starts for the connection now; a
    read starts none.
 
@@ -445,10 +445,26 @@ it touches in full, with those their tickets depend on.
 
 Read-only calls with no resolvable run still work and say `run=unknown`;
 writes are attributed to the run the server starts, or `by: "unknown"` when
-none can be started. `claim`, `release` and `ask_human` belong to a run and
-fail with `ambiguous_run` when there is none. A shortened run id
-(`claude:3f2a9c1e`, as the recovery note shows it) is accepted when it names
-one run.
+none can be started. A shortened run id (`claude:3f2a9c1e`, as the recovery
+note shows it) is accepted when it names one run.
+
+**Run and claim policy.** Each tool declares when it needs its caller's run
+and whether it refuses a ticket another live run holds (`claimed`, §7.2):
+
+| Tool | Run | Several sessions here (step 4) | A session here on another branch (step 4) | Ticket held by another run |
+|---|---|---|---|---|
+| `claim`, `release`, `ask_human` | required: they belong to a run | `ambiguous_run` | `ambiguous_run` | `claim` answers `claimed` (unless `force`); `release` says you do not hold it; `ask_human` works |
+| `checkpoint`, `update_ticket`, `move`, `write_review`, `attach`, `create_workstream` (its `tickets`) | required only when ambiguous | `ambiguous_run` | works, `by: "unknown"` | `claimed` |
+| `create_ticket`, `set_project_key` | required only when ambiguous | `ambiguous_run` | works, `by: "unknown"` | — |
+| `board_context`, `list_tickets`, `get_ticket` | none | works, `run=unknown` | works, `run=unknown` | — |
+
+With one run (from `run`, the connection, or the one hook session here)
+every tool works, and with none at all a write starts one (step 5). `attach`
+and `set_project_key` answer `ambiguous_run` with several sessions, as the
+other writes do (FH-93, D36): an attachment is a write to a ticket, recorded as
+the caller's `attachment.added`, and `set_project_key` sets the key that
+`create_ticket`'s `project_key` sets, which was already refused there, so an
+agent meets one rule for every write.
 
 ### 7.2 Tools
 
@@ -698,6 +714,13 @@ in tool results, the caller's agent from `clientInfo`, and the skill's line
 that without hooks an answer arrives with the next tool result. Every event
 keeps its shape and hook-attributed calls are unchanged, so the version
 stays 2.
+
+Additive change within version 2 (D36, FH-93, 2026-10-12): `attach` and
+`set_project_key` answer `ambiguous_run` while several sessions work in the
+worktree, as the other write tools already did, and §7.1 states each tool's
+run and claim policy. The code and its fix were already part of every
+agent's vocabulary, no event or tool changes shape, and the skill does not
+describe the rule, so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`
