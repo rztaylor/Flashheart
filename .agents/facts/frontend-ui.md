@@ -37,9 +37,11 @@
 - Editing: every edit from the panel carries the ticket's content hash; a
   409 opens the conflict dialog. Moves from the board set only `status`.
   Native `<dialog>` for decisions (blocked move, conflict, new ticket); a
-  polite toast with Undo for results. Drag and drop uses `@dnd-kit` pointer
-  sensors; the keyboard alternative is Shift with an arrow, and the panel's
-  Move to menu.
+  polite toast with Undo for results. Only the latest move offers Undo:
+  the toast clears as a move starts, and a save that returns after a later
+  move started is announced without Undo (FH-115). Drag and drop uses
+  `@dnd-kit` pointer sensors; the keyboard alternative is Shift with an
+  arrow, and the panel's Move to menu.
 - Tickets are named by id (`FH-42`) everywhere: cards, panel, table,
   search and the `?t=<id>` route parameter. Every shown id is a
   `components/TicketLink` to the ticket's full page `#/ticket/<id>`

@@ -52,7 +52,8 @@ const notSaved = "The change could not be saved";
 // EDIT-3, EDIT-8), rejecting included (a move to the rejected status, which
 // shows in Done; FH-58): it shows the new column and place at once (EDIT-9), asks
 // for a reason before starting a blocked ticket, and announces each result
-// with Undo, which puts the ticket back in its old column and place.
+// with Undo, which puts the ticket back in its old column and place; only
+// the latest move offers Undo (FH-115).
 // remark, when given, picks a marginal remark for a successful move's toast
 // (FH-22); it is asked only after the save succeeds.
 export function useEditing(
@@ -87,6 +88,12 @@ export function useEditing(
       if (from === to && after === undefined) return;
       seq.current += 1;
       const mine = seq.current;
+      // Undo is offered only for the latest move (FH-115): the last result
+      // goes as this move starts, and a save that returns after a later
+      // move started is announced without Undo. Two steps of one card read
+      // alike, so an earlier move's Undo would put it back where it was
+      // before both.
+      setToast(null);
       setPending((current) => ({
         ...current,
         [ticket.id]: { column: columnOf(to), after, saved: false, seq: mine },
@@ -105,22 +112,25 @@ export function useEditing(
                 : `Moved ${ticket.id} to ${statusTitle(to)}.`,
           details: saved.warnings,
           aside: remark?.(ticket, to),
-          action: {
-            label: "Undo",
-            run: () =>
-              void move(
-                {
-                  ...ticket,
-                  column: columnOf(to),
-                  rejected: to === "rejected",
-                },
-                from,
-                "",
-                after === undefined
-                  ? {}
-                  : { after: undoAfter ?? "", undoAfter: after },
-              ),
-          },
+          action:
+            seq.current === mine
+              ? {
+                  label: "Undo",
+                  run: () =>
+                    void move(
+                      {
+                        ...ticket,
+                        column: columnOf(to),
+                        rejected: to === "rejected",
+                      },
+                      from,
+                      "",
+                      after === undefined
+                        ? {}
+                        : { after: undoAfter ?? "", undoAfter: after },
+                    ),
+                }
+              : undefined,
         });
         onChanged();
       } catch (error) {
