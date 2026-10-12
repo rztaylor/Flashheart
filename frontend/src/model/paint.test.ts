@@ -18,6 +18,7 @@ function card(overrides: Partial<Card>): Card {
     updated: "",
     modified: "",
     branch: "",
+    pr: "",
     dependsOn: [],
     criteria: { done: 0, total: 0 },
     excerpt: "",

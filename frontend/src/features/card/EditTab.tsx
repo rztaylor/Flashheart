@@ -28,6 +28,7 @@ interface Form {
   priority: string;
   created: string;
   branch: string;
+  pr: string;
   workstream: string;
   "depends-on": string;
   tags: string;
@@ -47,6 +48,7 @@ function formOf(detail: TicketDetail): Form {
     priority: detail.priority,
     created: detail.created,
     branch: detail.branch,
+    pr: detail.pr,
     workstream: detail.workstream,
     "depends-on": detail.dependsOn.join(", "),
     tags: detail.tags.join(", "),
@@ -262,6 +264,18 @@ export function EditTab({
               value={form.branch}
               onChange={set("branch")}
               spellCheck={false}
+              className="font-mono text-xs"
+            />
+          </FormField>
+          <FormField
+            label="Pull request"
+            hint="Its web address; an http(s) address shows as a link."
+          >
+            <TextInput
+              value={form.pr}
+              onChange={set("pr")}
+              spellCheck={false}
+              placeholder="https://github.com/owner/repo/pull/42"
               className="font-mono text-xs"
             />
           </FormField>

@@ -86,6 +86,7 @@ type: feature            # feature | test | bug | refactor | infra | docs | spik
 priority: high           # high | medium | low
 created: 2026-10-04
 branch: feature/x        # empty until work starts
+pr: https://github.com/o/r/pull/7   # empty until a pull request is open
 workstream: board-ui
 depends-on: [FH-12, NG-3]
 depends-on-workstreams: []
@@ -116,6 +117,7 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 | `priority` | yes | `high`, `medium`, `low`. |
 | `created` | yes | `YYYY-MM-DD`. Orders numbering at migration and ties in sorting. |
 | `branch` | no | Used for provisional run links (`RUN-5`). |
+| `pr` | no | The ticket's pull request, one line, usually its URL (FH-114, D43). Set by the agent that opens it, or edited on the board. The board links it only when it is an `http(s)` URL and never fetches it. New tickets carry it empty; a ticket without it reads as having none. |
 | `workstream` | no | Slug of a workstream in this project. |
 | `depends-on` | no | Ticket ids, in any project. |
 | `depends-on-workstreams` | no | Workstream slugs in this project. |

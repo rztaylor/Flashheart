@@ -157,6 +157,14 @@ func TestUpdateTicket(t *testing.T) {
 	contains(t, out, "ok ticket=DM-1 changed=priority,tags,title,criteria,notes")
 	file := e.file(id)
 	contains(t, file, "priority: high", "tags: [ui, panel]", "# Card panel", "- [x] Opens beside the board", "- [x] Keeps the column in view", "- [ ] Closes on Escape", "claude:5b0c7e2a: Decided on a slide-over.")
+	pr := "https://github.com/o/r/pull/7"
+	contains(t, e.ok("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"pr": pr}}), "changed=pr")
+	e.ok("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"priority": "low"}})
+	contains(t, e.file(id), "branch:\npr: "+pr+"\n")
+	e.ok("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"pr": ""}})
+	if e.field(id, "pr") != "" {
+		t.Fatalf("pr = %q after clear", e.field(id, "pr"))
+	}
 	e.fails("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"status": "done"}}, "invalid_input")
 	e.fails("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"id": "DM-9"}}, "invalid_input")
 	e.fails("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"priority": "urgent"}}, "invalid_input")

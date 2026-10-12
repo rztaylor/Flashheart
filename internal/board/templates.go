@@ -107,6 +107,7 @@ func RenderTicket(id string, t NewTicket, now time.Time) ([]byte, error) {
 		{key: "priority", value: t.Priority},
 		{key: "created", value: now.Format("2006-01-02")},
 		{key: "branch"},
+		{key: "pr"},
 		{key: "workstream", value: t.Workstream},
 		{key: "depends-on", list: t.DependsOn, isList: true},
 		{key: "depends-on-workstreams", isList: true},

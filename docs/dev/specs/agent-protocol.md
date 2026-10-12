@@ -558,7 +558,7 @@ agent meets one rule for every write.
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff |
 | `release` | `ticket`, `reason?` | §6 | ok |
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
-| `update_ticket` | `ticket`, `set?` (frontmatter fields), `check?` (criteria text or index), `append_notes?` | frontmatter/body edit with hash precondition; setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4) | changed fields; a title advice warning (below) when it sets the title |
+| `update_ticket` | `ticket`, `set?` (frontmatter fields, including `pr`, the pull request URL; an empty value clears it), `check?` (criteria text or index), `append_notes?` | frontmatter/body edit with hash precondition; setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4) | changed fields; a title advice warning (below) when it sets the title |
 | `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file and criteria and returns warnings (never refuses, `EDIT-3`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `context?` (implementation detail, written under `## Context`), `project_key?` (only for a project with no key yet) | new ticket folder with the next id (`KEY-2`); a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` is joined (§7.4) | id; a title advice warning (below) |
@@ -753,6 +753,8 @@ kept current by the session-start hook (§5.4). It covers, briefly:
   in the chat does not settle the question (§7.1); where
   the agent can run background commands that wake it, run the `flashheart await` command
   `ask_human` returns (§7.5);
+- when you open a pull request for a ticket, set its `pr` to the pull
+  request's URL with `update_ticket` (board-format §Frontmatter);
 - finishing: evidence in the review (§11): captioned screenshots of every
   state a visible change touched, or "No visible change: <why>";
   `write_review`, `move` to `review`; never move to `done`;
@@ -851,6 +853,12 @@ without `origin` reads as before; `background` keeps its meaning, a turn
 the user did not start, which answers nothing (it now also marks agents'
 messages, which older readers took for the user's); and no tool, refusal
 or skill text changes. The version stays 2.
+
+Additive change within version 2 (D43, FH-114, 2026-10-12): tickets gain
+the optional `pr` frontmatter field, which `update_ticket` sets and clears
+like `branch`, and the skill gains a line asking agents to set it when they
+open a pull request. No event or tool changes shape, and an older agent
+that never sets it leaves tickets as before, so the version stays 2.
 
 Additive change within version 2 (FH-78, 2026-10-12): one delivery
 routine serves every path that hands answers over (§4). It shows what it

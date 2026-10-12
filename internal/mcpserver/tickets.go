@@ -19,7 +19,7 @@ import (
 type UpdateTicketInput struct {
 	Attribution
 	Ticket      string         `json:"ticket" jsonschema:"the ticket id"`
-	Set         map[string]any `json:"set,omitempty" jsonschema:"fields to set: title, type, priority, created, branch, workstream (strings); tags, depends-on, depends-on-workstreams (lists of strings)"`
+	Set         map[string]any `json:"set,omitempty" jsonschema:"fields to set: title, type, priority, created, branch, pr (the pull request URL; empty clears it), workstream (strings); tags, depends-on, depends-on-workstreams (lists of strings)"`
 	Check       []string       `json:"check,omitempty" jsonschema:"acceptance criteria to tick, by number (1 is the first) or by their text"`
 	AppendNotes string         `json:"append_notes,omitempty" jsonschema:"a paragraph appended to the ticket's notes"`
 }

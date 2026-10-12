@@ -563,6 +563,48 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
   expect(await readTicket("FH-36-split-api")).toContain("priority: low");
 });
 
+test("the Edit tab records a pull request, linked from the panel and page (FH-114)", async () => {
+  const url = "https://github.com/rztaylor/flashheart/pull/7";
+  await open(page, "#/p/flashheart/board?t=FH-36");
+  const panel = page.getByRole("complementary", { name: "Ticket FH-36" });
+  await panel.getByRole("tab", { name: "Edit" }).click();
+  await panel.getByRole("textbox", { name: "Pull request" }).fill(url);
+  await panel.getByRole("button", { name: "Save changes" }).click();
+  const link = panel.getByRole("link", { name: "Pull request PR #7" });
+  await expect(link).toHaveAttribute("href", url);
+  await expect(link).toHaveAttribute("target", "_blank");
+  expect(await readTicket("FH-36-split-api")).toContain(`pr: ${url}\n`);
+  await panel.getByRole("tab", { name: "Ticket" }).click();
+  await shot(page, "pull-request-panel-1440-light");
+  await open(page, "#/p/flashheart/board?t=FH-36", { theme: "dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expectNoAxeViolations(page, "pull request dark");
+  await shot(page, "pull-request-panel-1440-dark");
+
+  await open(page, "#/ticket/FH-36");
+  await expect(
+    page.getByRole("link", { name: "Pull request PR #7" }),
+  ).toHaveAttribute("href", url);
+  await shot(page, "pull-request-page-1440-light");
+  await open(page, "#/ticket/FH-36", { theme: "dark" });
+  await shot(page, "pull-request-page-1440-dark");
+
+  // A value that is not a web address is shown, never linked.
+  await open(page, "#/p/flashheart/board?t=FH-36");
+  await panel.getByRole("tab", { name: "Edit" }).click();
+  await panel
+    .getByRole("textbox", { name: "Pull request" })
+    .fill("javascript:alert(1)");
+  await panel.getByRole("button", { name: "Save changes" }).click();
+  await expect(panel.getByText("javascript:alert(1)")).toBeVisible();
+  await expect(panel.getByRole("link", { name: /Pull request/ })).toHaveCount(
+    0,
+  );
+  await panel.getByRole("textbox", { name: "Pull request" }).fill("");
+  await panel.getByRole("button", { name: "Save changes" }).click();
+  await expect.poll(() => readTicket("FH-36-split-api")).toMatch(/^pr:$/m);
+});
+
 test("an edit made in a text editor appears within a second", async () => {
   await open(page, "#/p/flashheart/board");
   const name = ticketFile("FH-28-hook-latency");

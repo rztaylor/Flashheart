@@ -85,6 +85,8 @@ instructions.
   questions. The next session resumes from it.
 - ` + "`update_ticket`" + ` ticks acceptance criteria as they pass, edits fields and
   appends notes.
+- When you open a pull request for a ticket, set its ` + "`pr`" + ` to the pull
+  request's URL with ` + "`update_ticket`" + `, so the board links to it.
 - ` + "`attach`" + ` copies a screenshot or log, saved as a file, into a ticket with
   a caption, and gives the markdown to link it from the review.
 - When you need a human decision, ` + "`ask_human`" + ` (kind question, decision,

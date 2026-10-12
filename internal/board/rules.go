@@ -16,7 +16,7 @@ import (
 // title is the H1; the rest are frontmatter keys.
 var (
 	ListFields   = []string{"depends-on", "depends-on-workstreams", "tags"}
-	ScalarFields = []string{"title", "status", "type", "priority", "created", "branch", "workstream"}
+	ScalarFields = []string{"title", "status", "type", "priority", "created", "branch", "pr", "workstream"}
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,99}$`)
@@ -53,7 +53,7 @@ func ValidateField(key, value string) error {
 		if _, _, ok := ParseID(value); !ok {
 			return fmt.Errorf("%q is not a ticket id like FH-42", value)
 		}
-	case "branch", "tags":
+	case "branch", "pr", "tags":
 		if strings.ContainsAny(value, "\n\r") || utf8.RuneCountInString(value) > 200 {
 			return fmt.Errorf("%s must be one line of at most 200 characters", key)
 		}
