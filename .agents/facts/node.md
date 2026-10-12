@@ -3,6 +3,10 @@
 - Build-time only: Node.js 22 or newer; running Flashheart needs no Node.
 - Package root and lockfile: `frontend/package.json` and
   `frontend/package-lock.json`; use `npm ci` for deterministic installs.
+  The scripts install through `scripts/frontend-deps.sh`, which reruns
+  `npm ci` when the lockfile checksum or Node major version differs from
+  the stamp in `frontend/node_modules/.flashheart-install` (`--always` in
+  `scripts/check.sh`).
 - TypeScript strict. Biome for lint and format (typescript-eslint does not
   support the TypeScript 7 toolchain used across these projects).
 - Frontend validation: Biome, Vitest, TypeScript + Vite production build, and

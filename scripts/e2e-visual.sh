@@ -12,9 +12,7 @@ set -eu
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_root"
 
-if [ ! -d frontend/node_modules ]; then
-  npm --cache "$project_root/.cache/npm" --prefix frontend ci
-fi
+scripts/frontend-deps.sh
 version=$(node -p 'require("./frontend/node_modules/@playwright/test/package.json").version')
 image="mcr.microsoft.com/playwright:v$version-noble"
 

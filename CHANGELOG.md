@@ -79,6 +79,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Building after a pull that adds or upgrades frontend packages no longer
+  fails on missing modules (FH-119). `scripts/build.sh` (and so
+  `scripts/e2e.sh`) and `scripts/e2e-visual.sh` installed the packages only
+  when none were installed, so an install older than the lockfile was
+  reused. They now share `scripts/frontend-deps.sh`, which reruns `npm ci`
+  whenever the lockfile's checksum or the Node major version differs from
+  the last successful install; an up-to-date install is reused.
+  `scripts/check.sh` still always runs `npm ci`.
+
 - Undo after two quick moves of a card now undoes the latest one (FH-115).
   While the second move was saving, the first move's toast still offered
   Undo with the same words, and choosing it put the card back where it was
