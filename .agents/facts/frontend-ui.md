@@ -75,3 +75,6 @@
   `components/Icon.tsx`.
 - Validation: Vitest for view-models and components; Playwright screenshots
   at 1280 and 1920 in light and dark with axe-core for visible changes.
+  Keys, focus and state over time are tested in happy-dom with Testing
+  Library (`*.dom.test.tsx`, D42); a visible change updates the stable
+  screenshot baselines (`scripts/e2e-visual.sh --update-snapshots`).

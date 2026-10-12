@@ -7,3 +7,7 @@
   support the TypeScript 7 toolchain used across these projects).
 - Frontend validation: Biome, Vitest, TypeScript + Vite production build, and
   Playwright for lifecycle and visual checks.
+- Dependencies: exact versions, pinned in `package-lock.json`, at least two
+  weeks old when added; test-only packages are dev dependencies. Each new
+  package is recorded with its alternatives in `docs/dev/decisions.md`
+  (D10 the libraries, D42 happy-dom and Testing Library).

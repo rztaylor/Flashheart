@@ -88,6 +88,7 @@ Requires Go 1.26.6+ and Node.js 22+ (build time only).
 scripts/build.sh                    # frontend + binary into build/flashheart
 scripts/check.sh                    # lint, unit tests, builds, vet, race tests
 scripts/e2e.sh                      # Playwright lifecycle, axe and screenshots
+scripts/e2e-visual.sh               # screenshot comparison in Docker (--update-snapshots)
 ```
 
 Changes land through pull requests; see [`CONTRIBUTING.md`](CONTRIBUTING.md).

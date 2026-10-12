@@ -1,12 +1,13 @@
-import { join, resolve } from "node:path";
-import AxeBuilder from "@axe-core/playwright";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
+  expectConnected,
+  expectNoAxeViolations,
   launch,
   makeSandbox,
-  screenshotDir,
+  shot,
   stopIfRunning,
   waitForManualURL,
 } from "./support.mjs";
@@ -73,26 +74,8 @@ async function tab(
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await setup(page);
   await page.goto(`${origin}/${hash}`);
-  await expect(
-    page.getByRole("button", { name: "Backend connected. Check connection" }),
-  ).toBeVisible();
+  await expectConnected(page);
   return page;
-}
-
-async function shot(page, name) {
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-  });
-  await page.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
-}
-
-async function expectNoAxeViolations(page, label) {
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(
-    results.violations,
-    `${label}: ${results.violations.map((v) => `${v.id} (${v.nodes.length})`).join(", ")}`,
-  ).toEqual([]);
 }
 
 // reload asks every view to load again, as returning to the tab does.
