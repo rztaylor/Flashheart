@@ -7,8 +7,9 @@
   `--help`.
 - `hook` and `mcp` print only protocol output to stdout; `hook` always exits 0
   (usage problems go to stderr and `hook-errors.log`); handoff enforcement
-  speaks through its JSON output, not the exit code. `hook claude <Event>`
-  and `mcp` are implemented; Codex arrives with `codex-support`.
+  speaks through its JSON output, not the exit code. `hook claude <Event>`,
+  `hook codex <Event>` and `mcp` are implemented; `setup codex` and its
+  doctor checks arrive with `codex-support` (FH-75).
 - `await` is run by agents in the background after `ask_human`; its stdout
   holds only the answers note (or a one-line "already delivered"), since
   that is what wakes the agent. Exit 0 delivered, 1 timeout or unknown

@@ -12,9 +12,9 @@ import (
 // claudeToolName matches a quoted Claude Code tool name.
 var claudeToolName = regexp.MustCompile(`"(Bash|PowerShell|Edit|Write|MultiEdit|NotebookEdit|TodoWrite|TaskCreate|TaskUpdate)"`)
 
-// Only the Claude adapter knows Claude Code's tool names; past it, tool
-// results are classified (FH-90). The one exception is runs' fallback for
-// tool.used records from before protocol 2.
+// Only the agents' adapters know their tool names (Codex's shell tool is
+// Bash too); past them, tool results are classified (FH-90). The one
+// exception is runs' fallback for tool.used records from before protocol 2.
 func TestNoClaudeToolNamesPastTheAdapter(t *testing.T) {
 	t.Parallel()
 
@@ -27,7 +27,7 @@ func TestNoClaudeToolNamesPastTheAdapter(t *testing.T) {
 			}
 			relative, _ := filepath.Rel(base, path)
 			if entry.IsDir() {
-				if relative == filepath.Join("internal", "hooks", "claude") {
+				if relative == filepath.Join("internal", "hooks", "claude") || relative == filepath.Join("internal", "hooks", "codex") {
 					return filepath.SkipDir
 				}
 				return nil

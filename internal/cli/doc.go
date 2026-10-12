@@ -5,7 +5,8 @@
 //
 // It chooses between a detached, foreground or background-child serve,
 // presents the launch outcome, keeps the one registry of agents (each
-// agent's hook adapter and setup.Agent) that hook, setup and doctor read,
+// agent's hook adapter and, unless it has hooks only, its setup.Agent)
+// that hook, setup and doctor read,
 // passes an agent's skill refresh to the session-start hook, runs
 // the MCP server on stdio with the agent's project directory
 // (CLAUDE_PROJECT_DIR, else the working directory) and its own binary path,

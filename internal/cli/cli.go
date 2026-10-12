@@ -152,10 +152,10 @@ func commands() []command {
 			name:    "hook",
 			summary: "record an agent hook event read from stdin",
 			usage:   "hook <agent> <event> [--root DIR]",
-			detail: "Record a Claude Code hook event (agent: claude) read from stdin in the\n" +
-				"board's event log, and print the recovery note at session start. Agents\n" +
-				"run this from their hook configuration; it always exits 0 and logs\n" +
-				"problems to <root>/.flashheart/hook-errors.log.",
+			detail: "Record a Claude Code or Codex hook event (agent: claude or codex) read\n" +
+				"from stdin in the board's event log, and print the recovery note at\n" +
+				"session start. Agents run this from their hook configuration; it always\n" +
+				"exits 0 and logs problems to <root>/.flashheart/hook-errors.log.",
 			run: runHook,
 		},
 		{
@@ -473,7 +473,7 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	default:
 		var found bool
 		if registered, found = findAgent(args[0]); !found {
-			problem = fmt.Sprintf("unknown agent %q (known: %s)", args[0], knownAgents())
+			problem = fmt.Sprintf("unknown agent %q (known: %s)", args[0], knownAgents(false))
 		}
 	}
 	if problem != "" {
@@ -587,13 +587,13 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 	registered, found := findAgent(flags.Arg(0))
 	switch {
 	case flags.NArg() == 0:
-		return usageError{fmt.Sprintf("setup needs an agent: flashheart setup <agent> (known: %s)", knownAgents())}
+		return usageError{fmt.Sprintf("setup needs an agent: flashheart setup <agent> (known: %s)", knownAgents(true))}
 	case flags.NArg() > 1:
 		return usageError{"setup takes one agent"}
 	case flags.Arg(0) == "codex":
 		return errNotYetAvailable
-	case !found:
-		return usageError{fmt.Sprintf("unknown agent %q (known: %s)", flags.Arg(0), knownAgents())}
+	case !found || registered.setup == nil:
+		return usageError{fmt.Sprintf("unknown agent %q (known: %s)", flags.Arg(0), knownAgents(true))}
 	}
 	root, err := resolveRoot(globals, env.deps)
 	if err != nil {
@@ -659,6 +659,9 @@ func runDoctor(_ context.Context, env *environment, flags *flag.FlagSet, globals
 	}
 	checks := doctor.Options{Root: root}
 	for _, registered := range agents {
+		if registered.setup == nil {
+			continue
+		}
 		options, err := agentOptions(env, root, registered.setup)
 		if err != nil {
 			return err

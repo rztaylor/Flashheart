@@ -2,11 +2,12 @@
 
 Recorded payloads for the Codex hook adapter (agent-protocol §5.3 and §13).
 Each `<Event>/<case>.json` is one hook payload as Codex sends it on stdin;
-`mcp/` holds what Codex sent the flashheart MCP server in the same kind of
-session. The adapter's expected events (`<case>.events.json`, as in
-`testdata/hooks/claude`) arrive with the adapter.
-`internal/hooks/codex` checks that every payload parses, names its event
-and carries the hook session into its MCP calls.
+`<Event>/<case>.events.json` beside it holds the events the adapter
+records for it on an empty board, as in `testdata/hooks/claude`; `mcp/`
+holds what Codex sent the flashheart MCP server in the same kind of
+session. `internal/hooks/codex` replays every payload against its expected
+events, and checks that each names its event and carries the hook session
+into its MCP calls.
 
 Every payload is scrubbed: the working directory is `/Users/example/src/demo`,
 Codex's home is `/Users/example/.codex`, session, subagent and turn ids are

@@ -77,7 +77,7 @@ func run(o options) error {
 	}
 	payloads := payloadSource{dir: filepath.Join("testdata", "hooks", o.agent), repo: repo}
 
-	steps, session, err := scenario(o.scenario, payloads)
+	steps, session, err := scenario(o.scenario, o.agent, payloads)
 	if err != nil {
 		return err
 	}
@@ -135,17 +135,31 @@ func run(o options) error {
 	return nil
 }
 
+// mixes are each agent's recorded payloads for the mix and tools
+// scenarios. mix is a realistic session: mostly tool results, with
+// prompts, plans and stops. tools is tool results within a minute of each
+// other: all but the first and each newly edited path's are held in the
+// session's state.
+var mixes = map[string]map[string][]string{
+	"claude": {
+		scenarioMix:   {"PostToolUse/edit", "PostToolUse/read", "PostToolUse/bash", "PostToolUse/todowrite", "PostToolUse/edit", "UserPromptSubmit/prompt", "PostToolUse/write", "Stop/stop"},
+		scenarioTools: {"PostToolUse/read", "PostToolUse/bash", "PostToolUse/read", "PostToolUseFailure/read-missing", "PostToolUse/edit"},
+	},
+	// No recorded Codex session had a planning tool (MANIFEST.md).
+	"codex": {
+		scenarioMix:   {"PostToolUse/apply-patch", "PostToolUse/bash", "PostToolUse/wait-agent", "PostToolUse/bash-failed", "PostToolUse/app-apply-patch", "UserPromptSubmit/prompt", "PostToolUse/spawn-agent", "Stop/stop"},
+		scenarioTools: {"PostToolUse/bash", "PostToolUse/wait-agent", "PostToolUse/bash-failed", "PostToolUse/spawn-agent", "PostToolUse/apply-patch"},
+	},
+}
+
 // scenario returns the invocations of round i and the session the
 // scenario's stops are enforced on ("" for none).
-func scenario(name string, payloads payloadSource) (func(i int) []step, string, error) {
+func scenario(name, agent string, payloads payloadSource) (func(i int) []step, string, error) {
 	switch name {
 	case scenarioMix, scenarioTools:
-		// A realistic mix: mostly tool results, with prompts, plans and stops.
-		mix := []string{"PostToolUse/edit", "PostToolUse/read", "PostToolUse/bash", "PostToolUse/todowrite", "PostToolUse/edit", "UserPromptSubmit/prompt", "PostToolUse/write", "Stop/stop"}
-		if name == scenarioTools {
-			// Tool results within a minute of each other: all but the first
-			// and each newly edited path's are held in the session's state.
-			mix = []string{"PostToolUse/read", "PostToolUse/bash", "PostToolUse/read", "PostToolUseFailure/read-missing", "PostToolUse/edit"}
+		mix := mixes[agent][name]
+		if mix == nil {
+			return nil, "", fmt.Errorf("no %s mix for agent %q", name, agent)
 		}
 		steps := make([]step, len(mix))
 		for i, name := range mix {
