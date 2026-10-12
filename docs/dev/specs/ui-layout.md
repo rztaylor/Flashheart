@@ -149,7 +149,7 @@ reorders them.
 | 3 | Tags: workstream bullet, type tag, age tag (Colour by Age) | ✓ | ✓ | ✓ |
 | 4 | Needs repair note | ✓ | ✓ | ✓ |
 | 5 | Blocker pill (diamond, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
-| 6 | Live badge: run state and agent, permission reason, last activity; plan step `done/total · step` when the run has a plan (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
+| 6 | Live badge: run state and agent, its Needs you reason (the words its Runs tab uses, `RUN-3`), last activity; plan step `done/total · step` when the run has a plan (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
 | 7 | Question waiting plate, when a question needs the user and its run does not | — | ✓ | ✓ |
 | 8 | Description excerpt, three lines | — | — | ✓ |
 | 9 | Handoff next step (arrow) | — | — | ✓ |
@@ -189,7 +189,8 @@ reorders them.
    (`CARD-3`) · format warnings · the ticket's markdown (`CARD-2`).
 4. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
    dialog on save (`EDIT-7`).
-5. **Runs tab**: runs newest first, each a card with its state, agent,
+5. **Runs tab**: runs newest first, each a card with its state (and its
+   Needs you reason, in the card's words, `RUN-3`), agent,
    short id, link, branch and time, then its detail and its subagents as a
    tree on a spur: each row its state, type, the ticket it claimed when that
    is another, and its plan step (or tool and edit counts), opening to its

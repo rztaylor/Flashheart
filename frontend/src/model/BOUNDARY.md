@@ -7,8 +7,9 @@ VIEW-7, FH-39), running times, markdown
 link resolution, ticket-id linking (KEY-3) and section trimming (CARD-2),
 card paint for "Colour by" (`paint`, VIEW-6), ticket status tones and
 priority wording (`status`), the page header's summary line (`summary`),
-why a run needs you, timeline
-wording (`runs`), the Overview's sections, their
+the words for why a run needs you
+(the server derives the reason, D39) and the session part of the server's
+short run id, timeline wording (`runs`), the Overview's sections, their
 order, at-risk reasons and wording, and its pipeline stages (`overview`,
 VIEW-3), keyboard grid movement, and
 manual-order placements and display sorts (`order`, EDIT-9), archive

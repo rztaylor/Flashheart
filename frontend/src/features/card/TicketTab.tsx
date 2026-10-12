@@ -8,7 +8,7 @@ import { QuestionCard } from "../../components/QuestionCard";
 import { StateNote } from "../../components/StateNote";
 import { LinkedText } from "../../components/TicketLink";
 import { ticketBody } from "../../model/markdown";
-import { counted, shortRun } from "../../model/runs";
+import { counted } from "../../model/runs";
 import { useNow } from "../../state/useNow";
 import { Checklist } from "./Checklist";
 
@@ -140,7 +140,7 @@ export function TicketTab({
             <QuestionCard
               key={question.id}
               question={question}
-              asker={shortRun(question.run)}
+              asker={question.runShort}
               now={now}
               onAnswer={
                 onAnswer ? (text) => onAnswer(question.id, text) : undefined

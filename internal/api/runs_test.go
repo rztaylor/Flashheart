@@ -151,8 +151,24 @@ func TestLiveBadgeNamesTheSubagentItWaitsOn(t *testing.T) {
 	var board BoardResponse
 	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
 	live := cardByID(t, board.Cards, "AL-3").Live
-	if live == nil || live.State != "needs-you" || live.Permission != "Bash" || live.WaitingOn != "Explore" {
+	want := runs.Reason{Kind: runs.ReasonPermission, Permission: "Bash", WaitingOn: child, AgentType: "Explore"}
+	if live == nil || live.State != "needs-you" || live.Reason != want {
 		t.Fatalf("live = %+v", live)
+	}
+	// The Runs tab gets the same reason for the session, and the subagent
+	// its own prompt; a subagent's short id is its session's (§2).
+	ticket := ticketDetail(t, handler, "AL-3")
+	for _, run := range ticket.Runs {
+		switch run.ID {
+		case sampleSession:
+			if run.Reason != want || run.Short != "claude:3f2a9c1e" {
+				t.Fatalf("session = %+v", run)
+			}
+		case child:
+			if run.Reason != (runs.Reason{Kind: runs.ReasonPermission, Permission: "Bash"}) || run.Short != "claude:3f2a9c1e" {
+				t.Fatalf("subagent = %+v", run)
+			}
+		}
 	}
 }
 

@@ -379,7 +379,12 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
 - `RUN-3` Run state is derived from events: *Working* (turn in progress),
   *Needs you* (permission request, open question or review requested),
   *Waiting* (turn finished, session open), *Quiet* (working but no event for
-  the quiet threshold, default 10 minutes), *Ended*. *Ended* runs whose linked
+  the quiet threshold, default 10 minutes), *Ended*. A run in *Needs you*
+  has one **reason**, derived with its state and worded the same on its
+  card, its Runs tab and the Overview (D39); first match wins: its own
+  permission prompt, its own unanswered question, a live subagent's prompt,
+  a subagent's unanswered question, then an answer waiting for delivery
+  (its own, then a subagent's). *Ended* runs whose linked
   ticket has edits since its last checkpoint (through the edit tools, or
   files the turn-end hook finds changed in the worktree during the run's
   own shell commands, not while it waited) are flagged **no handoff**.

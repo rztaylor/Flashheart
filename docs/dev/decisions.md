@@ -814,3 +814,47 @@ read's start (filesystem timestamps are too coarse to be safe); mark
 changes by reads started (chosen). For unwatched folders: rely on the 10 s
 sweep alone (cheapest, but agents' writes to old tickets show late), or
 read the board for events that record ticket writes (chosen).
+
+## 2026-10-12 — D39: The server derives why a run needs you, and its short id
+
+Why a run in Needs you needs you is one value, `runs.Reason`, derived with
+its state (FH-98): a run is in Needs you exactly when its reason is not
+zero. Before, the live badge (in `api`) and the Runs tab (in the frontend)
+each picked the blocker, in different orders: the badge named a
+subagent's permission prompt before the session's own question, the tab
+the reverse, so a card and its Runs tab could disagree; the Overview held
+a third copy of "a session waiting on a subagent is answered through it".
+Runs and live badges now carry the reason typed: its kind (permission or
+question), the tool, the question's kind and whether it is answered, and
+the subagent it is (run id and type), empty when it is the run's own. The
+frontend only words it, in the words it used before.
+
+First match wins: the run's own permission prompt, its own unanswered
+question, a live subagent's prompt, a subagent's unanswered question, then
+an answer waiting for delivery, its own before a subagent's; subagents in
+the order they were first seen. `RUN-3` and `HOOK-4` name a permission
+request before a question, and a prompt holds the agent mid-tool. The
+run's own blocker comes before its subagents' because it is what the
+card's session is asking, while each subagent's is also listed on its own
+(its Runs tab row, its Overview row). An answer on its way waits only for
+the session's next prompt: the human has answered, so anything else they
+can act on comes first. The Overview lists a run's own prompt beside its
+own questions, where it used to hide it behind them, and a prompt a
+session waits on through a subagent with that subagent.
+
+Short ids: agent-protocol §2's is canonical, the agent and the first 8
+characters of the session id (`protocol.ShortRun`), which ticket notes,
+handoffs and recovery notes already use. The frontend recomputed short ids
+and named a subagent by its own id; it now shows the server's `short`, and
+questions carry their run's `runShort`, so a subagent shows its session's
+short id, as the ticket's notes name it.
+
+Options: send the reason in words (one place, but wording belongs to the
+frontend and its tests); derive it in the frontend from a run and its
+subagents (a card has no subagents to look at); a typed reason on the
+server (chosen). For the order: the badge's (a subagent's prompt first,
+which hides what the session itself asks), every prompt in the family
+before any question (the same, for the session's own question), or the
+run's own blocker first (chosen). For short ids: a subagent's own id
+(tells subagents apart, but disagrees with the ticket's notes and names
+no session to answer in) or the session's (chosen).

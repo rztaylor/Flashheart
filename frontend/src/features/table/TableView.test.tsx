@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { Card } from "../../api/board";
+import { noReason } from "../../api/runs";
 import { TableView } from "./TableView";
 
 // The Table of docs/dev/specs/ui-layout.md §6: status as pills, type and
@@ -61,10 +62,7 @@ const markup = renderToStaticMarkup(
           done: 1,
           total: 3,
           step: "Write tests",
-          permission: "",
-          waitingOn: "",
-          question: "",
-          questionAnswered: false,
+          reason: noReason,
           lastActivity: "",
         },
       }),

@@ -2,7 +2,7 @@
 // wording, for cards, the Runs tab and the Overview.
 import { STATUSES } from "../api/board";
 import type {
-  Live,
+  NeedsReason,
   Question,
   QuestionKind,
   Run,
@@ -31,15 +31,6 @@ export function permissionReason(tool: string): string {
   return tool && tool !== "?"
     ? `Permission for ${tool}`
     : "Waiting for permission";
-}
-
-// reasonFor says why a run needs you: its own permission prompt, or that
-// of the subagent (by type) it is waiting on.
-export function reasonFor(permission: string, subagent: string): string {
-  if (!subagent) return permissionReason(permission);
-  return permission && permission !== "?"
-    ? `${subagent} needs permission for ${permission}`
-    : `${subagent} needs permission`;
 }
 
 const QUESTION_REASON: Record<QuestionKind, string> = {
@@ -73,48 +64,36 @@ export function questionReason(question: Question): string {
     : QUESTION_REASON[question.kind];
 }
 
-// openQuestion is a run's first question still waiting on the human or on
-// delivery.
-export function openQuestion(run: Run): Question | undefined {
-  return run.questions.find((question) => !question.delivered);
-}
-
-// needsReason says why a session needs you, from it and its subagents: a
-// permission prompt first, then a question.
-export function needsReason(run: Run, children: Run[]): string {
-  if (run.permission) return permissionReason(run.permission);
-  const own = openQuestion(run);
-  if (own) return questionReason(own);
-  const child = children.find((item) => item.state === "needs-you");
-  if (!child) return permissionReason("");
-  const asked = child.permission ? undefined : openQuestion(child);
-  if (asked) {
-    const reason = questionReason(asked);
-    return `${child.agentType || "Subagent"} ${reason.charAt(0).toLowerCase()}${reason.slice(1)}`;
+// needsReason words why a run needs you, from the reason the server
+// derived for it (FH-98): the server picks the blocker, this only words it.
+// subagent names the run when it is a subagent shown on its own, as the
+// Overview lists it; a subagent the run waits on is always named.
+export function needsReason(
+  reason: NeedsReason,
+  runID: string,
+  subagent = "",
+): string {
+  const who = reason.waitingOn ? reason.agentType || "Subagent" : subagent;
+  if (reason.kind === "permission") {
+    if (!who) return permissionReason(reason.permission);
+    return reason.permission && reason.permission !== "?"
+      ? `${who} needs permission for ${reason.permission}`
+      : `${who} needs permission`;
   }
-  return reasonFor(child.permission, child.agentType || "Subagent");
+  if (reason.kind !== "question" || !reason.question) return "";
+  const words = reason.answered
+    ? answerWaiting(runID)
+    : QUESTION_REASON[reason.question];
+  return who
+    ? `${who} ${words.charAt(0).toLowerCase()}${words.slice(1)}`
+    : words;
 }
 
-// liveReason is needsReason for a card's live run.
-export function liveReason(live: Live): string {
-  if (!live.permission && live.question)
-    return live.questionAnswered
-      ? answerWaiting(live.run)
-      : QUESTION_REASON[live.question];
-  return reasonFor(live.permission, live.waitingOn);
-}
-
-// shortID is a run's short id: the first 8 characters of its session id, or
-// of its own id for a subagent (agent-protocol §2).
-export function shortID(id: string): string {
-  const [, rest = id] = id.split(":");
-  const parts = rest.split("/");
-  return (parts[parts.length - 1] ?? "").slice(0, 8);
-}
-
-// shortRun is a run id as people see it: the agent and its short id.
-export function shortRun(id: string): string {
-  return `${id.split(":")[0] ?? ""}:${shortID(id)}`;
+// shortID is the session part of a run's short id as the server sends it
+// (agent-protocol §2): `claude:3f2a9c1e` is `3f2a9c1e`, for places that
+// name the agent beside it.
+export function shortID(short: string): string {
+  return short.slice(short.indexOf(":") + 1);
 }
 
 // counted puts a count before a noun, plural unless it is one.

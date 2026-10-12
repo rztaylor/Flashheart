@@ -65,6 +65,7 @@ function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
       {
         id: "q1",
         run: "claude:1234abcd",
+        runShort: "claude:1234abcd",
         ticket: "FH-4",
         kind: "decision",
         text: "Which session should we verify first?",

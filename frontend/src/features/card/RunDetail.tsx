@@ -2,7 +2,7 @@ import type { PlanItem, Run, TimelineEntry } from "../../api/runs";
 import { Aside } from "../../components/Aside";
 import { Icon } from "../../components/Icon";
 import { QuestionCard } from "../../components/QuestionCard";
-import { compactTimeline, describeEntry, shortRun } from "../../model/runs";
+import { compactTimeline, describeEntry } from "../../model/runs";
 import { absoluteTime, runningTime } from "../../model/time";
 
 // MAX_TIMELINE bounds the activity lines shown for one run.
@@ -44,7 +44,7 @@ export function RunDetail({
               <QuestionCard
                 key={question.id}
                 question={question}
-                asker={shortRun(question.run)}
+                asker={question.runShort}
                 now={now}
                 headingLevel={headingLevel === 3 ? 4 : 5}
                 onAnswer={

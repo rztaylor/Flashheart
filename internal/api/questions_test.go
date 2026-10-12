@@ -58,7 +58,7 @@ func TestQuestionsAreShownOnRunsCardsAndTickets(t *testing.T) {
 	}
 	// AL-1 is not the session's ticket, but its open question needs you (VIEW-2).
 	detail := ticketDetail(t, handler, "AL-1")
-	if !detail.NeedsYou || len(detail.Questions) != 1 || detail.Questions[0].ID != "q-1" {
+	if !detail.NeedsYou || len(detail.Questions) != 1 || detail.Questions[0].ID != "q-1" || detail.Questions[0].RunShort != "claude:3f2a9c1e" {
 		t.Fatalf("AL-1 needsYou %v questions %+v", detail.NeedsYou, detail.Questions)
 	}
 	var board BoardResponse
@@ -68,7 +68,7 @@ func TestQuestionsAreShownOnRunsCardsAndTickets(t *testing.T) {
 			t.Fatalf("AL-1 card = %+v", card)
 		}
 		// AL-3's session waits on a permission prompt, which it names first.
-		if card.ID == "AL-3" && (card.Live == nil || card.Live.Permission != "Bash" || card.Live.Question != "") {
+		if card.ID == "AL-3" && (card.Live == nil || card.Live.Reason != runs.Reason{Kind: runs.ReasonPermission, Permission: "Bash"}) {
 			t.Fatalf("AL-3 live = %+v", card.Live)
 		}
 	}

@@ -21,10 +21,14 @@ const live = {
   done: 1,
   total: 3,
   step: "Fix header",
-  permission: "Bash",
-  waitingOn: "",
-  question: "",
-  questionAnswered: false,
+  reason: {
+    kind: "permission",
+    permission: "Bash",
+    question: "",
+    answered: false,
+    waitingOn: "",
+    agentType: "",
+  },
   lastActivity: "2026-10-06T07:00:00Z",
 };
 const run = {
@@ -47,6 +51,14 @@ const run = {
   dirty: true,
   noHandoff: false,
   permission: "",
+  reason: {
+    kind: "",
+    permission: "",
+    question: "",
+    answered: false,
+    waitingOn: "",
+    agentType: "",
+  },
   started: "2026-10-06T07:00:00Z",
   lastActivity: "2026-10-06T07:05:00Z",
   ended: "",
@@ -60,6 +72,7 @@ const run = {
     {
       id: "q-1",
       run: "claude:s",
+      runShort: "claude:s",
       ticket: "AL-3",
       kind: "decision",
       text: "Which schema?",
@@ -87,8 +100,17 @@ describe("run validators", () => {
     expect(
       isRun({ ...run, questions: [{ ...run.questions[0], kind: "chat" }] }),
     ).toBe(false);
-    expect(isLive({ ...live, question: "decision" })).toBe(true);
-    expect(isLive({ ...live, question: "chat" })).toBe(false);
+    expect(
+      isRun({
+        ...run,
+        questions: [{ ...run.questions[0], runShort: undefined }],
+      }),
+    ).toBe(false);
+    const asked = { ...live.reason, kind: "question", question: "decision" };
+    expect(isLive({ ...live, reason: asked })).toBe(true);
+    expect(isLive({ ...live, reason: { ...asked, question: "chat" } })).toBe(
+      false,
+    );
   });
 
   it("reject unknown states and missing fields", () => {
@@ -97,7 +119,13 @@ describe("run validators", () => {
       false,
     );
     expect(isLive({ ...live, state: "busy" })).toBe(false);
-    expect(isLive({ ...live, waitingOn: undefined })).toBe(false);
+    expect(isLive({ ...live, reason: undefined })).toBe(false);
+    expect(isLive({ ...live, reason: { ...live.reason, kind: "busy" } })).toBe(
+      false,
+    );
+    expect(isRun({ ...run, reason: { ...run.reason, waitingOn: 1 } })).toBe(
+      false,
+    );
     expect(isRun({ ...run, kind: "thread" })).toBe(false);
     expect(isRun({ ...run, timeline: [{ kind: "turn.start" }] })).toBe(false);
   });

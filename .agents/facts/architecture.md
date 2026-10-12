@@ -30,7 +30,9 @@ Intended layout (packages are created when they get real content):
   the turn-end and session-end hooks only (FH-53); one bounded
   `git status` (and `git log` when HEAD moved), without optional locks.
 - `internal/runs`: pure run-state derivation, links, claims and flags from
-  events and a clock; it reads `events`' envelope types and no files.
+  events and a clock, and why a run needs you (`Reason`, D39), which the
+  API sends typed and the frontend only words; it reads `events`' envelope
+  types and no files.
 - `internal/protocol`: `PROTOCOL_VERSION`, recovery note and protocol text
   rendering shared by hooks, MCP and setup.
 - `internal/logfile`: also owns `hook-errors.log` (HOOK-1).

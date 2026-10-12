@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { Card } from "../../api/board";
+import { noReason } from "../../api/runs";
 import type { Density } from "../filters/FilterBar";
 import { TicketCard } from "./TicketCard";
 
@@ -186,10 +187,7 @@ describe("TicketCard live badge", () => {
     done: 0,
     total: 0,
     step: "",
-    permission: "",
-    waitingOn: "",
-    question: "" as const,
-    questionAnswered: false,
+    reason: noReason,
     lastActivity: "2026-10-06T11:58:00Z",
   };
   // badge is the live badge's markup, up to the card's footer.

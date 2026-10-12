@@ -88,7 +88,7 @@ function RunCard({
         <RunStateLabel state={run.state} />
         {run.state === "needs-you" ? (
           <span className="font-semibold text-ink">
-            {needsReason(run, subagents)}
+            {needsReason(run.reason, run.id)}
           </span>
         ) : null}
         <h3 id={headingId} className="flex items-baseline gap-1.5">
@@ -98,8 +98,7 @@ function RunCard({
                 {run.agentType || "Subagent"}
               </span>
               <span className="font-normal text-ink-muted">
-                subagent of{" "}
-                <span title={run.parent}>{shortID(run.parent)}</span>
+                subagent of <span title={run.parent}>{shortID(run.short)}</span>
               </span>
             </>
           ) : (
@@ -115,7 +114,7 @@ function RunCard({
                 {runAgentName(run)}
               </span>
               <span className="font-normal text-ink-muted" title={run.id}>
-                {shortID(run.id)}
+                {shortID(run.short)}
               </span>
             </>
           )}
@@ -156,7 +155,7 @@ function RunCard({
             </span>
           </h4>
           <ul
-            aria-label={`Subagents of ${shortID(run.id)}`}
+            aria-label={`Subagents of ${shortID(run.short)}`}
             className="ml-1.5 border-l border-ink/40"
           >
             {subagents.map((child) => (
@@ -233,7 +232,7 @@ function SubagentRow({
         <span className="min-w-0 flex-1 truncate text-ink-muted">
           {run.state === "needs-you" ? (
             <span className="font-semibold text-ink">
-              {needsReason(run, [])}{" "}
+              {needsReason(run.reason, run.id)}{" "}
             </span>
           ) : null}
           {elsewhere ? (
