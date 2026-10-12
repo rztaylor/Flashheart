@@ -504,13 +504,19 @@ func (l *Log) lines(project, file string, offset int64, fn func(line []byte)) (i
 }
 
 // Prune deletes a project's event files dated more than days before now's
-// UTC date and reports how many it removed.
+// UTC date, and the answers inboxes last written on those days, and reports
+// how many files it removed. An inbox goes with its day's events (FH-82):
+// the question.answered events behind its answers have expired, so no
+// reader of the log can deliver them any more, and no prompt of its session
+// has come since it was written, or the prompt hook would have taken it;
+// the answers stay in their tickets' Notes.
 func (l *Log) Prune(project string, now time.Time, days int) (int, error) {
 	files, err := l.store.EventFiles(project)
 	if err != nil {
 		return 0, err
 	}
-	cutoff := FileName(now.UTC().AddDate(0, 0, -days))
+	day := now.UTC().AddDate(0, 0, -days)
+	cutoff := FileName(day)
 	removed := 0
 	for _, file := range files {
 		if file >= cutoff {
@@ -521,7 +527,8 @@ func (l *Log) Prune(project string, now time.Time, days int) (int, error) {
 		}
 		removed++
 	}
-	return removed, nil
+	inboxes, err := l.store.PruneInboxes(project, time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC))
+	return removed + inboxes, err
 }
 
 // Delivery is one answer waiting in a session's inbox for its next prompt

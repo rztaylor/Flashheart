@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/runs"
 )
 
 // Throttled tool activity (FH-55, agent-protocol §3). Adapters report every
@@ -87,6 +88,20 @@ func (s *sessionState) run(id string) *runState {
 	return r
 }
 
+// expire forgets the runs whose latest hook event is stale_hours before at
+// (FH-82): the stale rule has ended them (agent-protocol §4), so what they
+// left pending is dropped rather than recorded now, which would date it
+// wrongly and reopen them. A session that never reports its end keeps
+// nothing for longer, and retention removes its file (store.PruneActivity).
+func (s *sessionState) expire(at time.Time) {
+	stale := runs.DefaultSettings().Stale
+	for id, r := range s.Runs {
+		if at.Sub(r.Last) >= stale {
+			delete(s.Runs, id)
+		}
+	}
+}
+
 // bound keeps the most recently active runs.
 func (s *sessionState) bound() {
 	for len(s.Runs) > maxStateRuns {
@@ -144,8 +159,15 @@ func throttle(state *sessionState, list []events.Event, at time.Time, interval t
 	var out []events.Event
 	for _, e := range list {
 		if e.Kind != events.ToolUsed {
-			if e.Kind == events.TurnEnd || e.Kind == events.RunEnd {
+			switch {
+			case e.Kind == events.TurnEnd || e.Kind == events.RunEnd:
 				out = append(out, flushRuns(state, e, at)...)
+			case e.Kind == events.RunStart && state.Runs[e.Run] != nil:
+				// A run starting again after a crash (it reported no end)
+				// records what its last life left pending first (FH-82).
+				if record, ok := state.Runs[e.Run].flush(e, at, nil); ok {
+					out = append(out, record)
+				}
 			}
 			out = append(out, e)
 			if e.Kind == events.RunEnd {
@@ -243,6 +265,7 @@ func record(log *events.Log, project string, list []events.Event, apply func(*se
 	var appended []events.Event
 	err := log.AppendWithState(project, session, func(raw []byte) ([]byte, []events.Event, error) {
 		state := decodeState(raw)
+		state.expire(list[0].Time)
 		appended = apply(state)
 		return state.encode(), appended, nil
 	})

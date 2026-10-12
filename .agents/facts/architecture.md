@@ -45,7 +45,9 @@ Intended layout (packages are created when they get real content):
   `hook-errors.log`'s path is `logfile.HookErrorsPath`.
 - `internal/events`: event envelope and kinds, locked JSONL append (alone
   or with a session's hook activity state, under one project lock), daily
-  rotation, retention, tolerant reading, and answer delivery: `Deliver`
+  rotation, retention (an answers inbox expires with its day's events;
+  `app` also expires hook activity state after `stale_hours`, FH-82),
+  tolerant reading, and answer delivery: `Deliver`
   is the one routine every path (prompt and session-start hooks, `await`,
   `board_context`, the MCP server's tool results) hands answers over
   through, returning what it took even when recording delivery fails
