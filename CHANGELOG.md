@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Agents write tickets a person can read at a glance (FH-113). The
+  flashheart skill gains a *Writing tickets* section: a title says what a
+  person would notice or gain, in plain words; the description gives the
+  problem, why it matters and the proposed change; implementation detail
+  goes in the new `create_ticket` `context` input, saved under the
+  ticket's Context section. `create_ticket` and `update_ticket` repeat the
+  advice where agents read it, and a title that reads like code or runs
+  past 80 characters is saved with a warning saying how to improve it
+  (protocol version unchanged).
+
 - Finished workstreams collapse on the Workstreams view (FH-68). A
   workstream whose tickets are all Done, Rejected or Archived shows only
   its route card head (name, *Completed*, `d of t served`) with a chevron;

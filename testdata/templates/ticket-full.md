@@ -31,6 +31,8 @@ Drag a card.
 
 ## Context
 
+`ui/dnd.ts` owns the drop.
+
 ## Notes
 
 None.

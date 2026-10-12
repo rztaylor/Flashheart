@@ -24,6 +24,9 @@ type NewTicket struct {
 	Session     string
 	// PlanOrRepro fills the Test Plan section, or Reproduction for a bug.
 	PlanOrRepro string
+	// Context fills the Context section: implementation detail kept below
+	// the description, which is written for a person (FH-113).
+	Context string
 	// Key is used only when the project has no key yet (KEY-5).
 	Key string
 }
@@ -66,7 +69,7 @@ func (t *NewTicket) Normalize() error {
 
 // RenderTicket is a new ticket's file (board-format §Ticket): the
 // frontmatter in its fixed order, then the sections of the template, with
-// the description and plan kept inside theirs (mdfile.SectionSafe). t is
+// the description, plan and context kept inside theirs (mdfile.SectionSafe). t is
 // normalized.
 func RenderTicket(id string, t NewTicket, now time.Time) ([]byte, error) {
 	body := []string{"# " + t.Title, "", "## " + SectionDescription, ""}
@@ -92,7 +95,11 @@ func RenderTicket(id string, t NewTicket, now time.Time) ([]byte, error) {
 	if plan := mdfile.SectionSafe(strings.TrimSpace(t.PlanOrRepro)); plan != "" {
 		body = append(body, plan, "")
 	}
-	body = append(body, "## "+SectionContext, "", "## "+SectionNotes, "", "None.", "")
+	body = append(body, "## "+SectionContext, "")
+	if context := mdfile.SectionSafe(strings.TrimSpace(t.Context)); context != "" {
+		body = append(body, context, "")
+	}
+	body = append(body, "## "+SectionNotes, "", "None.", "")
 	return setFields([]byte("---\n---\n"+strings.Join(body, "\n")), []field{
 		{key: "id", value: id},
 		{key: "status", value: string(t.Status)},
