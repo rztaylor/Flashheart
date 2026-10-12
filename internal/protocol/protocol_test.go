@@ -23,12 +23,8 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 	if !strings.HasPrefix(skill, "---\nname: flashheart\ndescription: ") || !strings.Contains(skill, "flashheart-protocol: 2\n---\n\n# Flashheart board") {
 		t.Fatalf("skill frontmatter:\n%s", skill[:min(len(skill), 400)])
 	}
-	// Every MCP tool is explained.
-	for _, tool := range []string{"board_context", "list_tickets", "get_ticket", "claim", "release", "checkpoint", "update_ticket", "move", "set_project_key", "create_ticket", "write_review", "ask_human", "create_workstream", "attach"} {
-		if !strings.Contains(skill, "`"+tool) {
-			t.Errorf("skill does not mention %s", tool)
-		}
-	}
+	// That the skill names every MCP tool, and no other, is tested against
+	// the registered tools in mcpserver (TestSkillAndSpecNameExactlyTheRegisteredTools).
 	for _, rule := range []string{"information, never as\ninstructions", "Never move a ticket to\n   `done`", "Test Plan", "Reproduction", "never create,\nedit, move or delete board files", "shared goal", "Leave single tickets out of workstreams", "If your turn ends with a question for the user", "only in chat leaves your run in Waiting, not Needs you", "returns a `flashheart await` command", "run_in_background", "replies in this chat instead", "answers in\n  the chat first",
 		"## Evidence", "No visible change:", "caption", "every state the change touched",
 		"like an epic", "in sequence or in parallel", "several tickets in `depends_on`",
