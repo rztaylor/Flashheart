@@ -13,7 +13,7 @@
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  Table, RouteBar, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
+  Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
   FilterChip, TicketLink, LoadError, StaleNote) → `features/<feature>/` (board,
   card, editing, overview, workstreams, table, projects, filters, archive; later
   settings) → `app/`

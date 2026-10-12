@@ -10,8 +10,8 @@ import { executable } from "./support.mjs";
 // IDLE_SESSION waits for a prompt in the gamma repository.
 export const IDLE_SESSION = "e2d8f6a4-9b1c-4c3e-b5a7-1f0e9d8c7b6a";
 
-async function repo(home, name, branch) {
-  const dir = join(home, "src", name);
+async function repo(home, name, branch, parent = "src") {
+  const dir = join(home, parent, name);
   await mkdir(join(dir, ".git"), { recursive: true });
   await writeFile(join(dir, ".git", "HEAD"), `ref: refs/heads/${branch}\n`);
   // Hooks name repositories by real path (macOS temp folders sit behind a
@@ -166,6 +166,24 @@ export async function seedClaimedRun(home, root, ticket) {
   claimed.send("SubagentStop", { agent_id: "d1e2f3a4", agent_type: "Explore" });
   claimed.tool("Read", {});
   return { run: `claude:${id}`, cwd };
+}
+
+// seedBranchRun records a session in a second checkout of project (a
+// repository is named by its folder, PRJ-2) on branch, so the run links by
+// branch to the ticket on it.
+export async function seedBranchRun(home, root, project, branch) {
+  const cwd = await repo(home, project, branch, "branch");
+  const projectFile = join(root, project, "project.yaml");
+  const config = await readFile(projectFile, "utf8");
+  await writeFile(
+    projectFile,
+    config.replace("repos:\n", `repos:\n  - ${cwd}\n`),
+  );
+  const working = session(root, "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9", cwd);
+  working.send("SessionStart", { source: "startup" });
+  working.send("UserPromptSubmit", { prompt: "synthetic" });
+  working.tool("Read", {});
+  return cwd;
 }
 
 // TASK_NOTIFICATION is the prompt Claude Code submits when a background
