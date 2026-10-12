@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { Card } from "../api/board";
-import type { Question, Run, TicketSessions } from "../api/runs";
+import {
+  type NeedsReason,
+  noReason,
+  type Question,
+  type Run,
+  type TicketSessions,
+} from "../api/runs";
 import {
   overview,
   pipelineStages,
@@ -80,6 +86,7 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     dirty: false,
     noHandoff: false,
     permission: "",
+    reason: noReason,
     started: "2026-10-05T10:00:00Z",
     lastActivity: "2026-10-05T10:00:00Z",
     ended: "",
@@ -94,10 +101,17 @@ function run(id: string, patch: Partial<Run> = {}): Run {
   };
 }
 
+// reason is the server's reason (FH-98).
+const reason = (patch: Partial<NeedsReason>): NeedsReason => ({
+  ...noReason,
+  ...patch,
+});
+
 function question(id: string, patch: Partial<Question> = {}): Question {
   return {
     id,
     run: "claude:q",
+    runShort: "claude:q",
     kind: "decision",
     text: "Which way?",
     asked: "2026-10-05T11:00:00Z",
@@ -397,6 +411,7 @@ describe("overview", () => {
   it("lists open questions and permission prompts, oldest first, with or without a ticket", () => {
     const asking = run("claude:asking", {
       state: "needs-you",
+      reason: reason({ kind: "question", question: "decision" }),
       ticket: "AL-1",
       ticketTitle: "Run on AL-1",
       branch: "feature/one",
@@ -418,6 +433,7 @@ describe("overview", () => {
     const permission = run("claude:perm", {
       state: "needs-you",
       permission: "Bash",
+      reason: reason({ kind: "permission", permission: "Bash" }),
       project: "beta",
       branch: "main",
       lastActivity: "2026-10-05T11:10:00Z",
@@ -427,6 +443,12 @@ describe("overview", () => {
       ticket: "AL-1",
       ticketTitle: "Run on AL-1",
       children: ["claude:parent/sub"],
+      reason: reason({
+        kind: "permission",
+        permission: "WebFetch",
+        waitingOn: "claude:parent/sub",
+        agentType: "Explore",
+      }),
       lastActivity: "2026-10-05T11:45:00Z",
     });
     const sub = run("claude:parent/sub", {
@@ -435,6 +457,7 @@ describe("overview", () => {
       ticket: "AL-1",
       ticketTitle: "Run on AL-1",
       permission: "WebFetch",
+      reason: reason({ kind: "permission", permission: "WebFetch" }),
       lastActivity: "2026-10-05T11:44:00Z",
     });
     const ended = run("claude:ended", {
@@ -468,6 +491,24 @@ describe("overview", () => {
       reason: "Explore needs permission for WebFetch",
       ticket: { id: "AL-1", title: "X" },
     });
+  });
+
+  // A session's own prompt is listed beside its own question: the server
+  // names the prompt first, and each needs the human (FH-98).
+  it("lists a session's own prompt beside its own question", () => {
+    const both = run("claude:both", {
+      state: "needs-you",
+      permission: "Edit",
+      reason: reason({ kind: "permission", permission: "Edit" }),
+      lastActivity: "2026-10-05T11:10:00Z",
+      questions: [question("q-1", { run: "claude:both" })],
+    });
+    expect(
+      overview(cards, [both]).decision.map((item) => [item.key, item.reason]),
+    ).toEqual([
+      ["q-1", "Needs a decision"],
+      ["claude:both", "Permission for Edit"],
+    ]);
   });
 
   it("lists live sessions with no ticket, most recent first", () => {

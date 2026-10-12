@@ -37,7 +37,8 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   for (§7.1), its agent named from the client's `clientInfo` name at
   initialize (`claude-code` → `claude`, `codex-mcp-client` → `codex`, any
   other name lowercased to letters, digits and hyphens). Displayed shortened
-  to the first 8 characters of the session id. Agent ids match
+  to the agent and the first 8 characters of the session id
+  (`claude:3f2a9c1e`); a subagent shows its session's (D39). Agent ids match
   `[a-z][a-z0-9-]{0,31}`, session and subagent ids `[A-Za-z0-9_.-]{1,128}`
   (`events.RunID` owns the grammar). Hooks log and drop an event whose run
   id falls outside it or names another agent than the adapter's, and

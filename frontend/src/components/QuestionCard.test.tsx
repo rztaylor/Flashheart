@@ -8,6 +8,7 @@ const now = new Date("2026-10-06T10:05:00Z");
 const question: Question = {
   id: "q-1",
   run: "claude:s",
+  runShort: "claude:s",
   ticket: "FH-4",
   kind: "decision",
   text: "Keep <b>the</b> old schema?",

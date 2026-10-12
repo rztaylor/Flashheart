@@ -529,10 +529,6 @@ func (s *Set) answerInSession(r *Run, at time.Time) {
 	}
 }
 
-func (r *Run) openQuestion() bool {
-	return slices.ContainsFunc(r.Questions, Question.Open)
-}
-
 // settleChildren clears the pending permission prompts of a session's
 // subagents when the session itself moves on: a denial sends no event, and
 // a subagent may never report again, so the prompt would otherwise hold the
@@ -595,7 +591,7 @@ func (s *Set) lastActivity(r *Run) time.Time {
 
 // State derives a run's state at now (agent-protocol §4; first match wins).
 // A subagent ends with its session, and a session needs you while one of
-// its live subagents does.
+// its live subagents does; why it needs you is its reason.
 func (s *Set) State(id string, now time.Time, settings Settings) State {
 	r := s.runs[id]
 	if r == nil {
@@ -608,13 +604,8 @@ func (s *Set) State(id string, now time.Time, settings Settings) State {
 	if parent := s.runs[r.Parent]; parent != nil && s.State(parent.ID, now, settings) == Ended {
 		return Ended
 	}
-	if r.Permission != "" || r.openQuestion() {
+	if s.reason(r).Kind != "" {
 		return NeedsYou
-	}
-	for _, childID := range r.Children {
-		if child := s.runs[childID]; child != nil && (!child.ended && child.Permission != "" || child.openQuestion()) {
-			return NeedsYou
-		}
 	}
 	if !r.turnOpen {
 		return Waiting
@@ -794,6 +785,8 @@ type View struct {
 	NoHandoff bool
 	// Permission is the tool awaiting permission ("?" when unknown).
 	Permission string
+	// Reason is why the run needs you, zero unless State is NeedsYou.
+	Reason Reason
 
 	Started time.Time
 	// LastActivity includes the run's subagents.
@@ -815,6 +808,10 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 		r := s.runs[id]
 		state := s.State(id, now, settings)
 		link := s.Link(id, byBranch)
+		var reason Reason
+		if state == NeedsYou {
+			reason = s.reason(r)
+		}
 		views = append(views, View{
 			ID: r.ID, Agent: r.Agent, Kind: r.Kind, Parent: r.Parent, Project: r.Project,
 			Cwd: r.Cwd, Branch: r.Branch, Worktree: r.Worktree,
@@ -825,6 +822,7 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 			Dirty:      s.Dirty(id),
 			NoHandoff:  s.Dirty(id) && state == Ended && link.Ticket != "",
 			Permission: r.Permission,
+			Reason:     reason,
 			Started:    r.Started, LastActivity: s.lastActivity(r), EndedAt: r.EndedAt,
 			Tools: r.Tools, Edits: s.Edits(id),
 			Files:     slices.Clone(r.Files),

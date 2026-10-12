@@ -15,7 +15,7 @@ import { StateNote } from "../../components/StateNote";
 import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { type Paint, paintVars } from "../../model/paint";
-import { agentName, liveReason, STATE_LABEL } from "../../model/runs";
+import { agentName, needsReason, STATE_LABEL } from "../../model/runs";
 import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import type { Density } from "../filters/FilterBar";
@@ -296,7 +296,7 @@ const questionsWaiting = (count: number) =>
 function liveLabel(live: Live): string {
   const state =
     live.state === "needs-you"
-      ? `needs you: ${liveReason(live)}`
+      ? `needs you: ${needsReason(live.reason, live.run)}`
       : STATE_LABEL[live.state].toLowerCase();
   const plan =
     live.total > 0
@@ -334,7 +334,9 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
         </span>
       </span>
       {needsYou ? (
-        <span className="font-semibold text-ink">{liveReason(live)}</span>
+        <span className="font-semibold text-ink">
+          {needsReason(live.reason, live.run)}
+        </span>
       ) : null}
       {step ? (
         <span className="truncate text-ink" title={live.step}>

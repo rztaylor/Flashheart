@@ -8,7 +8,7 @@ import {
   type ProjectSummary,
 } from "../api/board";
 import type { Question, Run, TicketSessions } from "../api/runs";
-import { permissionReason, questionReason, reasonFor } from "./runs";
+import { needsReason, questionReason } from "./runs";
 import { type StateTone, statusOf } from "./status";
 
 export type SectionId =
@@ -224,21 +224,19 @@ function decisions(runs: Run[], cards: Map<string, Card>): DecisionItem[] {
         ticket: titled(question.ticket || run.ticket, run),
       });
     }
-    if (run.state !== "needs-you" || questions.length > 0) continue;
-    // A session waiting on a subagent is answered through that subagent,
-    // which is listed itself.
-    const waitsOnChild = runs.some(
-      (other) => other.parent === run.id && other.state === "needs-you",
-    );
-    if (waitsOnChild && !run.permission) continue;
+    // A run's own permission prompt is listed with it; one a session waits
+    // on through a subagent is listed with that subagent (the server's
+    // reason says whose it is, FH-98).
+    if (run.reason.kind !== "permission" || run.reason.waitingOn) continue;
     items.push({
       kind: "permission",
       key: run.id,
       run,
-      reason:
-        run.kind === "subagent"
-          ? reasonFor(run.permission, run.agentType || "Subagent")
-          : permissionReason(run.permission),
+      reason: needsReason(
+        run.reason,
+        run.id,
+        run.kind === "subagent" ? run.agentType || "Subagent" : "",
+      ),
       since: run.lastActivity,
       project: run.project,
       branch: run.branch,

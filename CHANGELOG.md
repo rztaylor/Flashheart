@@ -100,6 +100,20 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- A card's live badge, its Runs tab and the Overview now give the same
+  reason a run needs you (FH-98, D39). Flashheart derives it once with the
+  run's state: the run's own permission prompt, then its own question, then
+  a subagent's prompt, then a subagent's question, then an answer still on
+  its way. A session with its own open question while a subagent waits on a
+  permission prompt used to show the subagent's prompt on its card and the
+  question on its Runs tab; both now name the question, and the
+  subagent's prompt shows on the subagent's row and in the Overview. A
+  card whose session waits on a subagent's question now names the
+  subagent ("Explore has a question"), as the Runs tab did, and the
+  Overview lists a session's own permission prompt even when it also has a
+  question. Short run ids come from the server: a subagent shows its
+  session's id (`claude:3f2a9c1e`), as the ticket's notes and handoffs
+  name it, not its own.
 - `serve` keeps up with busy agents without rereading the board (FH-96, D38).
   An agent's hook events now only refold the runs over the board already
   read, where each batch used to reparse every ticket; an event recording

@@ -42,26 +42,17 @@ func countsJSON(c index.RunCounts) RunCountsJSON {
 }
 
 // LiveJSON is a card's live badge (VIEW-8): the linked run that most needs
-// attention.
+// attention, with why it needs you (the reason its Runs tab words too).
 type LiveJSON struct {
-	Run        string `json:"run"`
-	Short      string `json:"short"`
-	Agent      string `json:"agent"`
-	State      string `json:"state"`
-	Done       int    `json:"done"`
-	Total      int    `json:"total"`
-	Step       string `json:"step"`
-	Permission string `json:"permission"`
-	// WaitingOn names the subagent (by type) whose permission prompt holds
-	// the run; empty when the prompt is the run's own.
-	WaitingOn string `json:"waitingOn"`
-	// Question is the kind of the open question the run (or a subagent)
-	// is waiting on when that, not a permission prompt, is why it needs you.
-	Question string `json:"question"`
-	// QuestionAnswered means that question has an answer waiting for the
-	// session's next prompt.
-	QuestionAnswered bool   `json:"questionAnswered"`
-	LastActivity     string `json:"lastActivity"`
+	Run          string      `json:"run"`
+	Short        string      `json:"short"`
+	Agent        string      `json:"agent"`
+	State        string      `json:"state"`
+	Done         int         `json:"done"`
+	Total        int         `json:"total"`
+	Step         string      `json:"step"`
+	Reason       runs.Reason `json:"reason"`
+	LastActivity string      `json:"lastActivity"`
 }
 
 // SessionsJSON summarises the sessions working for a ticket (RUN-9): the
@@ -129,6 +120,7 @@ type RunJSON struct {
 	Dirty        bool              `json:"dirty"`
 	NoHandoff    bool              `json:"noHandoff"`
 	Permission   string            `json:"permission"`
+	Reason       runs.Reason       `json:"reason"`
 	Started      string            `json:"started"`
 	LastActivity string            `json:"lastActivity"`
 	Ended        string            `json:"ended"`
@@ -138,8 +130,26 @@ type RunJSON struct {
 	Files        []string          `json:"files"`
 	Plan         []events.PlanItem `json:"plan"`
 	Progress     runs.Progress     `json:"progress"`
-	Questions    []runs.Question   `json:"questions"`
+	Questions    []QuestionJSON    `json:"questions"`
 	Timeline     []runs.Entry      `json:"timeline,omitempty"`
+}
+
+// QuestionJSON is a question with its asking run's short id, as people see
+// it (agent-protocol §2).
+type QuestionJSON struct {
+	runs.Question
+	RunShort string `json:"runShort"`
+}
+
+// questionsJSON adds each question's run short id; ended marks them asked
+// by a run that has ended (RUN-8), as Snapshot.Questions already does.
+func questionsJSON(list []runs.Question, ended bool) []QuestionJSON {
+	out := make([]QuestionJSON, len(list))
+	for index, q := range list {
+		q.SessionEnded = q.SessionEnded || ended
+		out[index] = QuestionJSON{Question: q, RunShort: protocol.ShortRun(q.Run)}
+	}
+	return out
 }
 
 // RunsResponse is GET /api/runs[?project=][&ended=all].
@@ -167,13 +177,10 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 		ID: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, Kind: v.Kind, Parent: v.Parent,
 		Children: nonNil(v.Children), Project: v.Project, Cwd: v.Cwd, Branch: v.Branch, Worktree: v.Worktree,
 		Source: v.Source, AgentType: v.AgentType, State: string(v.State),
-		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission,
+		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission, Reason: v.Reason,
 		Started: timestamp(v.Started), LastActivity: timestamp(v.LastActivity), Ended: timestamp(v.EndedAt), EndReason: v.EndReason,
 		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files), Plan: nonNil(v.Plan), Progress: v.Progress,
-		Questions: nonNil(v.Questions),
-	}
-	for index := range result.Questions {
-		result.Questions[index].SessionEnded = v.State == runs.Ended
+		Questions: questionsJSON(v.Questions, v.State == runs.Ended),
 	}
 	if v.Link.Ticket != "" {
 		if _, ticket, ok := snapshot.FindTicket(v.Link.Ticket); ok {
@@ -250,37 +257,10 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 	card.Live = &LiveJSON{
 		Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(v.State),
 		Done: v.Progress.Done, Total: v.Progress.Total, Step: v.Progress.Current,
-		Permission: v.Permission, LastActivity: timestamp(v.LastActivity),
-	}
-	if v.State == runs.NeedsYou && v.Permission == "" {
-		for _, child := range snapshot.Subagents(v.ID) {
-			if child.State == runs.NeedsYou && child.Permission != "" {
-				card.Live.Permission, card.Live.WaitingOn = child.Permission, child.AgentType
-				if card.Live.WaitingOn == "" {
-					card.Live.WaitingOn = "Subagent"
-				}
-				break
-			}
-		}
-	}
-	if v.State == runs.NeedsYou && card.Live.Permission == "" {
-		card.Live.Question, card.Live.QuestionAnswered = openQuestion(snapshot, v)
+		Reason: v.Reason, LastActivity: timestamp(v.LastActivity),
 	}
 	card.NeedsYou = card.NeedsYou || v.State == runs.NeedsYou
 	card.AgentWorking = v.State == runs.Working || v.State == runs.Quiet
-}
-
-// openQuestion is the kind of the first open question of a run or its
-// subagents, and whether it is answered and waiting for delivery.
-func openQuestion(snapshot *index.Snapshot, v runs.View) (string, bool) {
-	for _, run := range snapshot.Family(v.ID) {
-		for _, q := range run.Questions {
-			if q.Open() {
-				return q.Kind, q.Answered()
-			}
-		}
-	}
-	return "", false
 }
 
 // ticketRuns lists a ticket's runs with timelines for its Runs tab, with

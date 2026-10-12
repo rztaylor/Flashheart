@@ -31,7 +31,7 @@ import {
   type SectionId,
   sectionOpen,
 } from "../../model/overview";
-import { agentName, agentNote, shortID, shortRun } from "../../model/runs";
+import { agentName, agentNote, shortID } from "../../model/runs";
 import { absoluteTime, durationWords } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
@@ -499,7 +499,7 @@ export function DecisionRow({
   const title = ticket ? (
     <TicketTitle id={ticket.id} title={ticket.title} onOpen={onOpen} />
   ) : (
-    `Session ${shortID(run.id)}`
+    `Session ${shortID(run.short)}`
   );
   if (question) {
     return (
@@ -513,7 +513,7 @@ export function DecisionRow({
       >
         <QuestionCard
           question={question}
-          asker={shortRun(run.id)}
+          asker={question.runShort}
           now={now}
           headingLevel={3}
           onAnswer={
@@ -654,7 +654,7 @@ export function UnticketedRow({
 }) {
   return (
     <Row
-      title={`Session ${shortID(run.id)}`}
+      title={`Session ${shortID(run.short)}`}
       sub={where(run, projectNames)}
       agent={agentName(run.agent)}
       agentNote={agentNote(run)}

@@ -33,24 +33,44 @@ export const noRuns: RunCounts = {
   needsYouUnticketed: 0,
 };
 
+// NeedsReason is why a run in Needs you needs you, derived once on the
+// server so the card, the Runs tab and the Overview word the same blocker
+// (FH-98, D39). kind is "" when the run does not need you.
+export interface NeedsReason {
+  kind: "permission" | "question" | "";
+  // permission is the tool awaiting permission ("?" when unknown).
+  permission: string;
+  // question is the open question's kind; answered means its answer waits
+  // for delivery to the session.
+  question: QuestionKind | "";
+  answered: boolean;
+  // waitingOn is the subagent whose prompt or question it is, with its
+  // type ("" when unknown); both are empty when it is the run's own.
+  waitingOn: string;
+  agentType: string;
+}
+
+// noReason is the reason of a run that does not need you.
+export const noReason: NeedsReason = {
+  kind: "",
+  permission: "",
+  question: "",
+  answered: false,
+  waitingOn: "",
+  agentType: "",
+};
+
 // Live is a card's badge: the linked run that most needs attention.
 export interface Live {
   run: string;
+  // short is the run id as people see it (agent-protocol §2).
   short: string;
   agent: string;
   state: RunState;
   done: number;
   total: number;
   step: string;
-  permission: string;
-  // waitingOn names the subagent (by type) whose permission prompt the run
-  // is waiting on; empty when it is the session's own.
-  waitingOn: string;
-  // question is the kind of open question the run waits on, when that and
-  // not a permission prompt is why it needs you.
-  question: QuestionKind | "";
-  // questionAnswered: that question's answer waits for the next prompt.
-  questionAnswered: boolean;
+  reason: NeedsReason;
   lastActivity: string;
 }
 
@@ -79,6 +99,8 @@ export type QuestionKind = "question" | "decision" | "review" | "blocked";
 export interface Question {
   id: string;
   run: string;
+  // runShort is the asking run's short id (agent-protocol §2).
+  runShort: string;
   ticket?: string;
   kind: QuestionKind;
   text: string;
@@ -120,6 +142,9 @@ export interface TimelineEntry {
 
 export interface Run {
   id: string;
+  // short is the run id as people see it: the agent and the first 8
+  // characters of the session id, a subagent's its session's
+  // (agent-protocol §2).
   short: string;
   agent: string;
   kind: "session" | "subagent";
@@ -138,6 +163,7 @@ export interface Run {
   dirty: boolean;
   noHandoff: boolean;
   permission: string;
+  reason: NeedsReason;
   started: string;
   lastActivity: string;
   ended: string;
@@ -176,6 +202,20 @@ export function isRunCounts(value: unknown): value is RunCounts {
   );
 }
 
+function isReason(value: unknown): value is NeedsReason {
+  return (
+    isRecord(value) &&
+    (value.kind === "" ||
+      value.kind === "permission" ||
+      value.kind === "question") &&
+    isString(value.permission) &&
+    (value.question === "" || isQuestionKind(value.question)) &&
+    typeof value.answered === "boolean" &&
+    isString(value.waitingOn) &&
+    isString(value.agentType)
+  );
+}
+
 export function isLive(value: unknown): value is Live {
   return (
     isRecord(value) &&
@@ -186,10 +226,7 @@ export function isLive(value: unknown): value is Live {
     isNumber(value.done) &&
     isNumber(value.total) &&
     isString(value.step) &&
-    isString(value.permission) &&
-    isString(value.waitingOn) &&
-    (value.question === "" || isQuestionKind(value.question)) &&
-    typeof value.questionAnswered === "boolean" &&
+    isReason(value.reason) &&
     isString(value.lastActivity)
   );
 }
@@ -226,6 +263,7 @@ export function isQuestion(value: unknown): value is Question {
     isRecord(value) &&
     isString(value.id) &&
     isString(value.run) &&
+    isString(value.runShort) &&
     isQuestionKind(value.kind) &&
     isString(value.text) &&
     isString(value.asked) &&
@@ -256,6 +294,7 @@ export function isRun(value: unknown): value is Run {
     typeof value.dirty === "boolean" &&
     typeof value.noHandoff === "boolean" &&
     isString(value.permission) &&
+    isReason(value.reason) &&
     isString(value.lastActivity) &&
     isNumber(value.tools) &&
     isNumber(value.edits) &&

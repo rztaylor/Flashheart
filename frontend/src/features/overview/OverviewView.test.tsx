@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Card } from "../../api/board";
-import type { Run } from "../../api/runs";
+import { noReason, type Run } from "../../api/runs";
 import { QuestionCard } from "../../components/QuestionCard";
 import { overview } from "../../model/overview";
 import {
@@ -72,6 +72,7 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     dirty: false,
     noHandoff: false,
     permission: "",
+    reason: noReason,
     started: "2026-10-05T10:00:00Z",
     lastActivity: "2026-10-05T11:50:00Z",
     ended: "",
@@ -89,10 +90,12 @@ function run(id: string, patch: Partial<Run> = {}): Run {
 const asking = run("claude:3f2a9c1e-0000", {
   state: "needs-you",
   ticket: "AL-1",
+  reason: { ...noReason, kind: "question", question: "decision" },
   questions: [
     {
       id: "q-1",
       run: "claude:3f2a9c1e-0000",
+      runShort: "claude:3f2a9c1e",
       ticket: "AL-1",
       kind: "decision",
       text: "Keep the old schema?",
@@ -104,6 +107,7 @@ const asking = run("claude:3f2a9c1e-0000", {
 const permission = run("claude:b7c4e9f2-0000", {
   state: "needs-you",
   permission: "Bash",
+  reason: { ...noReason, kind: "permission", permission: "Bash" },
   project: "beta",
   branch: "spike/offline",
   lastActivity: "2026-10-05T11:48:00Z",

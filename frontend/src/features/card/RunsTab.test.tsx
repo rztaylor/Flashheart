@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { Run } from "../../api/runs";
+import { noReason, type Run } from "../../api/runs";
 import { RunsTab } from "./RunsTab";
 
 const session = "claude:3f2a9c1e-0000-0000-0000-000000000000";
@@ -27,6 +27,7 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     dirty: false,
     noHandoff: false,
     permission: "",
+    reason: noReason,
     started: "2026-10-04T13:00:00Z",
     lastActivity: "2026-10-04T13:29:00Z",
     ended: "",
@@ -49,6 +50,13 @@ describe("RunsTab with subagents", () => {
     run(session, {
       state: "needs-you",
       children: [`${session}/b1`, `${session}/b2`, `${session}/b3`],
+      reason: {
+        ...noReason,
+        kind: "permission",
+        permission: "Bash",
+        waitingOn: `${session}/b3`,
+        agentType: "Explore",
+      },
     }),
     run(`${session}/b1`, { state: "ended", ended: "2026-10-04T13:28:00Z" }),
     run(`${session}/b2`, {
@@ -61,7 +69,11 @@ describe("RunsTab with subagents", () => {
       ],
       progress: { done: 1, total: 2, current: "Write the tests" },
     }),
-    run(`${session}/b3`, { state: "needs-you", permission: "Bash" }),
+    run(`${session}/b3`, {
+      state: "needs-you",
+      permission: "Bash",
+      reason: { ...noReason, kind: "permission", permission: "Bash" },
+    }),
   ];
   const markup = renderToStaticMarkup(
     <RunsTab detail={{ id: "AL-3", branch: "", runs }} />,
@@ -83,6 +95,9 @@ describe("RunsTab with subagents", () => {
 
   it("says which subagent holds the session", () => {
     expect(markup).toContain("Explore needs permission for Bash");
+    // The subagent's own row says what it needs.
+    const tree = markup.slice(markup.indexOf('aria-label="Subagents of'));
+    expect(tree).toContain("Permission for Bash");
   });
 });
 

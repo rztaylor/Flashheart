@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import type { Run, TimelineEntry } from "../api/runs";
+import {
+  type NeedsReason,
+  noReason,
+  type Run,
+  type TimelineEntry,
+} from "../api/runs";
 import {
   agentName,
   agentNote,
   compactTimeline,
   counted,
   describeEntry,
-  liveReason,
   mcpOnly,
   needsReason,
   needsYouPhrase,
@@ -40,6 +44,7 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     dirty: false,
     noHandoff: false,
     permission: "",
+    reason: noReason,
     started: "2026-10-05T10:00:00Z",
     lastActivity: "2026-10-05T10:00:00Z",
     ended: "",
@@ -292,65 +297,49 @@ it("says what a run waiting on permission needs", () => {
   expect(permissionReason("")).toBe("Waiting for permission");
 });
 
-it("names the subagent a session is waiting on", () => {
-  const session = run("claude:s", { state: "needs-you" });
-  const explore = run("claude:s/x", {
-    state: "needs-you",
-    agentType: "Explore",
-    permission: "Bash",
+it("words the reason the server derived for a run", () => {
+  const reason = (patch: Partial<NeedsReason>): NeedsReason => ({
+    ...noReason,
+    ...patch,
   });
-  expect(needsReason(session, [explore])).toBe(
+  const own = reason({ kind: "permission", permission: "Bash" });
+  expect(needsReason(own, "claude:s")).toBe("Permission for Bash");
+  expect(needsReason({ ...own, permission: "?" }, "claude:s")).toBe(
+    "Waiting for permission",
+  );
+  const child = { waitingOn: "claude:s/x", agentType: "Explore" };
+  expect(needsReason({ ...own, ...child }, "claude:s")).toBe(
     "Explore needs permission for Bash",
   );
-  expect(needsReason({ ...session, permission: "Edit" }, [explore])).toBe(
-    "Permission for Edit",
-  );
-  expect(needsReason(session, [])).toBe("Waiting for permission");
   expect(
-    needsReason(session, [{ ...explore, agentType: "", permission: "?" }]),
+    needsReason(
+      { ...own, ...child, agentType: "", permission: "?" },
+      "claude:s",
+    ),
   ).toBe("Subagent needs permission");
-});
-
-it("gives a card's live run the same reason as its run on the Runs tab", () => {
-  const live = {
-    run: "claude:s",
-    short: "claude:s",
-    agent: "claude",
-    state: "needs-you" as const,
-    done: 0,
-    total: 0,
-    step: "",
-    permission: "Bash",
-    waitingOn: "Explore",
-    question: "" as const,
-    questionAnswered: false,
-    lastActivity: "",
-  };
-  expect(liveReason(live)).toBe("Explore needs permission for Bash");
-  expect(liveReason({ ...live, waitingOn: "" })).toBe("Permission for Bash");
+  // A subagent the Overview lists on its own is named by its type.
+  expect(needsReason(own, "claude:s/x", "Explore")).toBe(
+    "Explore needs permission for Bash",
+  );
+  const asked = reason({ kind: "question", question: "decision" });
+  expect(needsReason(asked, "claude:s")).toBe("Needs a decision");
+  expect(needsReason({ ...asked, answered: true }, "claude:s")).toBe(
+    "Answer waits for its next prompt",
+  );
   expect(
-    liveReason({
-      ...live,
-      permission: "",
-      waitingOn: "",
-      question: "decision",
-    }),
-  ).toBe("Needs a decision");
+    needsReason({ ...asked, answered: true }, "codex:mcp-0a1b2c3d4e5f"),
+  ).toBe("Answer waits for its next tool call");
   expect(
-    liveReason({
-      ...live,
-      permission: "",
-      waitingOn: "",
-      question: "decision",
-      questionAnswered: true,
-    }),
-  ).toBe("Answer waits for its next prompt");
+    needsReason({ ...asked, ...child, agentType: "Plan" }, "claude:s"),
+  ).toBe("Plan needs a decision");
+  expect(needsReason(noReason, "claude:s")).toBe("");
 });
 
 it("says what a question asks for, and when its answer is on its way", () => {
   const asked = {
     id: "q-1",
     run: "claude:s",
+    runShort: "claude:s",
     kind: "review" as const,
     text: "Is the layout right?",
     asked: "2026-10-05T10:00:00Z",
@@ -374,25 +363,12 @@ it("says what a question asks for, and when its answer is on its way", () => {
       answeredAt: "2026-10-05T10:01:00Z",
     }),
   ).toBe("Answer waits for its next tool call");
-  const session = run("claude:s", { state: "needs-you", questions: [asked] });
-  expect(needsReason(session, [])).toBe("Asks for a review");
-  // A permission prompt is named before a question.
-  expect(needsReason({ ...session, permission: "Bash" }, [])).toBe(
-    "Permission for Bash",
-  );
-  const helper = run("claude:s/x", {
-    state: "needs-you",
-    agentType: "Plan",
-    questions: [{ ...asked, kind: "decision" }],
-  });
-  expect(needsReason(run("claude:s", { state: "needs-you" }), [helper])).toBe(
-    "Plan needs a decision",
-  );
 });
 
 it("shortens run ids and counts things in words", () => {
-  expect(shortID("claude:3f2a9c1e-7b44-4d0e")).toBe("3f2a9c1e");
-  expect(shortID("claude:3f2a9c1e-7b44/ae8ecef8da6a4664f")).toBe("ae8ecef8");
+  // The server's short id, without the agent (agent-protocol §2).
+  expect(shortID("claude:3f2a9c1e")).toBe("3f2a9c1e");
+  expect(shortID("human")).toBe("human");
   expect(counted(1, "tool")).toBe("1 tool");
   expect(counted(3, "edit")).toBe("3 edits");
 });

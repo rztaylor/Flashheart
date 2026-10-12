@@ -1,7 +1,9 @@
 // Package api owns Flashheart's HTTP JSON endpoints under /api/: routing,
 // request validation, response shapes (cards with live run badges and
 // session summaries, project summaries with run counts, ticket detail with
-// its runs, workstreams, runs),
+// its runs, workstreams, runs; runs, badges and questions carry the run's
+// short id and runs and badges its typed Needs you reason, which the
+// frontend words),
 // long-polling for changes (LIFE-3), JSON errors and attachment response
 // headers (SEC-4).
 //
