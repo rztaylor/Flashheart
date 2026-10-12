@@ -354,6 +354,15 @@ settings:                 # per-project overrides of global config
   quiet_minutes: 10
 ```
 
+Flashheart edits only the fields it writes (`key`, `next_id`, `retired`,
+`repos`), adding a missing one at the end, and keeps every other line, the
+file's line endings and a byte-order mark (`STO-2`). Every reader treats
+problems alike: a file that does not parse contributes nothing, and a field
+of the wrong type or an invalid key is ignored; the board shows each as a
+project warning. A list may be written as a single value. A list that
+cannot be read is never replaced: adopting a repository or retiring an id
+is refused until it is repaired.
+
 ## config.yaml
 
 ```yaml

@@ -405,6 +405,52 @@ func TestCreateTicketKeepsACRLFProjectFile(t *testing.T) {
 	}
 }
 
+// A project.yaml with Windows line endings or a byte-order mark keeps its
+// name, repositories and encoding through every edit (FH-77).
+func TestProjectFileEditsKeepItsEncoding(t *testing.T) {
+	t.Parallel()
+
+	for name, encode := range map[string]func(string) string{
+		"crlf":     func(text string) string { return strings.ReplaceAll(text, "\n", "\r\n") },
+		"bom":      func(text string) string { return "\ufeff" + text },
+		"bom+crlf": func(text string) string { return "\ufeff" + strings.ReplaceAll(text, "\n", "\r\n") },
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			s, root := writable(t)
+			file := filepath.Join(root, "app", "project.yaml")
+			write(t, file, encode("name: My App\n"))
+			if got, err := s.ProjectFor("app", "/src/app", true); err != nil || got != "app" {
+				t.Fatalf("ProjectFor = %q, %v", got, err)
+			}
+			if err := s.SetProjectKey("app", "APP"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := s.CreateTicket("app", NewTicket{Title: "First"}); err != nil {
+				t.Fatal(err)
+			}
+			data, _ := os.ReadFile(file)
+			if want := encode("name: My App\nrepos: [/src/app]\nkey: APP\nnext_id: 2\n"); string(data) != want {
+				t.Errorf("project.yaml = %q, want %q", data, want)
+			}
+			project, err := s.ReadProject("app")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if project.DisplayName != "My App" || !slices.Equal(project.Repos, []string{"/src/app"}) || project.Key != "APP" || len(project.Warnings) != 0 {
+				t.Errorf("project = %q %v %q %v", project.DisplayName, project.Repos, project.Key, project.Warnings)
+			}
+			if again, err := s.ProjectFor("app", "/src/app", true); err != nil || again != "app" {
+				t.Errorf("second ProjectFor = %q, %v", again, err)
+			}
+			if after, _ := os.ReadFile(file); string(after) != string(data) {
+				t.Errorf("second ProjectFor rewrote project.yaml: %q", after)
+			}
+		})
+	}
+}
+
 func TestCreateTicketWritesNothingWhenProjectFileIsBroken(t *testing.T) {
 	t.Parallel()
 

@@ -60,6 +60,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A project whose `project.yaml` uses Windows line endings or a byte-order
+  mark keeps its name and repositories (FH-77). Before, adopting a
+  repository and then setting the project key wrote a second header into
+  the file, so the board showed the project under its folder name with no
+  repositories, and the next hook adopted the repository again. Every edit
+  of `project.yaml` now keeps the file's line endings, and every reader
+  treats problems alike: a field of the wrong type is shown as a project
+  warning and the other fields still count, and a list that cannot be read
+  is never replaced.
 - Text written into a ticket section can no longer split it (FH-87).
   This covers a handoff, a note, a new ticket's description or plan from
   the board or an agent, and a workstream's goal. A level-1 or level-2

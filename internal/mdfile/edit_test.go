@@ -305,3 +305,85 @@ func TestSectionWritesKeepTheirContentInside(t *testing.T) {
 		t.Errorf("fenced heading changed:\n%s", out)
 	}
 }
+
+// Plain YAML files such as project.yaml are edited in place, keeping their
+// other lines, line endings and byte-order mark (FH-77).
+func TestYAMLEditsKeepTheFileAndItsEncoding(t *testing.T) {
+	t.Parallel()
+
+	setKey := func(data []byte) ([]byte, error) { return SetYAMLScalar(data, "key", "NEW") }
+	tests := []struct {
+		name, data, want string
+		edit             func([]byte) ([]byte, error)
+	}{
+		{"replace", "name: App\nkey: OLD # chosen\nnext_id: 3\n", "name: App\nkey: NEW\nnext_id: 3\n", setKey},
+		{"append", "name: App\nrepos:\n  - /a\n# trailing comment\n", "name: App\nrepos:\n  - /a\n# trailing comment\nkey: NEW\n", setKey},
+		{"no final newline", "name: App\nnext_id: 3", "name: App\nnext_id: 3\nkey: NEW\n", setKey},
+		{"document markers", "---\nname: App\n...\n", "---\nname: App\nkey: NEW\n...\n", setKey},
+		{"unchanged", "name: App\nkey: NEW\n", "name: App\nkey: NEW\n", setKey},
+		{"empty", "", "repos: [/a]\n",
+			func(data []byte) ([]byte, error) { return SetYAMLList(data, "repos", []string{"/a"}) }},
+		{"comments only", "# Keys\n", "# Keys\nkeys: [AB]\n",
+			func(data []byte) ([]byte, error) { return SetYAMLList(data, "keys", []string{"AB"}) }},
+		{"block list", "repos:\n  - /a\nname: App\n", "repos:\n  - /a\n  - /b\nname: App\n",
+			func(data []byte) ([]byte, error) { return SetYAMLList(data, "repos", []string{"/a", "/b"}) }},
+	}
+	encodings := map[string]func(string) string{
+		"lf":       func(text string) string { return text },
+		"crlf":     func(text string) string { return strings.ReplaceAll(text, "\n", "\r\n") },
+		"bom":      func(text string) string { return "\ufeff" + text },
+		"bom+crlf": func(text string) string { return "\ufeff" + strings.ReplaceAll(text, "\n", "\r\n") },
+	}
+	for _, test := range tests {
+		for encoding, encode := range encodings {
+			if test.data == "" && strings.Contains(encoding, "crlf") {
+				continue // an empty file has no line endings to keep
+			}
+			input := []byte(encode(test.data))
+			got, err := test.edit(input)
+			if err != nil {
+				t.Fatalf("%s %s: %v", test.name, encoding, err)
+			}
+			if want := encode(test.want); string(got) != want {
+				t.Errorf("%s %s = %q, want %q", test.name, encoding, got, want)
+			}
+			if test.name == "unchanged" && &got[0] != &input[0] {
+				t.Errorf("%s %s: an edit that changes nothing returned new bytes", test.name, encoding)
+			}
+		}
+	}
+}
+
+func TestParseYAMLReadsAPlainMapping(t *testing.T) {
+	t.Parallel()
+
+	doc := ParseYAML([]byte("\ufeffname: My App\r\nrepos: /a\r\nnext_id: x\r\n"))
+	if doc.FrontmatterError != nil {
+		t.Fatal(doc.FrontmatterError)
+	}
+	if name, _ := doc.String("name"); name != "My App" {
+		t.Errorf("name = %q", name)
+	}
+	if repos := doc.List("repos"); len(repos) != 1 || repos[0] != "/a" {
+		t.Errorf("repos = %v", repos)
+	}
+	var next int
+	if err := doc.Decode("next_id", &next); err == nil || !strings.HasPrefix(err.Error(), "line 3: ") {
+		t.Errorf("Decode(next_id) = %v, want a line 3 error", err)
+	}
+	var missing int
+	if err := doc.Decode("absent", &missing); err != nil || missing != 0 {
+		t.Errorf("Decode(absent) = %d, %v", missing, err)
+	}
+	if fields := doc.Fields(); len(fields) != 3 || fields[2].Line != 3 {
+		t.Errorf("fields = %+v", fields)
+	}
+	for _, broken := range []string{"name: [oops\n", "- a\n- b\n"} {
+		if ParseYAML([]byte(broken)).FrontmatterError == nil {
+			t.Errorf("ParseYAML(%q) has no error", broken)
+		}
+		if _, err := SetYAMLScalar([]byte(broken), "key", "AB"); !errors.Is(err, ErrBrokenFrontmatter) || strings.Contains(err.Error(), "frontmatter") {
+			t.Errorf("SetYAMLScalar(%q) = %v, want ErrBrokenFrontmatter about YAML", broken, err)
+		}
+	}
+}

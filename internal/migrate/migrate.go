@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"go.yaml.in/yaml/v3"
-
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -144,7 +142,7 @@ func prepareProject(s *store.Store, name string, options Options) (Project, erro
 	case options.Keys[name] != "":
 		project.Key, project.KeySource = options.Keys[name], "--key"
 	default:
-		if key := projectFileKey(s, name); key != "" {
+		if key := s.ProjectFileKey(name); key != "" {
 			project.Key, project.KeySource = key, "project.yaml"
 		} else {
 			project.Key, project.KeySource = board.DeriveKey(name), "derived"
@@ -237,20 +235,6 @@ func prepareProject(s *store.Store, name string, options Options) (Project, erro
 		}
 	}
 	return project, nil
-}
-
-func projectFileKey(s *store.Store, name string) string {
-	data, err := s.ReadFile(path.Join(name, "project.yaml"))
-	if err != nil {
-		return ""
-	}
-	var parsed struct {
-		Key string `yaml:"key"`
-	}
-	if yaml.Unmarshal(data, &parsed) != nil || !board.ValidKey(parsed.Key) {
-		return ""
-	}
-	return parsed.Key
 }
 
 // resolveSlug maps a v1 reference ("slug" or "project/slug") to an id, or
