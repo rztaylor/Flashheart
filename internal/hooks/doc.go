@@ -7,9 +7,11 @@
 // makes edit paths repository-relative (events bounds and scrubs what is
 // stored), throttles tool results into activity records (at most one per
 // run per activity_seconds, with each newly edited path and permission
-// resolution at once and pending activity before a turn end or end),
+// resolution at once and pending activity before a turn end or end, or
+// before a run's start again after a crash),
 // keeping a session's pending activity in its state file under the
-// project lock (agent-protocol §3), appends the events, renders the
+// project lock and forgetting runs the stale rule has ended
+// (agent-protocol §3), appends the events, renders the
 // recovery note at session start
 // (after calling the caller's skill refresh and noting an update),
 // delivers waiting answers with a prompt and in the recovery note

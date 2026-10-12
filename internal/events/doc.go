@@ -11,7 +11,8 @@
 // selective reading that judges a line by its envelope header before
 // decoding its data (ReadSelected, or ReadHeaders for several passes over
 // lines held in memory),
-// expiring files after the retention period, and the answers inbox's line
+// expiring files after the retention period (with the answers inboxes last
+// written on those days, FH-82), and the answers inbox's line
 // format (answers queued for a session's next prompt, HOOK-5) with the
 // question.delivered events that record taking them, delivering answers
 // (Deliver: the one routine every delivery path uses; it takes inboxes,

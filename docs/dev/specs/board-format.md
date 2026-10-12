@@ -427,7 +427,10 @@ per line, appended under the project lock by `flashheart hook` (and later
 `mcp` and `serve`). Schema and event kinds:
 `docs/dev/specs/agent-protocol.md` §3. Events name tickets by id. Readers skip
 malformed lines and unknown kinds. Files older than `event_retention_days` are
-deleted by `serve` at startup and daily. The only other deletions are
+deleted by `serve` at startup and daily, with the answers inboxes last
+written on their days; at the same time `serve` deletes activity state no
+hook has written for `stale_hours` (12), left by a session that never
+reported its end (agent-protocol §3, §4; FH-82). The only other deletions are
 permanent deletes the user confirms: of an archived ticket (`EDIT-8`), whose
 events are left to this retention, and of an archived project (`PRJ-5`),
 whose event log goes with its directory.

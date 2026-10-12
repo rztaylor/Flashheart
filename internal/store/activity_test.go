@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // A session's activity state is read, appended with and replaced under the
@@ -48,5 +49,65 @@ func TestUpdateActivityKeepsStateWithTheLog(t *testing.T) {
 		if err := s.UpdateActivity("alpha", session, nil); !errors.Is(err, ErrInvalidName) {
 			t.Errorf("session %q: %v", session, err)
 		}
+	}
+}
+
+// Retention removes the session files nothing has written since before,
+// each checked again under the project lock (FH-82): activity state and
+// answers inboxes left by sessions that never reported their end.
+func TestPruneSessionFilesRemovesOnlyThoseWrittenBefore(t *testing.T) {
+	t.Parallel()
+
+	s, root := writable(t)
+	now := time.Now()
+	old, fresh := now.Add(-13*time.Hour), now.Add(-time.Hour)
+	write := func(name string, at time.Time) string {
+		t.Helper()
+		full := filepath.Join(root, "alpha", ".flashheart", name)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("{}\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(full, at, at); err != nil {
+			t.Fatal(err)
+		}
+		return full
+	}
+	gone := []string{write("activity/claude--old.json", old), write("answers/claude--old.jsonl", old)}
+	kept := []string{
+		write("activity/claude--fresh.json", fresh), write("answers/claude--fresh.jsonl", fresh),
+		write("activity/notes.txt", old), write("answers/notes.txt", old),
+	}
+	if err := os.MkdirAll(filepath.Join(root, "alpha", ".flashheart", "activity", "claude--dir.json"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cutoff := now.Add(-12 * time.Hour)
+	if removed, err := s.PruneActivity("alpha", cutoff); err != nil || removed != 1 {
+		t.Fatalf("PruneActivity = %d, %v", removed, err)
+	}
+	if removed, err := s.PruneInboxes("alpha", cutoff); err != nil || removed != 1 {
+		t.Fatalf("PruneInboxes = %d, %v", removed, err)
+	}
+	for _, name := range gone {
+		if _, err := os.Stat(name); !os.IsNotExist(err) {
+			t.Errorf("%s: %v, want removed", name, err)
+		}
+	}
+	for _, name := range kept {
+		if _, err := os.Stat(name); err != nil {
+			t.Errorf("%s: %v, want kept", name, err)
+		}
+	}
+	// A project with neither folder has nothing to prune.
+	if err := os.MkdirAll(filepath.Join(root, "beta", "tickets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if removed, err := s.PruneActivity("beta", now); err != nil || removed != 0 {
+		t.Fatalf("PruneActivity(beta) = %d, %v", removed, err)
+	}
+	if _, err := s.PruneInboxes("../x", now); !errors.Is(err, ErrInvalidName) {
+		t.Fatalf("an unsafe project: %v", err)
 	}
 }
