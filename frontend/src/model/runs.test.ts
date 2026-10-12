@@ -10,6 +10,7 @@ import {
   liveReason,
   mcpOnly,
   needsReason,
+  needsYouPhrase,
   permissionReason,
   planStations,
   questionReason,
@@ -437,4 +438,17 @@ it("plans with every step completed have no current stop", () => {
       { text: "b", status: "completed" },
     ]),
   ).toEqual(["served", "served"]);
+});
+
+describe("needsYouPhrase", () => {
+  it("agrees with the count", () => {
+    expect(needsYouPhrase(1)).toBe("needs you");
+    expect(needsYouPhrase(3)).toBe("need you");
+    expect(needsYouPhrase(0)).toBe("need you");
+  });
+
+  it("names agents when asked", () => {
+    expect(needsYouPhrase(1, true)).toBe("agent needs you");
+    expect(needsYouPhrase(2, true)).toBe("agents need you");
+  });
 });

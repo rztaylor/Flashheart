@@ -1,5 +1,6 @@
 import type { RunState } from "../api/runs";
 import { STATE_LABEL } from "../model/runs";
+import { NeedsYouPlate } from "./NeedsYou";
 
 // RunStateMark draws a run's state as a monochrome shape (ink, shape and
 // words, never a hue): Needs you a solid disc, Working a ring around a
@@ -68,29 +69,16 @@ export function RunStateMark({
 }
 
 // RunStateLabel pairs the mark with its word. Needs you is the one state
-// set as a plate in the attention colour, so it reads from across the room;
-// the others are ink marks with their words.
+// set as a plate in the attention colour (NeedsYouPlate); the others are
+// ink marks with their words.
 export function RunStateLabel({
   state,
-  tone = "map",
   className,
 }: {
   state: RunState;
-  // tone "band" sits on the frame (band or rail).
-  tone?: "map" | "band";
   className?: string;
 }) {
-  if (state === "needs-you") {
-    return (
-      <span
-        data-tone={tone}
-        className={`inline-flex items-center gap-1 rounded-full bg-attention px-2 leading-5 font-semibold whitespace-nowrap text-on-attention ${className ?? ""}`}
-      >
-        <RunStateMark state={state} size={9} />
-        {STATE_LABEL[state]}
-      </span>
-    );
-  }
+  if (state === "needs-you") return <NeedsYouPlate className={className} />;
   return (
     <span
       className={`inline-flex items-center gap-1 whitespace-nowrap ${
