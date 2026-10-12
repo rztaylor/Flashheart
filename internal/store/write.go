@@ -253,7 +253,7 @@ func (s *Store) UpdateWorkstream(project, slug string, pre Precondition, edit Ed
 	if err := s.checkProject(project); err != nil {
 		return "", err
 	}
-	if !ValidName(slug) {
+	if !board.ValidSlug(slug) {
 		return "", fmt.Errorf("workstream %q: %w", slug, ErrInvalidName)
 	}
 	release, err := s.lock(project)
@@ -279,22 +279,7 @@ func (s *Store) update(name string, pre Precondition, edit Edit, stamp bool) (st
 }
 
 // NewTicket is the content of a ticket created from the template (EDIT-5).
-type NewTicket struct {
-	Title       string
-	Type        string
-	Priority    string
-	Status      board.Column
-	Workstream  string
-	Description string
-	Criteria    []string
-	DependsOn   []string
-	Tags        []string
-	Session     string
-	// PlanOrRepro fills the Test Plan section, or Reproduction for a bug.
-	PlanOrRepro string
-	// Key is used only when the project has no key yet (KEY-5).
-	Key string
-}
+type NewTicket = board.NewTicket
 
 // Created reports a new ticket.
 type Created struct {
@@ -303,40 +288,6 @@ type Created struct {
 	Hash   string
 	// Key is set when creating the ticket also chose the project's key.
 	Key string
-}
-
-func (t *NewTicket) validate() error {
-	t.Title = strings.Join(strings.Fields(t.Title), " ")
-	if t.Title == "" {
-		return fmt.Errorf("%w: a ticket needs a title", ErrInvalidInput)
-	}
-	if t.Type == "" {
-		t.Type = "feature"
-	}
-	if !slices.Contains(board.TicketTypes, t.Type) {
-		return fmt.Errorf("%w: type must be one of %s", ErrInvalidInput, strings.Join(board.TicketTypes, ", "))
-	}
-	if t.Priority == "" {
-		t.Priority = "medium"
-	}
-	if !slices.Contains(board.Priorities, t.Priority) {
-		return fmt.Errorf("%w: priority must be one of %s", ErrInvalidInput, strings.Join(board.Priorities, ", "))
-	}
-	if t.Status == "" {
-		t.Status = board.Backlog
-	}
-	if _, ok := board.ParseColumn(string(t.Status)); !ok {
-		return fmt.Errorf("%w: status %q is not a column", ErrInvalidInput, t.Status)
-	}
-	if t.Workstream != "" && !ValidName(t.Workstream) {
-		return fmt.Errorf("%w: workstream %q", ErrInvalidInput, t.Workstream)
-	}
-	for _, id := range t.DependsOn {
-		if _, _, ok := board.ParseID(id); !ok {
-			return fmt.Errorf("%w: depends-on %q is not a ticket id", ErrInvalidInput, id)
-		}
-	}
-	return nil
 }
 
 // CreateTicket writes a new ticket folder with the project's next id
@@ -348,8 +299,8 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if err := s.checkProject(project); err != nil {
 		return Created{}, err
 	}
-	if err := input.validate(); err != nil {
-		return Created{}, err
+	if err := input.Normalize(); err != nil {
+		return Created{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 	releaseRoot, err := s.lock(".")
 	if err != nil {
@@ -383,7 +334,7 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	if s.Exists(path.Dir(name)) {
 		return Created{}, fmt.Errorf("ticket folder %s already exists", created.Folder)
 	}
-	data, err := s.ticketTemplate(created.ID, input)
+	data, err := board.RenderTicket(created.ID, input, s.now())
 	if err != nil {
 		return Created{}, err
 	}
@@ -406,67 +357,6 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	}
 	created.Hash = Hash(data)
 	return created, nil
-}
-
-func (s *Store) ticketTemplate(id string, t NewTicket) ([]byte, error) {
-	now := s.now()
-	body := []string{"# " + t.Title, "", "## Description", ""}
-	if description := strings.TrimSpace(t.Description); description != "" {
-		body = append(body, description, "")
-	}
-	body = append(body, "## Acceptance Criteria", "")
-	criteria := 0
-	for _, criterion := range t.Criteria {
-		if criterion = strings.Join(strings.Fields(criterion), " "); criterion != "" {
-			body = append(body, "- [ ] "+criterion)
-			criteria++
-		}
-	}
-	if criteria > 0 {
-		body = append(body, "")
-	}
-	if t.Type == "bug" {
-		body = append(body, "## Reproduction", "")
-	} else {
-		body = append(body, "## Test Plan", "")
-	}
-	if plan := strings.TrimSpace(t.PlanOrRepro); plan != "" {
-		body = append(body, plan, "")
-	}
-	body = append(body, "## Context", "", "## Notes", "", "None.", "")
-	data := []byte("---\n---\n" + strings.Join(body, "\n"))
-
-	steps := []struct {
-		key    string
-		value  string
-		list   []string
-		isList bool
-	}{
-		{key: "id", value: id},
-		{key: "status", value: string(t.Status)},
-		{key: "type", value: t.Type},
-		{key: "priority", value: t.Priority},
-		{key: "created", value: now.Format("2006-01-02")},
-		{key: "branch"},
-		{key: "workstream", value: t.Workstream},
-		{key: "depends-on", list: t.DependsOn, isList: true},
-		{key: "depends-on-workstreams", isList: true},
-		{key: "tags", list: t.Tags, isList: true},
-		{key: "session", value: t.Session},
-		{key: "updated", value: now.Format(time.RFC3339)},
-	}
-	var err error
-	for _, step := range steps {
-		if step.isList {
-			data, err = mdfile.SetList(data, step.key, step.list)
-		} else {
-			data, err = mdfile.SetScalar(data, step.key, step.value)
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-	return data, nil
 }
 
 // Slugify makes a folder slug from a title: lowercase words joined by

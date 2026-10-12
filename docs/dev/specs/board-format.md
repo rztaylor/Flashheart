@@ -208,7 +208,16 @@ Relative links to a ticket file (`FH-42-card-panel.md` in the same folder,
 ### Handoff section
 
 Written only by `checkpoint` (or a human). Replaced as a whole each time; the
-log keeps history.
+log keeps history. `Done` and `Next` are left out when empty; empty `Files`
+and `Open questions` are written as the item `None` and read back as
+empty (`board.RenderHandoff` and `board.ParseHandoff` round-trip). A
+hand-written section without the `_Updated …_` line is read for its lists
+alone.
+
+Text Flashheart writes into any section (a handoff, a note, a ticket's
+description or plan, a workstream's goal) stays inside it: a level-1 or -2
+heading outside code fences becomes level 3, and a code fence left open is
+closed, so it cannot start or hide a section (FH-4).
 
 ```markdown
 ## Handoff
@@ -258,7 +267,10 @@ id counts as done only when every copy does. Only tickets in `backlog`,
 
 ## Workstream
 
-`workstreams/<slug>.md`:
+`workstreams/<slug>.md`, where a slug is lower-case letters, digits, `.`,
+`_` and `-`, starting with a letter or digit, at most 100 characters (the
+same rule wherever a slug is given: a ticket's `workstream:`, MCP tools,
+the UI):
 
 ```markdown
 ---
