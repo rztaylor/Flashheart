@@ -1,8 +1,6 @@
 package mcpserver
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"strings"
 	"sync"
 	"time"
@@ -97,6 +95,14 @@ func agentName(client string) string {
 	return agent
 }
 
+// connection is the call's client connection, nil when it has none.
+func (inv *invocation) connection() *conn {
+	if inv == nil {
+		return nil
+	}
+	return inv.conn
+}
+
 // current is the connection's started run, "" when there is none.
 func (cn *conn) current() (run, project string) {
 	if cn == nil {
@@ -105,74 +111,6 @@ func (cn *conn) current() (run, project string) {
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
 	return cn.run, cn.project
-}
-
-// own starts a run for a write whose connection has none and finds no
-// hook run: `<agent>:mcp-<random>` in the caller's project, with source
-// mcp. A run found from hooks, or named by the run argument, always wins,
-// and a live hook session of the caller's agent in this worktree on
-// another branch keeps one from starting (agent-protocol §7.1). A started
-// run that finds its agent on another branch records it, as a hook run's
-// next prompt would.
-func (c *call) own(inv *invocation, write bool) error {
-	if c.started {
-		return c.followBranch()
-	}
-	if inv == nil || inv.conn == nil || c.run != "" || len(c.candidates)+len(c.nearby) > 0 {
-		return nil
-	}
-	if !write || c.project == "" || c.archived != "" {
-		return nil
-	}
-	cn := inv.conn
-	cn.mu.Lock()
-	defer cn.mu.Unlock()
-	if cn.run != "" {
-		// Another call of this connection started it meanwhile.
-		c.run, c.started = cn.run, true
-		return nil
-	}
-	random := make([]byte, 6)
-	_, _ = rand.Read(random)
-	agent := cn.agent
-	if agent == "" {
-		agent = "agent"
-	}
-	run, err := events.SessionRun(agent, "mcp-"+hex.EncodeToString(random))
-	if err != nil {
-		return err
-	}
-	c.run = run.String()
-	if err := c.recordStart(c.project); err != nil {
-		c.run = ""
-		return err
-	}
-	c.started = true
-	cn.run, cn.project = c.run, c.project
-	return nil
-}
-
-// recordStart records the started run's run.start where it works now.
-func (c *call) recordStart(project string) error {
-	list := []events.Event{{Kind: events.RunStart, Data: events.RunStartData{
-		Kind: events.KindSession, Cwd: c.srv.options.Cwd, Branch: c.where.Branch, Worktree: c.where.Worktree, Source: events.SourceMCP,
-	}}}
-	if err := c.record(project, list...); err != nil {
-		return err
-	}
-	c.seen = append(c.seen, list[0])
-	c.set.Apply(list[0])
-	return nil
-}
-
-// followBranch restates a started run's run.start when its agent has
-// switched branches, so its link (RUN-5), handoff and Overview row follow.
-func (c *call) followBranch() error {
-	r := c.set.Get(c.run)
-	if c.where.Branch == "" || r == nil || r.Branch == c.where.Branch || r.Project == "" {
-		return nil
-	}
-	return c.recordStart(r.Project)
 }
 
 // disconnected ends a closed connection's run (run.end, reason

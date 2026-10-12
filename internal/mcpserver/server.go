@@ -149,18 +149,3 @@ func asToolError(err error) *toolError {
 	}
 	return fail("internal", "retry; if it keeps failing, tell the human", "%v", err)
 }
-
-// tool registers a handler that returns text, turning errors into tool
-// errors with a fix. A call of a run the server started is that run's
-// activity, and its result carries the run's waiting answers.
-func tool[In any](srv *server, server *mcp.Server, name, description string, handle func(*invocation, In) (string, error)) {
-	mcp.AddTool(server, &mcp.Tool{Name: name, Description: description}, func(_ context.Context, req *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
-		inv := &invocation{conn: srv.connection(req.Session)}
-		text, err := handle(inv, input)
-		if err != nil {
-			text = asToolError(err).Error()
-		}
-		text += srv.called(inv, err == nil)
-		return &mcp.CallToolResult{IsError: err != nil, Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil, nil
-	})
-}

@@ -726,3 +726,22 @@ collapses again once finished.
 Options: collapse on the derived Completed status (hides work waiting for
 review); collapse nothing and filter finished lines out (loses progress at
 a glance); collapse on all tickets finished (chosen).
+
+## 2026-10-12 — D36: Every write refuses an ambiguous caller
+
+Every MCP write tool answers `ambiguous_run` while several hook sessions
+of the caller's agent work in its worktree and branch and no `run` names
+the caller (agent-protocol §7.1, FH-93). `attach` and `set_project_key`
+used to go ahead as `unknown`, the only writes that did. An attachment is
+a write to a ticket, recorded as the caller's `attachment.added`, so it
+follows the other ticket writes; `set_project_key` sets the key that
+`create_ticket`'s `project_key` sets, which was already refused, so the
+two ways of choosing a key now agree. Each tool declares this as its
+policy at registration (run required, required only when ambiguous, or
+none, and whether it guards a held ticket), and §7.1 tables it.
+
+Options: leave both as they were (one more exception for agents and for
+each new tool to copy); refuse only `attach` (`set_project_key` records no
+event, but then it disagrees with `create_ticket`); refuse both (chosen).
+`PROTOCOL_VERSION` stays 2: the code and its fix are already known to
+every agent and no event or tool changes shape.
