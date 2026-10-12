@@ -117,6 +117,12 @@
 - Runs the MCP server starts (D34) are tested over the in-memory transport
   with several client connections (`env.dial`), and over stdio by
   `TestHooklessSessionOverStdio` in `internal/cli`.
+- Codex attribution (D44) replays recordings in `internal/mcpserver`
+  (`codexruns_test.go`): hook events from
+  `testdata/hooks/codex/<Event>/<case>.events.json` go into the log
+  (`env.codexHooks`) and calls carry the `_meta` of
+  `testdata/hooks/codex/mcp/tools-call-flashheart.json` (`codexMeta`,
+  `env.callAs`).
 - Concurrency: multi-process write tests for locks and preconditions.
   `store.LockWait` is a variable so a non-parallel test can shorten it (the
   MCP `busy` contract test); restore it before returning.

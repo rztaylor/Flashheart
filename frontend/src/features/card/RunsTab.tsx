@@ -101,7 +101,7 @@ function RunCard({
         <RunStateLabel state={run.state} />
         {run.state === "needs-you" ? (
           <span className="font-semibold text-ink">
-            {needsReason(run.reason, run.id)}
+            {needsReason(run.reason)}
           </span>
         ) : null}
         <h3 id={headingId} className="flex items-baseline gap-1.5">
@@ -250,7 +250,7 @@ function SubagentRow({
         <span className="min-w-0 flex-1 truncate text-ink-muted">
           {run.state === "needs-you" ? (
             <span className="font-semibold text-ink">
-              {needsReason(run.reason, run.id)}{" "}
+              {needsReason(run.reason)}{" "}
             </span>
           ) : null}
           {elsewhere ? (

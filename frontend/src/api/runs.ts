@@ -48,6 +48,9 @@ export interface NeedsReason {
   // type ("" when unknown); both are empty when it is the run's own.
   waitingOn: string;
   agentType: string;
+  // mcpOnly is set with answered when the run reports through the MCP
+  // server alone (no hooks): the answer goes with its next tool call.
+  mcpOnly?: boolean;
 }
 
 // noReason is the reason of a run that does not need you.
@@ -116,6 +119,9 @@ export interface Question {
   // sessionEnded: the asking session has ended; an answer waits for it to
   // resume, and the question does not need you (RUN-8, VIEW-2).
   sessionEnded?: boolean;
+  // mcpOnly: the asking run reports through the MCP server alone (no
+  // hooks), so the answer goes with its next Flashheart tool call (D34).
+  mcpOnly?: boolean;
 }
 
 export interface PlanItem {
@@ -157,6 +163,9 @@ export interface Run {
   source: string;
   agentType: string;
   state: RunState;
+  // mcpOnly: a run the MCP server started that no hook reports
+  // (agent-protocol §7.1); the server decides it, from its events.
+  mcpOnly?: boolean;
   ticket: string;
   ticketTitle: string;
   linkedBy: "" | "claim" | "branch";

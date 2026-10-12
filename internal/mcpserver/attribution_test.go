@@ -19,15 +19,18 @@ func hookRun(run, agent, branch, source, cwd string) events.Event {
 const startedRun = "claude:mcp-0123456789ab"
 
 // Attribution precedence (agent-protocol §7.1), apart from any tool: the
-// run argument, then the connection's started run, then the one hook
-// session here; several, or one on another branch, leave the caller
-// unresolved; a write with none of these starts a run.
+// run argument, then the session the call's _meta names (Codex), then the
+// connection's started run, then the one hook session here; several, or
+// one on another branch, leave the caller unresolved; a write with none of
+// these starts a run.
 func TestAttributionPrecedence(t *testing.T) {
 	t.Parallel()
 
 	const other = "claude:77777777-0000"
 	type hook struct{ run, agent, branch, source string }
 	here := func(run string) hook { return hook{run, "claude", "feature/demo", "startup"} }
+	codexHere := func(run string) hook { return hook{run, "codex", "feature/demo", "startup"} }
+	const codexOther = "codex:019a7c00-0000-7000-8000-0000000000ff"
 	cases := []struct {
 		name       string
 		hooks      []hook
@@ -35,6 +38,7 @@ func TestAttributionPrecedence(t *testing.T) {
 		agent      string // the connection's agent; "-" for no connection
 		started    string // the connection's started run
 		arg        string
+		session    string // the Codex session the call's _meta names
 		write      bool
 		run        string // the resolved run; "mcp" for a run started now
 		fromConn   bool
@@ -47,6 +51,12 @@ func TestAttributionPrecedence(t *testing.T) {
 		{name: "shortened argument naming two is ambiguous", hooks: []hook{here("claude:5b0c7e2a-aaaa"), here("claude:5b0c7e2a-bbbb")}, agent: "claude", arg: "claude:5b0c7e2a", code: "ambiguous_run"},
 		{name: "shortened argument naming none is a mistake", agent: "claude", arg: "claude:deadbeef", code: "invalid_input"},
 		{name: "full argument not seen yet is taken", agent: "claude", arg: "claude:0123456789abcdef-new", run: "claude:0123456789abcdef-new"},
+		{name: "argument beats the session _meta names", hooks: []hook{codexHere(codexRun)}, agent: "codex", session: recordedSession, arg: codexOther, run: codexOther},
+		{name: "the session _meta names beats the started run and the worktree", hooks: []hook{codexHere(codexRun), codexHere(codexOther)}, agent: "codex", started: "codex:mcp-0123456789ab", session: recordedSession, write: true, run: codexRun},
+		{name: "the session _meta names, on another branch", hooks: []hook{{codexRun, "codex", "main", "startup"}}, agent: "codex", session: recordedSession, write: true, run: codexRun},
+		{name: "a session's run the connection started stays its caller", hooks: []hook{{codexRun, "codex", "feature/demo", events.SourceMCP}}, agent: "codex", started: codexRun, session: recordedSession, write: true, run: codexRun, fromConn: true},
+		{name: "a write naming an unseen session starts the session's run", hooks: []hook{codexHere(codexOther)}, agent: "codex", session: recordedSession, write: true, run: codexRun, fromConn: true},
+		{name: "a read naming an unseen session starts none", hooks: []hook{codexHere(codexOther)}, agent: "codex", session: recordedSession},
 		{name: "started run beats a hook run", hooks: []hook{here(session)}, agent: "claude", started: startedRun, run: startedRun, fromConn: true},
 		{name: "one hook run here is the caller", hooks: []hook{here(session)}, agent: "claude", run: session},
 		{name: "one hook run here without a connection", hooks: []hook{here(session)}, agent: "-", run: session},
@@ -78,7 +88,7 @@ func TestAttributionPrecedence(t *testing.T) {
 			if tc.ended != "" {
 				c.set.Apply(events.Event{Time: t0, Run: tc.ended, Agent: "claude", Kind: events.RunEnd, Project: "demo", Data: events.RunEndData{Reason: "exit"}})
 			}
-			inv := &invocation{}
+			inv := &invocation{session: tc.session}
 			if tc.agent != "-" {
 				inv.conn = &conn{agent: tc.agent, run: tc.started, project: "demo"}
 			}
@@ -102,6 +112,8 @@ func TestAttributionPrecedence(t *testing.T) {
 				t.Fatalf("run = %q, want %q", c.run, tc.run)
 			case tc.run == "" && len(e.log()) != 0:
 				t.Fatalf("an unresolved caller recorded %v", e.log())
+			case tc.session != "" && tc.fromConn && tc.started == "" && (inv.conn.run != c.run || len(e.log()) != 1):
+				t.Fatalf("the connection's run = %q, log = %v", inv.conn.run, e.log())
 			}
 			if c.started != tc.fromConn || len(c.candidates) != tc.candidates || len(c.nearby) != tc.nearby {
 				t.Fatalf("started %v, candidates %v, nearby %v", c.started, c.candidates, c.nearby)

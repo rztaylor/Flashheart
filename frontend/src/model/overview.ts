@@ -234,7 +234,6 @@ function decisions(runs: Run[], cards: Map<string, Card>): DecisionItem[] {
       run,
       reason: needsReason(
         run.reason,
-        run.id,
         run.kind === "subagent" ? run.agentType || "Subagent" : "",
       ),
       since: run.lastActivity,

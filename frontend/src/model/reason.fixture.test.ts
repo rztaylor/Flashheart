@@ -96,8 +96,8 @@ describe("one reason on every surface", () => {
     ["its subagent's prompt", false, "Explore needs permission for Bash"],
   ])("names %s: %s", (_, ownQuestion, want) => {
     const { session, explore, live } = fixture(ownQuestion);
-    const card = needsReason(live.reason, live.run);
-    const runsTab = needsReason(session.reason, session.id);
+    const card = needsReason(live.reason);
+    const runsTab = needsReason(session.reason);
     const reasons = overview([], [session, explore]).decision.map(
       (item) => item.reason,
     );

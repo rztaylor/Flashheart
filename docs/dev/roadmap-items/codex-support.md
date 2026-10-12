@@ -17,7 +17,8 @@ Claude Code sessions, and can pick up each other's tickets.
   text between markers in the global `AGENTS.md` (`SET-1`, `SET-2`).
 - Attribution for Codex hook runs where input stamping is unavailable, and
   merging a session's hook run with any run the MCP server started for it
-  before its hooks were installed (`mcp-runs`).
+  before its hooks were installed (`mcp-runs`): built by naming both by the
+  session each MCP call carries in `_meta` (FH-74, D44).
 - Where Codex reads MCP servers from: on 2026-10-06 a Codex session used
   the server with no `[mcp_servers.flashheart]` in `~/.codex/config.toml`.
 

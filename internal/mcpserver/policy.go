@@ -25,7 +25,7 @@ const (
 )
 
 // policy is what a tool declares at registration: whether it writes (so
-// it may create the caller's project and start a run, §7.1 step 5), when
+// it may create the caller's project and start a run, §7.1 step 6), when
 // it needs the caller's run, and whether the ticket it is given is guarded
 // against another live session's claim (§7.2, claimed).
 type policy struct {
@@ -59,6 +59,9 @@ func (a Attribution) runArg() string { return a.Run }
 func tool[In attributed](srv *server, server *mcp.Server, name, description string, p policy, handle func(*call, In) (string, error)) {
 	mcp.AddTool(server, &mcp.Tool{Name: name, Description: description}, func(_ context.Context, req *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
 		inv := &invocation{conn: srv.connection(req.Session)}
+		if req.Params != nil {
+			inv.session, inv.thread = codexSession(req.Params.Meta, inv.conn)
+		}
 		text, err := srv.enter(inv, p, input.runArg(), func(c *call) (string, error) { return handle(c, input) })
 		if err != nil {
 			text = asToolError(err).Error()

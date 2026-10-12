@@ -1,6 +1,7 @@
 package runs
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -122,5 +123,93 @@ func TestRestatedStartsInTheTimeline(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A Codex session names itself in every MCP call, so a run the server
+// started for it is `codex:<session>`, the id its hooks record under
+// (agent-protocol §7.1). Hooks that start mid-session (trusted later) join
+// that run: one claim holder and one question, and the run stops being
+// MCP-only at its first hook-only event (FH-74).
+func TestAHookSessionJoinsTheRunItsServerStarted(t *testing.T) {
+	t.Parallel()
+
+	const run = "codex:019a7c00-0000-7000-8000-000000000001"
+	on := func(minutes float64, kind events.Kind, data any) events.Event {
+		e := ev(minutes, run, kind, data)
+		e.Agent = "codex"
+		return e
+	}
+	started := []events.Event{
+		on(0, events.RunStart, events.RunStartData{Kind: events.KindSession, Cwd: "/src/alpha", Branch: "feature/x", Worktree: "/src/alpha", Source: events.SourceMCP}),
+		on(1, events.Claim, events.TicketData{Ticket: "AL-1"}),
+		on(2, events.QuestionAsked, events.QuestionData{ID: "q-1", Kind: "question", Text: "Which schema?"}),
+		on(3, events.QuestionAnswered, events.AnswerData{ID: "q-1", Answer: "v2", By: "Robert"}),
+	}
+	settings := DefaultSettings()
+	hookless := NewSet()
+	for _, e := range started {
+		hookless.Apply(e)
+	}
+	views := hookless.Views(at(4), settings, nil)
+	if !hookless.Get(run).MCPOnly() || len(views) != 1 || !views[0].MCPOnly || !views[0].Reason.MCPOnly || !views[0].Questions[0].MCPOnly {
+		t.Fatalf("before hooks: %+v", views)
+	}
+
+	for _, joined := range []struct {
+		name  string
+		event events.Event
+	}{
+		{"a prompt", on(5, events.TurnStart, events.TurnStartData{Origin: events.OriginTask, Cwd: "/src/alpha", Branch: "feature/x", Worktree: "/src/alpha"})},
+		{"a turn's end", on(5, events.TurnEnd, events.TurnEndData{})},
+		{"a resumed session", on(5, events.RunStart, events.RunStartData{Kind: events.KindSession, Cwd: "/src/alpha", Branch: "feature/x", Worktree: "/src/alpha", Source: "resume"})},
+	} {
+		t.Run(joined.name, func(t *testing.T) {
+			t.Parallel()
+			set := NewSet()
+			for _, e := range append(slices.Clone(started), joined.event) {
+				set.Apply(e)
+			}
+			views := set.Views(at(5.5), settings, nil)
+			if len(views) != 1 || views[0].ID != run {
+				t.Fatalf("runs = %+v", views)
+			}
+			if holder := set.Holder("AL-1", at(5.5), settings); holder == nil || holder.ID != run {
+				t.Fatalf("holder = %+v", holder)
+			}
+			v := views[0]
+			if set.Get(run).MCPOnly() || v.MCPOnly || len(v.Questions) != 1 || v.Questions[0].MCPOnly {
+				t.Fatalf("after hooks: %+v", v)
+			}
+			// The board's answer now waits for a prompt, not a tool call.
+			if v.State != NeedsYou || !v.Reason.Answered || v.Reason.MCPOnly {
+				t.Fatalf("state %s, reason %+v", v.State, v.Reason)
+			}
+		})
+	}
+}
+
+// Events the MCP server records itself never make its run hooked: a
+// restated start (a branch switch), activity, a checkpoint, a delivered
+// answer, its end.
+func TestTheServersOwnEventsKeepARunMCPOnly(t *testing.T) {
+	t.Parallel()
+
+	set := NewSet()
+	for _, e := range []events.Event{
+		mcpStart(0), mcpCall(1, 2),
+		mcpEvent(2, events.RunStart, events.RunStartData{Kind: events.KindSession, Branch: "feature/next", Source: events.SourceMCP}),
+		mcpEvent(3, events.Checkpoint, events.CheckpointData{Ticket: "AL-1"}),
+		mcpEvent(4, events.QuestionDelivered, events.DeliveredData{ID: "q-1"}),
+		mcpEvent(5, events.RunEnd, events.RunEndData{Reason: events.RunEndDisconnected}),
+	} {
+		set.Apply(e)
+	}
+	if !set.Get(mcpRun).MCPOnly() {
+		t.Fatal("the server's own events made its run hooked")
+	}
+	set.Apply(start(0))
+	if set.Get(session).MCPOnly() {
+		t.Fatal("a hook run is MCP-only")
 	}
 }

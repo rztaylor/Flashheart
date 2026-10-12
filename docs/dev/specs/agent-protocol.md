@@ -36,7 +36,9 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   `<agent>:mcp-<12 hex digits>` for a session the MCP server started a run
   for (§7.1), its agent named from the client's `clientInfo` name at
   initialize (`claude-code` → `claude`, `codex-mcp-client` → `codex`, any
-  other name lowercased to letters, digits and hyphens). Displayed shortened
+  other name lowercased to letters, digits and hyphens); a Codex session
+  names itself in each call (§5.3), so the run the server starts for it is
+  `codex:<session_id>`, the id its hooks use. Displayed shortened
   to the agent and the first 8 characters of the session id
   (`claude:3f2a9c1e`); a subagent shows its session's (D39). Agent ids match
   `[a-z][a-z0-9-]{0,31}`, session and subagent ids `[A-Za-z0-9_.-]{1,128}`
@@ -347,7 +349,7 @@ to the app. The events are `SessionStart`
 |---|---|
 | `SessionStart` | `run.start`; recovery note as `additionalContext` (a developer message) |
 | `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; answered questions as `additionalContext` |
-| `PreToolUse` | nothing yet; stamping `run` into Flashheart's own tools (`updatedInput`, §7.1) is FH-74 |
+| `PreToolUse` | nothing: Flashheart's tool calls are attributed by the session each call names in `_meta` (below, §7.1), so `run` is not stamped (stamping needs `permissionDecision: "allow"`, which would skip the user's approval of Flashheart's tools) |
 | `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `plan.updated` (the whole plan) for `update_plan` where Codex offers it, read from its `plan` steps (`step`, `status`) |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
@@ -376,9 +378,12 @@ for `quiet_minutes`.
 
 Every MCP `tools/call` from Codex carries the hook session in its `_meta`
 (`sessionId`, and `session_id` and `turn_id` in `x-codex-turn-metadata`),
-and its `callId` is the `PreToolUse` hook's `tool_use_id`, so a call can be
-tied to its hook run with or without stamping. Without these
-hooks, a Codex session's first Flashheart write starts its run (§7.1).
+and its `callId` is the `PreToolUse` hook's `tool_use_id`. The MCP server
+reads the session there and attributes the call to `codex:<session_id>`,
+the session's hook run (§7.1 step 2), with no stamping and no guess by
+worktree, so two Codex sessions in one worktree each get their own calls.
+Without these hooks, a Codex session's first Flashheart write starts its
+run under that same id, which its hooks join if they start later.
 
 ### 5.4 Configuration written by setup
 
@@ -478,27 +483,39 @@ plain text with a final machine-readable line where useful
 
 Every tool accepts an optional `run` argument. The server resolves the caller:
 
-1. `run` argument present (stamped by the `PreToolUse` hook where the agent
-   supports input rewriting, or copied by the model from the recovery note);
-2. else the run this server started for the connection (below): one server
+1. `run` argument present (stamped by Claude Code's `PreToolUse` hook, or
+   copied by the model from the recovery note);
+2. else, for Codex, the session the call names in its `_meta` (§5.3:
+   `x-codex-turn-metadata`'s `session_id` and `thread_id`, else `sessionId`
+   and `threadId`; read from a call that carries `x-codex-turn-metadata` or
+   whose client named itself as Codex, and only when the id fits §2):
+   `codex:<session_id>/<thread_id>` when that thread is a subagent its
+   hooks reported, or a subagent whose own id the call names as its
+   session (whether Codex names a subagent's thread there is not
+   recorded), else `codex:<session_id>`. When hooks report that run it is
+   the caller; otherwise the connection stands in for its hooks under that
+   id (below);
+3. else the run this server started for the connection (below): one server
    serves one session, so it stays the caller for the connection's life;
-3. else the single session of the caller's agent (named by the client at
+4. else the single session of the caller's agent (named by the client at
    initialize, §2; any agent's when the client gives no name) that is not
-   Ended, was not started by an MCP server, and works in the worktree and
+   Ended, is not a run an MCP server started that no hook reports, and
+   works in the worktree and
    branch of the server's working directory: `CLAUDE_PROJECT_DIR` when the
    agent sets it (Claude Code starts user-scope MCP servers in `~/.claude`,
    not the project), else the process's directory;
-4. several such sessions, or none on this branch while one of the caller's
+5. several such sessions, or none on this branch while one of the caller's
    agent works in this worktree on another (its hooks have not yet seen a
    branch switch) → no run; a tool whose policy needs one (below) answers
    `ambiguous_run` listing them and saying to pass `run`;
-5. else, for a write, a run the server starts for the connection now; a
+6. else, for a write, a run the server starts for the connection now; a
    read starts none.
 
 **Runs the server starts.** One MCP server process serves one agent
 session over stdio and is closed when the session ends, so a connection is
 a session. When a write finds no run, the server starts one for its
-connection: `run.start` with id `<agent>:mcp-<random>` (§2), `kind:
+connection: `run.start` with id `<agent>:mcp-<random>` (§2), or the
+session's own run id when the call names its session (step 2), `kind:
 session`, the working directory, branch and worktree above, and `source:
 mcp`, recorded in the caller's project. A run found from hooks, or named by
 `run`, always wins; a started run is never another connection's caller, so
@@ -518,6 +535,22 @@ Closing the connection records `run.end` with reason `disconnected`; a
 server that dies leaves the run to the stale rule. A write with no project
 to record in (an archived project, or none created) starts no run.
 
+**A session whose hooks start later.** A run the server started is
+*MCP-only* until any event only hooks record (a `run.start` with another
+source, `turn.start`, `turn.end`, `tool.used`, `plan.updated`,
+`permission.*`, `notification`, `compact`) reaches it; the board says
+"MCP only" and that an answer waits for the next tool call only while it
+is. A Codex session's run is named by its session (step 2), so when its
+hooks start mid-session (trusted after the session began) their events
+land on the same run: one claim holder, one question in Needs you, one
+Overview row. From the next call on, the hooks report it and the server
+stops standing in: it records the activity it had counted, then no more
+activity, delivers no answers in tool results and records no `run.end` at
+disconnect. A client that names no session (Claude Code without its hooks,
+an older Codex, another agent) keeps a `<agent>:mcp-<random>` run: nothing
+it sends ties it to a hook session that starts later, so the two stay
+apart, and the started run ends with its connection.
+
 Read-only tools (`board_context`, `list_tickets`, `get_ticket`) change
 nothing on the board: they never create or adopt a project, never write the
 cwd cache and never start a run; a started run's read is still its
@@ -534,15 +567,16 @@ note shows it) is accepted when it names one run.
 **Run and claim policy.** Each tool declares when it needs its caller's run
 and whether it refuses a ticket another live run holds (`claimed`, §7.2):
 
-| Tool | Run | Several sessions here (step 4) | A session here on another branch (step 4) | Ticket held by another run |
+| Tool | Run | Several sessions here (step 5) | A session here on another branch (step 5) | Ticket held by another run |
 |---|---|---|---|---|
 | `claim`, `release`, `ask_human` | required: they belong to a run | `ambiguous_run` | `ambiguous_run` | `claim` answers `claimed` (unless `force`); `release` says you do not hold it; `ask_human` works |
 | `checkpoint`, `update_ticket`, `move`, `write_review`, `attach`, `create_workstream` (its `tickets`) | required only when ambiguous | `ambiguous_run` | works, `by: "unknown"` | `claimed` |
 | `create_ticket`, `set_project_key` | required only when ambiguous | `ambiguous_run` | works, `by: "unknown"` | — |
 | `board_context`, `list_tickets`, `get_ticket` | none | works, `run=unknown` | works, `run=unknown` | — |
 
-With one run (from `run`, the connection, or the one hook session here)
-every tool works, and with none at all a write starts one (step 5). `attach`
+With one run (from `run`, the session a Codex call names, the connection,
+or the one hook session here)
+every tool works, and with none at all a write starts one (step 6). `attach`
 and `set_project_key` answer `ambiguous_run` with several sessions, as the
 other writes do (FH-93, D36): an attachment is a write to a ticket, recorded as
 the caller's `attachment.added`, and `set_project_key` sets the key that
