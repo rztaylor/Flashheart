@@ -17,7 +17,10 @@
 // scrubbed files in a ticket from their bytes (AddAttachment) or a local
 // path (CopyIntoTicket), with one reader and writer of files/index.yaml
 // that keeps what it does not write (REV-1, REV-5),
-// writes reviews (REV-4) and ticks their How to Verify steps (REV-3), finds or creates a repository's project
+// writes reviews (REV-4) and ticks their How to Verify steps (REV-3),
+// reads every project.yaml through one parser that reports problems as
+// warnings and edits it only through mdfile's plain-YAML editor (FH-77),
+// finds or creates a repository's project
 // (PRJ-2–PRJ-5; outside git there is none, ErrNoProject), resolves working
 // directories through the cwd cache (never caching one outside git), and
 // keeps event files, answers inboxes and the hooks' per-session activity

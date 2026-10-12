@@ -163,16 +163,14 @@ func archivedProjects(root interface {
 		project := board.ArchivedProject{Name: name, DisplayName: name}
 		project.Key, project.KeyDerived = board.DeriveKey(name), true
 		if data, err := fs.ReadFile(fsys, path.Join(dir, "project.yaml")); err == nil {
-			var parsed projectFile
-			if yaml.Unmarshal(data, &parsed) == nil {
-				if display := strings.TrimSpace(parsed.Name); display != "" {
-					project.DisplayName = display
-				}
-				if key := strings.TrimSpace(parsed.Key); board.ValidKey(key) {
-					project.Key, project.KeyDerived = key, false
-				}
-				project.Repos = parsed.Repos
+			parsed := parseProjectFile(name, data)
+			if parsed.Name != "" {
+				project.DisplayName = parsed.Name
 			}
+			if parsed.Key != "" {
+				project.Key, project.KeyDerived = parsed.Key, false
+			}
+			project.Repos = parsed.Repos
 		}
 		for _, tickets := range []string{path.Join(dir, "tickets"), path.Join(dir, ".archive", "tickets")} {
 			folders, _ := fs.ReadDir(fsys, tickets)
@@ -203,9 +201,7 @@ func (s *Store) archivedRepos(project string) ([]string, bool) {
 	if err != nil {
 		return nil, true
 	}
-	var parsed projectFile
-	_ = yaml.Unmarshal(data, &parsed)
-	return parsed.Repos, true
+	return parseProjectFile(project, data).Repos, true
 }
 
 // ProjectReference is a ticket in a live project that depends on tickets of
@@ -359,10 +355,9 @@ func (s *Store) retireKey(key string) error {
 	if !strings.HasSuffix(text, "\n") {
 		text += "\n"
 	}
-	doc, err := mdfile.SetList([]byte("---\n"+text+"---\n"), "keys", append(keys, key))
+	out, err := mdfile.SetYAMLList([]byte(text), "keys", append(keys, key))
 	if err != nil {
 		return fmt.Errorf("%s: %w", retiredFile, err)
 	}
-	out := strings.TrimSuffix(strings.TrimPrefix(string(doc), "---\n"), "---\n")
-	return s.WriteFileAtomic(retiredFile, []byte(out))
+	return s.WriteFileAtomic(retiredFile, out)
 }
