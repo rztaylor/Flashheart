@@ -1,11 +1,11 @@
 package mcpserver
 
 import (
-	"fmt"
 	"regexp"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/scrub"
@@ -13,11 +13,10 @@ import (
 
 // Bounds on agent-written text (MCP-5, SEC-3).
 const (
-	maxItems       = 30
-	maxItemText    = 500
-	maxNoteText    = 2000
-	maxDescription = 16 << 10
-	maxReview      = 256 << 10
+	maxItems    = 30
+	maxItemText = 500
+	maxNoteText = 2000
+	maxReview   = 256 << 10
 )
 
 // agentKey is the key format agents may choose: 2–5 capitals or digits,
@@ -67,5 +66,5 @@ func (c *call) record(project string, list ...events.Event) error {
 
 // note is a dated ## Notes line written for an agent.
 func (c *call) note(text string) string {
-	return fmt.Sprintf("- %s · %s: %s", c.now.Format("2006-01-02"), protocol.ShortRun(c.by()), text)
+	return board.Note(c.now, protocol.ShortRun(c.by())+": "+text)
 }

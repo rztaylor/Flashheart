@@ -313,7 +313,8 @@ Full format: `docs/dev/specs/board-format.md`.
   Done state for a ticket closed without being accepted (FH-58). Each move
   can be undone.
 - `EDIT-2` Moving a blocked ticket into *in-progress* asks for confirmation
-  and records the override reason in `## Notes`.
+  and records the override reason in `## Notes` as a dated bullet, the same
+  one an agent's forced claim writes (FH-81).
 - `EDIT-3` Moving into *Ready to review* warns when the review file is
   missing, when the review shows no evidence (no screenshot and no stated
   reason in its *Evidence* section, `REV-4`), or when criteria are unticked;

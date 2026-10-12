@@ -3,8 +3,9 @@
 // reasons (CARD-4, board-format §Blocking), derived workstream status,
 // format warnings and needs-repair reasons (STO-4), board order with manual
 // ranks and placement plans (EDIT-9), and the editing rules
-// the UI and the MCP tools share (editable fields, review warnings, the
-// blocked-start note; EDIT-2, EDIT-3, EDIT-6), a review's How to Verify
+// the UI and the MCP tools share (editable fields, review warnings, dated
+// notes and the blocked-start note, the section text limit; EDIT-2,
+// EDIT-3, EDIT-6, FH-81), a review's How to Verify
 // steps (REV-3), and local links in markdown with the attachment
 // allow-list, its message and the attachment kinds, for copying the files
 // they name (REV-2, REV-5). It owns the file schema: section

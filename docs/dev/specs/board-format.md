@@ -231,7 +231,10 @@ alone.
 Text Flashheart writes into any section (a handoff, a note, a ticket's
 description or plan, a workstream's goal) stays inside it: a level-1 or -2
 heading outside code fences becomes level 3, and a code fence left open is
-closed, so it cannot start or hide a section (FH-4).
+closed, so it cannot start or hide a section (FH-4). A ticket's
+description, plan (or reproduction) and context, and a workstream's goal,
+are each limited to 16 KiB, written from the board or by an agent
+(`board.MaxSectionText`, FH-81); longer text belongs in a linked document.
 
 ```markdown
 ## Handoff
@@ -252,7 +255,10 @@ _Updated 2026-10-04 14:12 UTC by claude:3f2a… (run) on feature/x._
 
 Answered questions and override reasons are appended to `## Notes` as dated
 bullets, e.g. `- 2026-10-04 · Question from claude:3f2a… — "Use known
-assessment objectives?" Answer (Robert): "Yes".`
+assessment objectives?" Answer (Robert): "Yes".` A blocked ticket started
+from the board or claimed by an agent with `force` gets the same bullet
+either way: `- 2026-10-04 · Started while blocked: <reason>` (`board.Note`,
+FH-81).
 
 ## Blocking
 
