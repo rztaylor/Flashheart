@@ -20,6 +20,12 @@ import { RunStateLabel, RunStateMark } from "../../components/RunState";
 import { StaleNote } from "../../components/StaleNote";
 import { TicketLink } from "../../components/TicketLink";
 import {
+  focusHeading,
+  focusItem,
+  focusList,
+  useKeepFocus,
+} from "../../components/useKeepFocus";
+import {
   collapsible,
   type DecisionItem,
   type Overview,
@@ -102,6 +108,9 @@ export function OverviewView({
     () => new Map(projects.map((item) => [item.name, item.displayName])),
     [projects],
   );
+  // A focused row keeps focus when a reload moves it to another section,
+  // and hands it on when it goes (FH-84).
+  const keepFocus = useKeepFocus();
 
   if (resource.status === "loading") return <OverviewSkeleton />;
   if (resource.status === "error" || !data) {
@@ -116,7 +125,7 @@ export function OverviewView({
   }
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className={`${column} pb-12`}>
+      <div ref={keepFocus} className={`${column} pb-12`}>
         <PipelineHeadline
           stages={pipelineStages(projects, project)}
           boardHref={boardHref}
@@ -319,10 +328,15 @@ function OverviewSection({
     <section
       aria-labelledby={titleId}
       data-section={section.id}
+      {...focusList(section.id)}
       className="overflow-hidden rounded-panel border border-rule bg-card shadow-card"
     >
       <div className="flex flex-wrap items-center gap-x-3 bg-column">
-        <h2 className="min-w-0 flex-1">
+        <h2
+          {...focusHeading}
+          tabIndex={toggles ? undefined : -1}
+          className="min-w-0 flex-1"
+        >
           {toggles ? (
             <button
               type="button"
@@ -360,8 +374,11 @@ function OverviewSection({
 
 // Row lays out one ticket (or session) on the Overview: its id, title and
 // one line of words, then the agent, a time or count, and an action,
-// aligned across rows from 48rem and stacked under the title below.
+// aligned across rows from 48rem and stacked under the title below. item
+// names the row across reloads (a ticket, question or run id) so focus can
+// follow it.
 function Row({
+  item,
   ticket,
   title,
   sub,
@@ -371,6 +388,7 @@ function Row({
   action,
   children,
 }: {
+  item: string;
   ticket?: string;
   title: ReactNode;
   sub?: ReactNode;
@@ -382,7 +400,7 @@ function Row({
   children?: ReactNode;
 }) {
   return (
-    <li className="px-4 py-3" data-row={ticket}>
+    <li className="px-4 py-3" data-row={ticket} {...focusItem(item)}>
       <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5 md:grid-cols-[5rem_minmax(0,1fr)_5rem_11rem_10.5rem] md:items-center">
         <div className="pt-0.5 text-sm md:pt-0">
           {ticket ? <TicketLink id={ticket} className="text-ink" /> : null}
@@ -499,6 +517,7 @@ export function DecisionRow({
   if (question) {
     return (
       <Row
+        item={item.key}
         ticket={ticket?.id}
         title={title}
         sub={ticket ? undefined : place}
@@ -520,6 +539,7 @@ export function DecisionRow({
   }
   return (
     <Row
+      item={item.key}
       ticket={ticket?.id}
       title={title}
       sub={item.reason}
@@ -550,6 +570,7 @@ function ReviewRow({
   const { card } = item;
   return (
     <Row
+      item={card.id}
       ticket={card.id}
       title={<TicketTitle id={card.id} title={card.title} onOpen={onOpen} />}
       sub={criteriaMet(card)}
@@ -588,6 +609,7 @@ function RiskRow({
   const { card } = item;
   return (
     <Row
+      item={card.id}
       ticket={card.id}
       title={<TicketTitle id={card.id} title={card.title} onOpen={onOpen} />}
       sub={item.reasons.join(" · ")}
@@ -620,6 +642,7 @@ function ProgressRow({
   const { card } = item;
   return (
     <Row
+      item={card.id}
       ticket={card.id}
       title={<TicketTitle id={card.id} title={card.title} onOpen={onOpen} />}
       sub={item.words}
@@ -649,6 +672,7 @@ export function UnticketedRow({
 }) {
   return (
     <Row
+      item={run.id}
       title={`Session ${shortID(run.short)}`}
       sub={where(run, projectNames)}
       agent={agentName(run.agent)}
@@ -684,6 +708,7 @@ function UpNextRow({
   const [blocker] = card.blockedBy;
   return (
     <Row
+      item={card.id}
       ticket={card.id}
       title={<TicketTitle id={card.id} title={card.title} onOpen={onOpen} />}
       sub={card.blocked && blocker ? blocker.text : "Ready to start"}

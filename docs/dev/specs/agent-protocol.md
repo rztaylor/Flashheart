@@ -563,7 +563,7 @@ agent meets one rule for every write.
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
-| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call", and that a reply in the chat does not reach the board, so the user answers there too); the `flashheart await` command for it (§7.5) |
+| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call", and that a reply in the chat does not reach the board, so the user answers there too); the `flashheart await` command for it (§7.5), with how Claude Code runs it only when the run is Claude's |
 
 **Tickets for a person (FH-113, D40).** Tickets are written for someone
 who has not read the code; implementation detail is welcome below, in
@@ -620,7 +620,8 @@ the board alone would not wake it. `ask_human` therefore also returns a shell
 command, `<binary> await <question-id> --project <project> --root <root>`
 (the server's own absolute binary and root, shell-quoted). An agent that can
 run a background command which wakes it when the command exits (Claude
-Code: Bash with `run_in_background`) runs it after asking:
+Code: Bash with `run_in_background`, which the result names only to a
+Claude run) runs it after asking:
 
 - it finds the question in the project's run window (§4; else exit
   1, "no such question");
@@ -855,6 +856,13 @@ took even when recording delivery fails, and `flashheart await` also
 delivers an answer the log shows given and not delivered (§7.5) instead
 of waiting for its timeout. No event, tool or skill text changes shape, so
 the version stays 2.
+
+Additive change within version 2 (FH-94, 2026-10-12): `ask_human`'s
+result names Claude Code's way of running the await command only to a
+Claude run, and `update_ticket`'s description lists
+`depends-on-workstreams`, which it already accepted. A test holds the
+skill and the §7.2 table to the tools the server registers. No tool,
+input or event changes shape, so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

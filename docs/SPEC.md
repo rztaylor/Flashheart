@@ -352,10 +352,12 @@ Full format: `docs/dev/specs/board-format.md`.
   visible cards of the ticket's own project, so filtered-out tickets and
   other projects in *All projects* keep their order. Shift with Up or Down
   and the panel's **Position** buttons are the keyboard and menu alternatives;
-  Undo puts the ticket back after the card it followed. A temporary display
-  sort (the Table's column sort, or a future board sort) rearranges only what
-  is shown and never writes ranks; while one is on, cards cannot be
-  reordered within a column and a move keeps the ticket's rank. Board order
+  Undo puts the ticket back after the card it followed; it is offered only
+  for the latest move, so two quick steps never leave the first one's Undo
+  showing. A temporary display sort (the Table's column sort, or a future
+  board sort) rearranges only what is shown and never writes ranks; while
+  one is on, cards cannot be reordered within a column and a move keeps the
+  ticket's rank. Board order
   is separate from workstream order (`EDIT-4`) and never changes it.
 - `EDIT-10` Every board write that changes a ticket (new ticket, move or
   place, field, raw and criterion edits, a ticked review step, archive,
