@@ -63,7 +63,9 @@ const (
 // Entry is one timeline event of a run, with the fields worth showing.
 // An activity record's entry counts its tool uses (Tools) and failures and
 // names the first path it recorded; a ticket.moved entry's Detail is the
-// status the ticket moved to; Branch marks a hookless run's restated
+// status the ticket moved to; a turn.start entry's Detail is "agent" for an
+// agent's message, "background" for any other turn the user did not start
+// and empty for the user's prompt; Branch marks a hookless run's restated
 // run.start as its switch to that branch.
 type Entry struct {
 	Time     time.Time   `json:"time"`
@@ -347,10 +349,14 @@ func (s *Set) Apply(e events.Event) {
 		r.Cwd = first(data.Cwd, r.Cwd)
 		r.Branch = first(data.Branch, r.Branch)
 		r.Worktree = first(data.Worktree, r.Worktree)
-		if data.Background {
+		answers = data.FromUser()
+		switch {
+		case answers:
+		case data.Origin == events.OriginAgent:
+			entry.Detail = "agent"
+		default:
 			entry.Detail = "background"
 		}
-		answers = !data.Background
 	case events.TurnEnd:
 		var data events.TurnEndData
 		_ = e.Decode(&data)

@@ -76,6 +76,9 @@ describe("describeEntry", () => {
     expect(
       describeEntry(entry({ kind: "turn.start", detail: "background" })),
     ).toBe("Background task finished");
+    expect(describeEntry(entry({ kind: "turn.start", detail: "agent" }))).toBe(
+      "Message from an agent",
+    );
     expect(describeEntry(entry({ kind: "turn.end" }))).toBe("Turn finished");
     expect(
       describeEntry(entry({ kind: "permission.requested", tool: "Bash" })),

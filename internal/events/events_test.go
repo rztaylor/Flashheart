@@ -273,3 +273,31 @@ func TestAnInboxDeliversEachAnswerOnce(t *testing.T) {
 		t.Fatalf("answers = %+v, %v", got, err)
 	}
 }
+
+// Only the user's prompt is from the user; a turn without an origin, from
+// a log older than the field, is the user's unless marked background
+// (FH-57, agent-protocol §3).
+func TestTurnStartFromUser(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		data TurnStartData
+		want bool
+	}{
+		{TurnStartData{Origin: OriginUser}, true},
+		{TurnStartData{}, true},
+		{TurnStartData{Background: true}, false},
+		{TurnStartData{Origin: OriginTask, Background: true}, false},
+		{TurnStartData{Origin: OriginAgent}, false},
+		{TurnStartData{Origin: "scheduler"}, false},
+	}
+	for _, tc := range cases {
+		if got := tc.data.FromUser(); got != tc.want {
+			t.Errorf("%+v.FromUser() = %v, want %v", tc.data, got, tc.want)
+		}
+	}
+	long := TurnStartData{Origin: strings.Repeat("o", 100)}.bound().(TurnStartData)
+	if len([]rune(long.Origin)) > maxWord {
+		t.Fatalf("origin of %d runes kept", len([]rune(long.Origin)))
+	}
+}
