@@ -22,6 +22,7 @@ import {
 import { uploadFile } from "../../api/files";
 import { messageOf } from "../../model/errors";
 import { sentWords } from "../../model/requests";
+import { commentedWords } from "../../model/tell";
 import type { Upload } from "../../model/uploads";
 import { type Resource, useResource } from "../../state/useResource";
 import { saveWithBase } from "../editing/precondition";
@@ -46,8 +47,9 @@ export interface TicketState {
   // edit saves the full page's in-place edits (FH-66) on base: typed
   // fields (EDIT-6), or one section's text.
   edit?: TicketEdits;
-  // comment posts a person's comment (STO-8, FH-125), then reloads and
-  // says so; a failed post rejects with the reason.
+  // comment posts a person's comment (STO-8, FH-125), sent to a session
+  // too when it names one (FH-127), then reloads and says where it went;
+  // a failed post rejects with the reason.
   comment?(comment: NewComment): Promise<void>;
   // editComment saves a comment's new text on base, the hash of the
   // activity it was read from.
@@ -168,10 +170,20 @@ export function useTicket({
     comment:
       editable && detail && editing
         ? (comment) =>
-            addComment(fetcher, detail.id, comment).then(() => {
-              resource.reload();
-              editing.notify({ text: `Commented on ${detail.id}.` });
-            })
+            addComment(fetcher, detail.id, comment).then(
+              (posted) => {
+                resource.reload();
+                editing.notify({
+                  text: commentedWords(detail.id, posted.sentTo),
+                  details: posted.warnings,
+                });
+              },
+              (failure: unknown) => {
+                // A session refused as no longer live: show who is now.
+                if (comment.sendTo) resource.reload();
+                throw failure;
+              },
+            )
         : undefined,
     editComment:
       editable && detail

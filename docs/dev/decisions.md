@@ -1497,6 +1497,51 @@ Alt+Enter on whatever the cursor is on; a toolbar always shown above the
 text was rejected for one over the selection, which keeps the section's
 look.
 
+## 2026-10-13 — D63: A comment told to a session is marked delivered on the comment, by whoever delivers it
+
+Built by FH-127 within D47's choices (the user's: a per-comment choice in
+the comment box; only live sessions that have claimed the ticket, with
+their subagents under them; nothing queued for a later session; editable
+until delivered; *Delivered to … at …*). What FH-127 decided itself:
+
+- **Where delivery is kept.** The comment names its run (`sent-to`) when
+  posted and gains `delivered` (a time) in the ticket's `activity.md`
+  once handed over, so the board can say so for as long as the ticket
+  lasts; the `comment.delivered` event stays the protocol's record but
+  expires with the log, and reading delivery from it would also mean
+  folding comment ids into every run.
+- **Who marks it.** Whoever delivers the session's inbox (prompt hook,
+  recovery note, `board_context`, tool results, `flashheart await`)
+  marks it, through `events.Deliver` and `store.DeliverComment`, under
+  the ticket's project lock. The inbox entry carries the ticket's
+  `project`, since the inbox is in the session's home project. The cost
+  lands only on a prompt that has a comment to deliver; an empty inbox is
+  still one `stat` (`HOOK-1`).
+- **What the session reads.** The text as the comment reads when it is
+  delivered, not as it was queued: reading it and marking it delivered is
+  one locked write, so an edit either lands before (and is what the
+  session reads) or is refused (`delivered`). One that was delivered
+  already, sent to another run or is gone is left out; one whose ticket
+  cannot be read goes as queued, since nothing taken may be lost.
+- **Who may be chosen.** The ticket offers its live claimants
+  (`index.Snapshot.Claimants`, the rule `Holder` uses), and the server
+  checks the chosen run again when the comment is sent and refuses
+  (`not_live`) without posting, so the person chooses again. A comment
+  that cannot be queued stays posted and is unsent, with a warning.
+- **Missed.** A comment whose run has ended (or left the run window)
+  undelivered reads *Not delivered*; it stays editable and on the
+  ticket, where the next session reads it with `get_ticket` and `claim`.
+  Should its own session resume, it is delivered then.
+- **Delete** is not offered for comments yet; when it is, a delivered
+  comment is locked against it too.
+
+Options: delivery read from the event log only (lost after retention);
+`serve` marking comments from the events it folds (a write that depends
+on `serve` running, and a second writer); re-queueing an edited comment
+(the inbox keeps an entry's first copy, so the session would read the old
+text); posting the comment unsent when the chosen run is no longer live
+(the person chose to tell a session, so they choose again instead).
+
 ## 2026-10-13 — D64: Files from the browser are judged by their bytes; pasted HTML stays text
 
 Decision (FH-18, `REV-7`, `SEC-7`): a file pasted, dropped or chosen on

@@ -60,13 +60,17 @@ var ErrNoComment = errors.New("no such comment")
 
 // Comment is a person's comment on a ticket. Edited is zero until the
 // comment is edited; Quote is the part of the ticket it quotes ("" for
-// none) and QuoteFrom where that part is.
+// none) and QuoteFrom where that part is. SentTo is the run a person sent
+// it to as well (FH-127), "" for none, and Delivered when that run's
+// session was handed it, zero until then.
 type Comment struct {
 	ID        string
 	Time      time.Time
 	By        string
 	State     CommentState
 	Edited    time.Time
+	SentTo    string
+	Delivered time.Time
 	QuoteFrom string
 	Quote     string
 	Body      string
@@ -268,6 +272,14 @@ func parseComment(lines []string) (Comment, []attribute) {
 			if edited, err := time.Parse(time.RFC3339, attr.value); err == nil {
 				comment.Edited = edited.UTC()
 			}
+		case "sent-to":
+			if IsRun(attr.value) {
+				comment.SentTo = attr.value
+			}
+		case "delivered":
+			if delivered, err := time.Parse(time.RFC3339, attr.value); err == nil {
+				comment.Delivered = delivered.UTC()
+			}
 		case "quote":
 			quoted, comment.QuoteFrom = true, attr.value
 		}
@@ -449,7 +461,8 @@ func heading(at time.Time, kind, by, id string) string {
 }
 
 // renderComment is a comment entry's lines: heading, attributes (state,
-// edited, quote, then those kept from the file), quote, text.
+// edited, sent-to, delivered, quote, then those kept from the file),
+// quote, text.
 func renderComment(c Comment, kept []attribute) []string {
 	state := c.State
 	if state == "" {
@@ -457,6 +470,8 @@ func renderComment(c Comment, kept []attribute) []string {
 	}
 	attributes := setAttribute(slices.Clone(kept), "state", string(state), true)
 	attributes = setAttribute(attributes, "edited", c.Edited.UTC().Format(timeLayout), !c.Edited.IsZero())
+	attributes = setAttribute(attributes, "sent-to", OneLine(c.SentTo, MaxAuthor), c.SentTo != "")
+	attributes = setAttribute(attributes, "delivered", c.Delivered.UTC().Format(timeLayout), !c.Delivered.IsZero())
 	attributes = setAttribute(attributes, "quote", OneLine(c.QuoteFrom, MaxQuoteFrom), c.Quote != "")
 	lines := []string{heading(c.Time, EntryComment, c.By, c.ID), ""}
 	for _, attr := range attributes {
@@ -473,7 +488,7 @@ func renderComment(c Comment, kept []attribute) []string {
 }
 
 // attributeOrder is the order Flashheart writes the attributes it knows.
-var attributeOrder = []string{"state", "edited", "quote"}
+var attributeOrder = []string{"state", "edited", "sent-to", "delivered", "quote"}
 
 // setAttribute sets key to value where it is, or adds it after the known
 // attributes written before it; with keep false it removes key.

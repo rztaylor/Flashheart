@@ -415,6 +415,14 @@ line each up to a blank line, always at least `state`:
   addressed. A comment never goes back to `open`.
 - `edited`: when it was last edited, RFC 3339 UTC; absent until then. The
   board shows the comment as edited.
+- `sent-to`: the run id (agent-protocol §2) of the live session, or one
+  of its subagents, the person also sent the comment to when posting it
+  (**Tell a session now**, D47, FH-127); absent for a comment not sent.
+- `delivered`: when that session was handed the comment, RFC 3339 UTC;
+  absent until then. Once it is set the comment can no longer be edited:
+  the session has read what it says. Without it, a comment whose run has
+  ended (or left the run window) was not delivered, and the board says
+  so.
 - `quote`: where the quoted part of the ticket is from (one line, at most
   200 characters, such as `Acceptance Criteria 2`); present only with a
   quote, which follows as a blockquote (`> ` before each line).
@@ -456,7 +464,12 @@ or restore is moved back. A comment is appended to the file as it is under
 the lock; an edit replaces only that comment's entry, its heading,
 unknown attributes and following blank lines kept, and carries the hash of
 the file the person read: a stale hash is a conflict and writes nothing.
-A state change rewrites that comment's entry the same way but merges
+An edit of a delivered comment is refused (`delivered`). Marking a comment
+delivered is done by whoever delivers the session's inbox (agent-protocol
+§4), never by a person; like a state change it rewrites that comment's
+entry, merging with the file as it is under the lock, and writes nothing
+when the comment was not sent to that run or is delivered already; it is
+not history. A state change rewrites that comment's entry the same way but merges
 with the file as it is under the lock, and a request for changes moves
 the ticket and marks its comments in one write, with one history entry.
 New entries follow a blank line, in the file's line endings (CRLF when its

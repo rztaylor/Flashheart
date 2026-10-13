@@ -184,7 +184,9 @@ Full format: `docs/dev/specs/board-format.md`.
   each, kept as long as the ticket. People add and edit comments on the
   board (edits shown as edited; each has a state for change requests:
   open, change requested, addressed, resolved, `REV-6`); agents never
-  write comments and change only a request's state, to addressed. Every
+  write comments and change only a request's state, to addressed. A
+  comment sent to a session (`CARD-7`) names its run and, once handed
+  over, when; it can no longer be edited after that. Every
   ticket write by the board or an agent (create, move, field and raw
   edits, ticked criteria and review steps, archive, restore, comment
   states) appends one history entry in the same locked write: who, what
@@ -342,8 +344,17 @@ Full format: `docs/dev/specs/board-format.md`.
   comment with **Comment** or Ctrl or Cmd and Enter (never an empty one;
   a failed post keeps the text with the reason beside it), optionally
   quoting a section, criterion or How to verify step chosen from the
-  page, shown as a quote in the comment. A person's comment edits in
-  place (`EDIT-11`) and then shows as edited, and shows its state when it
+  page, shown as a quote in the comment. Per comment, **Tell a session
+  now** also sends it, as the user's own words, to a live session that
+  has claimed the ticket, chosen from those sessions with their subagents
+  under them; with none the option is off and says why, and nothing is
+  ever queued for a later session (D47, FH-127). The session gets it
+  through its inbox with its next prompt, Flashheart tool result,
+  `board_context` or `flashheart await` (`HOOK-5`); the comment shows
+  *Delivered to <run> at <time>* and is then locked, or says it was not
+  delivered when the session ended first, staying on the ticket. A
+  person's comment edits in
+  place (`EDIT-11`) until it is delivered and then shows as edited, and shows its state when it
   is a change request. On a ticket in review the properties offer
   **Request changes** (`REV-6`). From 1280px an outline
   of the sections (with counts, empty template sections marked empty, the

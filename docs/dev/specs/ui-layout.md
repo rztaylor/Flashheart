@@ -191,11 +191,13 @@ reorders them.
    (`CARD-3`) · format warnings · the ticket's markdown (`CARD-2`).
 4. **Comments tab** (FH-128): the full page's Activity limited to people's
    comments, with the same parts: the timeline of comments oldest first
-   (author, time, *edited*, the quote in its well, the text; *No comments
+   (author, time, *edited*, the quote in its well, the text, and a sent
+   comment's delivery line; *No comments
    yet.* when there are none), a person's comment editable in place with
-   its pencil, Save, Cancel, shortcuts and the conflict dialog, and, where
-   the ticket can be edited, the comment box with **Comment**, *Quote* and
-   the shortcut hint. History, notes, handoffs and questions stay on the
+   its pencil, Save, Cancel, shortcuts and the conflict dialog, until it
+   is delivered, and, where
+   the ticket can be edited, the comment box with **Tell a session now**,
+   **Comment**, *Quote* and the shortcut hint. History, notes, handoffs and questions stay on the
    full page. The tab's comment being written or edited stays while
    another tab is shown; closing the panel, Escape or opening another
    ticket with unsaved comment text asks first (*Unsaved changes to the
@@ -293,7 +295,11 @@ at most 94rem.
   edited, the quote in a well with a full rule border captioned with where
   it is from, then the text; a pencil, *Edit comment*, on a person's
   comment edits its text in place as other items do, FH-125; a change
-  request's state pill after its time, `REV-6`), notes
+  request's state pill after its time, `REV-6`; a comment sent to a
+  session ends with a muted line with an icon, FH-127: *Waiting for <run>
+  to take it with its next prompt or tool call.*, *Delivered to <run> at
+  <time>. It can no longer be edited.* (no pencil), or *Not delivered:
+  <run> ended before taking it. It stays on the ticket.*), notes
   (author, day, text), history (author, what the write changed in words,
   "moved it from Up next to In progress", "edited the description and the
   priority", "ticked criterion 2", and time; never the ticket's text),
@@ -309,8 +315,17 @@ at most 94rem.
   questions and checkpoints, and agents' moves from before the history
   begins, show while the runs that made them are within the run window.
   Where the page can save, the timeline ends with the **comment box**: a
-  comment node, then a text area *Add a comment*, then **Comment**
-  (primary; disabled while empty, *Posting…* meanwhile), *Quote*, a select
+  comment node, then a text area *Add a comment*, then **Tell a session
+  now** (FH-127), a checkbox with a muted line beside it: *Also hands it
+  to the session working on <id>.*; checked, a *Session* select of the
+  live sessions holding the ticket, each an option group *Session
+  <run>* with the session (*<run> · <state>*) and its live subagents
+  (*<type> subagent · <state>*), the holder chosen first, and the line
+  *It gets your words with its next prompt or tool call.*; with no live
+  session the checkbox is disabled and the line says *No live session
+  holds <id> now.* Then **Comment**
+  (primary; disabled while empty, *Posting…* meanwhile; **Comment and
+  tell**, *Sending…*, while telling; the choice clears once posted), *Quote*, a select
   of the parts of the ticket a comment can quote (*No quote*, then
   Sections, Criteria and How to verify steps, numbered), and the hint
   *⌘Enter posts* (Ctrl on other systems). A chosen quote shows above the

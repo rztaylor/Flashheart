@@ -42,6 +42,10 @@ type Entry struct {
 	ID     string    `json:"id"`
 	Run    string    `json:"run"`
 	Ticket string    `json:"ticket,omitempty"`
+	// Project is the ticket's project for a comment a person sent from the
+	// board (FH-127), whose delivery is recorded on the comment there;
+	// the inbox is in the session's home project, which may be another.
+	Project string `json:"project,omitempty"`
 	// Question is the question an answer answers.
 	Question string `json:"question,omitempty"`
 	// Text is the answer, the comment or the change asked for.
@@ -57,7 +61,7 @@ func (e Entry) key() string { return string(e.Type) + "\x00" + e.ID }
 
 // bound cuts and scrubs the entry's strings as the log does (SEC-3).
 func (e Entry) bound() Entry {
-	e.ID, e.Run, e.Ticket = line(e.ID, maxID), line(e.Run, maxRef), line(e.Ticket, maxRef)
+	e.ID, e.Run, e.Ticket, e.Project = line(e.ID, maxID), line(e.Run, maxRef), line(e.Ticket, maxRef), line(e.Project, maxRef)
 	e.Question, e.Text = line(e.Question, MaxQuestionText), block(e.Text, MaxInboxText)
 	e.By = line(e.By, MaxNameLength)
 	return e
@@ -100,20 +104,26 @@ type Mailbox struct {
 }
 
 // Inbox is the session inbox as delivery uses it: taking a session's
-// entries and recording that they reached their runs. *Log is one.
+// entries, handing over the comments people sent from the board as their
+// tickets have them then, and recording that they reached their runs.
+// *Log is one.
 type Inbox interface {
 	Take(project string, box Mailbox) ([]Entry, error)
+	DeliverComment(e Entry, at time.Time) (Entry, bool, error)
 	MarkDelivered(project string, list []Entry, at time.Time) error
 }
 
 // Deliver hands over what waits in sessions' inboxes (HOOK-5): it takes
 // each mailbox, adds pending (answered questions the fold shows
-// undelivered, whose inbox may be gone), keeps each entry once, and
-// records each delivered (question.delivered for an answer,
-// comment.delivered otherwise) at at. It returns everything it took even
-// when an inbox or the record fails, so the caller shows it: nothing taken
-// may be lost, and an answer whose record failed is still undelivered in
-// the log, so a later delivery shows it again.
+// undelivered, whose inbox may be gone), keeps each entry once, hands
+// over each comment sent from the board as its ticket has it now, marking
+// it delivered there (FH-127: one sent to another run, delivered already
+// or gone is left out), and records each delivered (question.delivered
+// for an answer, comment.delivered otherwise) at at. It returns
+// everything it took even when an inbox, a ticket or the record fails, so
+// the caller shows it: nothing taken may be lost, and an answer whose
+// record failed is still undelivered in the log, so a later delivery
+// shows it again.
 func Deliver(in Inbox, project string, boxes []Mailbox, pending []Entry, at time.Time) ([]Entry, error) {
 	var list []Entry
 	var problems error
@@ -137,6 +147,23 @@ func Deliver(in Inbox, project string, boxes []Mailbox, pending []Entry, at time
 	for _, e := range pending {
 		add(e)
 	}
+	kept := list[:0]
+	for _, e := range list {
+		if e.Type == EntryComment && e.Project != "" {
+			current, ok, err := in.DeliverComment(e, at)
+			if err != nil {
+				// The ticket cannot say: hand it over as it was queued.
+				problems = errors.Join(problems, err)
+				current, ok = e, true
+			}
+			if !ok {
+				continue
+			}
+			e = current
+		}
+		kept = append(kept, e)
+	}
+	list = kept
 	if len(list) > 0 {
 		problems = errors.Join(problems, in.MarkDelivered(project, list, at))
 	}
@@ -162,6 +189,19 @@ func (l *Log) Queue(project string, e Entry) error {
 		return err
 	}
 	return l.store.AppendInbox(project, run.Session().String(), append(data, '\n'))
+}
+
+// DeliverComment hands over a comment a person sent from the board as its
+// ticket has it now (store.DeliverComment): with its current text, and
+// marked delivered there. ok is false when it is not to be handed over:
+// sent to another run, delivered already or no longer there.
+func (l *Log) DeliverComment(e Entry, at time.Time) (Entry, bool, error) {
+	comment, ok, err := l.store.DeliverComment(e.Project, e.Ticket, e.ID, e.Run, at)
+	if err != nil || !ok {
+		return e, ok, err
+	}
+	e.Text, e.By = block(comment.Body, MaxInboxText), line(comment.By, MaxNameLength)
+	return e, true, nil
 }
 
 // MarkDelivered records that entries taken from an inbox reached their

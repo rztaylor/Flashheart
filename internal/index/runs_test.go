@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -365,6 +366,47 @@ func TestSnapshotKnowsTheHumansLatestActivity(t *testing.T) {
 // (agent-protocol §6): what a comment or change request may be sent to
 // now (FH-126, FH-127). A run linked by branch alone, an ended run and a
 // lapsed lease hold nothing.
+// The runs a comment may be sent to now (FH-127) are the live claimants:
+// the holding session, then its live subagents, which work under its
+// claim; an ended subagent or one linked by branch alone is not one.
+func TestClaimantsAreTheHolderAndItsLiveSubagents(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	now := clock.now
+	as := func(run string, at time.Time, kind events.Kind, data any) {
+		t.Helper()
+		if err := log.Append(events.Event{Time: at, Run: run, Agent: "claude", Kind: kind, Project: "alpha", Data: data}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	as("claude:s1", now.Add(-20*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSession})
+	snapshot, _ := index.Rebuild()
+	if list := snapshot.Claimants("AL-3"); len(list) != 0 {
+		t.Fatalf("an unclaimed ticket has claimants %+v", list)
+	}
+	as("claude:s1", now.Add(-10*time.Minute), events.Claim, events.TicketData{Ticket: "AL-3", Home: "alpha"})
+	as("claude:s1/a1", now.Add(-5*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: "claude:s1"})
+	as("claude:s1/a2", now.Add(-5*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: "claude:s1"})
+	as("claude:s1/a2", now.Add(-4*time.Minute), events.RunEnd, events.RunEndData{Reason: "done"})
+	snapshot, _ = index.Rebuild()
+	var ids []string
+	for _, run := range snapshot.Claimants("AL-3") {
+		ids = append(ids, run.ID)
+	}
+	if !slices.Equal(ids, []string{"claude:s1", "claude:s1/a1"}) {
+		t.Errorf("claimants = %v", ids)
+	}
+	if holder, _ := snapshot.Holder("AL-3"); holder.ID != "claude:s1" {
+		t.Errorf("holder = %s", holder.ID)
+	}
+	as("claude:s1", now.Add(-time.Minute), events.RunEnd, events.RunEndData{Reason: "other"})
+	snapshot, _ = index.Rebuild()
+	if list := snapshot.Claimants("AL-3"); len(list) != 0 {
+		t.Errorf("an ended session has claimants %+v", list)
+	}
+}
+
 func TestHolderIsTheLiveClaimant(t *testing.T) {
 	t.Parallel()
 

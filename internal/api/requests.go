@@ -89,16 +89,17 @@ func (b boardAPI) requestChanges(w http.ResponseWriter, r *http.Request) {
 			b.recordHuman(project.Name, events.CommentEdited, events.TicketData{Ticket: ticket.ID, Comment: comment.ID, Fields: []string{"state"}})
 		}
 	}
-	sentTo, warnings := b.sendRequests(ticket.ID, result.Comments)
+	sentTo, warnings := b.sendRequests(project.Name, ticket.ID, result.Comments)
 	response := RequestChangesResponse{
 		Comments: make([]CommentJSON, 0, len(result.Comments)), Hash: result.Hash, ActivityHash: result.ActivityHash,
 		SentTo: sentTo, Warnings: nonNil(warnings),
 	}
-	for _, comment := range result.Comments {
-		response.Comments = append(response.Comments, commentJSON(comment))
-	}
-	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
+	snapshot, _ := b.board.Rebuild()
+	if snapshot != nil {
 		response.Revision = snapshot.Revision
+	}
+	for _, comment := range result.Comments {
+		response.Comments = append(response.Comments, commentJSON(comment, snapshot))
 	}
 	writeJSON(w, http.StatusOK, response)
 }
@@ -128,13 +129,15 @@ func (b boardAPI) setCommentState(w http.ResponseWriter, r *http.Request, writer
 		return
 	}
 	b.recordHuman(project.Name, events.CommentEdited, events.TicketData{Ticket: ticket.ID, Comment: comment.ID, Fields: []string{"state"}})
-	response := CommentResponse{Comment: commentJSON(comment), ActivityHash: hash}
+	response := CommentResponse{ActivityHash: hash}
 	if to == board.CommentChangeRequested {
-		response.SentTo, response.Warnings = b.sendRequests(ticket.ID, []board.Comment{comment})
+		response.SentTo, response.Warnings = b.sendRequests(project.Name, ticket.ID, []board.Comment{comment})
 	}
-	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
+	snapshot, _ := b.board.Rebuild()
+	if snapshot != nil {
 		response.Revision = snapshot.Revision
 	}
+	response.Comment = commentJSON(comment, snapshot)
 	writeJSON(w, http.StatusOK, response)
 }
 
@@ -144,7 +147,7 @@ func (b boardAPI) setCommentState(w http.ResponseWriter, r *http.Request, writer
 // It returns that run, or "" when no live session holds the ticket: the
 // next session reads them from the ticket (recovery note, board_context).
 // The requests are saved already, so a failure to queue is a warning.
-func (b boardAPI) sendRequests(ticket string, comments []board.Comment) (string, []string) {
+func (b boardAPI) sendRequests(project, ticket string, comments []board.Comment) (string, []string) {
 	if b.events == nil || len(comments) == 0 {
 		return "", nil
 	}
@@ -156,12 +159,8 @@ func (b boardAPI) sendRequests(ticket string, comments []board.Comment) (string,
 	if !ok {
 		return "", nil
 	}
-	now := b.now().UTC()
-	for _, comment := range comments {
-		entry := events.Entry{Type: events.EntryChangeRequest, ID: comment.ID, Run: holder.ID, Ticket: ticket, Text: comment.Body, By: comment.By, Time: now}
-		if err := b.events.Queue(holder.Project, entry); err != nil {
-			return "", []string{fmt.Sprintf("The changes are on %s, but they could not be sent to %s now (%v); the session sees them when it reads the ticket.", ticket, protocol.ShortRun(holder.ID), err)}
-		}
+	if err := b.queue(holder, project, ticket, events.EntryChangeRequest, comments); err != nil {
+		return "", []string{fmt.Sprintf("The changes are on %s, but they could not be sent to %s now (%v); the session sees them when it reads the ticket.", ticket, protocol.ShortRun(holder.ID), err)}
 	}
 	return holder.ID, nil
 }

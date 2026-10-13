@@ -108,7 +108,7 @@ writing.
 | `question.asked` | MCP | `id`, `ticket`, `kind`, `text` (≤1,000), `options` |
 | `question.answered` | UI | `id`, `answer`, `by` |
 | `question.delivered` | whoever delivers it (§4) | `id` |
-| `comment.delivered` | whoever delivers it (§4) | `ticket`, `comment` (its id in the ticket's `activity.md`), `type` (`comment` or `change-request`), on the run it was sent to; never its text |
+| `comment.delivered` | whoever delivers it (§4) | `ticket`, `comment` (its id in the ticket's `activity.md`), `type` (`comment` or `change-request`), on the run it was sent to; never its text. A comment a person sent from the board is also marked `delivered` on the comment itself (FH-127) |
 | `comment.added` / `comment.edited` | UI | `ticket`, `comment` (its id in the ticket's `activity.md`), `by: human`; `fields: [state]` on `comment.edited` when only its state changed (a change requested, resolved or reopened, FH-126); never its text (D47) |
 
 ### Activity records
@@ -303,6 +303,7 @@ per line:
 | `id` | the question's id for an answer; the comment's id in the ticket's `activity.md` otherwise |
 | `run` | the run it is for: the asking run of an answer (the session or one of its subagents), the run a comment or change request was sent to |
 | `ticket` | the ticket, when there is one |
+| `project` | the ticket's project, for a comment or change request sent from the board (the inbox is in the session's home project, which may be another); a comment's delivery is marked there (FH-127) |
 | `question` | an answer's question |
 | `text` | the answer, the comment or the change asked for (scrubbed, at most 8,000 bytes) |
 | `by` | who wrote it |
@@ -310,7 +311,15 @@ per line:
 
 Answering a question in the UI appends `question.answered` and queues an
 `answer` there; `events.Log.Queue` is how a writer queues a `comment` or
-`change-request` (FH-127 builds comments). A `change-request` is queued
+`change-request`. A `comment` is queued when the person posts one and
+also chooses **Tell a session now** (D47, FH-127): the board offers only
+the live runs that have claimed the ticket (`index.Snapshot.Claimants`:
+the holding session, then its live subagents, which work under its
+claim), checks the chosen run again when the comment is sent, and refuses
+one that is no longer such a run (`not_live`), posting nothing. The
+comment is posted naming the run (`sent-to` in `activity.md`) and queued
+for it with the ticket's `project`; nothing is ever queued for a later
+session. A `change-request` is queued
 when the person requests changes on a ticket in review, or reopens one,
 for each request, on the **live session holding the ticket**
 (`index.Snapshot.Holder`: the run whose claim on the ticket is live, §6,
@@ -323,7 +332,14 @@ to the model (the prompt hook, the recovery note, `board_context` or
 `flashheart await`, §7.5; for a run the MCP server started, which has no
 prompt hook, its connection's next tool result) empties it and appends
 `question.delivered` for each answer and `comment.delivered` for each
-comment or change request. Each path frames every entry by its type, under
+comment or change request. A `comment` with a `project` is handed over
+as its ticket has it then (`events.Deliver`, `store.DeliverComment`):
+under that project's lock its text is read, edits included, and the
+comment is marked `delivered` with the time, after which the person can
+no longer edit it. One that is no longer there, was delivered already or
+was not sent to that run is left out; one whose ticket cannot be read
+(archived) goes as it was queued and the failure is logged, since
+nothing taken may be lost. Each path frames every entry by its type, under
 its own heading:
 
 | Type | Heading (prompt hook, tool results, `board_context`, `await`) | Recovery note line (§8) |
@@ -360,8 +376,11 @@ answer or comment should reach the agent whenever it gets a turn.
 The recovery note takes the new session's own inbox and the **answers**
 in the inbox of the previous session in its worktree, so resuming that
 session later does not deliver them again; the previous session's comments
-and change requests were sent to it and stay for it (FH-127 decides what
-the board says of a comment its session never received).
+and change requests were sent to it and stay for it. The board says of a
+comment whose session ended before taking it that it was not delivered
+(FH-127); it stays on the ticket, where `get_ticket` and `claim` show
+it to the next session as one of the ticket's comments, and the person
+may still edit it. Should that session resume, it is delivered then.
 
 Inboxes written before D54 sit in `<project>/.flashheart/answers/`, with
 lines that have no `type` (they are answers) and carry the answer in
@@ -981,7 +1000,9 @@ checks (§5.4). It covers, briefly:
   conflict with the session's own instructions asked about; agents do not
   write comments (§7.2); a change requested in review is such a comment,
   with an id: make it, then pass the id in `update_ticket`'s `addressed`
-  (FH-126);
+  (FH-126); a comment the user sends the session from the board arrives
+  with its next prompt or Flashheart tool result, as the user's words
+  (FH-127);
 - writing tickets for a person (§7.2): a title says what a person would
   notice or gain, without names from the code; the description gives the
   problem, why it matters and the proposed change in plain words; detail
@@ -1014,6 +1035,11 @@ checks (§5.4). It covers, briefly:
 - **MCP contract tests** through the Go SDK's in-memory transport.
 - **End-to-end smoke**: a scripted sequence (start → claim → edits → stop
   blocked → checkpoint → end → new session recovery note) against a temp root.
+  A cross-agent leg runs it from Claude Code to Codex and from Codex to
+  Claude Code in one worktree, Codex's side from its recorded payloads and
+  MCP calls: the second session's note names the ticket and the first's
+  last handoff, it claims the ticket and checkpoints, and the ticket's
+  runs, claims, checkpoints and handoff name each session in turn.
 
 ## 14. Versioning
 
@@ -1138,6 +1164,17 @@ bullet gains a sentence. Nothing that was accepted is refused, no event
 changes shape (`fields` was already optional on ticket events), outputs
 only gain lines, and an older agent that never sends `addressed` leaves
 requests open for the person to resolve, so the version stays 2.
+
+Additive change within version 2 (D47, D63, FH-127, 2026-10-13): a
+person may send a comment to a live session that has claimed the ticket.
+It travels as a `comment` inbox entry, which gains the optional
+`project` (the ticket's); delivery marks the comment delivered in the
+ticket's `activity.md` (board-format §Activity: `sent-to`,
+`delivered`) and hands over its text as it is then; and the skill's
+comments bullet gains a clause. Agents see the same heading and lines
+they already read, no tool or event changes shape, an entry without
+`project` is delivered as before, and an older binary delivering one
+only leaves the comment unmarked, so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`
