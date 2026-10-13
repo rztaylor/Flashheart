@@ -36,15 +36,7 @@ describe("BlockerPill", () => {
 });
 
 describe("Tag", () => {
-  it("fills a painted tag with its paint and names the value", () => {
-    const markup = renderToStaticMarkup(
-      <Tag paint={{ token: "type-bug", label: "bug", value: "bug" }}>bug</Tag>,
-    );
-    expect(markup).toContain("--paint:var(--fh-paint-type-bug)");
-    expect(markup).toContain(">bug</span>");
-  });
-
-  it("draws an unpainted tag as a neutral outlined chip", () => {
+  it("draws a tag as a neutral outlined chip", () => {
     const markup = renderToStaticMarkup(<Tag>feature</Tag>);
     expect(markup).not.toContain("--paint");
     expect(markup).toContain("border-rule");

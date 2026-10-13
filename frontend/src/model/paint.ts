@@ -38,6 +38,12 @@ const ages = [
   ["older", "Older"],
 ] as const;
 
+// typeToken is a type's paint token: its own for a known type, "other"
+// for the rest. The card's type icon and the Colour by tint share it.
+export function typeToken(type: string): string {
+  return `type-${(types as readonly string[]).includes(type) ? type : "other"}`;
+}
+
 const day = 24 * 60 * 60 * 1000;
 
 function ageBucket(iso: string, now: Date) {
@@ -62,9 +68,8 @@ export function paintFor(
   switch (mode) {
     case "type": {
       if (!card.type) return undefined;
-      const known = (types as readonly string[]).includes(card.type);
       return {
-        token: `type-${known ? card.type : "other"}`,
+        token: typeToken(card.type),
         label: card.type,
         value: card.type,
       };

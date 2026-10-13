@@ -54,6 +54,30 @@ describe("FilterChips", () => {
     expect(markup).toMatch(/aria-pressed="false"[^>]*>(<[^>]*>)*feature/);
   });
 
+  it("marks each type chip with the type's own card icon (FH-147)", () => {
+    const markup = render();
+    expect(markup).toMatch(/data-type="feature"[^>]*>[\s\S]*?feature/);
+    expect(markup).toContain('data-icon="star"');
+    expect(markup).toContain('data-icon="bug"');
+    expect(markup).toContain("color:var(--fh-paint-type-bug)");
+  });
+
+  it("keeps the round paint bullet for other Colour by values", () => {
+    const markup = renderToStaticMarkup(
+      <FilterChips
+        workstreams={[]}
+        lines={new Map()}
+        cards={[]}
+        paint="priority"
+        paints={[{ token: "priority-high", label: "High", value: "high" }]}
+        filters={emptyFilters}
+        onChange={() => undefined}
+      />,
+    );
+    expect(markup).toContain("--paint:var(--fh-paint-priority-high)");
+    expect(markup).not.toContain("data-icon");
+  });
+
   it("shows an excluded workstream as hidden", () => {
     const markup = render({
       ...emptyFilters,

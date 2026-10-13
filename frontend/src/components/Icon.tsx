@@ -55,6 +55,17 @@ const paths = {
   // trash: a bin with its lid, deleting a comment (FH-140).
   trash:
     "M4.5 6.5h15M9.5 6.5V4h5v2.5M6.5 6.5l1 13.5h9l1-13.5M10.5 10.5v6m3-6v6",
+  // Ticket types (FH-147, components/TicketMarks): feature a star, bug a
+  // beetle, infra a server stack, test a beaker, refactor two swapping
+  // arrows, docs a page of lines, spike a light bulb.
+  star: "M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.85 6.75 19.6l1-5.8L3.5 9.7l5.9-.9Z",
+  bug: "M9 8a3 3 0 0 1 6 0M8 11a4 4 0 0 1 8 0v3.5a4 4 0 0 1-8 0ZM12 11v7.5M4.5 13H8m8 0h3.5M5.5 8.5 8 10m10.5-1.5L16 10M5.5 18.5 8 17m10.5 1.5L16 17",
+  server: "M4.5 4.5h15v6h-15zM4.5 13.5h15v6h-15zM8 7.5h.01M8 16.5h.01",
+  beaker:
+    "M9 3.5h6M10.25 3.5v6.25L5.2 18.6A1.25 1.25 0 0 0 6.3 20.5h11.4a1.25 1.25 0 0 0 1.1-1.9l-5.05-8.85V3.5M7.6 14.5h8.8",
+  swap: "M4 8h14m-3.5-3.5L18 8l-3.5 3.5M20 16H6m3.5-3.5L6 16l3.5 3.5",
+  doc: "M6.5 3.5H14l3.5 3.5v13.5h-11zM13.5 3.5V7.5h4M9.5 12h5m-5 3.5h5",
+  bulb: "M9.5 18h5M10.5 21h3M12 3.5a5.5 5.5 0 0 0-3.25 9.9c.8.6 1.25 1.45 1.25 2.4V16h4v-.2c0-.95.45-1.8 1.25-2.4A5.5 5.5 0 0 0 12 3.5Z",
 } as const;
 
 // Filled marks: a solid shape with its inner mark cut out (even-odd), so
