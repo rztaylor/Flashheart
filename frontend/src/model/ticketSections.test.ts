@@ -74,6 +74,20 @@ describe("ticketSections", () => {
     ]);
   });
 
+  // FH-18: files are dropped on the Attachments tab, so a ticket that can
+  // be edited offers it with no files yet.
+  it("offers Attachments with no files only where files can be added", () => {
+    const plain = { runs: [], review: null, comments: [] };
+    expect(
+      ticketSections({ ...plain, attachmentFiles: [] }, true).map(sectionLabel),
+    ).toEqual(["Ticket", "Comments", "Edit", "Runs", "Attachments"]);
+    expect(
+      ticketSections({ ...plain, attachmentFiles: [] }, false).map(
+        sectionLabel,
+      ),
+    ).toEqual(["Ticket", "Runs"]);
+  });
+
   // FH-128: the Comments tab holds the comment box where the ticket can be
   // edited, so it is offered with no comments yet; read-only, only when
   // there are comments to read.
@@ -288,6 +302,17 @@ describe("pageSections", () => {
     expect(count("files")).toBe("1");
     expect(count("activity")).toBe("4");
     expect(count("description")).toBeUndefined();
+  });
+
+  it("shows Files with no files only where files can be added (FH-18)", () => {
+    const files = (attachable: boolean) =>
+      pageSections(input({}), 0, attachable).find(
+        (section) => section.id === "files",
+      );
+    expect(files(false)).toBeUndefined();
+    expect(files(true)).toMatchObject({ title: "Files", group: "files" });
+    expect(files(true)?.count).toBeUndefined();
+    expect(files(true)?.empty).toBeUndefined();
   });
 
   it("marks empty template sections and names them in sentence case", () => {

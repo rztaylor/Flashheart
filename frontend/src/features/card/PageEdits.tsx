@@ -64,7 +64,8 @@ interface Links {
 // SectionEditor edits a section's markdown, by its heading in the file (an
 // empty or missing section starts empty), in the formatted editor (FH-16):
 // the text it saves is the text as edited, so an untouched section saves
-// nothing.
+// nothing. Files pasted, dropped or attached there go into the ticket at
+// once and their references into the text, saved with it (FH-18).
 export function SectionEditor({
   item,
   detail,
@@ -95,6 +96,7 @@ export function SectionEditor({
           onChange={set}
           context={context}
           keys={keys}
+          upload={edit.upload}
         />
       )}
     </InPlaceEditor>

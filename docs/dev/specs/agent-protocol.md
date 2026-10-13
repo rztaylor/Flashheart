@@ -43,7 +43,7 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   (`claude:3f2a9c1e`), or the last when the id is a time-ordered UUID
   (version 7, as Codex's are: `codex:019a7c00-…-8000-00009c4e1f2a` shows
   as `codex:9c4e1f2a`), whose start is the same for sessions started in
-  the same minute (D65); a subagent shows its session's (D39). The
+  the same minute (D66); a subagent shows its session's (D39). The
   server shortens ids (`events.RunID.Short`) and sends the short form
   with each run, question, comment, history entry and change request it
   sends to a session (`short`, `runShort`, `byShort`, `sentToShort`); the frontend

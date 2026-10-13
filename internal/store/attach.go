@@ -138,13 +138,72 @@ func (s *Store) AddAttachment(project, id string, input NewAttachment) (StoredFi
 		return StoredFile{}, err
 	}
 	encoded, err := index.encode()
-	if err != nil {
-		return StoredFile{}, err
+	if err == nil {
+		err = s.WriteFileAtomic(indexName, encoded)
 	}
-	if err := s.WriteFileAtomic(indexName, encoded); err != nil {
+	if err != nil {
+		// A file the index does not list would be a partial upload.
+		s.removeQuietly(path.Join(dir, name))
 		return StoredFile{}, err
 	}
 	return StoredFile{File: name}, nil
+}
+
+// removeQuietly removes a file this write created, when the write failed.
+func (s *Store) removeQuietly(name string) {
+	if root, _, err := s.handle(); err == nil {
+		_ = root.Remove(name)
+	}
+}
+
+// Upload is a file sent from the browser (FH-18): its name as the person's
+// computer had it and its bytes, which are read here no further than the
+// limit.
+type Upload struct {
+	Name string
+	Body io.Reader
+	// Caption is one line (the name when empty); Kind is screenshot, log
+	// or other (from the stored name when empty).
+	Caption, Kind string
+	// MaxBytes is the size limit; zero means DefaultMaxFileCopy.
+	MaxBytes int64
+}
+
+// UploadAttachment stores a file from the browser in a ticket
+// (AddAttachment), judged by its bytes rather than its name
+// (board.SniffAttachment): it is stored under the extension of what it
+// is, so it is served as that (SEC-4). The body is read at most one byte
+// past the limit, so an oversized upload is cut off as it streams, and
+// nothing is written unless the whole file is allowed. The index entry
+// names who added it (As) and no source.
+func (s *Store) UploadAttachment(project, id string, input Upload) (StoredFile, error) {
+	if err := s.checkTicket(project, id); err != nil {
+		return StoredFile{}, err
+	}
+	name := path.Base(strings.ReplaceAll(input.Name, `\`, "/"))
+	if name == "." || name == "/" {
+		name = "file"
+	}
+	limit := maxBytes(input.MaxBytes)
+	data, err := io.ReadAll(io.LimitReader(input.Body, limit+1))
+	if err != nil {
+		return StoredFile{}, fmt.Errorf("%s could not be read: %w", name, err)
+	}
+	if int64(len(data)) > limit {
+		return StoredFile{}, fmt.Errorf("%s is larger than %s, the limit for an attachment: %w", name, board.SizeWords(limit), ErrTooLarge)
+	}
+	sniffed, refusal := board.SniffAttachment(name, data)
+	if refusal != "" {
+		return StoredFile{}, fmt.Errorf("%s was not attached because %s: %w", name, refusal, ErrTypeNotAllowed)
+	}
+	caption := input.Caption
+	if strings.TrimSpace(caption) == "" {
+		caption = name
+	}
+	return s.AddAttachment(project, id, NewAttachment{
+		Name: strings.TrimSuffix(name, path.Ext(name)) + sniffed.Ext, Data: data,
+		Caption: scrub.Secrets(caption), Kind: input.Kind, Run: s.author, MaxBytes: limit,
+	})
 }
 
 func maxBytes(limit int64) int64 {

@@ -218,11 +218,21 @@ reorders them.
    connection. A run's plan shows only when it has one; a run with no
    plan shows no plan section. A subagent listed on its own ticket names
    the session it belongs to.
-7. **Attachments tab** (shown when the ticket has files): a two-column grid
-   of thumbnails (screenshots) and file tiles, each with caption, file name
-   and kind; a thumbnail opens a lightbox dialog (Escape closes, arrows and
-   Previous/Next step when there is more than one, focus returns to the
-   thumbnail); other files open in a new tab.
+7. **Attachments tab** (shown when the ticket has files or can be
+   edited): a two-column grid of thumbnails (screenshots) and file tiles,
+   each with caption, file name and kind; a thumbnail opens a lightbox
+   dialog (Escape closes, arrows and Previous/Next step when there is more
+   than one, focus returns to the thumbnail); other files open in a new
+   tab. Where the ticket can be edited, the **file drop** follows the grid
+   (`REV-7`): the whole tab takes dropped files, and a dashed slot (rule
+   border, card corners) with the attachment icon reads *Drop files here
+   to attach them* over a muted line of the allowed types and size, with
+   **Attach files** (secondary) at its end; while files are dragged over
+   the tab the slot turns solid, on the select surface with a select
+   border and ring. Under it, a muted status line (*Uploading 2 files…*,
+   *Attached 2 files.*) and each refusal in danger words (an alert, with
+   a warning icon and a Dismiss button that returns focus to Attach
+   files).
 8. **Review tab**: screenshots above the review markdown; the *How to
    Verify* steps show as a checklist with `d of t`, between the section's
    own text, and a tick is written into the step's line in `review.md`
@@ -275,7 +285,8 @@ at most 94rem.
   kind) that opens the lightbox; *How to verify* is the steps' checklist
   with its count between the section's own text (`REV-3`). Then **Files**
   (h2): the attachments neither the review nor the ticket links, in the
-  attachment grid. Then **Activity** (h2), with its filter beside the
+  attachment grid, followed by the file drop of the Attachments tab where
+  the ticket can be edited (then Files shows even with no files). Then **Activity** (h2), with its filter beside the
   heading, a segmented control *Show in Activity*: **All**, **Comments**
   (people's comments) or **History** (the ticket's history); a muted line
   under the heading says what it lists. A timeline on one rule, oldest
@@ -388,7 +399,13 @@ at most 94rem.
   selection toolbar (icon buttons for bold, italic, code, link, bulleted
   list and task list) are popovers; the toolbar sits above the
   selection, or below it near the top. While the editor's code loads, a
-  same-sized slot reads *Opening the editor…*.
+  same-sized slot reads *Opening the editor…*. Under the text, a row of
+  **Attach files** (secondary) and a muted hint (*Paste or drop files to
+  attach them*, with the allowed types and size), then the file drop's
+  status line and refusals (Dismiss returns focus to the text). While
+  files are dragged over the text its border turns select with a select
+  ring. A file uploading shows in the text, where it will go, as a quiet
+  chip on the well (*Uploading screenshot.png…*), never as text.
 - **Below 1280px** the outline becomes a **Jump to** button (naming the
   section in view) at the top of the page, staying in view, opening the
   same list as a menu. From 1024px the properties stay on the right;

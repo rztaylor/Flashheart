@@ -98,7 +98,13 @@
   own chunk) and mounts in a shadow root, where its run-time styles are a
   constructed style sheet the CSP (`style-src 'self'`) allows; Tailwind
   does not reach inside, so it is themed with `EditorView.theme` over the
-  token custom properties. Paste is plain text.
+  token custom properties. Paste is plain text. Files (REV-7, FH-18): a
+  pasted screenshot, dropped or chosen files go into the ticket through
+  `MarkdownField`'s `upload` (`editor/uploads`: a placeholder decoration
+  per file, then its reference typed in); the panel's Attachments tab and
+  the page's Files take them through `card/AttachmentDrop`; both use
+  `components/FileDrop` and `model/uploads`, and `app/fileDrops` keeps a
+  file dropped elsewhere from opening in the tab.
 - Desktop first (1280 px and up); narrow widths show one column with a column
   picker. Healthy connection state is visually quiet.
 - Visual direction (D18, D22, 2026-10-06): **Metro Pop** in light (a

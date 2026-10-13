@@ -1,15 +1,16 @@
 import { Annotation, EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import {
-  type FocusEvent,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import { type FocusEvent, useEffect, useRef, useState } from "react";
 
 import type { EditorMode } from "../../api/preferences";
+import {
+  AttachButton,
+  FileDropArea,
+  UploadNotes,
+  useUploadNotes,
+} from "../../components/FileDrop";
 import { SegmentedControl } from "../../components/SegmentedControl";
+import { ALLOWED_WORDS } from "../../model/uploads";
 import type { MarkdownEditorProps } from "./MarkdownField";
 import { useEditorMode } from "./mode";
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -19,6 +20,7 @@ import {
   modeCompartment,
   modeExtensions,
 } from "./setup";
+import { attachFiles } from "./uploads";
 
 // MarkdownEditor is the formatted markdown editor (FH-16, D61): CodeMirror
 // editing the markdown text itself, with a live preview, a slash menu, a
@@ -49,16 +51,31 @@ export default function MarkdownEditor({
   context,
   keys,
   autoFocus = true,
-  extensions = [],
-  handle,
+  upload,
 }: MarkdownEditorProps) {
   const { mode, setMode } = useEditorMode();
   const host = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const toolbar = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<EditorView | null>(null);
-  const latest = useRef({ onChange, context, keys, mode });
-  latest.current = { onChange, context, keys, mode };
+  const latest = useRef({ onChange, context, keys, mode, upload });
+  latest.current = { onChange, context, keys, mode, upload };
+  // What happened to the files last given: in progress or attached, and
+  // the refusals with why (FH-18).
+  const notes = useUploadNotes();
+  const attach = (
+    editor: EditorView,
+    files: File[],
+    pos: number,
+    pasted: boolean,
+  ) => {
+    const send = latest.current.upload;
+    if (!send || files.length === 0) return;
+    notes.start(files.length);
+    void attachFiles(editor, files, pos, send, pasted).then(notes.finish);
+  };
+  const attachRef = useRef(attach);
+  attachRef.current = attach;
   // The toolbar shows over a selection while focus is in the text or the
   // toolbar, or wherever the cursor is after Alt+F10 (asked).
   const [focusWithin, setFocusWithin] = useState(false);
@@ -90,6 +107,12 @@ export default function MarkdownEditor({
         setAsked(true);
         return true;
       },
+      ...(upload
+        ? {
+            onFiles: (editor, files, pos, pasted) =>
+              attachRef.current(editor, files, pos, pasted),
+          }
+        : {}),
     };
     const place = (editor: EditorView) => {
       const { main } = editor.state.selection;
@@ -123,7 +146,7 @@ export default function MarkdownEditor({
       state: EditorState.create({
         doc: value,
         extensions: [
-          editorExtensions(options, latest.current.mode, extensions),
+          editorExtensions(options, latest.current.mode),
           EditorView.updateListener.of((update) => {
             if (
               update.docChanged &&
@@ -172,25 +195,6 @@ export default function MarkdownEditor({
     });
   }, [mode, view]);
 
-  useImperativeHandle(
-    handle,
-    () => ({
-      insert(text: string) {
-        if (!view) return;
-        view.dispatch({
-          ...view.state.replaceSelection(text),
-          scrollIntoView: true,
-          userEvent: "input",
-        });
-        view.focus();
-      },
-      focus() {
-        view?.focus();
-      },
-    }),
-    [view],
-  );
-
   const shown = view && spot && focusWithin && (selected || asked);
   // Alt+F10 moves focus into the toolbar once it shows.
   useEffect(() => {
@@ -220,22 +224,56 @@ export default function MarkdownEditor({
           onChange={setMode}
         />
       </div>
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: it only notes whether focus is in the text or its toolbar. */}
-      <div
-        ref={frame}
-        className="relative min-w-0"
-        onFocus={() => setFocusWithin(true)}
-        onBlur={onBlur}
+      {/* A drop the text did not take (on its padding) goes to the cursor;
+          the text shows it will take files only where they are attached. */}
+      <FileDropArea
+        className={upload ? "group min-w-0" : "min-w-0"}
+        onFiles={(files) => {
+          if (view && upload)
+            attach(view, files, view.state.selection.main.head, false);
+        }}
       >
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: it only notes whether focus is in the text or its toolbar. */}
         <div
-          ref={host}
-          data-autofocus
-          className="min-w-0 rounded-control border border-rule bg-card transition-colors hover:border-ink-muted focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus"
-        />
-        {shown ? (
-          <SelectionToolbar view={view} position={spot} toolbar={toolbar} />
-        ) : null}
-      </div>
+          ref={frame}
+          className="relative min-w-0"
+          onFocus={() => setFocusWithin(true)}
+          onBlur={onBlur}
+        >
+          <div
+            ref={host}
+            data-autofocus
+            className="min-w-0 rounded-control border border-rule bg-card transition-colors hover:border-ink-muted focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus group-data-dropping:border-select group-data-dropping:ring-2 group-data-dropping:ring-select"
+          />
+          {shown ? (
+            <SelectionToolbar view={view} position={spot} toolbar={toolbar} />
+          ) : null}
+        </div>
+      </FileDropArea>
+      {upload ? (
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <AttachButton
+              disabled={!view}
+              onFiles={(files) => {
+                if (view)
+                  attach(view, files, view.state.selection.main.head, false);
+              }}
+            />
+            <p className="min-w-0 text-xs text-ink-muted">
+              Paste or drop files to attach them · {ALLOWED_WORDS}
+            </p>
+          </div>
+          <UploadNotes
+            refusals={notes.refusals}
+            status={notes.status}
+            onDismiss={() => {
+              notes.dismiss();
+              view?.focus();
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
