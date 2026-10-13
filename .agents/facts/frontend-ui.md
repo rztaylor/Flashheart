@@ -56,7 +56,11 @@
   item too, saved on the activity file's hash (`ActivityTimeline`); a
   comment being written in `CommentBox` is a held draft
   (`useHeldDraft`), asked about on leaving but not when opening an item
-  (FH-125). Leaving the page with unsaved changes
+  (FH-125). Timeline and box are one shared part, `TicketComments`, on
+  the page's Activity and the card panel's Comments tab, which has its
+  own `InPlaceEditing` and stays mounted across tabs; closing the panel
+  or opening another ticket waits on the leave guard (FH-128). Leaving
+  the page with unsaved changes
   goes through the one leave guard, `state/leaveGuard`, which the router
   (`app/route`) asks before every navigation and a link or Back that
   changed the hash; the browser's `beforeunload` prompt covers reloads.

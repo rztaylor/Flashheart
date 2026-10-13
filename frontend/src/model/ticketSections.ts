@@ -12,7 +12,13 @@ import {
 } from "./markdown";
 import { sessionsOf } from "./runs";
 
-export type SectionId = "ticket" | "edit" | "runs" | "attachments" | "review";
+export type SectionId =
+  | "ticket"
+  | "comments"
+  | "edit"
+  | "runs"
+  | "attachments"
+  | "review";
 
 export interface TicketSection {
   id: SectionId;
@@ -21,17 +27,32 @@ export interface TicketSection {
   count?: number;
 }
 
-// ticketSections lists the sections a ticket offers: Ticket always, Edit
-// when it can be edited, Runs (counting sessions, not their subagents),
-// Attachments when it has files, and Review when it has review.md.
+// ticketSections lists the sections a ticket offers: Ticket always,
+// Comments (counting them) when it has any or can be edited, since it then
+// holds the comment box (FH-128), Edit when it can be edited, Runs
+// (counting sessions, not their subagents), Attachments when it has files,
+// and Review when it has review.md.
 export function ticketSections(
-  detail: Pick<TicketDetail, "runs" | "attachmentFiles" | "review">,
+  detail: Pick<
+    TicketDetail,
+    "runs" | "attachmentFiles" | "review" | "comments"
+  >,
   editable: boolean,
 ): TicketSection[] {
   const sessions = sessionsOf(detail.runs).length;
   const files = detail.attachmentFiles.length;
+  const comments = detail.comments.length;
   return [
     { id: "ticket", title: "Ticket" },
+    ...(comments || editable
+      ? [
+          {
+            id: "comments" as const,
+            title: "Comments",
+            ...(comments ? { count: comments } : {}),
+          },
+        ]
+      : []),
     ...(editable ? [{ id: "edit" as const, title: "Edit" }] : []),
     { id: "runs", title: "Runs", ...(sessions ? { count: sessions } : {}) },
     ...(files

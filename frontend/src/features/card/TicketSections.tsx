@@ -16,7 +16,8 @@ import type { TicketState } from "./useTicket";
 
 // SectionBody is one of the card panel's tabs for a loaded ticket: Ticket,
 // Edit (EDIT-6), Runs, Attachments (REV-1) or Review (REV-3). The full page
-// shows the ticket as one page instead (TicketPage).
+// shows the ticket as one page instead (TicketPage). The panel keeps its
+// Comments tab mounted itself (CardPanel, FH-128).
 export function SectionBody({
   section,
   detail,
@@ -26,7 +27,7 @@ export function SectionBody({
   onOpen,
   workstreams,
 }: {
-  section: SectionId;
+  section: Exclude<SectionId, "comments">;
   detail: TicketDetail;
   ticket: TicketState;
   fetcher: AuthenticatedFetch;

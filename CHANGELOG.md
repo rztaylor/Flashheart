@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Comment on a ticket from the board's side panel (FH-128, D47,
+  `CARD-1`). The panel has a **Comments** tab, counting the ticket's
+  comments, with the same comments and comment box as the full page:
+  post with **Comment** or Ctrl or Cmd with Enter, quote part of the
+  ticket, edit your comments in place, and get the conflict dialog when
+  a comment changed meanwhile. A comment you are writing stays while you
+  look at another tab, and closing the panel, pressing Escape or opening
+  another ticket with it unposted asks first.
 - Comment on a ticket from its full page (FH-125, D47, `CARD-7`).
   Activity ends with a comment box: write a comment and post it with
   **Comment** or Ctrl or Cmd with Enter, optionally quoting a section, an

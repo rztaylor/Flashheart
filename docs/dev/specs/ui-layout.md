@@ -178,9 +178,10 @@ reorders them.
    tab only for an `http(s)` URL (FH-114), changed time); actions (Move to, Archive) when editable. Top
    right, *Open full page in a new tab* (expand icon) and close; Escape
    closes.
-2. **Tabs**: Ticket, Edit (editable only), Runs (with its session count),
-   Attachments (once `review-and-orchestration` builds it), Review (when a
-   review file exists). Hidden tabs never leave a gap.
+2. **Tabs**: Ticket, Comments (with its comment count; when the ticket has
+   comments or is editable), Edit (editable only), Runs (with its session
+   count), Attachments (once `review-and-orchestration` builds it), Review
+   (when a review file exists). Hidden tabs never leave a gap.
 3. **Ticket tab**, in order: Needs repair (dashed, hatched, the problems, the
    frontmatter) · questions for you, each with its answer box or option
    buttons (`CARD-6`) · Handoff, the accent callout with the next steps large
@@ -188,9 +189,22 @@ reorders them.
    edited since (`CARD-5`) · Blocked by (diamond, reasons with ids linked, Open) and Waits for
    (`CARD-4`) · Acceptance criteria with `d of t` and tickable boxes
    (`CARD-3`) · format warnings · the ticket's markdown (`CARD-2`).
-4. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
+4. **Comments tab** (FH-128): the full page's Activity limited to people's
+   comments, with the same parts: the timeline of comments oldest first
+   (author, time, *edited*, the quote in its well, the text; *No comments
+   yet.* when there are none), a person's comment editable in place with
+   its pencil, Save, Cancel, shortcuts and the conflict dialog, and, where
+   the ticket can be edited, the comment box with **Comment**, *Quote* and
+   the shortcut hint. History, notes, handoffs and questions stay on the
+   full page. The tab's comment being written or edited stays while
+   another tab is shown; closing the panel, Escape or opening another
+   ticket with unsaved comment text asks first (*Unsaved changes to the
+   comment*: **Discard changes** or **Keep editing**), and focus returns
+   to the card only once the panel closes. The panel's Edit tab is a
+   separate form and is not part of this prompt.
+5. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
    dialog on save (`EDIT-7`).
-5. **Runs tab**: runs newest first, each a card with its state (and its
+6. **Runs tab**: runs newest first, each a card with its state (and its
    Needs you reason, in the card's words, `RUN-3`), agent,
    short id, link, branch and time, then its detail and its subagents as a
    tree on a spur: each row its state, type, the ticket it claimed when that
@@ -202,12 +216,12 @@ reorders them.
    connection. A run's plan shows only when it has one; a run with no
    plan shows no plan section. A subagent listed on its own ticket names
    the session it belongs to.
-6. **Attachments tab** (shown when the ticket has files): a two-column grid
+7. **Attachments tab** (shown when the ticket has files): a two-column grid
    of thumbnails (screenshots) and file tiles, each with caption, file name
    and kind; a thumbnail opens a lightbox dialog (Escape closes, arrows and
    Previous/Next step when there is more than one, focus returns to the
    thumbnail); other files open in a new tab.
-7. **Review tab**: screenshots above the review markdown; the *How to
+8. **Review tab**: screenshots above the review markdown; the *How to
    Verify* steps show as a checklist with `d of t`, between the section's
    own text, and a tick is written into the step's line in `review.md`
    (`REV-3`).
@@ -327,7 +341,8 @@ at most 94rem.
   width.
 
 No close button, no Position buttons, no workstream line strip and no
-Edit, Runs, Attachments or Review tabs (the card panel keeps its tabs).
+Comments, Edit, Runs, Attachments or Review tabs (the card panel keeps its
+tabs; the page's Activity holds the comments).
 Ticket links on the page stay in its tab; the browser tab reads
 `<id> · <title> · Flashheart`.
 
