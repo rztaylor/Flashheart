@@ -2,9 +2,16 @@ package store
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"io/fs"
+	"path"
+	"slices"
 	"time"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/mdfile"
 )
 
@@ -45,9 +52,22 @@ func (p Precondition) check(name string, current []byte) error {
 // writes each changed file atomically in the order it was staged. A
 // failure before commit writes nothing; a crash during commit leaves the
 // files written so far (board-format.md, Multi-file writes).
+//
+// For a store writing as someone (As), commit first stages one history
+// entry in the activity file of each ticket the transaction changed,
+// after its other files: what changed in the ticket and its review.md
+// since the transaction first read them, and what the write states
+// besides (created, archived, restored). A history that cannot be staged
+// fails the whole write, so a ticket write and its history land together.
 type tx struct {
 	s     *Store
 	files []staged
+	// before holds the ticket and review files the transaction edited, as
+	// it first read them; noted holds the changes a write states, by
+	// ticket folder; folders orders both by first appearance.
+	before  []staged
+	noted   map[string][]board.Change
+	folders []string
 }
 
 type staged struct {
@@ -96,6 +116,9 @@ func (t *tx) edit(name string, pre Precondition, edit Edit, stamp bool) (string,
 	if err != nil {
 		return "", err
 	}
+	if stamp || path.Base(name) == reviewFile {
+		t.track(name, current)
+	}
 	next := current
 	if edit != nil {
 		if next, err = edit(current); err != nil {
@@ -112,8 +135,37 @@ func (t *tx) edit(name string, pre Precondition, edit Edit, stamp bool) (string,
 	return Hash(next), nil
 }
 
-// commit writes the staged files in order.
+// track keeps a ticket or review file's content before the transaction
+// changes it, for its history.
+func (t *tx) track(name string, current []byte) {
+	if slices.ContainsFunc(t.before, func(file staged) bool { return file.name == name }) {
+		return
+	}
+	t.before = append(t.before, staged{name: name, data: current})
+	t.folder(path.Dir(name))
+}
+
+// note records a change the write states about the ticket in folder.
+func (t *tx) note(folder string, change board.Change) {
+	if t.noted == nil {
+		t.noted = map[string][]board.Change{}
+	}
+	t.noted[folder] = append(t.noted[folder], change)
+	t.folder(folder)
+}
+
+func (t *tx) folder(folder string) {
+	if !slices.Contains(t.folders, folder) {
+		t.folders = append(t.folders, folder)
+	}
+}
+
+// commit stages the history of a store writing as someone, then writes
+// the staged files in order.
 func (t *tx) commit() error {
+	if err := t.history(); err != nil {
+		return err
+	}
 	for _, file := range t.files {
 		if err := t.s.WriteFileAtomic(file.name, file.data); err != nil {
 			return err
@@ -134,4 +186,88 @@ func (s *Store) stamp(data []byte) []byte {
 		return data
 	}
 	return stamped
+}
+
+// reviewFile is a ticket's review guide (REV-4).
+const reviewFile = "review.md"
+
+// history stages one entry in each changed ticket's activity file.
+func (t *tx) history() error {
+	if t.s.author == "" {
+		return nil
+	}
+	for _, folder := range t.folders {
+		changes := slices.Clone(t.noted[folder])
+		for _, file := range t.before {
+			if path.Dir(file.name) != folder {
+				continue
+			}
+			after, err := t.read(file.name)
+			if err != nil {
+				return err
+			}
+			if path.Base(file.name) == reviewFile {
+				changes = append(changes, board.ReviewChanges(string(file.data), string(after))...)
+			} else {
+				changes = append(changes, board.TicketChanges(file.data, after)...)
+			}
+		}
+		if len(changes) == 0 {
+			continue
+		}
+		if err := t.appendHistory(folder, changes); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// appendHistory stages a history entry in folder's activity file. A file
+// already at the size limit takes no more history: the ticket's writes go
+// on without it rather than fail for good.
+func (t *tx) appendHistory(folder string, changes []board.Change) error {
+	name := path.Join(folder, board.ActivityFile)
+	data, err := t.readActivity(name)
+	switch {
+	case errors.Is(err, ErrTooLarge):
+		return nil
+	case err != nil:
+		return err
+	}
+	id, err := newEntryID(board.ParseActivity(data))
+	if err != nil {
+		return err
+	}
+	ticket, _, _ := board.ParseFolder(path.Base(folder))
+	next := board.AppendHistory(data, ticket, board.History{ID: id, Time: t.s.now(), By: t.s.author, Changes: changes})
+	if len(next) > MaxFileBytes {
+		return nil
+	}
+	t.put(name, next)
+	return nil
+}
+
+// readActivity reads an activity file as the transaction has left it; a
+// missing one is empty.
+func (t *tx) readActivity(name string) ([]byte, error) {
+	data, err := t.read(name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	return data, err
+}
+
+// newEntryID is an activity entry id the file does not use: eight random
+// hex digits, so writers on two copies of a synced board do not collide.
+func newEntryID(activity board.Activity) (string, error) {
+	used := activity.IDs()
+	for {
+		random := make([]byte, 4)
+		if _, err := rand.Read(random); err != nil {
+			return "", err
+		}
+		if id := hex.EncodeToString(random); !slices.Contains(used, id) {
+			return id, nil
+		}
+	}
 }

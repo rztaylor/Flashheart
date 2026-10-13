@@ -56,7 +56,7 @@ func (s *Store) ReadFile(name string) ([]byte, error) {
 		return nil, err
 	}
 	if len(data) > MaxFileBytes {
-		return nil, fmt.Errorf("%s is larger than %d KiB", name, MaxFileBytes>>10)
+		return nil, fmt.Errorf("%s is larger than %d KiB: %w", name, MaxFileBytes>>10, ErrTooLarge)
 	}
 	return data, nil
 }

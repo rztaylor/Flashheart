@@ -26,6 +26,20 @@ All notable changes to this project are documented here. The project follows
   the conflict dialog, while an agent's change elsewhere in the ticket
   does not; a failed save stays open with the reason. The card panel
   keeps its Edit tab.
+- Each ticket keeps its comments and a lasting change history beside it
+  (FH-124, D47). A new `activity.md` in the ticket's folder holds one
+  dated, typed entry each: comments people write on the board, and the
+  history every ticket write by the board or an agent appends in the same
+  write (created, moved, which fields and sections were edited, which
+  criteria and review steps were ticked, archived, restored; who and when,
+  never the ticket's text). History outlives the event log's retention;
+  tickets without the file need no migration. The ticket API returns
+  `comments` and `history`, and `POST /api/tickets/{id}/comments` and
+  `PATCH /api/tickets/{id}/comments/{comment}` add and edit a comment
+  (shown as edited, refused over a newer version), recording the human's
+  new `comment.added` and `comment.edited` events. Comments are scrubbed
+  of secrets; agents never write them. The page to comment from comes
+  with FH-125 (protocol version unchanged).
 
 - One command connects Codex to Flashheart, and `doctor` checks it (FH-75).
   `flashheart setup codex` shows, as a diff, the `[mcp_servers.flashheart]`

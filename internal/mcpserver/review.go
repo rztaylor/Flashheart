@@ -35,7 +35,7 @@ func (srv *server) writeReview(c *call, input WriteReviewInput) (string, error) 
 	if !strings.HasSuffix(text, "\n") {
 		text += "\n"
 	}
-	if err := srv.store.WriteReview(project.Name, ticket.ID, []byte(text)); err != nil {
+	if err := c.files().WriteReview(project.Name, ticket.ID, []byte(text)); err != nil {
 		return "", err
 	}
 	if err := c.record(project.Name, events.Event{Kind: events.ReviewWritten, Data: events.TicketData{Ticket: ticket.ID}}); err != nil {

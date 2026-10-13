@@ -479,3 +479,16 @@ func TestParseYAMLReadsAPlainMapping(t *testing.T) {
 		}
 	}
 }
+
+func TestHeadingsFromDemotesHeadingsAboveTheLevel(t *testing.T) {
+	t.Parallel()
+
+	got := HeadingsFrom("# One\n## Two\n  ### Three\n#### Four\n```\n# fenced\n```\n~~~\nopen", 4)
+	want := "#### One\n#### Two\n#### Three\n#### Four\n```\n# fenced\n```\n~~~\nopen\n~~~"
+	if got != want {
+		t.Errorf("HeadingsFrom = %q, want %q", got, want)
+	}
+	if got := SectionSafe("# One\n### Three"); got != "### One\n### Three" {
+		t.Errorf("SectionSafe = %q", got)
+	}
+}

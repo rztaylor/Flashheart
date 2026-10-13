@@ -97,7 +97,7 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 		}
 		return data, nil
 	}
-	if _, err := srv.store.EditTicket(project.Name, ticket.ID, store.Unchanged(base), changes, edit); err != nil {
+	if _, err := c.files().EditTicket(project.Name, ticket.ID, store.Unchanged(base), changes, edit); err != nil {
 		return "", err
 	}
 	fields := changes.Keys()
@@ -199,7 +199,7 @@ func (srv *server) move(c *call, input MoveInput) (string, error) {
 			return "", fail("blocked", "claim it with force and a reason to start it anyway", "%s is blocked: %s", ticket.ID, strings.Join(reasons, "; "))
 		}
 	}
-	if _, err := srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
+	if _, err := c.files().UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 		return mdfile.SetScalar(data, "status", string(to))
 	}); err != nil {
 		return "", err
@@ -271,7 +271,7 @@ func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error
 			return "", fail("invalid_input", "pass ticket ids like FH-42", "depends_on %q is not a ticket id", id)
 		}
 	}
-	created, err := srv.store.CreateTicket(project.Name, store.NewTicket{
+	created, err := c.files().CreateTicket(project.Name, store.NewTicket{
 		Title: scrub.Text(input.Title, board.MaxTitle), Type: input.Type, Priority: input.Priority, Status: status,
 		Workstream: strings.TrimSpace(input.Workstream), Description: scrub.Secrets(input.Description),
 		Criteria: items(input.Criteria), DependsOn: input.DependsOn, Tags: items(input.Tags),

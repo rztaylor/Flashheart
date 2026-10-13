@@ -31,6 +31,16 @@ func TestByHumanRecordsTheBoardWrite(t *testing.T) {
 	if len(read) != 2 || read[1].Run != Human || read[1].Kind != TicketUpdated {
 		t.Fatalf("read = %+v", read)
 	}
+
+	// A comment names its id, never its text.
+	comment, err := ByHuman(t0, "alpha", CommentAdded, TicketData{Ticket: "AL-2", Comment: "4e5f6a7b"}).MarshalLine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = `{"v":1,"ts":"2026-10-05T14:12:09.123Z","run":"human","agent":"human","kind":"comment.added","project":"alpha","data":{"ticket":"AL-2","by":"human","comment":"4e5f6a7b"}}` + "\n"
+	if string(comment) != want {
+		t.Errorf("comment line =\n%s\nwant\n%s", comment, want)
+	}
 }
 
 func TestHumanActivityOf(t *testing.T) {
@@ -49,6 +59,10 @@ func TestHumanActivityOf(t *testing.T) {
 			HumanActivity{Time: t0, Project: "alpha", Kind: TicketUpdated, Ticket: "AL-3"}, true},
 		{"a new ticket on the board", ByHuman(t0, "beta", TicketCreated, TicketData{Ticket: "BE-2"}),
 			HumanActivity{Time: t0, Project: "beta", Kind: TicketCreated, Ticket: "BE-2"}, true},
+		{"a comment", ByHuman(t0, "beta", CommentAdded, TicketData{Ticket: "BE-2", Comment: "4e5f6a7b"}),
+			HumanActivity{Time: t0, Project: "beta", Kind: CommentAdded, Ticket: "BE-2"}, true},
+		{"a comment edited", ByHuman(t0, "beta", CommentEdited, TicketData{Ticket: "BE-2", Comment: "4e5f6a7b"}),
+			HumanActivity{Time: t0, Project: "beta", Kind: CommentEdited, Ticket: "BE-2"}, true},
 		// An answer is recorded on the asking run, by the person's name.
 		{"an answer", Event{Time: t0, Run: agent, Agent: "claude", Kind: QuestionAnswered, Project: "alpha", Data: AnswerData{ID: "q-1", Answer: "Yes", By: "Robert"}},
 			HumanActivity{Time: t0, Project: "alpha", Kind: QuestionAnswered}, true},

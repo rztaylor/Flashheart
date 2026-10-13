@@ -1,7 +1,8 @@
 // Package app composes Flashheart's HTTP surface with its Singleserve browser
 // lifetime for one serve process.
 //
-// It owns router assembly (wiring store, events, index and api), security
+// It owns router assembly (wiring store, events, index and api, the api
+// writing as the person at the board: store.As with config's answerer), security
 // headers, the shutdown guard (no quit while a write is in flight, LIFE-2),
 // expiring old files at startup and daily (event files and answers inboxes
 // after event_retention_days, STO-5; hook activity state after stale_hours,

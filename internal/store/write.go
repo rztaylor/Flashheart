@@ -341,8 +341,10 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 	// (board-format.md, Multi-file writes). A project.yaml that cannot be
 	// edited, or a missing workstream (the ticket joins its list,
 	// board-format §Blocking), stops the create before anything is written.
+	// Its history comes last.
 	t := s.begin()
 	t.put(name, data)
+	t.note(path.Dir(name), board.Change{What: board.ChangeCreated, To: string(input.Status)})
 	if err := s.projectFields(t, project, key, number+1); err != nil {
 		return Created{}, err
 	}
@@ -539,8 +541,8 @@ func (s *Store) setProjectFields(project, key string, nextID int) error {
 	return t.commit()
 }
 
-// Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8),
-// first stamping `updated:`, which dates the archive.
+// Archive moves a ticket's folder to <project>/.archive/tickets/ (EDIT-8)
+// and stamps `updated:`, which dates the archive.
 func (s *Store) Archive(project, id string) error {
 	return s.moveTicket(project, id, path.Join(project, "tickets"), path.Join(project, ".archive", "tickets"), true)
 }
@@ -550,7 +552,11 @@ func (s *Store) Unarchive(project, id string) error {
 	return s.moveTicket(project, id, path.Join(project, ".archive", "tickets"), path.Join(project, "tickets"), false)
 }
 
-func (s *Store) moveTicket(project, id, from, to string, stamp bool) error {
+// moveTicket moves a ticket's folder, then in its new place stamps an
+// archived ticket and records the history, in one write; when that write
+// fails, the folder is moved back, so the move and its history land
+// together.
+func (s *Store) moveTicket(project, id, from, to string, archiving bool) error {
 	if err := s.checkTicket(project, id); err != nil {
 		return err
 	}
@@ -563,12 +569,24 @@ func (s *Store) moveTicket(project, id, from, to string, stamp bool) error {
 	if err != nil {
 		return err
 	}
-	if stamp {
-		// A ticket whose frontmatter does not parse is archived unstamped.
-		_, _ = s.update(file, Merge, func(data []byte) ([]byte, error) { return s.stamp(data), nil }, false)
-	}
 	folder := path.Dir(file)
-	return s.Move(folder, path.Join(to, path.Base(folder)))
+	moved := path.Join(to, path.Base(folder))
+	if err := s.Move(folder, moved); err != nil {
+		return err
+	}
+	t := s.begin()
+	change := board.ChangeRestored
+	if archiving {
+		change = board.ChangeArchived
+		// A ticket whose frontmatter does not parse, or that cannot be
+		// read, is archived unstamped.
+		_, _ = t.edit(path.Join(moved, path.Base(file)), Merge, func(data []byte) ([]byte, error) { return s.stamp(data), nil }, false)
+	}
+	t.note(moved, board.Change{What: change})
+	if err := t.commit(); err != nil {
+		return errors.Join(err, s.Move(moved, folder))
+	}
+	return nil
 }
 
 // PlaceTicket applies edit to a ticket (a move sets its status) and ranks it

@@ -37,6 +37,10 @@ const (
 	QuestionAsked       Kind = "question.asked"
 	QuestionAnswered    Kind = "question.answered"
 	QuestionDelivered   Kind = "question.delivered"
+	// CommentAdded and CommentEdited record the human commenting on a ticket
+	// on the board (D47): the ticket and the comment's id, never its text.
+	CommentAdded  Kind = "comment.added"
+	CommentEdited Kind = "comment.edited"
 )
 
 // kinds is the one list of the kinds the log records, each with its data
@@ -64,6 +68,8 @@ var kinds = map[Kind]reflect.Type{
 	QuestionAsked:       reflect.TypeFor[QuestionData](),
 	QuestionAnswered:    reflect.TypeFor[AnswerData](),
 	QuestionDelivered:   reflect.TypeFor[DeliveredData](),
+	CommentAdded:        reflect.TypeFor[TicketData](),
+	CommentEdited:       reflect.TypeFor[TicketData](),
 }
 
 // Known reports a kind the log records.
@@ -198,6 +204,7 @@ func (d TicketData) bound() Data {
 	d.Ticket, d.Reason, d.By = line(d.Ticket, maxRef), line(d.Reason, MaxReasonText), line(d.By, maxRef)
 	d.From, d.To, d.Home = line(d.From, maxWord), line(d.To, maxWord), line(d.Home, MaxNameLength)
 	d.Fields = lines(d.Fields, maxField, maxWord)
+	d.Comment = line(d.Comment, maxID)
 	return d
 }
 
