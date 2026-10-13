@@ -10,8 +10,8 @@ priority wording (`status`), the page header's summary line (`summary`),
 the words for why a run needs you
 (the server derives the reason, D39) and the session part of the server's
 short run id, timeline wording (`runs`), the Overview's sections, their
-order, at-risk reasons and wording, and its pipeline stages (`overview`,
-VIEW-3), keyboard grid movement and the neighbour that takes focus when the
+order, at-risk reasons and wording, its pipeline stages and its Projects
+list's rows and their names (`overview`, VIEW-3, FH-153), keyboard grid movement and the neighbour that takes focus when the
 focused item leaves its list (`navigation`, FH-84), and
 manual-order placements and display sorts (`order`, EDIT-9), archive
 search and the delete gate (`archive`, EDIT-8), a ticket's sections in

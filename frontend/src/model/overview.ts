@@ -8,7 +8,7 @@ import {
   type ProjectSummary,
 } from "../api/board";
 import type { Question, Run, TicketSessions } from "../api/runs";
-import { needsReason, questionReason } from "./runs";
+import { needsReason, needsYouPhrase, questionReason } from "./runs";
 import { type StateTone, statusOf } from "./status";
 
 export type SectionId =
@@ -335,4 +335,75 @@ export function pipelineStages(
       0,
     ),
   }));
+}
+
+// ProjectRow is one project on the All projects Overview's list (FH-153).
+export interface ProjectRow {
+  name: string;
+  displayName: string;
+  key: string;
+  // tickets counts every ticket on the project's board, rejected ones too.
+  tickets: number;
+  // stages are the project's columns as the pipeline counts them.
+  stages: PipelineStage[];
+  blocked: number;
+  repair: number;
+  needsYou: number;
+  // label is the row's accessible name: the project and every count.
+  label: string;
+}
+
+// stageWords say a column's count in a sentence: "3 in backlog", "2 done".
+const stageWords: Record<Column, string> = {
+  backlog: "in backlog",
+  "up-next": "up next",
+  "in-progress": "in progress",
+  review: "ready to review",
+  done: "done",
+};
+
+// projectRows are the All projects Overview's per-project counts (FH-153,
+// PRJ-6), in the projects' own order (most recently active first, as the
+// rail lists them): tickets, each column as the pipeline counts it, and
+// blocked, needs repair and needs you.
+export function projectRows(
+  projects: (Pick<
+    ProjectSummary,
+    | "name"
+    | "displayName"
+    | "key"
+    | "counts"
+    | "rejected"
+    | "blocked"
+    | "needsRepair"
+  > & { runs: Pick<ProjectSummary["runs"], "needsYou"> })[],
+): ProjectRow[] {
+  return projects.map((project) => {
+    const stages = pipelineStages([project], project.name);
+    const tickets = COLUMNS.reduce(
+      (sum, { id }) => sum + (project.counts[id] ?? 0),
+      0,
+    );
+    const needsYou = project.runs.needsYou;
+    const title =
+      project.displayName !== project.name
+        ? `${project.displayName} (${project.name})`
+        : project.displayName;
+    const columns = stages
+      .map((stage) => `${stage.count} ${stageWords[stage.column]}`)
+      .join(", ");
+    const repair = project.needsRepair;
+    const label = `${title}: ${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${needsYou} ${needsYouPhrase(needsYou, true)}`;
+    return {
+      name: project.name,
+      displayName: project.displayName,
+      key: project.key,
+      tickets,
+      stages,
+      blocked: project.blocked,
+      repair: project.needsRepair,
+      needsYou,
+      label,
+    };
+  });
 }

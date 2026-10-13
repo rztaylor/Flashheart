@@ -13,6 +13,16 @@ export const stateToneClass: Record<StateTone, string> = {
   blocked: "bg-(--fh-state-blocked) text-(--fh-state-blocked-ink)",
 };
 
+// stateToneInk is a state's ink alone, for its icon beside its word on a
+// card surface (the Overview's projects list heads, FH-153).
+export const stateToneInk: Record<StateTone, string> = {
+  neutral: "text-(--fh-state-neutral-ink)",
+  progress: "text-(--fh-state-progress-ink)",
+  review: "text-(--fh-state-review-ink)",
+  done: "text-(--fh-state-done-ink)",
+  blocked: "text-(--fh-state-blocked-ink)",
+};
+
 export const stateToneIcon: Record<StateTone, IconName> = {
   neutral: "ring",
   progress: "half",
