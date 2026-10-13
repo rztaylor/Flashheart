@@ -1,14 +1,10 @@
 import { useCallback } from "react";
 import { fetchTicket, type TicketDetail } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import {
-  conflictOf,
-  type Saved,
-  setCriterion,
-  setReviewStep,
-} from "../../api/edit";
+import { type Saved, setCriterion, setReviewStep } from "../../api/edit";
 import { messageOf } from "../../model/errors";
 import { type Resource, useResource } from "../../state/useResource";
+import { saveWithBase } from "../editing/precondition";
 import type { Editing } from "../editing/useEditing";
 
 // TicketState is one loaded ticket and the saves its sections make. A save
@@ -61,21 +57,25 @@ export function useTicket({
         details: result.warnings,
       });
   };
-  const tick = (save: Promise<Saved>, what: string): Promise<boolean> =>
-    save
-      .then(() => {
-        resource.reload();
-        return true;
-      })
-      .catch((error: unknown) => {
-        resource.reload();
-        editing?.notify({
-          text: conflictOf(error)
+  // tick saves one box on the version the panel shows (base), under the
+  // same precondition as the Edit tab's saves. A conflict is not offered as
+  // a choice: the ticket reloads and the toast says so.
+  const tick = (
+    base: string,
+    send: (base: string) => Promise<Saved>,
+    what: string,
+  ): Promise<boolean> =>
+    saveWithBase(base, send).then((outcome) => {
+      resource.reload();
+      if (outcome.kind === "saved") return true;
+      editing?.notify({
+        text:
+          outcome.kind === "conflict"
             ? `${id} changed on disk; showing the current ${what}.`
-            : `Not saved: ${messageOf(error, "unknown error")}`,
-        });
-        return false;
+            : `Not saved: ${messageOf(outcome.error, "unknown error")}`,
       });
+      return false;
+    });
   const review = detail?.review;
   return {
     resource,
@@ -86,7 +86,8 @@ export function useTicket({
       editable && detail && editing
         ? (index, checked) =>
             tick(
-              setCriterion(fetcher, detail.id, detail.hash, index, checked),
+              detail.hash,
+              (base) => setCriterion(fetcher, detail.id, base, index, checked),
               "criteria",
             )
         : undefined,
@@ -94,7 +95,8 @@ export function useTicket({
       editing && detail && review?.hash
         ? (index, checked) =>
             tick(
-              setReviewStep(fetcher, detail.id, review.hash, index, checked),
+              review.hash,
+              (base) => setReviewStep(fetcher, detail.id, base, index, checked),
               "review",
             )
         : undefined,

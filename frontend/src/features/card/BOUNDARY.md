@@ -1,45 +1,32 @@
 # Card feature boundary
 
 Owns the card panel (CARD-1, `docs/dev/specs/ui-layout.md` §3) and the
-ticket's full page (`TicketPage`, CARD-7). Both compose the same parts;
-neither branches on the other's layout:
+ticket's full page (`TicketPage`, CARD-7). Both compose the same parts:
 
 - `useTicket` loads one ticket, reloads it when the board changes, and
-  wires its saves (tick a criterion or review step, answer a question,
-  reload after an Edit tab save), each reporting failures through
-  `editing`.
-- `TicketHeader`: `TicketIdentity` (id and project, the title as the panel's
-  h2 with the id linking to the full page, or as the page's h1),
-  `TicketProperties` (status, blocker, priority and type pills; workstream,
-  created, branch, pull request and last change) and `TicketActions` (Move to, Position
-  buttons (EDIT-9) and Archive).
-- `TicketSections`: `SectionBody` renders one section and `SectionTabs`
-  shows the sections (in `model/ticketSections` order, with counts) as
-  tabs over one tab panel.
-- The sections, one per file: `TicketTab` (needs repair, agents' questions
-  about the ticket with their answers (CARD-6), the handoff callout with a
-  warning when a run has edited since it (CARD-5) and its marginal remark,
-  blocked by with links, tickable acceptance criteria, warnings and the
-  rendered markdown), `EditTab` (typed fields and the raw file, EDIT-6),
-  `RunsTab` (the ticket's linked runs with their subagents as a tree,
-  keeping a focused subagent row's focus as its session moves or goes
-  through `components/useKeepFocus`, and
-  `RunDetail`: what one run did, its questions, plan, edited files and
-  activity), `Attachments` (a grid of thumbnails and file tiles, opening
-  screenshots in the lightbox) and `ReviewTab` (screenshots, then the
-  review file with its How to Verify steps as a `Checklist`, REV-3; the
-  same checklist shows acceptance criteria).
+  wires its saves: ticking a criterion or review step (through
+  `editing`'s `saveWithBase`, a conflict reloading with a toast),
+  answering a question, and reloading after an Edit tab save.
+- `TicketHeader`: `TicketIdentity` (id, project, title as the panel's h2 or
+  the page's h1), `TicketProperties` (pills, workstream, dates, branch,
+  pull request) and `TicketActions` (Move to, Position (EDIT-9), Archive).
+- `TicketSections`: `SectionBody` renders one section; `SectionTabs` shows
+  them as tabs in `model/ticketSections` order.
+- One file per section: `TicketTab` (needs repair, questions (CARD-6), the
+  handoff and its warning (CARD-5), blocked by, tickable criteria, the
+  markdown), `EditTab` (typed fields and the raw file, EDIT-6, one draft
+  through `editing`'s `useTicketDraft`), `RunsTab` and `RunDetail` (linked
+  runs as a subagent tree, keeping focus through `useKeepFocus`; what one
+  run did), `Attachments` and `ReviewTab` (screenshots and the How to
+  Verify steps as a `Checklist`, REV-3).
 
 `CardPanel` puts the header and tabs in the side panel; `TicketPage` puts
-them at reading width under a link to the board and names the browser tab.
-Both show the ticket's load states (ui-layout.md §8) the same way:
-`TicketSkeleton`, the shared error with Try again, and the last-good-copy
-note under the header.
-A caller may open a ticket on a given tab (the Overview's Review results).
+them at reading width and names the browser tab. Both show the load states
+(ui-layout.md §8: `TicketSkeleton`, the error with Try again, the stale
+note) the same way. A caller may open a ticket on a given tab.
 
-Does not own which sections a ticket offers or their counts
-(`model/ticketSections`), the side-panel shell, dialogs or markdown
-rendering (`components/`), the move, archive and conflict flows
-(`editing/`), routing and the page's place in the shell (`app/`), run state
-(backend), or attaching files, which agents do through `attach` and serve
-does for files a directly edited ticket links to (REV-5).
+Does not own section order and counts (`model/ticketSections`), the form's
+fields and changes (`model/ticketForm`), the side-panel shell, dialogs or
+markdown (`components/`), drafts, the save precondition, moves, archive
+and the conflict dialog (`editing/`), routing (`app/`), run state
+(backend), or attaching files (agents, and serve for REV-5).

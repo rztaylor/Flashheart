@@ -17,7 +17,8 @@ manual-order placements and display sorts (`order`, EDIT-9), archive
 search and the delete gate (`archive`, EDIT-8), a ticket's sections in
 order with their counts (`ticketSections`, CARD-1), and the marginal remarks
 catalogue (`remarks.md`), placements, selection and which moves to Done
-earn one (`remarks`), and a failure's words for any thrown value
+earn one (`remarks`), a ticket's typed fields as form text and the
+changes to save (`ticketForm`, EDIT-6), and a failure's words for any thrown value
 (`errors`: `messageOf`).
 Everything here is a plain function or type, unit-tested with Vitest.
 
