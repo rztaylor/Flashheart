@@ -591,6 +591,9 @@ Selects 32px, card surface, rule border, chevron. Toolbar filters are 32px butto
 ### File Drop
 Where files are added to a ticket (FH-18): the Attachments tab and the page's Files end in a slot with a dashed rule border and 10px corners, the attachment icon in muted ink, *Drop files here to attach them* in body ink over the allowed types in muted meta size, and **Attach files** (secondary, the attachment icon) at its end. While files are dragged over, the slot goes solid on the select surface with a select border and ring, as other drop targets do; the editor's text takes the select border and ring. A file uploading in the text is a quiet chip on the well with a rule border and control corners, its words in muted extra-small text. Under either, a muted status line and refusals in danger words with a warning icon and a Dismiss mark.
 
+### Lightbox
+A dialog filling the viewport less a 1rem margin (FH-146): the display-cut caption over a stage on the well with a rule border and card corners, the image centred at Fit and drawn pixel for pixel from 200%; under it the file name in faint mono and a muted hint. The footer (well, rule above) leads with 32px secondary icon buttons for Zoom out and Zoom in around a semibold tabular percentage, then a secondary Fit button with the fit icon; a button at its limit is at 50%. The stage shows a grab cursor while the image can pan. No zoom or pan animation.
+
 ### Filter Chips
 One chip for workstreams and Colour by values alike: a pill with a 20px round bullet (the line bullet, or the value's paint) and the name, card surface and shadow. Shown only takes the select border and ring; hidden is dashed, faint and struck through.
 

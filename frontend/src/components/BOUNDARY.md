@@ -9,7 +9,8 @@ disclosure menu on the lifted popover surface), `FilterChip` (the one
 filter chip: show only, Cmd or Ctrl click to hide), `ChipInput` (a list
 edited as removable chips), `Dialog`, `Toast`,
 `Markdown` (block or one inline line), `Lightbox` (one image of a set in a
-dialog), `Table` (the one table look, ui-layout.md §6: card surface,
+dialog that fills the viewport, with zoom, pan and their keys and pointer
+handling; the zoom and pan maths is `model/zoom`), `Table` (the one table look, ui-layout.md §6: card surface,
 sticky head, `HeadCell`, `Row` with dividers, hover and selection),
 `RouteBar`, `FileDrop` (taking files: `AttachButton`, the file picker;
 `FileDropArea`, a drop target that shows it will take files;

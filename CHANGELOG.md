@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Look closely at screenshots (FH-146). The lightbox that opens a
+  ticket's screenshots now fills the window, less a small margin, at
+  every width, and zooms from 25% to 800% of the image's actual size:
+  with **Zoom in**, **Zoom out** and **Fit** under the image beside the
+  zoom level, Cmd or Ctrl and + or −, or the mouse wheel or a trackpad
+  pinch, which zoom around the pointer. Drag the image, or use the arrow
+  keys while zoomed in, to move around it; at Fit the arrows still step
+  between screenshots. 0 (or Cmd or Ctrl and 0) fits the whole image
+  again, and every screenshot opens fitted, never enlarged past its
+  actual size.
 - Paste a screenshot or drop files straight into a ticket (FH-18, D65,
   `REV-7`). In a section's editor on the full page, paste a screenshot
   from the clipboard, drop files, or choose them with **Attach files**:
