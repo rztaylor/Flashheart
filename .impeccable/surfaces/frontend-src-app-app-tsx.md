@@ -48,8 +48,8 @@ criteria as a checklist), and follows each workstream as a route of
 stations on its own colour-washed card.
 
 FIRST VIEWPORT: 56px band (bolt and wordmark, view tabs, Needs you plate,
-search, quiet status dot, Quit); 248px rail (key badges only while a ticket
-is open below 1440px); page header (key badge, display title, one summary
+search, quiet status dot, Settings gear, Quit); 64px rail of key badges
+(Needs you count and repair mark on a badge); page header (key badge, display title, one summary
 line); toolbar (New ticket, filters, Show, Colour by, Density); workstream
 strip; five column wells. Structure and content: `docs/dev/specs/ui-layout.md`.
 

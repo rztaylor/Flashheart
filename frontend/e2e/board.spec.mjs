@@ -795,11 +795,13 @@ test("the panel sits beside the board and keeps the card's column in view", asyn
       boardBox.x + boardBox.width + 1,
     );
   }).toPass();
-  // Below 1440px the rail shrinks to its key badges, leaving three whole
+  // The rail is always its slim key badges (FH-150), leaving three whole
   // columns beside the panel.
   const rail = page.getByRole("navigation", { name: "Projects" });
   expect((await rail.boundingBox()).width).toBeLessThan(80);
-  await expect(rail.getByRole("button", { name: /Flashheart/ })).toBeVisible();
+  await expect(
+    rail.getByRole("button", { name: /^Flashheart \(flashheart\):/ }),
+  ).toBeVisible();
   await expect(async () => {
     const boardBox = await board.boundingBox();
     let whole = 0;

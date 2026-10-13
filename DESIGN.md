@@ -333,8 +333,7 @@ spacing:
   page-narrow: "16px"
   panel-gutter: "24px"
   band-height: "56px"
-  rail-width: "248px"
-  rail-collapsed: "64px"
+  rail-width: "64px"
   panel-width: "clamp(26rem, 32vw, 35rem)"
 components:
   button-primary:
@@ -456,7 +455,7 @@ Flashheart is a friendly metro system for work. Each workstream is a route with 
 Structure and content are fixed in [the UI layout contract](docs/dev/specs/ui-layout.md); this file records how that structure looks. A theme changes tokens, never layout. Metro Pop replaced the Transit Line Map of D14 (D18, 2026-10-06), chosen from the generated references in `.impeccable/mocks/metro-theme-rollout/`.
 
 **Key Characteristics:**
-- A 56px band (bolt, wordmark, view tabs, Needs you, search, status, Settings, Quit) over a 248px rail, with every view opening on a page header naming its scope.
+- A 56px band (bolt, wordmark, view tabs, Needs you, search, status, Settings, Quit) over a 64px rail of key badges, with every view opening on a page header naming its scope.
 - Rounded throughout: 8px controls, 10px cards, 14px wells and route cards, full pills and bullets.
 - Route colours mean workstreams; paint means the Colour by value; status pills always carry an icon and a word.
 - Archivo Variable across its width axis: a heavy condensed display cut for titles, a condensed bold for heads, tabular numerals everywhere.
@@ -481,7 +480,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
-- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark. Only Needs you uses it.
+- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, card, panel, question card), a rail badge's Needs you count and the Overview's Needs your decision mark. Only Needs you uses it.
 - **Flash** (`flash` #ffd23f): the bolt before the wordmark.
 - **Danger** (`danger`, `on-danger`, `danger-surface`): application errors, and actions that cannot be undone (a permanent delete): red, in both themes. Never a ticket state.
 
@@ -528,7 +527,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 
 ## Layout
 
-See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 248px rail, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem); below 1440px an open panel collapses the rail to 64px of key badges. Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; the Overview stacks section cards 16px apart in one column filling Main; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
+See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 64px rail of key badges, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem). Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; the Overview stacks section cards 16px apart in one column filling Main; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
 
 ## Elevation & Depth
 
@@ -558,7 +557,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 
 ### Pills and Tags
 - **Status pill:** state fill, state ink, an icon (ring, half, review page, check; a cross for Rejected) and the column's word, or *Rejected*. A rejected card in Done carries its Rejected pill with its tags.
-- **Blocker pill:** blocked fill and ink, the no-entry sign, the reason (one line on a card, full in its tooltip and the panel). The no-entry sign (a filled disc in the ink with its bar cut out to the surface behind) is the one symbol for blocked, also on its own beside Blocked by and the State filter's Blocked (in the blocked ink) and the rail's blocked count (in the rail's muted ink); it replaced a hollow diamond that read as decoration at card size (FH-148).
+- **Blocker pill:** blocked fill and ink, the no-entry sign, the reason (one line on a card, full in its tooltip and the panel). The no-entry sign (a filled disc in the ink with its bar cut out to the surface behind) is the one symbol for blocked, also on its own beside Blocked by and the State filter's Blocked (in the blocked ink); it replaced a hollow diamond that read as decoration at card size (FH-148).
 - **Tag:** type, priority and tags in the panel, the table and the archive: neutral outlined chips; High priority is semibold. Type and priority tags lead with the card's mark (FH-154): the 12px type icon in its paint shade, the 11px priority bars; a priority word without bars stands alone. The full page's Priority and Type rows show the same marks before their words. Cards draw type and priority as marks alone.
 
 ### Ticket Card
@@ -576,7 +575,7 @@ Above the section cards: five equal chevron cards in one row, Backlog to Done, e
 ### Navigation
 - **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate (a toggle: pressed, an inset on-attention ring and a close mark, filtering the Board to tickets that need you), search, quiet status dot, the Settings gear (a 36px icon button, quiet like the status, the band field behind it while hovered or open) and Quit. Under 640px tabs collapse to icons; the plate keeps its words.
 - **Settings menu:** a 288px popover (never wider than the screen less 32px) under the gear, right-aligned to it: Theme as a label over the System, Light, Dark segmented control, then under a rule the board root in semibold label and muted mono (cut from the start, the whole path in its tooltip) and the muted version line. App-wide settings only; the Board's View options keep the per-view ones.
-- **Rail:** All projects, a divider, projects with key badge (8px, tinted; filled in the accent when current), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile is raised: rail active surface, hairline border, card shadow. No footer: theme, board root and version are in the band's Settings menu.
+- **Rail:** a 64px column of 48px tiles at every width from 48rem (FH-150): All projects (the board icon), a divider, then each project's key badge (32px tall, at least 36px wide, 8px corners, tinted; filled in the accent when current; display cut, a size smaller for keys over three letters). The current tile is raised: rail active surface, hairline border, card shadow. A 16px attention-coloured count on the badge's top-right corner, ringed in the rail colour, is its Needs you count; a 1.5px dashed ink outline 2px out and a hatched top band mark a project with a ticket that needs repair. Name and counts are in the tooltip. No footer: theme, board root and version are in the band's Settings menu.
 - **Page header:** key badge (or board icon) and the scope's name in the display page cut, with one muted summary line.
 - **Panel tabs:** heading-small labels over a rule, the current one underlined 3px in select.
 
