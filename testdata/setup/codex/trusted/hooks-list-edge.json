@@ -1,0 +1,74 @@
+[
+  {
+    "key": "/Users/example/.codex/hooks.json:pre_tool_use:0:0",
+    "eventName": "preToolUse",
+    "command": "echo 'a<b>&c' \"q\" \\ \t \u00e9 \u2028 \u00a0 \ud83d\ude00",
+    "timeoutSec": 7,
+    "currentHash": "sha256:743cce196250076308150f47e16c66c721a566c355730c4fc500bfaabe69c6ab",
+    "trustStatus": "untrusted"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:pre_tool_use:0:1",
+    "eventName": "preToolUse",
+    "command": "echo async",
+    "timeoutSec": 600,
+    "currentHash": "sha256:cd7de5e607f9527710887ab2495652ed78fc1c300f7cd593adc1e297f1c52869",
+    "trustStatus": "untrusted"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:pre_tool_use:1:0",
+    "eventName": "preToolUse",
+    "command": "echo star",
+    "timeoutSec": 600,
+    "currentHash": "sha256:d0a2660c9e0053aaf0bd435d325861b8fea5d8eea38a09a1319c0b67abbd4227",
+    "trustStatus": "untrusted"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:pre_tool_use:2:0",
+    "eventName": "preToolUse",
+    "command": "echo default-limit",
+    "timeoutSec": 600,
+    "currentHash": "sha256:6c8eb74210fb25765949c4476057020566676de8fb574d5afea625e260feb6ed",
+    "trustStatus": "untrusted"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:session_end:0:0",
+    "eventName": "sessionEnd",
+    "command": "echo end",
+    "timeoutSec": 3,
+    "currentHash": "sha256:84be7971dba2dbb128add226e0537c753853bf675df8efb85a5dcbb611374b4f",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:session_end:0:1",
+    "eventName": "sessionEnd",
+    "command": "echo end-default",
+    "timeoutSec": 1,
+    "currentHash": "sha256:aeb0217f163da20022a85ee229c615dd10ae2a33b7ff9a8d9e3c3e1087340712",
+    "trustStatus": "untrusted"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:user_prompt_submit:0:0",
+    "eventName": "userPromptSubmit",
+    "command": "echo prompt",
+    "timeoutSec": 600,
+    "currentHash": "sha256:dc1c713727e2f3066673ac61ad3ccfe653c4f0e9c9ae2cad0ce6233ba7f8b50d",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:stop:0:0",
+    "eventName": "stop",
+    "command": "echo stop",
+    "timeoutSec": 1,
+    "currentHash": "sha256:3948c5861dd1e074727de37cb8522c8d50c592a839aae2db6f8b7c1db3db2b03",
+    "trustStatus": "untrusted"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:interrupt:0:0",
+    "eventName": "interrupt",
+    "command": "echo interrupt",
+    "timeoutSec": 1,
+    "currentHash": "sha256:1435c30cf86428ba66a2656f16b66b7b3ebf3de8830af485a6da21e33b8c2490",
+    "trustStatus": "modified"
+  }
+]

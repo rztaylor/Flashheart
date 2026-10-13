@@ -640,7 +640,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   and MCP configuration for each agent, and recent hook errors. It changes
   nothing, reports each check as ok, warning or problem with the fix (a
   missing hook, a configured binary that no longer exists, an out-of-date
-  skill or Codex protocol text, Codex hooks turned off or never trusted,
+  skill or Codex protocol text, Codex hooks turned off, never trusted or
+  trusted for an earlier command (naming the events),
   hook errors of the last day), and exits 1 when it finds a problem.
   An MCP server registered at local or project scope instead of setup's
   user scope is a warning naming the scope, not "not registered".

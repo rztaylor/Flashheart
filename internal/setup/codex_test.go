@@ -381,7 +381,7 @@ func TestCodexUninstallAfterChangesRemovesOnlyFlashheart(t *testing.T) {
 
 	m := newCodexMachine(t, "user")
 	m.apply(true)
-	trust := "\n[projects.\"/Users/example/src/new\"]\ntrust_level = \"trusted\"\n\n[hooks.state.\"" + m.path("hooks.json") + ":Stop:0:0\"]\ntrusted_hash = \"sha256:1111\"\n"
+	trust := "\n[projects.\"/Users/example/src/new\"]\ntrust_level = \"trusted\"\n\n[hooks.state.\"" + m.path("hooks.json") + ":stop:1:0\"]\ntrusted_hash = \"sha256:1111\"\n"
 	m.write("config.toml", m.read("config.toml")+trust)
 	m.write("hooks.json", strings.Replace(m.read("hooks.json"), "afplay /System/Library/Sounds/Glass.aiff", "say done", 1))
 	m.apply(false)

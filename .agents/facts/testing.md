@@ -49,6 +49,11 @@
   an agent changes; the Codex recorder runs with a scratch `CODEX_HOME`
   (Codex saves project trust to its config even with
   `--ignore-user-config`), so it never changes `~/.codex`.
+- Codex hook trust (the key and hash doctor recomputes, agent-protocol
+  §5.4) is tested against Codex's own keys and hashes in
+  `testdata/setup/codex/trusted/`; re-record them with
+  `scripts/record-codex-hook-trust.sh` (scratch `CODEX_HOME`, drives
+  `codex app-server`, no login or model) when Codex updates its hooks.
 - Hook latency: `scripts/hook-bench.sh` (developer tool, not in CI) fails
   when p95 over 1,000 warm invocations exceeds 50 ms and prints how many
   events were recorded. `-agent` picks the payloads

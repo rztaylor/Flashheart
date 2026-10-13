@@ -1496,3 +1496,25 @@ shortcut per action (one to tick, one to open) was rejected for one
 Alt+Enter on whatever the cursor is on; a toolbar always shown above the
 text was rejected for one over the selection, which keeps the section's
 look.
+
+## 2026-10-13 — D63: doctor recomputes Codex's hook trust hash
+
+Refines D44's "cannot tell a stale trust". `flashheart doctor` (FH-120)
+computes the key and hash Codex saves when you trust a hook
+(agent-protocol §5.4) for each Flashheart hook in `hooks.json`, compares
+them with `[hooks.state]` in `config.toml`, and names the events whose
+hook was never trusted or was trusted with another command. The rule was
+recorded from Codex 0.160.0 with `scripts/record-codex-hook-trust.sh`
+(Codex's own keys and hashes for Flashheart's hooks, a changed command,
+and every hashed field), matches the codex-rs source at that version, and
+tests check the implementation against those recordings.
+
+Options: ask Codex (`codex app-server` answers `hooks/list` with each
+hook's trust status), rejected because doctor would start Codex, which is
+slow, may reach the network, and is often only inside the ChatGPT app;
+check only that some trust exists (D44), rejected because a moved binary
+or another `--root` silently stops the hooks; recompute the hash (chosen:
+read only, local, instant). The cost is coupling to Codex's hashing: a
+Codex release that changes it makes doctor report trusted hooks as
+changed, so re-record with the script when Codex updates its hooks and
+fix the rule if the recordings fail.

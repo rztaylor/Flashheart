@@ -53,7 +53,8 @@ Codex runs hooks only once you trust them. After setup has written them:
 The ChatGPT app never asks: it silently skips hooks you have not trusted in
 the CLI, and uses the trust you give there. Trust belongs to a hook's exact
 command, so trust them again after running setup with a moved binary or
-another `--root`. Without trusted hooks Codex still uses the MCP server:
+another `--root`; `flashheart doctor` names the hooks that need trusting,
+or trusting again. Without trusted hooks Codex still uses the MCP server:
 your board actions are recorded, but not the session's own activity, and
 answers to questions arrive with its next Flashheart tool call.
 

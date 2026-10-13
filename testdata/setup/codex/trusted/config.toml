@@ -1,0 +1,38 @@
+[mcp_servers.flashheart]
+command = "/Users/example/bin/flashheart"
+args = ["mcp", "--root", "/Users/example/reports/Kanban"]
+
+[hooks.state]
+
+[hooks.state."/Users/example/.codex/hooks.json:permission_request:0:0"]
+trusted_hash = "sha256:1ca0e8322f8fce3c1c4beb83b3b2e892e6c4c296388c154a61d712da7efa0a51"
+
+[hooks.state."/Users/example/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:d864ea08523a52c2b7190e2786c398f2bb9c7cb90eb4ed3e5131536bb3c6c1cd"
+
+[hooks.state."/Users/example/.codex/hooks.json:pre_compact:0:0"]
+trusted_hash = "sha256:ee714ab0b57855d275afd3d95e708c3408c3d7f433cb891d9cf57050e46056a6"
+
+[hooks.state."/Users/example/.codex/hooks.json:post_compact:0:0"]
+trusted_hash = "sha256:64ee777510b2a9fb28c8af942c60fdc74e24ec07b1eb4d546c5f240a31c63a86"
+
+[hooks.state."/Users/example/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:dc1fc2906dbc1539368c8c4d1029544625239e32599281653fe23bf83343063f"
+
+[hooks.state."/Users/example/.codex/hooks.json:session_end:0:0"]
+trusted_hash = "sha256:ebe8d3d8b561a3a3c00186f409460f7926243e0f18cbbac9c62bbfd649d887d6"
+
+[hooks.state."/Users/example/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:847369a069aafaf33b269b1bbd8664fd857d05f23e72cef9dcd2098ca0bcf0ae"
+
+[hooks.state."/Users/example/.codex/hooks.json:subagent_start:0:0"]
+trusted_hash = "sha256:1e4c120de1a2ad35614aad49835df81e06bd271b4ad4d30d905151187e296731"
+
+[hooks.state."/Users/example/.codex/hooks.json:subagent_stop:0:0"]
+trusted_hash = "sha256:e43a33298a5898fb0d5b16b7ca6c4095bee5c1f6e9b7abf797a6e7e17ce2c352"
+
+[hooks.state."/Users/example/.codex/hooks.json:stop:1:0"]
+trusted_hash = "sha256:be77fc25bf247f54475cf6322d4a2a92186f58e54b52a33ef708e4dd0d65f2fd"
+
+[hooks.state."/Users/example/.codex/hooks.json:interrupt:0:0"]
+trusted_hash = "sha256:3958d251a073cfb6bc163ee5f306aef79efd5ba9b36ef42788a71d27c9b0f166"
