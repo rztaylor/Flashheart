@@ -8,6 +8,8 @@ interface PopoverProps {
   button: ReactNode;
   // active highlights the button, as an applied filter.
   active?: boolean;
+  // band draws the button as the band's quiet controls (Settings).
+  variant?: "field" | "band";
   align?: "start" | "end";
   // children receives close, for choices that finish with one pick.
   children(close: () => void): ReactNode;
@@ -21,6 +23,7 @@ export function Popover({
   iconOnly,
   button,
   active,
+  variant = "field",
   align = "start",
   children,
 }: PopoverProps) {
@@ -74,20 +77,26 @@ export function Popover({
         aria-label={label}
         title={iconOnly ? label : undefined}
         onClick={() => setOpen(!open)}
-        className={`flex h-8 items-center gap-1.5 rounded-control border px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
-          active
-            ? "border-select bg-select-surface text-ink ring-1 ring-select"
-            : open
-              ? "border-ink-muted bg-card text-ink"
-              : "border-rule bg-card text-ink hover:border-ink-muted"
-        }`}
+        className={
+          variant === "band"
+            ? `flex h-9 items-center rounded-control px-2 text-on-band transition-colors hover:bg-band-field focus-visible:outline-on-band ${
+                open ? "bg-band-field" : ""
+              }`
+            : `flex h-8 items-center gap-1.5 rounded-control border px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
+                active
+                  ? "border-select bg-select-surface text-ink ring-1 ring-select"
+                  : open
+                    ? "border-ink-muted bg-card text-ink"
+                    : "border-rule bg-card text-ink hover:border-ink-muted"
+              }`
+        }
       >
         {button}
       </button>
       {open ? (
         <div
           id={panel}
-          className={`absolute top-full z-30 mt-1.5 min-w-48 rounded-control bg-popover p-1.5 shadow-popover ${
+          className={`absolute top-full z-30 mt-1.5 min-w-48 rounded-control bg-popover p-1.5 text-ink shadow-popover ${
             align === "end" ? "right-0" : "left-0"
           }`}
         >
