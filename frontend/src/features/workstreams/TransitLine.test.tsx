@@ -119,6 +119,9 @@ describe("TransitLine track", () => {
 
   it("names a dependency outside the line above its station", () => {
     expect(graph).toContain("Needs NG-7");
+    expect(graph).toMatch(
+      /data-icon="blocked"(?:(?!<\/svg>)[\s\S])*<\/svg>Needs NG-7/,
+    );
   });
 
   it("puts tickets with no links on the line below the graph", () => {

@@ -80,6 +80,12 @@ const text: [string, string, number][] = [
   ["state-done-ink", "select-surface", 4.5],
   ["focus", "ground", 3],
   ["focus", "card", 3],
+  // The no-entry sign (FH-148) is a non-text mark: on its pill it is the
+  // blocked pair above; on its own (Blocked by, the State menu) it is the
+  // blocked ink on the surface it sits on.
+  ...["ground", "card", "panel", "popover"].map(
+    (surface): [string, string, number] => ["state-blocked-ink", surface, 3],
+  ),
   ...["handoff", "question"].flatMap((callout): [string, string, number][] => [
     ["ink", `callout-${callout}`, 4.5],
     ["ink-muted", `callout-${callout}`, 4.5],

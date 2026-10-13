@@ -64,6 +64,15 @@ describe("FilterBar", () => {
     expect(markup).toContain("Clear filters");
   });
 
+  it("marks the chosen Blocked state with the no-entry sign", () => {
+    expect(render()).not.toContain('data-icon="blocked"');
+    const markup = render({ ...emptyFilters, state: "blocked" });
+    expect(markup).toMatch(
+      /State: Blocked<\/span><svg[^>]*data-icon="blocked"/,
+    );
+    expect(markup).toContain('aria-label="State: Blocked"');
+  });
+
   it("offers Rejected as a State, labelled and badged like the others (FH-59)", () => {
     const markup = render({ ...emptyFilters, state: "rejected" });
     expect(markup).toContain('aria-label="State: Rejected"');

@@ -143,9 +143,11 @@ describe("TicketCard", () => {
   it("shows a real blocker as the blocked pill with its reason", () => {
     const markup = render({ blocked: true, blockedBy: [blocker] });
     expect(markup).toContain('data-tone="blocked"');
+    expect(markup).toContain('data-icon="blocked"');
     expect(markup).toContain("Depends on FH-4, which is in Backlog");
     const compact = render({ blocked: true, blockedBy: [blocker] }, "compact");
     expect(compact).toContain('data-tone="blocked"');
+    expect(compact).toContain('data-icon="blocked"');
     expect(compact).not.toContain("which is in Backlog");
   });
 

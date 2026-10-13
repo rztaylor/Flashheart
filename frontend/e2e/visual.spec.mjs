@@ -106,17 +106,22 @@ for (const theme of ["light", "dark"]) {
       { theme },
     );
   });
+  // The table and the workstreams carry blocked marks (FH-148) in both
+  // themes.
+  test(`the table, ${theme}`, async () => {
+    await compare(
+      "table",
+      "#/p/flashheart/table",
+      (page) => page.getByRole("table"),
+      { theme },
+    );
+  });
+  test(`workstreams, ${theme}`, async () => {
+    await compare("workstreams", "#/p/flashheart/workstreams", heading, {
+      theme,
+    });
+  });
 }
-
-test("the table", async () => {
-  await compare("table", "#/p/flashheart/table", (page) =>
-    page.getByRole("table"),
-  );
-});
-
-test("workstreams", async () => {
-  await compare("workstreams", "#/p/flashheart/workstreams", heading);
-});
 
 test("the Overview of every project", async () => {
   await compare("overview", "#/all/overview", heading);
