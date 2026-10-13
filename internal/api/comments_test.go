@@ -73,6 +73,13 @@ func TestBoardWritesAppendOneHistoryEntry(t *testing.T) {
 	send(t, handler, http.MethodPost, "/api/tickets/AL-3/criteria", CriterionRequest{Base: ticketDetail(t, handler, "AL-3").Hash, Index: 1, Checked: true}, http.StatusOK, nil)
 	expect("AL-3", board.ChangeTicked)
 
+	// A section edited in place (FH-66) names its section, not its text.
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: ticketDetail(t, handler, "AL-3").Hash, Section: "Context", Content: "A secret context."}, http.StatusOK, nil)
+	expect("AL-3", board.ChangeEdited)
+	if history := ticketDetail(t, handler, "AL-3").History; !slices.Equal(history[len(history)-1].Changes[0].Fields, []string{"context"}) {
+		t.Errorf("section edit fields = %v", history[len(history)-1].Changes[0].Fields)
+	}
+
 	raw := strings.Replace(ticketDetail(t, handler, "AL-3").Raw, "Fixture ticket.", "A secret body.", 1)
 	send(t, handler, http.MethodPut, "/api/tickets/AL-3/raw", RawRequest{Base: ticketDetail(t, handler, "AL-3").Hash, Content: raw}, http.StatusOK, nil)
 	expect("AL-3", board.ChangeEdited)

@@ -274,8 +274,28 @@ at most 94rem.
   Workstream (bullet and name), Branch, Pull request (when set), Depends on
   (ids linked), Tags, Agent (the run speaking for the ticket, its state
   mark and word), Created and Changed, *None* where empty; then
-  **Archive**. Each row and section is where its in-place edit will sit
-  (FH-66).
+  **Archive**.
+- **In-place editing** (`EDIT-11`, FH-66), where the server saves: the
+  title, each ticket section (criteria, Description, Test plan or
+  Reproduction, Context, the ticket's own) and the properties Priority,
+  Type, Workstream, Branch, Pull request (when set), Depends on and Tags
+  each show a quiet 28px pencil, *Edit <name>*, after the heading or at
+  the row's end, while the item is hovered or holds focus (always on
+  touch). The pencil, a double-click on the content or Enter opens the
+  item in place: its control on a well with a rule border (the title a
+  one-line field in the display cut, a section a markdown text area, the
+  criteria a list of rows with a done box, the text, Move up, Move down
+  and Remove, then *Add a criterion*; a property's name above its select,
+  text field or chips, spanning the panel), then **Save**, **Cancel** and
+  the shortcut hint (*⌘Enter saves · Esc cancels*, Ctrl on other
+  systems). A failed save's reason is a danger line above the buttons;
+  Save reads *Saving…* meanwhile. Chips are pills with a remove button,
+  then a field where Enter or a comma adds one; Depends on offers the
+  project's tickets. An empty template section is a dashed *Add
+  <section>* slot in its place. Handoff, Blocked by, the review, Files and
+  Activity have no pencil. Opening another item or leaving the page with
+  unsaved changes asks in a dialog, *Unsaved changes to the <name>*:
+  **Discard changes** or **Keep editing** (primary).
 - **Below 1280px** the outline becomes a **Jump to** button (naming the
   section in view) at the top of the page, staying in view, opening the
   same list as a menu. From 1024px the properties stay on the right;

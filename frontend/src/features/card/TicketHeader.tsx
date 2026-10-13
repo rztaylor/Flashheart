@@ -1,3 +1,5 @@
+import type { MouseEvent, ReactNode } from "react";
+
 import {
   STATUSES,
   type Status,
@@ -20,14 +22,30 @@ import { absoluteTime, runningTime } from "../../model/time";
 // TicketIdentity is the id and project, then the title (ui-layout.md §3).
 // As the panel's heading (level 2) the id links to the ticket's full page;
 // as the page's own heading (level 1) it is plain text.
+// On the full page, title replaces the heading while it is edited, and
+// action (its pencil) sits after it (FH-66).
 export function TicketIdentity({
   detail,
   level,
+  title,
+  action,
+  onDoubleClick,
 }: {
   detail: TicketDetail;
   level: 1 | 2;
+  title?: ReactNode;
+  action?: ReactNode;
+  onDoubleClick?(event: MouseEvent): void;
 }) {
   const Heading = level === 1 ? "h1" : "h2";
+  const heading = (
+    <Heading
+      onDoubleClick={onDoubleClick}
+      className={`mt-1 leading-tight display-cut ${level === 1 ? "text-3xl" : "text-2xl"} ${action ? "min-w-0" : ""}`}
+    >
+      {detail.title}
+    </Heading>
+  );
   return (
     <>
       <p className="flex items-center gap-2 text-sm text-ink-muted">
@@ -38,11 +56,15 @@ export function TicketIdentity({
         )}
         <span>{detail.project}</span>
       </p>
-      <Heading
-        className={`mt-1 leading-tight display-cut ${level === 1 ? "text-3xl" : "text-2xl"}`}
-      >
-        {detail.title}
-      </Heading>
+      {title ??
+        (action ? (
+          <div className="group/edit flex items-start gap-2">
+            {heading}
+            <span className="mt-2">{action}</span>
+          </div>
+        ) : (
+          heading
+        ))}
     </>
   );
 }

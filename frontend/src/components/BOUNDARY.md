@@ -6,7 +6,8 @@ Owns shared, product-neutral UI primitives on the semantic roles of
 surface with its head), `KeyBadge`, `StateNote`, `Tabs`,
 `SidePanel`, `SegmentedControl`, fields and form fields, `Popover` (a
 disclosure menu on the lifted popover surface), `FilterChip` (the one
-filter chip: show only, Cmd or Ctrl click to hide), `Dialog`, `Toast`,
+filter chip: show only, Cmd or Ctrl click to hide), `ChipInput` (a list
+edited as removable chips), `Dialog`, `Toast`,
 `Markdown` (block or one inline line), `Lightbox` (one image of a set in a
 dialog), `Table` (the one table look, ui-layout.md §6: card surface,
 sticky head, `HeadCell`, `Row` with dividers, hover and selection),

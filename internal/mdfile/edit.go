@@ -274,23 +274,79 @@ func SetCheckbox(data []byte, sectionName string, index int, checked bool) ([]by
 
 // ReplaceSection replaces the content of a level-2 section, adding the
 // section at the end of the file when it is missing. The content stays
-// inside the section (SectionSafe).
+// inside the section (SectionSafe). Content equal to the section's own,
+// ignoring blank lines around it and trailing whitespace, changes nothing
+// (STO-2); empty content leaves the heading and a blank line before the
+// next one, as the template writes an empty section.
 func ReplaceSection(data []byte, sectionName, content string) ([]byte, error) {
+	return PutSection(data, sectionName, content)
+}
+
+// PutSection is ReplaceSection, except that a missing section is added
+// before the earliest section in the file that before names (outside code
+// fences), and at the end only when the file has none of them: a ticket's
+// Context goes above its Notes and Handoff (FH-66).
+func PutSection(data []byte, sectionName, content string, before ...string) ([]byte, error) {
 	f := split(data)
-	content = SectionSafe(strings.Trim(strings.ReplaceAll(content, "\r\n", "\n"), "\n")) + "\n"
+	content = SectionSafe(sectionText(strings.ReplaceAll(content, "\r\n", "\n")))
 	start, end, ok := f.section(sectionName)
 	if !ok {
-		f.lines = appendSection(f.lines, sectionName, content)
+		at := len(f.lines)
+		for _, name := range before {
+			if next, _, found := f.section(name); found && next < at {
+				at = next
+			}
+		}
+		if at == len(f.lines) {
+			f.lines = appendSection(f.lines, sectionName, content)
+			return f.bytes(), nil
+		}
+		block := []string{"## " + sectionName + "\n", "\n"}
+		if at > 0 && strings.TrimSpace(f.lines[at-1]) != "" {
+			block = append([]string{"\n"}, block...)
+		}
+		if content != "" {
+			block = append(append(block, contentLines(content)...), "\n")
+		}
+		f.lines = slices.Concat(f.lines[:at], block, f.lines[at:])
 		return f.bytes(), nil
 	}
-	block := []string{"\n"}
-	block = append(block, strings.SplitAfter(strings.TrimSuffix(content, "\n"), "\n")...)
-	block[len(block)-1] += "\n"
+	if sectionText(strings.Join(f.lines[start+1:end], "")) == content {
+		return data, nil
+	}
+	var block []string
+	if content != "" {
+		block = append([]string{"\n"}, contentLines(content)...)
+	}
 	if end < len(f.lines) {
 		block = append(block, "\n")
 	}
+	if len(block) > 0 && !strings.HasSuffix(f.lines[start], "\n") {
+		f.lines[start] += "\n"
+	}
 	f.lines = slices.Concat(f.lines[:start+1], block, f.lines[end:])
 	return f.bytes(), nil
+}
+
+// sectionText is a section's text as it is compared and written: without
+// the blank lines before it or the whitespace after it.
+func sectionText(text string) string {
+	text = strings.TrimRight(text, " \t\r\n")
+	for {
+		line, rest, found := strings.Cut(text, "\n")
+		if !found || strings.TrimSpace(line) != "" {
+			return text
+		}
+		text = rest
+	}
+}
+
+// contentLines splits text that has no final newline into lines that end
+// in one.
+func contentLines(text string) []string {
+	lines := strings.SplitAfter(text, "\n")
+	lines[len(lines)-1] += "\n"
+	return lines
 }
 
 // AppendToSection adds a paragraph to the end of a level-2 section (for
@@ -298,10 +354,10 @@ func ReplaceSection(data []byte, sectionName, content string) ([]byte, error) {
 // section when it is missing.
 func AppendToSection(data []byte, sectionName, text string) ([]byte, error) {
 	f := split(data)
-	text = SectionSafe(strings.Trim(strings.ReplaceAll(text, "\r\n", "\n"), "\n"))
+	text = SectionSafe(sectionText(strings.ReplaceAll(text, "\r\n", "\n")))
 	start, end, ok := f.section(sectionName)
 	if !ok {
-		f.lines = appendSection(f.lines, sectionName, text+"\n")
+		f.lines = appendSection(f.lines, sectionName, text)
 		return f.bytes(), nil
 	}
 	existing := strings.TrimSpace(strings.Join(f.lines[start+1:end], ""))
@@ -373,11 +429,10 @@ func appendSection(lines []string, name, content string) []string {
 	if len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) != "" {
 		lines = append(lines, "\n")
 	}
-	lines = append(lines, "## "+name+"\n", "\n")
-	for _, line := range strings.SplitAfter(strings.TrimSuffix(content, "\n"), "\n") {
-		lines = append(lines, line)
+	lines = append(lines, "## "+name+"\n")
+	if content != "" {
+		lines = append(append(lines, "\n"), contentLines(content)...)
 	}
-	lines[len(lines)-1] += "\n"
 	return lines
 }
 

@@ -57,6 +57,7 @@ type ConflictJSON struct {
 func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/tickets/{id}/move", b.move)
 	mux.HandleFunc("PATCH /api/tickets/{id}", b.patchTicket)
+	mux.HandleFunc("PUT /api/tickets/{id}/section", b.putSection)
 	mux.HandleFunc("PUT /api/tickets/{id}/raw", b.putRaw)
 	mux.HandleFunc("POST /api/tickets/{id}/criteria", b.setCriterion)
 	mux.HandleFunc("POST /api/tickets/{id}/review/steps", b.setReviewStep)
@@ -326,6 +327,48 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: changes.Keys()})
+	b.saved(w, http.StatusOK, hash, nil)
+}
+
+// SectionRequest is PUT /api/tickets/{id}/section: one section's text,
+// edited in place on the ticket's page (FH-66). A missing section is
+// added in the template's place; Handoff and Notes are refused.
+type SectionRequest struct {
+	Base    string `json:"base"`
+	Section string `json:"section"`
+	Content string `json:"content"`
+}
+
+func (b boardAPI) putSection(w http.ResponseWriter, r *http.Request) {
+	writer := b.writer(w)
+	if writer == nil {
+		return
+	}
+	var request SectionRequest
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
+		return
+	}
+	// Which sections may be rewritten, and where a missing one goes, is
+	// the one rule agents will share (board.SectionChange).
+	change, err := board.NewSectionChange(request.Section, request.Content)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		return
+	}
+	_, project, ticket, ok := b.findTicket(w, r)
+	if !ok {
+		return
+	}
+	hash, err := writer.EditTicket(project.Name, ticket.ID, store.Unchanged(request.Base), board.FieldChanges{}, change.Apply)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	// The section's own text again writes nothing, so there is nothing to
+	// record.
+	if hash != request.Base {
+		b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{change.Field()}})
+	}
 	b.saved(w, http.StatusOK, hash, nil)
 }
 

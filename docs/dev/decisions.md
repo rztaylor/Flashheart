@@ -9,7 +9,7 @@ Flashheart (after the Blackadder character), binary `flashheart`, repository
 `~/src/Flashheart`. MIT licence, Robert Taylor as copyright holder. The working
 name AIshape was dropped before any code.
 
-## 2026-10-04 — D1: Observe and coordinate; do not launch agents
+## 2026-10-04 — D1: Observe and coordinate; do not launch agents (revised by D48)
 
 Options: watch agents the user runs in their own apps; launch agents from the
 board (as Vibe Kanban, Kagan and Kanbots do); both.
@@ -28,6 +28,9 @@ Decision: tickets stay markdown (readable in Obsidian, diffable, usable without
 Flashheart); high-volume run activity goes to per-project daily JSONL files.
 `serve` builds an in-memory index at start and keeps no database. Durable
 meaning (handoffs, answers) is written into tickets so the log is disposable.
+
+Refined by D47: a ticket's comments and change history are durable too, in
+the ticket folder's `activity.md`, so they outlive the log's retention.
 
 ## 2026-10-04 — D3: A ticket's column is its directory (superseded by D15)
 
@@ -58,25 +61,32 @@ only what the model knows; the protocol skill explains the tools; an opt-in
 Stop hook enforces a handoff after edits. Passive session-log reading is
 deferred: formats change without notice and logs contain secrets.
 
-## 2026-10-04 — D6: Project from the main checkout; ticket by claim
+Revised by D51: hooks no longer record plans; a ticket's criteria and
+handoff are its plan. D50 adds a reminder to claim for sessions that edit
+without a ticket.
+
+## 2026-10-04 — D6: Project from the main checkout; ticket by claim (revised by D50)
 
 Project name is the main checkout's directory name (worktree-safe). Runs link
 to tickets by explicit claim, provisionally by branch match, and subagents
 inherit. Unlinked runs show as Unassigned rather than being guessed.
 
-## 2026-10-04 — D7: A small MCP tool set
+## 2026-10-04 — D7: A small MCP tool set (revised by D52)
 
 About ten tools with compact outputs and no delete. Remote MCP (ordinary
 ChatGPT chat connectors) is rejected to stay local-only; Codex covers the
 ChatGPT side as a coding agent.
 
-## 2026-10-04 — D8: A separate Agents view plus virtual columns
+## 2026-10-04 — D8: A separate Agents view plus virtual columns (superseded by D27, D31 and D32)
 
 Options: extra workflow columns for AI states; a separate run-state view.
 
 Decision: run state is a different axis from workflow status. The Agents view
 shows runs in lanes (Working, Needs you, Waiting, Quiet, Ended); the board gets
 live badges and toggleable virtual columns (Needs you, Agent working).
+
+Superseded: Agent working became a filter (D27), Needs you the band's
+filter (D31), and the Agents view gave way to the Overview (D32).
 
 ## 2026-10-04 — D9: Setup shows a diff and writes only with --write
 
@@ -95,6 +105,15 @@ drop), `react-markdown` + `remark-gfm` without raw HTML; Biome, Vitest,
 Playwright. Commodity parsing, drag and drop and markdown are not
 hand-written.
 
+Confirmed at `foundation` (2026-10-04): `go.yaml.in/yaml/v3` (v3.0.5, maintained
+by the YAML organisation) rather than `gopkg.in/yaml.v3`, whose last release
+was v3.0.1 in May 2022 and whose repository is archived. The API is the same.
+Singleserve is pinned at v0.2.2, which requires Go 1.26.6.
+
+Later additions: `@fontsource-variable/archivo` and an authored icon set
+(D14), and the interaction-test libraries (D42). A rich text editor needs
+its own decision before it is added (D56).
+
 ## 2026-10-04 — D11: Safety model
 
 Writes confined to the root; `attach` copies allow-listed types under a size
@@ -107,11 +126,6 @@ Default root `~/reports/Kanban`, one subdirectory per project, so the board is
 the user's own and is not committed into the repositories it tracks.
 Overridable with `--root` or `FLASHHEART_ROOT`. Whether the root is itself a
 git repository is left to the user for now.
-
-Confirmed at `foundation` (2026-10-04): `go.yaml.in/yaml/v3` (v3.0.5, maintained
-by the YAML organisation) rather than `gopkg.in/yaml.v3`, whose last release
-was v3.0.1 in May 2022 and whose repository is archived. The API is the same.
-Singleserve is pinned at v0.2.2, which requires Go 1.26.6.
 
 ## 2026-10-04 — D13: `serve` detaches from the terminal
 
@@ -149,7 +163,7 @@ diamond answers "what is stuck". Frontend additions under D10: self-hosted
 `@fontsource-variable/archivo` (OFL) for the signage grotesk under the
 strict CSP, and an authored icon set instead of an icon library.
 
-## 2026-10-05 — D15: Board format v2: a folder per ticket, status in frontmatter
+## 2026-10-05 — D15: Board format v2: a folder per ticket, status in frontmatter (migration retired by D55)
 
 Context: the kanban-tracker skill will be replaced by Flashheart and Obsidian
 is not in use, so compatibility with the v1 column-folder layout no longer
@@ -216,9 +230,10 @@ Rejected: storing run state in a file (a second source of truth that hooks
 would have to rewrite under a lock on every event); a run-state daemon
 (D4, no required daemon).
 
-Dogfooding (user, 2026-10-05): Flashheart's own work is tracked on its board
-(project `Flashheart`, key `FH`) in the default root, outside the
-repository (D12).
+Refined: every reader now folds the same 48-hour window (D37). The Agents
+view and the virtual columns this decision describes were retired (D27,
+D31, D32); Needs you leading survives as the Overview's first section.
+Dogfooding (user, 2026-10-05) is recorded in `.agents/facts/roadmap.md`.
 
 ## 2026-10-06 — D18: Metro Pop structure with light and charcoal palettes
 
@@ -241,7 +256,7 @@ dependencies and validation are linked from
 contract is `docs/dev/specs/ui-layout.md`. No protocol/storage change or
 cloud deployment is implied.
 
-## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker
+## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker (kanban-tracker handling retired by D55)
 
 Options for registering the user-scope MCP server: edit `~/.claude.json`
 directly; run `claude mcp add-json` / `claude mcp remove`; print the command
@@ -259,7 +274,7 @@ subcommand, and restores the backed-up file byte for byte on uninstall when
 nothing changed since. `--uninstall` previews like setup does and applies
 with `--write` (D9).
 
-## 2026-10-06 — D20: Answers reach a session through an inbox
+## 2026-10-06 — D20: Answers reach a session through an inbox (revised by D54)
 
 The prompt hook must stay fast (`HOOK-1`) and never reads the event log
 (D17), but it must hand a session the answers to its questions (`HOOK-5`).
@@ -281,16 +296,10 @@ in `~/.claude`, so the fallback reads the project from
 
 ## 2026-10-06 — D21: Theme rollout no longer waits for review-and-orchestration
 
-Decision (user): implement `metro-theme-rollout` (FH-11–FH-14) now, without
-waiting for `review-and-orchestration` (FH-6). The surfaces being styled
-exist: the card panel's Review tab shows the review and its attachments.
-
-Options: wait for FH-6 so every review surface exists before styling (the
-order D18 set), or theme now and have FH-6 build its new surfaces
-(Attachments tab, lightbox, *How to Verify* checklist, subagent tree) to
-the shared contract in `docs/dev/specs/ui-layout.md`. The second was
-chosen: the contract already specifies those surfaces, so the themes need
-no second pass, and FH-6's pieces are not built under the theme tickets.
+Decision (user): the theme rollout (FH-11–FH-14) went ahead before FH-6
+instead of after it (the order D18 set). FH-6 built its new review surfaces
+to the shared contract in `docs/dev/specs/ui-layout.md`, so the themes
+needed no second pass. Both have shipped; this was a sequencing decision.
 
 ## 2026-10-06 — D22: Light theme on white with a raspberry bar
 
@@ -360,7 +369,6 @@ permanently only once archived, the same two steps as tickets (D24).
   the repository is unknown again, so activity there starts a new project,
   with a new key because the old one is retired.
 
-
 ## 2026-10-07 — D26: Workstreams are epics; only depends-on orders tickets
 
 Decision (FH-38, user): a workstream groups tickets toward a shared goal,
@@ -407,6 +415,38 @@ Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the card's
 `agentWorking` field is unchanged. A saved `virtual_columns` entry
 `agent-working` is dropped on load rather than refused.
 
+## 2026-10-08 — D28: A prompt in the asking session answers its questions (refined by D41)
+
+Decision (FH-43): when the user prompts the session that asked
+(`UserPromptSubmit`) before answering on the board, its unanswered
+questions, and its subagents', are answered in the session: they stop
+waiting, leave Needs you and are no longer shown as questions for you,
+while the run's question list and timeline keep them, marked. A question
+already answered on the board keeps waiting for delivery, which that same
+prompt's hook makes. Another session's questions are untouched. Users often
+answer in the chat, and the open question had kept the session, and every
+ticket it touched (including ones in Review and Done), in Needs you for up
+to twelve hours.
+
+The answer is derived in the run fold from `turn.start`, as a pending
+permission's resolution is, rather than recorded as a new event: the prompt
+hook stays at one `stat` when no answer is waiting, and older logs fold the
+same way. Claude Code also submits a prompt when a background command
+finishes (recorded: it starts `<task-notification>`), so its adapter marks
+that `turn.start` `background: true`, which answers nothing. A board answer
+to a question answered in the session is refused (`answered_in_session`),
+and `flashheart await` exits 0 saying the user answered in the chat.
+
+Options: a `question.answered` with `by: session` (an empty answer that
+recovery notes and `board_context` would try to deliver); a new
+`question.withdrawn` event written by the prompt hook (a log read on every
+prompt); deriving it from `turn.start` (chosen). Any later prompt counts,
+even one about something else, since the user is talking to the session.
+
+Versions: `PROTOCOL_VERSION` stays 1 (additive: an optional `background`
+field and a derived state rule); board format stays 2. The protocol skill
+says a reply in the chat answers the question.
+
 ## 2026-10-08 — D29: Serve copies linked files only from the project's repository
 
 Decision (FH-34): `serve`'s REV-5 copying of files linked from directly
@@ -448,38 +488,6 @@ that can be safe by default); the project's repository (chosen).
 Versions: board format stays 2 and `PROTOCOL_VERSION` stays 1; the agent
 protocol is unchanged. Serve now runs `git check-ignore`, the only place
 Flashheart runs git; hooks still run none.
-
-## 2026-10-08 — D28: A prompt in the asking session answers its questions
-
-Decision (FH-43): when the user prompts the session that asked
-(`UserPromptSubmit`) before answering on the board, its unanswered
-questions, and its subagents', are answered in the session: they stop
-waiting, leave Needs you and are no longer shown as questions for you,
-while the run's question list and timeline keep them, marked. A question
-already answered on the board keeps waiting for delivery, which that same
-prompt's hook makes. Another session's questions are untouched. Users often
-answer in the chat, and the open question had kept the session, and every
-ticket it touched (including ones in Review and Done), in Needs you for up
-to twelve hours.
-
-The answer is derived in the run fold from `turn.start`, as a pending
-permission's resolution is, rather than recorded as a new event: the prompt
-hook stays at one `stat` when no answer is waiting, and older logs fold the
-same way. Claude Code also submits a prompt when a background command
-finishes (recorded: it starts `<task-notification>`), so its adapter marks
-that `turn.start` `background: true`, which answers nothing. A board answer
-to a question answered in the session is refused (`answered_in_session`),
-and `flashheart await` exits 0 saying the user answered in the chat.
-
-Options: a `question.answered` with `by: session` (an empty answer that
-recovery notes and `board_context` would try to deliver); a new
-`question.withdrawn` event written by the prompt hook (a log read on every
-prompt); deriving it from `turn.start` (chosen). Any later prompt counts,
-even one about something else, since the user is talking to the session.
-
-Versions: `PROTOCOL_VERSION` stays 1 (additive: an optional `background`
-field and a derived state rule); board format stays 2. The protocol skill
-says a reply in the chat answers the question.
 
 ## 2026-10-08 — D30: Ticket ids open a full page in a new tab
 
@@ -583,7 +591,7 @@ board (editor edits do not count). Session detail (tools, files, plan,
 subagent tree) stays on the card's Runs tab.
 
 Evidence from the event logs shaped it: no project has recorded a plan, so
-plan displays are always empty; agents edit mostly through Bash, so edited
+plan displays are always empty (D51 removes them); agents edit mostly through Bash, so edited
 files and "no handoff" miss most edits; 21 of 35 sessions never claimed a
 ticket; one `tool.used` per tool call is 78% of all events. Run information
 is kept only where it becomes a fact about a ticket; the hooks move from
@@ -993,7 +1001,7 @@ and earlier ones stay in notes); derive it from the forge (a network call,
 ruled out). The protocol version stays 2: the field is optional and older
 agents never set it.
 
-## 2026-10-12 — D44: setup codex edits config.toml as text, hooks in hooks.json
+## 2026-10-12 — D44: setup codex edits config.toml as text, hooks in hooks.json (AGENTS.md refresh revised by D53)
 
 `flashheart setup codex` (FH-75) writes the flashheart MCP server into
 Codex's `config.toml`, a file Codex also writes itself (project and hook
@@ -1047,7 +1055,7 @@ names no session keeps `<agent>:mcp-<random>`, which never joins a later
 hook run. `PROTOCOL_VERSION` stays 2: run ids keep the §2 grammar, and the
 API field and the `_meta` read are additive.
 
-## 2026-10-13 — D46: The ticket page's Activity is read from what the ticket already returns
+## 2026-10-13 — D46: The ticket page's Activity is read from what the ticket already returns (refined by D47)
 
 The full page's Activity timeline (FH-65, CARD-7) is derived in the
 browser (`model/activity`) from the ticket the API already sends: the
@@ -1069,7 +1077,238 @@ carries only its day, so a day's notes come before its timed entries. If
 Activity needs the full history, the server can add it without changing
 the timeline's view.
 
-## 2026-10-13 — D48: A ticket's history is worked out from each write, as the writer
+## 2026-10-13 — D47: People comment on tickets; activity is typed and durable
+
+A person comments on a ticket mostly before work starts (clarifying what
+to build) and in review (asking for changes instead of telling a Claude or
+Codex session in its chat). Sending a remark to a live session is a
+secondary option, not the feature (FH-67, brainstormed with the user;
+built by FH-124 to FH-128).
+
+- **Typed activity, like Jira.** A ticket's Activity holds typed entries:
+  comments (people), notes (agents' `## Notes`), history (created, moved,
+  fields edited, criteria ticked, archived: who, what and when, never the
+  ticket's text), handoffs and questions. The page filters it All,
+  Comments or History.
+- **Storage.** Comments and history live in a new append-only
+  `activity.md` in the ticket's folder, beside `review.md`: human-readable
+  markdown, one dated, typed entry each. History is kept for the ticket's
+  life, so it outlives the event log's retention; board and agent writes
+  both append it. `## Notes` stays in the ticket file. Comments never
+  contend with agents rewriting `## Handoff` in the ticket file.
+- **Comments.** Ticket-level, optionally quoting part of the ticket (a
+  failing How to verify step). Editable, shown as edited. Agents read
+  them as the user's words, not as agent text: `get_ticket` and `claim`
+  carry them, so the session that takes a ticket gets them with it.
+- **Request changes.** In review, comments can be marked *change
+  requested*; the ticket goes back to In progress on its branch. Open
+  requests reach the live holding session at once, and otherwise the next
+  session through the recovery note and `board_context`. An agent marks
+  each one addressed through the MCP tools; moving to review warns while
+  any is open; the person resolves or reopens them at the next review.
+- **Tell a session now.** A comment may also be sent to a live session
+  that has claimed the ticket, chosen in the comment box; with none, the
+  option is off and nothing is queued. It is delivered through the
+  answers inbox as answers are, shows *Delivered to … at …*, and is
+  locked once delivered.
+- **Protocol.** Additive within version 2 (§14): new event kinds, comments
+  in `get_ticket` and `claim`, open requests in the recovery note and
+  `board_context`, an optional input to mark a request addressed, and
+  skill lines. No setup rerun.
+- **Where.** The ticket's full page first; the card panel later.
+
+Options: notes delivered to sessions as the main feature (rejected once
+the user framed comments as ordinary ticket work); comments in
+`## Notes` or a `## Comments` section of the ticket file (one file, but
+people's saves would race agents' checkpoints, and history would bloat
+the ticket); history from the event log only (lost after retention);
+anchoring comments to criteria or steps (anchors go stale as agents
+rewrite sections; a quote does the job); requested changes as new
+acceptance criteria (cheap, but loses the conversation). Durable history
+supersedes the run-window limits D46 accepted for Activity.
+
+## 2026-10-13 — D48: Flashheart may start an agent's own app on a ticket
+
+Decision (user, FH-130 review): revises D1. Flashheart may start an agent
+on a ticket by starting the agent's own app or command-line tool (Claude
+Code, Codex) with the ticket as its opening prompt. The agent app still
+owns the session, its credentials and its permissions, and the started
+session reports through hooks and MCP like any other. Flashheart never
+holds credentials, grants a permission or runs an agent without a window
+the user can see; hosting, proxying or supervising agents stays a non-goal.
+D1 kept launching out because launchers were an established category and
+nothing gave one view of the sessions people already run. That view now
+exists, and the board holds the priorities, reviews and comments, so
+starting work from the ticket that describes it is the next short step.
+
+How it works for each agent (which apps can be started locally, the
+prompt, the folder or worktree, linking the started session to its
+ticket) is worked out in a spike before anything is built (FH-131).
+Starting a turn in a session that is already running was a separate
+option and is not part of this decision: D47's comments and change
+requests still reach a session at its next prompt or Flashheart tool
+result.
+
+Options: keep D1 and only deliver to running sessions; start turns in
+running sessions; start the agent's own app (chosen); headless runs that
+Flashheart supervises, as launchers like Vibe Kanban do (Flashheart would
+own sessions, which D1's other reasons still rule out).
+
+## 2026-10-13 — D49: One user on several machines; a small team kept possible
+
+Decision (user, FH-130 review): Flashheart is for one person, who may use
+it on several machines with the board root synced between them.
+Multi-user sharing stays a non-goal for now, but the user wants to keep
+the option of a small team later, so choices should not close it off:
+entries name who wrote them (comments, history and notes already do), a
+synced root stays a supported case, and D29's protections stay, because a
+synced folder can carry edits from anywhere. Nothing is built for teams
+yet: no accounts, no identities beyond names, no permissions, and no
+merging beyond the lock and hash rules. D47's "people" is the user, or
+the user's agents.
+
+Options: one person on several machines, keeping teams possible (chosen);
+a small team through a synced folder now (authors, identity and D29 as
+core requirements); strictly one person (D29 reduced to basic checks).
+
+## 2026-10-13 — D50: A session that edits without a ticket is asked to claim one
+
+Decision (user, FH-130 review): revises D6. A claim stays the way a
+session is linked to its ticket, but the hooks now ask once. When a
+session has changed files (shell commands included) and holds no ticket
+by claim or branch match, it is reminded once per session to claim a
+ticket or create one. D32 found that 21 of 35 sessions never claimed, and
+the Overview, Needs you and handoffs all depend on the link; the skill's
+instruction alone is too often missed (D5: deterministic first). The
+reminder blocks the turn end only where the user has turned on handoff
+enforcement (`HOOK-6`); otherwise it reaches the session as a note, and
+hooks stay fast and fail open. Subagents are not reminded. Built by
+FH-132.
+
+Options: a reminder from the hooks (chosen); stronger wording in the skill
+and recovery note only; study the unclaimed sessions first; accept
+unlinked sessions and improve the Overview's Work with no ticket.
+
+## 2026-10-13 — D51: A ticket's criteria and handoff are its plan
+
+Decision (user, FH-130 review): revises D5 and D32. Hooks stop recording
+agents' plans, and the board stops showing or promising them; a ticket's
+progress is its ticked acceptance criteria and its handoff's next steps,
+which agents already write. In about 5,750 recorded tool calls on this
+board, no session called a plan tool (`TodoWrite`, the task tools or
+`update_plan`), and the Claude desktop app's Code session used for this
+review offered none, so the plan display was always empty. Older logs that hold plans
+still fold. Built by FH-133, which also settles the protocol version
+under agent-protocol §14.
+
+Options: criteria and handoff as the plan (chosen); hide the display but
+keep the parsing dormant; agents report a plan through `checkpoint` (more
+tokens per call, and it repeats the criteria); keep plans as they are.
+
+## 2026-10-13 — D52: New abilities extend existing MCP tools first
+
+Decision (user, FH-130 review): revises D7's "about ten tools", which the
+list passed at fourteen. A new ability becomes an optional input on an
+existing tool unless it is a genuinely new action; a new tool records why
+in its decision. Every tool's name, description and schema is in every
+agent's context before it does any work (principle 3), so the list's size
+is measured: a test fails when it grows past a recorded budget, and a
+change that raises the budget says why (FH-134). "No delete" stands.
+
+Options: extend existing tools first, with a measured size (chosen); a
+hard token budget alone; add tools freely.
+
+## 2026-10-13 — D53: Codex's hook keeps its Flashheart section current
+
+Decision (user, FH-130 review): revises D44's "no hook refreshes it".
+Codex's SessionStart hook rewrites the Flashheart section between its
+markers in the global `AGENTS.md` when it is out of date, as Claude Code's
+hook refreshes the skill. It changes only that section, only when the
+section exists (it never creates one), writes atomically, and fails open.
+Without it, Codex follows outdated protocol rules after every upgrade
+until setup runs again. The rest of the file stays the user's. Built by
+FH-121.
+
+Options: refresh only between the markers (chosen); move the text into a
+file Flashheart owns outright, if Codex offers one; keep D44 and let
+`doctor` warn.
+
+## 2026-10-13 — D54: One typed inbox per session
+
+Decision (user, FH-130 review): revises D20. The answers inbox becomes a
+session's inbox, holding typed entries (answer, comment, change request),
+because D47's comments and change requests travel the same route. Every
+delivery path (the prompt hook, MCP tool results, `board_context`,
+`flashheart await`) frames each entry by its type, and the prompt hook
+still costs one `stat` when nothing waits (`HOOK-1`). Readers also deliver
+from the old `answers/` location while it drains. The inbox stays a
+delivery queue, not a store of meaning. Built by FH-135, before FH-126 and
+FH-127.
+
+Options: one typed inbox (chosen); add types but keep the `answers/` name;
+a second inbox for comments (a second `stat` on every prompt).
+
+## 2026-10-13 — D55: The one-off upgrades are retired
+
+Decision (user, FH-130 review): revises D15 and D19. `flashheart migrate`
+(v1 column-folder boards to format 2) and setup's handling of the old
+kanban-tracker skill are removed. Both upgrades have been made on the one
+board they were for, and code no one runs still needs tests and docs.
+`setup --uninstall` still restores a kanban-tracker backup that setup
+made earlier, so nothing a user has is lost. Built by FH-136.
+
+Options: retire both (chosen); keep them until a release cut-off; keep
+them indefinitely.
+
+## 2026-10-13 — D56: Kept after the October review, with points to revisit
+
+Decision (user, FH-130 review): the 2026-10-13 review of these decisions
+kept the following, each with the point at which to look again.
+
+- **A rich text editor gets its own decision first** (D10). FH-16's
+  formatted editor would be the largest frontend dependency, and saving it
+  can reformat text agents wrote, so Tiptap, Milkdown and CodeMirror with
+  live preview are compared, mainly on saving markdown unchanged, before
+  FH-16 starts (FH-137).
+- **`serve` keeps its browser-bound lifetime** (D13). Hooks and MCP do not
+  need it, and neither does a launcher that starts an agent's own app
+  (D48). Revisit when desktop notifications are scheduled.
+- **Ticket ids keep opening the full page in a new tab** (D30). Revisit
+  once in-place editing (FH-66) and comments (FH-124 to FH-128) ship,
+  including whether the side panel still earns its place.
+- **D9 (setup writes only with `--write`)** is revised by FH-129 in its
+  own change, together with D19's `--uninstall`.
+
+## 2026-10-13 — D57: A section edited in place is saved by the server, as one section
+
+The full page's in-place editing (FH-66, `EDIT-11`) saves a section with
+`PUT /api/tickets/{id}/section` (`base`, `section`, `content`):
+`board.NewSectionChange` decides which sections may be rewritten whole
+(not Handoff or Notes), the size limit and where a missing template
+section goes, and its `Apply` (`mdfile.PutSection`) replaces only the
+lines between the heading and the next one; `store.EditTicket` writes it
+under the content-hash precondition. Text equal to the section's own
+writes nothing and records nothing; a write records `ticket.updated` with
+the template section's key, or `section` for a name that is ticket text.
+In the browser, a draft whose own part did not change in a newer version
+of the file moves its base hash to that version
+(`useTicketDraft`), so an agent's note or checkpoint during an edit is
+not a conflict, while a change to the item itself still is (`EDIT-7`).
+Leaving the page with unsaved changes goes through one leave guard
+(`state/leaveGuard`) that the router asks before every navigation.
+
+Options: rewrite the whole file in the browser and save it as a raw edit
+(no API change, but the browser would own section splitting, a raw edit
+names no fields in its event, and any change elsewhere in the file would
+conflict); a server-side section replace (chosen: the line-anchored
+splitter and the Handoff rule already live in `mdfile` and `board`, the
+byte-for-byte guarantee is tested against real tickets in Go, and FH-69
+can let agents rewrite a section through the same `SectionChange` and
+`EditTicket`). Rebasing a draft on any newer version was rejected: a
+change to the section being edited must still be shown, never
+overwritten.
+
+## 2026-10-13 — D58: A ticket's history is worked out from each write, as the writer
 
 Every ticket write by the board or an agent appends one history entry to
 the ticket's `activity.md` (D47, FH-124, board-format §Activity). The

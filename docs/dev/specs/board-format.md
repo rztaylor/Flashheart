@@ -269,6 +269,19 @@ claim taken from another session) names the agent's short run id first:
 `- 2026-10-04 · claude:3f2a…: <text>`. Every one of these bullets comes
 from `board.NoteLine` (FH-85).
 
+### Section edits
+
+A section edited in place on the ticket's page (FH-66,
+`board.NewSectionChange`) replaces only the lines between its heading and
+the next level-1 or -2 heading: one blank line, the text, and one blank
+line before the next heading. Every other byte of the file stays as it
+was, but the `updated:` stamp. Text equal to the section's own, ignoring
+blank lines around it and trailing whitespace, writes nothing. A missing
+template section is added in the template's place, above the template
+sections that follow it (a ticket's own section above `## Notes` and
+`## Handoff`). `## Handoff` and `## Notes` are never rewritten whole:
+checkpoints write the one, and notes are appended.
+
 ## Blocking
 
 A ticket is **blocked** when any of these holds:
@@ -422,7 +435,7 @@ never the ticket's text:
 
 A bullet of another form is kept and not shown. History is worked out
 from the write itself, comparing the ticket (and, for a review step, its
-`review.md`) before and after, so every write path is described alike (D48).
+`review.md`) before and after, so every write path is described alike (D58).
 `updated` and `rank` are not history, and neither are `## Notes` and
 `## Handoff`: a reorder within a column, a note, a checkpoint or an answer
 records none. A write that changes nothing records nothing.

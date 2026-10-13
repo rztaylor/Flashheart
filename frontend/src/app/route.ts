@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TICKET_ID, type TicketRef } from "../api/board";
 import { ticketPageHref } from "../model/markdown";
+import { guarded, leave } from "../state/leaveGuard";
 
 // archive is reached from the page header, not the band (EDIT-8); ticket
 // is a ticket's full page (CARD-7), reached from its id.
@@ -77,8 +78,14 @@ function decode(value: string): string {
   }
 }
 
+// useRoute is the route in the URL hash and the way to change it. While an
+// edit is unsaved, leaving asks first (state/leaveGuard, FH-66): its own
+// navigation waits, and a link or Back that already changed the hash is
+// put back until the person agrees to drop the edit.
 export function useRoute(): [Route, (next: Route) => void] {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));
+  // shown is the hash of the route on screen, to put back a held change.
+  const shown = useRef(window.location.hash);
   useEffect(() => {
     // An old route (#/all/agents) is rewritten to the view it lands on.
     const canonical = () => {
@@ -91,17 +98,30 @@ export function useRoute(): [Route, (next: Route) => void] {
         );
     };
     canonical();
+    shown.current = window.location.hash;
     const onChange = () => {
+      const target = window.location.hash;
+      if (target !== shown.current && guarded()) {
+        window.history.replaceState(null, "", shown.current || "#");
+        leave(() => {
+          window.location.hash = target;
+        });
+        return;
+      }
       canonical();
+      shown.current = window.location.hash;
       setRoute(parseRoute(window.location.hash));
     };
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
   const navigate = useCallback((next: Route) => {
-    const hash = formatRoute(next);
-    if (window.location.hash !== hash) window.location.hash = hash;
-    setRoute(next);
+    leave(() => {
+      const hash = formatRoute(next);
+      shown.current = hash;
+      if (window.location.hash !== hash) window.location.hash = hash;
+      setRoute(next);
+    });
   }, []);
   return [route, navigate];
 }

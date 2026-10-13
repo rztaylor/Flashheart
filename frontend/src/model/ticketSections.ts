@@ -82,6 +82,14 @@ export interface PageSection {
   empty?: boolean;
   // markdown is a text section's body (the review's lead for "review").
   markdown?: string;
+  // heading names the section of the ticket file an in-place edit saves
+  // to (FH-66): as written, or the template's name for a missing one.
+  // Absent for what is not edited in place: Handoff, the review, Files,
+  // Activity, and a repeated heading after its first section.
+  heading?: string;
+  // template marks a section of the ticket template (criteria,
+  // Description, Test plan, Reproduction, Context).
+  template?: boolean;
   // images are the Evidence section's screenshots, in order.
   images?: ImageRef[];
 }
@@ -105,11 +113,31 @@ const placedElsewhere = ["acceptance criteria", "handoff", "notes"];
 
 // The template's text sections, in the page's order, with their sentence
 // case titles (board-format.md, Ticket).
-const templateText: { id: string; heading: string; title: string }[] = [
-  { id: "description", heading: "description", title: "Description" },
-  { id: "test-plan", heading: "test plan", title: "Test plan" },
-  { id: "reproduction", heading: "reproduction", title: "Reproduction" },
-  { id: "context", heading: "context", title: "Context" },
+const templateText: {
+  id: string;
+  heading: string;
+  title: string;
+  name: string;
+}[] = [
+  {
+    id: "description",
+    heading: "description",
+    title: "Description",
+    name: "Description",
+  },
+  {
+    id: "test-plan",
+    heading: "test plan",
+    title: "Test plan",
+    name: "Test Plan",
+  },
+  {
+    id: "reproduction",
+    heading: "reproduction",
+    title: "Reproduction",
+    name: "Reproduction",
+  },
+  { id: "context", heading: "context", title: "Context", name: "Context" },
 ];
 
 // The review template's headings in sentence case (agent-protocol review
@@ -173,19 +201,20 @@ export function pageSections(
     ticket({ id: "handoff", kind: "handoff", title: "Handoff" });
   if (detail.blockedBy.length > 0)
     ticket({ id: "blocked", kind: "blocked", title: "Blocked by" });
+  const { lead, sections } = markdownSections(detail.body);
+  const byHeading = (heading: string) =>
+    sections.find((section) => plain(section.title) === heading);
   ticket({
     id: "criteria",
     kind: "criteria",
     title: "Acceptance criteria",
+    heading: byHeading("acceptance criteria")?.title ?? "Acceptance Criteria",
+    template: true,
     empty: detail.criteriaItems.length === 0,
     ...(detail.criteriaItems.length > 0
       ? checklistCount(detail.criteriaItems)
       : {}),
   });
-
-  const { lead, sections } = markdownSections(detail.body);
-  const byHeading = (heading: string) =>
-    sections.find((section) => plain(section.title) === heading);
   const bug = detail.type === "bug";
   for (const text of templateText) {
     const found = byHeading(text.heading);
@@ -201,6 +230,8 @@ export function pageSections(
       id: text.id,
       kind: "text",
       title: text.title,
+      heading: found?.title ?? text.name,
+      template: true,
       markdown,
       empty: !markdown.trim(),
     });
@@ -209,12 +240,18 @@ export function pageSections(
     ...placedElsewhere,
     ...templateText.map((text) => text.heading),
   ]);
+  // A repeated heading is edited only in its first section, the one a
+  // save by name reaches.
+  const named = new Set<string>();
   for (const section of sections) {
     if (known.has(plain(section.title))) continue;
+    const first = !named.has(plain(section.title));
+    named.add(plain(section.title));
     ticket({
       id: slug(section.title),
       kind: "text",
       title: section.title,
+      ...(first ? { heading: section.title } : {}),
       markdown: section.markdown,
       empty: !section.markdown.trim(),
     });
