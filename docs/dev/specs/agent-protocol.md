@@ -363,13 +363,14 @@ to the app. The events are `SessionStart`
 (`source` `startup`, `resume`, `clear` or `compact`), `UserPromptSubmit`,
 `PreToolUse`, `PermissionRequest`, `PostToolUse`, `SubagentStart`,
 `SubagentStop`, `PreCompact`, `PostCompact`, `Stop`, `SessionEnd` and
-`Interrupt`.
+`Interrupt`. Setup registers every one but `PreToolUse`, which Flashheart
+has no use for (FH-123).
 
 | Hook event | Flashheart action |
 |---|---|
 | `SessionStart` | `run.start`; recovery note as `additionalContext` (a developer message) |
 | `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; answered questions as `additionalContext` |
-| `PreToolUse` (setup registers it for `mcp__flashheart__.*` only; FH-123 drops it) | nothing: Flashheart's tool calls are attributed by the session each call names in `_meta` (below, §7.1), so `run` is not stamped (stamping needs `permissionDecision: "allow"`, which would skip the user's approval of Flashheart's tools) |
+| `PreToolUse` (not registered) | nothing: Flashheart's tool calls are attributed by the session each call names in `_meta` (below, §7.1), so `run` is not stamped (stamping needs `permissionDecision: "allow"`, which would skip the user's approval of Flashheart's tools) |
 | `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `plan.updated` (the whole plan) for `update_plan` where Codex offers it, read from its `plan` steps (`step`, `status`) |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
@@ -463,13 +464,15 @@ args = ["mcp"]
 {
   "hooks": {
     "SessionStart": [{"hooks": [{"type": "command", "command": "/usr/local/bin/flashheart hook codex SessionStart", "timeout": 5}]}],
-    "PreToolUse":   [{"matcher": "mcp__flashheart__.*", "hooks": [{"type": "command", "command": "/usr/local/bin/flashheart hook codex PreToolUse", "timeout": 5}]}]
+    "Stop":         [{"hooks": [{"type": "command", "command": "/usr/local/bin/flashheart hook codex Stop", "timeout": 5}]}]
   }
 }
 ```
 
-(`hooks.json`, abbreviated; every event in §5.3 is registered the same way,
-merged with the user's hooks as for Claude Code.) The protocol text (§12)
+(`hooks.json`, abbreviated; every event in §5.3 but `PreToolUse` is
+registered the same way, merged with the user's hooks as for Claude Code.
+Setup removes a Flashheart hook on an event it no longer registers, such as
+the `PreToolUse` hook earlier versions wrote, and `doctor` warns about one.) The protocol text (§12)
 goes into the global `AGENTS.md` between
 `<!-- BEGIN FLASHHEART: written by flashheart setup codex; edits here are replaced -->`
 and `<!-- END FLASHHEART -->`, appended after a blank line when it is not

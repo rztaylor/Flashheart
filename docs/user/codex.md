@@ -29,8 +29,9 @@ as a diff:
   `args` are set; your comments, other servers, project trust and anything
   else you put in the table stay as they are;
 - the hooks it merges into `hooks.json`: every event Flashheart handles,
-  each running `<path to flashheart> hook codex <Event>`, and `PreToolUse`
-  limited to Flashheart's own tools. Your other hooks are kept;
+  each running `<path to flashheart> hook codex <Event>`. Your other hooks
+  are kept, and a Flashheart hook an earlier version registered that is no
+  longer needed (`PreToolUse`) is removed;
 - the Flashheart protocol text it adds to your global `AGENTS.md`, between
   `<!-- BEGIN FLASHHEART … -->` and `<!-- END FLASHHEART -->`. Text outside
   the markers is yours; text inside is replaced by the next setup.
@@ -69,8 +70,10 @@ deletes a file setup created that would be left empty.
 
 `flashheart doctor` has a Codex section: the MCP server, the hooks and the
 protocol text against what `setup codex` writes. A missing entry or a
-binary that no longer exists is a problem; another binary, out-of-date
-protocol text (after you upgrade Flashheart, run `setup codex` again), hooks turned off with `[features] hooks = false`, or hooks never
+binary that no longer exists is a problem; another binary, a hook an
+earlier version registered that setup no longer writes, out-of-date
+protocol text (after you upgrade Flashheart, run `setup codex` again),
+hooks turned off with `[features] hooks = false`, or hooks never
 trusted with `/hooks`, are warnings. Doctor cannot tell whether trust is
 still current after a hook changed, so trust them again when setup changed
 them. Without a Codex home, the section only says Codex is not installed.

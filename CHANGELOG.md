@@ -347,6 +347,13 @@ All notable changes to this project are documented here. The project follows
   as before. `--write` still works as an older name for `--yes`, and
   doctor's fixes now say `run flashheart setup <agent>`.
 
+- `setup codex` no longer installs a `PreToolUse` hook on Flashheart's own
+  tools (FH-123). Codex's calls are attributed by the session they name
+  (D45), so the hook did nothing but start Flashheart on every board call
+  and ask to be trusted with `/hooks`. Running `setup codex` again
+  removes the hook an earlier setup wrote, and `doctor` warns about a
+  Flashheart hook on an event setup no longer registers.
+
 - A ticket's full page uses the width (FH-65, CARD-7). Instead of the card
   panel's tabs stretched to one column, it shows the whole ticket as one
   page: questions waiting for you, the handoff, blockers, criteria and the
