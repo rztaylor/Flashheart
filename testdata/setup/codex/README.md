@@ -17,3 +17,11 @@ Codex home.
   hook of the user's, and a `PreToolUse` hook on Flashheart's tools, which
   setup no longer registers (FH-123); and an out-of-date protocol section between the
   markers in `AGENTS.md`, with the user's text around it.
+- `trusted/`: recorded from Codex by `scripts/record-codex-hook-trust.sh`
+  (`testdata/hooks/codex/MANIFEST.md`, "Hook trust"), not a starting home:
+  `hooks.json` as setup writes it after a hook of the user's, the
+  `config.toml` Codex saved after trusting Flashheart's hooks, the same
+  hooks after a change of `--root` (`hooks-moved.json`), hooks using every
+  field Codex hashes (`hooks-edge.json`), and Codex's own `hooks/list` for
+  each (`hooks-list-*.json`: key, hash and trust status). Doctor's trust
+  check is tested against these.

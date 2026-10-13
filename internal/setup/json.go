@@ -115,6 +115,14 @@ func (v *value) get(key string) *value {
 	return nil
 }
 
+// arrayItems returns an array's items, or none for anything else.
+func (v *value) arrayItems() []*value {
+	if v == nil || !v.isArray {
+		return nil
+	}
+	return v.array
+}
+
 func (v *value) set(key string, child *value) {
 	for index := range v.object {
 		if v.object[index].key == key {

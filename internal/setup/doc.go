@@ -30,8 +30,10 @@
 // handling; and the protocol text between markers in the global
 // AGENTS.md. RefreshProtocol rewrites only that section, only when it
 // exists and its markers pair, through a symlink to its target. It runs no
-// Codex command. Its diagnosis also reports hooks
-// Codex will skip (turned off, or never trusted with /hooks).
+// Codex command. Its diagnosis also reports hooks Codex will skip (turned
+// off, never trusted with /hooks, or trusted with another command):
+// codex_trust.go computes the key and hash Codex saves trust under, so
+// doctor compares them without running Codex.
 //
 // Which agents exist, flags and output streams belong to cli; the skill's
 // and AGENTS.md's text to protocol. It never touches the board root.

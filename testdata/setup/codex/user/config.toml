@@ -32,5 +32,5 @@ DOCS_TOKEN_FILE = '/Users/example/.config/docs\token'
 [tui]
 theme = { name = "dusk", accent = "#ff8800" }
 
-[hooks.state."/Users/example/.codex/config.toml:Stop:0:0"]
+[hooks.state."/Users/example/.codex/config.toml:stop:0:0"]
 trusted_hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
