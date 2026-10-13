@@ -12,7 +12,14 @@ export function viewSummary({
   workstreams,
   archived,
 }: {
-  view: "board" | "overview" | "workstreams" | "table" | "archive" | "ticket";
+  view:
+    | "board"
+    | "overview"
+    | "workstreams"
+    | "table"
+    | "archive"
+    | "ticket"
+    | "workstream";
   board?: { shown: number; total: number };
   filtered: boolean;
   // counts are the tickets per column of each project in scope.
@@ -21,8 +28,9 @@ export function viewSummary({
   archived?: { count: number; of: "tickets" | "projects" };
 }): string {
   switch (view) {
-    // A ticket's full page has its own header.
+    // A ticket's full page and a workstream's page have their own header.
     case "ticket":
+    case "workstream":
       return "";
     case "archive": {
       if (!archived) return "";

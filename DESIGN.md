@@ -456,7 +456,7 @@ Flashheart is a friendly metro system for work. Each workstream is a route with 
 Structure and content are fixed in [the UI layout contract](docs/dev/specs/ui-layout.md); this file records how that structure looks. A theme changes tokens, never layout. Metro Pop replaced the Transit Line Map of D14 (D18, 2026-10-06), chosen from the generated references in `.impeccable/mocks/metro-theme-rollout/`.
 
 **Key Characteristics:**
-- A 56px band (bolt, wordmark, view tabs, Needs you, search, status, Quit) over a 248px rail, with every view opening on a page header naming its scope.
+- A 56px band (bolt, wordmark, view tabs, Needs you, search, status, Settings, Quit) over a 248px rail, with every view opening on a page header naming its scope.
 - Rounded throughout: 8px controls, 10px cards, 14px wells and route cards, full pills and bullets.
 - Route colours mean workstreams; paint means the Colour by value; status pills always carry an icon and a word.
 - Archivo Variable across its width axis: a heavy condensed display cut for titles, a condensed bold for heads, tabular numerals everywhere.
@@ -538,7 +538,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 - **Card** (`--fh-shadow-card`): cards, chips, badges, secondary buttons, route cards, the table.
 - **Card hover** (`--fh-shadow-card-hover`): hovered and selected cards, dialogs, toasts.
 - **Panel** (`--fh-shadow-panel`): the card panel's left edge.
-- **Popover** (`--fh-shadow-popover`): filter and View options menus, on the `popover` surface (white in light, `#2c2c2f` in dark, a step above the cards) with a hairline edge ring, so they lift clear of the board.
+- **Popover** (`--fh-shadow-popover`): filter, View options and Settings menus, on the `popover` surface (white in light, `#2c2c2f` in dark, a step above the cards) with a hairline edge ring, so they lift clear of the board.
 - **Selection ring** (`0 0 0 1px` select over card hover): the selected card.
 - **Station halo** (`0 0 0 3–4px` route surface): clears the track around stations.
 
@@ -574,8 +574,9 @@ Card surface, rule border, 14px corners, card shadow; the head on the column sur
 Above the section cards: five equal chevron cards in one row, Backlog to Done, each notched on the left and pointed on the right so they interlock with a 5px ground-coloured gap (the first flat on the left with 10px corners). Each takes its status pill's fill and ink: a display-cut tabular count (1.5rem, 2.25rem from 40rem, 3rem from 64rem) over the column's word, semibold, with its status icon from 40rem. The point is 12px, 22px from 40rem. Clipped shapes take no box shadow or outline, so the row casts `--fh-shadow-chevron` (a drop-shadow filter) and a focused card draws its focus ring as four 2px drop-shadows that follow the shape. Hover lifts a card 2px.
 
 ### Navigation
-- **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate (a toggle: pressed, an inset on-attention ring and a close mark, filtering the Board to tickets that need you), search, quiet status dot, Quit. Under 640px tabs collapse to icons; the plate keeps its words.
-- **Rail:** All projects, a divider, projects with key badge (8px, tinted; filled in the accent when current), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile is raised: rail active surface, hairline border, card shadow. Footer: theme (System, Light, Dark), board root (cut from the start) and version.
+- **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate (a toggle: pressed, an inset on-attention ring and a close mark, filtering the Board to tickets that need you), search, quiet status dot, the Settings gear (a 36px icon button, quiet like the status, the band field behind it while hovered or open) and Quit. Under 640px tabs collapse to icons; the plate keeps its words.
+- **Settings menu:** a 288px popover (never wider than the screen less 32px) under the gear, right-aligned to it: Theme as a label over the System, Light, Dark segmented control, then under a rule the board root in semibold label and muted mono (cut from the start, the whole path in its tooltip) and the muted version line. App-wide settings only; the Board's View options keep the per-view ones.
+- **Rail:** All projects, a divider, projects with key badge (8px, tinted; filled in the accent when current), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile is raised: rail active surface, hairline border, card shadow. No footer: theme, board root and version are in the band's Settings menu.
 - **Page header:** key badge (or board icon) and the scope's name in the display page cut, with one muted summary line.
 - **Panel tabs:** heading-small labels over a rule, the current one underlined 3px in select.
 

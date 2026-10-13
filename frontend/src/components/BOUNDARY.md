@@ -5,7 +5,8 @@ Owns shared, product-neutral UI primitives on the semantic roles of
 `Pill` (status, blocker and attribute tags), `ColumnWell` (the board column
 surface with its head), `KeyBadge`, `StateNote`, `Tabs`,
 `SidePanel`, `SegmentedControl`, fields and form fields, `Popover` (a
-disclosure menu on the lifted popover surface), `FilterChip` (the one
+disclosure menu on the lifted popover surface, opened from a field-style
+button or, on the band, a quiet one), `FilterChip` (the one
 filter chip: show only, Cmd or Ctrl click to hide), `ChipInput` (a list
 edited as removable chips), `Dialog`, `Toast`,
 `Markdown` (block or one inline line), `Lightbox` (one image of a set in a

@@ -1,25 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TICKET_ID, type TicketRef } from "../api/board";
-import { ticketPageHref } from "../model/markdown";
+import { ticketPageHref, workstreamPageHref } from "../model/markdown";
 import { guarded, leave } from "../state/leaveGuard";
 
 // archive is reached from the page header, not the band (EDIT-8); ticket
-// is a ticket's full page (CARD-7), reached from its id.
+// is a ticket's full page (CARD-7), reached from its id, and workstream a
+// workstream's page (FH-139), reached from its route card.
 export type View =
   | "board"
   | "overview"
   | "workstreams"
   | "table"
   | "archive"
-  | "ticket";
+  | "ticket"
+  | "workstream";
 export type Scope = { kind: "all" } | { kind: "project"; project: string };
+
+// WorkstreamRef names a workstream: its project and slug.
+export interface WorkstreamRef {
+  project: string;
+  slug: string;
+}
 
 export interface Route {
   scope: Scope;
   view: View;
   ticket?: TicketRef;
+  workstream?: WorkstreamRef;
 }
+
+// SLUG is a workstream slug (board-format §Workstream).
+const SLUG = /^[a-z0-9][a-z0-9._-]{0,99}$/;
 
 const views: View[] = ["board", "overview", "workstreams", "table", "archive"];
 
@@ -27,8 +39,8 @@ const views: View[] = ["board", "overview", "workstreams", "table", "archive"];
 const aliases: Record<string, View> = { agents: "overview" };
 
 // Routes live in the URL hash (#/all/board, #/p/<project>/<view>?t=<ticket
-// id>, #/ticket/<ticket id>) so reloads and new tabs keep their place
-// without any browser storage.
+// id>, #/ticket/<ticket id>, #/workstream/<project>/<slug>) so reloads and
+// new tabs keep their place without any browser storage.
 export function parseRoute(hash: string): Route {
   const [path = "", query = ""] = hash.replace(/^#/, "").split("?");
   const parts = path.split("/").filter(Boolean).map(decode);
@@ -36,6 +48,16 @@ export function parseRoute(hash: string): Route {
     const id = parts[1] ?? "";
     return TICKET_ID.test(id)
       ? { scope: { kind: "all" }, view: "ticket", ticket: { id } }
+      : { scope: { kind: "all" }, view: "board" };
+  }
+  if (parts[0] === "workstream") {
+    const [project = "", slug = ""] = parts.slice(1);
+    return project && project !== "." && project !== ".." && SLUG.test(slug)
+      ? {
+          scope: { kind: "all" },
+          view: "workstream",
+          workstream: { project, slug },
+        }
       : { scope: { kind: "all" }, view: "board" };
   }
   let scope: Scope = { kind: "all" };
@@ -47,10 +69,7 @@ export function parseRoute(hash: string): Route {
     viewPart = parts[1];
   }
   const named = aliases[viewPart ?? ""] ?? viewPart;
-  const view =
-    views.includes(named as View) && named !== "ticket"
-      ? (named as View)
-      : "board";
+  const view = views.includes(named as View) ? (named as View) : "board";
   const route: Route = { scope, view };
   const ticket = new URLSearchParams(query).get("t");
   if (ticket && TICKET_ID.test(ticket)) route.ticket = { id: ticket };
@@ -60,6 +79,8 @@ export function parseRoute(hash: string): Route {
 export function formatRoute(route: Route): string {
   if (route.view === "ticket" && route.ticket)
     return ticketPageHref(route.ticket.id);
+  if (route.view === "workstream" && route.workstream)
+    return workstreamPageHref(route.workstream);
   const base =
     route.scope.kind === "all"
       ? "#/all"

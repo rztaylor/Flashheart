@@ -11,6 +11,7 @@ import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { EditorModeProvider } from "../features/editor/mode";
 import { ProjectRail } from "../features/projects/ProjectRail";
+import { WorkstreamPage } from "../features/workstreams/WorkstreamPage";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
 import { shownColumns } from "../model/columns";
 import { messageOf } from "../model/errors";
@@ -21,8 +22,8 @@ import { Band, BandNotices, type BandView } from "./Band";
 import { NarrowControls } from "./NarrowControls";
 import { pressNeedsYou } from "./needsYou";
 import { PageActions, PageHeader } from "./PageHeader";
-import { RailFooter } from "./RailFooter";
 import { formatRoute, type Route, type Scope, useRoute } from "./route";
+import { SettingsMenu } from "./SettingsMenu";
 import { useBoardData } from "./useBoardData";
 import { useScopeMemory } from "./useScopeMemory";
 import type { ServerInfoState } from "./useServerInfo";
@@ -110,9 +111,13 @@ export function Shell({
     : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
-  // From a ticket's full page the band leaves the ticket.
+  // From a ticket's full page or a workstream's page the band leaves it.
   const chooseView = (view: BandView) => {
-    go(route.view === "ticket" ? { view, ticket: undefined } : { view });
+    go(
+      route.view === "ticket" || route.view === "workstream"
+        ? { view, ticket: undefined, workstream: undefined }
+        : { view },
+    );
     memory.rememberView(view);
   };
   // The band's Needs you pill filters All projects' Board or Table, and
@@ -209,6 +214,16 @@ export function Shell({
           needsYouOn={filters.needsYou}
           onNeedsYou={toggleNeedsYou}
           search={boardOrTable ? search : undefined}
+          settings={
+            <SettingsMenu
+              root={root}
+              info={info}
+              theme={preferences.theme}
+              onTheme={(theme) =>
+                updatePreferences((current) => ({ ...current, theme }))
+              }
+            />
+          }
         />
         <BandNotices
           shutdownDenied={state.shutdownDenied}
@@ -251,6 +266,39 @@ export function Shell({
               />
             </EditorModeProvider>
           </main>
+        ) : route.view === "workstream" && route.workstream ? (
+          <main
+            className="min-h-0 overflow-y-auto"
+            aria-label={`Workstream ${route.workstream.slug}`}
+          >
+            <EditorModeProvider value={editorMode}>
+              <WorkstreamPage
+                key={`${route.workstream.project}/${route.workstream.slug}`}
+                workstream={route.workstream}
+                fetcher={fetcher}
+                lines={data.lines}
+                keys={data.keys}
+                revision={data.revision}
+                editing={editing}
+                onOpen={(ticket) =>
+                  navigate({ scope: { kind: "all" }, view: "ticket", ticket })
+                }
+                backLink={{
+                  href: formatRoute({
+                    scope: {
+                      kind: "project",
+                      project: route.workstream.project,
+                    },
+                    view: "workstreams",
+                  }),
+                  label:
+                    summaries.find(
+                      (item) => item.name === route.workstream?.project,
+                    )?.displayName ?? route.workstream.project,
+                }}
+              />
+            </EditorModeProvider>
+          </main>
         ) : (
           // Below 1440px an open panel shrinks the rail to its key badges so
           // the board keeps three whole columns.
@@ -258,24 +306,14 @@ export function Shell({
             data-panel={route.ticket ? "open" : undefined}
             className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[4rem_minmax(0,1fr)_auto]"
           >
-            <div className="hidden min-h-0 flex-col border-r border-rail-rule bg-rail md:flex">
-              <div className="min-h-0 flex-1">
-                <ProjectRail
-                  projects={summaries}
-                  runs={
-                    projects.status === "ready" ? projects.data.runs : undefined
-                  }
-                  scope={route.scope}
-                  onSelect={selectScope}
-                />
-              </div>
-              <RailFooter
-                root={root}
-                info={info}
-                theme={preferences.theme}
-                onTheme={(theme) =>
-                  updatePreferences((current) => ({ ...current, theme }))
+            <div className="hidden min-h-0 border-r border-rail-rule bg-rail md:block">
+              <ProjectRail
+                projects={summaries}
+                runs={
+                  projects.status === "ready" ? projects.data.runs : undefined
                 }
+                scope={route.scope}
+                onSelect={selectScope}
               />
             </div>
 
