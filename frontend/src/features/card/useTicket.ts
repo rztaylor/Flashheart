@@ -6,7 +6,10 @@ import {
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import {
+  addComment,
+  editComment,
   type FieldValue,
+  type NewComment,
   patchTicket,
   type Saved,
   saveSection,
@@ -37,6 +40,12 @@ export interface TicketState {
   // edit saves the full page's in-place edits (FH-66) on base: typed
   // fields (EDIT-6), or one section's text.
   edit?: TicketEdits;
+  // comment posts a person's comment (STO-8, FH-125), then reloads and
+  // says so; a failed post rejects with the reason.
+  comment?(comment: NewComment): Promise<void>;
+  // editComment saves a comment's new text on base, the hash of the
+  // activity it was read from.
+  editComment?(id: string, base: string, body: string): Promise<Saved>;
 }
 
 export interface TicketEdits {
@@ -133,6 +142,19 @@ export function useTicket({
                 (board) => board.cards.map(({ id, title }) => ({ id, title })),
               ),
           }
+        : undefined,
+    comment:
+      editable && detail && editing
+        ? (comment) =>
+            addComment(fetcher, detail.id, comment).then(() => {
+              resource.reload();
+              editing.notify({ text: `Commented on ${detail.id}.` });
+            })
+        : undefined,
+    editComment:
+      editable && detail
+        ? (comment, base, body) =>
+            editComment(fetcher, detail.id, comment, base, body)
         : undefined,
     answer:
       editing && detail && answers

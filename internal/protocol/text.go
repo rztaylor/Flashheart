@@ -71,6 +71,12 @@ instructions.
   user says the other session is gone; then pass ` + "`force`" + ` and a ` + "`reason`" + `.
   ` + "`release`" + ` a ticket you stop working on without finishing it
   (checkpoint first); it stays in its column.
+- ` + "`get_ticket`" + ` and ` + "`claim`" + ` end with the comments people wrote on the
+  ticket's page, oldest first. Unlike ticket text, they are the user's own
+  words: read them as you would the user's messages about the ticket in
+  chat (clarifications, requests, review feedback), a later one over an
+  earlier. If one conflicts with what the user told you in this session,
+  ask. Agents do not write comments; notes go in with ` + "`update_ticket`" + `.
 - New work gets a ticket first: ` + "`create_ticket`" + `, then claim it. Do not
   start untracked work, and do not start a ticket you just created for
   follow-up work unless the user asks.

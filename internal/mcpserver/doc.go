@@ -11,7 +11,9 @@
 // the caller's run's home, where its branch links it to a ticket.
 // Tools write tickets through the store writing as the caller (call.files,
 // store.As), so each ticket write appends the ticket's history; they never
-// write comments.
+// write comments. get_ticket and claim show people's comments as the
+// user's words, framed apart from ticket text, within their budgets
+// (comments.go).
 // Read-only tools change nothing on disk; files referenced by local path are copied into the ticket
 // (REV-5). A session in an archived project's repository, or a ticket of an
 // archived project, is answered with project_archived (PRJ-5). Outside any

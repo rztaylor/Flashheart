@@ -29,6 +29,10 @@ const paths = {
   archive: "M3.5 5h17v4h-17zM5 9v10h14V9M10 13h4",
   undo: "M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2",
   edit: "M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4",
+  // comment: a speech balloon, a person's comment on a ticket.
+  comment: "M4.5 5h15v10.5h-8.5l-4.5 4v-4h-2Z",
+  // history: a clock face with an arrow turning back, a ticket's changes.
+  history: "M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9M4.5 5v4h4M12 8v4.5l3 1.5",
   grip: "M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01",
   more: "M5 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0M11 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0M17 12a1 1 0 1 0 2 0 1 1 0 1 0-2 0",
   // overview: section cards stacked in one column.

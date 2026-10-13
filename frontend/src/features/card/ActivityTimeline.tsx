@@ -1,9 +1,25 @@
 import type { ReactNode } from "react";
+import type { Comment } from "../../api/board";
+import type { Saved } from "../../api/edit";
+import { TextArea } from "../../components/Field";
 import { Icon, type IconName } from "../../components/Icon";
 import { Markdown } from "../../components/Markdown";
 import { LinkedText } from "../../components/TicketLink";
-import type { ActivityEntry } from "../../model/activity";
+import {
+  type ActivityEntry,
+  type ActivityFilter,
+  andList,
+  type CommentEntry,
+} from "../../model/activity";
+import { commentInFile } from "../../model/comments";
 import type { LinkContext } from "../../model/markdown";
+import {
+  EditPencil,
+  editGroup,
+  InPlaceEditor,
+  useInPlaceItem,
+} from "../editing/InPlace";
+import { QuoteFigure } from "./CommentBox";
 
 // when is an entry's date, and its time when it has one, where the
 // browser is.
@@ -34,63 +50,177 @@ function when(entry: ActivityEntry): { text: string; dateTime: string } {
   };
 }
 
+// A comment is a person's words, on the selection surface as an answer
+// is; history sits back on the well.
 const nodeTone: Record<ActivityEntry["kind"], string> = {
   note: "border-rule bg-card text-ink-muted",
   question:
     "border-callout-question-edge/30 bg-callout-question text-callout-question-edge",
   handoff:
     "border-callout-handoff-edge/30 bg-callout-handoff text-callout-handoff-edge",
+  comment: "border-select/30 bg-select-surface text-ink",
+  history: "border-rule bg-well text-ink-muted",
 };
 
 const nodeIcon: Record<ActivityEntry["kind"], IconName> = {
   note: "edit",
   question: "warning",
   handoff: "next",
+  comment: "comment",
+  history: "history",
 };
 
-// ActivityTimeline is the ticket's notes, agents' questions with their
-// answers and handoff updates, oldest first, on one rule (FH-65). It is
-// read-only: notes are written by agents, and by people through the
-// ticket's text, until the human-notes spike (FH-67) decides more.
+const emptyWords: Record<ActivityFilter, string> = {
+  all: "No comments, notes, history, handoff updates or questions yet.",
+  comments: "No comments yet.",
+  history: "No history yet.",
+};
+
+// CommentEditing edits people's comments in place (FH-125): detail is the
+// ticket's activity, hashed by the activity file's hash; send saves a
+// comment's text on base.
+export interface CommentEditing {
+  detail: { id: string; hash: string; comments: Comment[] };
+  send(comment: string, base: string, body: string): Promise<Saved>;
+  onSaved(saved: Saved | undefined, what: string): void;
+}
+
+// ActivityTimeline is the ticket's activity, oldest first, on one rule
+// (FH-65, FH-125): people's comments (each editable in place where the page
+// can save), notes, history, agents' questions with their answers and
+// handoff updates, as the filter shows them.
 export function ActivityTimeline({
   entries,
+  filter = "all",
   context,
   keys,
+  editing,
 }: {
   entries: ActivityEntry[];
+  filter?: ActivityFilter;
   context: LinkContext;
   keys: Set<string>;
+  editing?: CommentEditing;
 }) {
   if (entries.length === 0)
-    return (
-      <p className="text-sm text-ink-muted">
-        No notes, questions or handoff updates yet.
-      </p>
-    );
+    return <p className="text-sm text-ink-muted">{emptyWords[filter]}</p>;
   return (
     <ol className="relative flex flex-col gap-5 before:absolute before:top-3 before:bottom-3 before:left-[13px] before:w-0.5 before:bg-rule">
-      {entries.map((entry) => (
-        <li
-          key={entry.key}
-          className="relative grid grid-cols-[1.75rem_minmax(0,1fr)] gap-3"
-        >
-          <span
-            aria-hidden="true"
-            className={`grid size-7 place-items-center rounded-full border ${nodeTone[entry.kind]}`}
-          >
-            <Icon name={nodeIcon[entry.kind]} size={13} />
-          </span>
-          <div className="min-w-0">
+      {entries.map((entry) =>
+        entry.kind === "comment" ? (
+          <CommentItem
+            key={entry.key}
+            entry={entry}
+            context={context}
+            keys={keys}
+            editing={entry.byPerson ? editing : undefined}
+          />
+        ) : (
+          <Item key={entry.key} entry={entry}>
             <Head entry={entry} />
             <Body entry={entry} context={context} keys={keys} />
-          </div>
-        </li>
-      ))}
+          </Item>
+        ),
+      )}
     </ol>
   );
 }
 
-function Head({ entry }: { entry: ActivityEntry }) {
+function Item({
+  entry,
+  className = "",
+  children,
+}: {
+  entry: ActivityEntry;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <li
+      className={`relative grid grid-cols-[1.75rem_minmax(0,1fr)] gap-3 ${className}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`grid size-7 place-items-center rounded-full border ${nodeTone[entry.kind]}`}
+      >
+        <Icon name={nodeIcon[entry.kind]} size={13} />
+      </span>
+      <div className="min-w-0">{children}</div>
+    </li>
+  );
+}
+
+// CommentItem is a person's comment: who, when and whether it was edited,
+// its quote and its text; where the page can save, a pencil opens its text
+// in place.
+function CommentItem({
+  entry,
+  context,
+  keys,
+  editing,
+}: {
+  entry: CommentEntry;
+  context: LinkContext;
+  keys: Set<string>;
+  editing?: CommentEditing;
+}) {
+  const item = useInPlaceItem(`comment-${entry.id}`, "comment");
+  const edit = editing?.detail.hash && item.editable ? editing : undefined;
+  return (
+    <Item entry={entry} className={edit ? editGroup : ""}>
+      <Head
+        entry={entry}
+        action={
+          edit && !item.open ? <EditPencil item={item} name="comment" /> : null
+        }
+      />
+      {entry.quote ? (
+        <QuoteFigure from={entry.quoteFrom || "the ticket"}>
+          <Markdown context={context} keys={keys}>
+            {entry.quote}
+          </Markdown>
+        </QuoteFigure>
+      ) : null}
+      {edit && item.open ? (
+        <InPlaceEditor
+          item={item}
+          name="comment"
+          detail={edit.detail}
+          read={(activity) =>
+            activity.comments.find((comment) => comment.id === entry.id)
+              ?.body ?? ""
+          }
+          isDirty={(draft, base) => draft !== base}
+          send={(base, value) => edit.send(entry.id, base, value)}
+          mine={(value) => value}
+          theirs={(file) => commentInFile(file, entry.id)}
+          check={(value) =>
+            value.trim() ? undefined : "A comment needs some text."
+          }
+          onSaved={edit.onSaved}
+        >
+          {(value, set) => (
+            <TextArea
+              aria-label="Comment"
+              value={value}
+              onChange={set}
+              rows={Math.min(12, Math.max(3, value.split("\n").length + 1))}
+            />
+          )}
+        </InPlaceEditor>
+      ) : (
+        // biome-ignore lint/a11y/noStaticElementInteractions: a double-click is a shortcut; the pencil is the control.
+        <div onDoubleClick={edit ? item.onDoubleClick : undefined}>
+          <Markdown context={context} keys={keys}>
+            {entry.markdown}
+          </Markdown>
+        </div>
+      )}
+    </Item>
+  );
+}
+
+function Head({ entry, action }: { entry: ActivityEntry; action?: ReactNode }) {
   const date = when(entry);
   const verb =
     entry.kind === "note"
@@ -99,20 +229,35 @@ function Head({ entry }: { entry: ActivityEntry }) {
         : "Note"
       : entry.kind === "question"
         ? "asked you"
-        : "updated the handoff";
+        : entry.kind === "comment"
+          ? "commented"
+          : entry.kind === "history"
+            ? andList(entry.words)
+            : "updated the handoff";
   return (
-    <p className="flex min-h-7 flex-wrap items-center gap-x-1.5 text-xs text-ink-muted">
-      {entry.by ? (
-        <span className="font-semibold text-ink">{entry.by}</span>
-      ) : null}
-      <span>{verb}</span>
-      {date.text ? (
-        <>
-          <span aria-hidden="true">·</span>
-          <time dateTime={date.dateTime}>{date.text}</time>
-        </>
-      ) : null}
-    </p>
+    <div className="flex min-h-7 items-center gap-2">
+      <p className="flex flex-1 flex-wrap items-center gap-x-1.5 text-xs text-ink-muted">
+        {entry.by ? (
+          <span className="font-semibold text-ink">{entry.by}</span>
+        ) : null}
+        <span>{verb}</span>
+        {date.text ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <time dateTime={date.dateTime}>{date.text}</time>
+          </>
+        ) : null}
+        {entry.kind === "comment" && entry.edited ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <span title={when({ ...entry, time: entry.edited }).text}>
+              edited
+            </span>
+          </>
+        ) : null}
+      </p>
+      {action ? <span className="-my-1.5">{action}</span> : null}
+    </div>
   );
 }
 
@@ -146,7 +291,7 @@ function Body({
           ))}
         </p>
       ) : null;
-    default:
+    case "question":
       return (
         <>
           <p className="text-base text-ink">
@@ -168,6 +313,8 @@ function Body({
           </Reply>
         </>
       );
+    default:
+      return null;
   }
 }
 
