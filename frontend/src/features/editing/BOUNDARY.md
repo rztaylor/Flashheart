@@ -21,9 +21,14 @@ guard (also for held drafts
 outside any item, such as a comment being written or the panel's Edit
 tab, and Keep editing's return to one), an item's pencil,
 Add slot, double-click and focus return, and an open item's draft with
-Save, Cancel, shortcuts, inline error and conflict.
+Save, Cancel, shortcuts, inline error and conflict; and `InPlaceSection`,
+one level-2 section of a file's body edited by its heading in `editor/`'s
+`MarkdownField`, compared and saved again over a newer file as one rule
+for a ticket's sections (`card/`) and a workstream's (`workstreams/`,
+FH-139); the conflict dialog says which kind of file changed.
 
 Does not own request shapes (`api/edit`), a draft's fields (`model/`),
-the controls each item edits with or the page (`card/`), board layout or
+the editor itself (`editor/`), the other controls each item edits with or
+the page (`card/`, `workstreams/`), board layout or
 drag sources (`board/`), or routing and the guard itself (`app/`,
 `state/`).

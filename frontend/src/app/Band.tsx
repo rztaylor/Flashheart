@@ -11,7 +11,7 @@ import { NeedsYouPill } from "./NeedsYouPill";
 import type { View } from "./route";
 
 // BandView is a view the band's tabs open.
-export type BandView = Exclude<View, "archive" | "ticket">;
+export type BandView = Exclude<View, "archive" | "ticket" | "workstream">;
 
 const views: { id: BandView; label: string; icon: IconName }[] = [
   { id: "overview", label: "Overview", icon: "overview" },

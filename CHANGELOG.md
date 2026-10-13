@@ -8,6 +8,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Edit a workstream's goal and notes on its own page (FH-139,
+  `EDIT-13`). A workstream's name on the Workstreams view now opens its
+  page (a finished line has an *Open* link beside its head): its line of
+  stations, then its Goal, Scope, Success Criteria, Notes and any
+  sections of its own. Each edits in place in the same formatted editor
+  as a ticket's sections, with the slash menu, the selection toolbar and
+  your Formatted / Markdown choice. Saving rewrites only that section and
+  an untouched save writes nothing; a change someone made elsewhere in
+  the file saves without asking, and a change to the same section shows
+  both versions to choose from.
+
 - Delete a comment you posted by mistake (FH-140, D66, `STO-8`). Beside
   a comment's pencil, on the ticket's full page and the side panel's
   Comments tab, **Delete comment** asks first, then removes it from the
@@ -496,6 +507,13 @@ All notable changes to this project are documented here. The project follows
   project needs repair. Hover a badge, or listen to it, for the project's
   name and its tickets, in progress, blocked, needs-repair and needs-you
   counts. On a phone the Project picker is unchanged.
+- Blocked tickets are marked with a no-entry sign (FH-148). The small
+  hollow diamond that marked a blocked ticket read as decoration at card
+  size; a filled no-entry sign now marks blocked everywhere: on cards,
+  blocker pills and notes, the side panel and full page (Blocked by), the
+  blocked-move dialog, the Table, the Workstreams view and the State
+  filter's Blocked. It always sits beside the
+  word or the reason.
 - Theme, board root and version are behind a gear in the title bar
   (FH-149, `CFG-2`). The Settings button sits between the connection dot
   and Quit on every view and on a ticket's full page, at every width. Its

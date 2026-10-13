@@ -84,6 +84,24 @@ export function saveSection(
   });
 }
 
+// saveWorkstreamSection replaces one section of a workstream's text,
+// adding a missing template section in its place (FH-139).
+export function saveWorkstreamSection(
+  fetcher: AuthenticatedFetch,
+  project: string,
+  slug: string,
+  base: string,
+  section: string,
+  content: string,
+) {
+  return save(
+    fetcher,
+    "PUT",
+    `/api/projects/${segment(project)}/workstreams/${segment(slug)}/section`,
+    { base, section, content },
+  );
+}
+
 export function saveRaw(
   fetcher: AuthenticatedFetch,
   id: string,

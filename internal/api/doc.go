@@ -1,7 +1,8 @@
 // Package api owns Flashheart's HTTP JSON endpoints under /api/: routing,
 // request validation, response shapes (cards with live run badges and
 // session summaries, project summaries with run counts, ticket detail with
-// its runs, workstreams, runs; runs, badges and questions carry the run's
+// its runs, workstreams and one workstream with its file and hash, runs;
+// runs, badges and questions carry the run's
 // short id and runs and badges its typed Needs you reason, which the
 // frontend words),
 // long-polling for changes (LIFE-3), JSON errors and attachment response
@@ -14,7 +15,9 @@
 // criteria, new tickets,
 // archive and restore, permanent delete of archived tickets with its preview
 // token (EDIT-8), project archive, restore and delete (PRJ-5), placement
-// in manual order (EDIT-9), workstream order,
+// in manual order (EDIT-9), workstream order, one workstream section
+// rewritten in place (board.NewWorkstreamSectionChange through
+// store.UpdateWorkstream, FH-139),
 // project keys, preferences, answers to agents'
 // questions, comments on a ticket, D47, files uploaded into a ticket,
 // REV-7, whose limit it reads from the config) validate input, apply

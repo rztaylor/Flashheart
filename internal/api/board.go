@@ -284,6 +284,21 @@ type WorkstreamsResponse struct {
 	Workstreams []WorkstreamJSON `json:"workstreams"`
 }
 
+// WorkstreamDetail is a workstream's page (FH-139): its line, its body,
+// and, with the write side, its file and the hash a section save sends.
+type WorkstreamDetail struct {
+	WorkstreamJSON
+	Body string `json:"body"`
+	Hash string `json:"hash"`
+	Raw  string `json:"raw"`
+}
+
+// WorkstreamResponse is GET /api/projects/{project}/workstreams/{slug}.
+type WorkstreamResponse struct {
+	Revision   uint64           `json:"revision"`
+	Workstream WorkstreamDetail `json:"workstream"`
+}
+
 type boardAPI struct {
 	board     BoardSource
 	files     FileSource
@@ -309,6 +324,7 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/projects/{project}/tickets/{id}", getOnly(b.ticket))
 	mux.Handle("/api/tickets/{id}", getOnly(b.ticket))
 	mux.Handle("/api/projects/{project}/workstreams", getOnly(b.workstreams))
+	mux.Handle("/api/projects/{project}/workstreams/{slug}", getOnly(b.workstream))
 	mux.Handle("/api/projects/{project}/tickets/{id}/files/{file}", getOnly(b.attachment))
 	mux.Handle("/api/all/board", getOnly(b.allBoard))
 	mux.Handle("/api/changes", getOnly(b.changes))
@@ -538,48 +554,80 @@ func (b boardAPI) workstreams(w http.ResponseWriter, r *http.Request) {
 	}
 	response := WorkstreamsResponse{Revision: snapshot.Revision, Workstreams: []WorkstreamJSON{}}
 	for _, workstream := range project.Workstreams {
-		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, ID: workstream.Slug}]
-		item := WorkstreamJSON{
-			Slug: workstream.Slug, Title: workstream.Title, Status: state.Status,
-			Suspended:      suspended(snapshot, project.Name, workstream.DependsOnWorkstreams),
-			DeclaredStatus: workstream.Status, Priority: workstream.Priority, Created: workstream.Created,
-			Done: state.Done, Total: state.Total, Next: state.Next,
-			BlockedBy:            reasons(project.Name, state.Reasons),
-			DependsOnWorkstreams: nonNil(workstream.DependsOnWorkstreams),
-			Tags:                 nonNil(workstream.Tags),
-			NeedsRepair:          nonNil(workstream.Repair),
-			Warnings:             nonNil(workstream.Warnings),
-			Tickets:              []WorkstreamTicket{},
-		}
-		for _, id := range workstream.Tickets {
-			entry := WorkstreamTicket{ID: id, Title: id, Missing: true, DependsOn: []string{}, Outside: []string{}}
-			if owner, ticket, ok := snapshot.FindTicket(id); ok {
-				ref := board.Ref{Project: owner.Name, ID: id}
-				reasons := snapshot.Analysis.Blocked[ref]
-				entry = WorkstreamTicket{
-					ID: id, Title: ticket.Title, Column: string(ticket.Column), Rejected: ticket.Rejected,
-					Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream),
-					DependsOn: []string{}, Outside: []string{},
-				}
-				for _, dependency := range ticket.DependsOn {
-					switch {
-					case dependency == id || slices.Contains(entry.DependsOn, dependency):
-					case slices.Contains(workstream.Tickets, dependency):
-						entry.DependsOn = append(entry.DependsOn, dependency)
-					case slices.ContainsFunc(reasons, func(reason board.Reason) bool {
-						return reason.Kind == board.TicketDependency && reason.Ticket.ID == dependency
-					}):
-						entry.Outside = append(entry.Outside, dependency)
-					}
-				}
-			} else if snapshot.Archived(id) {
-				entry = WorkstreamTicket{ID: id, Title: id, Column: "archived", DependsOn: []string{}, Outside: []string{}}
-			}
-			item.Tickets = append(item.Tickets, entry)
-		}
-		response.Workstreams = append(response.Workstreams, item)
+		response.Workstreams = append(response.Workstreams, workstreamJSON(snapshot, project, workstream))
 	}
 	writeJSON(w, http.StatusOK, response)
+}
+
+// workstreamJSON is a workstream's line with its derived status (VIEW-4).
+func workstreamJSON(snapshot *index.Snapshot, project *board.Project, workstream board.Workstream) WorkstreamJSON {
+	state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, ID: workstream.Slug}]
+	item := WorkstreamJSON{
+		Slug: workstream.Slug, Title: workstream.Title, Status: state.Status,
+		Suspended:      suspended(snapshot, project.Name, workstream.DependsOnWorkstreams),
+		DeclaredStatus: workstream.Status, Priority: workstream.Priority, Created: workstream.Created,
+		Done: state.Done, Total: state.Total, Next: state.Next,
+		BlockedBy:            reasons(project.Name, state.Reasons),
+		DependsOnWorkstreams: nonNil(workstream.DependsOnWorkstreams),
+		Tags:                 nonNil(workstream.Tags),
+		NeedsRepair:          nonNil(workstream.Repair),
+		Warnings:             nonNil(workstream.Warnings),
+		Tickets:              []WorkstreamTicket{},
+	}
+	for _, id := range workstream.Tickets {
+		entry := WorkstreamTicket{ID: id, Title: id, Missing: true, DependsOn: []string{}, Outside: []string{}}
+		if owner, ticket, ok := snapshot.FindTicket(id); ok {
+			ref := board.Ref{Project: owner.Name, ID: id}
+			reasons := snapshot.Analysis.Blocked[ref]
+			entry = WorkstreamTicket{
+				ID: id, Title: ticket.Title, Column: string(ticket.Column), Rejected: ticket.Rejected,
+				Blocked: len(reasons) > 0, Held: heldOutsideLine(reasons, workstream),
+				DependsOn: []string{}, Outside: []string{},
+			}
+			for _, dependency := range ticket.DependsOn {
+				switch {
+				case dependency == id || slices.Contains(entry.DependsOn, dependency):
+				case slices.Contains(workstream.Tickets, dependency):
+					entry.DependsOn = append(entry.DependsOn, dependency)
+				case slices.ContainsFunc(reasons, func(reason board.Reason) bool {
+					return reason.Kind == board.TicketDependency && reason.Ticket.ID == dependency
+				}):
+					entry.Outside = append(entry.Outside, dependency)
+				}
+			}
+		} else if snapshot.Archived(id) {
+			entry = WorkstreamTicket{ID: id, Title: id, Column: "archived", DependsOn: []string{}, Outside: []string{}}
+		}
+		item.Tickets = append(item.Tickets, entry)
+	}
+	return item
+}
+
+func (b boardAPI) workstream(w http.ResponseWriter, r *http.Request) {
+	snapshot, project := b.project(w, r)
+	if project == nil {
+		return
+	}
+	slug := r.PathValue("slug")
+	at := slices.IndexFunc(project.Workstreams, func(workstream board.Workstream) bool { return workstream.Slug == slug })
+	if at < 0 {
+		writeError(w, http.StatusNotFound, "not_found", fmt.Sprintf("No workstream %s in %s", slug, project.Name))
+		return
+	}
+	workstream := project.Workstreams[at]
+	// With the write side, show the body from the same bytes as the hash a
+	// section save will send, as a ticket's page does (STO-3).
+	var hash, raw string
+	if b.write != nil {
+		if data, current, err := b.write.ReadWorkstream(project.Name, slug); err == nil {
+			workstream.Body = board.ParseWorkstream(slug, data).Body
+			hash, raw = current, string(data)
+		}
+	}
+	writeJSON(w, http.StatusOK, WorkstreamResponse{Revision: snapshot.Revision, Workstream: WorkstreamDetail{
+		WorkstreamJSON: workstreamJSON(snapshot, project, workstream),
+		Body:           workstream.Body, Hash: hash, Raw: raw,
+	}})
 }
 
 func (b boardAPI) attachment(w http.ResponseWriter, r *http.Request) {

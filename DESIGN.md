@@ -467,7 +467,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Selection and Focus** (`select`/`focus` #be185d raspberry with `select-surface` #fdf0f6; `night-select`/`night-focus` lime): the selected card ring, the current panel tab's underline, an applied filter's ring, the chosen density segment's edge and the focus outline.
 - **Lines** (`line-0`…`line-8`: red, blue, yellow, green, purple, orange, lime, brown, teal; lifted in dark): workstreams only. Each workstream takes one line stably, by a hash of its slug in creation order, so a newer workstream never recolours an older one. A bullet carries its paired initials ink (`line-ink-*`, AA on its fill). No line is grey: grey would read as an inactive state.
 - **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the card header and fills that value's tag; the strong shade sets the tag's word (always AA on the tint) and the colour key's swatch. Paint is softer than the lines on purpose, so a tag never reads as a workstream.
-- **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross, Blocked red with a diamond and its reason.
+- **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross, Blocked red with the no-entry sign and its reason.
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
@@ -548,7 +548,7 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 
 ### Pills and Tags
 - **Status pill:** state fill, state ink, an icon (ring, half, review page, check; a cross for Rejected) and the column's word, or *Rejected*. A rejected card in Done carries its Rejected pill with its tags.
-- **Blocker pill:** blocked fill and ink, diamond, the reason (one line on a card, full in its tooltip and the panel).
+- **Blocker pill:** blocked fill and ink, the no-entry sign, the reason (one line on a card, full in its tooltip and the panel). The no-entry sign (a filled disc in the ink with its bar cut out to the surface behind) is the one symbol for blocked, also on its own beside Blocked by and the State filter's Blocked (in the blocked ink); it replaced a hollow diamond that read as decoration at card size (FH-148).
 - **Tag:** type, priority and age. The Colour by value's tag takes its paint (tint fill, strong word, a 35% ring); the rest are neutral outlined chips; High priority is semibold.
 
 ### Ticket Card
