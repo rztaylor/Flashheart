@@ -109,6 +109,11 @@
   protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
   with `go test`.
+- Setup's question (FH-129) is a table test in `internal/cli`
+  (`TestSetupAsksBeforeApplying`) with the harness's fake stdin and
+  `terminal` flag: each answer, end of input, no terminal, `--yes`,
+  `--write` and `--dry-run`. `IsTerminal` is tested on a pipe and
+  `/dev/null`; a real terminal is checked by hand under a pseudo-terminal.
 - Setup is tested against `testdata/setup/claude/` in a temporary home with
   a fake `claude` CLI, and against the `$CODEX_HOME` fixtures in
   `testdata/setup/codex/` (`user/`: the user's own entries; `stale/`: an

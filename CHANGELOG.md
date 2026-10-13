@@ -306,6 +306,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- `flashheart setup` asks before it writes instead of needing a second
+  run with `--write` (FH-129, D48). It shows the diff, then asks
+  `Apply these changes? [y/N]` and applies them only on `y`; `--yes`
+  applies without asking, for scripts, and `--dry-run` only shows the
+  changes. With no terminal to ask in and no `--yes`, it only shows them,
+  as before. `--write` still works as an older name for `--yes`, and
+  doctor's fixes now say `run flashheart setup <agent>`.
+
 - A ticket's full page uses the width (FH-65, CARD-7). Instead of the card
   panel's tabs stretched to one column, it shows the whole ticket as one
   page: questions waiting for you, the handoff, blockers, criteria and the

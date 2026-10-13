@@ -15,8 +15,9 @@ protocol is versioned separately (`PROTOCOL_VERSION`,
   secrets.
 - Any write outside the board root, or any deletion other than event-log
   retention.
-- `setup` changes agent configuration without `--write`, or `--uninstall`
-  leaves Flashheart entries behind or removes the user's own.
+- `setup` changes agent configuration without showing the diff and getting
+  a yes (the prompt or `--yes`), or `--uninstall` leaves Flashheart entries
+  behind or removes the user's own.
 - A protocol change that is not additive ships without a `PROTOCOL_VERSION`
   bump and release-note instructions to re-run `setup`.
 - Release notes overstate planned or unverified behaviour, or omit the agent

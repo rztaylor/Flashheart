@@ -525,9 +525,12 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 ### 6.10 Setup and the protocol skill (`SET`)
 
 - `SET-1` `flashheart setup claude|codex` shows the exact configuration
-  changes (hooks, MCP server registration, protocol instructions) as a diff
-  and writes nothing. `--write` applies them with timestamped backups.
-  `--uninstall` shows the reverse, and applies it with `--write`.
+  changes (hooks, MCP server registration, protocol instructions) as a diff,
+  then asks `Apply these changes? [y/N]` in a terminal and applies them,
+  with timestamped backups, only on `y` or `yes` (D48). `--yes` (or its
+  older name `--write`) applies without asking; `--dry-run`, or no
+  terminal to ask in without `--yes`, only shows them. `--uninstall` does
+  the same for the reverse.
 - `SET-2` For Claude, setup installs the **Flashheart protocol skill**
   (`~/.claude/skills/flashheart/SKILL.md`), which replaces the kanban-tracker
   skill: tickets are created, read and moved through Flashheart, never by

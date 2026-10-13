@@ -1118,3 +1118,23 @@ anchoring comments to criteria or steps (anchors go stale as agents
 rewrite sections; a quote does the job); requested changes as new
 acceptance criteria (cheap, but loses the conversation). Durable history
 supersedes the run-window limits D46 accepted for Activity.
+
+## 2026-10-13 — D48: Setup asks before it writes; --yes for scripts
+
+Revises D9. `flashheart setup <agent>` showed a diff and wrote only when
+run again with `--write`, the way formatters work (`gofmt -w`,
+`prettier --write`). Setup commands usually apply their change, so this
+took two runs, and someone skimming the diff could think setup had
+worked (FH-129, user's choice).
+
+Setup now follows `terraform apply`: it shows the diff, then asks
+`Apply these changes? [y/N]` on a terminal and writes only on `y` or
+`yes`; any other answer, or none, changes nothing. `--yes` applies
+without asking, `--dry-run` only shows. With no terminal on stdin (a
+pipe, a script, an agent's shell) and no `--yes`, it only shows the diff
+and says to re-run with `--yes`, so nothing hangs waiting for an answer
+and nothing is written unseen. D9's guarantee stands: no agent
+configuration changes without the user seeing the exact diff and saying
+yes. `--write` stays as an older name for `--yes`, so scripts and notes
+that use it keep working. Doctor's fixes say `run flashheart setup
+<agent>`. `migrate` keeps `--write` for now.

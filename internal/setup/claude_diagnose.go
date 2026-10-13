@@ -14,7 +14,7 @@ import (
 )
 
 // fix is the remedy doctor findings name.
-var fix = "run flashheart setup " + Claude{}.Name() + " --write"
+var fix = "run flashheart setup " + Claude{}.Name()
 
 // Diagnose checks Claude Code's configuration for Flashheart without
 // changing anything (SET-4): the hooks of §5.2, the MCP server and the

@@ -13,7 +13,7 @@ import (
 )
 
 // codexRemedy is the fix Codex findings name.
-var codexRemedy = "run flashheart setup " + Codex{}.Name() + " --write"
+var codexRemedy = "run flashheart setup " + Codex{}.Name()
 
 // Diagnose checks Codex's configuration for Flashheart without changing
 // anything (SET-4): the MCP server, the hooks of §5.3 and the protocol

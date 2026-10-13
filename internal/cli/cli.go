@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -56,8 +57,12 @@ type Dependencies struct {
 	OpenHandshake   func() (Handshake, error)
 	// OpenServeLog returns the background child's diagnostic log for a root.
 	OpenServeLog func(root string) io.Writer
-	// Stdin is the hook payload and MCP message source.
+	// Stdin is the hook payload and MCP message source, and where setup
+	// reads the answer to its question.
 	Stdin io.Reader
+	// Interactive reports whether Stdin is a terminal setup can ask in;
+	// nil means it is not.
+	Interactive func() bool
 	// Getwd returns the process's working directory.
 	Getwd func() (string, error)
 	// FindCLI locates an agent's own command-line program, which setup
@@ -105,7 +110,8 @@ type awaitFlags struct {
 }
 
 type setupFlags struct {
-	write, uninstall bool
+	// yes is --yes, or its older name --write.
+	yes, dryRun, uninstall bool
 }
 
 type migrateFlags struct {
@@ -170,15 +176,16 @@ func commands() []command {
 		{
 			name:    "setup",
 			summary: "show or apply an agent's configuration for Flashheart",
-			usage:   "setup claude|codex [--uninstall] [--write] [--root DIR]",
+			usage:   "setup claude|codex [--uninstall] [--yes | --dry-run] [--root DIR]",
 			detail: "Show the changes that connect an agent to Flashheart. claude: its hooks\n" +
 				"in ~/.claude/settings.json, the flashheart MCP server and the Flashheart\n" +
 				"skill (which replaces kanban-tracker); backups go to\n" +
 				"~/.claude/flashheart-backup/. codex: the MCP server in config.toml, its\n" +
 				"hooks in hooks.json and the protocol text in AGENTS.md, all in\n" +
 				"$CODEX_HOME (default ~/.codex), with backups in its flashheart-backup/;\n" +
-				"then trust the hooks with /hooks in codex. Nothing changes without\n" +
-				"--write; --uninstall shows, and with --write applies, the reverse.",
+				"then trust the hooks with /hooks in codex. Setup shows the changes as a\n" +
+				"diff, then asks before it writes; without a terminal to ask in it only\n" +
+				"shows them unless you pass --yes. --uninstall does the same for the reverse.",
 			run: runSetup,
 		},
 		{
@@ -249,7 +256,9 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 		flags.StringVar(&env.await.project, "project", "", "")
 		flags.DurationVar(&env.await.timeout, "timeout", await.DefaultTimeout, "")
 	case "setup":
-		flags.BoolVar(&env.setup.write, "write", false, "")
+		flags.BoolVar(&env.setup.yes, "yes", false, "")
+		flags.BoolVar(&env.setup.yes, "write", false, "")
+		flags.BoolVar(&env.setup.dryRun, "dry-run", false, "")
 		flags.BoolVar(&env.setup.uninstall, "uninstall", false, "")
 	}
 	if err := parseInterspersed(flags, flagArgs); err != nil {
@@ -576,8 +585,8 @@ func runMCP(ctx context.Context, env *environment, flags *flag.FlagSet, globals 
 	return mcpserver.Serve(ctx, mcpserver.Options{Root: root, Cwd: cwd, Binary: binary}, stdin, env.stdout)
 }
 
-// runSetup shows, or with --write applies, an agent's configuration
-// (SET-1–SET-3, D9).
+// runSetup shows an agent's configuration, then applies it when the user
+// says yes in a terminal or passes --yes (SET-1–SET-3, D9, D48).
 func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
 	registered, found := findAgent(flags.Arg(0))
 	switch {
@@ -587,6 +596,8 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 		return usageError{"setup takes one agent"}
 	case !found || registered.setup == nil:
 		return usageError{fmt.Sprintf("unknown agent %q (known: %s)", flags.Arg(0), knownAgents(true))}
+	case env.setup.dryRun && env.setup.yes:
+		return usageError{"--dry-run and --yes cannot be used together: --dry-run only shows the changes, --yes applies them"}
 	}
 	root, err := resolveRoot(globals, env.deps)
 	if err != nil {
@@ -604,18 +615,49 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 	if err != nil {
 		return err
 	}
-	if env.setup.write {
-		return changes.Apply(env.stdout)
+	again := "flashheart setup " + registered.setup.Name()
+	if env.setup.uninstall {
+		again += " --uninstall"
 	}
-	changes.Render(env.stdout)
-	if !changes.Empty() {
-		again := "--write"
-		if env.setup.uninstall {
-			again = "--uninstall --write"
-		}
-		fmt.Fprintf(env.stdout, "\nNothing was changed. Run flashheart setup %s %s to apply these changes.\n", registered.setup.Name(), again)
+	interactive := env.deps.Interactive != nil && env.deps.Interactive()
+	switch {
+	case changes.Empty():
+		changes.Render(env.stdout)
+		return nil
+	case env.setup.dryRun:
+		changes.Render(env.stdout)
+		fmt.Fprintf(env.stdout, "\nNothing was changed (--dry-run). Run %s to apply these changes.\n", again)
+		return nil
+	case !env.setup.yes && !interactive:
+		changes.Render(env.stdout)
+		fmt.Fprintf(env.stdout, "\nNothing was changed: setup asks before it writes, and there is no terminal to ask in. Run %s --yes to apply these changes.\n", again)
+		return nil
 	}
-	return nil
+	changes.RenderChanges(env.stdout)
+	if !env.setup.yes && !confirm(env.deps.Stdin, env.stderr, "Apply these changes? [y/N] ") {
+		fmt.Fprintln(env.stdout, "Nothing was changed.")
+		return nil
+	}
+	return changes.Apply(env.stdout)
+}
+
+// confirm asks question on w and reports whether the answer read from r is
+// y or yes; anything else, or no answer, is no.
+func confirm(r io.Reader, w io.Writer, question string) bool {
+	fmt.Fprint(w, "\n"+question)
+	if r == nil {
+		fmt.Fprintln(w)
+		return false
+	}
+	answer, err := bufio.NewReader(r).ReadString('\n')
+	if err != nil && answer == "" {
+		fmt.Fprintln(w) // end of input: finish the prompt's line
+	}
+	switch strings.ToLower(strings.TrimSpace(answer)) {
+	case "y", "yes":
+		return true
+	}
+	return false
 }
 
 // agentOptions describe this machine for an agent's configuration, for
@@ -815,8 +857,9 @@ func writeCommandUsage(output io.Writer, command command) {
 		return
 	case "setup":
 		fmt.Fprintln(output, "Options:")
-		fmt.Fprintln(output, "  --write       apply the changes (otherwise only show them)")
-		fmt.Fprintln(output, "  --uninstall   show (with --write, apply) the reverse")
+		fmt.Fprintln(output, "  --yes         apply the changes without asking (--write is an older name)")
+		fmt.Fprintln(output, "  --dry-run     only show the changes; never ask or write")
+		fmt.Fprintln(output, "  --uninstall   remove Flashheart's configuration instead")
 		writeGlobalOptionLines(output)
 		return
 	case "await":
