@@ -9,18 +9,22 @@ interface DialogProps {
   // actions sit at the foot of the dialog, primary last.
   actions?: ReactNode;
   wide?: boolean;
+  // fill takes the whole viewport less a 1rem margin and gives the body
+  // its full height without scrolling, for the lightbox (FH-146).
+  fill?: boolean;
 }
 
 // Dialog is a modal native <dialog>: it traps focus, closes on Escape, and
 // returns focus to whatever opened it when it unmounts. Used only for steps
 // that need a decision before continuing (a blocked move, a save conflict, a
-// new ticket).
+// new ticket), and for the lightbox.
 export function Dialog({
   title,
   onClose,
   children,
   actions,
   wide,
+  fill,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -48,9 +52,9 @@ export function Dialog({
         event.stopPropagation();
         onClose();
       }}
-      className={`m-auto max-h-[min(44rem,90vh)] ${wide ? "w-[min(calc(100vw-2rem),60rem)]" : "w-[min(calc(100vw-2rem),32rem)]"} overflow-hidden rounded-panel border border-rule bg-panel p-0 text-ink shadow-card-hover`}
+      className={`m-auto ${fill ? "h-[calc(100dvh-2rem)] max-h-none w-[calc(100vw-2rem)] max-w-none" : `max-h-[min(44rem,90vh)] ${wide ? "w-[min(calc(100vw-2rem),60rem)]" : "w-[min(calc(100vw-2rem),32rem)]"}`} overflow-hidden rounded-panel border border-rule bg-panel p-0 text-ink shadow-card-hover`}
     >
-      <div className="flex max-h-[inherit] flex-col">
+      <div className={`flex flex-col ${fill ? "h-full" : "max-h-[inherit]"}`}>
         <header className="flex items-start justify-between gap-4 px-6 pt-5">
           <h2 id={titleId} className="text-xl leading-tight display-cut">
             {title}
@@ -64,7 +68,13 @@ export function Dialog({
             <Icon name="close" />
           </button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-3 pb-5 text-sm">
+        <div
+          className={
+            fill
+              ? "flex min-h-0 flex-1 flex-col px-6 pt-3 pb-3 text-sm"
+              : "min-h-0 flex-1 overflow-y-auto px-6 pt-3 pb-5 text-sm"
+          }
+        >
           {children}
         </div>
         {actions ? (

@@ -20,7 +20,8 @@ catalogue (`remarks.md`), placements, selection and which moves to Done
 earn one (`remarks`), a ticket's typed fields as form text and the
 changes to save (`ticketForm`, EDIT-6), a section's text as edited in
 place and the criteria list (`sectionEdit`, EDIT-11), files given to a
-ticket (`uploads`, REV-7), and a failure's words for any thrown value
+ticket (`uploads`, REV-7), the lightbox's zoom and pan (`zoom`: Fit, the
+25–800% limits and steps, zooming around a point, pan bounds; FH-146), and a failure's words for any thrown value
 (`errors`: `messageOf`).
 Everything here is a plain function or type, unit-tested with Vitest.
 

@@ -228,9 +228,28 @@ reorders them.
 7. **Attachments tab** (shown when the ticket has files or can be
    edited): a two-column grid of thumbnails (screenshots) and file tiles,
    each with caption, file name and kind; a thumbnail opens a lightbox
-   dialog (Escape closes, arrows and Previous/Next step when there is more
-   than one, focus returns to the thumbnail); other files open in a new
-   tab. Where the ticket can be edited, the **file drop** follows the grid
+   dialog; other files open in a new tab. The **lightbox** (FH-146) fills
+   the viewport less a 1rem margin at every width: the caption as its
+   title, the image on a well stage, its file name with a muted hint
+   (*Drag to pan, scroll to zoom; arrows pan when zoomed in, 0 fits.*,
+   from 640px), and a footer of **Zoom out**, the zoom as a tabular
+   percentage, **Zoom in** and **Fit**, then, when there is more than
+   one image, *n of m* with Previous and Next. Zoom is relative to the
+   image's natural size (100% is one image pixel to a CSS pixel), from
+   25% to 800% (down to Fit for an image too large to fit at 25%), in
+   steps of 25, 33, 50, 67, 75, 100, 125, 150, 200, 300, 400, 600 and
+   800% with Fit among them; Fit shows the whole image, never larger
+   than 100%, and is where every image opens. Keys while focus is in the
+   dialog: Cmd or Ctrl (or no modifier) with + or = zooms in and with −
+   zooms out, never the browser's page; 0 or Cmd or Ctrl and 0 fits; the
+   arrows pan by 80px (320px with Shift) while zoomed in past Fit, and at
+   Fit or smaller Left and Right step between images; Escape closes and
+   focus returns to the thumbnail. The wheel zooms around the pointer (a
+   trackpad pinch too), dragging pans (a grab cursor while there is
+   anything to pan), two fingers pinch on a touch screen; panning stops
+   where the image's edge meets the stage's. A button at its limit stays
+   focusable, marked unavailable. Nothing animates. Where the ticket can
+   be edited, the **file drop** follows the grid
    (`REV-7`): the whole tab takes dropped files, and a dashed slot (rule
    border, card corners) with the attachment icon reads *Drop files here
    to attach them* over a muted line of the allowed types and size, with
