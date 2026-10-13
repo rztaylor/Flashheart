@@ -363,6 +363,12 @@ func (srv *server) getTicket(c *call, input TicketInput) (string, error) {
 	if review, found, err := srv.store.ReadReview(project.Name, ticket.Folder); err == nil && found {
 		lines = append(lines, "Review:", bounded(review, reviewBudget))
 	}
+	// People's comments follow the ticket's text, framed as the user's
+	// words rather than as ticket text (D47).
+	if comments := srv.commentLines(project, ticket, ticketCommentsBudget); len(comments) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, comments...)
+	}
 	return strings.Join(lines, "\n"), nil
 }
 

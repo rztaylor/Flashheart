@@ -15,7 +15,7 @@ VIEW-3), keyboard grid movement and the neighbour that takes focus when the
 focused item leaves its list (`navigation`, FH-84), and
 manual-order placements and display sorts (`order`, EDIT-9), archive
 search and the delete gate (`archive`, EDIT-8), a ticket's sections in
-order with their counts and the files the full page lists (`ticketSections`, CARD-1, CARD-7), its activity timeline (`activity`), and the marginal remarks
+order with their counts and the files the full page lists (`ticketSections`, CARD-1, CARD-7), its activity timeline, history words and filters (`activity`), what a comment quotes and its entry in the file (`comments`), and the marginal remarks
 catalogue (`remarks.md`), placements, selection and which moves to Done
 earn one (`remarks`), a ticket's typed fields as form text and the
 changes to save (`ticketForm`, EDIT-6), a section's text as edited in

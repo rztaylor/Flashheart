@@ -1,12 +1,20 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { Attachment, TicketDetail, TicketRef } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { LoadError } from "../../components/LoadError";
 import { Markdown } from "../../components/Markdown";
+import { SegmentedControl } from "../../components/SegmentedControl";
 import { StaleNote } from "../../components/StaleNote";
 import { LinkedText, TicketLinksInPlace } from "../../components/TicketLink";
-import { activityOf } from "../../model/activity";
+import {
+  ACTIVITY_FILTERS,
+  type ActivityEntry,
+  type ActivityFilter,
+  activityOf,
+  filterActivity,
+} from "../../model/activity";
+import { quoteChoices } from "../../model/comments";
 import { workstreamTitle } from "../../model/lines";
 import {
   type ImageRef,
@@ -30,6 +38,7 @@ import { ActivityTimeline } from "./ActivityTimeline";
 import { Attachments } from "./Attachments";
 import type { CardPanelProps } from "./CardPanel";
 import { Checklist } from "./Checklist";
+import { CommentBox } from "./CommentBox";
 import { CriteriaEditor, SectionEditor, TitleEditor } from "./PageEdits";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { JumpTo, SectionOutline } from "./SectionOutline";
@@ -167,7 +176,10 @@ function LoadedPage({
   onMove?: Parameters<typeof PropertiesPanel>[0]["onMove"];
   onArchive?(): void;
 } & Pick<TicketPageProps, "lines" | "workstreams" | "keys" | "onOpen">) {
-  const activity = activityOf(detail);
+  // Activity shows All, Comments or History (FH-125); the outline counts
+  // what it shows.
+  const [filter, setFilter] = useState<ActivityFilter>("all");
+  const activity = filterActivity(activityOf(detail), filter);
   const sections = pageSections(detail, activity.length);
   const shown = sections.filter((section) => !section.empty);
   const page = useRef<HTMLDivElement>(null);
@@ -190,6 +202,8 @@ function LoadedPage({
       onOpen={onOpen}
       context={context}
       activity={activity}
+      filter={filter}
+      onFilter={setFilter}
     />
   );
   const inGroup = (group: PageSection["group"]) =>
@@ -363,6 +377,13 @@ function SectionHeading({
 const itemName = (section: PageSection) =>
   section.template ? section.title.toLowerCase() : section.title;
 
+// activityWords says what Activity lists under each filter.
+const activityWords: Record<ActivityFilter, string> = {
+  all: "Comments, notes, history, handoff updates and questions, oldest first",
+  comments: "People's comments, oldest first",
+  history: "Changes to the ticket, oldest first",
+};
+
 // PageSectionView is one section of the page, in its element (marked for
 // the outline) and under its heading, with its in-place edit (FH-66)
 // where it has one.
@@ -374,6 +395,8 @@ function PageSectionView({
   onOpen,
   context,
   activity,
+  filter,
+  onFilter,
 }: {
   section: PageSection;
   detail: TicketDetail;
@@ -381,7 +404,9 @@ function PageSectionView({
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
   context: LinkContext;
-  activity: ReturnType<typeof activityOf>;
+  activity: ActivityEntry[];
+  filter: ActivityFilter;
+  onFilter(filter: ActivityFilter): void;
 }) {
   const markdown = (text = "", inline = false) =>
     text.trim() ? (
@@ -394,10 +419,14 @@ function PageSectionView({
     body: ReactNode,
     aside?: ReactNode,
     action?: ReactNode,
+    // pencil: the action is the section's pencil, shown while the section
+    // is hovered or holds focus (not Activity's filter, whose comments
+    // show their own).
+    pencil = !!action,
   ) => (
     <section
       aria-labelledby={`${sectionElementId(section.id)}-heading`}
-      className={action ? editGroup : undefined}
+      className={pencil ? editGroup : undefined}
     >
       <SectionHeading
         id={section.id}
@@ -553,14 +582,47 @@ function PageSectionView({
           2,
           <>
             <p className="-mt-1 mb-4 text-xs text-ink-muted">
-              Notes, questions and handoff updates, oldest first
+              {activityWords[filter]}
             </p>
             <ActivityTimeline
               entries={activity}
+              filter={filter}
               context={context}
               keys={keys}
+              editing={
+                ticket.editComment
+                  ? {
+                      detail: {
+                        id: detail.id,
+                        hash: detail.activityHash,
+                        comments: detail.comments,
+                      },
+                      send: ticket.editComment,
+                      onSaved: (saved, what) =>
+                        ticket.saved(
+                          saved,
+                          what === "Saved" ? "Saved your comment on" : what,
+                        ),
+                    }
+                  : undefined
+              }
             />
+            {ticket.comment ? (
+              <CommentBox
+                choices={quoteChoices(detail)}
+                onPost={ticket.comment}
+                renderQuote={(text) => markdown(text)}
+              />
+            ) : null}
           </>,
+          undefined,
+          <SegmentedControl
+            label="Show in Activity"
+            options={ACTIVITY_FILTERS}
+            value={filter}
+            onChange={onFilter}
+          />,
+          false,
         );
       default:
         return null;

@@ -199,6 +199,49 @@ export interface TicketDetail extends Card {
   runs: Run[];
   // questions are the open questions about the ticket (CARD-6).
   questions: Question[];
+  // comments and history are the ticket's activity file, oldest first
+  // (STO-8, D47); activityHash guards a comment edit and is empty on a
+  // read-only server or while the ticket has no activity file.
+  comments: Comment[];
+  history: History[];
+  activityHash: string;
+}
+
+// Comment is a person's comment on a ticket (STO-8). edited is "" until it
+// is edited; quote is the part of the ticket it quotes ("" for none) and
+// quoteFrom where that part is ("Acceptance criteria 2").
+export interface Comment {
+  id: string;
+  time: string;
+  by: string;
+  byPerson: boolean;
+  state: string;
+  edited: string;
+  quoteFrom: string;
+  quote: string;
+  body: string;
+}
+
+// HistoryChange is one thing a write changed: what is created, moved,
+// edited, ticked, unticked, archived or restored; from and to are statuses,
+// fields the names edited, criteria and steps 1-based numbers.
+export interface HistoryChange {
+  what: string;
+  from: string;
+  to: string;
+  fields: string[];
+  criteria: number[];
+  steps: number[];
+}
+
+// History is one write that changed the ticket: who, when and what, never
+// the ticket's text (board-format §Activity).
+export interface History {
+  id: string;
+  time: string;
+  by: string;
+  byPerson: boolean;
+  changes: HistoryChange[];
 }
 
 export interface WorkstreamTicket {
@@ -345,12 +388,50 @@ const isReview = (value: unknown): value is Review =>
       isRecord(step) && isString(step.text) && typeof step.done === "boolean",
   );
 
+const isNumberArray = (value: unknown): value is number[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "number");
+
+export const isComment = (value: unknown): value is Comment =>
+  isRecord(value) &&
+  isString(value.id) &&
+  isString(value.time) &&
+  isString(value.by) &&
+  typeof value.byPerson === "boolean" &&
+  isString(value.state) &&
+  isString(value.edited) &&
+  isString(value.quoteFrom) &&
+  isString(value.quote) &&
+  isString(value.body);
+
+const isHistory = (value: unknown): value is History =>
+  isRecord(value) &&
+  isString(value.id) &&
+  isString(value.time) &&
+  isString(value.by) &&
+  typeof value.byPerson === "boolean" &&
+  Array.isArray(value.changes) &&
+  value.changes.every(
+    (change) =>
+      isRecord(change) &&
+      isString(change.what) &&
+      isString(change.from) &&
+      isString(change.to) &&
+      isStringArray(change.fields) &&
+      isNumberArray(change.criteria) &&
+      isNumberArray(change.steps),
+  );
+
 const isTicket = (
   value: unknown,
 ): value is { revision: number; ticket: TicketDetail } =>
   isRecord(value) &&
   isRecord(value.ticket) &&
   isCard(value.ticket) &&
+  Array.isArray(value.ticket.comments) &&
+  value.ticket.comments.every(isComment) &&
+  Array.isArray(value.ticket.history) &&
+  value.ticket.history.every(isHistory) &&
+  isString(value.ticket.activityHash) &&
   isString(value.ticket.body) &&
   Array.isArray(value.ticket.criteriaItems) &&
   Array.isArray(value.ticket.questions) &&

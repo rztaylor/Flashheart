@@ -73,6 +73,9 @@ function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
     hash: "abc",
     raw: "",
     runs: [],
+    comments: [],
+    history: [],
+    activityHash: "",
     questions: [
       {
         id: "q1",

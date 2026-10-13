@@ -15,9 +15,10 @@ version, busy and error, and a conflict as a pending choice (overwrite,
 reload, cancel) for the conflict dialog.
 
 Owns in-place editing (`InPlace`, EDIT-11): one open item per page, the
-unsaved-changes prompt and holding the leave guard, an item's pencil, Add
-slot, double-click and focus return, and an open item's draft with Save,
-Cancel, shortcuts, inline error and conflict.
+unsaved-changes prompt and holding the leave guard (also for held drafts
+outside any item, such as a comment being written), an item's pencil,
+Add slot, double-click and focus return, and an open item's draft with
+Save, Cancel, shortcuts, inline error and conflict.
 
 Does not own request shapes (`api/edit`), a draft's fields (`model/`),
 the controls each item edits with or the page (`card/`), board layout or

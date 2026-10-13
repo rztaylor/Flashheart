@@ -113,7 +113,11 @@
   `store` (`TestEveryTicketWriteAppendsOneHistoryEntry`); every board write
   in `api` (`TestBoardWritesAppendOneHistoryEntry`); comments need
   Singleserve's authentication in `app`. Attribution precedence is tested apart from the tools
-  (`TestAttributionPrecedence`).
+  (`TestAttributionPrecedence`). The comments `get_ticket` and `claim`
+  show, and their budgets, are `internal/mcpserver/comments_test.go`;
+  posting, quoting, editing, the conflict, the filter and the leave guard
+  are `TicketComments.dom.test.tsx` and, in the browser,
+  `frontend/e2e/comments.spec.mjs` (FH-125).
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
   (`internal/mcpserver`) lists tools over the in-memory transport and fails
