@@ -154,7 +154,9 @@
 - MCP tools are tested through the Go SDK's in-memory transport; the
   protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
-  with `go test`.
+  with `go test`; `TestCrossAgentHandoff` beside it hands a ticket from
+  Claude Code to Codex and back, Codex's side replaying
+  `testdata/hooks/codex` with its session and working directory swapped.
 - Setup's question (FH-129) is a table test in `internal/cli`
   (`TestSetupAsksBeforeApplying`) with the harness's fake stdin and
   `terminal` flag: each answer, end of input, no terminal, `--yes`,
