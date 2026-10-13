@@ -91,6 +91,11 @@ const text: [string, string, number][] = [
       4.5,
     ],
   ),
+  // A column's icon in its state ink beside its word, on the Overview's
+  // projects list (FH-153): a graphic, so 3:1.
+  ...["neutral", "progress", "review", "done"].map(
+    (state): [string, string, number] => [`state-${state}-ink`, "card", 3],
+  ),
   ...[
     "type-feature",
     "type-bug",

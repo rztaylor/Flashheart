@@ -69,7 +69,8 @@ its counts: *Flashheart (flashheart): 50 tickets, 3 in progress, 22
 blocked, 1 needs repair, 2 agents need you*, the blocked, repair and Needs
 you counts only when not zero; All projects names its project count and
 sums them. Project names, route bars and the other counts are not shown as
-text. The rail has no footer: the theme, board root and version are in the
+text; the All projects Overview's Projects list (§5) shows them side by
+side. The rail has no footer: the theme, board root and version are in the
 band's Settings menu. Below 48rem the rail hides and a control row with
 Project and Column pickers takes its place.
 
@@ -545,8 +546,29 @@ order (Backlog, Up next, In progress, Ready to review, Done, the last
 without Rejected tickets), each a large
 tabular count over the column's word with its status icon, in the State
 role (§7). Each card leads to the Board for the scope. The row stays one row
-at every width; below 40rem the icons go and the words wrap. Then the
-rounded section cards in fixed order:
+at every width; below 40rem the icons go and the words wrap.
+
+In the All projects scope only, the **Projects** list follows the pipeline
+(FH-153, `PRJ-6`): a section card (the board icon on a card disc, the
+title, the project count) listing every project in the rail's order, most
+recently active first. Each row is one link to that project's Overview,
+named with the project and every count (*Alpha (alpha): 7 tickets (3 in
+backlog, 1 up next, 1 in progress, 1 ready to review, 1 done), 3 blocked,
+1 needs repair, 1 agent needs you*). Once the card is at least 50rem wide
+(its own width, so a ticket panel beside the Overview narrows it too) the
+rows are a table under one line of column words: Project (key badge and
+name), Tickets, the five board columns (each word after its status icon in
+its state ink), Blocked, Needs repair and Needs you, the counts centred in
+tabular numerals, zeros faint. Tickets counts every ticket; the columns
+count as the pipeline does, so Done leaves out rejected tickets and the
+columns of every row add up to the pipeline. A needs-repair count other
+than zero is ringed in dashed ink; a Needs you count other than zero sits
+on the attention colour. Narrower, a row stacks: the key badge and name,
+with the needs-repair and Needs you marks beside it in words when not zero,
+over *N tickets · N blocked*, then the five columns' counts over their
+words. A single project's Overview has no list.
+
+Then the rounded section cards in fixed order:
 
 1. **Needs your decision**: questions, each a question card answerable in
    place (`CARD-6`), and permission prompts, which say *Answer in the
@@ -596,10 +618,10 @@ for another role's job, and none is ever the only carrier of meaning.
 | --- | --- | --- | --- |
 | Frame | Brand surface and the current scope | Band and its current view tab (raspberry light, black dark), rail and its current tile | The tab's or project's name |
 | Action | The primary action | Primary button | Its label |
-| Attention | A run or question that needs the user | Needs you plate (band, card, panel, question card), a rail badge's Needs you count and the Overview's Needs your decision mark | Disc mark and words (on a rail badge, the count, with the words in its name and tooltip) |
+| Attention | A run or question that needs the user | Needs you plate (band, card, panel, question card), a rail badge's Needs you count, the Overview's Needs your decision mark and a project's Needs you count in its Projects list | Disc mark and words (on a rail badge or in the Projects list, the count, with the words in its name and its column's word) |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
 | Paint | The Colour by value | Card header tint, filled tag, colour chip bullet | The value's word |
-| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages | Icon and column word |
+| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages; the icon in state ink before a column's word over the Projects list | Icon and column word |
 | Blocked | A real blocker | Blocker pill | Diamond and the reason |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |

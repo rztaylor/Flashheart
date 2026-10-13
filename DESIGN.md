@@ -471,7 +471,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
-- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, card, panel, question card), a rail badge's Needs you count and the Overview's Needs your decision mark. Only Needs you uses it.
+- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, card, panel, question card), a rail badge's Needs you count, the Overview's Needs your decision mark and a project's Needs you count in the Overview's Projects list. Only Needs you uses it.
 - **Flash** (`flash` #ffd23f): the bolt before the wordmark.
 - **Danger** (`danger`, `on-danger`, `danger-surface`): application errors, and actions that cannot be undone (a permanent delete): red, in both themes. Never a ticket state.
 
@@ -559,6 +559,9 @@ Column well surface, rule border, 14px corners, 10px padding; head with a round 
 
 ### Overview Section Card
 Card surface, rule border, 14px corners, card shadow; the head on the column surface with a 28px round mark (Needs your decision in the attention disc while anything needs you; review and in progress in their status fills; the rest an ink icon on a card disc), the title in the display head cut and a round count badge; the collapsible ones end in a chevron. Rows divided by rules, roomy (12px by 16px): the id, the title over one muted line of words, a small outlined agent chip, a muted time or count, and the action (Review results in the action fill, Create ticket secondary). An empty section is its head with one muted sentence. No coloured edge strips.
+
+### Overview Projects List
+All projects only, between the pipeline and the section cards (FH-153): a section card with the board icon on a card disc, *Projects* and a count badge. Rows are links divided by rules that hover to the well. From 50rem of the card's own width (a container query, so the panel narrows it) they are a table: a line of column words in muted semibold label size on the heading cut (each board column's word after its status icon in that state's ink), then per row the accent key badge and the name in semibold small text, and nine centred tabular counts at body size, a zero in faint ink. A needs-repair count other than zero sits in a round dashed ink ring (1.5px); a Needs you count other than zero on a round attention fill. The name column takes 1.6 parts to each count's one, so the counts spread across the card. Narrower, a row stacks: badge and name with the repair and Needs you marks as small word pills beside it, a muted line of tickets and blocked, then the five column counts over their words in meta size.
 
 ### Overview Pipeline
 Above the section cards: five equal chevron cards in one row, Backlog to Done, each notched on the left and pointed on the right so they interlock with a 5px ground-coloured gap (the first flat on the left with 10px corners). Each takes its status pill's fill and ink: a display-cut tabular count (1.5rem, 2.25rem from 40rem, 3rem from 64rem) over the column's word, semibold, with its status icon from 40rem. The point is 12px, 22px from 40rem. Clipped shapes take no box shadow or outline, so the row casts `--fh-shadow-chevron` (a drop-shadow filter) and a focused card draws its focus ring as four 2px drop-shadows that follow the shape. Hover lifts a card 2px.
