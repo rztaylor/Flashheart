@@ -129,7 +129,7 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 	case "UserPromptSubmit":
 		from := origin(p.Prompt)
 		add(session, events.TurnStart, events.TurnStartData{Origin: from, Background: from != events.OriginUser})
-		input.Answers = session
+		input.Inbox = session
 	case "PreToolUse":
 		input.Reply = stamp(p.ToolName, p.ToolInput, actor)
 	case "PostToolUse", "PostToolUseFailure":

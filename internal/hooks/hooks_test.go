@@ -92,7 +92,7 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	case "Plan":
 		input.Events = []Pending{{Run: run, Kind: events.PlanUpdated, Data: events.PlanData{Items: []events.PlanItem{{Text: "Rotate token=abcdef123456\nnow", Status: "pending"}}}}}
 	case "Prompt":
-		input.Answers = run
+		input.Inbox = run
 		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{}}}
 	case "Stop", "StopActive":
 		input.Stop, input.StopActive = true, event == "StopActive"

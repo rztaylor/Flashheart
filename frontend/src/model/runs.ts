@@ -218,6 +218,8 @@ export function describeEntry(entry: TimelineEntry): string {
       return "Answered on the board";
     case "question.delivered":
       return "Answer delivered";
+    case "comment.delivered":
+      return `${entry.detail === "change-request" ? "Change request" : "Comment"}${on(entry.ticket)} delivered`;
     case "question.answered-in-session":
       return `Question${on(entry.ticket)} answered in the session`;
     default:

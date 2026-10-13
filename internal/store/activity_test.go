@@ -54,7 +54,7 @@ func TestUpdateActivityKeepsStateWithTheLog(t *testing.T) {
 
 // Retention removes the session files nothing has written since before,
 // each checked again under the project lock (FH-82): activity state and
-// answers inboxes left by sessions that never reported their end.
+// session inboxes left by sessions that never reported their end.
 func TestPruneSessionFilesRemovesOnlyThoseWrittenBefore(t *testing.T) {
 	t.Parallel()
 
@@ -75,9 +75,9 @@ func TestPruneSessionFilesRemovesOnlyThoseWrittenBefore(t *testing.T) {
 		}
 		return full
 	}
-	gone := []string{write("activity/claude--old.json", old), write("answers/claude--old.jsonl", old)}
+	gone := []string{write("activity/claude--old.json", old), write("inbox/claude--old.jsonl", old), write("answers/claude--old.jsonl", old)}
 	kept := []string{
-		write("activity/claude--fresh.json", fresh), write("answers/claude--fresh.jsonl", fresh),
+		write("activity/claude--fresh.json", fresh), write("inbox/claude--fresh.jsonl", fresh), write("answers/claude--fresh.jsonl", fresh),
 		write("activity/notes.txt", old), write("answers/notes.txt", old),
 	}
 	if err := os.MkdirAll(filepath.Join(root, "alpha", ".flashheart", "activity", "claude--dir.json"), 0o755); err != nil {
@@ -87,7 +87,7 @@ func TestPruneSessionFilesRemovesOnlyThoseWrittenBefore(t *testing.T) {
 	if removed, err := s.PruneActivity("alpha", cutoff); err != nil || removed != 1 {
 		t.Fatalf("PruneActivity = %d, %v", removed, err)
 	}
-	if removed, err := s.PruneInboxes("alpha", cutoff); err != nil || removed != 1 {
+	if removed, err := s.PruneInboxes("alpha", cutoff); err != nil || removed != 2 {
 		t.Fatalf("PruneInboxes = %d, %v", removed, err)
 	}
 	for _, name := range gone {

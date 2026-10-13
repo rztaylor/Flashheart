@@ -1233,7 +1233,7 @@ Options: refresh only between the markers (chosen); move the text into a
 file Flashheart owns outright, if Codex offers one; keep D44 and let
 `doctor` warn.
 
-## 2026-10-13 — D54: One typed inbox per session
+## 2026-10-13 — D54: One typed inbox per session (refined by D60)
 
 Decision (user, FH-130 review): revises D20. The answers inbox becomes a
 session's inbox, holding typed entries (answer, comment, change request),
@@ -1355,3 +1355,26 @@ configuration changes without the user seeing the exact diff and saying
 yes. `--write` stays as an older name for `--yes`, so scripts and notes
 that use it keep working. Doctor's fixes say `run flashheart setup
 <agent>`.
+
+## 2026-10-13 — D60: Old inboxes drain so the prompt hook checks one file
+
+Refines D54 (FH-135). The inbox is
+`<project>/.flashheart/inbox/<agent>--<session>.jsonl`, one typed entry
+per line (`answer`, `comment`, `change-request`; agent-protocol §4).
+D54 asks readers to deliver from the old `answers/` location while it
+drains, and HOOK-1 asks the prompt hook for one `stat` when nothing
+waits; checking both would cost every prompt a second. So the prompt hook
+checks only the new inbox, and old inboxes drain into it: queueing
+anything for a session moves its old inbox in first, `serve`'s retention
+moves them all at startup and daily, and the recovery note,
+`board_context`, tool results and `flashheart await` take both locations.
+Only an answer an older `serve` queues after the binary is replaced waits
+for one of those. A new session's recovery note takes the previous
+session's answers, as before, but leaves its comments and change
+requests: they were sent to that session. A delivered comment or change
+request records `comment.delivered` on the run it was sent to; the log
+never holds its text (D47), so it is delivered from the inbox alone.
+
+Options: the prompt hook checks both locations (a second `stat` on every
+prompt, for a short upgrade window); keep the `answers/` name (rejected
+by D54); drain into the new inbox and check one (chosen).

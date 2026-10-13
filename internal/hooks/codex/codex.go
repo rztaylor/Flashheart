@@ -72,7 +72,7 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		input.Recovery = true
 	case "UserPromptSubmit":
 		add(session, events.TurnStart, events.TurnStartData{Origin: events.OriginUser})
-		input.Answers = session
+		input.Inbox = session
 	case "PostToolUse":
 		// Codex has no failure event: a failed command is an ordinary result.
 		add(actor, events.ToolUsed, toolResult(p.ToolName, p.ToolInput, p.Cwd))

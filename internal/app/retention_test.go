@@ -53,7 +53,7 @@ func TestRetentionRemovesTheFilesOfASessionThatNeverEnded(t *testing.T) {
 	}
 	files := store.New(root)
 	defer files.Close()
-	if err := events.New(files).QueueAnswer("demo", "claude:s1", events.Delivery{ID: "q1", Run: "claude:s1", Question: "which?", Answer: "this", By: "human"}); err != nil {
+	if err := events.New(files).Queue("demo", events.Entry{Type: events.EntryAnswer, ID: "q1", Run: "claude:s1", Question: "which?", Text: "this", By: "human"}); err != nil {
 		t.Fatal(err)
 	}
 	listing := func(dir string) []string {
@@ -67,9 +67,24 @@ func TestRetentionRemovesTheFilesOfASessionThatNeverEnded(t *testing.T) {
 	if names := listing("activity"); !slices.Equal(names, []string{"claude--s1.json"}) {
 		t.Fatalf("activity state before retention = %v", names)
 	}
+	// An inbox an older binary left in the old location (D54).
+	old := filepath.Join(root, "demo", ".flashheart", "answers")
+	if err := os.MkdirAll(old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(old, "claude--s2.jsonl"), []byte(`{"id":"q2","run":"claude:s2","question":"which?","answer":"that","by":"human"}`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	var diagnostics bytes.Buffer
 	pruneExpired(files, time.Now().Add(11*time.Hour), 90, &diagnostics)
+	// Retention moves old inboxes into the inbox the prompt hook checks.
+	if names := listing("inbox"); !slices.Equal(names, []string{"claude--s1.jsonl", "claude--s2.jsonl"}) {
+		t.Fatalf("inboxes after retention = %v", names)
+	}
+	if names := listing("answers"); len(names) != 0 {
+		t.Fatalf("old inboxes after retention = %v, want moved", names)
+	}
 	if names := listing("activity"); len(names) != 1 {
 		t.Fatalf("activity state of a session silent for 11 hours = %v, want kept", names)
 	}
@@ -77,11 +92,11 @@ func TestRetentionRemovesTheFilesOfASessionThatNeverEnded(t *testing.T) {
 	if names := listing("activity"); len(names) != 0 {
 		t.Fatalf("activity state of a stale session = %v, want removed", names)
 	}
-	if names := listing("answers"); len(names) != 1 {
+	if names := listing("inbox"); len(names) != 2 {
 		t.Fatalf("inbox = %v, want kept until its day's events expire", names)
 	}
 	pruneExpired(files, time.Now().AddDate(0, 0, 92), 90, &diagnostics)
-	if names := listing("answers"); len(names) != 0 {
+	if names := listing("inbox"); len(names) != 0 {
 		t.Fatalf("inbox = %v, want removed with its day's events", names)
 	}
 	if strings.TrimSpace(diagnostics.String()) != "" {

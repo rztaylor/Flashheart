@@ -34,7 +34,7 @@ func askedBoard(t *testing.T, answered bool) string {
 		t.Fatal(err)
 	}
 	if answered {
-		if err := log.QueueAnswer("alpha", "claude:s1", events.Delivery{ID: "q-1", Run: "claude:s1", Question: "Push it?", Answer: "Push", By: "Robert"}); err != nil {
+		if err := log.Queue("alpha", events.Entry{Type: events.EntryAnswer, ID: "q-1", Run: "claude:s1", Question: "Push it?", Text: "Push", By: "Robert"}); err != nil {
 			t.Fatal(err)
 		}
 	}

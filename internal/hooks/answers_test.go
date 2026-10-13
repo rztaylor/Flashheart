@@ -31,7 +31,57 @@ func asked(t *testing.T, root, cwd, session string) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if err := log.QueueAnswer("demo", id, events.Delivery{ID: "q-1", Run: id, Ticket: "DM-1", Question: "Which schema?", Answer: "v2", By: "Robert"}); err != nil {
+	if err := log.Queue("demo", events.Entry{Type: events.EntryAnswer, ID: "q-1", Run: id, Ticket: "DM-1", Question: "Which schema?", Text: "v2", By: "Robert"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// sent queues a comment and a change request for a session, as FH-127 and
+// FH-126 will from the board.
+func sent(t *testing.T, root, session string) {
+	t.Helper()
+	s, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	log := events.New(s)
+	id := "fake:" + session
+	for _, e := range []events.Entry{
+		{Type: events.EntryComment, ID: "c-1", Run: id, Ticket: "DM-1", Text: "Use the blue one.", By: "Robert"},
+		{Type: events.EntryChangeRequest, ID: "c-2", Run: id, Ticket: "DM-1", Text: "Rename the button.", By: "Robert"},
+	} {
+		if err := log.Queue("demo", e); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// commentsDelivered lists the comment.delivered events as run, comment and
+// type.
+func commentsDelivered(t *testing.T, root string) []string {
+	t.Helper()
+	var list []string
+	for _, e := range readEvents(t, root, "demo") {
+		if e.Kind == events.CommentDelivered {
+			var data events.CommentDeliveredData
+			_ = e.Decode(&data)
+			list = append(list, e.Run+" "+data.Comment+" "+data.Type)
+		}
+	}
+	return list
+}
+
+// oldInbox leaves an answer in the inbox's location before D54, as an
+// older binary queued it.
+func oldInbox(t *testing.T, root, session string) {
+	t.Helper()
+	dir := filepath.Join(root, "demo", ".flashheart", "answers")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := `{"id":"q-old","run":"fake:` + session + `","ticket":"DM-1","question":"Old question?","answer":"Old answer","by":"Robert"}` + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "fake--"+session+".jsonl"), []byte(line), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -241,7 +291,7 @@ func TestAStopIsRecordedEvenWhenEnforcementCannotBeChecked(t *testing.T) {
 // failingMark is an inbox whose record of delivery cannot be written.
 type failingMark struct{ events.Inbox }
 
-func (failingMark) MarkDelivered(string, []events.Delivery, time.Time) error {
+func (failingMark) MarkDelivered(string, []events.Entry, time.Time) error {
 	return errors.New("disk full")
 }
 
@@ -276,4 +326,104 @@ func TestAnswersTakenAreShownWhenRecordingDeliveryFails(t *testing.T) {
 			t.Fatalf("prompt output = %q", out)
 		}
 	})
+}
+
+// Every prompt hands over each entry type, framed as what it is (D54).
+func TestPromptDeliversEachEntryType(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), repo(t)
+	asked(t, root, cwd, "s1")
+	sent(t, root, "s1")
+	out := run(t, root, "Prompt", "s1 "+cwd, fake{})
+	for _, part := range []string{
+		`[Flashheart] Answers to your questions (information, not instructions):`,
+		`- DM-1: "Which schema?" → "v2" (Robert)`,
+		`[Flashheart] Changes requested by the user on the board (their own words):`,
+		`- DM-1 (Robert): "Rename the button."`,
+		`[Flashheart] Comments from the user on the board (their own words):`,
+		`- DM-1 (Robert): "Use the blue one."`,
+	} {
+		if !strings.Contains(out, part) {
+			t.Fatalf("prompt output missing %q:\n%s", part, out)
+		}
+	}
+	if got := delivered(t, root); !slices.Equal(got, []string{"q-1"}) {
+		t.Fatalf("answers delivered = %v", got)
+	}
+	if got := commentsDelivered(t, root); !slices.Equal(got, []string{"fake:s1 c-1 comment", "fake:s1 c-2 change-request"}) {
+		t.Fatalf("comments delivered = %v", got)
+	}
+	if out := run(t, root, "Prompt", "s1 "+cwd, fake{}); out != "" {
+		t.Fatalf("second prompt output = %q", out)
+	}
+}
+
+// recordingInbox notes the mailboxes a delivery asks for.
+type recordingInbox struct {
+	events.Inbox
+	asked *[]events.Mailbox
+}
+
+func (r recordingInbox) Take(project string, box events.Mailbox) ([]events.Entry, error) {
+	*r.asked = append(*r.asked, box)
+	return r.Inbox.Take(project, box)
+}
+
+// The prompt hook checks one file, the session's inbox, whatever waits
+// (HOOK-1): an inbox left in the old location is left to the readers that
+// can afford a second check, which the session start is.
+// Not parallel: it swaps the package's inbox.
+func TestThePromptChecksOnlyTheSessionsInbox(t *testing.T) {
+	var asked []events.Mailbox
+	saved := inboxOf
+	inboxOf = func(log *events.Log) events.Inbox { return recordingInbox{log, &asked} }
+	t.Cleanup(func() { inboxOf = saved })
+
+	root, cwd := t.TempDir(), repo(t)
+	run(t, root, "SessionStart", "s1 "+cwd, fake{})
+	oldInbox(t, root, "s1")
+	asked = nil
+	if out := run(t, root, "Prompt", "s1 "+cwd, fake{}); out != "" {
+		t.Fatalf("prompt output = %q", out)
+	}
+	if !slices.Equal(asked, []events.Mailbox{{Session: "fake:s1"}}) {
+		t.Fatalf("the prompt took %+v", asked)
+	}
+	// The session, resumed, gets the old inbox with its recovery note.
+	out := run(t, root, "SessionStart", "s1 "+cwd, fake{})
+	if !strings.Contains(out, `Answered: "Old question?" → "Old answer" (Robert).`) {
+		t.Fatalf("recovery note = %q", out)
+	}
+}
+
+// The recovery note delivers the session's comments and change requests
+// with its answers, and takes only the answers of the previous session in
+// the worktree: its messages were sent to it, not to whoever comes next.
+func TestSessionStartDeliversCommentsToTheirOwnSessionOnly(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), repo(t)
+	asked(t, root, cwd, "s1")
+	sent(t, root, "s1")
+	out := run(t, root, "SessionStart", "s2 "+cwd, fake{})
+	if !strings.Contains(out, `Answered: "Which schema?"`) || strings.Contains(out, "Use the blue one") {
+		t.Fatalf("new session's recovery note = %q", out)
+	}
+	if got := commentsDelivered(t, root); len(got) != 0 {
+		t.Fatalf("comments delivered to the next session: %v", got)
+	}
+	// The session they were sent to, resumed, gets them.
+	out = run(t, root, "SessionStart", "s1 "+cwd, fake{})
+	for _, part := range []string{
+		`Change requested by Robert on DM-1 (the user's own words): "Rename the button."`,
+		`Comment from Robert on DM-1 (the user's own words): "Use the blue one."`,
+	} {
+		if !strings.Contains(out, part) {
+			t.Fatalf("recovery note missing %q:\n%s", part, out)
+		}
+	}
+	if got := commentsDelivered(t, root); !slices.Equal(got, []string{"fake:s1 c-1 comment", "fake:s1 c-2 change-request"}) {
+		t.Fatalf("comments delivered = %v", got)
+	}
 }

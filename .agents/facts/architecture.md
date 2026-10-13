@@ -55,14 +55,18 @@ Intended layout (packages are created when they get real content):
   `hook-errors.log`'s path is `logfile.HookErrorsPath`.
 - `internal/events`: event envelope and kinds, locked JSONL append (alone
   or with a session's hook activity state, under one project lock), daily
-  rotation, retention (an answers inbox expires with its day's events;
-  `app` also expires hook activity state after `stale_hours`, FH-82),
-  tolerant reading, and answer delivery: `Deliver`
-  is the one routine every path (prompt and session-start hooks, `await`,
-  `board_context`, the MCP server's tool results) hands answers over
+  rotation, retention (a session inbox expires with its day's events;
+  `app` also expires hook activity state after `stale_hours`, FH-82, and
+  moves inboxes left in the old `answers/` location into `inbox/`),
+  tolerant reading, and the session inbox (D54): typed entries (answer,
+  comment, change request) queued with `Log.Queue`, and `Deliver`, the
+  one routine every path (prompt and session-start hooks, `await`,
+  `board_context`, the MCP server's tool results) hands them over
   through, returning what it took even when recording delivery fails
-  (FH-78); `protocol.AnswersOf` is the one conversion to what the model is
-  shown, `runs.Set.PendingDeliveries` the fold's undelivered answers.
+  (FH-78); `protocol.InboxNote` is the one rendering of what the model is
+  shown (the recovery note has its own lines), `runs.Set.PendingDeliveries`
+  the fold's undelivered answers. The prompt hook checks one file; the
+  other paths also take the old location.
 - `internal/scrub`: secret scrubbing and length limits for agent strings.
 - `internal/gitinfo`: project, branch and worktree from a cwd without git
   subprocesses; cached.
@@ -85,7 +89,7 @@ Intended layout (packages are created when they get real content):
   a Codex call to the session its `_meta` names (D45); starts a run for a
   connection without hooks and ends it on disconnect (D34).
 - `internal/await`: `flashheart await`: wait for one question's answer in
-  its session's inbox (or given and undelivered in the `runs` fold, when a
+  its session's inbox (any entry there wakes it) (or given and undelivered in the `runs` fold, when a
   failed delivery took the inbox), deliver it, notice delivery elsewhere or an answer
   in the session (from the `runs` fold), time out.
 - `internal/setup`: an agent-neutral plan engine (`plan.go`: diff, write

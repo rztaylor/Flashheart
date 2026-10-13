@@ -333,7 +333,7 @@ func TestStopAndPromptAskForTheirChecks(t *testing.T) {
 		t.Fatalf("Stop input = %+v, %v", stop, err)
 	}
 	prompt, err := Adapter{}.Parse("UserPromptSubmit", []byte(`{"session_id":"s1","cwd":"/x","prompt":"go"}`))
-	if err != nil || prompt.Answers != "claude:s1" {
+	if err != nil || prompt.Inbox != "claude:s1" {
 		t.Fatalf("prompt input = %+v, %v", prompt, err)
 	}
 	out := Adapter{}.Render("Stop", hooks.Output{Block: "record a checkpoint"})

@@ -84,8 +84,28 @@ func TestProtocolSmoke(t *testing.T) {
 	if out := tool(first, "checkpoint", map[string]any{"ticket": "DM-1", "done": []string{"Panel shell"}, "next": []string{"Wire the Runs tab"}, "files": []string{"src/Panel.tsx"}}); !strings.Contains(out, "ok ticket=DM-1 checkpoint") {
 		t.Fatalf("checkpoint: %s", out)
 	}
+	// A change request and a comment sent to the session from the board
+	// (D54) arrive with its next prompt, each framed as what it is.
+	files := store.New(root)
+	for _, entry := range []events.Entry{
+		{Type: events.EntryChangeRequest, ID: "c-1", Run: "claude:" + first, Ticket: "DM-1", Text: "Rename the button.", By: "Robert"},
+		{Type: events.EntryComment, ID: "c-2", Run: "claude:" + first, Ticket: "DM-1", Text: "Looks good so far.", By: "Robert"},
+	} {
+		if err := events.New(files).Queue("demo", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files.Close()
 	// A new turn with nothing edited since the checkpoint stops freely.
-	hook("UserPromptSubmit", first, map[string]any{"prompt": "thanks"})
+	prompted := hook("UserPromptSubmit", first, map[string]any{"prompt": "thanks"})
+	for _, part := range []string{
+		"[Flashheart] Changes requested by the user on the board (their own words):", "Rename the button.",
+		"[Flashheart] Comments from the user on the board (their own words):", "Looks good so far.",
+	} {
+		if !strings.Contains(prompted, part) {
+			t.Fatalf("prompt context missing %q:\n%s", part, prompted)
+		}
+	}
 	if out := hook("Stop", first, map[string]any{"stop_hook_active": false}); out != "" {
 		t.Fatalf("stop after the checkpoint: %q", out)
 	}

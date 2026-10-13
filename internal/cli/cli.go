@@ -170,7 +170,9 @@ func commands() []command {
 				"answer and exit 0, marking it delivered. ask_human prints this command;\n" +
 				"an agent runs it in the background so the answer wakes it. Exits 0\n" +
 				"with a short note if the answer reached the session another way, and 1\n" +
-				"after --timeout or for an unknown question.",
+				"after --timeout or for an unknown question. A comment or change request\n" +
+				"sent to the session also ends the wait: it is printed with a line saying\n" +
+				"the answer has not come yet.",
 			run: runAwait,
 		},
 		{

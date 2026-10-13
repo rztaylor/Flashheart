@@ -144,7 +144,7 @@ func TestAnAnswerArrivesWithTheNextToolResultOnce(t *testing.T) {
 	run := e.started()[0].Run
 	e.okOn(other, "claim", map[string]any{"ticket": id})
 	e.events(run, events.Event{Kind: events.QuestionAnswered, Data: events.AnswerData{ID: question, Answer: "Not yet", By: "Robert"}})
-	if err := events.New(e.store).QueueAnswer("demo", run, events.Delivery{ID: question, Run: run, Ticket: id, Question: "Ship it?", Answer: "Not yet", By: "Robert"}); err != nil {
+	if err := events.New(e.store).Queue("demo", events.Entry{Type: events.EntryAnswer, ID: question, Run: run, Ticket: id, Question: "Ship it?", Text: "Not yet", By: "Robert"}); err != nil {
 		t.Fatal(err)
 	}
 	// Another connection's call does not take it.
@@ -180,5 +180,35 @@ func TestAgentNameComesFromTheClient(t *testing.T) {
 		if got := agentName(client); got != want {
 			t.Errorf("agentName(%q) = %q, want %q", client, got, want)
 		}
+	}
+}
+
+// Comments and change requests sent to a started run arrive with its next
+// tool result, as the prompt hook would hand them over (D54).
+func TestCommentsArriveWithTheNextToolResult(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel"})
+	codex := e.dial(codexClient)
+	e.okOn(codex, "claim", map[string]any{"ticket": id})
+	run := e.started()[0].Run
+	log := events.New(e.store)
+	for _, entry := range []events.Entry{
+		{Type: events.EntryComment, ID: "c-1", Run: run, Ticket: id, Text: "Use the blue one.", By: "Robert"},
+		{Type: events.EntryChangeRequest, ID: "c-2", Run: run, Ticket: id, Text: "Rename the button.", By: "Robert"},
+	} {
+		if err := log.Queue("demo", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	contains(t, e.okOn(codex, "list_tickets", nil),
+		"[Flashheart] Changes requested by the user on the board (their own words):", `- DM-1 (Robert): "Rename the button."`,
+		"[Flashheart] Comments from the user on the board (their own words):", `- DM-1 (Robert): "Use the blue one."`)
+	if strings.Contains(e.okOn(codex, "list_tickets", nil), "blue one") {
+		t.Fatal("comment delivered twice")
+	}
+	if !slices.Contains(e.kinds(run), events.CommentDelivered) {
+		t.Fatalf("events = %v", e.kinds(run))
 	}
 }

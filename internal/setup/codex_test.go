@@ -585,7 +585,7 @@ func TestCodexIgnoredEventsAreIgnoredByTheAdapter(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: %v", path, err)
 			}
-			if len(input.Events) > 0 || input.Recovery || input.Answers != "" || input.Stop || input.Reply != nil || input.Settled {
+			if len(input.Events) > 0 || input.Recovery || input.Inbox != "" || input.Stop || input.Reply != nil || input.Settled {
 				t.Errorf("%s: the adapter acts on %s (%+v); register it in codexEvents", path, event, input)
 			}
 			checked++

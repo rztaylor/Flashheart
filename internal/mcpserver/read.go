@@ -49,12 +49,12 @@ func (srv *server) boardContext(c *call, input BoardContextInput) (string, error
 	if err != nil {
 		return "", err
 	}
-	answers, err := c.deliverAnswers()
+	inbox, err := c.deliverInbox()
 	if err != nil {
 		return "", err
 	}
 	for limit := 12; ; limit-- {
-		out := c.renderContext(project, answers, limit)
+		out := c.renderContext(project, inbox, limit)
 		if len(out) <= contextBudget || limit <= 1 {
 			return out, nil
 		}
@@ -62,7 +62,7 @@ func (srv *server) boardContext(c *call, input BoardContextInput) (string, error
 }
 
 // renderContext lays out board_context with at most limit items per list.
-func (c *call) renderContext(project *board.Project, answers []protocol.Answer, limit int) string {
+func (c *call) renderContext(project *board.Project, inbox []events.Entry, limit int) string {
 	text := func(value string) string { return scrub.Limit(value, 40+limit*10) }
 	var lines []string
 	head := fmt.Sprintf("[Flashheart] project=%s key=%s run=%s", project.Name, project.Key, c.runLabel())
@@ -101,8 +101,8 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 			}
 		}
 	}
-	if len(answers) > 0 {
-		lines = append(lines, strings.TrimSuffix(protocol.AnswersNote(answers), "\n"))
+	if note := protocol.InboxNote(inbox); note != "" {
+		lines = append(lines, strings.TrimSuffix(note, "\n"))
 	}
 
 	var others []string
@@ -162,20 +162,20 @@ func (c *call) renderContext(project *board.Project, answers []protocol.Answer, 
 	return strings.Join(lines, "\n") + "\n"
 }
 
-// deliverAnswers hands the caller's waiting answers over: its session's
-// inbox and any answered question the log shows undelivered. They count as
-// delivered once shown (HOOK-5), and are shown even if recording that
-// fails: the log then still shows them undelivered, so a later call shows
-// them again rather than losing them.
-func (c *call) deliverAnswers() ([]protocol.Answer, error) {
+// deliverInbox hands over what waits for the caller: its session's inbox,
+// in either location (D54), and any answered question the log shows
+// undelivered. They count as delivered once shown (HOOK-5), and are shown
+// even if recording that fails: the log then still shows an answer
+// undelivered, so a later call shows it again rather than losing it.
+func (c *call) deliverInbox() ([]events.Entry, error) {
 	if c.run == "" || c.project == "" {
 		return nil, nil
 	}
-	waiting, err := events.Deliver(c.srv.log, c.project, []string{c.session()}, c.set.PendingDeliveries(c.session()), c.now)
+	waiting, err := events.Deliver(c.srv.log, c.project, []events.Mailbox{{Session: c.session(), Legacy: true}}, c.set.PendingDeliveries(c.session()), c.now)
 	if len(waiting) == 0 && err != nil {
 		return nil, err
 	}
-	return protocol.AnswersOf(waiting), nil
+	return waiting, nil
 }
 
 func handoffLines(h board.HandoffNote, limit int, text func(string) string) []string {

@@ -142,7 +142,7 @@ func (srv *server) disconnected(cn *conn) {
 // handOver stops a connection standing in for its run's hooks once they
 // report the run (a Codex session whose hooks started mid-session,
 // agent-protocol §7.1): the activity it counted is recorded, and from then
-// on the hooks count the session's tool calls, deliver its answers and end
+// on the hooks count the session's tool calls, deliver its inbox and end
 // it.
 func (srv *server) handOver(cn *conn, run string) {
 	if cn == nil {
@@ -171,9 +171,9 @@ func (cn *conn) take() (events.ActivityData, bool) {
 // called counts a tool call of the connection's started run as its
 // activity, recorded as hooks record tool results: at most one activity
 // record per activity_seconds, which renews its claim's lease
-// (agent-protocol §3, §6). It returns the answers waiting for the run,
-// marked delivered: with no prompt hook, the next tool result carries them
-// (HOOK-5). A call attributed to another run leaves the started run alone.
+// (agent-protocol §3, §6). It returns what waits in the run's inbox
+// (answers, comments, change requests; D54), marked delivered: with no
+// prompt hook, the next tool result carries them (HOOK-5). A call attributed to another run leaves the started run alone.
 func (srv *server) called(inv *invocation, ok bool) string {
 	cn := inv.conn
 	if cn == nil {
@@ -200,9 +200,9 @@ func (srv *server) called(inv *invocation, ok bool) string {
 	cn.mu.Unlock()
 	// Taken from the inbox, they are shown even if recording their
 	// delivery fails; board_context would then show them again.
-	waiting, _ := events.Deliver(srv.log, project, []string{run}, nil, now)
+	waiting, _ := events.Deliver(srv.log, project, []events.Mailbox{{Session: run, Legacy: true}}, nil, now)
 	if len(waiting) == 0 {
 		return ""
 	}
-	return "\n" + protocol.AnswersNote(protocol.AnswersOf(waiting))
+	return "\n" + protocol.InboxNote(waiting)
 }

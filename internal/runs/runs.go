@@ -198,10 +198,10 @@ type Question struct {
 // Answered reports whether a human answered the question.
 func (q Question) Answered() bool { return !q.AnsweredAt.IsZero() }
 
-// Delivery is the question's board answer as delivery hands it over, the
-// same as the answers inbox carries it (HOOK-5).
-func (q Question) Delivery() events.Delivery {
-	return events.Delivery{ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Answer: q.Answer, By: q.AnsweredBy}
+// InboxEntry is the question's board answer as delivery hands it over,
+// the same as the session inbox carries it (HOOK-5).
+func (q Question) InboxEntry() events.Entry {
+	return events.Entry{Type: events.EntryAnswer, ID: q.ID, Run: q.Run, Ticket: q.Ticket, Question: q.Text, Text: q.Answer, By: q.AnsweredBy}
 }
 
 // Open reports whether the question still needs the human: unanswered, or
@@ -537,6 +537,10 @@ func (s *Set) Apply(e events.Event) {
 			q.Delivered = true
 			entry.Ticket = q.Ticket
 		}
+	case events.CommentDelivered:
+		var data events.CommentDeliveredData
+		_ = e.Decode(&data)
+		entry.Ticket, entry.Detail = data.Ticket, data.Type
 	}
 	r.Timeline = append(r.Timeline, entry)
 	if answers {
@@ -718,13 +722,13 @@ func (s *Set) PendingAnswers(session string) []Question {
 	return pending
 }
 
-// PendingDeliveries is PendingAnswers of each session, as the deliveries
+// PendingDeliveries is PendingAnswers of each session, as the entries
 // events.Deliver hands over with what it takes from the inboxes.
-func (s *Set) PendingDeliveries(sessions ...string) []events.Delivery {
-	var list []events.Delivery
+func (s *Set) PendingDeliveries(sessions ...string) []events.Entry {
+	var list []events.Entry
 	for _, session := range sessions {
 		for _, q := range s.PendingAnswers(session) {
-			list = append(list, q.Delivery())
+			list = append(list, q.InboxEntry())
 		}
 	}
 	return list
