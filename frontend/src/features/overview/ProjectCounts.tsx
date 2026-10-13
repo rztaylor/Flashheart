@@ -5,6 +5,7 @@ import { Icon } from "../../components/Icon";
 import { KeyBadge } from "../../components/KeyBadge";
 import { attentionClass } from "../../components/NeedsYou";
 import { stateToneIcon, stateToneInk } from "../../components/Pill";
+import { RunStateMark } from "../../components/RunState";
 import { type ProjectRow, projectRows } from "../../model/overview";
 import { needsYouPhrase } from "../../model/runs";
 import {
@@ -18,17 +19,19 @@ import {
 // columns is the list's layout once the card is wide enough for a table
 // (50rem of its own width, so a ticket panel beside the Overview narrows it
 // too): the project, then tickets, the five board columns, blocked, needs
-// repair and needs you. Narrower, a row stacks: the project, with its needs
-// repair and Needs you beside the name when not zero, over its tickets and
-// blocked in words, then the five columns' counts over their words. Every
-// class is spelled out whole (@min-[50rem]:) so Tailwind finds it.
+// repair, live and needs you; their least widths (10rem and ten of 3.25rem,
+// with the gaps and padding) fit in 50rem. Narrower, a row stacks: the
+// project, with its needs repair and Needs you beside the name when not
+// zero, over its tickets, blocked and live in words, then the five columns'
+// counts over their words. Every class is spelled out whole (@min-[50rem]:)
+// so Tailwind finds it.
 const columns =
-  "grid-cols-5 @min-[50rem]:grid-cols-[minmax(11rem,1.6fr)_repeat(9,minmax(3.75rem,1fr))]";
+  "grid-cols-5 @min-[50rem]:grid-cols-[minmax(10rem,1.6fr)_repeat(10,minmax(3.25rem,1fr))]";
 
 // ProjectCounts is All projects' list of every project with its counts
-// (FH-153, PRJ-6), in the rail's order, most recently active first: what
-// the rail's badges keep in their tooltips, side by side. Each row leads to
-// the project's own Overview.
+// (FH-153, PRJ-6) and live agents (FH-162), in the rail's order, most
+// recently active first: what the rail's badges keep in their tooltips,
+// side by side. Each row leads to the project's own Overview.
 export function ProjectCounts({
   projects,
   hrefFor,
@@ -81,6 +84,15 @@ export function ProjectCounts({
           Blocked
         </span>
         <span className="text-center">Needs repair</span>
+        <span className="text-center">
+          <RunStateMark
+            state="working"
+            size={11}
+            still
+            className="mr-1 inline align-[-1px]"
+          />
+          Live
+        </span>
         <span className="text-center">Needs you</span>
       </div>
       <ul className="divide-y divide-rule border-t border-rule">
@@ -118,7 +130,10 @@ function ProjectCountsRow({ row, href }: { row: ProjectRow; href: string }) {
           </span>
           <span className="block text-xs text-ink-muted @min-[50rem]:hidden">
             {row.tickets} {row.tickets === 1 ? "ticket" : "tickets"} ·{" "}
-            {row.blocked} blocked
+            {row.blocked} blocked ·{" "}
+            <span className={row.live > 0 ? undefined : "text-ink-faint"}>
+              {row.live} live
+            </span>
           </span>
         </span>
       </span>
@@ -142,6 +157,11 @@ function ProjectCountsRow({ row, href }: { row: ProjectRow; href: string }) {
       />
       <Count
         className="hidden @min-[50rem]:grid"
+        value={row.live}
+        name="live"
+      />
+      <Count
+        className="hidden @min-[50rem]:grid"
         value={row.needsYou}
         mark="needs-you"
       />
@@ -162,15 +182,19 @@ const marks = {
 function Count({
   value,
   mark,
+  name,
   className = "grid",
 }: {
   value: number;
   mark?: keyof typeof marks;
+  // name marks the cell for tests (data-count).
+  name?: string;
   className?: string;
 }) {
   const marked = mark && value > 0;
   return (
     <span
+      data-count={name}
       data-mark={marked ? mark : undefined}
       className={`${className} h-6 min-w-6 place-items-center justify-self-center rounded-full px-1.5 text-sm tabular-nums ${
         marked ? marks[mark] : value > 0 ? "text-ink" : "text-ink-faint"

@@ -640,20 +640,24 @@ title, the project count) listing every project in the rail's order, most
 recently active first. Each row is one link to that project's Overview,
 named with the project and every count (*Alpha (alpha): 7 tickets (3 in
 backlog, 1 up next, 1 in progress, 1 ready to review, 1 done), 3 blocked,
-1 needs repair, 1 agent needs you*). Once the card is at least 50rem wide
-(its own width, so a ticket panel beside the Overview narrows it too) the
-rows are a table under one line of column words: Project (key badge and
-name), Tickets, the five board columns (each word after its status icon in
-its state ink), Blocked (after the no-entry sign in the blocked ink),
-Needs repair and Needs you, the counts centred in tabular numerals, zeros
-faint. Tickets counts every ticket; the columns
+1 needs repair, 3 agents live, 1 agent needs you*). Once the card is at
+least 50rem wide (its own width, so a ticket panel beside the Overview
+narrows it too) the rows are a table under one line of column words:
+Project (key badge and name), Tickets, the five board columns (each word
+after its status icon in its state ink), Blocked (after the no-entry sign
+in the blocked ink), Needs repair, Live (after the Working run-state mark,
+still) and Needs you, the counts centred in tabular numerals, zeros faint.
+Live (FH-162) counts the project's agents still running, subagents
+included: working, quiet, waiting and those that need you, so Needs you is
+the part of it that needs you. Tickets counts every ticket; the columns
 count as the pipeline does, so Done leaves out rejected tickets and the
 columns of every row add up to the pipeline. A needs-repair count other
 than zero is ringed in dashed ink; a Needs you count other than zero sits
 on the attention colour. Narrower, a row stacks: the key badge and name,
 with the needs-repair and Needs you marks beside it in words when not zero,
-over *N tickets · N blocked*, then the five columns' counts over their
-words. A single project's Overview has no list.
+over *N tickets · N blocked · N live* (no live agents faint), then the
+five columns' counts over their words. A single project's Overview has no
+list.
 
 Then the rounded section cards in fixed order:
 
