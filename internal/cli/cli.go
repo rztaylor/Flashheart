@@ -490,23 +490,29 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 	if stdin == nil {
 		stdin = strings.NewReader("")
 	}
-	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: registered.hooks, RefreshSkill: skillRefresher(registered.setup, env.deps)})
+	hooks.Run(hooks.Options{Root: root, Event: args[1], Stdin: stdin, Stdout: env.stdout, Adapter: registered.hooks, RefreshProtocol: protocolRefresher(registered.setup, env.deps)})
 	return nil
 }
 
-// skillRefresher keeps the agent's installed protocol skill current at
-// session start (agent-protocol §5.4), for agents that have one.
-func skillRefresher(a setup.Agent, deps Dependencies) func() (bool, error) {
-	refresher, ok := a.(setup.SkillRefresher)
+// protocolRefresher keeps the agent's installed protocol text current at
+// session start (agent-protocol §5.4), for agents that have it: Claude
+// Code's skill in the home directory, Codex's section of AGENTS.md in
+// $CODEX_HOME.
+func protocolRefresher(a setup.Agent, deps Dependencies) func() (string, error) {
+	refresher, ok := a.(setup.ProtocolRefresher)
 	if !ok || deps.HomeDir == nil {
 		return nil
 	}
-	return func() (bool, error) {
+	return func() (string, error) {
 		home, err := deps.HomeDir()
 		if err != nil {
-			return false, err
+			return "", err
 		}
-		return refresher.RefreshSkill(home)
+		options := setup.Options{Home: home}
+		if deps.Getenv != nil {
+			options.CodexHome = deps.Getenv("CODEX_HOME")
+		}
+		return refresher.RefreshProtocol(options)
 	}
 }
 

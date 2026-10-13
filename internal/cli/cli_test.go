@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -997,5 +998,60 @@ func TestClaudeSessionStartRefreshesTheInstalledSkill(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(skill); string(got) != protocol.Skill() {
 		t.Fatalf("skill not refreshed:\n%s", got)
+	}
+}
+
+// Codex's session-start hook refreshes the marked section of the global
+// AGENTS.md in $CODEX_HOME and says so in the session's context (FH-121,
+// D53); the user's text around it stays as it was.
+func TestCodexSessionStartRefreshesTheProtocolText(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	root := t.TempDir()
+	codexHome := filepath.Join(h.home, "codex-home")
+	h.env["CODEX_HOME"] = codexHome
+	stale, err := os.ReadFile(filepath.Join("..", "..", "testdata", "setup", "codex", "stale", "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	agents := filepath.Join(codexHome, "AGENTS.md")
+	mustWrite(t, agents, string(stale))
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	repo := filepath.Join(base, "demo")
+	mustWrite(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
+	h.stdin = `{"session_id":"019a7c00-0000-7000-8000-000000000001","cwd":"` + repo + `","hook_event_name":"SessionStart","source":"startup"}`
+
+	code, stdout, stderr := h.run("hook", "codex", "SessionStart", "--root", root)
+	if code != 0 || stderr != "" {
+		t.Fatalf("hook = %d, %q, %q", code, stdout, stderr)
+	}
+	var out struct {
+		HookSpecificOutput struct {
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &out); err != nil {
+		t.Fatalf("output %q: %v", stdout, err)
+	}
+	if want := protocol.AgentsUpdatedNote(agents) + "\n"; !strings.HasPrefix(out.HookSpecificOutput.AdditionalContext, want) {
+		t.Fatalf("context = %q, want it to open with %q", out.HookSpecificOutput.AdditionalContext, want)
+	}
+	got, _ := os.ReadFile(agents)
+	if !strings.Contains(string(got), protocol.Body()) || strings.Contains(string(got), "An older version of the protocol text.") {
+		t.Fatalf("section not refreshed:\n%s", got)
+	}
+	for _, mine := range []string{"# My global rules\n\n- Answer in British English.\n\n<!-- BEGIN FLASHHEART", "<!-- END FLASHHEART -->\n\n## More of my rules\n\n- Keep commits small.\n"} {
+		if !strings.Contains(string(got), mine) {
+			t.Fatalf("the user's text changed; lacks %q:\n%s", mine, got)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(h.home, ".codex")); err == nil {
+		t.Fatal("the hook wrote ~/.codex although CODEX_HOME is set")
+	}
+
+	// The next session start finds it current and says nothing about it.
+	if _, stdout, _ = h.run("hook", "codex", "SessionStart", "--root", root); strings.Contains(stdout, "AGENTS.md was updated") {
+		t.Fatalf("a current section was reported updated: %q", stdout)
 	}
 }

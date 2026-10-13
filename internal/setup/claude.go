@@ -92,7 +92,7 @@ func splitProgram(command string) (program, rest string, ok bool) {
 // CLI, and the protocol skill under ~/.claude/skills.
 type Claude struct{}
 
-var _ SkillRefresher = Claude{}
+var _ ProtocolRefresher = Claude{}
 
 // Name returns "claude".
 func (Claude) Name() string { return "claude" }

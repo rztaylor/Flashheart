@@ -25,10 +25,13 @@ type Agent interface {
 	Diagnose(Options) []health.Finding
 }
 
-// SkillRefresher is an Agent with an installed protocol skill that the
+// ProtocolRefresher is an Agent whose installed protocol text the
 // session-start hook keeps current (agent-protocol §5.4).
-type SkillRefresher interface {
-	RefreshSkill(home string) (bool, error)
+type ProtocolRefresher interface {
+	// RefreshProtocol rewrites the installed text when it is out of date,
+	// never installing it, and returns the line that opens the session's
+	// context when it did, else "".
+	RefreshProtocol(Options) (string, error)
 }
 
 // Options describe one machine for an agent's configuration.

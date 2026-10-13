@@ -87,10 +87,11 @@ type Options struct {
 	Stdout  io.Writer
 	Now     func() time.Time
 	Adapter Adapter
-	// RefreshSkill keeps the agent's installed protocol skill current at
-	// session start and reports whether it rewrote it (agent-protocol §5.4);
-	// nil for agents without one.
-	RefreshSkill func() (bool, error)
+	// RefreshProtocol keeps the agent's installed protocol text (Claude
+	// Code's skill, Codex's section of AGENTS.md) current at session start
+	// and returns the note that opens the context when it rewrote it
+	// (agent-protocol §5.4); nil for agents without one.
+	RefreshProtocol func() (string, error)
 	// ChangeTimeout is how long after the invocation began the worktree
 	// check at a session's turn end and end may run; zero means
 	// DefaultChangeTimeout.
@@ -191,9 +192,9 @@ func handle(options Options) error {
 	if info.Repo == "" {
 		return nil
 	}
-	// A skill that cannot be refreshed is logged at once, whatever happens
-	// to the rest of the hook; the session start goes on.
-	skillNote, err := refreshSkill(options, input)
+	// Protocol text that cannot be refreshed is logged at once, whatever
+	// happens to the rest of the hook; the session start goes on.
+	refreshNote, err := refreshProtocol(options, input)
 	if err != nil {
 		logError(options, err)
 	}
@@ -253,7 +254,7 @@ func handle(options Options) error {
 		// delivery failed, so they are never lost; the failure is logged.
 		out.Context, err = recovery(s, log, inboxOf(log), project, info, appended, at, settings)
 		problem = errors.Join(problem, err)
-		out.Context = joinNotes(skillNote, out.Context)
+		out.Context = joinNotes(refreshNote, out.Context)
 	case input.Inbox != "":
 		// Every prompt gets what waits in the session's inbox, the user's
 		// prompt or not: a board answer or comment reaches the agent
@@ -265,18 +266,15 @@ func handle(options Options) error {
 	return errors.Join(problem, write(options, out))
 }
 
-func refreshSkill(options Options, input Input) (string, error) {
-	if !input.Recovery || options.RefreshSkill == nil {
+func refreshProtocol(options Options, input Input) (string, error) {
+	if !input.Recovery || options.RefreshProtocol == nil {
 		return "", nil
 	}
-	updated, err := options.RefreshSkill()
+	note, err := options.RefreshProtocol()
 	if err != nil {
-		return "", fmt.Errorf("refresh skill: %w", err)
+		return "", fmt.Errorf("refresh protocol text: %w", err)
 	}
-	if updated {
-		return protocol.SkillUpdatedNote, nil
-	}
-	return "", nil
+	return note, nil
 }
 
 func joinNotes(notes ...string) string {

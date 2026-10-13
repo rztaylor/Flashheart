@@ -99,11 +99,12 @@ Intended layout (packages are created when they get real content):
 - `internal/setup`: an agent-neutral plan engine (`plan.go`: diff, write
   with backup, uninstall moves, commands through the agent's CLI) and the
   `setup.Agent` interface (install, uninstall, diagnose, find its CLI;
-  optional `SkillRefresher`), implemented per agent (`claude.go`; `codex.go`,
-  which edits Codex's `config.toml` as text through its own statement
-  scanner, `toml.go`, with no TOML library; refreshing an installed Claude
-  skill is called by the session-start hook through `cli`; `hooks` never
-  imports `setup`).
+  optional `ProtocolRefresher`), implemented per agent (`claude.go`;
+  `codex.go`, which edits Codex's `config.toml` as text through its own
+  statement scanner, `toml.go`, with no TOML library; refreshing the
+  installed protocol text, Claude Code's skill or Codex's marked section of
+  `AGENTS.md`, is called by the session-start hook through `cli`; `hooks`
+  never imports `setup`).
 - `internal/health`: a check's `Finding` and `Level`, shared by setup's
   diagnoses and doctor.
 - `internal/doctor`: `flashheart doctor` (SET-4): root checks, a section per
