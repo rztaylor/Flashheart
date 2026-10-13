@@ -128,10 +128,10 @@
   --fh-line-ink-7: #ffffff;
   --fh-line-ink-8: #ffffff;
 
-  /* Paint: the "Colour by" value. The tint washes the card header and
-     fills the tag, whose word is set in the strong shade, so paint stays
-     softer than the saturated line colours; -ink is text on the strong
-     shade (the colour key's swatch). */
+  /* Paint: the "Colour by" value. The tint washes the whole card (FH-147),
+     so paint stays softer than the saturated line colours; the strong
+     shade draws the type's icon and the colour key's swatch; -ink is text
+     on the strong shade. */
   --fh-paint-type-feature: #6247c4;
   --fh-paint-type-feature-tint: #f0ecfd;
   --fh-paint-type-feature-ink: #ffffff;
@@ -174,6 +174,15 @@
   --fh-paint-age-older: #9a4426;
   --fh-paint-age-older-tint: #f8e7df;
   --fh-paint-age-older-ink: #ffffff;
+
+  /* Priority: the card's three-bar marker (FH-147). High fills three bars
+     warm, medium two neutral grey, low one blue (a sky blue, apart from
+     the refactor paint and the review state); the rest are empty. Each is
+     3:1 on the card and every paint tint, and against an empty bar. */
+  --fh-priority-high: #c2410c;
+  --fh-priority-medium: #71717a;
+  --fh-priority-low: #0369a1;
+  --fh-priority-off: #e4e4e7;
   color-scheme: light;
 }
 
@@ -314,6 +323,11 @@
   --fh-paint-age-older: #f0a585;
   --fh-paint-age-older-tint: #33231c;
   --fh-paint-age-older-ink: #111111;
+
+  --fh-priority-high: #ff9a62;
+  --fh-priority-medium: #a1a1aa;
+  --fh-priority-low: #56b6f0;
+  --fh-priority-off: #333338;
   color-scheme: dark;
 }
 

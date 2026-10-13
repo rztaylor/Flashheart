@@ -14,7 +14,9 @@
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
+  Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou,
+  TicketMarks (a card's type icon and three-bar priority marker),
+  QuestionCard, Aside, Popover,
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
   ui-layout.md §8) → `features/<feature>/` (board,
@@ -134,7 +136,8 @@
   one layout and content contract, `docs/dev/specs/ui-layout.md`: a theme
   changes tokens only, never structure. Colour roles are fixed there (§7):
   line colours mean workstreams (bullet, card stripe, route); paint shows
-  the Colour by value as a header tint plus a named tag; status pills
+  the Colour by value as a whole-card tint, named by its colour chip and
+  the card's name; status pills
   (neutral, amber, blue, green) and the blocked pill always carry an icon
   and words; Needs you is the one attention plate; dashes mean suspended
   service, a missing station or needs repair; the Working dot is the only

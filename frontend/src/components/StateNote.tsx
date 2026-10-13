@@ -4,7 +4,7 @@ import { BlockerPill } from "./Pill";
 type Kind = "blocked" | "repair" | "warning";
 
 const icons = {
-  blocked: "diamond",
+  blocked: "blocked",
   repair: "repair",
   warning: "warning",
 } as const;

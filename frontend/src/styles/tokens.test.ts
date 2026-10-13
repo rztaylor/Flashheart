@@ -80,6 +80,12 @@ const text: [string, string, number][] = [
   ["state-done-ink", "select-surface", 4.5],
   ["focus", "ground", 3],
   ["focus", "card", 3],
+  // The no-entry sign (FH-148) is a non-text mark: on its pill it is the
+  // blocked pair above; on its own (Blocked by, the State menu) it is the
+  // blocked ink on the surface it sits on.
+  ...["ground", "card", "panel", "popover"].map(
+    (surface): [string, string, number] => ["state-blocked-ink", surface, 3],
+  ),
   ...["handoff", "question"].flatMap((callout): [string, string, number][] => [
     ["ink", `callout-${callout}`, 4.5],
     ["ink-muted", `callout-${callout}`, 4.5],
@@ -150,4 +156,61 @@ describe("dark palette", () => {
     expect(value, `--fh-${name}`).toBeDefined();
     expect(chroma(value ?? "")).toBeLessThan(0.012);
   });
+});
+
+// A card's marks (FH-147, ui-layout.md §2) sit on the card or, with Colour
+// by, on any paint's tint, since the whole card takes it. The priority
+// bars and type icons are non-text marks (3:1, WCAG 2.2 SC 1.4.11), a
+// filled bar also against an empty one; a change-request count is text.
+describe.each(Object.entries(themes))("%s card marks", (_, tokens) => {
+  const grounds = [
+    "card",
+    ...[...tokens.keys()].filter(
+      (name) => name.startsWith("paint-") && name.endsWith("-tint"),
+    ),
+  ];
+  const marks: [string, number][] = [
+    ["priority-high", 3],
+    ["priority-medium", 3],
+    ["priority-low", 3],
+    ...[
+      "feature",
+      "bug",
+      "infra",
+      "test",
+      "refactor",
+      "docs",
+      "spike",
+      "other",
+    ].map((type): [string, number] => [`paint-type-${type}`, 3]),
+    ["state-blocked-ink", 3],
+    ["state-progress-ink", 4.5],
+    ["state-review-ink", 4.5],
+    ["ink-muted", 4.5],
+  ];
+  it.each(
+    marks.flatMap(([mark, minimum]) =>
+      grounds.map((ground): [string, string, number] => [
+        mark,
+        ground,
+        minimum,
+      ]),
+    ),
+  )("%s on %s meets %s:1", (fg, bg, minimum) => {
+    const a = tokens.get(fg);
+    const b = tokens.get(bg);
+    expect(a, `--fh-${fg}`).toBeDefined();
+    expect(b, `--fh-${bg}`).toBeDefined();
+    expect(contrast(a ?? "", b ?? "")).toBeGreaterThanOrEqual(minimum);
+  });
+
+  it.each(["high", "medium", "low"])(
+    "a filled %s bar stands out from an empty one",
+    (level) => {
+      const filled = tokens.get(`priority-${level}`) ?? "";
+      const empty = tokens.get("priority-off") ?? "";
+      expect(empty, "--fh-priority-off").not.toBe("");
+      expect(contrast(filled, empty)).toBeGreaterThanOrEqual(3);
+    },
+  );
 });

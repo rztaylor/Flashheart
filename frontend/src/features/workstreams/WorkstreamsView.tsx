@@ -257,7 +257,7 @@ const statusLabel = {
 
 const statusIcon = {
   active: "half",
-  blocked: "diamond",
+  blocked: "blocked",
   completed: "check",
 } as const;
 
