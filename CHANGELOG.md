@@ -16,6 +16,16 @@ All notable changes to this project are documented here. The project follows
   withdrawn, so the session never reads it. Once a session has read a
   comment, or while it is a change request not yet resolved, it stays,
   and the control says why.
+
+- Pasting from a web page keeps its headings, lists and links (FH-142,
+  D68, `EDIT-12`). Copy part of a page, a document or an issue and paste
+  it into a section's editor: headings, bold and italic text, code, links,
+  lists (nested and numbered), task boxes, quotes and tables arrive as
+  markdown. Headings start at level 3, so a pasted heading never splits
+  the section. Pasting is safe: nothing on the copied page is loaded or
+  run, images from the web become links to them, and links other than
+  web, email and the ticket's own files keep only their words. To paste
+  plain text instead, press Ctrl+Shift+V (Cmd+Shift+V on a Mac).
 - Look closely at screenshots (FH-146). The lightbox that opens a
   ticket's screenshots now fills the window, less a small margin, at
   every width, and zooms from 25% to 800% of the image's actual size:
@@ -37,9 +47,8 @@ All notable changes to this project are documented here. The project follows
   **Files**, or use their **Attach files**, to add them without touching
   the text. PNG, JPEG, GIF, WebP, PDF, text, markdown, JSON and log files
   up to 20 MB are taken, judged by what they contain rather than their
-  name; anything else is refused with the reason beside it. Pasted text,
-  web pages included, still pastes as plain text. Links to a ticket's own
-  files in its text now open the file.
+  name; anything else is refused with the reason beside it. Links to a
+  ticket's own files in its text now open the file.
 - Send a comment straight to the session working on a ticket (FH-127,
   D47, D63, `CARD-7`). In the comment box, **Tell a session now** also
   hands the comment, as your own words, to a live session that has

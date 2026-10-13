@@ -113,7 +113,8 @@ Singleserve is pinned at v0.2.2, which requires Go 1.26.6.
 Later additions: `@fontsource-variable/archivo` and an authored icon set
 (D14), and the interaction-test libraries (D42). A rich text editor needs
 its own decision before it is added (D56): CodeMirror 6 with a live
-preview (D61), its packages in D62.
+preview (D61), its packages in D62. Pasted web HTML is converted by our
+own code over the browser's `DOMParser`, not a library (D68).
 
 ## 2026-10-04 — D11: Safety model
 
@@ -1380,7 +1381,7 @@ Options: the prompt hook checks both locations (a second `stat` on every
 prompt, for a short upgrade window); keep the `answers/` name (rejected
 by D54); drain into the new inbox and check one (chosen).
 
-## 2026-10-13 — D61: The formatted ticket editor is CodeMirror 6 with a live preview
+## 2026-10-13 — D61: The formatted ticket editor is CodeMirror 6 with a live preview (paste revised by D68)
 
 Decision (user, 2026-10-13, after the FH-137 spike): CodeMirror 6 with a
 Flashheart-owned live preview, as recommended below. FH-16 builds it.
@@ -1564,7 +1565,7 @@ Codex release that changes it makes doctor report trusted hooks as
 changed, so re-record with the script when Codex updates its hooks and
 fix the rule if the recordings fail.
 
-## 2026-10-13 — D65: Files from the browser are judged by their bytes; pasted HTML stays text
+## 2026-10-13 — D65: Files from the browser are judged by their bytes; pasted HTML stays text (paste revised by D68)
 
 Decision (FH-18, `REV-7`, `SEC-7`): a file pasted, dropped or chosen on
 the board is sent as the body of `POST /api/tickets/{id}/files`, through
@@ -1674,3 +1675,78 @@ can search for); the end of a time-ordered id (chosen). Only version 7 is
 treated as time-ordered: version 1 starts with the fast-changing low
 bits of its time, and version 6 ends with a node id that is the same on
 one machine.
+
+## 2026-10-13 — D68: Pasted web HTML becomes markdown through a converter of our own
+
+Decision (FH-142, `EDIT-12`, revising the paste rule of D61 and D65):
+HTML pasted into the formatted editor is converted to markdown by
+`features/editor/htmlToMarkdown`, under 600 lines of Flashheart code (a
+third of them lists of element names) over the browser's own
+`DOMParser`; no package is added. The editor's one
+paste handler (`features/editor/paste`) takes, in order: files with no
+text (a screenshot, `REV-7`), as before; the plain text, after Ctrl or
+Cmd with Shift and V; copied HTML that holds what markdown keeps, as
+markdown; anything else as plain text, as before.
+
+What it keeps: headings (levels 1 and 2 become 3, so no pasted heading
+starts a section on save, D62), paragraphs and line breaks, bold,
+italic and strikethrough (Google Docs' styled spans too, not its
+normal-weight wrapper), inline code and fenced code with its language,
+links, nested and numbered lists, task boxes, quotes, GFM tables and
+rules. Markdown blocks pasted mid-line go on lines of their own.
+
+Safety: the copy is parsed into a document with no browsing context,
+which runs no script and loads no image, style sheet or frame. Chromium
+still checks every `style` and `on*` attribute against the page's CSP as
+it parses and reports each one refused, so those are renamed inside the
+tags first (`data-fh-style`); text between tags is untouched, since
+serialized HTML escapes its `<`. Only `http`, `https` and `mailto`
+links, and relative `files/` links, survive, read by the URL parser as a
+browser reads them (case, spaces, tabs) and written as it normalised
+them; any other link keeps only its words. A remote image becomes a
+link to it, named by its alt text or file; a `data:` or other image
+keeps its alt text; a `files/` image stays an image. Scripts, styles,
+frames, media, forms, icons and hidden parts give nothing, any other
+element gives its text, and text that would read as a tag is escaped,
+so the output never holds raw HTML. A copy with nothing markdown keeps
+(plain paragraphs, a code editor's coloured lines in a `white-space:
+pre` block) pastes its plain text, as before.
+
+The plain-text key: the paste event does not say whether Shift was
+held. Chromium's Paste and Match Style gives the event only the plain
+text; whether Firefox and Safari do was not checked. The editor
+therefore observes Ctrl or Cmd with Shift and V (with Alt too, Safari's
+key) as it is pressed and pastes the next paste within a second as plain
+text. It observes rather than handles the key, because CodeMirror's own
+Ctrl+Shift+V on a Mac (select a page down) would otherwise hide it.
+
+Options, compared on 25 realistic copies (a docs page, GitHub's
+highlighted code, task lists and heading anchors, Google Docs, a code
+editor, unsafe links and images), sizes minified and gzipped with
+esbuild:
+
+| | Our converter | turndown 7.2.4 + turndown-plugin-gfm 1.0.2 |
+|---|---|---|
+| Copies giving the expected markdown | 25 of 25 | 1 of 25 (tuned options, unchanged rules) |
+| Unsafe output | none | `javascript:`, `data:`, `vbscript:` links kept; remote images kept as images (4 copies) |
+| Unknown elements | their text | their text; script and style contents kept as text |
+| Raw HTML | never (tag-like text escaped) | text `<details>` passes through |
+| Fetches | none (DOMParser) | none in the browser (DOMParser) |
+| Added, min / gzip | 6.7 / 2.9 KB | 12.7 / 4.7 KB, plus our rules |
+| Packages new to the lockfile | 0 | 3 (`@mixmark-io/domino`, 7.7 MB, left out of the browser build) |
+| Licence, upkeep | ours | MIT; turndown maintained, the GFM plugin last released in 2018 |
+
+Turndown out of the box escapes identifiers (`get_ticket` becomes
+`get\_ticket`, what D61 rejected Tiptap for), bolds all of a Google Docs
+copy, indents lists by four spaces, and needs the unmaintained plugin
+for tables and strikethrough. Making it safe and faithful means
+replacing its link, image, heading, list, code and escape rules and
+adding Google Docs' and hidden elements' handling, which is most of what
+our converter is, while it would still bring three packages. D10 keeps
+commodity parsing out of our code: here the parsing is the browser's,
+and what remains is a short walk over the parsed tree whose rules are
+Flashheart's own (allowed schemes, heading levels, nothing fetched).
+Converting nothing (D65's choice, keeping plain text) stays the fallback
+for copies with no structure. A Sanitizer API pass was not used: it is
+not in every browser the board supports, and the converter reads only
+what it allows anyway.

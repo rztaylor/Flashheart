@@ -109,26 +109,6 @@ describe("MarkdownEditor", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("pastes the plain text of copied HTML, never its markup", async () => {
-    const { view, content } = await mount("Start.");
-    act(() => {
-      view.focus();
-      view.dispatch({ selection: EditorSelection.cursor(6) });
-    });
-    const data = new DataTransfer();
-    data.setData(
-      "text/html",
-      '<script>alert(1)</script><a href="javascript:alert(1)">bad link</a> <img src="https://evil.example/x.png">',
-    );
-    data.setData("text/plain", "bad link");
-    const paste = new Event("paste", { bubbles: true, cancelable: true });
-    Object.defineProperty(paste, "clipboardData", { value: data });
-    act(() => {
-      content.dispatchEvent(paste);
-    });
-    expect(view.state.doc.toString()).toBe("Start.bad link");
-  });
-
   it("leaves Ctrl+Enter and Escape to the page when no menu is open", async () => {
     const { view } = await mount("Tex");
     // Just after typing, the menu's query is pending but nothing shows:
@@ -159,6 +139,118 @@ describe("MarkdownEditor", () => {
     }
     expect(view.state.doc.toString()).toBe("Text");
   });
+});
+
+// Pasted web pages (FH-142): copied HTML pastes as markdown, unless it
+// holds nothing markdown keeps or the person asked for plain text with
+// Shift (Ctrl or Cmd with Shift and V).
+describe("MarkdownEditor pasting a web page", () => {
+  const clip = (html: string, plain: string) => {
+    const data = new DataTransfer();
+    if (html) data.setData("text/html", html);
+    if (plain) data.setData("text/plain", plain);
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", { value: data });
+    return paste;
+  };
+  const at = async (text: string, cursor = text.length) => {
+    const mounted = await mount(text);
+    act(() => {
+      mounted.view.focus();
+      mounted.view.dispatch({ selection: EditorSelection.cursor(cursor) });
+    });
+    return mounted;
+  };
+
+  it("pastes copied HTML as markdown, without its script, unsafe link or remote image", async () => {
+    const { view, content, onChange } = await at("Start.");
+    const paste = clip(
+      '<script>alert(1)</script><a href="javascript:alert(1)">bad link</a> <img src="https://evil.example/x.png">',
+      "bad link",
+    );
+    act(() => {
+      content.dispatchEvent(paste);
+    });
+    expect(paste.defaultPrevented).toBe(true);
+    const text = "Start.bad link [x.png](https://evil.example/x.png)";
+    expect(view.state.doc.toString()).toBe(text);
+    expect(onChange).toHaveBeenLastCalledWith(text);
+    expect(view.state.selection.main.head).toBe(text.length);
+  });
+
+  it("puts pasted headings and lists on lines of their own, and undoes as one", async () => {
+    const { view, content } = await at("Intro after", 5);
+    act(() => {
+      content.dispatchEvent(
+        clip(
+          "<h1>Title</h1><ul><li><b>One</b></li><li>Two</li></ul>",
+          "Title\nOne\nTwo",
+        ),
+      );
+    });
+    expect(view.state.doc.toString()).toBe(
+      "Intro\n\n### Title\n\n- **One**\n- Two\n\n after",
+    );
+    act(() => {
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "z",
+          ctrlKey: true,
+          bubbles: true,
+        }),
+      );
+    });
+    expect(view.state.doc.toString()).toBe("Intro after");
+  });
+
+  it("pastes the plain text when the HTML holds nothing markdown keeps", async () => {
+    const { view, content } = await at("");
+    const paste = clip("<p>One</p><p>Two</p>", "One\n\nTwo");
+    act(() => {
+      content.dispatchEvent(paste);
+    });
+    expect(view.state.doc.toString()).toBe("One\n\nTwo");
+  });
+
+  it.each([
+    ["Ctrl", { ctrlKey: true }],
+    ["Cmd", { metaKey: true }],
+  ])(
+    "pastes plain text after %s with Shift and V, then markdown again",
+    async (_name, mod) => {
+      const { view, content } = await at("");
+      const html = '<p><a href="https://example.com/">Docs</a> <b>now</b></p>';
+      act(() => {
+        view.contentDOM.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "V",
+            code: "KeyV",
+            shiftKey: true,
+            ...mod,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        content.dispatchEvent(clip(html, "Docs now"));
+      });
+      expect(view.state.doc.toString()).toBe("Docs now");
+      act(() => {
+        view.contentDOM.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "v",
+            code: "KeyV",
+            ...mod,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        content.dispatchEvent(clip(html, "Docs now"));
+      });
+      expect(view.state.doc.toString()).toBe(
+        "Docs now[Docs](https://example.com/) **now**",
+      );
+    },
+  );
 });
 
 // Files pasted, dropped or chosen (FH-18): a placeholder while each
@@ -243,6 +335,21 @@ describe("MarkdownEditor with files", () => {
     });
     expect(calls).toEqual([]);
     expect(view.state.doc.toString()).toBe("a1 b1");
+  });
+
+  it("attaches a pasted image that also carries HTML, rather than converting it", async () => {
+    const { calls, upload } = held();
+    const { view, content } = await mount("", vi.fn(), upload);
+    const paste = fileEvent("paste", [png("image.png")]);
+    (paste as ClipboardEvent).clipboardData?.setData(
+      "text/html",
+      '<img src="https://example.com/copied.png" alt="Copied">',
+    );
+    act(() => {
+      content.dispatchEvent(paste);
+    });
+    expect(calls.map(({ name }) => name)).toEqual(["screenshot.png"]);
+    expect(view.state.doc.toString()).toBe("");
   });
 
   it("drops several files in order, images as images and others as links", async () => {
