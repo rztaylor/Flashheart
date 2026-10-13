@@ -36,6 +36,7 @@ type Writer interface {
 	EditComment(project, id, comment string, pre store.Precondition, body string) (board.Comment, string, error)
 	RequestChanges(project, id string, comments []string, added *store.NewComment) (store.RequestedChanges, error)
 	SetCommentState(project, id, comment string, to board.CommentState) (board.Comment, string, error)
+	UploadAttachment(project, id string, input store.Upload) (store.StoredFile, error)
 	ReadConfig() (config.Config, error)
 	UpdateConfig(edit store.Edit) error
 }
@@ -65,6 +66,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/tickets/{id}/review/steps", b.setReviewStep)
 	mux.HandleFunc("POST /api/tickets/{id}/archive", b.archive)
 	mux.HandleFunc("POST /api/tickets/{id}/unarchive", b.unarchive)
+	mux.HandleFunc("POST /api/tickets/{id}/files", b.upload)
 	mux.HandleFunc("POST /api/projects/{project}/tickets", b.createTicket)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/order", b.reorderWorkstream)
 	mux.HandleFunc("PUT /api/projects/{project}/key", b.setKey)

@@ -16,9 +16,11 @@
 // references and retired keys (PRJ-5) (both deletes share one reference
 // scan, run without a lock for the preview and again under the root lock
 // to check its token), stores allow-listed, bounded,
-// scrubbed files in a ticket from their bytes (AddAttachment) or a local
-// path (CopyIntoTicket), with one reader and writer of files/index.yaml
-// that keeps what it does not write (REV-1, REV-5),
+// scrubbed files in a ticket from their bytes (AddAttachment), a local
+// path (CopyIntoTicket) or a browser upload read no further than the limit
+// and stored as what its bytes are (UploadAttachment, REV-7, SEC-7), with
+// one reader and writer of files/index.yaml that keeps what it does not
+// write (REV-1, REV-5),
 // writes reviews (REV-4) and ticks their How to Verify steps (REV-3),
 // keeps each ticket's activity file (board-format §Activity, D47): a
 // store writing as someone (As: the person at the board or an agent's

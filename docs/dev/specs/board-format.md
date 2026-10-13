@@ -485,7 +485,12 @@ a ticket or review refers to is copied in before it is recorded (`REV-5`).
 Adding a file appends one entry and keeps the rest of the index as written,
 keys Flashheart does not know and comments included; an index that is not a
 list of files is reported and never replaced. A file added from its bytes
-(not a local path) has no `source`.
+(not a local path) has no `source`. A file a person adds on the board
+(`REV-7`) has the person in `run`, its original name as the caption, and
+the extension of what its content is (`SEC-7`): a PNG sent as `notes.txt`
+is stored as `<time>-notes.png`; a pasted screenshot is
+`<time>-screenshot.png`. Adding a file does not change the ticket file
+and records no history (the event log records it, `EDIT-10`).
 
 ## project.yaml
 

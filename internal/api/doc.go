@@ -16,7 +16,8 @@
 // token (EDIT-8), project archive, restore and delete (PRJ-5), placement
 // in manual order (EDIT-9), workstream order,
 // project keys, preferences, answers to agents'
-// questions, comments on a ticket, D47) validate input, apply
+// questions, comments on a ticket, D47, files uploaded into a ticket,
+// REV-7, whose limit it reads from the config) validate input, apply
 // mdfile edits through store's locked, hash-checked writes, and answer a
 // stale hash with 409 and the current file (STO-3, EDIT-7). A preference
 // read waits for any preference save in flight (CFG-2). Each write that

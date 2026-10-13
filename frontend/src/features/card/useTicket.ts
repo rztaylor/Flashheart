@@ -19,8 +19,10 @@ import {
   setRequestState,
   setReviewStep,
 } from "../../api/edit";
+import { uploadFile } from "../../api/files";
 import { messageOf } from "../../model/errors";
 import { sentWords } from "../../model/requests";
+import type { Upload } from "../../model/uploads";
 import { type Resource, useResource } from "../../state/useResource";
 import { saveWithBase } from "../editing/precondition";
 import type { Editing } from "../editing/useEditing";
@@ -63,6 +65,9 @@ export interface TicketEdits {
   section(base: string, section: string, content: string): Promise<Saved>;
   // tickets are the project's tickets, for the depends-on picker.
   tickets(signal: AbortSignal): Promise<{ id: string; title: string }[]>;
+  // upload stores a file in the ticket's files/ (FH-18), then reloads it
+  // so its attachments list the file; the ticket's text is not written.
+  upload: Upload;
 }
 
 // useTicket loads a ticket, reloading it when the board revision moves
@@ -150,6 +155,13 @@ export function useTicket({
             tickets: (signal) =>
               fetchProjectBoard(fetcher, detail.project, false, signal).then(
                 (board) => board.cards.map(({ id, title }) => ({ id, title })),
+              ),
+            upload: (file, name, kind) =>
+              uploadFile(fetcher, detail.id, file, name, kind).then(
+                (uploaded) => {
+                  resource.reload();
+                  return uploaded;
+                },
               ),
           }
         : undefined,

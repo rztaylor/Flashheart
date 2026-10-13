@@ -13,7 +13,8 @@
 // KEY-5), a review's How to Verify
 // steps (REV-3), and local links in markdown with the attachment
 // allow-list, its message and the attachment kinds, for copying the files
-// they name (REV-2, REV-5). It owns the file schema: section
+// they name (REV-2, REV-5), and what a file from the browser is by its
+// bytes (SniffAttachment, SEC-7). It owns the file schema: section
 // names (sections.go; nothing else names a section), the workstream slug
 // rule (ValidSlug), new tickets' and workstreams' defaults, checks and
 // templates (templates.go, rendered from values, no clock of its own), and

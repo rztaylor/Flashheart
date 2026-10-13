@@ -20,7 +20,7 @@ interface MarkdownProps {
 
 // Markdown renders GitHub-flavoured markdown without raw HTML (CARD-2,
 // SEC-4). Ticket links open the ticket's full page (TicketLink), web links
-// open in a new tab, images
+// and the ticket's own files open in a new tab, images
 // load only from the attachment endpoint, and anything else renders as text.
 export function Markdown({
   children,
@@ -41,6 +41,9 @@ export function Markdown({
               {label}
             </TicketLink>
           );
+        // A ticket's own file (files/…) opens from the attachment endpoint,
+        // served with its detected type and a sandbox (SEC-4).
+        case "attachment":
         case "external":
           return (
             <a
