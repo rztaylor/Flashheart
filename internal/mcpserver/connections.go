@@ -33,7 +33,10 @@ type conn struct {
 // attributed to once its call began.
 type invocation struct {
 	conn *conn
-	run  string
+	// session and thread are the agent session and thread the call's
+	// _meta names (Codex, agent-protocol §5.3), "" when it names none.
+	session, thread string
+	run             string
 	// every is activity_seconds, read when the call began.
 	every time.Duration
 }
@@ -134,6 +137,27 @@ func (srv *server) disconnected(cn *conn) {
 		list = append([]events.Event{{Time: now, Run: cn.run, Agent: agentOf(cn.run), Kind: events.Activity, Project: cn.project, Data: activity}}, list...)
 	}
 	_ = srv.log.Append(list...)
+}
+
+// handOver stops a connection standing in for its run's hooks once they
+// report the run (a Codex session whose hooks started mid-session,
+// agent-protocol §7.1): the activity it counted is recorded, and from then
+// on the hooks count the session's tool calls, deliver its answers and end
+// it.
+func (srv *server) handOver(cn *conn, run string) {
+	if cn == nil {
+		return
+	}
+	cn.mu.Lock()
+	defer cn.mu.Unlock()
+	if cn.run != run {
+		return
+	}
+	if activity, ok := cn.take(); ok {
+		// Best effort, as every activity record of a started run.
+		_ = srv.log.Append(events.Event{Time: srv.options.Now().UTC(), Run: run, Agent: agentOf(run), Kind: events.Activity, Project: cn.project, Data: activity})
+	}
+	cn.run, cn.project = "", ""
 }
 
 // take returns the run's activity since its last record and starts a new

@@ -12,8 +12,9 @@ import { StateNote } from "./StateNote";
 // choices. The question is the agent's words, shown as data. Once
 // answered it says the answer is on its way to the session's next prompt
 // (its next Flashheart tool call, for a session without hooks), or, when
-// the session has ended, to its resumption (RUN-8); a session without hooks
-// does not resume, so its answer stays on the board.
+// the session has ended, to its resumption (RUN-8); a run the MCP server
+// minted for one connection does not resume, so its answer stays on the
+// board.
 // MAX_ANSWER matches the server's limit on an answer.
 const MAX_ANSWER = 1000;
 
@@ -43,9 +44,11 @@ export function QuestionCard({
   const reason = questionReason(question);
   const answered = Boolean(question.answeredAt);
   const ended = Boolean(question.sessionEnded);
-  // A run the MCP server started for a session without hooks gets answers
-  // with its next tool call, and never resumes once ended (D34).
-  const hookless = startedByMCP(question.run);
+  // A run without hooks gets answers with its next tool call (D34); one
+  // whose id the server minted for its connection never resumes once
+  // ended, while a session named by its own id (Codex) can (FH-74).
+  const hookless = Boolean(question.mcpOnly);
+  const final = hookless && startedByMCP(question.run);
   const delivery = hookless
     ? "with its next Flashheart tool call"
     : "with its next prompt";
@@ -96,7 +99,7 @@ export function QuestionCard({
       </p>
       {ended && !answered ? (
         <p className="text-xs text-ink-muted">
-          {hookless
+          {final
             ? "This session has ended and will not resume. You can still answer; the answer stays on the board."
             : "This session has ended. You can still answer; it gets your answer when it resumes."}
         </p>
@@ -110,7 +113,7 @@ export function QuestionCard({
         >
           Answered{" "}
           <span className="font-semibold text-ink">“{question.answer}”</span>.{" "}
-          {ended && hookless
+          {ended && final
             ? "The session has ended; the answer stays on the board."
             : ended
               ? "The session gets it when it resumes."

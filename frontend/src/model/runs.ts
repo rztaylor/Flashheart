@@ -40,18 +40,21 @@ const QUESTION_REASON: Record<QuestionKind, string> = {
   blocked: "Is blocked",
 };
 
-// startedByMCP reports a run id the MCP server minted for a session
-// without hooks, `<agent>:mcp-<random>` (agent-protocol §2): no prompt hook
-// delivers its answers; its next Flashheart tool call does (D34).
+// startedByMCP reports a run id the MCP server minted for one connection,
+// `<agent>:mcp-<random>` (agent-protocol §2): a run that ends with its
+// connection and never resumes. Whether a run has hooks is the server's
+// mcpOnly, not its id: a Codex session without hooks is named by its own
+// session id (FH-74).
 export function startedByMCP(runID: string): boolean {
   const [, session = ""] = runID.split(":");
   return session.startsWith("mcp-") && !session.includes("/");
 }
 
 // answerWaiting says that an answer waits for the asking session: for its
-// next prompt (HOOK-5), or its next tool call without hooks.
-function answerWaiting(runID: string): string {
-  return startedByMCP(runID)
+// next prompt (HOOK-5), or, for a run the server marks MCP-only (no
+// hooks), its next Flashheart tool call (D34).
+function answerWaiting(mcpOnly: boolean | undefined): string {
+  return mcpOnly
     ? "Answer waits for its next tool call"
     : "Answer waits for its next prompt";
 }
@@ -60,7 +63,7 @@ function answerWaiting(runID: string): string {
 // answer is waiting for the session.
 export function questionReason(question: Question): string {
   return question.answeredAt
-    ? answerWaiting(question.run)
+    ? answerWaiting(question.mcpOnly)
     : QUESTION_REASON[question.kind];
 }
 
@@ -68,11 +71,7 @@ export function questionReason(question: Question): string {
 // derived for it (FH-98): the server picks the blocker, this only words it.
 // subagent names the run when it is a subagent shown on its own, as the
 // Overview lists it; a subagent the run waits on is always named.
-export function needsReason(
-  reason: NeedsReason,
-  runID: string,
-  subagent = "",
-): string {
+export function needsReason(reason: NeedsReason, subagent = ""): string {
   const who = reason.waitingOn ? reason.agentType || "Subagent" : subagent;
   if (reason.kind === "permission") {
     if (!who) return permissionReason(reason.permission);
@@ -82,7 +81,7 @@ export function needsReason(
   }
   if (reason.kind !== "question" || !reason.question) return "";
   const words = reason.answered
-    ? answerWaiting(runID)
+    ? answerWaiting(reason.mcpOnly)
     : QUESTION_REASON[reason.question];
   return who
     ? `${who} ${words.charAt(0).toLowerCase()}${words.slice(1)}`
@@ -118,7 +117,7 @@ export function agentName(agent: string): string {
 // Flashheart's hooks: it reports tool calls, claims and questions only,
 // never a plan, edits or permission prompts (agent-protocol §7.1).
 export function mcpOnly(run: Run): boolean {
-  return startedByMCP(run.id);
+  return Boolean(run.mcpOnly);
 }
 
 // agentNote qualifies a run's agent: "MCP only" for a run without hooks.

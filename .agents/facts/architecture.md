@@ -18,9 +18,13 @@ Intended layout (packages are created when they get real content):
 - `internal/mdfile`: pure markdown-with-frontmatter parsing and round-trip
   editing (key order, comments, unknown keys), sections, checkboxes. No I/O.
 - `internal/board`: pure domain model (projects, tickets, workstreams,
-  columns), blocking rules with reasons, derived workstream status. No I/O.
+  columns), blocking rules with reasons, derived workstream status, and the
+  ticket-editing rules the board and agents share, each defined once
+  (editable fields and their checked change-set, title and section limits,
+  key rules, the blocked-start gate, `NoteLine`; FH-85). No I/O.
 - `internal/store`: the only package that touches the board root: discovery,
-  reads, locked atomic writes with hash preconditions, moves, archive,
+  reads, locked atomic writes with hash preconditions, typed ticket edits
+  from the board and agents alike (`EditTicket`), moves, archive,
   attachments, path confinement, creating the root (`EnsureRoot`), reading
   `config.yaml` (`ReadConfig`, through the `os.Root`, so a symlink out of
   the root is refused) and telling its own writes from others'
@@ -71,8 +75,9 @@ Intended layout (packages are created when they get real content):
   throttling tool results into activity records (agent-protocol §3);
   `internal/hooks/claude` and `internal/hooks/codex` are the only places that
   know each agent's payload schema.
-- `internal/mcpserver`: MCP tools over store, events and runs; starts a
-  run for a connection without hooks and ends it on disconnect (D34).
+- `internal/mcpserver`: MCP tools over store, events and runs; attributes
+  a Codex call to the session its `_meta` names (D45); starts a run for a
+  connection without hooks and ends it on disconnect (D34).
 - `internal/await`: `flashheart await`: wait for one question's answer in
   its session's inbox (or given and undelivered in the `runs` fold, when a
   failed delivery took the inbox), deliver it, notice delivery elsewhere or an answer

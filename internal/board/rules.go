@@ -19,6 +19,10 @@ var (
 	ScalarFields = []string{"title", "status", "type", "priority", "created", "branch", "pr", "workstream"}
 )
 
+// MaxTitle is the most characters a ticket's or workstream's title has,
+// whoever writes it (FH-85).
+const MaxTitle = 300
+
 var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,99}$`)
 
 // ValidateField checks one value of an editable field; list fields are
@@ -26,8 +30,8 @@ var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,99}$`)
 func ValidateField(key, value string) error {
 	switch key {
 	case "title":
-		if strings.TrimSpace(value) == "" || utf8.RuneCountInString(value) > 300 {
-			return errors.New("title must be 1 to 300 characters")
+		if strings.TrimSpace(value) == "" || utf8.RuneCountInString(value) > MaxTitle {
+			return fmt.Errorf("title must be 1 to %d characters", MaxTitle)
 		}
 	case "status":
 		if _, _, ok := ParseStatus(value); !ok {
@@ -93,17 +97,21 @@ func ReviewWarnings(ticket Ticket, review string, hasReview bool) []string {
 // document.
 const MaxSectionText = 16 << 10
 
-// Note is a dated ## Notes bullet, the form of every note Flashheart writes
-// on the board's or an agent's behalf (board-format §Notes written by
-// Flashheart): "- 2026-10-04 · text".
-func Note(day time.Time, text string) string {
+// NoteLine is a dated ## Notes bullet, the form of every note Flashheart
+// writes on the board's or an agent's behalf (board-format §Notes written
+// by Flashheart): "- 2026-10-04 · text", or "- 2026-10-04 · by: text" for a
+// note written for someone, such as an agent's short run id (FH-85).
+func NoteLine(day time.Time, by, text string) string {
+	if by != "" {
+		text = by + ": " + text
+	}
 	return "- " + day.Format("2006-01-02") + " · " + text
 }
 
 // BlockedStartNote is the ## Notes bullet recording why a blocked ticket
 // was started anyway (EDIT-2), from the board or by an agent's claim.
 func BlockedStartNote(day time.Time, reason string) string {
-	return Note(day, "Started while blocked: "+OneLine(reason, 500))
+	return NoteLine(day, "", "Started while blocked: "+OneLine(reason, 500))
 }
 
 // OneLine joins whitespace and keeps at most limit characters.

@@ -1016,3 +1016,33 @@ it out of date after an upgrade. Codex skips hooks the user has not
 trusted with `/hooks`; setup says so, and `doctor` warns when no trust is
 recorded for `hooks.json` at all, but cannot tell a stale trust because
 how Codex hashes a hook is not recorded.
+
+## 2026-10-12 — D45: Codex calls are attributed by the session they name
+
+Every MCP `tools/call` Codex sends carries its hook session in `_meta`
+(`x-codex-turn-metadata.session_id`, `sessionId`), recorded from the CLI
+and the ChatGPT app (FH-72). The MCP server reads it and attributes the
+call to `codex:<session_id>`, the run Codex's hooks record (FH-74,
+agent-protocol §7.1 step 2), before the connection's started run and the
+worktree rule. Two Codex sessions in one worktree each get their own calls,
+and a branch switch the hooks have not reported does not matter.
+
+Without hooks the server starts the session's run under that same id
+(`source: mcp`) instead of `codex:mcp-<random>`, so hooks that start later
+(trusted mid-session) record onto the same run: one claim holder, one
+question in Needs you and one Overview row, with no merging of two runs.
+Whether a run is *MCP-only* is now derived from its events (`source: mcp`
+and no event only hooks record) and sent to the board as `mcpOnly`, rather
+than read from an `mcp-` id; once the hooks report the run, the server
+records the activity it counted and stops standing in for them (no more
+activity, answers in tool results or `run.end` at disconnect).
+
+Options: stamp `run` from Codex's `PreToolUse` (`updatedInput` works, but
+only with `permissionDecision: "allow"`, which would skip the user's
+approval of Flashheart's tools, and only where the hooks are trusted);
+fold a started `mcp-` run into a later hook run (moving claims, questions
+and the answers inbox between runs); name the run by the session the call
+carries (chosen: it needs no hooks, no stamping and no fold). A client that
+names no session keeps `<agent>:mcp-<random>`, which never joins a later
+hook run. `PROTOCOL_VERSION` stays 2: run ids keep the §2 grammar, and the
+API field and the `_meta` read are additive.

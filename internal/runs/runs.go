@@ -125,6 +125,8 @@ type Run struct {
 
 	turnOpen bool
 	ended    bool
+	// hooked is set by any event only hooks record (MCPOnly).
+	hooked bool
 	// windows are the run's successful shell commands since the last
 	// checkpoint, oldest first, merged where they overlap.
 	windows []Window
@@ -188,6 +190,9 @@ type Question struct {
 	// question can still be answered, and the answer waits for the session
 	// to resume (RUN-8), but it does not need you (VIEW-2).
 	SessionEnded bool `json:"sessionEnded,omitempty"`
+	// MCPOnly is set in a View when the asking run is MCP-only
+	// (Run.MCPOnly): its answer goes with its next Flashheart tool call.
+	MCPOnly bool `json:"mcpOnly,omitempty"`
 }
 
 // Answered reports whether a human answered the question.
@@ -296,6 +301,22 @@ var recordedElsewhere = map[events.Kind]bool{
 	events.ReviewWritten: true, events.AttachmentAdded: true,
 }
 
+// fromHooksOnly lists the kinds only hooks record, never the MCP server
+// (agent-protocol §3): one of them in a run the server started means its
+// session's hooks report it too (MCPOnly).
+var fromHooksOnly = map[events.Kind]bool{
+	events.TurnStart: true, events.TurnEnd: true, events.ToolUsed: true, events.PlanUpdated: true,
+	events.PermissionRequested: true, events.PermissionResolved: true, events.Notification: true, events.Compact: true,
+}
+
+// MCPOnly reports a run the MCP server started that no hook has reported
+// for (agent-protocol §7.1): it records claims, checkpoints, questions and
+// tool calls, never turns, and an answer waits for its next Flashheart tool
+// call rather than a prompt. A run whose session's hooks start later (the
+// server names a Codex run by its session, as its hooks do) is no longer
+// MCP-only from their first event.
+func (r *Run) MCPOnly() bool { return r.Source == events.SourceMCP && !r.hooked }
+
 // Apply folds one event into the set. Unknown or malformed data is ignored.
 func (s *Set) Apply(e events.Event) {
 	// The human's board writes have no run (agent-protocol §3).
@@ -328,10 +349,12 @@ func (s *Set) Apply(e events.Event) {
 	// answers is set by a prompt from the user, which answers the session's
 	// open questions after the prompt's own timeline entry.
 	answers := false
+	r.hooked = r.hooked || fromHooksOnly[e.Kind]
 	switch e.Kind {
 	case events.RunStart:
 		var data events.RunStartData
 		_ = e.Decode(&data)
+		r.hooked = r.hooked || data.Source != events.SourceMCP
 		// The MCP server restates a started run's start, still connected,
 		// when its agent switches branches (agent-protocol §7.1): a branch
 		// switch, not a second connection.
@@ -828,6 +851,8 @@ type View struct {
 	Link      Link
 	Dirty     bool
 	NoHandoff bool
+	// MCPOnly is Run.MCPOnly: a run without hooks.
+	MCPOnly bool
 	// Permission is the tool awaiting permission ("?" when unknown).
 	Permission string
 	// Reason is why the run needs you, zero unless State is NeedsYou.
@@ -863,6 +888,7 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 			Source: r.Source, AgentType: r.AgentType, EndReason: r.EndReason,
 			Children:   slices.Clone(r.Children),
 			State:      state,
+			MCPOnly:    r.MCPOnly(),
 			Link:       link,
 			Dirty:      s.Dirty(id),
 			NoHandoff:  s.Dirty(id) && state == Ended && link.Ticket != "",
@@ -873,7 +899,7 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 			Files:     slices.Clone(r.Files),
 			Plan:      slices.Clone(r.Plan),
 			Progress:  r.Progress(),
-			Questions: cloneQuestions(r.Questions, s.sessionEnded(r, state, now, settings)),
+			Questions: cloneQuestions(r.Questions, s.sessionEnded(r, state, now, settings), r.MCPOnly()),
 			Timeline:  slices.Clone(r.Timeline),
 		})
 	}
@@ -892,12 +918,12 @@ func (s *Set) sessionEnded(r *Run, state State, now time.Time, settings Settings
 }
 
 // cloneQuestions copies a run's questions, marked SessionEnded when the
-// session they wait on has ended.
-func cloneQuestions(list []Question, ended bool) []Question {
+// session they wait on has ended and MCPOnly when the run is.
+func cloneQuestions(list []Question, ended, mcpOnly bool) []Question {
 	out := slices.Clone(list)
 	for index := range out {
 		out[index].Options = slices.Clone(out[index].Options)
-		out[index].SessionEnded = ended
+		out[index].SessionEnded, out[index].MCPOnly = ended, mcpOnly
 	}
 	return out
 }

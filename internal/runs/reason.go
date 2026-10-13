@@ -25,6 +25,10 @@ type Reason struct {
 	// when the blocker is the run's own.
 	WaitingOn string `json:"waitingOn"`
 	AgentType string `json:"agentType"`
+	// MCPOnly is set with Answered when the run is MCP-only
+	// (Run.MCPOnly): the answer waits for its next Flashheart tool call,
+	// not a prompt.
+	MCPOnly bool `json:"mcpOnly"`
 }
 
 // reason derives why r needs you, first match wins: its own permission
@@ -55,7 +59,7 @@ func (s *Set) reason(r *Run) Reason {
 		}
 	}
 	if q, ok := r.firstOpen(true); ok {
-		return Reason{Kind: ReasonQuestion, Question: q.Kind, Answered: true}
+		return Reason{Kind: ReasonQuestion, Question: q.Kind, Answered: true, MCPOnly: r.MCPOnly()}
 	}
 	for _, child := range children {
 		if q, ok := child.firstOpen(true); ok {

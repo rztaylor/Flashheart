@@ -61,12 +61,18 @@ var Priorities = []string{"high", "medium", "low"}
 
 var (
 	keyPattern    = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,9}$`)
+	agentKey      = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,4}$`)
 	idPattern     = regexp.MustCompile(`^([A-Z][A-Z0-9]{1,9})-([1-9][0-9]*)$`)
 	folderPattern = regexp.MustCompile(`^([A-Z][A-Z0-9]{1,9}-[1-9][0-9]*)(?:-(.+))?$`)
 )
 
 // ValidKey reports whether key is a project key (KEY-1).
 func ValidKey(key string) bool { return keyPattern.MatchString(key) }
+
+// ValidAgentKey reports whether an agent may choose key: 2–5 capitals or
+// digits starting with a letter, what people call a project in
+// conversation (KEY-5). The board may set any valid key (KEY-1).
+func ValidAgentKey(key string) bool { return agentKey.MatchString(key) }
 
 // ParseID splits a ticket id such as FH-42 into its key and number.
 func ParseID(id string) (string, int, bool) {
