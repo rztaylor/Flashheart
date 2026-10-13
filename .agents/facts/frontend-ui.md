@@ -15,7 +15,8 @@
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
   Table, TailText, BranchLabel, EmptyState, RunState, NeedsYou,
-  TicketMarks (a card's type icon and three-bar priority marker),
+  TicketMarks (a ticket's type icon and three-bar priority marker, alone on
+  cards and before their words in tags elsewhere, FH-154),
   QuestionCard, Aside, Popover,
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
