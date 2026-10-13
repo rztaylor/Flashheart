@@ -1,0 +1,98 @@
+[
+  {
+    "key": "/Users/example/.codex/hooks.json:permission_request:0:0",
+    "eventName": "permissionRequest",
+    "command": "/Users/example/bin/flashheart hook codex PermissionRequest --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:7e5eb40daea04c0ccdeebe9efb79aa2ee73ee4400d1dbca4a235fc643b57911d",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:post_tool_use:0:0",
+    "eventName": "postToolUse",
+    "command": "/Users/example/bin/flashheart hook codex PostToolUse --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:929ff4dd70328ee765c29c7e0770e9721a53da4ae916ce421e03194c186aa425",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:pre_compact:0:0",
+    "eventName": "preCompact",
+    "command": "/Users/example/bin/flashheart hook codex PreCompact --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:5bbf22c1be9ac7443d7b93dd880e02d5b5497a76430ce5f39dd6f3f4d79a0622",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:post_compact:0:0",
+    "eventName": "postCompact",
+    "command": "/Users/example/bin/flashheart hook codex PostCompact --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:3d94fa4bf58b2e157019c390370403955661ee47c7bd4f0524d25d6ded274146",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:session_start:0:0",
+    "eventName": "sessionStart",
+    "command": "/Users/example/bin/flashheart hook codex SessionStart --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:4602f1e750974dac379391f6602cbc6176bdc34809ff4b2b9dc3efe47f0ff286",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:session_end:0:0",
+    "eventName": "sessionEnd",
+    "command": "/Users/example/bin/flashheart hook codex SessionEnd --root /Users/example/other-board",
+    "timeoutSec": 3,
+    "currentHash": "sha256:9e4e6aa4fd5cad32e588b04c31f991375f5b7a772d4e20c5286ff31d80a930c6",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:user_prompt_submit:0:0",
+    "eventName": "userPromptSubmit",
+    "command": "/Users/example/bin/flashheart hook codex UserPromptSubmit --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:2958838ccdb62d66ce50dd183d2e7d86a5df1b577d6b03a38b08fea9ac5ad25c",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:subagent_start:0:0",
+    "eventName": "subagentStart",
+    "command": "/Users/example/bin/flashheart hook codex SubagentStart --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:0b66a1dd6d590c17e209006d76072aa8ba1ea982ee14dde694efadadd5665c19",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:subagent_stop:0:0",
+    "eventName": "subagentStop",
+    "command": "/Users/example/bin/flashheart hook codex SubagentStop --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:74fa0f45347183a29cec20a0654f0004c7f3885d8f55443359d11f54bcfa6e7d",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:stop:0:0",
+    "eventName": "stop",
+    "command": "afplay /System/Library/Sounds/Glass.aiff",
+    "timeoutSec": 3,
+    "currentHash": "sha256:99522f2793140bd6f6e13244e6a6c8bc297c6887dda20dabafa7931d6eded9d0",
+    "trustStatus": "untrusted"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:stop:1:0",
+    "eventName": "stop",
+    "command": "/Users/example/bin/flashheart hook codex Stop --root /Users/example/other-board",
+    "timeoutSec": 5,
+    "currentHash": "sha256:ffd066f0aaf73c7b4da32ce811478a2d63fefeb20acb5ac31626bc942e23a5f7",
+    "trustStatus": "modified"
+  },
+  {
+    "key": "/Users/example/.codex/hooks.json:interrupt:0:0",
+    "eventName": "interrupt",
+    "command": "/Users/example/bin/flashheart hook codex Interrupt --root /Users/example/other-board",
+    "timeoutSec": 3,
+    "currentHash": "sha256:b16b4e12a4daa1a65aef419b351faa9fc31db0ada618df30b7f8d56ec5a7acb8",
+    "trustStatus": "modified"
+  }
+]

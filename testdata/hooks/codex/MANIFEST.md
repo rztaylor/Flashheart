@@ -51,7 +51,8 @@ it never offered to trust them: untrusted, they were skipped without a
 prompt or a log line, while the same project's MCP server was used.
 Trusting them with `/hooks` in the CLI (same `~/.codex`) made the app run
 them; trust is saved in `~/.codex/config.toml` as `[hooks.state."<config
-file>:<event>:<group>:<handler>"] trusted_hash = "sha256:…"`. The app's
+file>:<event>:<group>:<handler>"] trusted_hash = "sha256:…"` (see "Hook
+trust" below for how the key and hash are made). The app's
 payloads have the same fields as the CLI's. Archiving a thread sends
 `SessionEnd` and moves its transcript to `~/.codex/archived_sessions/`, so
 `transcript_path` stops existing. The app also starts an MCP server for
@@ -99,6 +100,45 @@ A subagent's hooks carry the parent's `session_id` with their own `agent_id`, `t
 and transcript. Neither hooks nor the MCP server get any `CODEX_*`
 environment variable. Codex starts one MCP server per session, in the
 session's working directory, before `SessionStart` fires.
+
+## Hook trust
+
+Recorded with `scripts/record-codex-hook-trust.sh` from Codex CLI 0.160.0
+(the ChatGPT app's copy), 2026-10-13, into `testdata/setup/codex/trusted/`.
+The recorder needs no model or login: it runs `flashheart setup codex` into
+a scratch `CODEX_HOME` that already holds a `Stop` hook of the user's, then
+drives `codex app-server` as the CLI's `/hooks` does (`hooks/list` for each
+hook's key, `currentHash` and `trustStatus`; one `config/batchWrite`
+upsert of `hooks.state` to trust). It saves `hooks.json`, the
+`config.toml` Codex wrote after trusting Flashheart's hooks, and Codex's
+list before trusting (`untrusted`), after (`trusted`), after Flashheart's
+commands change to another `--root` (`hooks-moved.json`, all `modified`),
+and for `hooks-edge.json`, hooks that use every hashed field with text JSON
+encoders escape differently. The flashheart binary and board root are
+replaced with `/Users/example/bin/flashheart` and
+`/Users/example/reports/Kanban` before Codex hashes them, so the hashes are
+Codex's own; the scratch `CODEX_HOME` in keys and paths is then replaced
+with `/Users/example/.codex` (keys are not hashed).
+
+The rule (agent-protocol §5.4), which matches codex-rs
+`hooks/src/engine/discovery.rs` at `rust-v0.160.0` and every recorded hash:
+
+- **Key**: `<hooks.json path>:<event>:<group>:<handler>`. The event is
+  snake case (`session_start`, `permission_request`); group and handler are
+  0-based positions in the file, so Flashheart's `Stop` hook after the
+  user's is `stop:1:0`. The path uses `CODEX_HOME` resolved (a symlinked
+  `CODEX_HOME` gave the real path), or `~/.codex` as it is when unset.
+- **Hash**: `sha256:` and the hex SHA-256 of the compact, key-sorted JSON
+  of `{"event_name", "matcher", "hooks": [handler]}` with the handler
+  normalised: `type`, `command`, `timeout` (default 600, at least 1; for
+  `SessionEnd` and `Interrupt` default 1, clamped to 1–3, so Flashheart's
+  `timeout: 5` there hashes as 3), `async`, and `statusMessage` and
+  `additionalContextLimit` (not at 2500, and only on events that emit
+  context) when set. `matcher` is omitted when unset and on
+  `UserPromptSubmit`, `Stop` and `Interrupt`. Strings escape only `"`, `\`
+  and control characters (`<`, `&`, U+2028 and non-ASCII stay literal).
+- **Status**: no `trusted_hash` is `untrusted`, an equal one `trusted`, any
+  other `modified`; only trusted hooks run.
 
 ## Payload notes
 

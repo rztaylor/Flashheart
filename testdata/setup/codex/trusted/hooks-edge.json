@@ -1,0 +1,91 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'a<b>&c' \"q\" \\ \t é     😀",
+            "timeout": 7
+          },
+          {
+            "type": "command",
+            "command": "echo async",
+            "async": true,
+            "statusMessage": "Checking…"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo star",
+            "additionalContextLimit": 100
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo default-limit",
+            "additionalContextLimit": 2500
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "ignored",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo stop",
+            "additionalContextLimit": 100,
+            "timeout": 0
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo end",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "echo end-default"
+          }
+        ]
+      }
+    ],
+    "Interrupt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo interrupt",
+            "timeout": 0
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo prompt",
+            "statusMessage": null
+          }
+        ]
+      }
+    ]
+  }
+}
