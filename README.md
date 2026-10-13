@@ -96,6 +96,9 @@ scripts/e2e.sh                      # Playwright lifecycle, axe and screenshots
 scripts/e2e-visual.sh               # screenshot comparison in Docker (--update-snapshots)
 ```
 
+The scripts reinstall the frontend packages when `frontend/package-lock.json`
+has changed since the last install (see `scripts/frontend-deps.sh`).
+
 Changes land through pull requests; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 Report security issues as described in [`SECURITY.md`](SECURITY.md).
 
