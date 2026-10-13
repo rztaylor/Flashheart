@@ -638,10 +638,14 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `modelcontextprotocol/go-sdk`.
 - `MCP-2` Tools: `board_context`, `list_tickets`, `get_ticket`, `claim`,
   `release`, `checkpoint`, `update_ticket`, `move`, `create_ticket`,
-  `set_project_key`, `create_workstream`,
+  `set_project_key`, `create_workstream`, `update_workstream`,
   `write_review`, `attach`, `ask_human`. Tickets are named by id. No delete
   tool exists. Setting a ticket's workstream through a tool keeps the
-  ticket's field and the workstreams' `tickets:` lists in step. The
+  ticket's field and the workstreams' `tickets:` lists in step.
+  `update_workstream` changes a workstream's title (its slug stays), goal,
+  priority, tags, workstream dependencies and members in one write, and
+  refuses a dependency cycle between workstreams; `create_ticket` files a
+  ticket in another project when given its name or key (FH-46). The
   ticket tools ask agents to write titles and descriptions for a person,
   with implementation detail under Context, and warn about a title that
   reads like code (agent-protocol §7.2). `get_ticket` and `claim` end

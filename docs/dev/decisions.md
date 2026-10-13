@@ -1750,3 +1750,49 @@ Converting nothing (D65's choice, keeping plain text) stays the fallback
 for copies with no structure. A Sanitizer API pass was not used: it is
 not in every browser the board supports, and the converter reads only
 what it allows anyway.
+
+## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project
+
+Decision (FH-46): a new MCP tool, `update_workstream`, sets a
+workstream's title, goal, priority, tags and `depends-on-workstreams`
+and adds and removes its tickets in one write under the project lock and
+the workstream file's content hash, every file prepared before any is
+written (agent-protocol §7.2, §7.4). The fields are one change-set
+defined in `board` (`NewWorkstreamChanges`, as `NewFieldChanges` is a
+ticket's) and written by `store.EditWorkstream`; `mcpserver` only
+decodes. `create_ticket` takes an optional `project` (a name or key).
+
+- **The slug stays when the title changes.** Options: keep the slug;
+  rename the file and rewrite every reference with the title; make the
+  rename a separate, explicit input. A slug is named by member tickets'
+  `workstream:`, other workstreams' and tickets'
+  `depends-on-workstreams`, links and the user's own notes, so a title
+  edit that moved the file would rewrite many files as a side effect of a
+  wording change. The title is what people read; the slug is an
+  identifier. An explicit rename is FH-158.
+- **No ordered flag.** FH-46's first criterion asked for one; D26 removed
+  ordered workstreams, so there is none to set.
+- **Cycles between workstreams are refused** by `update_workstream` and
+  `create_workstream` (a hand-edited workstream may already name a slug
+  not yet made), naming the cycle (`a → b → a`). Only cycles through the
+  workstream written are checked, so a cycle made by hand elsewhere does
+  not stop unrelated edits. A ticket's own `depends-on-workstreams` naming
+  its workstream is not checked here.
+- **Removed tickets belong to no workstream**, as `update_ticket`'s
+  `workstream: ""` does; a removed ticket that is not a member is
+  refused rather than ignored, so a typo is noticed.
+- **Another project.** `update_ticket` and the other ticket tools need no
+  `project`: the ticket id's key names it. `create_ticket` and
+  `update_workstream` take `project` as `set_project_key`,
+  `list_tickets` and `board_context` already did. The run and claim
+  policy is unchanged (§7.1): the caller is resolved from its own
+  worktree, the event is recorded in the project written to under the
+  caller's run, and creating a ticket claims nothing, so a follow-up filed
+  on another board is not started until the user asks.
+  `update_workstream`'s added and removed tickets are guarded against
+  another session's claim, as `create_workstream`'s are.
+
+Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): a new tool
+and a new optional input are additive, no event changes shape, and the
+only new refusal, a dependency cycle, is a state no board could use.
+Board format stays 2: no field is added.

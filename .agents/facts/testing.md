@@ -91,6 +91,16 @@
   single: the note bullet is spelled only in `board.NoteLine`, and `api`
   and `mcpserver` never check fields, set titles or change workstreams
   themselves.
+- Workstream edits (FH-46): the change-set, its byte-for-byte edits over
+  `testdata/workstreams/` and the cycle rule are table tests in `board`
+  (`workstreamedit_test.go`); the one write with its members, refusals
+  that write nothing, the hash, the lock (`ErrBusy`, not parallel) and a
+  ticket added after a workstream dependency was set in `store`
+  (`workstreams_test.go`); `update_workstream`, `create_ticket` with
+  `project` and the blocked reasons `list_tickets`, `get_ticket` and
+  `board_context` show in `mcpserver` (`workstreams_test.go`, with
+  `TestWriteToolPolicies`' row). `internal/archtest` keeps `mcpserver`
+  from editing a workstream file itself.
 - In-place edits (FH-66) leave the rest of a real ticket byte for byte:
   `board` replays field and section edits over `testdata/tickets/`
   (read-only copies of FH tickets, also with CRLF line endings) and

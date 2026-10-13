@@ -93,6 +93,10 @@ var policyCases = []policyCase{
 	{"create_workstream", func(*env) map[string]any {
 		return map[string]any{"title": "Cards", "goal": "Card work", "tickets": []string{"DM-1"}}
 	}, codes(false, true, ""), 1},
+	{"update_workstream", func(e *env) map[string]any {
+		e.workstream("cards")
+		return map[string]any{"workstream": "cards", "set": map[string]any{"priority": "high"}, "add_tickets": []string{"DM-1"}}
+	}, codes(false, true, ""), 1},
 	{"set_project_key", func(*env) map[string]any { return map[string]any{"key": "DM"} }, codes(false, false, ""), 0},
 }
 

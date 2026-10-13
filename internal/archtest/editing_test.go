@@ -56,3 +56,23 @@ func TestTicketFieldEditsGoThroughEditTicket(t *testing.T) {
 		}
 	}
 }
+
+// An agent's workstream edit (FH-46) decodes into
+// board.NewWorkstreamChanges and writes with store.EditWorkstream, so the
+// MCP tools never edit a workstream file's text themselves.
+func TestAgentWorkstreamEditsGoThroughEditWorkstream(t *testing.T) {
+	t.Parallel()
+
+	forbidden := []string{"UpdateWorkstream", "SetList", "PutSection"}
+	err := goFiles(filepath.Join("..", "..", "internal", "mcpserver"), func(name string, file *ast.File) {
+		ast.Inspect(file, func(node ast.Node) bool {
+			if selector, ok := node.(*ast.SelectorExpr); ok && slices.Contains(forbidden, selector.Sel.Name) {
+				t.Errorf("%s uses %s; decode into board.NewWorkstreamChanges and write with store.EditWorkstream", filepath.ToSlash(name), selector.Sel.Name)
+			}
+			return true
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}

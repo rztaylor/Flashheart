@@ -214,6 +214,7 @@ func TestOutsideGitThereIsNoProject(t *testing.T) {
 	}{
 		{"create_ticket", map[string]any{"type": "bug", "title": "X", "description": "x", "criteria": []string{"y"}, "priority": "low"}},
 		{"create_workstream", map[string]any{"title": "W", "goal": "g"}},
+		{"update_workstream", map[string]any{"workstream": "w", "set": map[string]any{"priority": "low"}}},
 		{"set_project_key", map[string]any{"key": "NO"}},
 		{"ask_human", map[string]any{"kind": "question", "text": "Still there?"}},
 		{"claim", map[string]any{"ticket": id}},
@@ -227,6 +228,10 @@ func TestOutsideGitThereIsNoProject(t *testing.T) {
 	}
 	contains(t, e.ok("update_ticket", map[string]any{"ticket": id, "append_notes": "Seen from outside."}), id)
 	contains(t, e.file(id), "Seen from outside.")
+	// A tool given its project files there (FH-46).
+	contains(t, e.ok("create_ticket", map[string]any{"type": "bug", "title": "Filed from notes", "description": "x", "criteria": []string{"y"}, "priority": "low", "project": "DM"}), "ok ticket=DM-2")
+	write(t, filepath.Join(e.root, "demo", "workstreams", "w.md"), "---\nslug: w\nstatus: active\npriority: medium\ntickets: []\ndepends-on-workstreams: []\ntags: []\n---\n\n# w\n")
+	contains(t, e.ok("update_workstream", map[string]any{"workstream": "w", "project": "demo", "add_tickets": []string{id}}), "ok workstream=w")
 }
 
 // With no board root yet, a session outside git is told the same, and the

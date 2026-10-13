@@ -1,7 +1,9 @@
 package mcpserver
 
 import (
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -32,16 +34,9 @@ func (srv *server) createWorkstream(c *call, input CreateWorkstreamInput) (strin
 	if len(input.Tickets) > maxItems {
 		return "", fail("invalid_input", fmt.Sprintf("list at most %d tickets; add more with update_ticket", maxItems), "too many tickets")
 	}
-	var tickets []string
-	for _, id := range input.Tickets {
-		owner, ticket, err := c.target(id)
-		if err != nil {
-			return "", err
-		}
-		if owner.Name != project.Name {
-			return "", fail("invalid_input", "list tickets of project "+project.Name, "%s belongs to project %s", ticket.ID, owner.Name)
-		}
-		tickets = append(tickets, ticket.ID)
+	tickets, err := c.ticketsOf(project, input.Tickets)
+	if err != nil {
+		return "", err
 	}
 	var dependencies []string
 	for _, slug := range items(input.DependsOnWorkstreams) {
@@ -68,4 +63,140 @@ func (srv *server) createWorkstream(c *call, input CreateWorkstreamInput) (strin
 	}
 	text += fmt.Sprintf(". Add tickets with create_ticket or update_ticket workstream=%s; they can be worked on in any order, so give a ticket depends_on when it needs others first.", created.Slug)
 	return text + fmt.Sprintf("\nok workstream=%s\n", created.Slug), nil
+}
+
+// ticketsOf finds the tickets a workstream tool moves, each a live ticket
+// of project that no other session holds (target), and returns their ids.
+func (c *call) ticketsOf(project *board.Project, ids []string) ([]string, error) {
+	var out []string
+	for _, id := range ids {
+		owner, ticket, err := c.target(id)
+		if err != nil {
+			return nil, err
+		}
+		if owner.Name != project.Name {
+			return nil, fail("invalid_input", "list tickets of project "+project.Name, "%s belongs to project %s", ticket.ID, owner.Name)
+		}
+		out = append(out, ticket.ID)
+	}
+	return out, nil
+}
+
+// UpdateWorkstreamInput is update_workstream's input.
+type UpdateWorkstreamInput struct {
+	Attribution
+	Workstream    string         `json:"workstream" jsonschema:"the workstream's slug, as board_context lists it"`
+	Project       string         `json:"project,omitempty" jsonschema:"a project name or key; default: your project"`
+	Set           map[string]any `json:"set,omitempty" jsonschema:"fields to set: title, goal, priority (strings); tags, depends-on-workstreams (lists of slugs). The slug stays when the title changes."`
+	AddTickets    []string       `json:"add_tickets,omitempty" jsonschema:"ids of the project's tickets to join it, appended in order; each leaves any other workstream"`
+	RemoveTickets []string       `json:"remove_tickets,omitempty" jsonschema:"ids of its tickets to leave it; they then belong to no workstream"`
+}
+
+func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (string, error) {
+	project, err := c.projectArg(input.Project)
+	if err != nil {
+		return "", err
+	}
+	slug := strings.TrimSpace(input.Workstream)
+	// Decoding and scrubbing agent text is the tool's; which fields change
+	// and how they are checked and written is board's and store's
+	// (board.NewWorkstreamChanges, store.EditWorkstream; FH-46).
+	var requested []board.FieldChange
+	for key, raw := range input.Set {
+		change := board.FieldChange{Key: key}
+		list, known := board.WorkstreamField(key)
+		switch {
+		case !known:
+			// board refuses it, naming the fields it sets.
+		case list:
+			values, ok := stringList(raw)
+			if !ok {
+				return "", fail("invalid_input", "pass a list of strings", "%s must be a list of strings", key)
+			}
+			change.List = items(values)
+		case key == "goal":
+			value, ok := raw.(string)
+			if !ok {
+				return "", fail("invalid_input", "pass a string", "goal must be a string")
+			}
+			change.Value = scrub.Secrets(value)
+		default:
+			value, ok := raw.(string)
+			if !ok {
+				return "", fail("invalid_input", "pass a string", "%s must be a string", key)
+			}
+			change.Value = scrub.Text(value, board.MaxTitle)
+		}
+		requested = append(requested, change)
+	}
+	changes, err := board.NewWorkstreamChanges(requested)
+	if errors.Is(err, board.ErrNotEditable) {
+		return "", fail("invalid_input", "set only "+strings.Join(board.WorkstreamFields, ", ")+"; the slug stays as it is, and members change with add_tickets and remove_tickets", "%v", err)
+	}
+	if err != nil {
+		return "", fail("invalid_input", "correct the value", "%v", err)
+	}
+	if len(input.AddTickets)+len(input.RemoveTickets) > maxItems {
+		return "", fail("invalid_input", fmt.Sprintf("add and remove at most %d tickets in one call", maxItems), "too many tickets")
+	}
+	add, err := c.ticketsOf(project, input.AddTickets)
+	if err != nil {
+		return "", err
+	}
+	remove, err := c.ticketsOf(project, input.RemoveTickets)
+	if err != nil {
+		return "", err
+	}
+	if changes.Len() == 0 && len(add) == 0 && len(remove) == 0 {
+		return "", fail("invalid_input", "pass set, add_tickets or remove_tickets", "nothing to change")
+	}
+	_, base, err := srv.store.ReadWorkstream(project.Name, slug)
+	if errors.Is(err, store.ErrNotFound) {
+		var available []string
+		for _, workstream := range project.Workstreams {
+			available = append(available, workstream.Slug)
+		}
+		return "", &store.WorkstreamNotFoundError{Project: project.Name, Slug: slug, Available: available}
+	}
+	if err != nil {
+		return "", err
+	}
+	// The fields are set over the workstream as it was read; a change made
+	// in between is a conflict, not lost (STO-3).
+	_, err = c.files().EditWorkstream(project.Name, slug, store.Unchanged(base), store.WorkstreamEdit{Changes: changes, Add: add, Remove: remove})
+	var cycle *board.CycleError
+	switch {
+	case errors.As(err, &cycle):
+		return "", fail("invalid_input", "leave out the dependency that leads back, or remove it from the workstream that has it", "%v", cycle)
+	case errors.Is(err, store.ErrConflict):
+		return "", fail("conflict", "call update_workstream again", "workstream %s changed while it was being edited", slug)
+	case err != nil:
+		return "", err
+	}
+	var list []events.Event
+	for _, id := range slices.Concat(add, remove) {
+		list = append(list, events.Event{Kind: events.TicketUpdated, Data: events.TicketData{Ticket: id, Fields: []string{"workstream"}}})
+	}
+	if err := c.record(project.Name, list...); err != nil {
+		return "", err
+	}
+	fields := changes.Keys()
+	if len(add)+len(remove) > 0 {
+		fields = append(fields, "tickets")
+	}
+	title := slug
+	if data, _, err := srv.store.ReadWorkstream(project.Name, slug); err == nil {
+		title = board.ParseWorkstream(slug, data).Title
+	}
+	text := fmt.Sprintf("Updated workstream %s %q", slug, scrub.Limit(title, 200))
+	if len(changes.Keys()) > 0 {
+		text += ": " + strings.Join(changes.Keys(), ", ")
+	}
+	if len(add) > 0 {
+		text += "; added " + strings.Join(add, ", ")
+	}
+	if len(remove) > 0 {
+		text += "; removed " + strings.Join(remove, ", ")
+	}
+	return text + fmt.Sprintf(".\nok workstream=%s changed=%s\n", slug, strings.Join(fields, ",")), nil
 }

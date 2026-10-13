@@ -59,12 +59,11 @@ instructions.
 - Otherwise call ` + "`board_context`" + `. It names your project and its key, your
   ticket if you have one, answers waiting for you, and what is up next.
 - If your project has no key yet, choose 2–5 capital letters a person would
-  use for it in conversation (` + "`FH`" + ` for Flashheart, ` + "`NG`" + ` for NG+) and set
-  it with ` + "`set_project_key`" + ` before creating tickets. If it is taken, pick
+  use for it in conversation (` + "`FH`" + ` for Flashheart) and set it with
+  ` + "`set_project_key`" + ` before creating tickets. If it is taken, pick
   another.
 - Outside a git repository there is no project and nothing is recorded:
-  ` + "`board_context`" + ` says so, and tools that need your project answer
-  ` + "`no_project`" + `. Talk to the user in chat instead of creating tickets or
+  tools that need your project answer ` + "`no_project`" + `. Talk to the user in chat instead of creating tickets or
   asking with ` + "`ask_human`" + `.
 
 ## Finding and claiming work
@@ -88,24 +87,25 @@ instructions.
   ` + "`update_ticket`" + `'s ` + "`addressed`" + `.
 - New work gets a ticket first: ` + "`create_ticket`" + `, then claim it. Do not
   start untracked work, and do not start a ticket you just created for
-  follow-up work unless the user asks.
+  follow-up work unless the user asks. File another repository's
+  follow-up there, naming it in ` + "`project`" + `.
 
 ## While working
 
-- Keep your own plan or todo list current. Where Flashheart's hooks are
-  installed it mirrors it for the user; no tool call is needed.
-- ` + "`checkpoint`" + ` at meaningful milestones, before long operations, when
-  your context may be compacted, and always before you stop after editing
-  files: what is done, what is next, the files that matter, and open
-  questions. The next session resumes from it.
+- Keep your plan or todo list current; Flashheart's hooks mirror it for
+  the user.
+- ` + "`checkpoint`" + ` at milestones, before long operations or a compaction,
+  and always before you stop after editing files: what is done, what is
+  next, the files that matter, and open questions. The next session
+  resumes from it.
 - ` + "`update_ticket`" + ` ticks acceptance criteria as they pass, edits fields and
   appends notes.
 - When you open a pull request for a ticket, set its ` + "`pr`" + ` to the pull
   request's URL with ` + "`update_ticket`" + `, so the board links to it.
-- ` + "`attach`" + ` copies a screenshot or log, saved as a file, into a ticket with
-  a caption, and gives the markdown to link it from the review.
-- When you need a human decision, ` + "`ask_human`" + ` (kind question, decision,
-  review or blocked, with options when there are clear choices). The board
+- ` + "`attach`" + ` copies a screenshot or log file into a ticket with a
+  caption and gives the markdown to link it from the review.
+- When you need a human decision, ` + "`ask_human`" + ` (with options when there
+  are clear choices). The board
   shows the user; the answer arrives in a later prompt, or, where
   Flashheart's hooks are not installed, with your next flashheart tool
   result. Carry on with other work if you can. If the user
@@ -168,12 +168,13 @@ who has not read the code; the technical detail comes second.
   worked on in sequence or in parallel. Its order never blocks; a ticket
   waits only for the tickets its ` + "`depends_on`" + ` names and for workstreams it
   or its workstream depends on. Give each ticket the dependencies it really
-  needs, naming several tickets in ` + "`depends_on`" + ` when it needs them all.
-  A blocked ticket needs ` + "`force`" + ` and a reason to claim.
+  needs, naming several tickets in ` + "`depends_on`" + ` when it needs them all;
+  a workstream waiting for another takes the dependency itself. A blocked ticket needs ` + "`force`" + ` and a reason to claim.
 - Work that spans several tickets with a shared goal belongs in a
   workstream. Join one ` + "`board_context`" + ` lists by passing ` + "`workstream`" + ` to
   ` + "`create_ticket`" + ` or ` + "`update_ticket`" + `, or make one with
-  ` + "`create_workstream`" + `. Leave single tickets out of workstreams.
+  ` + "`create_workstream`" + ` and change it with ` + "`update_workstream`" + ` (its slug
+  stays). Leave single tickets out of workstreams.
 
 ## Review template
 

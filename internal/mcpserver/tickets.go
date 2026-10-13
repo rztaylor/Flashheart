@@ -266,10 +266,11 @@ type CreateTicketInput struct {
 	PlanOrRepro string   `json:"plan_or_repro,omitempty" jsonschema:"the Test Plan (features) or Reproduction (bugs)"`
 	Context     string   `json:"context,omitempty" jsonschema:"implementation detail for whoever builds it (files, functions, design notes), saved under ## Context below the description"`
 	ProjectKey  string   `json:"project_key,omitempty" jsonschema:"only for a project with no key yet: the key to record first"`
+	Project     string   `json:"project,omitempty" jsonschema:"a project name or key to file the ticket in, such as a follow-up for another repository; default: your project"`
 }
 
 func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error) {
-	project, err := c.projectArg("")
+	project, err := c.projectArg(input.Project)
 	if err != nil {
 		return "", err
 	}

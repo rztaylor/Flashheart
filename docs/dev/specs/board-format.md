@@ -187,6 +187,9 @@ atomically, one at a time, in this order:
   the ticket's `workstream:` field;
 - creating a workstream: its file, then the other lists giving up its
   initial tickets, then those tickets' fields;
+- editing a workstream (an agent's `update_workstream`, FH-46): its file
+  (fields and its own list), then the other lists giving up the tickets
+  that join it, then the tickets' fields;
 - placing a ticket: the neighbours it ranks, then the ticket;
 - any ticket write from the board or an agent: the files above, then the
   history entry in each changed ticket's `activity.md` (§Activity).
@@ -306,6 +309,14 @@ A workstream's order never blocks (D26): its tickets are an epic's, worked on
 in sequence or in parallel, and `depends-on` (one ticket or several) is the
 only way to say one must wait for another.
 
+Rule 3 is read from the files each time, so a workstream's own
+`depends-on-workstreams` holds back every ticket it lists, a ticket that
+joins later included. Flashheart's writes never make workstreams depend on
+each other in a cycle (`a` on `b` and `b` on `a`, which would hold their
+tickets back for good): creating or editing a workstream refuses a
+dependency that leads back to it, naming the cycle (FH-46, D69). A cycle
+made by hand is shown as the blocking it causes.
+
 A workstream's `tickets:` list defines membership and display order; a ticket whose
 `workstream:` field disagrees with the lists gets a warning. Flashheart's own
 writes (ticket creation, the agent tools and the board's Edit tab) change
@@ -344,6 +355,10 @@ tags: []
 ## Success Criteria
 ## Notes
 ```
+
+A title change (its H1) keeps the slug: the file name and every reference
+to the workstream stay as they are (D69). Renaming a slug, which would
+rewrite every reference, is planned (FH-158).
 
 The UI derives status (`completed` when every ticket is in review or done,
 `blocked` when its own `depends-on-workstreams` are incomplete or every

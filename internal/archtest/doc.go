@@ -10,5 +10,7 @@
 //
 // Editing tests (FH-85) keep the ticket-editing rules defined once: every
 // Notes bullet is board.NoteLine's, and api and mcpserver write typed field
-// edits only through board's change-set and store.EditTicket.
+// edits only through board's change-set and store.EditTicket; mcpserver
+// edits a workstream only through board.NewWorkstreamChanges and
+// store.EditWorkstream (FH-46).
 package archtest

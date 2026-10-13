@@ -246,6 +246,10 @@ func TestEveryTicketWriteAppendsOneHistoryEntry(t *testing.T) {
 			_, err := s.CreateWorkstream("alpha", NewWorkstream{Title: "Offline", Goal: "Work offline", Tickets: []string{"AL-6"}})
 			return err
 		}, "tickets", "AL-6-offline-mode", []board.Change{{What: board.ChangeEdited, Fields: []string{"workstream"}}}},
+		{"ticket added to a workstream", "claude:5b0c7e2a", func(s *Store) error {
+			_, err := s.EditWorkstream("alpha", "board-ui", Merge, WorkstreamEdit{Add: []string{"AL-6"}})
+			return err
+		}, "tickets", "AL-6-offline-mode", []board.Change{{What: board.ChangeEdited, Fields: []string{"workstream"}}}},
 		{"review step", "Robert", func(s *Store) error {
 			_, err := s.UpdateReview("alpha", "AL-2", Merge, func(data []byte) ([]byte, error) {
 				next, err := board.SetReviewStep(string(data), 1, true)

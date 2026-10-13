@@ -792,7 +792,7 @@ and whether it refuses a ticket another live run holds (`claimed`, §7.2):
 | Tool | Run | Several sessions here (step 5) | A session here on another branch (step 5) | Ticket held by another run |
 |---|---|---|---|---|
 | `claim`, `release`, `ask_human` | required: they belong to a run | `ambiguous_run` | `ambiguous_run` | `claim` answers `claimed` (unless `force`); `release` says you do not hold it; `ask_human` works |
-| `checkpoint`, `update_ticket`, `move`, `write_review`, `attach`, `create_workstream` (its `tickets`) | required only when ambiguous | `ambiguous_run` | works, `by: "unknown"` | `claimed` |
+| `checkpoint`, `update_ticket`, `move`, `write_review`, `attach`, `create_workstream` (its `tickets`), `update_workstream` (its `add_tickets` and `remove_tickets`) | required only when ambiguous | `ambiguous_run` | works, `by: "unknown"` | `claimed` |
 | `create_ticket`, `set_project_key` | required only when ambiguous | `ambiguous_run` | works, `by: "unknown"` | — |
 | `board_context`, `list_tickets`, `get_ticket` | none | works, `run=unknown` | works, `run=unknown` | — |
 
@@ -804,6 +804,18 @@ other writes do (FH-93, D36): an attachment is a write to a ticket, recorded as
 the caller's `attachment.added`, and `set_project_key` sets the key that
 `create_ticket`'s `project_key` sets, which was already refused there, so an
 agent meets one rule for every write.
+
+**Another project's board (FH-46).** `create_ticket` and
+`update_workstream` take an optional `project` (a name, or a key the
+project owns), as `set_project_key` does; the ticket tools name their
+project by the ticket id's key. A write to another project keeps the
+policy above: the caller is resolved from its own worktree as for any
+write (a write may start its run there, step 6), the events are recorded
+in the project written to under the caller's run, and the new ticket's
+`session` names the caller. Creating a ticket claims nothing in either
+project, and a ticket filed elsewhere is follow-up work, not started
+until the user asks. Outside any git repository a tool given `project`
+still works, attributed to `unknown`.
 
 ### 7.2 Tools
 
@@ -818,8 +830,9 @@ agent meets one rule for every write.
 | `update_ticket` | `ticket`, `set?` (frontmatter fields, including `pr`, the pull request URL; an empty value clears it), `check?` (criteria text or index), `append_notes?`, `addressed?` (ids of the user's change requests on the ticket that the agent has made, FH-126) | frontmatter/body edit with hash precondition; `addressed` marks each change request addressed in the ticket's `activity.md` in the same write (one history entry), refusing a plain comment or a resolved request (`invalid_input`; one already addressed is no change) or an unknown id (`not_found`); setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4) | changed fields; a title advice warning (below) when it sets the title |
 | `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file, the criteria and the ticket's open change requests, naming each with its id and the start of its text, and returns warnings (never refuses, `EDIT-3`, `REV-6`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
-| `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `context?` (implementation detail, written under `## Context`), `project_key?` (only for a project with no key yet) | new ticket folder with the next id (`KEY-2`); a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` is joined (§7.4) | id; a title advice warning (below) |
+| `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `context?` (implementation detail, written under `## Context`), `project_key?` (only for a project with no key yet), `project?` (a name or key; default the caller's, §7.1) | new ticket folder with the next id (`KEY-2`) in that project; a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` (of that project) is joined (§7.4) | id; a title advice warning (below) |
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
+| `update_workstream` | `workstream` (slug), `project?` (a name or key; default the caller's), `set?` (`title`, `goal`, `priority`, `tags`, `depends-on-workstreams`), `add_tickets?` (ids of that project's tickets, appended in order), `remove_tickets?` (ids of its tickets) | one write under the project lock and the workstream file's hash precondition: the fields (the title as its H1, the goal as `## Goal`; the slug and file name never change), then membership (§7.4): added tickets leave any other workstream, removed ones belong to none; any other field (the slug, `status`, `tickets`), an unknown workstream, ticket or dependency, a removed ticket that is not a member, or a dependency that leads back to the workstream (`invalid_input` naming the cycle, `a → b → a`) refuses the whole call and writes nothing | the fields changed, tickets added and removed; `ok workstream=<slug> changed=…` |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
 | `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call", and that a reply in the chat does not reach the board, so the user answers there too); the `flashheart await` command for it (§7.5), with how Claude Code runs it only when the run is Claude's |
@@ -870,13 +883,17 @@ format than this binary) and `internal`. Every write tool answers `busy`
 when another writer holds its lock past the lock wait; every write to a
 ticket another live run holds answers `claimed`; `conflict` comes only
 from `update_ticket`, when the ticket changes between its read and its
-write. Writes to a ticket held by another live run (other than the
-caller's own session or subagents) fail with `claimed`.
+write, and from `update_workstream`, when the workstream does. Writes to
+a ticket held by another live run (other than the caller's own session or
+subagents) fail with `claimed`.
 
 Every `ticket` argument is a ticket id (`FH-42`); the id's key names the
-project, so no `project` argument is needed. `checkpoint` copies local paths
-listed in `files[]` that are not inside the repository, and any local file
-referenced in its text, into `files/` (`REV-5`).
+project, so no `project` argument is needed: `update_ticket` and the other
+ticket tools already work on any project's ticket. A tool that names no
+ticket (`create_ticket`, `update_workstream`, `set_project_key`,
+`list_tickets`, `board_context`) takes `project` instead. `checkpoint`
+copies local paths listed in `files[]` that are not inside the repository,
+and any local file referenced in its text, into `files/` (`REV-5`).
 
 There is deliberately no delete, archive or bulk tool for agents.
 
@@ -886,14 +903,28 @@ A workstream's `tickets:` list defines membership and display order; order
 never blocks, only `depends-on` does (board-format §Blocking, D26). A
 ticket's `workstream:` field names the one workstream that lists
 it. Every tool that sets a ticket's workstream (`create_ticket`,
-`update_ticket`, `create_workstream`) changes both together under the
-project lock (`update_ticket` also under the ticket's hash precondition): a
+`update_ticket`, `create_workstream`, `update_workstream`) changes both
+together under the project lock (`update_ticket` also under the ticket's
+hash precondition, `update_workstream` under the workstream's): a
 ticket joining a
 workstream is appended to the end of its list and removed from any other
-list; `workstream: ""` removes it from every list. Every file is prepared
+list; `workstream: ""`, or `update_workstream`'s `remove_tickets`,
+removes it from every list. Every file is prepared
 before any is written, so a refused call changes nothing. A workstream the
 project does not have is refused with `not_found`, whose fix names the
 project's workstreams and `create_workstream`.
+
+A workstream's `depends-on-workstreams` holds back every ticket it lists,
+including tickets that join it later (board-format §Blocking rule 3), so a
+whole workstream waits for another by one `update_workstream` call, not a
+dependency on each ticket; blocked reasons say *Its workstream a depends
+on workstream b, which has n tickets not yet in review or done*.
+Dependencies between workstreams never form a cycle: `update_workstream`
+and `create_workstream` refuse one that would lead back to the workstream
+(`invalid_input`, naming it), and check only cycles through the
+workstream they write. A title change renames a workstream as people see
+it; its slug, which tickets, other workstreams and links name, never
+changes (renaming a slug is FH-158).
 
 ### 7.5 Waiting for an answer (`flashheart await`)
 
@@ -1027,7 +1058,7 @@ checks (§5.4). It covers, briefly:
 - at start: read the recovery note; if none, call `board_context`, which
   names your project and its ticket key;
 - if your project has no key yet, choose 2–5 letters a person would use for
-  it in conversation (`FH` for Flashheart, `NG` for NG+), and set it with
+  it in conversation (`FH` for Flashheart), and set it with
   `set_project_key` before creating tickets; pick another if it is taken;
 - outside a git repository there is no project and nothing is recorded:
   talk to the user in chat instead of creating tickets or asking with
@@ -1035,7 +1066,8 @@ checks (§5.4). It covers, briefly:
 - refer to tickets by id (`FH-42`); when asked for work in plain words ("the
   three top-priority bugs"), use `list_tickets`, then `claim` each ticket;
 - before work on a ticket: `claim`; create tickets for new work rather than
-  starting untracked work;
+  starting untracked work; follow-up work for another repository goes on
+  that project's board (`create_ticket`'s `project`, §7.1);
 - keep your own plan/todo list current (where Flashheart's hooks are
   installed it is mirrored for you; no tool call needed);
 - `checkpoint` at meaningful milestones, before long operations, before
@@ -1072,7 +1104,10 @@ checks (§5.4). It covers, briefly:
   never create or edit board files directly, use the tools;
 - workstreams are encouraged, not required: work spanning several
   tickets with a shared goal joins a workstream `board_context` lists or a
-  new one from `create_workstream`; single tickets stay out of workstreams.
+  new one from `create_workstream`, changed later with `update_workstream`
+  (its slug stays); a workstream that waits for another takes the
+  dependency itself rather than each of its tickets (§7.4); single tickets
+  stay out of workstreams.
 
 ## 13. Testing the protocol
 
@@ -1250,6 +1285,16 @@ request deleted since it was queued (§4), which the board also withdraws
 from the session's inbox. Agents never saw deleted text and see nothing
 new; no tool, input or inbox entry changes shape, and a reader that
 predates the kind skips it, so the version stays 2.
+
+Additive change within version 2 (D69, FH-46, 2026-10-13): the tool
+`update_workstream` (§7.2, §7.4), the optional `project` input of
+`create_ticket` (§7.1), and skill lines on them (a few other lines were
+shortened, saying the same, to keep the skill under 8 KiB). Nothing that
+was accepted is refused but a dependency cycle between workstreams, which
+would block their tickets for good: a new tool and a new optional input,
+no event changes shape (membership changes record `ticket.updated` with
+`fields: [workstream]` as before), and an older agent that never calls
+the tool works as before, so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

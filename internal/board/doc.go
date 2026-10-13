@@ -7,7 +7,9 @@
 // fields and the checked change-set that writes them (fields.go), the
 // title and section text limits, the blocked-start gate and its note,
 // dated notes (NoteLine), which sections are rewritten whole and where a
-// missing one goes (SectionChange, FH-66; a workstream's, FH-139), review warnings and the project
+// missing one goes (SectionChange, FH-66; a workstream's, FH-139), a
+// workstream's editable fields, their checked change-set and the
+// dependency cycle rule (workstreamedit.go, FH-46), review warnings and the project
 // key rules, the
 // shorter one agents choose included (EDIT-2, EDIT-3, EDIT-6, KEY-1,
 // KEY-5), a review's How to Verify

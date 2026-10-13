@@ -9,8 +9,9 @@
 // FH-85),
 // places tickets in
 // their column's manual order (EDIT-9), keeps a ticket's
-// workstream field and the workstreams' tickets lists in step and creates
-// workstreams, creates tickets with the next id (KEY-2) and keys under a root lock (KEY-5), from board's templates, archives tickets,
+// workstream field and the workstreams' tickets lists in step, creates
+// workstreams and edits them with their members in one write
+// (EditWorkstream, FH-46), refusing a dependency cycle, creates tickets with the next id (KEY-2) and keys under a root lock (KEY-5), from board's templates, archives tickets,
 // lists them and deletes archived ones permanently with their references
 // (EDIT-8), archives, restores and permanently deletes projects with their
 // references and retired keys (PRJ-5) (both deletes share one reference
