@@ -183,10 +183,11 @@ Full format: `docs/dev/specs/board-format.md`.
   `activity.md` (board-format §Activity, D47), one dated, typed entry
   each, kept as long as the ticket. People add and edit comments on the
   board (edits shown as edited; each has a state for change requests:
-  open, change requested, addressed, resolved); agents never write
-  comments. Every ticket write by the board or an agent (create, move,
-  field and raw edits, ticked criteria and review steps, archive,
-  restore) appends one history entry in the same locked write: who, what
+  open, change requested, addressed, resolved, `REV-6`); agents never
+  write comments and change only a request's state, to addressed. Every
+  ticket write by the board or an agent (create, move, field and raw
+  edits, ticked criteria and review steps, archive, restore, comment
+  states) appends one history entry in the same locked write: who, what
   changed and when, never the ticket's text. A ticket without the file
   has no activity.
 - `MIG-1` `flashheart migrate` converts a v1 root to v2: it shows the plan
@@ -280,7 +281,9 @@ Full format: `docs/dev/specs/board-format.md`.
 - `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
   workstream, blocked, live badge, criteria progress), *Detailed* (+
   description excerpt, handoff "next", attachments count). Every card shows
-  its id and its workstream's line as a stripe and bullet. **Colour by**
+  its id and its workstream's line as a stripe and bullet, and, at every
+  density, its change requests still open or addressed (`REV-6`) as a
+  count. **Colour by**
   (type by default, priority, age or none) tints the card header and names
   the value in a tag, with colour chips on the board that also filter; the colour is never the
   only carrier of meaning and never uses the workstream line colours.
@@ -317,7 +320,8 @@ Full format: `docs/dev/specs/board-format.md`.
   reload or a new tab, under the band, the browser tab named
   `<id> · <title>`, with a link to the ticket beside its project's board.
   It shows the whole ticket as one continuous page, with no tabs: needs
-  repair, questions waiting for the user, Handoff, Blocked by, Acceptance
+  repair, change requests still open or addressed (`REV-6`, with Resolve
+  and Reopen), questions waiting for the user, Handoff, Blocked by, Acceptance
   criteria, Description, Test plan (or Reproduction), Context and the
   ticket's other sections; then, when `review.md` exists, the review in its
   own sections, its *Evidence* screenshots as one captioned gallery that
@@ -332,7 +336,9 @@ Full format: `docs/dev/specs/board-format.md`.
   a failed post keeps the text with the reason beside it), optionally
   quoting a section, criterion or How to verify step chosen from the
   page, shown as a quote in the comment. A person's comment edits in
-  place (`EDIT-11`) and then shows as edited. From 1280px an outline
+  place (`EDIT-11`) and then shows as edited, and shows its state when it
+  is a change request. On a ticket in review the properties offer
+  **Request changes** (`REV-6`). From 1280px an outline
   of the sections (with counts, empty template sections marked empty, the
   section in view highlighted) sits on the left and the properties (status
   with **Move to …**, priority, type, workstream, branch, pull request,
@@ -358,8 +364,9 @@ Full format: `docs/dev/specs/board-format.md`.
   one an agent's forced claim writes (FH-81).
 - `EDIT-3` Moving into *Ready to review* warns when the review file is
   missing, when the review shows no evidence (no screenshot and no stated
-  reason in its *Evidence* section, `REV-4`), or when criteria are unticked;
-  it does not prevent the move.
+  reason in its *Evidence* section, `REV-4`), when criteria are unticked,
+  or while change requests are open (`REV-6`; the warning names each, by
+  its id, its first words and who asked); it does not prevent the move.
 - `EDIT-4` Reordering a workstream's tickets that have no dependencies on
   the line rewrites the workstream's `tickets:` list; tickets on the graph
   are placed by their dependencies.
@@ -634,6 +641,20 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   rewritten; a link it cannot copy is logged once. Content Flashheart wrote
   itself, including raw edits sent from the browser, is not acted on, so
   the browser cannot pull local files in.
+- `REV-6` **Request changes** (D47, FH-126): on a ticket in review, the
+  person asks for changes from its full page, choosing existing comments,
+  writing a new one, or both. In one write the chosen comments become
+  *change requested*, the new one is added as one, and the ticket moves
+  back to In progress with its branch and pull request kept. A live
+  session holding the ticket (its claim, agent-protocol §6) gets them with
+  its next prompt or Flashheart tool call; otherwise nothing is queued,
+  and the next session's recovery note and `board_context` name them from
+  the ticket. The agent marks each one *addressed* through `update_ticket`
+  (agent-protocol §7.2). The page lists the requests still open or
+  addressed at its top with their counts, and the card shows the counts;
+  at the next review the person **Resolves** each addressed request or
+  **Reopens** it (a reopened request goes to the live holder too). Every
+  state change is the ticket's history (STO-8).
 
 ### 6.12 Settings (`CFG`)
 

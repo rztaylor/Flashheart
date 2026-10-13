@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/scrub"
 )
 
@@ -142,4 +144,184 @@ func (s *Store) updateActivity(project, id string, pre Precondition, edit Edit) 
 	}
 	t.put(name, next)
 	return Hash(next), t.commit()
+}
+
+// ErrNotInReview refuses a request for changes on a ticket that is no
+// longer in review (FH-126).
+var ErrNotInReview = errors.New("the ticket is not in review")
+
+// RequestedChanges reports a request for changes: the comments it marked
+// (those named, then the one it added), the ticket's new hash and the
+// activity file's.
+type RequestedChanges struct {
+	Comments     []board.Comment
+	Hash         string
+	ActivityHash string
+}
+
+// RequestChanges is a person's request for changes on a ticket in review
+// (D47, FH-126): in one write under the project lock it moves the ticket
+// back to In progress, keeping its branch and pull request, marks the
+// named comments as change requested and appends added, when given, as a
+// change request; the history entry names the move and the comments.
+// It needs a comment to name or add; a ticket not in review (as the
+// write finds it) is ErrNotInReview and a missing comment ErrNotFound,
+// and either writes nothing.
+func (s *Store) RequestChanges(project, id string, comments []string, added *NewComment) (RequestedChanges, error) {
+	if err := s.commenter(); err != nil {
+		return RequestedChanges{}, err
+	}
+	if len(comments) == 0 && added == nil {
+		return RequestedChanges{}, fmt.Errorf("%w: name a comment or write one to request changes", ErrInvalidInput)
+	}
+	var body, quote, from string
+	if added != nil {
+		var err error
+		if body, quote, from, err = board.CheckComment(scrub.Secrets(added.Body), scrub.Secrets(added.Quote), added.QuoteFrom); err != nil {
+			return RequestedChanges{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
+		}
+	}
+	var result RequestedChanges
+	err := s.inTicket(project, id, func(t *tx, ticket string) error {
+		current, err := t.read(ticket)
+		if err != nil {
+			return err
+		}
+		if status, _ := mdfile.Parse(current).String("status"); status != string(board.Review) {
+			return fmt.Errorf("%s is %s: %w", id, status, ErrNotInReview)
+		}
+		if result.Hash, err = t.edit(ticket, Merge, func(data []byte) ([]byte, error) {
+			return mdfile.SetScalar(data, "status", string(board.InProgress))
+		}, true); err != nil {
+			return err
+		}
+		name := path.Join(path.Dir(ticket), board.ActivityFile)
+		ids := slices.Clone(comments)
+		err = t.editActivity(name, func(data []byte) ([]byte, error) {
+			for _, comment := range comments {
+				if data, err = setCommentState(data, comment, board.CommentChangeRequested, true); err != nil {
+					return nil, err
+				}
+			}
+			if added == nil {
+				return data, nil
+			}
+			entryID, err := newEntryID(board.ParseActivity(data))
+			if err != nil {
+				return nil, err
+			}
+			ids = append(ids, entryID)
+			return board.AppendComment(data, id, board.Comment{
+				ID: entryID, Time: s.now(), By: s.author, State: board.CommentChangeRequested, Quote: quote, QuoteFrom: from, Body: body,
+			}), nil
+		})
+		if err != nil {
+			return err
+		}
+		if err := t.commit(); err != nil {
+			return err
+		}
+		final, err := t.readActivity(name)
+		if err != nil {
+			return err
+		}
+		result.ActivityHash = Hash(final)
+		for _, comment := range board.ParseActivity(final).Comments {
+			if slices.Contains(ids, comment.ID) {
+				result.Comments = append(result.Comments, comment)
+			}
+		}
+		return nil
+	})
+	return result, err
+}
+
+// SetCommentState moves a comment of a live ticket to state to, as the
+// store's writer: a person asks for, resolves or reopens a change, an
+// agent marks one addressed (board.CommentTransition). The change merges
+// with the file as it is under the project lock, and its history entry
+// names it. It returns the comment and the activity file's new hash. A
+// missing comment is ErrNotFound; a change the writer cannot make, or a
+// store writing as no one, ErrInvalidInput.
+func (s *Store) SetCommentState(project, id, comment string, to board.CommentState) (board.Comment, string, error) {
+	if s.author == "" {
+		return board.Comment{}, "", fmt.Errorf("%w: a comment's state is changed by someone", ErrInvalidInput)
+	}
+	var changed board.Comment
+	var hash string
+	err := s.inTicket(project, id, func(t *tx, ticket string) error {
+		name := path.Join(path.Dir(ticket), board.ActivityFile)
+		if err := t.editActivity(name, func(data []byte) ([]byte, error) {
+			return setCommentState(data, comment, to, board.ByPerson(s.author))
+		}); err != nil {
+			return err
+		}
+		if err := t.commit(); err != nil {
+			return err
+		}
+		final, err := t.readActivity(name)
+		if err != nil {
+			return err
+		}
+		hash = Hash(final)
+		at := slices.IndexFunc(board.ParseActivity(final).Comments, func(c board.Comment) bool { return c.ID == comment })
+		if at >= 0 {
+			changed = board.ParseActivity(final).Comments[at]
+		}
+		return nil
+	})
+	return changed, hash, err
+}
+
+// setCommentState is board.SetCommentState with the store's errors.
+func setCommentState(data []byte, comment string, to board.CommentState, person bool) ([]byte, error) {
+	next, _, err := board.SetCommentState(data, comment, to, person)
+	switch {
+	case errors.Is(err, board.ErrNoComment):
+		return nil, fmt.Errorf("%w: %v", ErrNotFound, err)
+	case errors.Is(err, board.ErrCommentState):
+		return nil, fmt.Errorf("%w: %v", ErrInvalidInput, err)
+	}
+	return next, err
+}
+
+// inTicket runs write in a transaction on a live ticket's files under the
+// project lock; write commits it.
+func (s *Store) inTicket(project, id string, write func(t *tx, ticket string) error) error {
+	if err := s.checkTicket(project, id); err != nil {
+		return err
+	}
+	release, err := s.lock(project)
+	if err != nil {
+		return err
+	}
+	defer release()
+	ticket, err := s.TicketFile(project, id)
+	if err != nil {
+		return err
+	}
+	return write(s.begin(), ticket)
+}
+
+// addressing marks comments addressed in the activity file beside ticket,
+// in the transaction t, as an agent (FH-126).
+func (s *Store) addressing(addressed []string) func(t *tx, ticket string) error {
+	if len(addressed) == 0 {
+		return nil
+	}
+	return func(t *tx, ticket string) error {
+		if s.author == "" {
+			return fmt.Errorf("%w: a comment's state is changed by someone", ErrInvalidInput)
+		}
+		name := path.Join(path.Dir(ticket), board.ActivityFile)
+		return t.editActivity(name, func(data []byte) ([]byte, error) {
+			var err error
+			for _, comment := range addressed {
+				if data, err = setCommentState(data, comment, board.CommentAddressed, board.ByPerson(s.author)); err != nil {
+					return nil, err
+				}
+			}
+			return data, nil
+		})
+	}
 }

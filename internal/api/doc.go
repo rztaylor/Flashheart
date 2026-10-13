@@ -23,7 +23,10 @@
 // changes or comments on a ticket appends one event recording that the
 // human did (EDIT-10), best effort once the ticket is saved; the Writer
 // writes as the person, so the store appends the ticket's history. Ticket
-// detail carries the ticket's comments and history. An answer is
+// detail carries the ticket's comments and history. A request for changes
+// on a ticket in review, and a reopened request, are queued in the inbox
+// of the live session holding the ticket (index.Snapshot.Holder), if any
+// (requests.go, REV-6); cards and detail count the change requests. An answer is
 // appended to the event log, queued in the asking session's inbox and noted
 // in the ticket (RUN-8, HOOK-5, STO-6). It owns no
 // filesystem rules, parsing or blocking rules (board), run derivation (runs)

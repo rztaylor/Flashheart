@@ -302,7 +302,8 @@ func TestEveryTicketWriteAppendsOneHistoryEntry(t *testing.T) {
 
 func sameChange(a, b board.Change) bool {
 	return a.What == b.What && a.From == b.From && a.To == b.To &&
-		slices.Equal(a.Fields, b.Fields) && slices.Equal(a.Criteria, b.Criteria) && slices.Equal(a.Steps, b.Steps)
+		slices.Equal(a.Fields, b.Fields) && slices.Equal(a.Criteria, b.Criteria) && slices.Equal(a.Steps, b.Steps) &&
+		slices.Equal(a.Comments, b.Comments)
 }
 
 func TestWritesThatChangeNoHistoryAppendNone(t *testing.T) {

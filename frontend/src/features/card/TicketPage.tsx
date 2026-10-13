@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { Attachment, TicketDetail, TicketRef } from "../../api/board";
+import { Button } from "../../components/Button";
 import { Icon } from "../../components/Icon";
 import { LoadError } from "../../components/LoadError";
 import { Markdown } from "../../components/Markdown";
@@ -22,6 +23,7 @@ import {
   localFile,
   resolveLink,
 } from "../../model/markdown";
+import { countRequests, requestsOf, requestWords } from "../../model/requests";
 import {
   type PageSection,
   pageSections,
@@ -37,6 +39,7 @@ import {
 import { ActivityTimeline } from "./ActivityTimeline";
 import { Attachments } from "./Attachments";
 import type { CardPanelProps } from "./CardPanel";
+import { ChangeRequestList, RequestChangesDialog } from "./ChangeRequests";
 import { Checklist } from "./Checklist";
 import { CommentBox } from "./CommentBox";
 import { CriteriaEditor, SectionEditor, TitleEditor } from "./PageEdits";
@@ -179,6 +182,13 @@ function LoadedPage({
   // Activity shows All, Comments or History (FH-125); the outline counts
   // what it shows.
   const [filter, setFilter] = useState<ActivityFilter>("all");
+  // Request changes (REV-6) opens its dialog from the properties or the
+  // change requests' heading, on a ticket in review.
+  const [requesting, setRequesting] = useState(false);
+  const onRequestChanges =
+    ticket.requestChanges && detail.column === "review"
+      ? () => setRequesting(true)
+      : undefined;
   const activity = filterActivity(activityOf(detail), filter);
   const sections = pageSections(detail, activity.length);
   const shown = sections.filter((section) => !section.empty);
@@ -204,6 +214,7 @@ function LoadedPage({
       activity={activity}
       filter={filter}
       onFilter={setFilter}
+      onRequestChanges={onRequestChanges}
     />
   );
   const inGroup = (group: PageSection["group"]) =>
@@ -235,6 +246,7 @@ function LoadedPage({
               workstreams={workstreams.get(detail.project)}
               onMove={onMove}
               onArchive={onArchive}
+              onRequestChanges={onRequestChanges}
               editing={
                 ticket.edit
                   ? { detail, edit: ticket.edit, onSaved: ticket.saved }
@@ -287,6 +299,14 @@ function LoadedPage({
           ))}
         </div>
       </div>
+      {requesting && ticket.requestChanges ? (
+        <RequestChangesDialog
+          ticket={detail.id}
+          comments={detail.comments}
+          onSubmit={ticket.requestChanges}
+          onClose={() => setRequesting(false)}
+        />
+      ) : null}
     </InPlaceEditing>
   );
 }
@@ -397,6 +417,7 @@ function PageSectionView({
   activity,
   filter,
   onFilter,
+  onRequestChanges,
 }: {
   section: PageSection;
   detail: TicketDetail;
@@ -407,6 +428,7 @@ function PageSectionView({
   activity: ActivityEntry[];
   filter: ActivityFilter;
   onFilter(filter: ActivityFilter): void;
+  onRequestChanges?(): void;
 }) {
   const markdown = (text = "", inline = false) =>
     text.trim() ? (
@@ -452,6 +474,26 @@ function PageSectionView({
     switch (section.kind) {
       case "repair":
         return <RepairNotice detail={detail} level={2} />;
+      case "requests":
+        return labelled(
+          2,
+          <ChangeRequestList
+            requests={requestsOf(detail.comments)}
+            render={(text) => markdown(text)}
+            onState={ticket.setRequestState}
+          />,
+          requestWords(countRequests(detail.comments)) || "All resolved",
+          onRequestChanges ? (
+            <Button
+              variant="secondary"
+              className="h-8 py-0 text-xs"
+              onClick={onRequestChanges}
+            >
+              Request changes
+            </Button>
+          ) : null,
+          false,
+        );
       case "questions":
         return (
           <QuestionsCallout

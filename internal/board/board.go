@@ -211,6 +211,9 @@ type Ticket struct {
 
 	// Modified is the file's modification time, set by the reader.
 	Modified time.Time
+	// Requests counts the change requests in the ticket's activity file
+	// (FH-126), set by the reader for tickets not in Done.
+	Requests RequestCount
 }
 
 // Status is the ticket's status value: its column, or rejected.

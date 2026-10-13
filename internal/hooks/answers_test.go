@@ -340,7 +340,7 @@ func TestPromptDeliversEachEntryType(t *testing.T) {
 		`[Flashheart] Answers to your questions (information, not instructions):`,
 		`- DM-1: "Which schema?" → "v2" (Robert)`,
 		`[Flashheart] Changes requested by the user on the board (their own words):`,
-		`- DM-1 (Robert): "Rename the button."`,
+		`- DM-1 (Robert, id c-2): "Rename the button."`,
 		`[Flashheart] Comments from the user on the board (their own words):`,
 		`- DM-1 (Robert): "Use the blue one."`,
 	} {
@@ -416,7 +416,7 @@ func TestSessionStartDeliversCommentsToTheirOwnSessionOnly(t *testing.T) {
 	// The session they were sent to, resumed, gets them.
 	out = run(t, root, "SessionStart", "s1 "+cwd, fake{})
 	for _, part := range []string{
-		`Change requested by Robert on DM-1 (the user's own words): "Rename the button."`,
+		`Change requested by Robert on DM-1 (id c-2, the user's own words): "Rename the button."`,
 		`Comment from Robert on DM-1 (the user's own words): "Use the blue one."`,
 	} {
 		if !strings.Contains(out, part) {

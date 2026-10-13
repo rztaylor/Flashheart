@@ -10,6 +10,7 @@ import {
   markdownSections,
   withoutImages,
 } from "./markdown";
+import { requestsOf } from "./requests";
 import { sessionsOf } from "./runs";
 
 export type SectionId = "ticket" | "edit" | "runs" | "attachments" | "review";
@@ -54,6 +55,7 @@ export type PageGroup = "ticket" | "review" | "files" | "activity";
 
 export type PageSectionKind =
   | "repair"
+  | "requests"
   | "questions"
   | "handoff"
   | "blocked"
@@ -105,7 +107,8 @@ export type PageInput = Pick<
   | "criteriaItems"
   | "review"
   | "attachmentFiles"
->;
+> &
+  Partial<Pick<TicketDetail, "comments">>;
 
 // Sections of the ticket file the page shows elsewhere: criteria from the
 // parsed checklist, the handoff as its callout, notes in Activity.
@@ -165,7 +168,7 @@ const slug = (text: string) =>
 const plain = (heading: string) => heading.trim().toLowerCase();
 
 // pageSections lists the full page's sections in order (FH-65): needs
-// repair, questions waiting, Handoff, Blocked by, Acceptance criteria,
+// repair, change requests (REV-6), questions waiting, Handoff, Blocked by, Acceptance criteria,
 // Description, Test plan (or Reproduction), Context and the ticket's other
 // sections; then Review, when review.md exists, in its own sections; then
 // Files, the attachments neither the review nor the ticket links; then
@@ -187,6 +190,18 @@ export function pageSections(
 
   if (detail.needsRepair.length > 0)
     ticket({ id: "repair", kind: "repair", title: "Needs repair" });
+  // Change requests (REV-6) head the page while the ticket has any; the
+  // outline counts those resolved of all, as a checklist does.
+  const requests = requestsOf(detail.comments ?? []);
+  if (requests.length > 0)
+    ticket({
+      id: "requests",
+      kind: "requests",
+      title: "Change requests",
+      ...checklistCount(
+        requests.map((request) => ({ done: request.state === "resolved" })),
+      ),
+    });
   if (detail.questions.length > 0)
     ticket({
       id: "questions",

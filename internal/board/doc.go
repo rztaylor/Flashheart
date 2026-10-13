@@ -21,7 +21,11 @@
 // ParseHandoff round-trip), and a ticket's activity file (activity.go:
 // comment and history entries, parsed and written byte for byte, unknown
 // entries kept; history.go: the changes a write made, worked out from the
-// ticket and review before and after, never their text; D47).
+// ticket and review before and after, never their text; D47), with the
+// change requests in review (requests.go, REV-6, FH-126): who may move a
+// comment's state where, the history of a state change worked out from
+// the file's comments before and after, the counts a card shows and the
+// warning that names open requests on a move to review.
 //
 // It performs no I/O and knows nothing about HTTP or the index: store reads
 // files and hands their bytes here, and index composes the results.

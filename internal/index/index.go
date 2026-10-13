@@ -48,6 +48,8 @@ type Snapshot struct {
 
 	// human is each project's latest human board activity (LatestHuman).
 	human map[string]events.HumanActivity
+	// lease is how long a claim outlives its run's last activity (Holder).
+	lease time.Duration
 	// runIndex finds Runs by ticket, id and parent (FH-96).
 	runIndex runIndex
 
@@ -277,7 +279,7 @@ func (i *Index) publishLocked(next *Snapshot, boardPrint string, now time.Time) 
 		next.human = i.events.human()
 		runsPrint = read + "\x00" + signature(next.Runs)
 	}
-	next.runIndex = indexRuns(next.Runs)
+	next.runIndex, next.lease = indexRuns(next.Runs), i.runs.Lease
 	next.Revision = 1
 	if i.current != nil {
 		next.Revision = i.current.Revision

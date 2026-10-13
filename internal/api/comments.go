@@ -40,7 +40,8 @@ type HistoryJSON struct {
 }
 
 // ChangeJSON is one thing a write changed (board.Change): what is created,
-// moved, edited, ticked, unticked, archived or restored.
+// moved, edited, ticked, unticked, archived, restored, or a comment's
+// state: change-requested, addressed, resolved or reopened.
 type ChangeJSON struct {
 	What     string   `json:"what"`
 	From     string   `json:"from"`
@@ -48,6 +49,8 @@ type ChangeJSON struct {
 	Fields   []string `json:"fields"`
 	Criteria []int    `json:"criteria"`
 	Steps    []int    `json:"steps"`
+	// Comments are the ids of the comments whose state changed (FH-126).
+	Comments []string `json:"comments"`
 }
 
 // CommentRequest is POST /api/tickets/{id}/comments.
@@ -58,18 +61,24 @@ type CommentRequest struct {
 }
 
 // CommentEditRequest is PATCH /api/tickets/{id}/comments/{comment}: the
-// new text, and the hash of the activity the person read (STO-3).
+// new text, and the hash of the activity the person read (STO-3); or,
+// alone, the state the person moves a change request to: resolved, or
+// change-requested to reopen it (FH-126).
 type CommentEditRequest struct {
-	Base string `json:"base"`
-	Body string `json:"body"`
+	Base  string `json:"base,omitempty"`
+	Body  string `json:"body,omitempty"`
+	State string `json:"state,omitempty"`
 }
 
 // CommentResponse reports a saved comment, the activity's new hash and the
-// board revision.
+// board revision; for a reopened change request, the run it was sent to
+// (FH-126) and any warning.
 type CommentResponse struct {
 	Comment      CommentJSON `json:"comment"`
 	ActivityHash string      `json:"activityHash"`
 	Revision     uint64      `json:"revision"`
+	SentTo       string      `json:"sentTo,omitempty"`
+	Warnings     []string    `json:"warnings,omitempty"`
 }
 
 var commentID = regexp.MustCompile(`^[0-9A-Za-z_-]{1,64}$`)
@@ -77,6 +86,7 @@ var commentID = regexp.MustCompile(`^[0-9A-Za-z_-]{1,64}$`)
 func (b boardAPI) registerComments(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/tickets/{id}/comments", b.addComment)
 	mux.HandleFunc("PATCH /api/tickets/{id}/comments/{comment}", b.editComment)
+	mux.HandleFunc("POST /api/tickets/{id}/request-changes", b.requestChanges)
 }
 
 func (b boardAPI) addComment(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +118,14 @@ func (b boardAPI) editComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request CommentEditRequest
-	if !decode(w, r, &request) || !requireBase(w, request.Base) || !commentFits(w, request.Body, "") {
+	if !decode(w, r, &request) {
+		return
+	}
+	if request.State != "" {
+		b.setCommentState(w, r, writer, request)
+		return
+	}
+	if !requireBase(w, request.Base) || !commentFits(w, request.Body, "") {
 		return
 	}
 	id := r.PathValue("comment")
@@ -175,7 +192,7 @@ func activityJSON(activity board.Activity) ([]CommentJSON, []HistoryJSON) {
 		for _, change := range entry.Changes {
 			changes = append(changes, ChangeJSON{
 				What: change.What, From: change.From, To: change.To,
-				Fields: nonNil(change.Fields), Criteria: nonNil(change.Criteria), Steps: nonNil(change.Steps),
+				Fields: nonNil(change.Fields), Criteria: nonNil(change.Criteria), Steps: nonNil(change.Steps), Comments: nonNil(change.Comments),
 			})
 		}
 		history = append(history, HistoryJSON{

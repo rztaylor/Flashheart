@@ -144,6 +144,9 @@ type Card struct {
 	AgentWorking bool      `json:"agentWorking"`
 	// OpenQuestions counts open questions about the ticket (CARD-6).
 	OpenQuestions int `json:"openQuestions"`
+	// ChangeRequests counts the ticket's change requests still open or
+	// addressed (FH-126); zero for a ticket in Done.
+	ChangeRequests RequestsJSON `json:"changeRequests"`
 	// Sessions summarises the runs working for the ticket (RUN-9); absent
 	// when none is linked and the ticket is not in progress.
 	Sessions *SessionsJSON `json:"sessions,omitempty"`
@@ -490,6 +493,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 		// ticket itself still opens.
 		if activity, activityHash, err := b.files.ReadTicketActivity(project.Name, ticket.Folder); err == nil {
 			detail.Comments, detail.History = activityJSON(activity)
+			detail.ChangeRequests = requestsJSON(board.CountRequests(activity.Comments))
 			if b.write != nil {
 				detail.ActivityHash = activityHash
 			}
@@ -650,8 +654,8 @@ func card(snapshot *index.Snapshot, project *board.Project, ticket board.Ticket,
 		Modified: timestamp(ticket.Modified), Branch: ticket.Branch, PR: ticket.PR, DependsOn: nonNil(ticket.DependsOn),
 		Excerpt: ticket.Excerpt, Attachments: len(project.Attachments[ticket.ID]), HasReview: project.Reviews[ticket.ID],
 		Blocked: len(blockedBy) > 0, BlockedBy: blockedBy,
-		NeedsRepair: nonNil(ticket.Repair),
-		Warnings:    nonNil(slices.Concat(ticket.Warnings, snapshot.Analysis.Warnings[ref])),
+		NeedsRepair: nonNil(ticket.Repair), ChangeRequests: requestsJSON(ticket.Requests),
+		Warnings: nonNil(slices.Concat(ticket.Warnings, snapshot.Analysis.Warnings[ref])),
 	}
 	for _, criterion := range ticket.Criteria {
 		result.Criteria.Total++

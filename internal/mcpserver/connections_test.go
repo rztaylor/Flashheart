@@ -203,7 +203,7 @@ func TestCommentsArriveWithTheNextToolResult(t *testing.T) {
 		}
 	}
 	contains(t, e.okOn(codex, "list_tickets", nil),
-		"[Flashheart] Changes requested by the user on the board (their own words):", `- DM-1 (Robert): "Rename the button."`,
+		"[Flashheart] Changes requested by the user on the board (their own words):", `- DM-1 (Robert, id c-2): "Rename the button."`,
 		"[Flashheart] Comments from the user on the board (their own words):", `- DM-1 (Robert): "Use the blue one."`)
 	if strings.Contains(e.okOn(codex, "list_tickets", nil), "blue one") {
 		t.Fatal("comment delivered twice")

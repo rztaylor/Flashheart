@@ -14,7 +14,9 @@ Archive), and its tabs (`TicketSections`, `EditTab` through
 `useTicketDraft`, `RunsTab`, `RunDetail`, `ReviewTab`).
 
 Page only: `PropertiesPanel` (Move to, a row per field, Archive),
-`SectionOutline` and `JumpTo`, `useSectionInView`, `ActivityTimeline`
+`SectionOutline` and `JumpTo`, `useSectionInView`, `ChangeRequests` (the
+change requests list, the Request changes dialog and a request's state
+pill, REV-6), `ActivityTimeline`
 (with its filter's state on the page, and a person's comment edited in
 place) and `CommentBox` (posting a comment with its quote, FH-125), and
 what each in-place item edits with (EDIT-11): `PageEdits` (title,

@@ -55,14 +55,16 @@ func (p Precondition) check(name string, current []byte) error {
 //
 // For a store writing as someone (As), commit first stages one history
 // entry in the activity file of each ticket the transaction changed,
-// after its other files: what changed in the ticket and its review.md
+// after its other files: what changed in the ticket, its review.md and
+// its comments' states (FH-126)
 // since the transaction first read them, and what the write states
 // besides (created, archived, restored). A history that cannot be staged
 // fails the whole write, so a ticket write and its history land together.
 type tx struct {
 	s     *Store
 	files []staged
-	// before holds the ticket and review files the transaction edited, as
+	// before holds the ticket, review and activity files the transaction
+	// edited (an activity file only for its comments' states), as
 	// it first read them; noted holds the changes a write states, by
 	// ticket folder; folders orders both by first appearance.
 	before  []staged
@@ -206,9 +208,12 @@ func (t *tx) history() error {
 			if err != nil {
 				return err
 			}
-			if path.Base(file.name) == reviewFile {
+			switch path.Base(file.name) {
+			case reviewFile:
 				changes = append(changes, board.ReviewChanges(string(file.data), string(after))...)
-			} else {
+			case board.ActivityFile:
+				changes = append(changes, board.CommentChanges(file.data, after)...)
+			default:
 				changes = append(changes, board.TicketChanges(file.data, after)...)
 			}
 		}
@@ -242,6 +247,31 @@ func (t *tx) appendHistory(folder string, changes []board.Change) error {
 	next := board.AppendHistory(data, ticket, board.History{ID: id, Time: t.s.now(), By: t.s.author, Changes: changes})
 	if len(next) > MaxFileBytes {
 		return nil
+	}
+	t.put(name, next)
+	return nil
+}
+
+// editActivity applies edit to an activity file's comments (their
+// states) as the transaction has left it, a missing file being empty,
+// and stages the result when it changed; its history names each
+// comment whose state changed. A result over MaxFileBytes is
+// ErrTooLarge.
+func (t *tx) editActivity(name string, edit Edit) error {
+	current, err := t.readActivity(name)
+	if err != nil {
+		return err
+	}
+	t.track(name, current)
+	next, err := edit(current)
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(next, current) {
+		return nil
+	}
+	if len(next) > MaxFileBytes {
+		return fmt.Errorf("the ticket's activity is limited to %d KiB: %w", MaxFileBytes>>10, ErrTooLarge)
 	}
 	t.put(name, next)
 	return nil

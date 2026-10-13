@@ -25,7 +25,12 @@
 // run) appends one history entry, worked out by board from the files
 // before and after, in the same transaction as each ticket write
 // (tx.go), and adds and edits people's comments under the lock with the
-// file's hash, never touching the ticket file (ticketactivity.go),
+// file's hash, never touching the ticket file (ticketactivity.go); a
+// comment's state changes as its writer may (a person requests, resolves
+// and reopens, an agent addresses with its ticket edit,
+// EditTicketAddressing), and a request for changes moves the ticket and
+// marks its comments in one write (RequestChanges, REV-6); the board read
+// counts an open ticket's change requests (Ticket.Requests),
 // reads every project.yaml through one parser that reports problems as
 // warnings and edits it only through mdfile's plain-YAML editor (FH-77),
 // finds or creates a repository's project

@@ -231,19 +231,29 @@ type Edit func(current []byte) ([]byte, error)
 // ticket gets `updated:` stamped; an edit that changes nothing writes
 // nothing. It returns the file's hash after the call.
 func (s *Store) UpdateTicket(project, id string, pre Precondition, edit Edit) (string, error) {
-	if err := s.checkTicket(project, id); err != nil {
-		return "", err
-	}
-	release, err := s.lock(project)
+	return s.updateTicket(project, id, pre, edit, nil)
+}
+
+// updateTicket is UpdateTicket, with also (nil for none) staging more of
+// the ticket's files in the same transaction.
+func (s *Store) updateTicket(project, id string, pre Precondition, edit Edit, also func(t *tx, ticket string) error) (string, error) {
+	var hash string
+	err := s.inTicket(project, id, func(t *tx, name string) error {
+		var err error
+		if hash, err = t.edit(name, pre, edit, true); err != nil {
+			return err
+		}
+		if also != nil {
+			if err := also(t, name); err != nil {
+				return err
+			}
+		}
+		return t.commit()
+	})
 	if err != nil {
 		return "", err
 	}
-	defer release()
-	name, err := s.TicketFile(project, id)
-	if err != nil {
-		return "", err
-	}
-	return s.update(name, pre, edit, true)
+	return hash, nil
 }
 
 // UpdateWorkstream applies edit to workstreams/<slug>.md under the project
