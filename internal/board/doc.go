@@ -25,7 +25,9 @@
 // change requests in review (requests.go, REV-6, FH-126): who may move a
 // comment's state where, the history of a state change worked out from
 // the file's comments before and after, the counts a card shows and the
-// warning that names open requests on a move to review.
+// warning that names open requests on a move to review; and a comment
+// told to a session (delivery.go, FH-127): the run it was sent to, its
+// delivery once, and the lock on editing it after.
 //
 // It performs no I/O and knows nothing about HTTP or the index: store reads
 // files and hands their bytes here, and index composes the results.

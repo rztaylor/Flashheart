@@ -18,8 +18,10 @@
 // entries a delivery takes (Mailbox), the question.delivered and
 // comment.delivered events that record taking them, and Deliver, the one
 // routine every delivery path uses (it takes inboxes, adds the fold's
-// undelivered answers, records delivery and returns what it took even
-// when recording fails, so nothing taken is lost), and the human's board
+// undelivered answers, hands over a comment sent from the board as its
+// ticket has it then and marks it delivered there through store, FH-127,
+// records delivery and returns what it took even when recording fails,
+// so nothing taken is lost), and the human's board
 // activity: the shape of a board write's event (run `human`, EDIT-10;
 // comment.added and comment.edited, D47) and which events count as the
 // human acting on the board.

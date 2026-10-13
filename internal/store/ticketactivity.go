@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path"
 	"slices"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/mdfile"
@@ -19,12 +20,18 @@ import (
 // file, so a comment never contends with an agent rewriting its handoff.
 
 // NewComment is a comment as a person writes it: its text and, optionally,
-// the part of the ticket it quotes and where that is from.
+// the part of the ticket it quotes and where that is from, and the run it
+// is sent to as well (FH-127; a run id, "" for none).
 type NewComment struct {
 	Body      string
 	Quote     string
 	QuoteFrom string
+	SentTo    string
 }
+
+// ErrDelivered refuses a change to a comment its session has been handed
+// (FH-127).
+var ErrDelivered = errors.New("delivered")
 
 // ReadTicketActivity returns a live ticket's activity file, parsed, with
 // its content hash, the precondition of an edit; a ticket without one has
@@ -63,13 +70,16 @@ func (s *Store) AddComment(project, id string, pre Precondition, input NewCommen
 	if err != nil {
 		return board.Comment{}, "", fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
+	if input.SentTo != "" && !board.IsRun(input.SentTo) {
+		return board.Comment{}, "", fmt.Errorf("%w: a comment is sent to a session's run, not %q", ErrInvalidInput, input.SentTo)
+	}
 	var comment board.Comment
 	hash, err := s.updateActivity(project, id, pre, func(data []byte) ([]byte, error) {
 		entryID, err := newEntryID(board.ParseActivity(data))
 		if err != nil {
 			return nil, err
 		}
-		comment = board.Comment{ID: entryID, Time: s.now(), By: s.author, State: board.CommentOpen, Quote: quote, QuoteFrom: from, Body: body}
+		comment = board.Comment{ID: entryID, Time: s.now(), By: s.author, State: board.CommentOpen, SentTo: input.SentTo, Quote: quote, QuoteFrom: from, Body: body}
 		return board.AppendComment(data, id, comment), nil
 	})
 	return comment, hash, err
@@ -78,7 +88,8 @@ func (s *Store) AddComment(project, id string, pre Precondition, input NewCommen
 // EditComment replaces the text of comment in a live ticket's activity
 // file and marks it edited, under the project lock once pre holds (the
 // hash of the file the person read). A comment the file does not have is
-// ErrNotFound. It returns the comment and the file's new hash.
+// ErrNotFound, and one delivered to its session (FH-127) ErrDelivered. It
+// returns the comment and the file's new hash.
 func (s *Store) EditComment(project, id, comment string, pre Precondition, body string) (board.Comment, string, error) {
 	if err := s.commenter(); err != nil {
 		return board.Comment{}, "", err
@@ -88,17 +99,78 @@ func (s *Store) EditComment(project, id, comment string, pre Precondition, body 
 		return board.Comment{}, "", fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 	var edited board.Comment
-	hash, err := s.updateActivity(project, id, pre, func(data []byte) ([]byte, error) {
-		next, changed, err := board.EditComment(data, comment, func(c *board.Comment) {
-			c.Body, c.Edited = body, s.now()
-		})
-		if errors.Is(err, board.ErrNoComment) {
-			return nil, fmt.Errorf("%w: %v", ErrNotFound, err)
-		}
-		edited = changed
-		return next, err
-	})
+	hash, err := s.updateActivity(project, id, pre, editUndelivered(comment, &edited, func(c *board.Comment) {
+		c.Body, c.Edited = body, s.now()
+	}))
 	return edited, hash, err
+}
+
+// UnsendComment clears the run a person sent a comment to, under the
+// project lock, as the file is then (FH-127): the board unsends a comment
+// it could not queue, so it does not say the comment waits for a session.
+// A delivered comment is ErrDelivered. It returns the comment and the
+// file's new hash.
+func (s *Store) UnsendComment(project, id, comment string) (board.Comment, string, error) {
+	if err := s.commenter(); err != nil {
+		return board.Comment{}, "", err
+	}
+	var unsent board.Comment
+	hash, err := s.updateActivity(project, id, Merge, editUndelivered(comment, &unsent, func(c *board.Comment) { c.SentTo = "" }))
+	return unsent, hash, err
+}
+
+// editUndelivered is an activity edit that applies edit to comment unless
+// it was delivered to its session, keeping the result in out.
+func editUndelivered(comment string, out *board.Comment, edit func(*board.Comment)) Edit {
+	return func(data []byte) ([]byte, error) {
+		locked := false
+		next, changed, err := board.EditComment(data, comment, func(c *board.Comment) {
+			if locked = board.CanEditComment(*c) != nil; !locked {
+				edit(c)
+			}
+		})
+		switch {
+		case errors.Is(err, board.ErrNoComment):
+			return nil, fmt.Errorf("%w: %v", ErrNotFound, err)
+		case err != nil:
+			return nil, err
+		case locked:
+			return nil, fmt.Errorf("%w: %v", ErrDelivered, board.CanEditComment(changed))
+		}
+		*out = changed
+		return next, nil
+	}
+}
+
+// DeliverComment records that comment of a live ticket reached run, the
+// run it was sent to, at at (FH-127), under the project lock as the file
+// is then, and returns the comment as it is: the text its session is
+// shown. ok is false, and nothing is written, when the comment is not
+// there, was not sent to run or was delivered already: it is handed over
+// once. Whoever delivers a session's inbox calls it (events.Deliver); it
+// needs no author and records no history, since the ticket did not
+// change.
+func (s *Store) DeliverComment(project, id, comment, run string, at time.Time) (board.Comment, bool, error) {
+	var delivered board.Comment
+	ok := false
+	err := s.inTicket(project, id, func(t *tx, ticket string) error {
+		name := path.Join(path.Dir(ticket), board.ActivityFile)
+		if err := t.editActivity(name, func(data []byte) ([]byte, error) {
+			next, current, handed, err := board.DeliverComment(data, comment, run, at)
+			if errors.Is(err, board.ErrNoComment) {
+				return data, nil
+			}
+			delivered, ok = current, handed
+			return next, err
+		}); err != nil {
+			return err
+		}
+		return t.commit()
+	})
+	if err != nil {
+		return board.Comment{}, false, err
+	}
+	return delivered, ok, nil
 }
 
 // commenter refuses a store that does not write as a person.
