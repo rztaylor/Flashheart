@@ -299,8 +299,10 @@ Full format: `docs/dev/specs/board-format.md`.
 - `CARD-1` Opening a card shows a panel beside the board (covering the view
   only on narrow screens); the board narrows and scrolls so the card's column
   stays in view. Its tabs: **Ticket** (rendered
-  markdown), **Edit** (frontmatter form and raw markdown), **Runs** (timeline
-  and subagent tree), **Attachments**, **Review** (when a review file exists).
+  markdown), **Comments** (people's comments and the full page's comment
+  box, `CARD-7`; when the ticket has comments or can be edited), **Edit**
+  (frontmatter form and raw markdown), **Runs** (timeline and subagent
+  tree), **Attachments**, **Review** (when a review file exists).
 - `CARD-2` Markdown renders GitHub-flavoured markdown (tables, task lists,
   code). Raw HTML is not rendered. Ticket ids in text (`FH-42`) and relative
   links into another ticket's folder open that ticket's full page

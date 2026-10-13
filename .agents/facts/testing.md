@@ -117,7 +117,10 @@
   show, and their budgets, are `internal/mcpserver/comments_test.go`;
   posting, quoting, editing, the conflict, the filter and the leave guard
   are `TicketComments.dom.test.tsx` and, in the browser,
-  `frontend/e2e/comments.spec.mjs` (FH-125).
+  `frontend/e2e/comments.spec.mjs` (FH-125). The comment tests run on
+  both the page and the card panel's Comments tab (`describe.each` over a
+  surface); the panel's own flow, from posting there to seeing it on the
+  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128).
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
   (`internal/mcpserver`) lists tools over the in-memory transport and fails

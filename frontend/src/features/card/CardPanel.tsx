@@ -6,10 +6,13 @@ import { LoadError } from "../../components/LoadError";
 import { SidePanel } from "../../components/SidePanel";
 import { StaleNote } from "../../components/StaleNote";
 import { TicketLink } from "../../components/TicketLink";
+import { activityOf, filterActivity } from "../../model/activity";
 import { type Line, workstreamTitle } from "../../model/lines";
 import type { Step } from "../../model/order";
 import { type SectionId, ticketSections } from "../../model/ticketSections";
+import { InPlaceEditing } from "../editing/InPlace";
 import type { Editing } from "../editing/useEditing";
+import { TicketComments } from "./TicketComments";
 import {
   TicketActions,
   TicketIdentity,
@@ -128,23 +131,44 @@ export function CardPanel({
           {resource.error ? (
             <StaleNote error={resource.error} className="px-6 pb-3" />
           ) : null}
-          <SectionTabs
-            sections={sections}
-            active={active}
-            onSelect={setTab}
-            tabsClassName="px-6"
-            bodyClassName="relative min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10"
-          >
-            <SectionBody
-              section={active}
-              detail={detail}
-              ticket={ticket}
-              fetcher={fetcher}
-              keys={keys}
-              onOpen={onOpen}
-              workstreams={workstreams}
-            />
-          </SectionTabs>
+          {/* The panel's comments edit in place and hold a comment being
+              written, as the full page's do (FH-128): closing the panel or
+              opening another ticket asks first. */}
+          <InPlaceEditing>
+            <SectionTabs
+              sections={sections}
+              active={active}
+              onSelect={setTab}
+              tabsClassName="px-6"
+              bodyClassName="relative min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10"
+            >
+              {active === "comments" ? null : (
+                <SectionBody
+                  section={active}
+                  detail={detail}
+                  ticket={ticket}
+                  fetcher={fetcher}
+                  keys={keys}
+                  onOpen={onOpen}
+                  workstreams={workstreams}
+                />
+              )}
+              {/* Comments stay mounted while another tab shows, so a
+                  comment being written or edited survives a look at the
+                  ticket. */}
+              {sections.some((section) => section.id === "comments") ? (
+                <div hidden={active !== "comments"}>
+                  <TicketComments
+                    detail={detail}
+                    ticket={ticket}
+                    entries={filterActivity(activityOf(detail), "comments")}
+                    filter="comments"
+                    keys={keys}
+                  />
+                </div>
+              ) : null}
+            </SectionTabs>
+          </InPlaceEditing>
         </>
       ) : null}
     </SidePanel>

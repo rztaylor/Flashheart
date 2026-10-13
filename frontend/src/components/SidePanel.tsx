@@ -26,7 +26,11 @@ export function SidePanel({
   }, []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) onClose();
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      // Claim the key: closing may open a prompt (unsaved changes), which
+      // the browser's own Escape would otherwise cancel at once.
+      event.preventDefault();
+      onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
