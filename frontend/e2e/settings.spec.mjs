@@ -135,6 +135,43 @@ test("the menu opens and closes from the keyboard, back on the gear", async () =
   await expect(gear()).toBeFocused();
 });
 
+test("the open menu is accessible in both themes, wide and narrow", async () => {
+  // The wide screens first, so no phone layout has scrolled the board.
+  for (const [hash, width, height] of [
+    ["#/p/flashheart/board", 1440, 900],
+    ["#/ticket/FH-36", 1440, 900],
+    ["#/p/flashheart/board", 390, 844],
+  ]) {
+    for (const theme of ["light", "dark"]) {
+      await open(page, hash, { width, height, theme });
+      await expect(gear()).toBeVisible();
+      const board = page.locator(".board-grid");
+      const scrolled = async () =>
+        (await board.count()) === 0
+          ? 0
+          : board.evaluate((element) => element.scrollLeft);
+      const before = await scrolled();
+      await gear().click();
+      const panel = await menu();
+      await expect(panel).toBeVisible();
+      // Opening the menu leaves the board where it was.
+      expect(await scrolled()).toBe(before);
+      // On a phone the menu stays inside the screen.
+      const box = await panel.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      await expectNoAxeViolations(page, `settings ${hash} ${width} ${theme}`);
+      const where = hash.startsWith("#/ticket") ? "ticket" : "board";
+      await shot(page, `settings-${where}-${width}-${theme}`, {
+        keepFocus: true,
+      });
+      await page.keyboard.press("Escape");
+      expect(await scrolled()).toBe(before);
+    }
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+});
+
 test("the menu opens over a ticket panel covering a phone's screen", async () => {
   await open(page, "#/p/flashheart/board?t=FH-36", {
     width: 390,
@@ -154,31 +191,4 @@ test("the menu opens over a ticket panel covering a phone's screen", async () =>
   );
   expect(hit).toBe("Dark");
   await page.keyboard.press("Escape");
-});
-
-test("the open menu is accessible in both themes, wide and narrow", async () => {
-  for (const theme of ["light", "dark"]) {
-    for (const [hash, width, height] of [
-      ["#/p/flashheart/board", 1440, 900],
-      ["#/ticket/FH-36", 1440, 900],
-      ["#/p/flashheart/board", 390, 844],
-    ]) {
-      await open(page, hash, { width, height, theme });
-      await expect(gear()).toBeVisible();
-      await gear().click();
-      const panel = await menu();
-      await expect(panel).toBeVisible();
-      // On a phone the menu stays inside the screen.
-      const box = await panel.boundingBox();
-      expect(box.x).toBeGreaterThanOrEqual(0);
-      expect(box.x + box.width).toBeLessThanOrEqual(width);
-      await expectNoAxeViolations(page, `settings ${hash} ${width} ${theme}`);
-      const where = hash.startsWith("#/ticket") ? "ticket" : "board";
-      await shot(page, `settings-${where}-${width}-${theme}`, {
-        keepFocus: true,
-      });
-      await page.keyboard.press("Escape");
-    }
-  }
-  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
 });
