@@ -14,7 +14,7 @@
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou,
+  Table, TailText, BranchLabel, EmptyState, RunState, NeedsYou,
   TicketMarks (a card's type icon and three-bar priority marker),
   QuestionCard, Aside, Popover,
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the

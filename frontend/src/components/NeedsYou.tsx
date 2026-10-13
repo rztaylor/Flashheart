@@ -32,7 +32,6 @@ export function AttentionDisc({
 
 const plateSizes = {
   inline: "inline-flex gap-1 px-2 leading-5",
-  rail: "flex gap-1 px-1.5",
   band: "flex h-8 gap-1.5 px-2.5 text-xs sm:h-9 sm:px-3.5 sm:text-sm",
 } as const;
 
@@ -41,7 +40,6 @@ export type PlateSize = keyof typeof plateSizes;
 // plateMark is the Needs you disc's size on each plate.
 export const plateMark: Record<PlateSize, number> = {
   inline: 9,
-  rail: 8,
   band: 11,
 };
 
@@ -55,8 +53,8 @@ export function plateClass(size: PlateSize, pressed = false): string {
 }
 
 // NeedsYouPlate is Needs you as a plate in the attention colour, so it
-// reads from across the room: inline (a card or row's run state) or rail
-// (a project's count); the band's is NeedsYouPill.
+// reads from across the room: a card or row's run state. The band's is
+// NeedsYouPill; a project's on the rail is NeedsYouCount.
 export function NeedsYouPlate({
   size = "inline",
   className,
@@ -71,6 +69,21 @@ export function NeedsYouPlate({
     <span className={`${plateClass(size)} ${className ?? ""}`}>
       <RunStateMark state="needs-you" size={plateMark[size]} />
       {children ?? STATE_LABEL["needs-you"]}
+    </span>
+  );
+}
+
+// NeedsYouCount is a project's Needs you as a count on the corner of its
+// rail badge, in the attention colour (FH-150). Decorative: the badge's
+// name says how many agents need the user.
+export function NeedsYouCount({ count }: { count: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-mark="needs-you"
+      className={`absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full px-1 text-2xs leading-none font-semibold tabular-nums ring-2 ring-rail ${attentionClass}`}
+    >
+      {count}
     </span>
   );
 }

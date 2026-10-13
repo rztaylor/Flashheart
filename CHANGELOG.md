@@ -511,6 +511,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- A slim project sidebar gives the board room for another column
+  (FH-150). The sidebar is now a narrow column of project key badges at
+  every width, whether or not a ticket is open, so at 1440px the Done
+  column fits beside the others. A badge keeps what needs you: its Needs
+  you count on the corner and a dashed, hatched mark while a ticket in the
+  project needs repair. Hover a badge, or listen to it, for the project's
+  name and its tickets, in progress, blocked, needs-repair and needs-you
+  counts. On a phone the Project picker is unchanged.
 - Board cards are less cluttered, and each density shows clearly
   different detail (FH-147, `VIEW-6`). **Compact** is just the title, led
   by its id, with what needs attention (Needs you, blocked, change
@@ -532,8 +540,8 @@ All notable changes to this project are documented here. The project follows
   hollow diamond that marked a blocked ticket read as decoration at card
   size; a filled no-entry sign now marks blocked everywhere: on cards,
   blocker pills and notes, the side panel and full page (Blocked by), the
-  blocked-move dialog, the Table, the Workstreams view, the project rail's
-  blocked count and the State filter's Blocked. It always sits beside the
+  blocked-move dialog, the Table, the Workstreams view and the State
+  filter's Blocked. It always sits beside the
   word or the reason.
 - Theme, board root and version are behind a gear in the title bar
   (FH-149, `CFG-2`). The Settings button sits between the connection dot

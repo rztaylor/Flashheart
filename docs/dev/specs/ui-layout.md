@@ -19,13 +19,13 @@ One shell for Overview, Workstreams, Table and Board, in both themes.
 ```
 ┌ Band ─────────────────────────────────────────────────────────────────┐
 │ ⚡ Flashheart │ Overview  Workstreams  Table  Board │ [● N need you] [Search] status [⚙] [Quit] │
-├ Rail ────────┬ Main ──────────────────────────────────────┬ Panel ────┤
-│ All projects │ Page header: scope identity · view summary │ (ticket)  │
-│ ──────────── │ View toolbar (Board, Table)                │           │
-│ FH Project   │ View body                                  │           │
-│   route bar  │                                            │           │
-│ …            │                                            │           │
-└──────────────┴────────────────────────────────────────────┴───────────┘
+├ Rail ┬ Main ───────────────────────────────────────────────┬ Panel ────┤
+│ [▥]  │ Page header: scope identity · view summary          │ (ticket)  │
+│ ──── │ View toolbar (Board, Table)                         │           │
+│ [FH]²│ View body                                           │           │
+│ [AL] │                                                     │           │
+│ …    │                                                     │           │
+└──────┴─────────────────────────────────────────────────────┴───────────┘
 ```
 
 **Band** (3.5rem tall, left to right): the bolt and the *Flashheart*
@@ -55,14 +55,23 @@ click outside or tabbing away closes it, and Escape returns focus to the
 gear. Per-view settings (Show columns, Colour by, Density) stay in the
 Board's View options.
 
-**Rail** (15.5rem; 4rem of key badges while a ticket is open below
-1440px): *All projects*, a divider, then each project, most recently active
-first: key badge, name, ticket count, route bar, and a line with its Needs
-you plate (count), in-progress count, blocked count (no-entry sign) and repair
-count. The current scope is filled. The rail has no footer: the theme,
-board root and version are in the band's Settings menu. Below 48rem the
-rail hides and a control row with Project and Column pickers takes its
-place.
+**Rail** (4rem at every width from 48rem, ticket open or not, with no
+toggle; FH-150): a slim column of key badges, *All projects* (the board
+icon), a divider, then one badge per project, most recently active first.
+The current scope's tile is raised and its badge filled. A badge shows only
+what needs the user: its Needs you count on the badge's top-right corner in
+the attention colour while any of its runs need the user, and the repair
+mark (a dashed ink outline and a hatched top band, as a needs-repair card
+has) while a ticket needs repair. Keys of up to three letters fit at the
+badge's size; longer keys take a smaller cut. Its tooltip and accessible
+name are the project's name (with its folder name when that differs) and
+its counts: *Flashheart (flashheart): 50 tickets, 3 in progress, 22
+blocked, 1 needs repair, 2 agents need you*, the blocked, repair and Needs
+you counts only when not zero; All projects names its project count and
+sums them. Project names, route bars and the other counts are not shown as
+text. The rail has no footer: the theme, board root and version are in the
+band's Settings menu. Below 48rem the rail hides and a control row with
+Project and Column pickers takes its place.
 
 **Page header** (top of Main, every view): the scope's identity, a key badge
 and the project's display name set as the page title (*All projects* with
@@ -682,7 +691,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | --- | --- | --- | --- |
 | Frame | Brand surface and the current scope | Band and its current view tab (raspberry light, black dark), rail and its current tile | The tab's or project's name |
 | Action | The primary action | Primary button | Its label |
-| Attention | A run or question that needs the user | Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark | Disc mark and words |
+| Attention | A run or question that needs the user | Needs you plate (band, card, panel, question card), a rail badge's Needs you count and the Overview's Needs your decision mark | Disc mark and words (on a rail badge, the count, with the words in its name and tooltip) |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name (a card's stripe: the name in the card's name and on a Detailed card) |
 | Paint | The Colour by value | Whole-card tint, colour chip bullet, the type icon's colour | The value's word (chip, tooltip, card name) |
 | State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages | Icon and column word |
@@ -701,12 +710,11 @@ ticket or workstream is marked blocked: a card's blocked mark (§2), the
 blocker pill and note (Detailed cards, the Table, the blocked-move dialog, a route card's blocker notes), the
 short *Blocked* pill and any blocked-tone pill (the panel and page
 headers, a station's *Needs FH-n*), the Blocked by heading on the panel
-and full page, a route card's derived status, the rail's blocked count and
+and full page, a route card's derived status and
 the State filter's *Blocked* choice (in its menu and on its button). It is
 always beside the word *Blocked* or a reason, or inside a name that says
 blocked, and it meets the 3:1 non-text contrast in both themes (the
-blocked ink on its pill, the ground, card, panel and popover surfaces;
-the rail's muted ink on the rail). Transit-line station marks keep their
+blocked ink on its pill, the ground, card, panel and popover surfaces). Transit-line station marks keep their
 own shapes: they show service (served, next stop, ahead, held, missing),
 not blocking, and a dependency outside the line is the blocked pill above
 the station.
@@ -788,11 +796,11 @@ other than the above, the above wins:
   (dark workstreams) is solid at 35%, since dashes mean suspended service.
 - **Placement**: view tabs sit in the band (the light workstreams image puts
   them under it); the backend status stays in the band rather than the rail
-  footer, so it shows at every width and with the rail collapsed; the
+  footer, so it shows at every width beside the slim rail; the
   theme, board root and version, which the references put in the rail's
   footer, are in the band's Settings menu (FH-149).
 - **Omissions the references do not show but the product keeps**: project
-  route bars and counts in the rail, the filter buttons, the
+  counts in the rail badges' names and tooltips, the filter buttons, the
   ticket count, the Needs you filter, the Backlog toggle, the colour chips,
   repair, wait notes, the project name on All-projects cards,
   attachments and review markers, Archive, the Edit and Runs tabs' content,
