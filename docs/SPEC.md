@@ -32,7 +32,9 @@ the user sees, for all projects at once, which agents are working, which are
 stuck, and which are waiting for them.
 
 Flashheart **observes and coordinates** agents the user already runs in their
-own apps. It does not launch, host or proxy agents (`D1`).
+own apps. It does not host, proxy or supervise agents (`D1`); it may start an
+agent's own app or command-line tool on a ticket, which then owns the session
+(`D48`, not yet built).
 
 ## 2. Users and jobs
 
@@ -702,15 +704,17 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
 
 ## 8. Non-goals
 
-Launching, hosting or proxying agents; remote access or multi-user sharing;
+Hosting, proxying or supervising agents (`D48`); remote access, or
+multi-user sharing for now (`D49`);
 accounts; a hosted service; telemetry; issue-tracker sync (GitHub Issues,
 Jira, Linear); time tracking; replacing git or PRs; editing source code.
 
 ## 9. Later possibilities (not committed)
 
 Passive reading of agent session logs for activity without hooks; desktop
-notifications for *Needs you*; Windows support; launching an agent on a
-ticket; more agents (Gemini CLI, Cursor, others with hooks); GitHub PR status
+notifications for *Needs you*; Windows support; starting an agent's own app
+on a ticket (`D48`, FH-131); a small team sharing a synced board (`D49`);
+more agents (Gemini CLI, Cursor, others with hooks); GitHub PR status
 on cards; read-only sharing of a snapshot; board history from git if the root
 is a repository.
 

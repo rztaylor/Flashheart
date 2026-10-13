@@ -32,7 +32,8 @@ waiting for them, across every project, without clicking through chat tabs.
 ## Positioning
 
 Flashheart observes and coordinates the agents the user already runs in their
-own apps; it does not launch, host or proxy agents. Lifecycle facts come from
+own apps; it does not host, proxy or supervise agents, though it may start an
+agent's own app on a ticket (D48). Lifecycle facts come from
 hooks deterministically, not from the model remembering to report, and the
 board is plain markdown files the user owns, readable in any editor or
 Obsidian without Flashheart running.
