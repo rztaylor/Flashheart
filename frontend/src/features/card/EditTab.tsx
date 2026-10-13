@@ -1,84 +1,46 @@
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 import {
   STATUSES,
-  statusWord,
   type TicketDetail,
   type WorkstreamBrief,
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import {
-  type Conflict,
-  conflictOf,
-  type FieldValue,
-  patchTicket,
-  type Saved,
-  saveRaw,
-} from "../../api/edit";
+import { patchTicket, type Saved, saveRaw } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
 import { SegmentedControl } from "../../components/SegmentedControl";
-import { messageOf } from "../../model/errors";
+import {
+  changes,
+  fieldsText,
+  formOf,
+  type TicketForm,
+} from "../../model/ticketForm";
 import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 import { ConflictDialog } from "../editing/ConflictDialog";
+import { useTicketDraft } from "../editing/useTicketDraft";
 
-interface Form {
-  title: string;
-  status: string;
-  type: string;
-  priority: string;
-  created: string;
-  branch: string;
-  pr: string;
-  workstream: string;
-  "depends-on": string;
-  tags: string;
+// Draft is both editors' text: the typed fields and the raw file. They share
+// one base, so a save from either adopts the saved version in both.
+interface Draft {
+  form: TicketForm;
+  raw: string;
 }
 
-const lists: (keyof Form)[] = ["depends-on", "tags"];
+const draftOf = (detail: TicketDetail): Draft => ({
+  form: formOf(detail),
+  raw: detail.raw,
+});
 
-function baseOf(detail: TicketDetail) {
-  return { hash: detail.hash, form: formOf(detail), raw: detail.raw };
-}
+const fieldEdits = (draft: Draft, base: Draft) =>
+  changes(draft.form, base.form);
 
-function formOf(detail: TicketDetail): Form {
-  return {
-    title: detail.title,
-    status: statusWord(detail),
-    type: detail.type,
-    priority: detail.priority,
-    created: detail.created,
-    branch: detail.branch,
-    pr: detail.pr,
-    workstream: detail.workstream,
-    "depends-on": detail.dependsOn.join(", "),
-    tags: detail.tags.join(", "),
-  };
-}
-
-const split = (value: string) =>
-  value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-// changes lists the fields that differ from the saved ticket, as the API
-// expects them (lists as arrays).
-function changes(form: Form, saved: Form): Record<string, FieldValue> {
-  const out: Record<string, FieldValue> = {};
-  for (const key of Object.keys(form) as (keyof Form)[]) {
-    if (form[key].trim() === saved[key].trim()) continue;
-    out[key] = lists.includes(key) ? split(form[key]) : form[key].trim();
-  }
-  return out;
-}
-
-type Pending =
-  | { kind: "fields"; fields: Record<string, FieldValue>; conflict: Conflict }
-  | { kind: "raw"; content: string; conflict: Conflict };
+const isDirty = (draft: Draft, base: Draft) =>
+  Object.keys(fieldEdits(draft, base)).length > 0 || draft.raw !== base.raw;
 
 // EditTab edits a ticket's frontmatter with typed controls, or the whole
-// file in a raw editor (EDIT-6). Every save carries the hash the panel read;
-// a stale hash opens the conflict dialog (EDIT-7).
+// file in a raw editor (EDIT-6). Every save carries the hash of the version
+// the draft started from (useTicketDraft); a stale hash opens the conflict
+// dialog (EDIT-7).
 export function EditTab({
   detail,
   fetcher,
@@ -90,79 +52,35 @@ export function EditTab({
   workstreams: WorkstreamBrief[];
   onSaved(saved: Saved | undefined, what: string): void;
 }) {
-  // base is the version of the file the drafts started from. Edits are
-  // measured against it and saved with its hash, so a change on disk since
-  // then is a conflict, never a silent overwrite (STO-3, EDIT-7).
-  const [base, setBase] = useState(() => baseOf(detail));
+  const draft = useTicketDraft({ detail, read: draftOf, isDirty, onSaved });
   const [mode, setMode] = useState<"fields" | "raw">("fields");
-  const [form, setForm] = useState<Form>(base.form);
-  const [raw, setRaw] = useState(base.raw);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<Pending | null>(null);
-  // adopt takes the next version of the file after a save or a reload.
-  const adopt = useRef(false);
-  const latest = useRef(detail);
-  latest.current = detail;
-  const edits = changes(form, base.form);
+  const { form, raw } = draft.value;
+  const base = draft.base.value;
+  const edits = fieldEdits(draft.value, base);
   const dirty = Object.keys(edits).length > 0;
   const rawDirty = raw !== base.raw;
-
-  const reset = (from: TicketDetail) => {
-    const next = baseOf(from);
-    setBase(next);
-    setForm(next.form);
-    setRaw(next.raw);
-  };
-  // Follow the file while nothing is being edited, and after a save.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the file itself changes.
-  useEffect(() => {
-    if (detail.hash === base.hash) return;
-    if (adopt.current || (!dirty && !rawDirty)) {
-      adopt.current = false;
-      reset(detail);
-    }
-  }, [detail.hash]);
-
-  const run = async (
-    save: () => Promise<Saved>,
-    what: string,
-    onConflict: (c: Conflict) => Pending,
-  ) => {
-    setBusy(true);
-    setError("");
-    try {
-      const result = await save();
-      // Live updates may already have brought the saved version.
-      if (latest.current.hash === result.hash) reset(latest.current);
-      else adopt.current = true;
-      onSaved(result, what);
-    } catch (caught) {
-      const conflict = conflictOf(caught);
-      if (conflict) setPending(onConflict(conflict));
-      else setError(messageOf(caught, "Not saved"));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const { busy, error } = draft;
 
   const saveFields = (event: FormEvent) => {
     event.preventDefault();
-    void run(
-      () => patchTicket(fetcher, detail.id, base.hash, edits),
-      "Saved",
-      (conflict) => ({ kind: "fields", fields: edits, conflict }),
-    );
+    void draft.save({
+      send: (hash) => patchTicket(fetcher, detail.id, hash, edits),
+      what: "Saved",
+      mine: fieldsText(edits),
+    });
   };
   const saveText = () =>
-    run(
-      () => saveRaw(fetcher, detail.id, base.hash, raw),
-      "Saved the file",
-      (conflict) => ({ kind: "raw", content: raw, conflict }),
-    );
+    draft.save({
+      send: (hash) => saveRaw(fetcher, detail.id, hash, raw),
+      what: "Saved the file",
+      mine: raw,
+    });
 
-  const set = (key: keyof Form) => (value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const set = (key: keyof TicketForm) => (value: string) =>
+    draft.set((current) => ({
+      ...current,
+      form: { ...current.form, [key]: value },
+    }));
   const knownWorkstream = workstreams.some(
     (item) => item.slug === form.workstream,
   );
@@ -286,7 +204,9 @@ export function EditTab({
             <Button
               variant="quiet"
               disabled={!dirty || busy}
-              onClick={() => setForm(base.form)}
+              onClick={() =>
+                draft.set((current) => ({ ...current, form: base.form }))
+              }
             >
               Discard
             </Button>
@@ -296,7 +216,9 @@ export function EditTab({
         <div className="flex flex-col gap-3">
           <TextArea
             value={raw}
-            onChange={setRaw}
+            onChange={(text) =>
+              draft.set((current) => ({ ...current, raw: text }))
+            }
             rows={22}
             mono
             spellCheck={false}
@@ -317,7 +239,9 @@ export function EditTab({
             <Button
               variant="quiet"
               disabled={!rawDirty || busy}
-              onClick={() => setRaw(base.raw)}
+              onClick={() =>
+                draft.set((current) => ({ ...current, raw: base.raw }))
+              }
             >
               Discard
             </Button>
@@ -329,58 +253,14 @@ export function EditTab({
           {error}
         </p>
       ) : null}
-      {pending ? (
+      {draft.conflict ? (
         <ConflictDialog
           id={detail.id}
-          mine={
-            pending.kind === "raw"
-              ? pending.content
-              : Object.entries(pending.fields)
-                  .map(
-                    ([key, value]) =>
-                      `${key}: ${Array.isArray(value) ? `[${value.join(", ")}]` : value}`,
-                  )
-                  .join("\n")
-          }
-          current={pending.conflict.content}
-          onCancel={() => setPending(null)}
-          onReload={() => {
-            setPending(null);
-            // Take the version on disk now, and any newer one the reload
-            // brings.
-            reset(detail);
-            adopt.current = true;
-            onSaved(undefined, "Reloaded");
-          }}
-          onOverwrite={() => {
-            const current = pending;
-            setPending(null);
-            if (current.kind === "raw") {
-              void run(
-                () =>
-                  saveRaw(
-                    fetcher,
-                    detail.id,
-                    current.conflict.hash,
-                    current.content,
-                  ),
-                "Saved the file",
-                (conflict) => ({ ...current, conflict }),
-              );
-            } else {
-              void run(
-                () =>
-                  patchTicket(
-                    fetcher,
-                    detail.id,
-                    current.conflict.hash,
-                    current.fields,
-                  ),
-                "Saved",
-                (conflict) => ({ ...current, conflict }),
-              );
-            }
-          }}
+          mine={draft.conflict.mine}
+          current={draft.conflict.current.content}
+          onCancel={draft.cancel}
+          onReload={draft.reload}
+          onOverwrite={draft.overwrite}
         />
       ) : null}
     </div>

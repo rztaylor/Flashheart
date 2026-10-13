@@ -34,8 +34,14 @@
   each view shows the one skeleton its feature exports (`BoardSkeleton`,
   `TableSkeleton`, `OverviewSkeleton`, `WorkstreamsSkeleton`,
   `ArchiveSkeleton`, `TicketSkeleton`), marked `data-skeleton`.
-- Editing: every edit from the panel carries the ticket's content hash; a
-  409 opens the conflict dialog. Moves from the board set only `status`.
+- Editing: every edit from the panel carries the ticket's content hash
+  through one helper, `features/editing/precondition` (`saveWithBase`:
+  saved, conflict or failed). A draft (the Edit tab now, in-place editors
+  later) is `features/editing/useTicketDraft`: its base hash, adopting the
+  saved version, and a 409 as a pending choice for the conflict dialog;
+  a criterion or review-step tick reloads with a toast on a 409. The
+  form's fields and changes are `model/ticketForm`. Moves from the board
+  set only `status`.
   Native `<dialog>` for decisions (blocked move, conflict, new ticket); a
   polite toast with Undo for results. Only the latest move offers Undo:
   the toast clears as a move starts, and a save that returns after a later
