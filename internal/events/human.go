@@ -9,7 +9,7 @@ const Human = "human"
 
 // ByHuman returns the event recording that the human changed a ticket on the
 // board: kind is ticket.moved, ticket.updated, ticket.created,
-// comment.added or comment.edited, and data names the ticket with at most
+// comment.added, comment.edited or comment.deleted, and data names the ticket with at most
 // the columns or field names it changed, or the comment's id.
 func ByHuman(at time.Time, project string, kind Kind, data TicketData) Event {
 	data.By = Human
@@ -34,7 +34,7 @@ func HumanActivityOf(e Event) (HumanActivity, bool) {
 	switch e.Kind {
 	case QuestionAnswered:
 		return activity, true
-	case TicketMoved, TicketUpdated, TicketCreated, CommentAdded, CommentEdited:
+	case TicketMoved, TicketUpdated, TicketCreated, CommentAdded, CommentEdited, CommentDeleted:
 		if e.Run != Human {
 			return HumanActivity{}, false
 		}

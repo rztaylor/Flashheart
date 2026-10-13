@@ -49,6 +49,9 @@ const paths = {
   code: "M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5",
   refresh:
     "M20 11a8 8 0 0 0-14.5-4.5L4 8m0-4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16m0 4v-4h-4",
+  // trash: a bin with its lid, deleting a comment (FH-140).
+  trash:
+    "M4.5 6.5h15M9.5 6.5V4h5v2.5M6.5 6.5l1 13.5h9l1-13.5M10.5 10.5v6m3-6v6",
 } as const;
 
 export type IconName = keyof typeof paths;

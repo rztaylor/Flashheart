@@ -270,7 +270,8 @@ export interface Comment {
 // edited, ticked, unticked, archived or restored, or a comment's state
 // (change-requested, addressed, resolved, reopened; FH-126); from and to
 // are statuses, fields the names edited, criteria and steps 1-based
-// numbers, comments the ids of the comments whose state changed.
+// numbers, comments the ids of the comments whose state changed or that
+// were deleted (FH-140).
 export interface HistoryChange {
   what: string;
   from: string;

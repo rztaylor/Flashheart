@@ -291,6 +291,17 @@ func TestHelperProcess(t *testing.T) {
 			_, err = robert.UpdateTicket("alpha", "AL-4", Merge, setStatus(args[3]))
 		case "edit":
 			_, _, err = robert.EditComment("alpha", "AL-4", args[3], Unchanged(args[4]), args[5])
+		case "delete":
+			if _, _, err = robert.DeleteComment("alpha", "AL-4", args[3], Unchanged(args[4])); errors.Is(err, ErrDelivered) {
+				fmt.Println("refused")
+				os.Exit(0)
+			}
+		case "deliver":
+			var ok bool
+			if _, ok, err = s.DeliverComment("alpha", "AL-4", args[3], args[4], time.Now()); err == nil && !ok {
+				fmt.Println("skipped")
+				os.Exit(0)
+			}
 		}
 	}
 	switch {

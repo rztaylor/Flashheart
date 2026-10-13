@@ -211,6 +211,35 @@ export function editComment(
   );
 }
 
+// deleteComment deletes a comment the person posted by mistake (FH-140) on
+// base, the hash of the activity it was read from. A stale base is a
+// conflict; a comment its session has read (`delivered`) or a change
+// request not resolved (`open_request`) is refused with the reason.
+export async function deleteComment(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  comment: string,
+  base: string,
+): Promise<Saved> {
+  const payload = await sendJSON(
+    fetcher,
+    "DELETE",
+    `${ticketPath(id)}/comments/${segment(comment)}`,
+    { base },
+  );
+  if (
+    !isRecord(payload) ||
+    typeof payload.activityHash !== "string" ||
+    typeof payload.revision !== "number"
+  )
+    throw new Error("Delete response was invalid");
+  return {
+    hash: payload.activityHash,
+    revision: payload.revision,
+    warnings: [],
+  };
+}
+
 // Sent reports a change request write (REV-6, FH-126): the board revision,
 // how many requests it covered, the run they were sent to ("" when no live
 // session holds the ticket, so the next one finds them on it) and any

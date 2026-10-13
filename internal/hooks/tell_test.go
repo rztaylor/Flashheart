@@ -93,3 +93,35 @@ func TestPromptDeliversACommentSentFromTheBoard(t *testing.T) {
 		t.Errorf("comments delivered = %v", got)
 	}
 }
+
+// A comment the person deleted after it was queued (FH-140) is not handed
+// over with the next prompt, nor recorded as delivered.
+func TestPromptNeverHandsOverADeletedComment(t *testing.T) {
+	t.Parallel()
+
+	root, cwd := t.TempDir(), repo(t)
+	run(t, root, "SessionStart", "s1 "+cwd, fake{})
+	ticket, comment := toldFromBoard(t, root, "s1", "Posted by mistake.")
+	s, err := store.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := s.TicketFile("demo", ticket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, hash, err := s.ReadTicketActivity("demo", filepath.Base(filepath.Dir(file)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.As("Robert").DeleteComment("demo", ticket, comment, store.Unchanged(hash)); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	if out := run(t, root, "Prompt", "s1 "+cwd, fake{}); strings.Contains(out, "Posted by mistake") || strings.Contains(out, "Comments from the user") {
+		t.Errorf("prompt output:\n%s", out)
+	}
+	if got := commentsDelivered(t, root); len(got) != 0 {
+		t.Errorf("comments delivered = %v", got)
+	}
+}

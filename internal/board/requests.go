@@ -75,19 +75,27 @@ func SetCommentState(data []byte, id string, to CommentState, person bool) ([]by
 }
 
 // changeOrder is the order CommentChanges lists the kinds of change in.
-var changeOrder = []string{ChangeRequested, ChangeReopened, ChangeAddressed, ChangeResolved}
+var changeOrder = []string{ChangeRequested, ChangeReopened, ChangeAddressed, ChangeResolved, ChangeDeleted}
 
 // CommentChanges is what a write changed in a ticket's comments, as
 // history records it: the comments asked for as changes (a new comment
-// written as one too), reopened, addressed and resolved, by id, in the
-// file's order; never their text. Nil when no comment's state changed.
+// written as one too), reopened, addressed and resolved, and those deleted
+// (FH-140), by id, in the file's order; never their text. Nil when no
+// comment's state changed and none was deleted.
 func CommentChanges(before, after []byte) []Change {
 	was := map[string]CommentState{}
-	for _, comment := range ParseActivity(before).Comments {
+	previous := ParseActivity(before).Comments
+	for _, comment := range previous {
 		was[comment.ID] = comment.State
 	}
 	byKind := map[string][]string{}
-	for _, comment := range ParseActivity(after).Comments {
+	current := ParseActivity(after).Comments
+	for _, comment := range previous {
+		if !slices.ContainsFunc(current, func(c Comment) bool { return c.ID == comment.ID }) {
+			byKind[ChangeDeleted] = append(byKind[ChangeDeleted], comment.ID)
+		}
+	}
+	for _, comment := range current {
 		from, known := was[comment.ID]
 		if !known {
 			from = CommentOpen

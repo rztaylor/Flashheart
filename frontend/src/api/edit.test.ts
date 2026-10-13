@@ -5,6 +5,7 @@ import {
   addComment,
   blockedReasons,
   conflictOf,
+  deleteComment,
   editComment,
   keysInUse,
   moveTicket,
@@ -160,6 +161,33 @@ describe("comments", () => {
       hash: "a9",
       content: "# Activity: FH-1\n",
     });
+  });
+
+  it("deletes a comment on the activity's hash, a refusal carrying its code (FH-140)", async () => {
+    const ok = respond(200, {
+      comment: "4e5f6a7b",
+      activityHash: "a3",
+      revision: 8,
+    });
+    expect(await deleteComment(ok.fetcher, "FH-1", "4e5f6a7b", "a2")).toEqual({
+      hash: "a3",
+      revision: 8,
+      warnings: [],
+    });
+    expect(ok.calls[0]?.url).toBe("/api/tickets/FH-1/comments/4e5f6a7b");
+    expect(ok.calls[0]?.init?.method).toBe("DELETE");
+    expect(JSON.parse(String(ok.calls[0]?.init?.body))).toEqual({ base: "a2" });
+    const refused = respond(409, {
+      error: { code: "delivered", message: "It was read." },
+    });
+    const error = await deleteComment(
+      refused.fetcher,
+      "FH-1",
+      "4e5f6a7b",
+      "a2",
+    ).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("delivered");
   });
 
   it("refuses a response without its comment", async () => {
