@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/store"
 )
@@ -87,8 +88,18 @@ func TestProtocolSmoke(t *testing.T) {
 	// A change request and a comment sent to the session from the board
 	// (D54) arrive with its next prompt, each framed as what it is.
 	files := store.New(root)
+	// The change request is a real one on the ticket (FH-126), so the next
+	// session finds it there too.
+	robert := files.As("Robert")
+	request, _, err := robert.AddComment("demo", "DM-1", store.Merge, store.NewComment{Body: "Rename the button."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := robert.SetCommentState("demo", "DM-1", request.ID, board.CommentChangeRequested); err != nil {
+		t.Fatal(err)
+	}
 	for _, entry := range []events.Entry{
-		{Type: events.EntryChangeRequest, ID: "c-1", Run: "claude:" + first, Ticket: "DM-1", Text: "Rename the button.", By: "Robert"},
+		{Type: events.EntryChangeRequest, ID: request.ID, Run: "claude:" + first, Ticket: "DM-1", Text: "Rename the button.", By: "Robert"},
 		{Type: events.EntryComment, ID: "c-2", Run: "claude:" + first, Ticket: "DM-1", Text: "Looks good so far.", By: "Robert"},
 	} {
 		if err := events.New(files).Queue("demo", entry); err != nil {
@@ -117,14 +128,33 @@ func TestProtocolSmoke(t *testing.T) {
 		"[Flashheart] run=claude:22222222 project=demo (key DM) branch=feature/demo",
 		`Ticket DM-1 \"Card panel\" (in-progress, linked by branch).`,
 		"Last handoff — Next: Wire the Runs tab.",
+		// The first session never addressed the change request, so the
+		// next one is told of it from the ticket (FH-126).
+		`Change requested by Robert on DM-1 (id ` + request.ID + `, the user's own words): \"Rename the button.\"`,
+		"When one is done, mark it addressed: update_ticket with addressed and its id.",
 		"Use the flashheart MCP tools",
 	} {
 		if !strings.Contains(note, part) {
 			t.Fatalf("recovery note missing %q:\n%s", part, note)
 		}
 	}
+	if out := tool(second, "board_context", map[string]any{}); !strings.Contains(out, "Open change requests on DM-1") || !strings.Contains(out, "id "+request.ID) {
+		t.Fatalf("board_context does not name the open change request:\n%s", out)
+	}
+	// Moving to review warns, naming it, and moves; once addressed the
+	// request is the user's to resolve.
+	if out := tool(second, "move", map[string]any{"ticket": "DM-1", "to": "review"}); !strings.Contains(out, "warning: 1 change request is still open: "+request.ID) || !strings.Contains(out, "ok ticket=DM-1 column=review") {
+		t.Fatalf("move to review: %s", out)
+	}
+	if out := tool(second, "update_ticket", map[string]any{"ticket": "DM-1", "addressed": []string{request.ID}, "append_notes": "Renamed it."}); !strings.Contains(out, "changed=notes,addressed") {
+		t.Fatalf("update_ticket addressed: %s", out)
+	}
+	activity, _ := os.ReadFile(filepath.Join(root, "demo", "tickets", "DM-1-card-panel", "activity.md"))
+	if !strings.Contains(string(activity), "state: addressed") || !strings.Contains(string(activity), "- addressed: comment "+request.ID) {
+		t.Fatalf("activity:\n%s", activity)
+	}
 	ticket, _ := os.ReadFile(filepath.Join(root, "demo", "tickets", "DM-1-card-panel", "DM-1-card-panel.md"))
-	for _, part := range []string{"status: in-progress", "branch: feature/demo", "**Next**\n\n- Wire the Runs tab", "- src/Panel.tsx"} {
+	for _, part := range []string{"status: review", "branch: feature/demo", "**Next**\n\n- Wire the Runs tab", "- src/Panel.tsx"} {
 		if !strings.Contains(string(ticket), part) {
 			t.Fatalf("ticket missing %q:\n%s", part, ticket)
 		}

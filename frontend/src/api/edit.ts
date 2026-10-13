@@ -198,6 +198,91 @@ export function editComment(
   );
 }
 
+// Sent reports a change request write (REV-6, FH-126): the board revision,
+// how many requests it covered, the run they were sent to ("" when no live
+// session holds the ticket, so the next one finds them on it) and any
+// warning.
+export interface Sent {
+  revision: number;
+  count: number;
+  sentTo: string;
+  warnings: string[];
+}
+
+function isSent(payload: unknown, count: number): Sent {
+  if (
+    !isRecord(payload) ||
+    typeof payload.revision !== "number" ||
+    (payload.sentTo !== undefined && typeof payload.sentTo !== "string")
+  )
+    throw new Error("Change request response was invalid");
+  const warnings = Array.isArray(payload.warnings)
+    ? payload.warnings.filter(
+        (item): item is string => typeof item === "string",
+      )
+    : [];
+  return {
+    revision: payload.revision,
+    count,
+    sentTo: typeof payload.sentTo === "string" ? payload.sentTo : "",
+    warnings,
+  };
+}
+
+// requestChanges asks for changes on a ticket in review (REV-6): the
+// comments named become change requests, comment (when given) is added as
+// one, and the ticket goes back to In progress on its branch.
+export async function requestChanges(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  comments: string[],
+  comment?: NewComment,
+): Promise<Sent> {
+  const payload = await sendJSON(
+    fetcher,
+    "POST",
+    `${ticketPath(id)}/request-changes`,
+    {
+      comments,
+      ...(comment
+        ? {
+            comment: {
+              body: comment.body,
+              quote: comment.quote ?? "",
+              quoteFrom: comment.quoteFrom ?? "",
+            },
+          }
+        : {}),
+    },
+  );
+  const count =
+    isRecord(payload) && Array.isArray(payload.comments)
+      ? payload.comments.length
+      : 0;
+  return isSent(payload, count);
+}
+
+// RequestState is a state the person moves a change request to: resolved,
+// or change-requested to reopen it.
+export type RequestState = "resolved" | "change-requested";
+
+// setRequestState resolves or reopens a change request (REV-6); the change
+// merges with the activity as it is, as a tick does.
+export async function setRequestState(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  comment: string,
+  state: RequestState,
+): Promise<Sent> {
+  const payload = await sendJSON(
+    fetcher,
+    "PATCH",
+    `${ticketPath(id)}/comments/${segment(comment)}`,
+    { state },
+  );
+  return isSent(payload, 1);
+}
+
 export function archiveTicket(fetcher: AuthenticatedFetch, id: string) {
   return save(fetcher, "POST", `${ticketPath(id)}/archive`);
 }

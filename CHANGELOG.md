@@ -30,6 +30,22 @@ All notable changes to this project are documented here. The project follows
   a comment changed meanwhile. A comment you are writing stays while you
   look at another tab, and closing the panel, pressing Escape or opening
   another ticket with it unposted asks first.
+
+- Ask for changes in review and see which ones the agent has addressed
+  (FH-126, D47, `REV-6`). On a ticket in review, **Request changes** (in
+  its properties) sends comments you pick, a new one, or both back as
+  change requests and moves the ticket to In progress with its branch and
+  pull request kept. A live session holding the ticket gets them with its
+  next prompt or Flashheart tool call; otherwise the next session's
+  recovery note and `board_context` name them from the ticket, so nothing
+  waits on a session that has gone. The agent marks each one addressed
+  with `update_ticket`'s new `addressed` input (additive within protocol
+  2; no setup rerun). The ticket page lists the requests at its top with
+  their counts, each with **Resolve** and **Reopen** for the next review,
+  comments in Activity show their state, the card counts the requests
+  still waiting, and moving the ticket to review warns, naming each open
+  request, without refusing. Every request, address, resolve and reopen
+  is in the ticket's history.
 - Comment on a ticket from its full page (FH-125, D47, `CARD-7`).
   Activity ends with a comment box: write a comment and post it with
   **Comment** or Ctrl or Cmd with Enter, optionally quoting a section, an

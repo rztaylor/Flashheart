@@ -127,7 +127,9 @@ Intended layout (packages are created when they get real content):
   again). Without a watcher `Current` rebuilds on `MaxAge`. Event logs count
   against `FolderBudget`. Snapshots index runs by ticket, id and parent
   once; API read paths use those lookups, never a scan of `Runs` per card
-  (FH-96, D38).
+  (FH-96, D38). `Snapshot.Holder` is a ticket's live claim holder (claim
+  link, not Ended, within the lease): the one rule for which session a
+  change request (FH-126) or comment (FH-127) is sent to now.
 - `internal/archtest`: tests over the module's source (the root
   confinement rule, the one default root); no code outside its tests.
 - `internal/api`: HTTP JSON handlers and request validation; no filesystem

@@ -98,10 +98,26 @@ export interface Card {
   agentWorking: boolean;
   // openQuestions counts open questions about the ticket (CARD-6).
   openQuestions: number;
+  // changeRequests counts its change requests still open (waiting for an
+  // agent) or addressed (waiting for the person; REV-6, FH-126); absent
+  // from an older server.
+  changeRequests?: ChangeRequests;
   // sessions summarises the runs working for the ticket (RUN-9); absent
   // when none is linked and the ticket is not in progress.
   sessions?: TicketSessions;
 }
+
+// ChangeRequests counts a ticket's change requests (REV-6): open waits
+// for an agent to make it, addressed for the person to resolve or reopen.
+export interface ChangeRequests {
+  open: number;
+  addressed: number;
+}
+
+const isChangeRequests = (value: unknown): value is ChangeRequests =>
+  isRecord(value) &&
+  typeof value.open === "number" &&
+  typeof value.addressed === "number";
 
 export interface WorkstreamBrief {
   slug: string;
@@ -223,8 +239,10 @@ export interface Comment {
 }
 
 // HistoryChange is one thing a write changed: what is created, moved,
-// edited, ticked, unticked, archived or restored; from and to are statuses,
-// fields the names edited, criteria and steps 1-based numbers.
+// edited, ticked, unticked, archived or restored, or a comment's state
+// (change-requested, addressed, resolved, reopened; FH-126); from and to
+// are statuses, fields the names edited, criteria and steps 1-based
+// numbers, comments the ids of the comments whose state changed.
 export interface HistoryChange {
   what: string;
   from: string;
@@ -232,6 +250,7 @@ export interface HistoryChange {
   fields: string[];
   criteria: number[];
   steps: number[];
+  comments?: string[];
 }
 
 // History is one write that changed the ticket: who, when and what, never
@@ -319,6 +338,8 @@ export function isCard(value: unknown): value is Card {
     typeof value.needsYou === "boolean" &&
     typeof value.agentWorking === "boolean" &&
     typeof value.openQuestions === "number" &&
+    (value.changeRequests === undefined ||
+      isChangeRequests(value.changeRequests)) &&
     (value.sessions === undefined || isTicketSessions(value.sessions))
   );
 }
@@ -418,7 +439,8 @@ const isHistory = (value: unknown): value is History =>
       isString(change.to) &&
       isStringArray(change.fields) &&
       isNumberArray(change.criteria) &&
-      isNumberArray(change.steps),
+      isNumberArray(change.steps) &&
+      (change.comments === undefined || isStringArray(change.comments)),
   );
 
 const isTicket = (

@@ -88,7 +88,13 @@ Ask in plain words: "tackle the two top-priority bugs", "look at FH-42",
   them into the ticket, so they survive the agent cleaning up), or a line
   saying there is no visible change and why; then moves the ticket to
   **Ready to review**, which warns if the evidence is missing. Agents never move tickets to
-  Done.
+  Done;
+- makes the changes you ask for in review: **Request changes** on the
+  ticket's page sends your comments back and returns the ticket to In
+  progress. The session holding the ticket gets them with its next prompt
+  (otherwise the next session finds them on the ticket), marks each one
+  addressed when it is done, and you resolve or reopen each at the next
+  review.
 
 ## Questions
 

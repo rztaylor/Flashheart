@@ -74,21 +74,21 @@ func TestReviewWarnings(t *testing.T) {
 	t.Parallel()
 
 	ticket := Ticket{Criteria: []Criterion{{Text: "a", Done: true}, {Text: "b"}, {Text: "c"}}}
-	got := ReviewWarnings(ticket, "", false)
+	got := ReviewWarnings(ticket, "", false, nil)
 	want := []string{"There is no review file yet.", "2 acceptance criteria are not ticked."}
 	if !slices.Equal(got, want) {
 		t.Fatalf("warnings = %q, want %q", got, want)
 	}
 	ticket.Criteria = ticket.Criteria[:2]
-	if got := ReviewWarnings(ticket, shown, true); !slices.Equal(got, []string{"1 acceptance criterion is not ticked."}) {
+	if got := ReviewWarnings(ticket, shown, true, nil); !slices.Equal(got, []string{"1 acceptance criterion is not ticked."}) {
 		t.Fatalf("warnings = %q", got)
 	}
 	ticket.Criteria = nil
-	if got := ReviewWarnings(ticket, shown, true); len(got) != 0 {
+	if got := ReviewWarnings(ticket, shown, true, nil); len(got) != 0 {
 		t.Fatalf("warnings = %q", got)
 	}
 	// A review with no screenshot and no stated reason warns, never refuses.
-	if got := ReviewWarnings(ticket, "# Review: X\n\n## Summary\nDone.\n", true); len(got) != 1 || !strings.Contains(got[0], "no evidence") {
+	if got := ReviewWarnings(ticket, "# Review: X\n\n## Summary\nDone.\n", true, nil); len(got) != 1 || !strings.Contains(got[0], "no evidence") {
 		t.Fatalf("warnings = %q", got)
 	}
 }

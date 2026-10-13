@@ -393,3 +393,23 @@ func (s *Snapshot) Question(id string) (runs.Question, runs.View, bool) {
 	run := s.Runs[position[0]]
 	return run.Questions[position[1]], run, true
 }
+
+// Holder returns the live run that holds a ticket's claim (agent-protocol
+// §6): linked to it by a claim, not Ended, and active within the lease
+// at the snapshot's time. A session holds a ticket its subagents work on
+// under its claim; a subagent holds one it claimed itself. It is what a
+// comment or change request is sent to now (FH-126, FH-127); a run linked
+// by branch alone holds nothing.
+func (s *Snapshot) Holder(ticket string) (runs.View, bool) {
+	var holder runs.View
+	found := false
+	for _, run := range s.linked(ticket) {
+		if run.Link.By != runs.LinkClaim || run.State == runs.Ended || s.BuiltAt.Sub(run.LastActivity) >= s.lease {
+			continue
+		}
+		if !found || (holder.Parent != "" && run.Parent == "") {
+			holder, found = run, true
+		}
+	}
+	return holder, found
+}

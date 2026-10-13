@@ -133,7 +133,17 @@
   `frontend/e2e/comments.spec.mjs` (FH-125). The comment tests run on
   both the page and the card panel's Comments tab (`describe.each` over a
   surface); the panel's own flow, from posting there to seeing it on the
-  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128).
+  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128). Change
+  requests (FH-126, REV-6): who may move a comment's state and its history in `board`
+  (`requests_test.go`), the one-write request and addressing in `store`,
+  a ticket's live holder in `index` (`TestHolderIsTheLiveClaimant`),
+  delivery to the holder's inbox and the move warning in `api`, the
+  `addressed` input, the warning and `board_context` in `mcpserver`
+  (with `TestWriteToolPolicies`' row and the tool-list test), the
+  recovery note in `protocol` and `TestProtocolSmoke`; the page and the
+  dialog are `TicketRequests.dom.test.tsx`, and
+  `frontend/e2e/requests.spec.mjs` drives a live session through the real
+  hook and `flashheart mcp`.
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
   (`internal/mcpserver`) lists tools over the in-memory transport and fails

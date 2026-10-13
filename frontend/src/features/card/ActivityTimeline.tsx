@@ -19,6 +19,7 @@ import {
   InPlaceEditor,
   useInPlaceItem,
 } from "../editing/InPlace";
+import { RequestPill } from "./ChangeRequests";
 import { QuoteFigure } from "./CommentBox";
 
 // when is an entry's date, and its time when it has one, where the
@@ -254,6 +255,9 @@ function Head({ entry, action }: { entry: ActivityEntry; action?: ReactNode }) {
               edited
             </span>
           </>
+        ) : null}
+        {entry.kind === "comment" && entry.state ? (
+          <RequestPill state={entry.state} />
         ) : null}
       </p>
       {action ? <span className="-my-1.5">{action}</span> : null}

@@ -127,6 +127,12 @@ func (s *Store) joinTicket(t *tx, project, id string, pre Precondition, workstre
 // workstream the project does not have is a *WorkstreamNotFoundError and
 // nothing is written. It returns the ticket's hash after the call.
 func (s *Store) SetTicketWorkstream(project, id string, pre Precondition, workstream string, edit Edit) (string, error) {
+	return s.setTicketWorkstream(project, id, pre, workstream, edit, nil)
+}
+
+// setTicketWorkstream is SetTicketWorkstream, with also (nil for none)
+// staging more of the ticket's files in the same transaction.
+func (s *Store) setTicketWorkstream(project, id string, pre Precondition, workstream string, edit Edit, also func(t *tx, ticket string) error) (string, error) {
 	if err := s.checkTicket(project, id); err != nil {
 		return "", err
 	}
@@ -154,6 +160,11 @@ func (s *Store) SetTicketWorkstream(project, id string, pre Precondition, workst
 	hash, err := s.joinTicket(t, project, id, pre, workstream, edit)
 	if err != nil {
 		return "", err
+	}
+	if also != nil {
+		if err := also(t, name); err != nil {
+			return "", err
+		}
 	}
 	return hash, t.commit()
 }

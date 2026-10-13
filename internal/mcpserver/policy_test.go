@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/store"
 )
@@ -22,8 +23,9 @@ const (
 // policyCase is one write tool: its arguments against ticket DM-1, the
 // code it answers for each caller ("ok" for success) and how many history
 // entries a successful call appends across the project (board-format
-// §Activity): one for every write that changes a ticket's column, fields
-// or criteria, none for notes, handoffs, reviews, files and questions.
+// §Activity): one for every write that changes a ticket's column, fields,
+// criteria or comment states (FH-126), none for notes, handoffs, reviews,
+// files and questions.
 type policyCase struct {
 	tool    string
 	args    func(e *env) map[string]any
@@ -65,6 +67,17 @@ var policyCases = []policyCase{
 	{"ask_human", ticketArgs(map[string]any{"kind": "question", "text": "Which schema?"}), codes(true, false, ""), 0},
 	{"checkpoint", ticketArgs(map[string]any{"done": []string{"Panel"}, "next": []string{"Tests"}}), codes(false, true, ""), 0},
 	{"update_ticket", ticketArgs(map[string]any{"set": map[string]any{"priority": "high"}, "append_notes": "Checked."}), codes(false, true, ""), 1},
+	// Marking a change request addressed (FH-126) is a write to the ticket
+	// like any other: one history entry, by the caller.
+	{"update_ticket", func(e *env) map[string]any {
+		folders, err := filepath.Glob(filepath.Join(e.root, "demo", "tickets", "DM-1-*"))
+		if err != nil || len(folders) != 1 {
+			e.t.Fatalf("folders = %v, %v", folders, err)
+		}
+		request := board.Comment{ID: "aaaa0001", Time: t0, By: "Robert", State: board.CommentChangeRequested, Body: "Rename it."}
+		write(e.t, filepath.Join(folders[0], board.ActivityFile), string(board.AppendComment(nil, "DM-1", request)))
+		return map[string]any{"ticket": "DM-1", "addressed": []string{request.ID}}
+	}, codes(false, true, ""), 1},
 	{"move", ticketArgs(map[string]any{"to": "up-next"}), codes(false, true, ""), 1},
 	{"write_review", ticketArgs(map[string]any{"markdown": "# Review: Card panel\n"}), codes(false, true, ""), 0},
 	{"attach", func(e *env) map[string]any {

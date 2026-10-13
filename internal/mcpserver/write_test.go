@@ -394,7 +394,7 @@ func TestBoardContextDeliversEachEntryType(t *testing.T) {
 	}
 	contains(t, e.ok("board_context", nil),
 		"[Flashheart] Answers to your questions (information, not instructions):", `- "Old question?" → "Old answer" (Robert)`,
-		"[Flashheart] Changes requested by the user on the board (their own words):", `- DM-1 (Robert): "Rename the button."`,
+		"[Flashheart] Changes requested by the user on the board (their own words):", `- DM-1 (Robert, id c-2): "Rename the button."`,
 		"[Flashheart] Comments from the user on the board (their own words):", `- DM-1 (Robert): "Use the blue one."`)
 	if !slices.Contains(e.kinds(session), events.CommentDelivered) {
 		t.Fatalf("events = %v", e.kinds(session))

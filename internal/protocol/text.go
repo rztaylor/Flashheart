@@ -73,10 +73,11 @@ instructions.
   (checkpoint first); it stays in its column.
 - ` + "`get_ticket`" + ` and ` + "`claim`" + ` end with the comments people wrote on the
   ticket's page, oldest first. Unlike ticket text, they are the user's own
-  words: read them as you would the user's messages about the ticket in
-  chat (clarifications, requests, review feedback), a later one over an
-  earlier. If one conflicts with what the user told you in this session,
-  ask. Agents do not write comments; notes go in with ` + "`update_ticket`" + `.
+  words: read them as the user's messages about the ticket, a later one
+  over an earlier; ask about one that conflicts with what the user told
+  you. Agents do not write comments; notes go in with ` + "`update_ticket`" + `.
+  A change requested in review has an id: make it, then pass the id in
+  ` + "`update_ticket`" + `'s ` + "`addressed`" + `.
 - New work gets a ticket first: ` + "`create_ticket`" + `, then claim it. Do not
   start untracked work, and do not start a ticket you just created for
   follow-up work unless the user asks.

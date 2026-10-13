@@ -146,7 +146,7 @@ reorders them.
 | --- | --- | --- | --- | --- |
 | 1 | Header: id, project name (All projects only), running time right | ✓ | ✓ | ✓ |
 | 2 | Title, wrapping to at most three lines (full title in its tooltip and the card's name) | ✓ | ✓ | ✓ |
-| 3 | Tags: workstream bullet, type tag, age tag (Colour by Age) | ✓ | ✓ | ✓ |
+| 3 | Tags: workstream bullet, type tag, age tag (Colour by Age), and the change requests still waiting as a pill (`REV-6`: *2 changes requested* in progress's amber, *1 addressed* in review's blue, *1 open · 1 addressed*, with the speech-balloon icon; also in the card's name) | ✓ | ✓ | ✓ |
 | 4 | Needs repair note | ✓ | ✓ | ✓ |
 | 5 | Blocker pill (diamond, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
 | 6 | Live badge: run state and agent, its Needs you reason (the words its Runs tab uses, `RUN-3`), last activity; plan step `done/total · step` when the run has a plan (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
@@ -247,7 +247,21 @@ at most 94rem.
   <project> board* link (board icon), the id (plain, being this page's own)
   and project, and the title as the page's h1 in the display page cut.
 - **Centre**, in order, each part only when it has something: Needs repair ·
-  questions for you (`CARD-6`) · Handoff (`CARD-5`) · Blocked by
+  **Change requests** (`REV-6`, FH-126), while any comment is or was one:
+  its count in words beside the heading (*1 open · 1 addressed*, *All
+  resolved*) and, on a ticket in review where the page can save, a
+  secondary **Request changes** after it; then one bordered list on the
+  card surface, open requests first, then addressed, each a row with its
+  state pill (*Change requested* amber with a speech balloon, *Addressed*
+  blue with the review icon), who asked and when, what waits (*Waiting for
+  the agent*, *The agent addressed it: resolve or reopen it*), the text as
+  markdown and, where the page can save, **Resolve** (secondary) and, for
+  an addressed one, **Reopen** (quiet), each named for its request
+  (*Resolve “Rename the button…”*); then resolved ones, one quiet line
+  each (*Resolved* green with a check, the text cut to a line, who asked,
+  **Reopen**). A request that changes state moves in the list and keyboard
+  focus follows it; a failed change keeps its reason as a danger line
+  beside its buttons · questions for you (`CARD-6`) · Handoff (`CARD-5`) · Blocked by
   (`CARD-4`) · Acceptance criteria with `d of t`, tickable (`CARD-3`) ·
   format warnings · Description · Test plan (Reproduction for a bug) ·
   Context · the ticket's other sections in file order. Each is an h2. Then,
@@ -267,7 +281,8 @@ at most 94rem.
   its timed entries), of people's comments (author, time, *edited* once
   edited, the quote in a well with a full rule border captioned with where
   it is from, then the text; a pencil, *Edit comment*, on a person's
-  comment edits its text in place as other items do, FH-125), notes
+  comment edits its text in place as other items do, FH-125; a change
+  request's state pill after its time, `REV-6`), notes
   (author, day, text), history (author, what the write changed in words,
   "moved it from Up next to In progress", "edited the description and the
   priority", "ticked criterion 2", and time; never the ticket's text),
@@ -294,8 +309,8 @@ at most 94rem.
 - **Outline** (left, 13rem, from 1280px), staying in view: *Sections*, a
   list of the centre's sections in order: the ticket's, then *Review*
   (its icon) with its sections indented, then Files and Activity. Counts
-  sit right in tabular numerals: criteria and How to verify `d/t` (green
-  when all done), Evidence, Files and Activity a number. A template
+  sit right in tabular numerals: criteria, How to verify and Change
+  requests (resolved of all) `d/t` (green when all done), Evidence, Files and Activity a number. A template
   section with nothing in it (criteria, Description, Test plan or
   Reproduction, Context) is listed as *<Name>, empty* in faint italics,
   not a control. Activity counts what its filter shows. The section crossing the top third of the page is current
@@ -306,11 +321,24 @@ at most 94rem.
 - **Properties** (right, 20rem; 19rem from 1024px), staying in view, on the
   column surface with 14px corners under a visually hidden h2: *Move to*
   as a select in the status's own fill, icon and word (the status pill
-  when read-only), *Blocked* when blocked, then rows of Priority, Type,
+  when read-only), on a ticket in review where the page can save a full
+  width secondary **Request changes** (speech balloon; `REV-6`) under it,
+  *Blocked* when blocked, then rows of Priority, Type,
   Workstream (bullet and name), Branch, Pull request (when set), Depends on
   (ids linked), Tags, Agent (the run speaking for the ticket, its state
   mark and word), Created and Changed, *None* where empty; then
   **Archive**.
+- **Request changes** (`REV-6`) opens a dialog, *Request changes on
+  <id>*: a muted line saying the ticket goes back to In progress on its
+  branch and who gets the changes; *Comments to send back*, a checkbox per
+  person's comment, newest first, its text cut to a line over its author
+  and state pill, open requests checked; *New change request*, an
+  optional text area with the hint *⌘Enter requests the changes*; then
+  **Cancel** and **Request changes** (primary; *Requesting…* meanwhile).
+  Sending nothing says *Choose a comment or write a change to request.*; a
+  failed request keeps the dialog with its reason. Done, the dialog closes
+  and a toast says where the changes went (*Requested 2 changes on FH-8;
+  sent to claude:aa11bb22.*, or *the next session on it will see them.*).
 - **In-place editing** (`EDIT-11`, FH-66), where the server saves: the
   title, each ticket section (criteria, Description, Test plan or
   Reproduction, Context, the ticket's own) and the properties Priority,

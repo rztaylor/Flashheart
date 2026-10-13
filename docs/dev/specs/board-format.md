@@ -409,7 +409,10 @@ After the heading and a blank line come its attributes, one `key: value`
 line each up to a blank line, always at least `state`:
 
 - `state`: `open` (new), `change-requested`, `addressed` or `resolved`
-  (FH-126); another value reads as `open`.
+  (REV-6, FH-126); another value reads as `open`. A person asks for a
+  change (from any state, so an addressed or resolved request is
+  reopened) and resolves a request; an agent only marks a change request
+  addressed. A comment never goes back to `open`.
 - `edited`: when it was last edited, RFC 3339 UTC; absent until then. The
   board shows the comment as edited.
 - `quote`: where the quoted part of the ticket is from (one line, at most
@@ -433,10 +436,14 @@ never the ticket's text:
 | `- edited: <names>` | frontmatter keys (`priority`, `pr`), `title`, sections (`description`, `acceptance-criteria`, `test-plan`, `reproduction`, `context`), `review`; `body` for other text, `frontmatter` for a key Flashheart would not name or frontmatter that does not parse |
 | `- ticked: <items>`, `- unticked: <items>` | `criterion N` and `review step N`, numbered from 1, when only their boxes changed |
 | `- archived`, `- restored` | archived or restored (EDIT-8) |
+| `- change-requested: <comments>` | comments the person asked for as changes (a new one written as one too), as `comment <id>` (REV-6, FH-126) |
+| `- addressed: <comments>` | change requests an agent marked addressed |
+| `- resolved: <comments>`, `- reopened: <comments>` | change requests the person resolved, or asked for again after they were addressed or resolved |
 
 A bullet of another form is kept and not shown. History is worked out
 from the write itself, comparing the ticket (and, for a review step, its
-`review.md`) before and after, so every write path is described alike (D58).
+`review.md`; for a comment's state, this file's comments) before and
+after, so every write path is described alike (D58).
 `updated` and `rank` are not history, and neither are `## Notes` and
 `## Handoff`: a reorder within a column, a note, a checkpoint or an answer
 records none. A write that changes nothing records nothing.
@@ -449,6 +456,9 @@ or restore is moved back. A comment is appended to the file as it is under
 the lock; an edit replaces only that comment's entry, its heading,
 unknown attributes and following blank lines kept, and carries the hash of
 the file the person read: a stale hash is a conflict and writes nothing.
+A state change rewrites that comment's entry the same way but merges
+with the file as it is under the lock, and a request for changes moves
+the ticket and marks its comments in one write, with one history entry.
 New entries follow a blank line, in the file's line endings (CRLF when its
 first line ends so); every other byte, a byte-order mark included, is kept.
 The file is limited to 1 MiB: a comment that would pass it is refused,

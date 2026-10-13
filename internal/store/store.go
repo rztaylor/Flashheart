@@ -465,10 +465,17 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 			r.readFilesIndex(&project, ticket.ID, path.Join(tickets, folder, "files", "index.yaml"))
 		}
 		// A comment changes only the activity file; the fingerprint sees it,
-		// so the board's revision moves and pages read the ticket again.
+		// so the board's revision moves and pages read the ticket again. An
+		// open ticket's file is read for its change requests (FH-126), which
+		// its card counts; a finished ticket's is not.
 		if entry := present[board.ActivityFile]; entry != nil {
-			if info, err := entry.Info(); err == nil {
-				r.note(path.Join(tickets, folder, board.ActivityFile), info)
+			name := path.Join(tickets, folder, board.ActivityFile)
+			if ticket.Column != board.Done {
+				if data, _, problem := r.read(name); problem == "" {
+					project.Tickets[len(project.Tickets)-1].Requests = board.RequestsIn(data)
+				}
+			} else if info, err := entry.Info(); err == nil {
+				r.note(name, info)
 			}
 		}
 	}

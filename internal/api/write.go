@@ -34,6 +34,8 @@ type Writer interface {
 	Unarchive(project, id string) error
 	AddComment(project, id string, pre store.Precondition, comment store.NewComment) (board.Comment, string, error)
 	EditComment(project, id, comment string, pre store.Precondition, body string) (board.Comment, string, error)
+	RequestChanges(project, id string, comments []string, added *store.NewComment) (store.RequestedChanges, error)
+	SetCommentState(project, id, comment string, to board.CommentState) (board.Comment, string, error)
 	ReadConfig() (config.Config, error)
 	UpdateConfig(edit store.Edit) error
 }
@@ -120,6 +122,8 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusConflict, map[string]body{"error": {Code: "key_taken", Message: taken.Error(), InUse: taken.InUse}})
 	case errors.Is(err, store.ErrExists):
 		writeError(w, http.StatusConflict, "exists", strings.TrimPrefix(err.Error(), store.ErrExists.Error()+": "))
+	case errors.Is(err, store.ErrNotInReview):
+		writeError(w, http.StatusConflict, "not_in_review", "This ticket is no longer in review, so changes cannot be requested on it.")
 	case errors.Is(err, store.ErrKeyFixed):
 		writeError(w, http.StatusConflict, "key_fixed", err.Error())
 	case errors.Is(err, store.ErrNotFound):
@@ -252,10 +256,16 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 	b.recordHuman(project.Name, events.TicketMoved, events.TicketData{Ticket: ticket.ID, From: ticket.Status(), To: request.To})
 	if to == board.Review && ticket.Column != board.Review {
 		review := ""
-		if project.Reviews[ticket.ID] && b.files != nil {
-			review, _, _ = b.files.ReadReview(project.Name, ticket.Folder)
+		var requests []board.Comment
+		if b.files != nil {
+			if project.Reviews[ticket.ID] {
+				review, _, _ = b.files.ReadReview(project.Name, ticket.Folder)
+			}
+			if activity, _, err := b.files.ReadTicketActivity(project.Name, ticket.Folder); err == nil {
+				requests = board.OpenRequests(activity.Comments)
+			}
 		}
-		warnings = append(warnings, board.ReviewWarnings(ticket, review, project.Reviews[ticket.ID])...)
+		warnings = append(warnings, board.ReviewWarnings(ticket, review, project.Reviews[ticket.ID], requests)...)
 	}
 	b.saved(w, http.StatusOK, hash, warnings)
 }

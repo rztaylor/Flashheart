@@ -68,6 +68,9 @@ export interface CommentEntry extends Dated {
   by: string;
   byPerson: boolean;
   edited: string;
+  // state is the comment's state as a change request (REV-6): open for
+  // a plain comment, change-requested, addressed or resolved.
+  state: string;
   quoteFrom: string;
   quote: string;
   markdown: string;
@@ -162,6 +165,18 @@ function numbered(one: string, many: string, numbers: number[]): string[] {
   ];
 }
 
+// counted names a comment state change (FH-126) by how many comments it
+// covered: "asked for a change", "addressed 2 change requests".
+function counted(
+  change: HistoryChange,
+  one: string,
+  verb: string,
+  many: string,
+): string {
+  const n = change.comments?.length ?? 0;
+  return n > 1 ? `${verb} ${n} ${many}` : one;
+}
+
 // historyWords says what each change of a write did, in plain words and
 // never with the ticket's text.
 export function historyWords(changes: HistoryChange[]): string[] {
@@ -187,6 +202,29 @@ export function historyWords(changes: HistoryChange[]): string[] {
         return "archived it";
       case "restored":
         return "restored it";
+      case "change-requested":
+        return counted(change, "asked for a change", "asked for", "changes");
+      case "addressed":
+        return counted(
+          change,
+          "addressed a change request",
+          "addressed",
+          "change requests",
+        );
+      case "resolved":
+        return counted(
+          change,
+          "resolved a change request",
+          "resolved",
+          "change requests",
+        );
+      case "reopened":
+        return counted(
+          change,
+          "reopened a change request",
+          "reopened",
+          "change requests",
+        );
       default:
         return change.what;
     }
@@ -351,6 +389,7 @@ function commentEntry(comment: Comment): CommentEntry {
     by: comment.byPerson ? comment.by : shortAuthor(comment.by),
     byPerson: comment.byPerson,
     edited: comment.edited,
+    state: comment.state,
     quoteFrom: comment.quoteFrom,
     quote: comment.quote,
     markdown: comment.body,
