@@ -112,7 +112,8 @@ tickets neither done nor in the backlog), finished workstreams left out
 unless chosen; right-aligned, one chip per Colour by value present (a round
 paint bullet and the value's word; with Colour by Type, the type's card
 icon in its colour instead of the bullet, so people learn the icons,
-FH-147). Both are filters with the menus' click
+FH-147; with Colour by Priority, the bullet then the card's priority bars,
+FH-154). Both are filters with the menus' click
 rules: a shown-only chip takes the selection ring, a hidden one is dashed and
 struck through. The row never wraps: chips that do not fit stay out of view,
 colour chips before workstreams; the menus list every value. Hidden when
@@ -169,7 +170,10 @@ One set of markers, three layouts (FH-147, decided with the user on
 and a marker shows only when it applies.
 
 **Markers.** Each is a drawing with its words in its tooltip and in the
-card's name:
+card's name. The type and priority marks are the same drawings wherever a
+ticket's type or priority shows, before the word where there is room for
+it: the Table and archive tags, the panel header's tags, the full page's
+Priority and Type rows and the Colour by Priority chips (FH-154).
 
 | Marker | Shown as |
 | --- | --- |
@@ -240,8 +244,8 @@ words:
 
 1. **Header**: id (a link to the full page, `CARD-7`) and project name; the
    title in the display cut; a pill row
-   (status pill for its column, the blocker pill when blocked, priority tag,
-   type tag); a meta row (workstream bullet and name, created date, branch in
+   (status pill for its column, the blocker pill when blocked, priority tag
+   with its bars, type tag with its icon, §2); a meta row (workstream bullet and name, created date, branch in
    monospace, the pull request as *PR #7* or its address, a link in a new
    tab only for an `http(s)` URL (FH-114), changed time); actions (Move to, Archive) when editable. Top
    right, *Open full page in a new tab* (expand icon) and close; Escape
@@ -452,7 +456,8 @@ at most 94rem.
   as a select in the status's own fill, icon and word (the status pill
   when read-only), on a ticket in review where the page can save a full
   width secondary **Request changes** (speech balloon; `REV-6`) under it,
-  *Blocked* when blocked, then rows of Priority, Type,
+  *Blocked* when blocked, then rows of Priority (bars and word), Type
+  (icon and word),
   Workstream (bullet and name), Branch, Pull request (when set), Depends on
   (ids linked), Tags, Agent (the run speaking for the ticket, its state
   mark and word), Created and Changed, *None* where empty; then
@@ -687,7 +692,8 @@ No coloured edge strips; the attention colour stays with Needs you.
 
 Page header and view toolbar (no View options or chip row); then the table
 on a rounded surface with a sticky head: Ticket (title over id), Project (all
-scope), Status (status pill), Type (tag), Priority (tag), Workstream (bullet
+scope), Status (status pill), Type (tag with its icon), Priority (tag with
+its bars; §2), Workstream (bullet
 and name), State (blocker pill, repair mark, live mark), Criteria, Changed.
 Head buttons sort (`VIEW-5`); the selected row takes the selection tint.
 

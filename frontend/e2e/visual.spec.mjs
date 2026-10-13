@@ -119,6 +119,19 @@ for (const theme of ["light", "dark"]) {
       }
     });
   }
+  // Colour by Priority: the tint and the chips' paint with the card's
+  // priority bars (FH-154).
+  test(`the board coloured by priority, ${theme}`, async () => {
+    await open(page, "#/p/flashheart/board", { width: 1280, theme });
+    await viewOption(page, "Colour by", "Priority");
+    try {
+      await compare("board-priority", "#/p/flashheart/board", column, {
+        theme,
+      });
+    } finally {
+      await viewOption(page, "Colour by", "Type");
+    }
+  });
   test(`a ticket in the side panel, ${theme}`, async () => {
     await compare(
       "panel",
@@ -148,6 +161,10 @@ test("the Overview of every project", async () => {
   await compare("overview", "#/all/overview", heading);
 });
 
-test("a ticket's own page", async () => {
-  await compare("ticket", "#/ticket/FH-5", heading);
-});
+// The page's properties carry the type icon and priority bars (FH-154) in
+// both themes.
+for (const theme of ["light", "dark"]) {
+  test(`a ticket's own page, ${theme}`, async () => {
+    await compare("ticket", "#/ticket/FH-5", heading, { theme });
+  });
+}

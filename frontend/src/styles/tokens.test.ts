@@ -219,3 +219,45 @@ describe.each(Object.entries(themes))("%s card marks", (_, tokens) => {
     },
   );
 });
+
+// Beside their words (FH-154), the same marks sit on the Table's and the
+// archive's rows (the card surface, the hover well and the selected row's
+// tint), the card panel's header, the ticket page's properties (the column
+// surface) and the Colour by chips (the card, the chosen chip's tint and
+// the ground under a hidden chip): 3:1 on each, in both themes.
+describe.each(Object.entries(themes))("%s marks beside words", (_, tokens) => {
+  const grounds = [
+    "card",
+    "well",
+    "select-surface",
+    "panel",
+    "column",
+    "ground",
+  ];
+  const marks = [
+    "priority-high",
+    "priority-medium",
+    "priority-low",
+    ...[
+      "feature",
+      "bug",
+      "infra",
+      "test",
+      "refactor",
+      "docs",
+      "spike",
+      "other",
+    ].map((type) => `paint-type-${type}`),
+  ];
+  it.each(
+    marks.flatMap((mark) =>
+      grounds.map((ground): [string, string] => [mark, ground]),
+    ),
+  )("%s on %s meets 3:1", (fg, bg) => {
+    const a = tokens.get(fg);
+    const b = tokens.get(bg);
+    expect(a, `--fh-${fg}`).toBeDefined();
+    expect(b, `--fh-${bg}`).toBeDefined();
+    expect(contrast(a ?? "", b ?? "")).toBeGreaterThanOrEqual(3);
+  });
+});

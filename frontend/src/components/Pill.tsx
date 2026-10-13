@@ -116,8 +116,9 @@ export function BlockerPill({
 }
 
 // Tag is a ticket attribute (type, priority, a tag) as a neutral outlined
-// chip, in the panel, the table and the archive. Cards draw type and
-// priority as marks instead (components/TicketMarks, FH-147).
+// chip, in the panel, the table and the archive. Type and priority carry
+// the card's mark before their word there (TicketMarks' TypeTag and
+// PriorityTag, FH-154).
 export function Tag({
   strong,
   children,
@@ -128,7 +129,7 @@ export function Tag({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-rule px-2 text-2xs leading-[1.125rem] ${strong ? "font-semibold text-ink" : "text-ink-muted"}`}
+      className={`inline-flex items-center gap-1 rounded-full border border-rule px-2 text-2xs leading-[1.125rem] ${strong ? "font-semibold text-ink" : "text-ink-muted"}`}
     >
       {children}
     </span>
