@@ -1,0 +1,15 @@
+model = "gpt-6-astra"
+
+[projects."/Users/example/src/demo"]
+trust_level = "trusted"
+
+[mcp_servers.flashheart]
+command = "/Users/example/old/flashheart"
+args = ["mcp"]
+startup_timeout_sec = 30 # mine, kept
+
+[mcp_servers.flashheart.env]
+FLASHHEART_DEBUG = "1"
+
+[tui]
+theme = "dusk"

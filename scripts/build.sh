@@ -1,6 +1,10 @@
 #!/bin/sh
 # Build the frontend and the flashheart binary into build/. Release builds set
 # FLASHHEART_VERSION, FLASHHEART_COMMIT and FLASHHEART_BUILD_DATE.
+# Reinstalls the frontend packages (npm ci) first when they are missing or no
+# longer match frontend/package-lock.json, for example after a pull that adds
+# or upgrades a package; an up-to-date install is reused (see
+# scripts/frontend-deps.sh).
 set -eu
 
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -11,9 +15,7 @@ commit=${FLASHHEART_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo unk
 build_date=${FLASHHEART_BUILD_DATE:-unknown}
 buildinfo=github.com/rztaylor/flashheart/internal/buildinfo
 
-if [ ! -d frontend/node_modules ]; then
-  npm --cache "$project_root/.cache/npm" --prefix frontend ci
-fi
+scripts/frontend-deps.sh
 npm --cache "$project_root/.cache/npm" --prefix frontend run build
 
 mkdir -p "$project_root/.cache/go-build" "$project_root/build"

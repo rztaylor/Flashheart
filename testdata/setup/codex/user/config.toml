@@ -1,0 +1,36 @@
+# My Codex settings. Comments, order and spacing must survive setup.
+model = "gpt-6-astra"
+model_reasoning_effort = "medium"   # trailing comment
+notify = ["/Users/example/bin/notify", "turn-ended"]
+developer_instructions = """
+Prefer small diffs.
+[mcp_servers.flashheart]
+This line only looks like a table header; it is inside a string.
+"""
+sandbox_workspace_write.network_access = false
+
+[features]
+web_search = true
+
+[projects."/Users/example/src/demo"]
+trust_level = "trusted"
+
+[projects."/Users/example/src/it's here"]
+trust_level = "untrusted"
+
+[mcp_servers.docs]
+command = "npx"
+args = [
+  "-y",          # fetch it
+  "docs-server",
+]
+startup_timeout_sec = 20
+
+[mcp_servers.docs.env]
+DOCS_TOKEN_FILE = '/Users/example/.config/docs\token'
+
+[tui]
+theme = { name = "dusk", accent = "#ff8800" }
+
+[hooks.state."/Users/example/.codex/config.toml:Stop:0:0"]
+trusted_hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"

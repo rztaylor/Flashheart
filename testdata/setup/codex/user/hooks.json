@@ -1,0 +1,28 @@
+{
+  "description": "My own lifecycle hooks — “quoted” ünïcode kept.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/format-changed",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

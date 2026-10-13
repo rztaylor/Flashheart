@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {"type": "command", "command": "/Users/example/old/flashheart hook codex SessionStart", "timeout": 5},
+          {"type": "command", "command": "echo session started"}
+        ]
+      }
+    ],
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "/Users/example/old/flashheart hook codex Stop", "timeout": 5}]}
+    ]
+  }
+}

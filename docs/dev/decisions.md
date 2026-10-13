@@ -1022,3 +1022,26 @@ carries (chosen: it needs no hooks, no stamping and no fold). A client that
 names no session keeps `<agent>:mcp-<random>`, which never joins a later
 hook run. `PROTOCOL_VERSION` stays 2: run ids keep the §2 grammar, and the
 API field and the `_meta` read are additive.
+## 2026-10-12 — D44: setup codex edits config.toml as text, hooks in hooks.json
+
+`flashheart setup codex` (FH-75) writes the flashheart MCP server into
+Codex's `config.toml`, a file Codex also writes itself (project and hook
+trust) and the user keeps comments in. Setup edits only its own
+`[mcp_servers.flashheart]` table, through a small statement scanner in
+`internal/setup` (headers, keys, strings of every kind, multi-line arrays
+and inline tables), and refuses a server defined any other way.
+
+Options: a TOML library (Go's maintained ones decode and re-encode, losing
+comments and order, and would add a dependency for one table); running
+`codex mcp add` (Codex keeps the file's layout, but the diff could not be
+shown before writing, and the CLI is often only inside the ChatGPT app);
+editing as text (chosen: the diff shows exactly the lines that change, and
+everything else is kept byte for byte). Hooks go into `hooks.json`, not a
+`[hooks]` table in `config.toml`: it is JSON, merged with the same code as
+Claude Code's `settings.json`, and keeps `config.toml` edits to one table.
+The protocol text goes between markers in the global `AGENTS.md` (SET-2);
+no hook refreshes it, since that file is the user's, so `doctor` reports
+it out of date after an upgrade. Codex skips hooks the user has not
+trusted with `/hooks`; setup says so, and `doctor` warns when no trust is
+recorded for `hooks.json` at all, but cannot tell a stale trust because
+how Codex hashes a hook is not recorded.

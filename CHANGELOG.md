@@ -17,6 +17,19 @@ All notable changes to this project are documented here. The project follows
   keeps one claim holder, one Needs you entry and one Overview row, and
   stops calling it "MCP only". When `ambiguous_run` lists runs whose short
   ids look the same, it names them in full (protocol version unchanged).
+- One command connects Codex to Flashheart, and `doctor` checks it (FH-75).
+  `flashheart setup codex` shows, as a diff, the `[mcp_servers.flashheart]`
+  table it adds to `config.toml`, the hooks it merges into `hooks.json` and
+  the protocol text it puts between markers in the global `AGENTS.md`, all
+  in `$CODEX_HOME` (default `~/.codex`); `--write` applies them with
+  backups and says to trust the hooks with `/hooks` in `codex`, and
+  `--uninstall --write` takes out only Flashheart's entries and text.
+  `config.toml` is edited as text, so comments, project trust and other
+  servers stay byte for byte. `doctor` gains a Codex section: a missing or
+  stale MCP entry, hooks or protocol text, hooks turned off or never
+  trusted, each with its fix; without a Codex home it reports nothing to
+  check. The shared protocol text now says plans are mirrored only where
+  the hooks are installed (protocol version unchanged).
 
 - Codex sessions with Flashheart's hooks are recorded on the board like
   Claude Code ones (FH-73). `flashheart hook codex <Event>` turns Codex's
@@ -26,8 +39,8 @@ All notable changes to this project are documented here. The project follows
   subagents, compaction and run ends; an interrupted turn ends as a stop
   does. A new session gets the recovery note and a prompt the waiting
   answers, and a stop is blocked for a handoff where the project enforces
-  it (an interrupt never is). Hooks are installed by hand until `flashheart
-  setup codex` (FH-75); Codex's own `update_plan` is mapped to the plan but
+  it (an interrupt never is). `flashheart setup codex` installs the hooks
+  (FH-75); Codex's own `update_plan` is mapped to the plan but
   was not offered in any recorded session (protocol version unchanged).
 
 - A ticket's pull request shows on its card panel and full page (FH-114).
@@ -88,6 +101,15 @@ All notable changes to this project are documented here. The project follows
   once. Paths given to the MCP tools are copied as before.
 
 ### Fixed
+
+- Building after a pull that adds or upgrades frontend packages no longer
+  fails on missing modules (FH-119). `scripts/build.sh` (and so
+  `scripts/e2e.sh`) and `scripts/e2e-visual.sh` installed the packages only
+  when none were installed, so an install older than the lockfile was
+  reused. They now share `scripts/frontend-deps.sh`, which reruns `npm ci`
+  whenever the lockfile's checksum or the Node major version differs from
+  the last successful install; an up-to-date install is reused.
+  `scripts/check.sh` still always runs `npm ci`.
 
 - Undo after two quick moves of a card now undoes the latest one (FH-115).
   While the second move was saving, the first move's toast still offered
