@@ -103,7 +103,7 @@ export function sentWords(
 
 // shortRun shortens a run id to its agent and the first eight characters
 // of its session, as the board names runs.
-function shortRun(run: string): string {
+export function shortRun(run: string): string {
   const match = /^([a-z][a-z0-9-]*:)([^\s/]{1,8})/.exec(run);
   return match ? `${match[1]}${match[2]}` : run;
 }

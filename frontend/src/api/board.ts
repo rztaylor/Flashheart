@@ -9,6 +9,7 @@ import {
   type Question,
   type Run,
   type RunCounts,
+  type RunState,
   type TicketSessions,
 } from "./runs";
 
@@ -221,11 +222,34 @@ export interface TicketDetail extends Card {
   comments: Comment[];
   history: History[];
   activityHash: string;
+  // tellSessions are the runs a comment may be sent to now (FH-127): each
+  // live session that has claimed the ticket, then its live subagents;
+  // none when no live session holds it.
+  tellSessions?: TellSession[];
 }
+
+// TellSession is a run a comment may be sent to now: a live session
+// holding the ticket, or one of its subagents (parent its session,
+// agentType its kind).
+export interface TellSession {
+  run: string;
+  short: string;
+  agent: string;
+  state: RunState;
+  parent: string;
+  agentType: string;
+}
+
+// CommentDelivery is where a comment sent to a session stands (FH-127):
+// waiting for the session to take it, delivered to it (and so locked), or
+// missed because the session ended first.
+export type CommentDelivery = "waiting" | "delivered" | "missed";
 
 // Comment is a person's comment on a ticket (STO-8). edited is "" until it
 // is edited; quote is the part of the ticket it quotes ("" for none) and
-// quoteFrom where that part is ("Acceptance criteria 2").
+// quoteFrom where that part is ("Acceptance criteria 2"). A comment sent
+// to a session (FH-127) names its run (sentTo, sentToShort) and where its
+// delivery stands, delivered when it was handed over ("" until then).
 export interface Comment {
   id: string;
   time: string;
@@ -236,6 +260,10 @@ export interface Comment {
   quoteFrom: string;
   quote: string;
   body: string;
+  sentTo?: string;
+  sentToShort?: string;
+  delivery?: CommentDelivery | "";
+  delivered?: string;
 }
 
 // HistoryChange is one thing a write changed: what is created, moved,
@@ -422,7 +450,10 @@ export const isComment = (value: unknown): value is Comment =>
   isString(value.edited) &&
   isString(value.quoteFrom) &&
   isString(value.quote) &&
-  isString(value.body);
+  isString(value.body) &&
+  [value.sentTo, value.sentToShort, value.delivery, value.delivered].every(
+    (field) => field === undefined || isString(field),
+  );
 
 const isHistory = (value: unknown): value is History =>
   isRecord(value) &&

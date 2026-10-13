@@ -6,12 +6,14 @@ import {
   useState,
 } from "react";
 
+import type { TellSession } from "../../api/board";
 import type { NewComment } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { SelectField, TextArea } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import type { QuoteGroup } from "../../model/comments";
 import { messageOf } from "../../model/errors";
+import { noSessionReason, tellGroups, tellLabel } from "../../model/tell";
 import { sendKeys, useHeldDraft } from "../editing/InPlace";
 
 // QuoteFigure is the part of the ticket a comment quotes, named by where
@@ -36,18 +38,30 @@ export function QuoteFigure({
   );
 }
 
+// Tell is the comment box's Tell a session now option (FH-127): the runs
+// the server offers for ticket, live sessions that have claimed it with
+// their subagents; none disables the option, saying why.
+export interface Tell {
+  ticket: string;
+  sessions: TellSession[];
+}
+
 // CommentBox ends a ticket page's Activity (FH-125): a person writes a
 // comment, optionally quoting a section, criterion or How to verify step
 // chosen from the page, and posts it with Comment or Ctrl or Cmd and
-// Enter. An empty comment cannot be posted; a failed post keeps the text
-// with the reason beside it. While it holds text, leaving the page asks
-// first (the page's in-place editing holds it).
+// Enter. With tell, the comment can also be sent to a live session that
+// has claimed the ticket, chosen per comment (FH-127). An empty comment
+// cannot be posted; a failed post keeps the text with the reason beside
+// it. While it holds text, leaving the page asks first (the page's
+// in-place editing holds it).
 export function CommentBox({
   choices,
+  tell,
   onPost,
   renderQuote,
 }: {
   choices: QuoteGroup[];
+  tell?: Tell;
   onPost(comment: NewComment): Promise<void>;
   // renderQuote shows a quote's text as the page shows the ticket's.
   renderQuote(text: string): ReactNode;
@@ -55,15 +69,23 @@ export function CommentBox({
   const id = useId();
   const [text, setText] = useState("");
   const [quoteKey, setQuoteKey] = useState("");
+  const [telling, setTelling] = useState(false);
+  const [target, setTarget] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const quote = choices
     .flatMap((group) => group.choices)
     .find((choice) => choice.key === quoteKey);
+  const sessions = tell?.sessions ?? [];
+  // The run chosen, or the holder while the choice is no longer offered.
+  const chosen =
+    sessions.find((session) => session.run === target) ?? sessions[0];
+  const sending = telling && chosen !== undefined;
   const empty = !text.trim();
   useHeldDraft("comment-box", "comment", !empty, () => {
     setText("");
     setQuoteKey("");
+    setTelling(false);
     setError("");
   });
 
@@ -76,9 +98,11 @@ export function CommentBox({
         body: text,
         quote: quote?.text ?? "",
         quoteFrom: quote?.from ?? "",
+        ...(sending ? { sendTo: chosen.run } : {}),
       });
       setText("");
       setQuoteKey("");
+      setTelling(false);
     } catch (failure) {
       setError(messageOf(failure, "Not posted"));
     } finally {
@@ -127,6 +151,16 @@ export function CommentBox({
             {error}
           </p>
         ) : null}
+        {tell ? (
+          <TellChoice
+            id={id}
+            tell={tell}
+            telling={sending}
+            onTelling={setTelling}
+            chosen={chosen?.run ?? ""}
+            onChoose={setTarget}
+          />
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           {/* While posting the button stays focusable (aria-disabled), so
               focus is not lost when the post fails. */}
@@ -137,7 +171,13 @@ export function CommentBox({
             aria-disabled={busy || undefined}
             className="h-8 py-0 text-xs aria-disabled:cursor-wait aria-disabled:opacity-50"
           >
-            {busy ? "Posting…" : "Comment"}
+            {sending
+              ? busy
+                ? "Sending…"
+                : "Comment and tell"
+              : busy
+                ? "Posting…"
+                : "Comment"}
           </Button>
           {choices.length > 0 ? (
             <SelectField
@@ -165,5 +205,77 @@ export function CommentBox({
         </div>
       </div>
     </form>
+  );
+}
+
+// TellChoice is the Tell a session now option (FH-127): a checkbox and,
+// once checked, the picker of the runs offered, each session with its
+// subagents under it. With none it is disabled and says why.
+function TellChoice({
+  id,
+  tell,
+  telling,
+  onTelling,
+  chosen,
+  onChoose,
+}: {
+  id: string;
+  tell: Tell;
+  telling: boolean;
+  onTelling(telling: boolean): void;
+  chosen: string;
+  onChoose(run: string): void;
+}) {
+  const none = tell.sessions.length === 0;
+  const reason = `${id}-tell-reason`;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <label
+        className={`flex items-center gap-1.5 text-sm ${
+          none ? "cursor-not-allowed text-ink-muted" : "cursor-pointer text-ink"
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={telling}
+          disabled={none}
+          aria-describedby={reason}
+          onChange={(event) => onTelling(event.target.checked)}
+          className="size-4 accent-[var(--fh-select)] disabled:cursor-not-allowed"
+        />
+        Tell a session now
+      </label>
+      {telling ? (
+        <SelectField
+          label="Session"
+          plain
+          value={chosen}
+          onChange={onChoose}
+          className="w-72 max-w-full min-w-0"
+        >
+          {tellGroups(tell.sessions).map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.session ? (
+                <option value={group.session.run}>
+                  {tellLabel(group.session)}
+                </option>
+              ) : null}
+              {group.subagents.map((run) => (
+                <option key={run.run} value={run.run}>
+                  {tellLabel(run)}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </SelectField>
+      ) : null}
+      <span id={reason} className="text-xs text-ink-muted">
+        {none
+          ? noSessionReason(tell.ticket)
+          : telling
+            ? "It gets your words with its next prompt or tool call."
+            : `Also hands it to the session working on ${tell.ticket}.`}
+      </span>
+    </div>
   );
 }
