@@ -1035,6 +1035,11 @@ checks (§5.4). It covers, briefly:
 - **MCP contract tests** through the Go SDK's in-memory transport.
 - **End-to-end smoke**: a scripted sequence (start → claim → edits → stop
   blocked → checkpoint → end → new session recovery note) against a temp root.
+  A cross-agent leg runs it from Claude Code to Codex and from Codex to
+  Claude Code in one worktree, Codex's side from its recorded payloads and
+  MCP calls: the second session's note names the ticket and the first's
+  last handoff, it claims the ticket and checkpoints, and the ticket's
+  runs, claims, checkpoints and handoff name each session in turn.
 
 ## 14. Versioning
 
