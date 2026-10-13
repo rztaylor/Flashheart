@@ -392,6 +392,37 @@ export async function createTicket(
   return payload as unknown as Created;
 }
 
+export interface NewWorkstream {
+  title: string;
+  goal: string;
+  priority: string;
+  dependsOnWorkstreams: string[];
+}
+
+export interface CreatedWorkstream {
+  slug: string;
+  hash: string;
+  revision: number;
+}
+
+// createWorkstream writes a workstream from the board-format template; the
+// server makes its slug from the title (FH-17).
+export async function createWorkstream(
+  fetcher: AuthenticatedFetch,
+  project: string,
+  workstream: NewWorkstream,
+): Promise<CreatedWorkstream> {
+  const payload = await sendJSON(
+    fetcher,
+    "POST",
+    `/api/projects/${segment(project)}/workstreams`,
+    workstream,
+  );
+  if (!isRecord(payload) || typeof payload.slug !== "string")
+    throw new Error("Create response was invalid");
+  return payload as unknown as CreatedWorkstream;
+}
+
 export function reorderWorkstream(
   fetcher: AuthenticatedFetch,
   project: string,

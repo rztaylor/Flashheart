@@ -46,8 +46,10 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 8. [`workstream-epics`](roadmap-items/workstream-epics.md) — **Partial**.
    Workstreams are epics: order never blocks, only `depends-on` does, and
    the Workstreams view draws dependencies as a railway graph (D26, FH-38).
-   Built: all of it; open: the user's review. No roadmap dependencies;
-   FH-17's workstream UI follows it.
+   Built: all of it, and on it FH-17's New workstream dialog, the panel's
+   workstream picker keeping ticket and list in step, and New ticket
+   opening its ticket ready to edit; open: the user's review. No roadmap
+   dependencies.
 9. [`project-overview`](roadmap-items/project-overview.md) — **Partial**.
    An Overview tab for a project manager replaces the Agents view: decisions,
    reviews, risks and progress by ticket, with sessions as evidence under a

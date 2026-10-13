@@ -186,6 +186,8 @@ export function TextInput({
   return (
     <input
       {...props}
+      // A dialog opens with focus here (components/Dialog).
+      data-autofocus={props.autoFocus ? "" : undefined}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className={`h-8 ${formControl} ${props.className ?? ""}`}
@@ -215,6 +217,7 @@ export function TextArea({
   return (
     <textarea
       {...props}
+      data-autofocus={props.autoFocus ? "" : undefined}
       rows={rows}
       value={value}
       onChange={(event) => onChange(event.target.value)}

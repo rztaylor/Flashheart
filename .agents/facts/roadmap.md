@@ -10,7 +10,8 @@
 - `ui-features` (board UI requests, the `ui-features` workstream FH-24,
   FH-23, FH-20, FH-21, FH-22, FH-45) has no roadmap dependencies.
 - `workstream-epics` (FH-38, D26: workstream order never blocks) has no
-  roadmap dependencies; FH-17's New workstream dialog builds on it.
+  roadmap dependencies; FH-17's New workstream dialog and membership
+  picker build on it.
 - `project-overview` (the `project-overview` workstream FH-49–FH-55, D32)
   replaces the Agents view with a ticket-centric Overview; no roadmap
   dependencies. Its UI follows the approved Calm concept attached to FH-47.

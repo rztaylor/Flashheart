@@ -57,9 +57,8 @@ export function WorkstreamsView({
   if (withLines.length === 0) {
     return (
       <EmptyState title="No workstreams yet">
-        A workstream is a group of tickets toward one goal. Add one as{" "}
-        <code className="font-mono">workstreams/&lt;slug&gt;.md</code> with a{" "}
-        <code className="font-mono">tickets:</code> list, and it appears here as
+        A workstream is a group of tickets toward one goal. Make one with New
+        workstream and add tickets to it from their Edit tab; it appears here as
         a line, with track wherever one ticket depends on another.
         <Aside placement="workstreams-none" className="mt-3" />
       </EmptyState>

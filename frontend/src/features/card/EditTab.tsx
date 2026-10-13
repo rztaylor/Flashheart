@@ -38,6 +38,12 @@ const fieldEdits = (draft: Draft, base: Draft) =>
 const isDirty = (draft: Draft, base: Draft) =>
   Object.keys(fieldEdits(draft, base)).length > 0 || draft.raw !== base.raw;
 
+// firstField is the tab's first text field or select, its Title.
+const firstField = (frame: HTMLElement | null) =>
+  frame?.querySelector<HTMLElement>(
+    "input:not([type=radio]), select, textarea",
+  );
+
 // EditTab edits a ticket's frontmatter with typed controls, or the whole
 // file in a raw editor (EDIT-6). Every save carries the hash of the version
 // the draft started from (useTicketDraft); a stale hash opens the conflict
@@ -50,12 +56,16 @@ export function EditTab({
   workstreams,
   onSaved,
   onShow,
+  autoFocus = false,
 }: {
   detail: TicketDetail;
   fetcher: AuthenticatedFetch;
   workstreams: WorkstreamBrief[];
   onSaved(saved: Saved | undefined, what: string): void;
   onShow(): void;
+  // autoFocus puts focus in the first field as the tab mounts: the panel
+  // opened ready to edit, after New ticket (FH-17).
+  autoFocus?: boolean;
 }) {
   const draft = useTicketDraft({ detail, read: draftOf, isDirty, onSaved });
   const [mode, setMode] = useState<"fields" | "raw">("fields");
@@ -91,15 +101,17 @@ export function EditTab({
     element?.addEventListener("focusin", remember);
     return () => element?.removeEventListener("focusin", remember);
   }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: focuses once, as the tab mounts.
+  useEffect(() => {
+    if (autoFocus) firstField(frame.current)?.focus();
+  }, []);
   useEffect(() => {
     if (returning === 0) return;
     const last = lastFocus.current;
     const target =
       last?.isConnected && frame.current?.contains(last)
         ? last
-        : frame.current?.querySelector<HTMLElement>(
-            "input:not([type=radio]), select, textarea",
-          );
+        : firstField(frame.current);
     target?.focus();
   }, [returning]);
   const { form, raw } = draft.value;

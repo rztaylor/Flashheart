@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Make workstreams and fill them on the board (FH-17, `EDIT-14`). **New
+  workstream** in the Workstreams view asks for a title, a goal, a
+  priority and the workstreams it depends on, writes the workstream file
+  with a unique name and opens its page. A ticket's Workstream field on
+  the side panel's Edit tab adds it to a workstream or takes it out, and
+  the ticket and the workstream's list always change together. After
+  **New ticket**, the new ticket opens on its Edit tab with the cursor in
+  its title, ready for the details the dialog does not ask.
+
 - Edit a workstream's goal and notes on its own page (FH-139,
   `EDIT-13`). A workstream's name on the Workstreams view now opens its
   page (a finished line has an *Open* link beside its head): its line of
@@ -273,6 +282,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Dialogs open with the cursor where you type first (FH-17): New
+  ticket's title, the reason for starting a blocked ticket and a new
+  change request lost focus to the dialog's close button as it opened.
 - Saving a section right after an edit keeps that edit (FH-142). Pressing
   Ctrl+Enter (Cmd+Enter on a Mac) a moment after pasting or typing in a
   section's editor could close it without saving the change, as the page

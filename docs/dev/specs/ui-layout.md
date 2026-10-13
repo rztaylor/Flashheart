@@ -76,7 +76,7 @@ the board icon in the all scope), then one quiet summary line for the view:
 | Table | as Board |
 
 The header's far end holds *Archive* and, on Board and Table, **New ticket**
-(primary) (FH-39).
+(primary) (FH-39), or on Workstreams **New workstream** (primary, FH-17).
 
 **View toolbar** (Board and Table), one row (wrapping only on a phone): one
 button per filter, named for what it filters with no separate label, Type,
@@ -225,7 +225,8 @@ reorders them.
    comment too when one is being written): **Discard changes** drops them,
    **Keep editing** shows the Edit tab again with focus on its control
    last used (or its first field), unless the prompt was opened from a
-   field, where focus stays. A save that meets a conflict after another
+   field, where focus stays. The ticket New ticket created opens on this
+   tab with focus in its Title, ready to edit (FH-17). A save that meets a conflict after another
    tab was chosen shows the Edit tab again with the conflict dialog.
 6. **Runs tab**: runs newest first, each a card with its state (and its
    Needs you reason, in the card's words, `RUN-3`), agent,
@@ -527,7 +528,20 @@ id a separate link.
   step where tracks share a stretch.
 - Tickets with no links on the line follow below the graph, set off by a
   faint rule when there is a graph, wrapping onto rows.
-  Shift with Left/Right or drag reorders them (`EDIT-4`).
+  Shift with Left/Right or drag reorders them (`EDIT-4`). A line with no
+  tickets says *No tickets on this line yet.*
+- **New workstream** (`EDIT-14`, FH-17) opens a dialog like New ticket's:
+  *Project* (only in the all scope), **Title** (focused), *Goal* (a text
+  area, *The shared outcome its tickets deliver.*), *Priority* (default
+  medium) and, when the project has workstreams, *Depends on workstreams*:
+  a bordered, scrolling list of checkboxes named by title, wrapping long
+  names, with the hint *Its tickets wait until every ticket in these is in
+  review or done.* **Create workstream** (primary, off until there is a
+  title; Enter in the title submits) and Cancel; Escape closes and focus
+  returns to the button. A refusal shows as an alert in words under the
+  form, which keeps what was typed. Created, a toast *Created workstream
+  <name>.* and the workstream's page opens. The empty view's sentence
+  names New workstream and the Edit tab's Workstream field.
 
 ### Workstream page
 

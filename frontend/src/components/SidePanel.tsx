@@ -12,8 +12,8 @@ interface SidePanelProps {
 
 // SidePanel sits beside the board on desktop, which narrows to make room and
 // stays scrollable (CARD-1); on narrow screens it covers the view. It is not
-// modal: focus moves in on open, Escape closes it and the caller restores
-// focus.
+// modal: focus moves in on open (to the panel, unless a control inside took
+// it), Escape closes it and the caller restores focus.
 export function SidePanel({
   label,
   onClose,
@@ -21,8 +21,10 @@ export function SidePanel({
   children,
 }: SidePanelProps) {
   const ref = useRef<HTMLElement>(null);
+  // A control inside that already took focus as it mounted (the Edit tab
+  // opened ready to edit, FH-17) keeps it.
   useEffect(() => {
-    ref.current?.focus();
+    if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
   }, []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
