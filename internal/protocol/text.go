@@ -77,8 +77,8 @@ instructions.
 
 ## While working
 
-- Keep your own plan or todo list current. Flashheart mirrors it for the
-  user; no tool call is needed.
+- Keep your own plan or todo list current. Where Flashheart's hooks are
+  installed it mirrors it for the user; no tool call is needed.
 - ` + "`checkpoint`" + ` at meaningful milestones, before long operations, when
   your context may be compacted, and always before you stop after editing
   files: what is done, what is next, the files that matter, and open

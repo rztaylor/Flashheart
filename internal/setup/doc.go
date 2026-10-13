@@ -22,6 +22,14 @@
 // current for the session-start hook: it rewrites only an existing skill
 // with Flashheart's frontmatter, never creates one.
 //
+// Codex (codex*.go) is Codex, in $CODEX_HOME (default ~/.codex): the
+// [mcp_servers.flashheart] table in config.toml, edited as text (toml.go
+// scans statements, no TOML library) because Codex writes the file itself;
+// the hooks of agent-protocol §5.3 in hooks.json, with Claude Code's JSON
+// handling; and the protocol text between markers in the global
+// AGENTS.md. It runs no Codex command. Its diagnosis also reports hooks
+// Codex will skip (turned off, or never trusted with /hooks).
+//
 // Which agents exist, flags and output streams belong to cli; the skill's
-// text to protocol. It never touches the board root.
+// and AGENTS.md's text to protocol. It never touches the board root.
 package setup

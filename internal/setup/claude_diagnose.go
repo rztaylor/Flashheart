@@ -30,10 +30,17 @@ func (o Options) diagnoseHooks() []health.Finding {
 	if err != nil {
 		return []health.Finding{{Level: health.Problem, Text: fmt.Sprintf("Hooks: cannot read the settings: %v", err)}}
 	}
+	findings, _ := o.diagnoseHookEvents(tree.get("hooks"), claudeEvents, o.hookCommand, fix)
+	return findings
+}
+
+// diagnoseHookEvents checks a hooks object for setup's hook for every
+// event, each running command(event); remedy is the fix findings name.
+// installed reports whether any of setup's hooks is there.
+func (o Options) diagnoseHookEvents(hooks *value, events []string, command func(string) string, remedy string) (findings []health.Finding, installed bool) {
 	var missing, programs []string
 	differ := false
-	hooks := tree.get("hooks")
-	for _, event := range claudeEvents {
+	for _, event := range events {
 		found := false
 		var groups *value
 		if hooks != nil {
@@ -46,17 +53,17 @@ func (o Options) diagnoseHooks() []health.Finding {
 					continue
 				}
 				for _, entry := range entries.array {
-					command := entry.get("command").text()
-					if !ownsCommand(command) {
+					configured := entry.get("command").text()
+					if !ownsCommand(configured) {
 						continue
 					}
 					found = true
-					program, _, _ := splitProgram(command)
+					program, _, _ := splitProgram(configured)
 					program = o.resolve(program)
 					if program != o.Binary && !slices.Contains(programs, program) {
 						programs = append(programs, program)
 					}
-					differ = differ || program == o.Binary && strings.TrimSpace(command) != o.hookCommand(event)
+					differ = differ || program == o.Binary && strings.TrimSpace(configured) != command(event)
 				}
 			}
 		}
@@ -64,23 +71,22 @@ func (o Options) diagnoseHooks() []health.Finding {
 			missing = append(missing, event)
 		}
 	}
-	var findings []health.Finding
 	switch {
-	case len(missing) == len(claudeEvents):
-		return []health.Finding{{Level: health.Problem, Text: "Hooks: none installed; " + fix}}
+	case len(missing) == len(events):
+		return []health.Finding{{Level: health.Problem, Text: "Hooks: none installed; " + remedy}}, false
 	case len(missing) > 0:
-		findings = append(findings, health.Finding{Level: health.Problem, Text: fmt.Sprintf("Hooks: missing for %s; %s", strings.Join(missing, ", "), fix)})
+		findings = append(findings, health.Finding{Level: health.Problem, Text: fmt.Sprintf("Hooks: missing for %s; %s", strings.Join(missing, ", "), remedy)})
 	}
 	for _, program := range programs {
-		findings = append(findings, o.diagnoseProgram("Hooks: run", program))
+		findings = append(findings, o.diagnoseProgram("Hooks: run", program, remedy))
 	}
 	if differ {
-		findings = append(findings, health.Finding{Level: health.Warning, Text: "Hooks: differ from what setup writes (another --root?); " + fix})
+		findings = append(findings, health.Finding{Level: health.Warning, Text: "Hooks: differ from what setup writes (another --root?); " + remedy})
 	}
 	if len(findings) == 0 {
-		findings = append(findings, health.Finding{Level: health.OK, Text: fmt.Sprintf("Hooks: all %d installed", len(claudeEvents))})
+		findings = append(findings, health.Finding{Level: health.OK, Text: fmt.Sprintf("Hooks: all %d installed", len(events))})
 	}
-	return findings
+	return findings, true
 }
 
 // resolve finds the file a configured program names, as the shell would:
@@ -98,12 +104,12 @@ func (o Options) resolve(program string) string {
 }
 
 // diagnoseProgram reports a configured flashheart program other than this
-// binary: a problem when it is gone, else a warning.
-func (o Options) diagnoseProgram(what, program string) health.Finding {
+// binary: a problem when it is gone, else a warning; remedy is its fix.
+func (o Options) diagnoseProgram(what, program, remedy string) health.Finding {
 	if info, err := os.Stat(program); err != nil || info.IsDir() {
-		return health.Finding{Level: health.Problem, Text: fmt.Sprintf("%s %s, which does not exist; %s", what, program, fix)}
+		return health.Finding{Level: health.Problem, Text: fmt.Sprintf("%s %s, which does not exist; %s", what, program, remedy)}
 	}
-	return health.Finding{Level: health.Warning, Text: fmt.Sprintf("%s %s, not this binary (%s); %s", what, program, o.Binary, fix)}
+	return health.Finding{Level: health.Warning, Text: fmt.Sprintf("%s %s, not this binary (%s); %s", what, program, o.Binary, remedy)}
 }
 
 func (o Options) diagnoseServer() []health.Finding {
@@ -119,7 +125,7 @@ func (o Options) diagnoseServer() []health.Finding {
 	case !server.found:
 		return []health.Finding{{Level: health.Problem, Text: "MCP server: not registered; " + fix}}
 	case command != o.Binary:
-		return []health.Finding{o.diagnoseProgram("MCP server: runs", command)}
+		return []health.Finding{o.diagnoseProgram("MCP server: runs", command, fix)}
 	case !slices.Equal(server.args, o.serverArgs()):
 		return []health.Finding{{Level: health.Warning, Text: fmt.Sprintf("MCP server: runs with %q, not %q; %s", strings.Join(server.args, " "), strings.Join(o.serverArgs(), " "), fix)}}
 	}

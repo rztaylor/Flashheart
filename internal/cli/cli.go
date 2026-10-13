@@ -127,8 +127,6 @@ func (k keyFlags) Set(value string) error {
 	return nil
 }
 
-var errNotYetAvailable = errors.New("not yet available")
-
 func commands() []command {
 	return []command{
 		{
@@ -172,21 +170,25 @@ func commands() []command {
 		{
 			name:    "setup",
 			summary: "show or apply an agent's configuration for Flashheart",
-			usage:   "setup claude [--uninstall] [--write] [--root DIR]",
-			detail: "Show the changes that connect Claude Code to Flashheart: its hooks in\n" +
-				"~/.claude/settings.json, the flashheart MCP server, and the Flashheart\n" +
-				"skill (which replaces kanban-tracker). Nothing changes without --write;\n" +
-				"backups go to ~/.claude/flashheart-backup/. --uninstall shows, and with\n" +
-				"--write applies, the reverse.",
+			usage:   "setup claude|codex [--uninstall] [--write] [--root DIR]",
+			detail: "Show the changes that connect an agent to Flashheart. claude: its hooks\n" +
+				"in ~/.claude/settings.json, the flashheart MCP server and the Flashheart\n" +
+				"skill (which replaces kanban-tracker); backups go to\n" +
+				"~/.claude/flashheart-backup/. codex: the MCP server in config.toml, its\n" +
+				"hooks in hooks.json and the protocol text in AGENTS.md, all in\n" +
+				"$CODEX_HOME (default ~/.codex), with backups in its flashheart-backup/;\n" +
+				"then trust the hooks with /hooks in codex. Nothing changes without\n" +
+				"--write; --uninstall shows, and with --write applies, the reverse.",
 			run: runSetup,
 		},
 		{
 			name:    "doctor",
 			summary: "check the board root and agent configuration",
 			usage:   "doctor [--root DIR]",
-			detail: "Check the board root and its permissions, Claude Code's hooks, MCP server\n" +
-				"and skill against what setup writes, and the hook errors of the last day.\n" +
-				"Changes nothing; exits 1 when it finds a problem.",
+			detail: "Check the board root and its permissions, each agent's hooks, MCP server\n" +
+				"and protocol text (Claude Code's skill, Codex's AGENTS.md) against what\n" +
+				"setup writes, and the hook errors of the last day. Changes nothing; exits\n" +
+				"1 when it finds a problem.",
 			run: runDoctor,
 		},
 		{
@@ -275,13 +277,6 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	switch {
 	case err == nil:
 		return 0
-	case errors.Is(err, errNotYetAvailable):
-		what := name
-		if name == "setup" && flags.NArg() > 0 {
-			what += " " + flags.Arg(0)
-		}
-		fmt.Fprintf(stderr, "flashheart: %s is not yet available\n", what)
-		return 2
 	case errors.As(err, &usage):
 		return reportUsage(stderr, usage)
 	default:
@@ -590,8 +585,6 @@ func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals 
 		return usageError{fmt.Sprintf("setup needs an agent: flashheart setup <agent> (known: %s)", knownAgents(true))}
 	case flags.NArg() > 1:
 		return usageError{"setup takes one agent"}
-	case flags.Arg(0) == "codex":
-		return errNotYetAvailable
 	case !found || registered.setup == nil:
 		return usageError{fmt.Sprintf("unknown agent %q (known: %s)", flags.Arg(0), knownAgents(true))}
 	}
@@ -640,6 +633,9 @@ func agentOptions(env *environment, root string, a setup.Agent) (setup.Options, 
 		return setup.Options{}, fmt.Errorf("find the flashheart binary: %w", err)
 	}
 	options := setup.Options{Home: home, Binary: binary, Run: env.deps.RunCommand}
+	if env.deps.Getenv != nil {
+		options.CodexHome = env.deps.Getenv("CODEX_HOME")
+	}
 	if root != underHome(DefaultRoot, home) {
 		options.Root = root
 	}
