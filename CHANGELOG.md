@@ -495,6 +495,13 @@ All notable changes to this project are documented here. The project follows
   blocked-move dialog, the Table, the Workstreams view, the project rail's
   blocked count and the State filter's Blocked. It always sits beside the
   word or the reason.
+- Theme, board root and version are behind a gear in the title bar
+  (FH-149, `CFG-2`). The Settings button sits between the connection dot
+  and Quit on every view and on a ticket's full page, at every width. Its
+  menu holds the theme choice (System, Light, Dark), still saved with your
+  other preferences, the board root and the version line, which no longer
+  take the foot of the project sidebar. The Board's View options keep the
+  per-view settings.
 - `flashheart doctor` tells you which Codex hooks need trusting again
   (FH-120, D64, `SET-4`). Codex skips a hook unless you trusted its exact
   command with `/hooks`, so after setup moves the binary or changes

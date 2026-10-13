@@ -181,6 +181,18 @@ export async function viewOption(page, group, option) {
   await page.keyboard.press("Escape");
 }
 
+// settingsMenu opens the band's Settings gear (FH-149) and returns its open
+// panel: the theme choice, the board root and the version line.
+export async function settingsMenu(page) {
+  const gear = page.getByRole("banner").getByRole("button", {
+    name: "Settings",
+  });
+  if ((await gear.getAttribute("aria-expanded")) !== "true") {
+    await gear.click();
+  }
+  return page.locator(`[id="${await gear.getAttribute("aria-controls")}"]`);
+}
+
 // expectConnected waits for the shell's quiet healthy-connection button.
 export async function expectConnected(page) {
   await expect(

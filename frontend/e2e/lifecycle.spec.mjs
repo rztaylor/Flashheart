@@ -12,6 +12,7 @@ import {
   makeSandbox,
   manualURLs,
   projectRoot,
+  settingsMenu,
   shot,
   stopIfRunning,
   waitForExit,
@@ -69,8 +70,13 @@ test("detached launch returns the terminal; reload, new tab and last-tab close f
     await page.goto(urls[0], { waitUntil: "domcontentloaded" });
     port = originPort(page);
     await expectRunning(page);
-    await expect(page.getByText(sandbox.root, { exact: true })).toBeVisible();
-    await expect(page.getByText("Agent protocol")).toBeVisible();
+    // The board root and version are in the band's Settings menu (FH-149).
+    const settings = await settingsMenu(page);
+    await expect(
+      settings.getByText(sandbox.root, { exact: true }),
+    ).toBeAttached();
+    await expect(settings.getByText("Agent protocol")).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(page.getByText(/Reconnecting/)).toHaveCount(0);
     await expect(page).toHaveURL(
       (url) => url.pathname === "/" && url.hash === "",
@@ -231,7 +237,9 @@ test("shell is keyboard reachable, accessible and renders in both themes", async
     await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
     await page.goto(url, { waitUntil: "domcontentloaded" });
     await expectRunning(page);
-    await expect(page.getByText(sandbox.root, { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("banner").getByRole("button", { name: "Settings" }),
+    ).toBeVisible();
 
     // The first stop is the first view tab, Overview (FH-61).
     await page.keyboard.press("Tab");

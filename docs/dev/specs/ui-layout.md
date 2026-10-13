@@ -18,14 +18,13 @@ One shell for Overview, Workstreams, Table and Board, in both themes.
 
 ```
 ┌ Band ─────────────────────────────────────────────────────────────────┐
-│ ⚡ Flashheart │ Overview  Workstreams  Table  Board │ [● N need you] [Search] status [Quit] │
+│ ⚡ Flashheart │ Overview  Workstreams  Table  Board │ [● N need you] [Search] status [⚙] [Quit] │
 ├ Rail ────────┬ Main ──────────────────────────────────────┬ Panel ────┤
 │ All projects │ Page header: scope identity · view summary │ (ticket)  │
 │ ──────────── │ View toolbar (Board, Table)                │           │
 │ FH Project   │ View body                                  │           │
 │   route bar  │                                            │           │
 │ …            │                                            │           │
-│ Theme · root │                                            │           │
 └──────────────┴────────────────────────────────────────────┴───────────┘
 ```
 
@@ -40,16 +39,30 @@ that is open) with only tickets that need the user; pressed again, it
 returns to the project it was pressed in. It stays while pressed, so it can
 be switched off once nothing needs the user. Then search (Board and Table
 only), the backend status (quiet dot while healthy, words when not,
-`LIFE-1`) and Quit. The band carries no tagline and no project name.
+`LIFE-1`), the **Settings** gear and Quit. The band carries no tagline and
+no project name.
+
+**Settings** (FH-149): an icon button named *Settings* (its name also its
+tooltip), at every width and on every screen under the band, the ticket
+page included. It opens a menu below it, aligned to its right edge and
+never wider than the screen, holding the app-wide settings: the theme
+choice (System, Light, Dark; `CFG-2`), which applies at once and is saved
+with the other preferences, so the menu stays open; the board root (cut
+from the start, the whole path in its tooltip); and the version line
+(version and agent protocol, once the server has answered). It is a
+disclosure like the toolbar's menus: Enter or Space opens it, Escape, a
+click outside or tabbing away closes it, and Escape returns focus to the
+gear. Per-view settings (Show columns, Colour by, Density) stay in the
+Board's View options.
 
 **Rail** (15.5rem; 4rem of key badges while a ticket is open below
 1440px): *All projects*, a divider, then each project, most recently active
 first: key badge, name, ticket count, route bar, and a line with its Needs
 you plate (count), in-progress count, blocked count (no-entry sign) and repair
-count. The current scope is filled. The footer holds the theme choice
-(System, Light, Dark; `CFG-2`), the board root (cut from the start) and the
-version line. Below 48rem the rail hides and a control row with Project and
-Column pickers takes its place.
+count. The current scope is filled. The rail has no footer: the theme,
+board root and version are in the band's Settings menu. Below 48rem the
+rail hides and a control row with Project and Column pickers takes its
+place.
 
 **Page header** (top of Main, every view): the scope's identity, a key badge
 and the project's display name set as the page title (*All projects* with
@@ -270,7 +283,7 @@ reorders them.
 
 A ticket's full page (`CARD-7`, `#/ticket/<id>`, FH-65) shows the whole
 ticket as one continuous page, with no tabs, under the band (no view
-current; its views leave the ticket). It scrolls as a whole in a frame of
+current; its views leave the ticket; its Settings gear is the views'). It scrolls as a whole in a frame of
 at most 94rem.
 
 ```
@@ -616,7 +629,7 @@ the station.
 | Repair | Dashed, hatched, never painted, never hidden |
 | Blocked | Blocker pill with the reason; on stations a pill above the next stop |
 | Long content | Titles wrap (card three lines, then clamped); ids never cut; paths, branches and run ids cut from the start |
-| Narrow (< 48rem) | Rail hidden, control row with Project and Column pickers, band tabs as icons, Needs you plate keeps its words, panel covers the view |
+| Narrow (< 48rem) | Rail hidden, control row with Project and Column pickers, band tabs as icons, Needs you plate keeps its words, the Settings gear stays with its menu inside the screen, panel covers the view |
 | Backend lost / stopped | Band status in words; the stopped screen replaces the app (`LIFE-1`) |
 | Marginal remark | At most one per screen: one quiet line in faint ink under a real quiet state, chosen once from its placement's lines (below) and kept while shown, never the line shown last. Never in errors, blockers, permissions, controls or anything to act on; identical in both themes; no motion |
 
@@ -681,7 +694,9 @@ other than the above, the above wins:
   (dark workstreams) is solid at 35%, since dashes mean suspended service.
 - **Placement**: view tabs sit in the band (the light workstreams image puts
   them under it); the backend status stays in the band rather than the rail
-  footer, so it shows at every width and with the rail collapsed.
+  footer, so it shows at every width and with the rail collapsed; the
+  theme, board root and version, which the references put in the rail's
+  footer, are in the band's Settings menu (FH-149).
 - **Omissions the references do not show but the product keeps**: project
   route bars and counts in the rail, the filter buttons, the
   ticket count, the Needs you filter, the Backlog toggle, the colour chips,
