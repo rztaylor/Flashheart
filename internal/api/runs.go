@@ -132,6 +132,9 @@ type RunJSON struct {
 	Progress     runs.Progress     `json:"progress"`
 	Questions    []QuestionJSON    `json:"questions"`
 	Timeline     []runs.Entry      `json:"timeline,omitempty"`
+	// MCPOnly marks a run the MCP server started that no hook reports
+	// (runs.Run.MCPOnly): the board calls it "MCP only".
+	MCPOnly bool `json:"mcpOnly"`
 }
 
 // QuestionJSON is a question with its asking run's short id, as people see
@@ -176,7 +179,7 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 	result := RunJSON{
 		ID: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, Kind: v.Kind, Parent: v.Parent,
 		Children: nonNil(v.Children), Project: v.Project, Cwd: v.Cwd, Branch: v.Branch, Worktree: v.Worktree,
-		Source: v.Source, AgentType: v.AgentType, State: string(v.State),
+		Source: v.Source, AgentType: v.AgentType, State: string(v.State), MCPOnly: v.MCPOnly,
 		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission, Reason: v.Reason,
 		Started: timestamp(v.Started), LastActivity: timestamp(v.LastActivity), Ended: timestamp(v.EndedAt), EndReason: v.EndReason,
 		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files), Plan: nonNil(v.Plan), Progress: v.Progress,

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -89,6 +90,44 @@ func TestRunsEndpointListsRunsWithState(t *testing.T) {
 		t.Fatalf("timeline = %+v", one.Run.Timeline)
 	}
 	getJSON(t, handler, "/api/run?id=claude:nope", http.StatusNotFound, nil)
+}
+
+// A run the MCP server started for a session without hooks is MCP-only:
+// its question's answer goes with its next Flashheart tool call. Once its
+// session's hooks report it (a Codex run named by its session), it is not
+// (agent-protocol §7.1, FH-74).
+func TestRunsSayWhichReportOnlyThroughTheMCPServer(t *testing.T) {
+	t.Parallel()
+
+	const run = "codex:019a7c00-0000-7000-8000-000000000001"
+	line := func(ts, kind, data string) string {
+		return `{"v":1,"ts":"2026-10-04T` + ts + `.000Z","run":"` + run + `","agent":"codex","kind":"` + kind + `","project":"alpha","data":` + data + `}`
+	}
+	hookless := []string{
+		line("13:10:00", "run.start", `{"kind":"session","cwd":"/Users/example/src/alpha","branch":"main","worktree":"/Users/example/src/alpha","source":"mcp"}`),
+		line("13:11:00", "question.asked", `{"id":"q-9","kind":"question","text":"Which schema?"}`),
+		line("13:12:00", "question.answered", `{"id":"q-9","answer":"v2","by":"Robert"}`),
+	}
+	for _, tc := range []struct {
+		name    string
+		lines   []string
+		mcpOnly bool
+	}{
+		{"without hooks", hookless, true},
+		{"once its hooks report it", append(slices.Clone(hookless), line("13:13:00", "turn.end", `{}`)), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			handler := runsAPI(t, time.Date(2026, 10, 4, 13, 20, 0, 0, time.UTC), tc.lines...)
+			var one RunResponse
+			getJSON(t, handler, "/api/run?id="+url.QueryEscape(run), http.StatusOK, &one)
+			got := one.Run
+			if got.MCPOnly != tc.mcpOnly || got.Reason.MCPOnly != tc.mcpOnly || !got.Reason.Answered ||
+				len(got.Questions) != 1 || got.Questions[0].MCPOnly != tc.mcpOnly {
+				t.Fatalf("run = mcpOnly %v, reason %+v, questions %+v", got.MCPOnly, got.Reason, got.Questions)
+			}
+		})
+	}
 }
 
 func TestEndedRunsOlderThanADayAreHiddenByDefault(t *testing.T) {

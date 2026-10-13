@@ -296,7 +296,7 @@ const questionsWaiting = (count: number) =>
 function liveLabel(live: Live): string {
   const state =
     live.state === "needs-you"
-      ? `needs you: ${needsReason(live.reason, live.run)}`
+      ? `needs you: ${needsReason(live.reason)}`
       : STATE_LABEL[live.state].toLowerCase();
   const plan =
     live.total > 0
@@ -335,7 +335,7 @@ function LiveBadge({ live, now }: { live: Live; now: Date }) {
       </span>
       {needsYou ? (
         <span className="font-semibold text-ink">
-          {needsReason(live.reason, live.run)}
+          {needsReason(live.reason)}
         </span>
       ) : null}
       {step ? (

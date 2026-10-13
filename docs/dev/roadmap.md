@@ -24,8 +24,9 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
    `mcp-protocol`.
 4. [`codex-support`](roadmap-items/codex-support.md) — **Partial**. Built:
    the Codex hook adapter (FH-73), `setup codex` with the AGENTS.md
-   protocol text and doctor's Codex checks (FH-75); open: run attribution
-   (FH-74) and the cross-agent handoff check. Depends on `mcp-runs`.
+   protocol text and doctor's Codex checks (FH-75), and run attribution by
+   the session each MCP call names (FH-74, D45); open: the cross-agent
+   handoff check (FH-76). Depends on `mcp-runs`.
 5. [`review-and-orchestration`](roadmap-items/review-and-orchestration.md) —
    **Partial**. Attachments, review panel, subagent tree, `doctor`. Built:
    all of it (FH-6); open: the user's review. Depends on `mcp-protocol`; can

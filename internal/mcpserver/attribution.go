@@ -1,10 +1,14 @@
 package mcpserver
 
 import (
+	"cmp"
 	"crypto/rand"
 	"encoding/hex"
 	"regexp"
+	"slices"
 	"strings"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/protocol"
@@ -32,14 +36,16 @@ const fullSession = 16
 //
 //  1. the run argument, in full or shortened as recovery notes show it
 //     (it must name one known run);
-//  2. the run the server started for this connection, which stays its
+//  2. the session the call's _meta names (Codex): that session's run, or
+//     its subagent's (sessionRun);
+//  3. the run the server started for this connection, which stays its
 //     caller for the connection's life and follows its branch;
-//  3. the one live hook session of the caller's agent working in this
+//  4. the one live hook session of the caller's agent working in this
 //     worktree on this branch;
-//  4. several such sessions (candidates), or one of the caller's agent in
+//  5. several such sessions (candidates), or one of the caller's agent in
 //     this worktree on another branch (nearby): no run, and the call's
 //     policy decides whether it may go on;
-//  5. for a write, a run started for the connection now.
+//  6. for a write, a run started for the connection now.
 //
 // A run the server started is never another connection's caller.
 func (c *call) attribute(inv *invocation, runArg string, write bool) error {
@@ -47,6 +53,9 @@ func (c *call) attribute(inv *invocation, runArg string, write bool) error {
 		return c.named(runArg)
 	}
 	cn := inv.connection()
+	if inv != nil && inv.session != "" {
+		return c.sessionRun(cn, inv.session, inv.thread, write)
+	}
 	if run, _ := cn.current(); run != "" {
 		c.run, c.started = run, true
 		return c.followBranch()
@@ -55,7 +64,86 @@ func (c *call) attribute(inv *invocation, runArg string, write bool) error {
 	if c.run != "" || len(c.candidates)+len(c.nearby) > 0 || !write {
 		return nil
 	}
-	return c.own(cn)
+	return c.own(cn, "")
+}
+
+// codexAgent is the agent id of Codex's hooks and MCP client (§2).
+const codexAgent = "codex"
+
+// codexSession reads the session and thread a Codex tools/call names in
+// its _meta (agent-protocol §5.3): x-codex-turn-metadata's session_id and
+// thread_id, else _meta's sessionId and threadId, which equal its hooks'
+// session_id. Both are "" unless the call is Codex's (it carries
+// x-codex-turn-metadata, or its client named itself as Codex) and the
+// session fits a run id; a thread that does not fit is left out.
+func codexSession(meta mcp.Meta, cn *conn) (session, thread string) {
+	turn, isCodex := meta["x-codex-turn-metadata"].(map[string]any)
+	if !isCodex && (cn == nil || cn.agent != codexAgent) {
+		return "", ""
+	}
+	text := func(m map[string]any, key string) string {
+		s, _ := m[key].(string)
+		return s
+	}
+	session = cmp.Or(text(turn, "session_id"), text(meta, "sessionId"))
+	thread = cmp.Or(text(turn, "thread_id"), text(meta, "threadId"))
+	run, err := events.SessionRun(codexAgent, session)
+	if err != nil {
+		return "", ""
+	}
+	if _, err := run.Subagent(thread); err != nil {
+		thread = ""
+	}
+	return session, thread
+}
+
+// sessionRun attributes a call whose _meta names its Codex session (step
+// 2): the run its hooks record under, so it needs no stamping and no
+// guess by worktree. A run its hooks report is the caller as it is.
+// Without them the connection stands in for the hooks under that same id,
+// as for a run it starts (step 6; a read starts none), so hooks that
+// start later join the run, and the connection stops standing in once
+// they do.
+func (c *call) sessionRun(cn *conn, session, thread string, write bool) error {
+	id := c.sessionRunID(session, thread)
+	r := c.set.Get(id)
+	if r != nil && !r.MCPOnly() {
+		c.run = id
+		c.srv.handOver(cn, id)
+		return nil
+	}
+	if own, _ := cn.current(); own == id {
+		c.run, c.started = id, true
+		return c.followBranch()
+	}
+	if !write {
+		if r != nil {
+			c.run = id
+		}
+		return nil
+	}
+	return c.own(cn, id)
+}
+
+// sessionRunID is the run of a Codex session and thread: a subagent's
+// thread that hooks reported (`codex:<session>/<thread>`, or a subagent
+// whose own id the call names as its session), else the session's.
+// Whether Codex names a subagent's thread in _meta is not recorded.
+func (c *call) sessionRunID(session, thread string) string {
+	run, _ := events.SessionRun(codexAgent, session)
+	if thread != "" && thread != session {
+		if sub, err := run.Subagent(thread); err == nil && c.set.Get(sub.String()) != nil {
+			return sub.String()
+		}
+	}
+	if c.set.Get(run.String()) == nil {
+		for _, r := range c.set.Runs() {
+			if id := events.RunOf(r.ID); id.Agent() == codexAgent && id.SubagentID() == session {
+				return r.ID
+			}
+		}
+	}
+	return run.String()
 }
 
 // named resolves the run argument (step 1).
@@ -87,13 +175,13 @@ func (c *call) named(runArg string) error {
 	return nil
 }
 
-// hookRun finds the caller among live hook sessions (steps 3 and 4).
+// hookRun finds the caller among live hook sessions (steps 4 and 5).
 func (c *call) hookRun(cn *conn) {
 	if c.where.Worktree == "" && c.where.Repo == "" && c.srv.options.Cwd == "" {
 		return
 	}
 	for _, r := range c.set.Runs() {
-		if r.Kind != events.KindSession || r.Source == events.SourceMCP || c.set.State(r.ID, c.now, c.runs) == runs.Ended {
+		if r.Kind != events.KindSession || r.MCPOnly() || c.set.State(r.ID, c.now, c.runs) == runs.Ended {
 			continue
 		}
 		if cn != nil && cn.agent != "" && r.Agent != cn.agent {
@@ -120,30 +208,34 @@ func (c *call) here(r *runs.Run) bool {
 }
 
 // own starts a run for a write whose connection has none and found no
-// hook run (step 5): `<agent>:mcp-<random>` in the caller's project, with
-// source mcp. A write with no project to record in starts none.
-func (c *call) own(cn *conn) error {
+// hook run (step 6): id, the session's run when the call names its
+// session (step 2), else `<agent>:mcp-<random>`, in the caller's project,
+// with source mcp. A write with no project to record in starts none.
+func (c *call) own(cn *conn, id string) error {
 	if cn == nil || c.project == "" || c.archived != "" {
 		return nil
 	}
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
-	if cn.run != "" {
+	if cn.run != "" && (id == "" || cn.run == id) {
 		// Another call of this connection started it meanwhile.
 		c.run, c.started = cn.run, true
 		return nil
 	}
-	random := make([]byte, 6)
-	_, _ = rand.Read(random)
-	agent := cn.agent
-	if agent == "" {
-		agent = "agent"
+	if id == "" {
+		random := make([]byte, 6)
+		_, _ = rand.Read(random)
+		agent := cn.agent
+		if agent == "" {
+			agent = "agent"
+		}
+		run, err := events.SessionRun(agent, "mcp-"+hex.EncodeToString(random))
+		if err != nil {
+			return err
+		}
+		id = run.String()
 	}
-	run, err := events.SessionRun(agent, "mcp-"+hex.EncodeToString(random))
-	if err != nil {
-		return err
-	}
-	c.run = run.String()
+	c.run = id
 	if err := c.recordStart(c.project); err != nil {
 		c.run = ""
 		return err
@@ -182,10 +274,18 @@ func related(a, b string) bool {
 	return events.RunOf(a).Session() == events.RunOf(b).Session()
 }
 
+// shortRuns names runs as recovery notes do, or in full when two would
+// look the same (Codex's session ids start with the time, so sessions
+// started in the same minute share a short id).
 func shortRuns(ids []string) string {
 	short := make([]string, 0, len(ids))
 	for _, id := range ids {
-		short = append(short, protocol.ShortRun(id))
+		if s := protocol.ShortRun(id); !slices.Contains(short, s) {
+			short = append(short, s)
+		}
+	}
+	if len(short) < len(ids) {
+		return strings.Join(ids, ", ")
 	}
 	return strings.Join(short, ", ")
 }

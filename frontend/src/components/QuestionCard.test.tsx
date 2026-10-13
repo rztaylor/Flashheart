@@ -54,7 +54,11 @@ describe("QuestionCard", () => {
   });
 
   it("says a run without hooks gets its answer with its next tool call", () => {
-    const asked = { ...question, run: "codex:mcp-0a1b2c3d4e5f" };
+    const asked = {
+      ...question,
+      run: "codex:mcp-0a1b2c3d4e5f",
+      mcpOnly: true,
+    };
     const open = renderToStaticMarkup(
       <QuestionCard
         question={asked}
@@ -86,6 +90,7 @@ describe("QuestionCard", () => {
     const asked = {
       ...question,
       run: "codex:mcp-0a1b2c3d4e5f",
+      mcpOnly: true,
       sessionEnded: true,
     };
     const open = renderToStaticMarkup(
@@ -113,6 +118,36 @@ describe("QuestionCard", () => {
     expect(answered).toContain(
       "The session has ended; the answer stays on the board.",
     );
+  });
+
+  // A Codex session without hooks has a run named by its own session id
+  // (FH-74): its answer goes with its next tool call, and an ended one can
+  // be resumed.
+  it("promises a resumption to a session without hooks named by its id", () => {
+    const asked = {
+      ...question,
+      run: "codex:019a7c00-0000-7000-8000-000000000001",
+      mcpOnly: true,
+    };
+    const open = renderToStaticMarkup(
+      <QuestionCard
+        question={asked}
+        asker="codex:019a7c00"
+        now={now}
+        onAnswer={send}
+      />,
+    );
+    expect(open).toContain("with its next Flashheart tool call");
+    const ended = renderToStaticMarkup(
+      <QuestionCard
+        question={{ ...asked, sessionEnded: true }}
+        asker="codex:019a7c00"
+        now={now}
+        onAnswer={send}
+      />,
+    );
+    expect(ended).toContain("it gets your answer when it resumes");
+    expect(ended).not.toContain("will not resume");
   });
 
   it("explains a read-only board", () => {

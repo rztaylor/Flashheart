@@ -266,6 +266,7 @@ it("marks runs the MCP server started for agents without hooks", () => {
   const hookless = run("codex:mcp-0a1b2c3d4e5f", {
     agent: "codex",
     source: "mcp",
+    mcpOnly: true,
   });
   expect(mcpOnly(hookless)).toBe(true);
   expect(runAgentName(hookless)).toBe("Codex (MCP only)");
@@ -273,10 +274,23 @@ it("marks runs the MCP server started for agents without hooks", () => {
   expect(runAgentName(run("claude:s"))).toBe("Claude");
   expect(agentNote(run("claude:s"))).toBeUndefined();
   expect(mcpOnly(run("claude:s", { source: "startup" }))).toBe(false);
-  // One signal decides it, the run id the server minted, as for questions
-  // and cards, which carry only the run id.
-  expect(mcpOnly(run("codex:mcp-0a1b2c3d4e5f", { agent: "codex" }))).toBe(true);
+  // The server decides it from the run's events: a Codex session without
+  // hooks is named by its own session id, and is not MCP-only once its
+  // hooks report it (FH-74).
+  const named = run("codex:019a7c00-0000-7000-8000-000000000001", {
+    agent: "codex",
+    source: "mcp",
+  });
+  expect(mcpOnly({ ...named, mcpOnly: true })).toBe(true);
+  expect(mcpOnly({ ...named, mcpOnly: false })).toBe(false);
+  expect(mcpOnly(run("codex:mcp-0a1b2c3d4e5f", { agent: "codex" }))).toBe(
+    false,
+  );
+  // A run id the server minted ends with its connection.
   expect(startedByMCP("codex:mcp-0a1b2c3d4e5f")).toBe(true);
+  expect(startedByMCP("codex:019a7c00-0000-7000-8000-000000000001")).toBe(
+    false,
+  );
   expect(startedByMCP("claude:5b0c7e2a-1f3d")).toBe(false);
   expect(startedByMCP("claude:5b0c7e2a/mcp-1")).toBe(false);
   const at = "2026-10-05T10:00:00Z";
@@ -306,36 +320,32 @@ it("words the reason the server derived for a run", () => {
     ...patch,
   });
   const own = reason({ kind: "permission", permission: "Bash" });
-  expect(needsReason(own, "claude:s")).toBe("Permission for Bash");
-  expect(needsReason({ ...own, permission: "?" }, "claude:s")).toBe(
+  expect(needsReason(own)).toBe("Permission for Bash");
+  expect(needsReason({ ...own, permission: "?" })).toBe(
     "Waiting for permission",
   );
   const child = { waitingOn: "claude:s/x", agentType: "Explore" };
-  expect(needsReason({ ...own, ...child }, "claude:s")).toBe(
+  expect(needsReason({ ...own, ...child })).toBe(
     "Explore needs permission for Bash",
   );
   expect(
-    needsReason(
-      { ...own, ...child, agentType: "", permission: "?" },
-      "claude:s",
-    ),
+    needsReason({ ...own, ...child, agentType: "", permission: "?" }),
   ).toBe("Subagent needs permission");
   // A subagent the Overview lists on its own is named by its type.
-  expect(needsReason(own, "claude:s/x", "Explore")).toBe(
-    "Explore needs permission for Bash",
-  );
+  expect(needsReason(own, "Explore")).toBe("Explore needs permission for Bash");
   const asked = reason({ kind: "question", question: "decision" });
-  expect(needsReason(asked, "claude:s")).toBe("Needs a decision");
-  expect(needsReason({ ...asked, answered: true }, "claude:s")).toBe(
+  expect(needsReason(asked)).toBe("Needs a decision");
+  expect(needsReason({ ...asked, answered: true })).toBe(
     "Answer waits for its next prompt",
   );
-  expect(
-    needsReason({ ...asked, answered: true }, "codex:mcp-0a1b2c3d4e5f"),
-  ).toBe("Answer waits for its next tool call");
-  expect(
-    needsReason({ ...asked, ...child, agentType: "Plan" }, "claude:s"),
-  ).toBe("Plan needs a decision");
-  expect(needsReason(noReason, "claude:s")).toBe("");
+  // The server marks a run without hooks (D34, FH-74).
+  expect(needsReason({ ...asked, answered: true, mcpOnly: true })).toBe(
+    "Answer waits for its next tool call",
+  );
+  expect(needsReason({ ...asked, ...child, agentType: "Plan" })).toBe(
+    "Plan needs a decision",
+  );
+  expect(needsReason(noReason)).toBe("");
 });
 
 it("says what a question asks for, and when its answer is on its way", () => {
@@ -362,6 +372,7 @@ it("says what a question asks for, and when its answer is on its way", () => {
     questionReason({
       ...asked,
       run: "codex:mcp-0a1b2c3d4e5f",
+      mcpOnly: true,
       answer: "Yes",
       answeredAt: "2026-10-05T10:01:00Z",
     }),
