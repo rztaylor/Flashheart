@@ -29,7 +29,8 @@ attention colour, `NeedsYouPlate` inline and on the rail, `plateClass` for
 the band's toggle, and `AttentionDisc`; nothing else uses the attention
 colour),
 `TicketMarks` (a ticket's type as an icon in its paint and its priority
-as three bars, for cards and type chips),
+as three bars, for cards and the Colour by chips; `TypeTag` and
+`PriorityTag`, each mark before its word in a `Tag`, FH-154),
 `QuestionCard` (an
 agent's question with its answer box), `TicketLink` (a ticket id as a link
 to its full page, a new tab unless inside `TicketLinksInPlace`, and
