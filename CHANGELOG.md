@@ -488,6 +488,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Blocked tickets are marked with a no-entry sign (FH-148). The small
+  hollow diamond that marked a blocked ticket read as decoration at card
+  size; a filled no-entry sign now marks blocked everywhere: on cards,
+  blocker pills and notes, the side panel and full page (Blocked by), the
+  blocked-move dialog, the Table, the Workstreams view, the project rail's
+  blocked count and the State filter's Blocked. It always sits beside the
+  word or the reason.
 - `flashheart doctor` tells you which Codex hooks need trusting again
   (FH-120, D64, `SET-4`). Codex skips a hook unless you trusted its exact
   command with `/hooks`, so after setup moves the binary or changes

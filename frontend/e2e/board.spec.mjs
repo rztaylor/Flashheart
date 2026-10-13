@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { writeDemoBoard } from "./demo-board.mjs";
@@ -11,6 +11,7 @@ import {
   launch,
   makeSandbox,
   open,
+  screenshotDir,
   shot,
   stopIfRunning,
   viewOption,
@@ -98,6 +99,82 @@ test("sample tickets land in the right columns with blocked reasons and repairs"
     "frontmatter does not parse",
   );
   await expect(cardFace(page, "Card panel")).not.toContainText("Depends on");
+});
+
+// Blocked has one symbol, the no-entry sign, wherever it is marked
+// (FH-148, ui-layout.md §7); the hollow diamond is gone.
+test("blocked is marked with the no-entry sign in every view (FH-148)", async () => {
+  const page = shared;
+  const noEntry = '[data-icon="blocked"]';
+  const save = (locator, name) =>
+    locator.screenshot({ path: resolve(screenshotDir, `${name}.png`) });
+  const noDiamond = () =>
+    expect(page.locator('[data-icon="diamond"]')).toHaveCount(0);
+  for (const theme of ["light", "dark"]) {
+    const wide = { width: 1440, height: 900, theme };
+    await open(page, "#/p/alpha/board?t=AL-5", wide);
+    const face = cardFace(page, "Long titles overflow the column");
+    await expect(face.locator(noEntry)).toBeVisible();
+    const panel = page.getByRole("complementary", { name: "Ticket AL-5" });
+    await expect(
+      panel.getByRole("heading", { name: "Blocked by" }).locator(noEntry),
+    ).toBeVisible();
+    await expect(panel.locator(noEntry).first()).toBeVisible();
+    await noDiamond();
+    await expectNoAxeViolations(page, `blocked board and panel ${theme}`);
+    await page.locator("h1").click();
+    await shot(page, `blocked-board-panel-1440-${theme}`);
+    await save(face, `blocked-card-${theme}`);
+
+    await open(page, "#/p/alpha/board", wide);
+    await viewOption(page, "Density", "Compact");
+    await expect(face.locator(noEntry)).toBeVisible();
+    await save(face, `blocked-card-compact-${theme}`);
+    await viewOption(page, "Density", "Normal");
+
+    const states = await filterMenu(page, "State");
+    await expect(
+      states
+        .getByRole("button", { name: "Blocked", exact: true })
+        .locator(noEntry),
+    ).toBeVisible();
+    await shot(page, `blocked-state-menu-${theme}`, { keepFocus: true });
+    await states.getByRole("button", { name: "Blocked", exact: true }).click();
+    await expect(filterButton(page, "State").locator(noEntry)).toBeVisible();
+    await page.getByRole("button", { name: "Clear filters" }).click();
+
+    await open(page, "#/ticket/AL-5", wide);
+    const blockedBy = page.getByRole("heading", { name: "Blocked by" });
+    await expect(blockedBy.locator(noEntry)).toBeVisible();
+    await noDiamond();
+    await expectNoAxeViolations(page, `blocked full page ${theme}`);
+    await shot(page, `blocked-ticket-page-1440-${theme}`);
+
+    await open(page, "#/p/flashheart/workstreams", wide);
+    const editing = page.getByRole("article", { name: "Board editing" });
+    await expect(editing.getByText("Blocked", { exact: true })).toBeVisible();
+    await expect(editing.locator(noEntry).first()).toBeVisible();
+    await noDiamond();
+    await expectNoAxeViolations(page, `blocked workstreams ${theme}`);
+    await shot(page, `blocked-workstreams-1440-${theme}`);
+
+    await open(page, "#/p/alpha/table", wide);
+    await expect(
+      page.getByRole("table").locator(noEntry).first(),
+    ).toBeVisible();
+    await noDiamond();
+    await shot(page, `blocked-table-1440-${theme}`);
+
+    const narrow = { width: 390, height: 844, theme };
+    await open(page, "#/p/alpha/board", narrow);
+    await page
+      .getByRole("combobox", { name: "Column" })
+      .selectOption("backlog");
+    await expect(face.locator(noEntry)).toBeVisible();
+    await shot(page, `blocked-board-narrow-${theme}`);
+    await open(page, "#/p/flashheart/workstreams", narrow);
+    await shot(page, `blocked-workstreams-narrow-${theme}`);
+  }
 });
 
 test("the card panel explains, links and renders without raw HTML", async () => {

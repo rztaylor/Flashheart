@@ -45,7 +45,7 @@ only), the backend status (quiet dot while healthy, words when not,
 **Rail** (15.5rem; 4rem of key badges while a ticket is open below
 1440px): *All projects*, a divider, then each project, most recently active
 first: key badge, name, ticket count, route bar, and a line with its Needs
-you plate (count), in-progress count, blocked count (diamond) and repair
+you plate (count), in-progress count, blocked count (no-entry sign) and repair
 count. The current scope is filled. The footer holds the theme choice
 (System, Light, Dark; `CFG-2`), the board root (cut from the start) and the
 version line. Below 48rem the rail hides and a control row with Project and
@@ -72,7 +72,8 @@ applies; right-aligned, Board only, one icon button, *View options* (⋯),
 whose menu holds Show columns (Backlog), Colour by and
 Density (FH-39, FH-41). An applied filter's button takes the select border and ring
 and a count badge (*State: Blocked* for the one-choice State). State
-offers All states, Blocked, Not blocked, Needs repair, Agent working and
+offers All states, Blocked (with the no-entry sign after the word, §7), Not
+blocked, Needs repair, Agent working and
 Rejected (tickets in Done whose status is rejected, FH-59; the Done limit
 still applies, so older ones need *Show all*). Type,
 Priority and Workstream open a list of values that toggle as chips do: a
@@ -148,7 +149,7 @@ reorders them.
 | 2 | Title, wrapping to at most three lines (full title in its tooltip and the card's name) | ✓ | ✓ | ✓ |
 | 3 | Tags: workstream bullet, type tag, age tag (Colour by Age), and the change requests still waiting as a pill (`REV-6`: *2 changes requested* in progress's amber, *1 addressed* in review's blue, *1 open · 1 addressed*, with the speech-balloon icon; also in the card's name) | ✓ | ✓ | ✓ |
 | 4 | Needs repair note | ✓ | ✓ | ✓ |
-| 5 | Blocker pill (diamond, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
+| 5 | Blocker pill (no-entry sign, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
 | 6 | Live badge: run state and agent, its Needs you reason (the words its Runs tab uses, `RUN-3`), last activity; plan step `done/total · step` when the run has a plan (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
 | 7 | Question waiting plate, when a question needs the user and its run does not | — | ✓ | ✓ |
 | 8 | Description excerpt, three lines | — | — | ✓ |
@@ -186,7 +187,7 @@ reorders them.
    frontmatter) · questions for you, each with its answer box or option
    buttons (`CARD-6`) · Handoff, the accent callout with the next steps large
    and the full handoff behind a disclosure, with a warning when the run has
-   edited since (`CARD-5`) · Blocked by (diamond, reasons with ids linked, Open) and Waits for
+   edited since (`CARD-5`) · Blocked by (no-entry sign, reasons with ids linked, Open) and Waits for
    (`CARD-4`) · Acceptance criteria with `d of t` and tickable boxes
    (`CARD-3`) · format warnings · the ticket's markdown (`CARD-2`).
 4. **Comments tab** (FH-128): the full page's Activity limited to people's
@@ -470,7 +471,7 @@ id a separate link.
   name in the all scope) and one route card per workstream, in workstream
   order (`VIEW-4`).
 - Route card head: large bullet, name in the display cut, derived status in
-  words with its mark (*Running*, *Blocked* with diamond, *Completed* with
+  words with its mark (*Running*, *Blocked* with the no-entry sign, *Completed* with
   check), and `d of t served` right. Repair, blocker and warning notes follow.
 - **Finished lines collapse** (FH-68, D35). A workstream whose tickets are all
   Done, Rejected or Archived, with nothing to repair, shows only its head
@@ -578,7 +579,7 @@ for another role's job, and none is ever the only carrier of meaning.
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
 | Paint | The Colour by value | Card header tint, filled tag, colour chip bullet | The value's word |
 | State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages | Icon and column word |
-| Blocked | A real blocker | Blocker pill | Diamond and the reason |
+| Blocked | A real blocker | Blocker pill, the no-entry sign wherever blocked is marked | No-entry sign and the reason or the word *Blocked* |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |
 | Selection | What is chosen or applied | Open ticket's card ring and table row, current panel tab, chosen density, applied filter, pressed workstream chip, drop target | `aria-current`, `aria-selected`, `aria-pressed` or the control's value |
@@ -586,6 +587,22 @@ for another role's job, and none is ever the only carrier of meaning.
 Run state other than Needs you stays an ink mark with its word. Waiting on an
 earlier station of the same line is muted text with no colour. Needs repair
 is dashed and hatched in ink.
+
+Blocked has one symbol, the **no-entry sign** (a filled disc with its
+bar cut out, so the bar shows the surface behind it; FH-148), wherever a
+ticket or workstream is marked blocked: the blocker pill and note (cards,
+the Table, the blocked-move dialog, a route card's blocker notes), the
+short *Blocked* pill and any blocked-tone pill (the panel and page
+headers, a station's *Needs FH-n*), the Blocked by heading on the panel
+and full page, a route card's derived status, the rail's blocked count and
+the State filter's *Blocked* choice (in its menu and on its button). It is
+always beside the word *Blocked* or a reason, or inside a name that says
+blocked, and it meets the 3:1 non-text contrast in both themes (the
+blocked ink on its pill, the ground, card, panel and popover surfaces;
+the rail's muted ink on the rail). Transit-line station marks keep their
+own shapes: they show service (served, next stop, ahead, held, missing),
+not blocking, and a dependency outside the line is the blocked pill above
+the station.
 
 ## 8. States
 

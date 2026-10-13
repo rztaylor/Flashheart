@@ -4,7 +4,6 @@
 const paths = {
   search: "M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Zm5.3-2.2L21 21",
   close: "M6 6l12 12M18 6 6 18",
-  diamond: "M12 3.5 20.5 12 12 20.5 3.5 12Z",
   warning: "M12 4 21 19.5H3L12 4Zm0 6v4.5m0 2.6v.1",
   repair:
     "M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.5-7.5Zm0 0L17 4l3 3-2.5 2.5",
@@ -54,7 +53,22 @@ const paths = {
     "M4.5 6.5h15M9.5 6.5V4h5v2.5M6.5 6.5l1 13.5h9l1-13.5M10.5 10.5v6m3-6v6",
 } as const;
 
-export type IconName = keyof typeof paths;
+// Filled marks: a solid shape with its inner mark cut out (even-odd), so
+// the cut shows the surface behind it in any theme. blocked is the
+// no-entry sign, the board's one symbol for blocked (FH-148): a disc with
+// a horizontal bar, legible at 10–13px.
+const filled = {
+  blocked:
+    "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM7.75 10.4h8.5a.6.6 0 0 1 .6.6v2a.6.6 0 0 1-.6.6h-8.5a.6.6 0 0 1-.6-.6v-2a.6.6 0 0 1 .6-.6Z",
+} as const;
+
+export type IconName = keyof typeof paths | keyof typeof filled;
+
+// iconNames lists the whole set.
+export const iconNames = [
+  ...Object.keys(paths),
+  ...Object.keys(filled),
+] as IconName[];
 
 export function Icon({
   name,
@@ -65,6 +79,21 @@ export function Icon({
   size?: number;
   className?: string;
 }) {
+  const classes = ["shrink-0", className].filter(Boolean).join(" ");
+  if (name in filled)
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        width={size}
+        height={size}
+        fill="currentColor"
+        aria-hidden="true"
+        data-icon={name}
+        className={classes}
+      >
+        <path fillRule="evenodd" d={filled[name as keyof typeof filled]} />
+      </svg>
+    );
   return (
     <svg
       viewBox="0 0 24 24"
@@ -76,9 +105,10 @@ export function Icon({
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      className={["shrink-0", className].filter(Boolean).join(" ")}
+      data-icon={name}
+      className={classes}
     >
-      <path d={paths[name]} />
+      <path d={paths[name as keyof typeof paths]} />
     </svg>
   );
 }

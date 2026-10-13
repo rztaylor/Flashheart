@@ -107,6 +107,7 @@ export function FilterBar({
             <span>
               {filters.state === "all" ? "State" : `State: ${state?.label}`}
             </span>
+            {filters.state === "blocked" ? <BlockedMark /> : null}
             <Icon name="chevronDown" size={12} className="text-ink-muted" />
           </>
         }
@@ -121,7 +122,14 @@ export function FilterBar({
                 close();
               }}
             >
-              {option.label}
+              {option.value === "blocked" ? (
+                <span className="flex items-center gap-1.5">
+                  {option.label}
+                  <BlockedMark />
+                </span>
+              ) : (
+                option.label
+              )}
             </MenuItem>
           ))
         }
@@ -219,6 +227,12 @@ function ChoiceMenu({
     </Popover>
   );
 }
+
+// BlockedMark is the no-entry sign beside the State filter's Blocked
+// (FH-148), the board's one symbol for blocked; the word names it.
+const BlockedMark = () => (
+  <Icon name="blocked" size={12} className="text-(--fh-state-blocked-ink)" />
+);
 
 function MenuItem({
   pressed,

@@ -131,6 +131,15 @@ describe("WorkstreamLine", () => {
     expect(markup).toContain('data-station="FH-2"');
   });
 
+  it("marks a blocked workstream with the no-entry sign and the word", () => {
+    const markup = render(
+      workstream([ticket("FH-1", "up-next", { blocked: true })], "blocked"),
+    );
+    expect(markup).toMatch(
+      /data-icon="blocked"(?:(?!<\/svg>)[\s\S])*<\/svg>Blocked</,
+    );
+  });
+
   it("does not animate the chevron beyond the token-driven transition", () => {
     // Reduced motion sets the default transition duration to 0 ms
     // (styles/index.css); an explicit duration would escape it.
