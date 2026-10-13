@@ -659,7 +659,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   and MCP configuration for each agent, and recent hook errors. It changes
   nothing, reports each check as ok, warning or problem with the fix (a
   missing hook, a configured binary that no longer exists, an out-of-date
-  skill or Codex protocol text, Codex hooks turned off or never trusted,
+  skill or Codex protocol text, Codex hooks turned off, never trusted or
+  trusted for an earlier command (naming the events),
   hook errors of the last day), and exits 1 when it finds a problem.
   An MCP server registered at local or project scope instead of setup's
   user scope is a warning naming the scope, not "not registered".
@@ -705,7 +706,7 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   at the next review the person **Resolves** each addressed request or
   **Reopens** it (a reopened request goes to the live holder too). Every
   state change is the ticket's history (STO-8).
-- `REV-7` **Files from the board** (FH-18, D64): in a section's formatted
+- `REV-7` **Files from the board** (FH-18, D65): in a section's formatted
   editor (`EDIT-12`), a pasted screenshot (a paste with a file and no
   text) is stored in the ticket as kind *screenshot*, named
   `<time>-screenshot.png`, and files dropped on the text, or chosen with

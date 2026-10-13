@@ -62,11 +62,10 @@ func (o Options) diagnoseCodexServer(config []byte, configErr error) []health.Fi
 }
 
 // diagnoseCodexHooks checks hooks.json and, from config.toml, whether
-// Codex runs them: hooks can be turned off, and Codex skips hooks nobody
-// trusted. Trust is recorded per hook as [hooks.state."<file>:<event>:
-// <group>:<handler>"] with a hash of the hook; how Codex computes the
-// hash is not known, so only whether any trust exists for hooks.json is
-// checked (agent-protocol §5.3).
+// Codex runs them: hooks can be turned off, and Codex skips a hook unless
+// the trust saved for it holds the hash of the hook as it is now
+// (agent-protocol §5.4, codex_trust.go). It names the events whose
+// Flashheart hook was never trusted or was trusted with another command.
 func (o Options) diagnoseCodexHooks(config []tomlEntry, configErr error) []health.Finding {
 	_, _, tree, err := readHooksFile(o.codexHooksPath())
 	if err != nil {
@@ -76,29 +75,77 @@ func (o Options) diagnoseCodexHooks(config []tomlEntry, configErr error) []healt
 	if !installed || configErr != nil {
 		return findings
 	}
-	hooksFile := o.codexHooksPath()
-	trusted := []string{hooksFile + ":"}
-	if real, err := filepath.EvalSymlinks(o.codexHome()); err == nil {
-		trusted = append(trusted, filepath.Join(real, "hooks.json")+":")
-	}
-	off, trust := false, false
+	off := false
+	trust := map[string]string{}
 	for _, entry := range config {
 		switch {
 		case !entry.header && slices.Equal(entry.path, []string{"features", "hooks"}):
 			off = entry.value == "false"
-		case len(entry.path) >= 3 && entry.path[0] == "hooks" && entry.path[1] == "state":
-			for _, prefix := range trusted {
-				trust = trust || strings.HasPrefix(entry.path[2], prefix)
+		case !entry.header && len(entry.path) == 4 && entry.path[0] == "hooks" && entry.path[1] == "state" && entry.path[3] == "trusted_hash":
+			trust[entry.path[2]], _ = parseTOMLString(entry.value)
+		}
+	}
+	if off {
+		return append(findings, health.Finding{Level: health.Warning, Text: fmt.Sprintf("Hooks: turned off in %s ([features] hooks = false), so Codex runs none; remove that line", o.display(o.codexConfigPath()))})
+	}
+	trusted, untrusted, changed := o.codexHookTrust(tree.get("hooks"), trust)
+	switch {
+	case len(untrusted) > 0 && len(trusted)+len(changed) == 0:
+		findings = append(findings, health.Finding{Level: health.Warning, Text: "Hooks: not trusted yet, so Codex skips them; start codex, type /hooks and trust each Flashheart hook"})
+	case len(untrusted) > 0:
+		findings = append(findings, health.Finding{Level: health.Warning, Text: fmt.Sprintf("Hooks: not trusted for %s, so Codex skips them; start codex, type /hooks and trust them", strings.Join(untrusted, ", "))})
+	}
+	if len(changed) > 0 {
+		findings = append(findings, health.Finding{Level: health.Warning, Text: fmt.Sprintf("Hooks: changed since you trusted them for %s, so Codex skips them; start codex, type /hooks and trust them again", strings.Join(changed, ", "))})
+	}
+	return findings
+}
+
+// codexHookTrust sorts the events of Flashheart's hooks, in codexEvents
+// order, by the trust saved for them: trusted for the hook as it is now,
+// not trusted at all, or trusted with another hash (changed). Codex keys
+// trust by $CODEX_HOME's real path when CODEX_HOME is set and by ~/.codex
+// as it is otherwise, so either key counts, the one Codex uses first. A
+// hook Codex would not load is left out.
+func (o Options) codexHookTrust(hooks *value, saved map[string]string) (trusted, untrusted, changed []string) {
+	files := []string{o.codexHooksPath()}
+	if real, err := filepath.EvalSymlinks(o.codexHome()); err == nil {
+		files = append(files, filepath.Join(real, "hooks.json"))
+		if o.CodexHome != "" {
+			slices.Reverse(files)
+		}
+	}
+	add := func(list *[]string, event string) {
+		if !slices.Contains(*list, event) {
+			*list = append(*list, event)
+		}
+	}
+	for _, event := range codexEvents {
+		for group, groupValue := range hooks.get(event).arrayItems() {
+			for handler, entry := range groupValue.get("hooks").arrayItems() {
+				if !ownsCommand(entry.get("command").text()) {
+					continue
+				}
+				hash := codexHookHash(event, groupValue, entry)
+				trust, found := "", false
+				for _, file := range files {
+					if trust, found = saved[codexHookKey(file, event, group, handler)]; found {
+						break
+					}
+				}
+				switch {
+				case hash == "":
+				case !found:
+					add(&untrusted, event)
+				case trust != hash:
+					add(&changed, event)
+				default:
+					add(&trusted, event)
+				}
 			}
 		}
 	}
-	switch {
-	case off:
-		findings = append(findings, health.Finding{Level: health.Warning, Text: fmt.Sprintf("Hooks: turned off in %s ([features] hooks = false), so Codex runs none; remove that line", o.display(o.codexConfigPath()))})
-	case !trust:
-		findings = append(findings, health.Finding{Level: health.Warning, Text: "Hooks: not trusted yet, so Codex skips them; start codex, type /hooks and trust each Flashheart hook"})
-	}
-	return findings
+	return trusted, untrusted, changed
 }
 
 func (o Options) diagnoseCodexAgents() []health.Finding {

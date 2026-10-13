@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
-- Paste a screenshot or drop files straight into a ticket (FH-18, D64,
+- Paste a screenshot or drop files straight into a ticket (FH-18, D65,
   `REV-7`). In a section's editor on the full page, paste a screenshot
   from the clipboard, drop files, or choose them with **Attach files**:
   each file is stored in the ticket and its image or link goes in where
@@ -428,6 +428,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- `flashheart doctor` tells you which Codex hooks need trusting again
+  (FH-120, D64, `SET-4`). Codex skips a hook unless you trusted its exact
+  command with `/hooks`, so after setup moves the binary or changes
+  `--root` the ChatGPT app silently stops recording sessions. Doctor now
+  compares the trust Codex saved in `config.toml` with Flashheart's hooks
+  as they are and names the events whose hook was never trusted or was
+  trusted for an earlier command, instead of only warning when nothing
+  was trusted at all. It still only reads files and never runs Codex.
 - `flashheart setup` asks before it writes instead of needing a second
   run with `--write` (FH-129, D59). It shows the diff, then asks
   `Apply these changes? [y/N]` and applies them only on `y`; `--yes`

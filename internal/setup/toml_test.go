@@ -34,7 +34,7 @@ func TestScanTOMLFindsTablesAndKeys(t *testing.T) {
 	wantHeaders := []string{
 		"features", "projects / /Users/example/src/demo", "projects / /Users/example/src/it's here",
 		"mcp_servers / docs", "mcp_servers / docs / env", "tui",
-		"hooks / state / /Users/example/.codex/config.toml:Stop:0:0",
+		"hooks / state / /Users/example/.codex/config.toml:stop:0:0",
 	}
 	if !slices.Equal(headers, wantHeaders) {
 		t.Fatalf("headers = %q", headers)
