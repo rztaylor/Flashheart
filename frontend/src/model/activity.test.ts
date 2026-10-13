@@ -385,6 +385,26 @@ describe("historyWords", () => {
       "restored it",
     ]);
   });
+
+  it("words a change request's states by how many comments they cover (FH-126)", () => {
+    expect(
+      historyWords([
+        change({ what: "change-requested", comments: ["a1"] }),
+        change({ what: "change-requested", comments: ["a1", "a2"] }),
+        change({ what: "addressed", comments: ["a1"] }),
+        change({ what: "addressed", comments: ["a1", "a2", "a3"] }),
+        change({ what: "resolved", comments: ["a1"] }),
+        change({ what: "reopened", comments: ["a1", "a2"] }),
+      ]),
+    ).toEqual([
+      "asked for a change",
+      "asked for 2 changes",
+      "addressed a change request",
+      "addressed 3 change requests",
+      "resolved a change request",
+      "reopened 2 change requests",
+    ]);
+  });
 });
 
 describe("filterActivity", () => {

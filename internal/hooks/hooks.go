@@ -494,6 +494,12 @@ func recovery(s *store.Store, log *events.Log, inbox events.Inbox, project strin
 				linked.Next = ticket.Handoff.Next
 			}
 			note.Ticket = linked
+			// Its open change requests reach whichever session picks it
+			// up, though none was queued for this one (FH-126). An
+			// activity file that cannot be read leaves them out.
+			if activity, _, err := s.ReadTicketActivity(project, ticket.Folder); err == nil {
+				note.Requests = protocol.ChangeRequests(ticket.ID, board.OpenRequests(activity.Comments))
+			}
 		}
 	}
 	thresholds := runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes)

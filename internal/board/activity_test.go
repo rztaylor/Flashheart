@@ -82,7 +82,8 @@ func TestParseActivityReadsCommentsHistoryAndKeepsUnknownEntries(t *testing.T) {
 
 func equalChange(a, b Change) bool {
 	return a.What == b.What && a.From == b.From && a.To == b.To &&
-		slices.Equal(a.Fields, b.Fields) && slices.Equal(a.Criteria, b.Criteria) && slices.Equal(a.Steps, b.Steps)
+		slices.Equal(a.Fields, b.Fields) && slices.Equal(a.Criteria, b.Criteria) && slices.Equal(a.Steps, b.Steps) &&
+		slices.Equal(a.Comments, b.Comments)
 }
 
 func TestActivityRoundTripsByteForByte(t *testing.T) {

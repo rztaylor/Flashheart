@@ -218,6 +218,34 @@ describe("pageSections", () => {
     ]);
   });
 
+  it("heads the page with change requests, counting those resolved (REV-6)", () => {
+    const request = (id: string, state: string) =>
+      ({ id, state, byPerson: true }) as Comment;
+    const detail = input({
+      needsRepair: ["Bad frontmatter"],
+      questions: [{ id: "q1" } as Question],
+      comments: [
+        request("a", "change-requested"),
+        request("b", "resolved"),
+        request("c", "open"),
+      ],
+    });
+    expect(ids(detail).slice(0, 3)).toEqual([
+      "repair",
+      "requests",
+      "questions",
+    ]);
+    const section = pageSections(detail, 0).find((s) => s.id === "requests");
+    expect(section).toMatchObject({
+      title: "Change requests",
+      count: "1/2",
+      complete: false,
+    });
+    expect(
+      ids(input({ comments: [request("c", "open")] })).includes("requests"),
+    ).toBe(false);
+  });
+
   it("follows the ticket with the review in its own sections, then Files and Activity", () => {
     const detail = input({
       review: pageReview,

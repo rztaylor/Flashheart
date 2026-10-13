@@ -181,3 +181,32 @@ func TestAskHumanGivesClaudeCodeAdviceOnlyToClaude(t *testing.T) {
 	claude.startSession(session)
 	contains(t, claude.ok("ask_human", ask), "Claude Code: Bash with run_in_background")
 }
+
+// update_ticket takes addressed, the change requests an agent marks done
+// (FH-126); its description, the §7.2 row and the skill say so.
+func TestUpdateTicketTakesAddressedChangeRequests(t *testing.T) {
+	t.Parallel()
+
+	tools := listTools(t)
+	i := slices.IndexFunc(tools, func(tool *mcp.Tool) bool { return tool.Name == "update_ticket" })
+	if i < 0 {
+		t.Fatal("update_ticket is not registered")
+	}
+	if !slices.Contains(inputs(t, tools[i]), "addressed") {
+		t.Errorf("update_ticket's inputs = %v, want addressed", inputs(t, tools[i]))
+	}
+	if !strings.Contains(tools[i].Description, "addressed") {
+		t.Errorf("update_ticket's description does not mention addressed: %q", tools[i].Description)
+	}
+	data, err := os.ReadFile("../../docs/dev/specs/agent-protocol.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := regexp.MustCompile("(?m)^\\| `update_ticket` \\|.*$").FindString(string(data))
+	if !strings.Contains(row, "`addressed?`") {
+		t.Errorf("agent-protocol §7.2's update_ticket row does not list addressed?: %q", row)
+	}
+	if !strings.Contains(protocol.Skill(), "`addressed`") {
+		t.Error("the skill does not say how to mark a change request addressed")
+	}
+}

@@ -18,9 +18,10 @@ kept mounted so its drafts survive a tab change).
 
 Page only: `PropertiesPanel` (Move to, a row per field, Archive),
 `SectionOutline` and `JumpTo`, `useSectionInView`, Activity's filter
-state, and what each in-place item edits with (EDIT-11): `PageEdits`
-(title, markdown section, criteria list) and `PropertyEdits` (a row and
-its typed control).
+state, `ChangeRequests` (the change requests list, the Request changes
+dialog and a request's state pill, REV-6), and what each in-place item
+edits with (EDIT-11): `PageEdits` (title, markdown section, criteria
+list) and `PropertyEdits` (a row and its typed control).
 
 Does not own section order, counts, review sections or which files show
 (`model/ticketSections`), section text and criteria rules

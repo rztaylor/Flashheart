@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -22,6 +23,7 @@ type UpdateTicketInput struct {
 	Set         map[string]any `json:"set,omitempty" jsonschema:"fields to set: title, type, priority, created, branch, pr (the pull request URL; empty clears it), workstream (strings); tags, depends-on, depends-on-workstreams (lists of strings)"`
 	Check       []string       `json:"check,omitempty" jsonschema:"acceptance criteria to tick, by number (1 is the first) or by their text"`
 	AppendNotes string         `json:"append_notes,omitempty" jsonschema:"a paragraph appended to the ticket's notes"`
+	Addressed   []string       `json:"addressed,omitempty" jsonschema:"ids of the user's change requests on the ticket that you have made, to mark them addressed for the user's review"`
 }
 
 func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error) {
@@ -80,8 +82,14 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 	if text := strings.TrimSpace(scrub.Secrets(input.AppendNotes)); text != "" {
 		note = c.note(c.copier(project.Name, ticket.ID).markdown(board.OneLine(text, maxNoteText)))
 	}
-	if changes.Len() == 0 && len(checks) == 0 && note == "" {
-		return "", fail("invalid_input", "pass set, check or append_notes", "nothing to change")
+	var addressed []string
+	for _, id := range input.Addressed {
+		if id = strings.TrimPrefix(strings.TrimSpace(id), "#"); id != "" && !slices.Contains(addressed, id) {
+			addressed = append(addressed, id)
+		}
+	}
+	if changes.Len() == 0 && len(checks) == 0 && note == "" && len(addressed) == 0 {
+		return "", fail("invalid_input", "pass set, check, append_notes or addressed", "nothing to change")
 	}
 	// Ticks and the note follow the fields in the same write; a workstream
 	// change also rewrites the workstreams' tickets lists.
@@ -97,7 +105,15 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 		}
 		return data, nil
 	}
-	if _, err := c.files().EditTicket(project.Name, ticket.ID, store.Unchanged(base), changes, edit); err != nil {
+	// Change requests the agent addressed are marked in the ticket's
+	// activity file in the same write (FH-126).
+	if _, err := c.files().EditTicketAddressing(project.Name, ticket.ID, store.Unchanged(base), changes, edit, addressed); err != nil {
+		if errors.Is(err, store.ErrNotFound) && len(addressed) > 0 {
+			return "", fail("not_found", "pass the ids of change requests on "+ticket.ID+"; get_ticket shows them with its comments", "%v", err)
+		}
+		if errors.Is(err, store.ErrInvalidInput) && len(addressed) > 0 {
+			return "", fail("invalid_input", "mark only the user's open change requests addressed; get_ticket shows each comment's state", "%v", err)
+		}
 		return "", err
 	}
 	fields := changes.Keys()
@@ -106,6 +122,9 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 	}
 	if note != "" {
 		fields = append(fields, "notes")
+	}
+	if len(addressed) > 0 {
+		fields = append(fields, "addressed")
 	}
 	if err := c.record(project.Name, events.Event{Kind: events.TicketUpdated, Data: events.TicketData{Ticket: ticket.ID, Fields: fields}}); err != nil {
 		return "", err
@@ -210,7 +229,14 @@ func (srv *server) move(c *call, input MoveInput) (string, error) {
 		if project.Reviews[ticket.ID] {
 			review, _, _ = srv.store.ReadReview(project.Name, ticket.Folder)
 		}
-		warnings = board.ReviewWarnings(ticket, review, project.Reviews[ticket.ID])
+		var requests []board.Comment
+		if activity, _, err := srv.store.ReadTicketActivity(project.Name, ticket.Folder); err == nil {
+			requests = board.OpenRequests(activity.Comments)
+		}
+		warnings = board.ReviewWarnings(ticket, review, project.Reviews[ticket.ID], requests)
+		if len(requests) > 0 {
+			warnings = append(warnings, "Make each open change request, or ask the user about it, and mark it addressed with update_ticket (addressed) before the review.")
+		}
 	}
 	if ticket.Column != to {
 		if err := c.record(project.Name, events.Event{Kind: events.TicketMoved, Data: events.TicketData{Ticket: ticket.ID, From: ticket.Status(), To: string(to), By: c.by()}}); err != nil {

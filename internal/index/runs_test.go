@@ -360,3 +360,39 @@ func TestSnapshotKnowsTheHumansLatestActivity(t *testing.T) {
 		t.Errorf("three days on LatestHuman = %+v", got)
 	}
 }
+
+// A ticket's holder is the live run whose claim on it is within its lease
+// (agent-protocol §6): what a comment or change request may be sent to
+// now (FH-126, FH-127). A run linked by branch alone, an ended run and a
+// lapsed lease hold nothing.
+func TestHolderIsTheLiveClaimant(t *testing.T) {
+	t.Parallel()
+
+	index, log, clock, _ := runsBoard(t)
+	now := clock.now
+	appendEvent(t, log, now.Add(-20*time.Minute), events.RunStart, events.RunStartData{Kind: events.KindSession, Branch: "feature/x"})
+	snapshot, _ := index.Rebuild()
+	if _, ok := snapshot.Holder("AL-3"); ok {
+		t.Fatal("a run linked by branch holds the ticket")
+	}
+	appendEvent(t, log, now.Add(-10*time.Minute), events.Claim, events.TicketData{Ticket: "AL-3", Home: "alpha"})
+	snapshot, _ = index.Rebuild()
+	holder, ok := snapshot.Holder("AL-3")
+	if !ok || holder.ID != "claude:s1" || holder.Project != "alpha" {
+		t.Fatalf("holder = %+v, %v", holder, ok)
+	}
+	if _, ok := snapshot.Holder("AL-1"); ok {
+		t.Error("an unclaimed ticket has a holder")
+	}
+	clock.now = now.Add(40 * time.Minute)
+	snapshot, _ = index.Rebuild()
+	if _, ok := snapshot.Holder("AL-3"); ok {
+		t.Error("a lapsed lease holds the ticket")
+	}
+	clock.now = now
+	appendEvent(t, log, now.Add(-time.Minute), events.RunEnd, events.RunEndData{Reason: "other"})
+	snapshot, _ = index.Rebuild()
+	if _, ok := snapshot.Holder("AL-3"); ok {
+		t.Error("an ended run holds the ticket")
+	}
+}

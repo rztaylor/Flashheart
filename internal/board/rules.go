@@ -66,9 +66,10 @@ func ValidateField(key, value string) error {
 }
 
 // ReviewWarnings are what a move into Ready to review warns about: a
-// missing review file, a review with no evidence (agent-protocol §11) and
-// unticked criteria (EDIT-3). They never prevent the move.
-func ReviewWarnings(ticket Ticket, review string, hasReview bool) []string {
+// missing review file, a review with no evidence (agent-protocol §11),
+// unticked criteria (EDIT-3) and the change requests still open, named
+// (requests, from OpenRequests; FH-126). They never prevent the move.
+func ReviewWarnings(ticket Ticket, review string, hasReview bool, requests []Comment) []string {
 	var warnings []string
 	switch {
 	case !hasReview:
@@ -87,6 +88,9 @@ func ReviewWarnings(ticket Ticket, review string, hasReview bool) []string {
 		warnings = append(warnings, "1 acceptance criterion is not ticked.")
 	case open > 1:
 		warnings = append(warnings, fmt.Sprintf("%d acceptance criteria are not ticked.", open))
+	}
+	if warning := openRequestsWarning(requests); warning != "" {
+		warnings = append(warnings, warning)
 	}
 	return warnings
 }

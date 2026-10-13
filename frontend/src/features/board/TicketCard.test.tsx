@@ -210,3 +210,26 @@ describe("TicketCard live badge", () => {
     expect(markup).toContain("plan 3 of 7: Fix header");
   });
 });
+
+describe("change requests on a card (REV-6)", () => {
+  it("counts them at every density, in the card's name too", () => {
+    for (const density of ["compact", "normal", "detailed"] as const) {
+      const markup = render(
+        { changeRequests: { open: 2, addressed: 1 } },
+        density,
+      );
+      expect(markup).toContain(">2 open · 1 addressed<");
+      expect(markup).toContain(", 2 open · 1 addressed");
+    }
+    const addressed = render({ changeRequests: { open: 0, addressed: 1 } });
+    expect(addressed).toContain('data-tone="review"');
+    expect(addressed).toContain("1 addressed");
+  });
+
+  it("shows nothing when none waits", () => {
+    expect(render({ changeRequests: { open: 0, addressed: 0 } })).not.toMatch(
+      /requested|addressed/,
+    );
+    expect(render()).not.toMatch(/requested|addressed/);
+  });
+});

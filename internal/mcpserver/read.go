@@ -53,16 +53,39 @@ func (srv *server) boardContext(c *call, input BoardContextInput) (string, error
 	if err != nil {
 		return "", err
 	}
+	requests := c.linkedRequests(inbox)
 	for limit := 12; ; limit-- {
-		out := c.renderContext(project, inbox, limit)
+		out := c.renderContext(project, inbox, requests, limit)
 		if len(out) <= contextBudget || limit <= 1 {
 			return out, nil
 		}
 	}
 }
 
+// linkedRequests are the open change requests on the caller's ticket,
+// read from its activity file (FH-126), less those its inbox delivers
+// now: a session that picks the ticket up gets them though none was
+// queued for it.
+func (c *call) linkedRequests(inbox []events.Entry) []board.Comment {
+	link := c.linked()
+	if link.Ticket == "" {
+		return nil
+	}
+	project, ticket, err := c.find(link.Ticket)
+	if err != nil {
+		return nil
+	}
+	activity, _, err := c.srv.store.ReadTicketActivity(project.Name, ticket.Folder)
+	if err != nil {
+		return nil
+	}
+	return slices.DeleteFunc(board.OpenRequests(activity.Comments), func(comment board.Comment) bool {
+		return slices.ContainsFunc(inbox, func(e events.Entry) bool { return e.Type == events.EntryChangeRequest && e.ID == comment.ID })
+	})
+}
+
 // renderContext lays out board_context with at most limit items per list.
-func (c *call) renderContext(project *board.Project, inbox []events.Entry, limit int) string {
+func (c *call) renderContext(project *board.Project, inbox []events.Entry, requests []board.Comment, limit int) string {
 	text := func(value string) string { return scrub.Limit(value, 40+limit*10) }
 	var lines []string
 	head := fmt.Sprintf("[Flashheart] project=%s key=%s run=%s", project.Name, project.Key, c.runLabel())
@@ -98,6 +121,15 @@ func (c *call) renderContext(project *board.Project, inbox []events.Entry, limit
 			if len(open) > 0 {
 				lines = append(lines, fmt.Sprintf("Unticked criteria (%d of %d):", len(open), len(ticket.Criteria)))
 				lines = append(lines, bullets(open, limit, text)...)
+			}
+			if len(requests) > 0 {
+				lines = append(lines, fmt.Sprintf("Open change requests on %s (the user's own words):", ticket.ID))
+				var items []string
+				for _, comment := range requests {
+					items = append(items, fmt.Sprintf("id %s (%s): %q", comment.ID, scrub.Limit(comment.By, 60), scrub.Limit(comment.Body, 200+limit*50)))
+				}
+				lines = append(lines, bullets(items, limit, func(item string) string { return item })...)
+				lines = append(lines, protocol.AddressHint)
 			}
 		}
 	}

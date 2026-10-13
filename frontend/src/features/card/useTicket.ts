@@ -11,12 +11,16 @@ import {
   type FieldValue,
   type NewComment,
   patchTicket,
+  type RequestState,
+  requestChanges,
   type Saved,
   saveSection,
   setCriterion,
+  setRequestState,
   setReviewStep,
 } from "../../api/edit";
 import { messageOf } from "../../model/errors";
+import { sentWords } from "../../model/requests";
 import { type Resource, useResource } from "../../state/useResource";
 import { saveWithBase } from "../editing/precondition";
 import type { Editing } from "../editing/useEditing";
@@ -46,6 +50,12 @@ export interface TicketState {
   // editComment saves a comment's new text on base, the hash of the
   // activity it was read from.
   editComment?(id: string, base: string, body: string): Promise<Saved>;
+  // requestChanges asks for changes on a ticket in review (REV-6, FH-126),
+  // then reloads and says where they went; a failure rejects with the
+  // reason.
+  requestChanges?(comments: string[], comment?: NewComment): Promise<void>;
+  // setRequestState resolves or reopens a change request, then reloads.
+  setRequestState?(comment: string, state: RequestState): Promise<void>;
 }
 
 export interface TicketEdits {
@@ -155,6 +165,33 @@ export function useTicket({
       editable && detail
         ? (comment, base, body) =>
             editComment(fetcher, detail.id, comment, base, body)
+        : undefined,
+    requestChanges:
+      editable && detail && editing
+        ? (comments, comment) =>
+            requestChanges(fetcher, detail.id, comments, comment).then(
+              (sent) => {
+                resource.reload();
+                editing.notify({
+                  text: sentWords(detail.id, sent.count, sent.sentTo),
+                  details: sent.warnings,
+                });
+              },
+            )
+        : undefined,
+    setRequestState:
+      editable && detail && editing
+        ? (comment, state) =>
+            setRequestState(fetcher, detail.id, comment, state).then((sent) => {
+              resource.reload();
+              editing.notify({
+                text:
+                  state === "resolved"
+                    ? `Resolved the change request on ${detail.id}.`
+                    : sentWords(detail.id, 1, sent.sentTo, "Reopened"),
+                details: sent.warnings,
+              });
+            })
         : undefined,
     answer:
       editing && detail && answers

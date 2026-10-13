@@ -72,15 +72,17 @@ func commentBlock(comments []board.Comment, budget int) []string {
 }
 
 // commentItem is one comment: who and when, whether it was edited, its
-// state in a review when not open, where its quote is from; then its quote
-// and its text, indented under it.
+// state in a review when not open (with its id), where its quote is
+// from; then its quote and its text, indented under it.
 func commentItem(comment board.Comment) string {
 	head := "- " + scrub.Limit(comment.By, 80) + ", " + comment.Time.UTC().Format("2006-01-02 15:04 UTC")
 	if !comment.Edited.IsZero() {
 		head += ", edited"
 	}
 	if comment.State != board.CommentOpen && comment.State != "" {
-		head += ", " + strings.ReplaceAll(string(comment.State), "-", " ")
+		// A change request names its id, which update_ticket's addressed
+		// takes (FH-126).
+		head += ", " + strings.ReplaceAll(string(comment.State), "-", " ") + ", id " + comment.ID
 	}
 	if comment.Quote != "" {
 		head += ", quoting " + scrub.Limit(comment.QuoteFrom, 120)

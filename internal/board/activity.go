@@ -90,18 +90,26 @@ const (
 	ChangeUnticked = "unticked"
 	ChangeArchived = "archived"
 	ChangeRestored = "restored"
+	// A comment's state in a review (FH-126): a person asked for the
+	// change, an agent addressed it, a person resolved or reopened it.
+	ChangeRequested = "change-requested"
+	ChangeAddressed = "addressed"
+	ChangeResolved  = "resolved"
+	ChangeReopened  = "reopened"
 )
 
 // Change is one thing a write changed: created (To: the status it starts
 // in), moved (From, To), edited (Fields: frontmatter keys, title, section
 // names), ticked or unticked (Criteria, Steps: 1-based numbers of
-// acceptance criteria and review steps), archived or restored.
+// acceptance criteria and review steps), archived or restored, or a
+// comment state change (Comments: the comments' ids).
 type Change struct {
 	What     string
 	From, To string
 	Fields   []string
 	Criteria []int
 	Steps    []int
+	Comments []string
 }
 
 // Activity is a parsed activity file. Unknown counts entries this version
@@ -129,6 +137,8 @@ var (
 	attributeLine = regexp.MustCompile(`^([a-z][a-z-]{0,39}):(?: (.*))?$`)
 	changeLine    = regexp.MustCompile(`^- ([a-z][a-z-]{0,39})(?:: (.*))?$`)
 	runAuthor     = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}:\S+$`)
+	// commentIDPattern is an entry id, as its heading names it.
+	commentIDPattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,64}$`)
 )
 
 const timeLayout = "2006-01-02T15:04:05Z"
@@ -322,6 +332,12 @@ func parseChanges(lines []string) []Change {
 				}
 			}
 		case ChangeArchived, ChangeRestored:
+		case ChangeRequested, ChangeAddressed, ChangeResolved, ChangeReopened:
+			for _, item := range splitList(argument) {
+				if id, ok := strings.CutPrefix(item, "comment "); ok && commentIDPattern.MatchString(id) {
+					change.Comments = append(change.Comments, id)
+				}
+			}
 		default:
 			continue
 		}
@@ -521,6 +537,12 @@ func (c Change) line() string {
 		}
 		for _, n := range c.Steps {
 			items = append(items, "review step "+strconv.Itoa(n))
+		}
+		return "- " + c.What + ": " + strings.Join(items, ", ")
+	case ChangeRequested, ChangeAddressed, ChangeResolved, ChangeReopened:
+		items := make([]string, 0, len(c.Comments))
+		for _, id := range c.Comments {
+			items = append(items, "comment "+id)
 		}
 		return "- " + c.What + ": " + strings.Join(items, ", ")
 	}

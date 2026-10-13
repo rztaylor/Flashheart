@@ -2,9 +2,11 @@ package protocol
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/scrub"
 )
@@ -24,6 +26,11 @@ type Recovery struct {
 	// answers to this run's questions not yet delivered, and comments and
 	// change requests sent to it.
 	Inbox []events.Entry
+	// Requests are the linked ticket's open change requests, read from its
+	// activity file (FH-126), as change-request entries: the session that
+	// picks the ticket up gets them though none was queued for it. One also
+	// in Inbox shows once.
+	Requests []events.Entry
 }
 
 // RecoveryTicket is the linked ticket.
@@ -97,7 +104,7 @@ func RecoveryNote(r Recovery) string {
 		} else if status != "" {
 			lines = append(lines, status)
 		}
-		lines = append(lines, inboxLines(r.Inbox, titleLimit)...)
+		lines = append(lines, inboxLines(withRequests(r.Inbox, r.Requests), titleLimit)...)
 		return strings.Join(append(lines, tail), "\n") + "\n"
 	}
 	nextItems := 5
@@ -125,8 +132,12 @@ func RecoveryNote(r Recovery) string {
 func inboxLines(list []events.Entry, limit int) []string {
 	var lines []string
 	shown := map[events.EntryType]int{}
+	requests, more := false, 0
 	for _, e := range list {
 		if shown[e.Type] == 3 {
+			if e.Type == events.EntryChangeRequest {
+				more++
+			}
 			continue
 		}
 		shown[e.Type]++
@@ -139,10 +150,46 @@ func inboxLines(list []events.Entry, limit int) []string {
 		case events.EntryAnswer:
 			lines = append(lines, fmt.Sprintf("Answered: %q → %q (%s).", scrub.Limit(e.Question, limit), text, by))
 		case events.EntryChangeRequest:
-			lines = append(lines, fmt.Sprintf("Change requested by %s%s (the user's own words): %q.", by, on, text))
+			lines = append(lines, fmt.Sprintf("Change requested by %s%s (id %s, the user's own words): %q.", by, on, e.ID, text))
+			requests = true
 		case events.EntryComment:
 			lines = append(lines, fmt.Sprintf("Comment from %s%s (the user's own words): %q.", by, on, text))
 		}
 	}
+	switch {
+	case more == 1:
+		lines = append(lines, "1 more change request: get_ticket shows them all.")
+	case more > 1:
+		lines = append(lines, fmt.Sprintf("%d more change requests: get_ticket shows them all.", more))
+	}
+	if requests {
+		lines = append(lines, AddressHint)
+	}
 	return lines
+}
+
+// withRequests is the inbox with a ticket's open change requests after
+// it, each once: one already in the inbox keeps its place there.
+func withRequests(inbox, requests []events.Entry) []events.Entry {
+	if len(requests) == 0 {
+		return inbox
+	}
+	list := slices.Clone(inbox)
+	for _, request := range requests {
+		if !slices.ContainsFunc(inbox, func(e events.Entry) bool { return e.Type == request.Type && e.ID == request.ID }) {
+			list = append(list, request)
+		}
+	}
+	return list
+}
+
+// ChangeRequests are a ticket's open change requests (board.OpenRequests)
+// as the entries an agent is shown, for the recovery note and
+// board_context (FH-126).
+func ChangeRequests(ticket string, open []board.Comment) []events.Entry {
+	list := make([]events.Entry, 0, len(open))
+	for _, comment := range open {
+		list = append(list, events.Entry{Type: events.EntryChangeRequest, ID: comment.ID, Ticket: ticket, Text: comment.Body, By: comment.By, Time: comment.Time})
+	}
+	return list
 }

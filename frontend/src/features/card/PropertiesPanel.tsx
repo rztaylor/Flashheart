@@ -94,8 +94,10 @@ const word = (text: string) =>
 // tags, agent, created and changed, then Archive. It stays in view beside
 // the page. With editing, priority, type, workstream (one of workstreams),
 // branch, pull request, depends on and tags edit in place with typed
-// controls (FH-66); agent, created and changed stay read-only. onMove,
-// onArchive and editing are absent on a read-only server.
+// controls (FH-66); agent, created and changed stay read-only. On a ticket
+// in review, onRequestChanges offers Request changes under Move to
+// (REV-6). onMove, onArchive, onRequestChanges and editing are absent on a
+// read-only server.
 export function PropertiesPanel({
   detail,
   line,
@@ -103,6 +105,7 @@ export function PropertiesPanel({
   workstreams = [],
   onMove,
   onArchive,
+  onRequestChanges,
   editing,
 }: {
   detail: TicketDetail;
@@ -111,6 +114,7 @@ export function PropertiesPanel({
   workstreams?: WorkstreamBrief[];
   onMove?(to: Status): void;
   onArchive?(): void;
+  onRequestChanges?(): void;
   editing?: PropertyEditing;
 }) {
   const session = detail.sessions;
@@ -127,6 +131,16 @@ export function PropertiesPanel({
       ) : (
         <StatusPill column={detail.column} rejected={detail.rejected} />
       )}
+      {onRequestChanges && detail.column === "review" ? (
+        <Button
+          variant="secondary"
+          onClick={onRequestChanges}
+          className="mt-2 w-full justify-center"
+        >
+          <Icon name="comment" size={14} />
+          Request changes
+        </Button>
+      ) : null}
       {detail.blockedBy.length > 0 ? (
         <Pill tone="blocked" className="mt-2">
           Blocked
