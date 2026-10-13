@@ -5,6 +5,7 @@ import { createWorkstream } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
+import { ProjectField } from "../../components/ProjectField";
 import { messageOf } from "../../model/errors";
 import { PRIORITIES } from "../../model/tickets";
 
@@ -93,24 +94,16 @@ export function NewWorkstreamDialog({
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-3">
-        {projects.length > 1 && !initialProject ? (
-          <FormField label="Project">
-            <Select
-              value={projectName}
-              onChange={(name) => {
-                setProjectName(name);
-                // Dependencies belong to the chosen project.
-                setDependsOn([]);
-              }}
-            >
-              {projects.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.displayName}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        ) : null}
+        <ProjectField
+          projects={projects}
+          scope={initialProject}
+          value={projectName}
+          onChange={(name) => {
+            setProjectName(name);
+            // Dependencies belong to the chosen project.
+            setDependsOn([]);
+          }}
+        />
         <FormField label="Title">
           <TextInput
             value={title}
