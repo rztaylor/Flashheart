@@ -1,11 +1,10 @@
 # Board feature boundary
 
 Owns the Board view (VIEW-1, VIEW-6): real columns in workflow order as
-rounded wells, less a hidden Backlog (FH-41), ticket cards in the one anatomy of
-`docs/dev/specs/ui-layout.md` §2 at three densities with workstream stripes
-and bullets, the
-"Colour by" header tint and tag, blocked proof and running
-times, the done-column limit
+rounded wells, less a hidden Backlog (FH-41), ticket cards as one set of
+markers in the three layouts of `docs/dev/specs/ui-layout.md` §2 (FH-147),
+their workstream stripes, the "Colour by" whole-card tint, the meta line's
+drop order and each card's accessible name, the done-column limit
 toggle, arrow-key movement between cards, keeping a focused card's focus
 as it moves or goes (through `components/useKeepFocus`, its column head the
 last place focus goes), moving tickets between columns by

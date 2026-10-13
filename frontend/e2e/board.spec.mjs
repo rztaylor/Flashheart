@@ -83,15 +83,25 @@ test("sample tickets land in the right columns with blocked reasons and repairs"
       ).toBeVisible();
     }
   }
+  // A Normal card marks a blocker; its reason is in the mark's tooltip and
+  // the card's name, and in words on a Detailed card (FH-147).
+  for (const [title, reason] of [
+    ["Drag and drop", "Depends on AL-3, which is In progress"],
+    ["Long titles overflow the column", "Depends on AL-4, which is Up next"],
+    ["Offline mode", "Depends on feat--does-not-exist, which does not exist"],
+  ]) {
+    await expect(card(page, title)).toHaveAccessibleName(
+      new RegExp(`blocked: ${reason}`),
+    );
+    await expect(
+      cardFace(page, title).locator('[data-mark="blocked"]'),
+    ).toHaveAttribute("title", `Blocked: ${reason}`);
+  }
+  await viewOption(page, "Density", "Detailed");
   await expect(cardFace(page, "Drag and drop")).toContainText(
     "Depends on AL-3, which is In progress",
   );
-  await expect(cardFace(page, "Long titles overflow the column")).toContainText(
-    "Depends on AL-4, which is Up next",
-  );
-  await expect(cardFace(page, "Offline mode")).toContainText(
-    "Depends on feat--does-not-exist, which does not exist",
-  );
+  await viewOption(page, "Density", "Normal");
   await expect(card(page, "Broken frontmatter")).toHaveAccessibleName(
     /needs repair/,
   );
@@ -174,6 +184,215 @@ test("blocked is marked with the no-entry sign in every view (FH-148)", async ()
     await shot(page, `blocked-board-narrow-${theme}`);
     await open(page, "#/p/flashheart/workstreams", narrow);
     await shot(page, `blocked-workstreams-narrow-${theme}`);
+  }
+});
+
+// busy makes AL-5 a ticket with every marker (FH-147): blocked already, a
+// working run with a plan, change requests, attachments and a review. The
+// board's response is changed in the browser; the server is the real one.
+// busy.needsYou turns the run to waiting on a permission for Bash.
+async function routeBusyCard(page, busy = { needsYou: false }) {
+  await page.route(
+    (url) => url.pathname === "/api/projects/alpha/board",
+    async (route) => {
+      const response = await route.fetch();
+      const json = await response.json();
+      for (const card of json.cards) {
+        if (card.id !== "AL-5") continue;
+        card.live = {
+          run: "claude:busy0001",
+          short: "claude:busy0001",
+          agent: "claude",
+          state: busy.needsYou ? "needs-you" : "working",
+          done: 2,
+          total: 5,
+          step: "Write the drop test",
+          reason: {
+            kind: busy.needsYou ? "permission" : "",
+            permission: busy.needsYou ? "Bash" : "",
+            question: "",
+            answered: false,
+            waitingOn: "",
+            agentType: "",
+          },
+          lastActivity: new Date().toISOString(),
+        };
+        card.changeRequests = { open: 2, addressed: 0 };
+        card.attachments = 3;
+        card.hasReview = true;
+      }
+      await route.fulfill({ response, json });
+    },
+  );
+}
+
+// metaLine lists the markers a card's meta line shows: those on its one
+// line inside its bounds. The rest wrapped out of sight.
+function metaLine(face) {
+  return face.locator('[data-row="meta"]').evaluate((row) => {
+    const line = row.firstElementChild.getBoundingClientRect();
+    const shown = [];
+    for (const item of row.querySelectorAll("[data-mark], a")) {
+      const box = item.getBoundingClientRect();
+      const inside =
+        box.top < line.bottom - 1 &&
+        box.left >= line.left - 0.5 &&
+        box.right <= row.getBoundingClientRect().right + 0.5;
+      if (inside) shown.push(item.dataset.mark ?? "id");
+    }
+    return { shown, height: row.getBoundingClientRect().height };
+  });
+}
+
+// The three layouts of one set of markers (FH-147, ui-layout.md §2).
+test("each density lays the card's markers out its own way (FH-147)", async () => {
+  const page = shared;
+  const busy = { needsYou: false };
+  await routeBusyCard(page, busy);
+  try {
+    await open(page, "#/p/flashheart/board", {
+      width: 1280,
+      height: 900,
+    });
+    await open(page, "#/p/alpha/board", { width: 1280, height: 900 });
+    const face = cardFace(page, "Long titles overflow the column");
+    await expect(face.locator('[data-mark="live"]')).toHaveText("2/5");
+    const column = await page
+      .locator('section[data-column="backlog"]')
+      .boundingBox();
+    // Columns are at least 15rem; at 1280 they are no wider.
+    expect(column?.width).toBeLessThanOrEqual(241);
+
+    // Normal: one meta line that keeps the id and the markers that never
+    // drop, and drops attachments, then review, then age.
+    const never = ["type", "id", "blocked", "requests", "live", "priority"];
+    const droppable = ["age", "review", "attachments"];
+    const atWidth = async (width) => {
+      await face.evaluate((node, w) => {
+        node.style.width = w ? `${w}px` : "";
+      }, width);
+      return metaLine(face);
+    };
+    const natural = await atWidth(undefined);
+    for (const mark of never) expect(natural.shown, mark).toContain(mark);
+    expect(natural.height).toBeLessThanOrEqual(17);
+    await shot(page, "card-busy-15rem-light");
+    await face.screenshot({
+      path: resolve(screenshotDir, "card-busy-15rem-card-light.png"),
+    });
+    // Hovering a marker shows its words; the card's button stays on top,
+    // so a click on a marker still opens the card.
+    const priority = await face.locator('[data-mark="priority"]').boundingBox();
+    await page.mouse.move(
+      (priority?.x ?? 0) + (priority?.width ?? 0) / 2,
+      (priority?.y ?? 0) + (priority?.height ?? 0) / 2,
+    );
+    await expect(card(page, "Long titles overflow the column")).toHaveAttribute(
+      "title",
+      "Medium priority",
+    );
+    await page.mouse.move(0, 0);
+    let kept = 3;
+    for (const width of [240, 220, 200, 190, 180, 170, 160]) {
+      const { shown, height } = await atWidth(width);
+      expect(height, `${width}px`).toBeLessThanOrEqual(17);
+      const left = droppable.filter((mark) => shown.includes(mark));
+      // What stays is always the start of age, review, attachments, and
+      // never grows as the card narrows.
+      expect(left, `${width}px`).toEqual(droppable.slice(0, left.length));
+      expect(left.length, `${width}px`).toBeLessThanOrEqual(kept);
+      kept = left.length;
+    }
+    expect(kept, "everything droppable dropped by 160px").toBe(0);
+    await atWidth(undefined);
+
+    // The name still says every marker, dropped or not.
+    await expect(
+      card(page, "Long titles overflow the column"),
+    ).toHaveAccessibleName(
+      /blocked: .*Claude working, plan 2 of 5: Write the drop test.*2 changes requested.*bug.*3 attachments, review written, changed/,
+    );
+
+    for (const theme of ["light", "dark"]) {
+      for (const density of ["Compact", "Normal", "Detailed"]) {
+        await open(page, "#/p/alpha/board", {
+          width: 1440,
+          height: 900,
+          theme,
+        });
+        await viewOption(page, "Density", density);
+        await expect(
+          face.locator('[data-mark="priority"]').first(),
+        ).toBeVisible();
+        await expectNoAxeViolations(page, `${density} cards ${theme}`);
+        await shot(page, `card-density-${density.toLowerCase()}-1440-${theme}`);
+        await face.screenshot({
+          path: resolve(
+            screenshotDir,
+            `card-busy-${density.toLowerCase()}-${theme}.png`,
+          ),
+        });
+        await open(page, "#/p/flashheart/board", {
+          width: 1440,
+          height: 900,
+          theme,
+        });
+        await shot(
+          page,
+          `card-density-${density.toLowerCase()}-flashheart-1440-${theme}`,
+        );
+        await open(page, "#/p/alpha/board", { width: 390, height: 844, theme });
+        await page
+          .getByRole("combobox", { name: "Column" })
+          .selectOption("backlog");
+        await shot(
+          page,
+          `card-density-${density.toLowerCase()}-narrow-${theme}`,
+        );
+      }
+    }
+    // Compact has no other row; Detailed has the words.
+    await open(page, "#/p/alpha/board", { width: 1440, height: 900 });
+    await viewOption(page, "Density", "Compact");
+    await expect(face.locator('[data-row="meta"]')).toHaveCount(0);
+    await expect(face.locator('[data-part="title"]')).toHaveText(
+      /^AL-5\s*Long titles overflow the column$/,
+    );
+    await viewOption(page, "Density", "Detailed");
+    await expect(face.locator('[data-row="run"]')).toContainText(
+      "2/5 · Write the drop test",
+    );
+    await expect(face).toContainText("Depends on AL-4, which is Up next");
+
+    // A run that needs the user: its reason on a line of its own (Normal,
+    // Detailed), the plate beside the title (Compact).
+    busy.needsYou = true;
+    for (const theme of ["light", "dark"]) {
+      await open(page, "#/p/flashheart/board", { width: 1440, height: 900 });
+      for (const density of ["Compact", "Normal", "Detailed"]) {
+        await open(page, "#/p/alpha/board", {
+          width: 1440,
+          height: 900,
+          theme,
+        });
+        await viewOption(page, "Density", density);
+        if (density === "Compact")
+          await expect(face.locator('[data-mark="needs-you"]')).toBeVisible();
+        else
+          await expect(face.locator('[data-row="needs-you"]')).toHaveText(
+            /Needs you\s*Permission for Bash/,
+          );
+        await face.screenshot({
+          path: resolve(
+            screenshotDir,
+            `card-needs-you-${density.toLowerCase()}-${theme}.png`,
+          ),
+        });
+      }
+    }
+  } finally {
+    await viewOption(page, "Density", "Normal");
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   }
 });
 
@@ -783,7 +1002,9 @@ test("cards are coloured by type, priority, age or not at all", async () => {
 
   await colourBy(page, "Priority");
   await expect(locked).toHaveAttribute("data-paint", "priority-high");
-  await expect(locked).toContainText("High");
+  await expect(
+    locked.locator('[data-mark="priority"][title="High priority"]'),
+  ).toBeVisible();
   await colourBy(page, "Age");
   await expect(locked).toHaveAttribute("data-paint", "age-today");
   await colourBy(page, "None");
