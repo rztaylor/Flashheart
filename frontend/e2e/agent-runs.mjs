@@ -19,11 +19,41 @@ async function repo(home, name, branch, parent = "src") {
   return realpath(dir);
 }
 
-function hook(root, event, payload) {
-  execFileSync(executable, ["hook", "claude", event, "--root", root], {
+function hook(root, event, payload, agent = "claude") {
+  execFileSync(executable, ["hook", agent, event, "--root", root], {
     input: JSON.stringify({ hook_event_name: event, ...payload }),
     env: { ...process.env, PATH: "/nonexistent" },
   });
+}
+
+// CODEX_PAIR is two Codex session ids from the same minute: time-ordered
+// UUIDs (version 7) that differ only at the end, as Codex's do (FH-122).
+export const CODEX_PAIR = [
+  "019a7c00-0000-7000-8000-000000000001",
+  "019a7c00-0000-7000-8000-0000000000ff",
+];
+
+// seedCodexPair records the CODEX_PAIR sessions through the real
+// `flashheart hook codex`, both working in a checkout of the flashheart
+// project on a branch no ticket is on.
+export async function seedCodexPair(home, root) {
+  const cwd = await repo(home, "flashheart", "feature/codex-pair", "codex");
+  const projectFile = join(root, "flashheart", "project.yaml");
+  const project = await readFile(projectFile, "utf8");
+  await writeFile(
+    projectFile,
+    project.replace("repos:\n", `repos:\n  - ${cwd}\n`),
+  );
+  for (const [index, id] of CODEX_PAIR.entries()) {
+    const send = (event, extra = {}) =>
+      hook(root, event, { session_id: id, cwd, ...extra }, "codex");
+    send("SessionStart", { source: "startup" });
+    send("UserPromptSubmit", {
+      turn_id: `019a7c00-0000-7000-8000-00000000010${index}`,
+      prompt: "synthetic",
+    });
+  }
+  return cwd;
 }
 
 function session(root, id, cwd) {

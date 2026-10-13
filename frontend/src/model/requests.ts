@@ -85,7 +85,8 @@ export function requestChoices(
 
 // sentWords is the toast after a request for changes, saying where the
 // requests went: to the live session holding the ticket, or to whichever
-// session picks it up next.
+// session picks it up next. sentTo is that session's short id, as the
+// server gives it (agent-protocol §2).
 export function sentWords(
   ticket: string,
   count: number,
@@ -97,13 +98,6 @@ export function sentWords(
       ? `Requested ${plural(count, "change", "changes")} on ${ticket}`
       : `${verb} the change request on ${ticket}`;
   return sentTo
-    ? `${what}; sent to ${shortRun(sentTo)}.`
+    ? `${what}; sent to ${sentTo}.`
     : `${what}; the next session on it will see ${count === 1 ? "it" : "them"}.`;
-}
-
-// shortRun shortens a run id to its agent and the first eight characters
-// of its session, as the board names runs.
-function shortRun(run: string): string {
-  const match = /^([a-z][a-z0-9-]*:)([^\s/]{1,8})/.exec(run);
-  return match ? `${match[1]}${match[2]}` : run;
 }

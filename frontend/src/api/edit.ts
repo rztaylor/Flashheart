@@ -199,13 +199,13 @@ export function editComment(
 }
 
 // Sent reports a change request write (REV-6, FH-126): the board revision,
-// how many requests it covered, the run they were sent to ("" when no live
-// session holds the ticket, so the next one finds them on it) and any
-// warning.
+// how many requests it covered, the short id of the run they were sent to
+// (agent-protocol §2; "" when no live session holds the ticket, so the next
+// one finds them on it) and any warning.
 export interface Sent {
   revision: number;
   count: number;
-  sentTo: string;
+  sentToShort: string;
   warnings: string[];
 }
 
@@ -213,7 +213,8 @@ function isSent(payload: unknown, count: number): Sent {
   if (
     !isRecord(payload) ||
     typeof payload.revision !== "number" ||
-    (payload.sentTo !== undefined && typeof payload.sentTo !== "string")
+    (payload.sentToShort !== undefined &&
+      typeof payload.sentToShort !== "string")
   )
     throw new Error("Change request response was invalid");
   const warnings = Array.isArray(payload.warnings)
@@ -224,7 +225,8 @@ function isSent(payload: unknown, count: number): Sent {
   return {
     revision: payload.revision,
     count,
-    sentTo: typeof payload.sentTo === "string" ? payload.sentTo : "",
+    sentToShort:
+      typeof payload.sentToShort === "string" ? payload.sentToShort : "",
     warnings,
   };
 }

@@ -39,14 +39,16 @@ type RequestChangesRequest struct {
 
 // RequestChangesResponse reports a request for changes: the comments now
 // change requested, the ticket's and the activity's new hashes, the board
-// revision, and the run they were sent to ("" when no live session holds
-// the ticket: the next one finds them on it).
+// revision, and the run they were sent to, in full and as its short id
+// (agent-protocol §2; "" when no live session holds the ticket: the next
+// one finds them on it).
 type RequestChangesResponse struct {
 	Comments     []CommentJSON `json:"comments"`
 	Hash         string        `json:"hash"`
 	ActivityHash string        `json:"activityHash"`
 	Revision     uint64        `json:"revision"`
 	SentTo       string        `json:"sentTo"`
+	SentToShort  string        `json:"sentToShort"`
 	Warnings     []string      `json:"warnings"`
 }
 
@@ -92,7 +94,7 @@ func (b boardAPI) requestChanges(w http.ResponseWriter, r *http.Request) {
 	sentTo, warnings := b.sendRequests(ticket.ID, result.Comments)
 	response := RequestChangesResponse{
 		Comments: make([]CommentJSON, 0, len(result.Comments)), Hash: result.Hash, ActivityHash: result.ActivityHash,
-		SentTo: sentTo, Warnings: nonNil(warnings),
+		SentTo: sentTo, SentToShort: protocol.ShortRun(sentTo), Warnings: nonNil(warnings),
 	}
 	for _, comment := range result.Comments {
 		response.Comments = append(response.Comments, commentJSON(comment))
@@ -131,6 +133,7 @@ func (b boardAPI) setCommentState(w http.ResponseWriter, r *http.Request, writer
 	response := CommentResponse{Comment: commentJSON(comment), ActivityHash: hash}
 	if to == board.CommentChangeRequested {
 		response.SentTo, response.Warnings = b.sendRequests(ticket.ID, []board.Comment{comment})
+		response.SentToShort = protocol.ShortRun(response.SentTo)
 	}
 	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
 		response.Revision = snapshot.Revision

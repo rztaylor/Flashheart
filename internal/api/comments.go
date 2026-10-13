@@ -8,6 +8,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -16,12 +17,15 @@ import (
 // The store writes them as that person (store.As); this file decodes,
 // checks sizes and records the human's events.
 
-// CommentJSON is a person's comment on a ticket. Edited is "" until it is
-// edited; Quote is the part of the ticket it quotes, from QuoteFrom.
+// CommentJSON is a person's comment on a ticket. ByShort names its author
+// as the board shows it (a run's short id, agent-protocol §2); Edited is
+// "" until it is edited; Quote is the part of the ticket it quotes, from
+// QuoteFrom.
 type CommentJSON struct {
 	ID        string `json:"id"`
 	Time      string `json:"time"`
 	By        string `json:"by"`
+	ByShort   string `json:"byShort"`
 	ByPerson  bool   `json:"byPerson"`
 	State     string `json:"state"`
 	Edited    string `json:"edited"`
@@ -30,11 +34,13 @@ type CommentJSON struct {
 	Body      string `json:"body"`
 }
 
-// HistoryJSON is one write that changed the ticket: who, when and what.
+// HistoryJSON is one write that changed the ticket: who (ByShort as the
+// board names them), when and what.
 type HistoryJSON struct {
 	ID       string       `json:"id"`
 	Time     string       `json:"time"`
 	By       string       `json:"by"`
+	ByShort  string       `json:"byShort"`
 	ByPerson bool         `json:"byPerson"`
 	Changes  []ChangeJSON `json:"changes"`
 }
@@ -72,12 +78,13 @@ type CommentEditRequest struct {
 
 // CommentResponse reports a saved comment, the activity's new hash and the
 // board revision; for a reopened change request, the run it was sent to
-// (FH-126) and any warning.
+// (FH-126), in full and as its short id, and any warning.
 type CommentResponse struct {
 	Comment      CommentJSON `json:"comment"`
 	ActivityHash string      `json:"activityHash"`
 	Revision     uint64      `json:"revision"`
 	SentTo       string      `json:"sentTo,omitempty"`
+	SentToShort  string      `json:"sentToShort,omitempty"`
 	Warnings     []string    `json:"warnings,omitempty"`
 }
 
@@ -169,13 +176,22 @@ func (b boardAPI) savedComment(w http.ResponseWriter, status int, comment board.
 	writeJSON(w, status, CommentResponse{Comment: commentJSON(comment), ActivityHash: hash, Revision: revision})
 }
 
+// shortAuthor is how the board names an entry's author: a run by its short
+// id (agent-protocol §2), a person as written.
+func shortAuthor(by string) string {
+	if board.ByPerson(by) {
+		return by
+	}
+	return protocol.ShortRun(by)
+}
+
 func commentJSON(c board.Comment) CommentJSON {
 	edited := ""
 	if !c.Edited.IsZero() {
 		edited = c.Edited.UTC().Format(time.RFC3339)
 	}
 	return CommentJSON{
-		ID: c.ID, Time: c.Time.UTC().Format(time.RFC3339), By: c.By, ByPerson: board.ByPerson(c.By),
+		ID: c.ID, Time: c.Time.UTC().Format(time.RFC3339), By: c.By, ByShort: shortAuthor(c.By), ByPerson: board.ByPerson(c.By),
 		State: string(c.State), Edited: edited, QuoteFrom: c.QuoteFrom, Quote: c.Quote, Body: c.Body,
 	}
 }
@@ -196,7 +212,7 @@ func activityJSON(activity board.Activity) ([]CommentJSON, []HistoryJSON) {
 			})
 		}
 		history = append(history, HistoryJSON{
-			ID: entry.ID, Time: entry.Time.UTC().Format(time.RFC3339), By: entry.By, ByPerson: board.ByPerson(entry.By), Changes: changes,
+			ID: entry.ID, Time: entry.Time.UTC().Format(time.RFC3339), By: entry.By, ByShort: shortAuthor(entry.By), ByPerson: board.ByPerson(entry.By), Changes: changes,
 		})
 	}
 	return comments, history

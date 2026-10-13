@@ -74,6 +74,7 @@ describe("comments", () => {
     id: "4e5f6a7b",
     time: "2026-10-13T09:12:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     state: "open",
     edited: "",

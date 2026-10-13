@@ -9,6 +9,7 @@ import {
   promptHook,
   seedBranchRun,
   seedClaimedRun,
+  seedCodexPair,
   seedRuns,
   TASK_NOTIFICATION,
 } from "./agent-runs.mjs";
@@ -890,5 +891,66 @@ test("a long branch and a long edited path keep their tail visible in the panel 
     ]);
     if (theme === "light") await expectNoAxeViolations(page, "long branch");
     await shot(page, `branch-tail-runs-1280-${theme}`);
+  }
+});
+
+test("two Codex sessions started in the same minute have their own short ids (FH-122)", async () => {
+  // Codex's session ids start with the time; the short id is their end.
+  const cwd = await seedCodexPair(sandbox.home, sandbox.root);
+
+  // The Overview lists both sessions, which have no ticket, apart.
+  const unticketed = section("Work with no ticket");
+  const rows = unticketed
+    .getByRole("listitem")
+    .filter({ hasText: "feature/codex-pair" });
+  for (const theme of ["light", "dark"]) {
+    await open(page, "#/p/flashheart/overview", {
+      width: 1440,
+      height: 1400,
+      theme,
+    });
+    const tile = unticketed.getByRole("button", {
+      name: /Work with no ticket/,
+    });
+    if ((await tile.getAttribute("aria-expanded")) === "false")
+      await tile.click();
+    await expect(rows).toHaveCount(2);
+    await expect(rows.getByText("Session 00000001")).toBeVisible();
+    await expect(rows.getByText("Session 000000ff")).toBeVisible();
+    await expect(page.getByText("Session 019a7c00")).toHaveCount(0);
+    await rows.first().scrollIntoViewIfNeeded();
+    await shot(page, `codex-pair-overview-1440-${theme}`);
+  }
+
+  // The run id each recovery note gives names that one session.
+  const created = await callTool(sandbox.root, cwd, "create_ticket", {
+    title: "Two Codex sessions side by side",
+    type: "bug",
+    priority: "medium",
+    description: "Synthetic ticket for two Codex sessions.",
+    criteria: ["Each session shows its own short id"],
+    run: "codex:00000001",
+  });
+  const ticket = /ticket=(FH-\d+)/.exec(created)[1];
+  await callTool(sandbox.root, cwd, "claim", {
+    ticket,
+    run: "codex:00000001",
+  });
+
+  // The card's Runs tab shows the holder and the other session on its
+  // branch, each by its own short id.
+  const panel = page.getByRole("complementary", { name: `Ticket ${ticket}` });
+  for (const theme of ["light", "dark"]) {
+    await open(page, `#/p/flashheart/board?t=${ticket}`, {
+      width: 1280,
+      height: 900,
+      theme,
+    });
+    await page.getByRole("tab", { name: /^Runs/ }).click();
+    await expect(panel.getByText("00000001", { exact: true })).toBeVisible();
+    await expect(panel.getByText("000000ff", { exact: true })).toBeVisible();
+    await expect(panel.getByText("019a7c00", { exact: true })).toHaveCount(0);
+    if (theme === "light") await expectNoAxeViolations(page, "codex pair");
+    await shot(page, `codex-pair-runs-1280-${theme}`);
   }
 });

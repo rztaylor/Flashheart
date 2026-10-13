@@ -103,12 +103,21 @@ func SessionOf(s string) string {
 	return session
 }
 
-// Short is the agent and the first 8 characters of the session id, as
-// recovery notes name runs (agent-protocol §2); an id without an agent is
-// returned whole.
+// timeOrdered is a version 7 UUID (RFC 9562), as Codex's session ids are:
+// it starts with the time in milliseconds and ends with random bits.
+var timeOrdered = regexp.MustCompile(`^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-7[0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$`)
+
+// Short is how people and recovery notes name a run (agent-protocol §2):
+// the agent and 8 characters of the session id, the first, or the last
+// for a time-ordered id (UUIDv7), whose start is the same for sessions
+// started in the same minute (FH-122). A subagent shows its session's;
+// an id without an agent is returned whole.
 func (r RunID) Short() string {
 	if r.agent == "" {
 		return r.String()
+	}
+	if timeOrdered.MatchString(r.session) {
+		return r.agent + ":" + r.session[len(r.session)-8:]
 	}
 	return r.agent + ":" + r.session[:min(len(r.session), 8)]
 }

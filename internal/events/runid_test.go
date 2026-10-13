@@ -22,6 +22,18 @@ func TestRunIDsFollowTheGrammar(t *testing.T) {
 		{"claude:6f1c2d3e-aaaa/a1b2c3", "claude", "6f1c2d3e-aaaa", "a1b2c3", "claude:6f1c2d3e", true},
 		{"codex:mcp-9bd225d4ac50", "codex", "mcp-9bd225d4ac50", "", "codex:mcp-9bd2", false},
 		{"my-agent2:s_1.x", "my-agent2", "s_1.x", "", "my-agent2:s_1.x", false},
+		// Claude Code's session ids are random UUIDs (version 4): the
+		// short id is their start, as before (FH-122).
+		{"claude:3f2a9c1e-7b4d-4c1a-9e2f-0123456789ab", "claude", "3f2a9c1e-7b4d-4c1a-9e2f-0123456789ab", "", "claude:3f2a9c1e", false},
+		// Codex's are time-ordered UUIDs (version 7), the same at the start
+		// for sessions started in the same minute: the short id is their
+		// random end (FH-122).
+		{"codex:019a7c00-0000-7000-8000-000000000001", "codex", "019a7c00-0000-7000-8000-000000000001", "", "codex:00000001", false},
+		{"codex:019a7c00-0000-7000-8000-0000000000ff", "codex", "019a7c00-0000-7000-8000-0000000000ff", "", "codex:000000ff", false},
+		{"codex:019A7C00-0000-7000-8000-0000ABCDEF12/019a7c00-1111-7000-8000-000000000002", "codex", "019A7C00-0000-7000-8000-0000ABCDEF12", "019a7c00-1111-7000-8000-000000000002", "codex:ABCDEF12", true},
+		// Only a whole version 7 UUID is time-ordered.
+		{"codex:019a7c00-0000-7000-8000-00000000000", "codex", "019a7c00-0000-7000-8000-00000000000", "", "codex:019a7c00", false},
+		{"codex:019a7c00-0000-6000-8000-000000000001", "codex", "019a7c00-0000-6000-8000-000000000001", "", "codex:019a7c00", false},
 	}
 	for _, tc := range cases {
 		r, err := ParseRunID(tc.id)

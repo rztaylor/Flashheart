@@ -39,8 +39,15 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   other name lowercased to letters, digits and hyphens); a Codex session
   names itself in each call (§5.3), so the run the server starts for it is
   `codex:<session_id>`, the id its hooks use. Displayed shortened
-  to the agent and the first 8 characters of the session id
-  (`claude:3f2a9c1e`); a subagent shows its session's (D39). Agent ids match
+  to the agent and 8 characters of the session id: the first
+  (`claude:3f2a9c1e`), or the last when the id is a time-ordered UUID
+  (version 7, as Codex's are: `codex:019a7c00-…-8000-00009c4e1f2a` shows
+  as `codex:9c4e1f2a`), whose start is the same for sessions started in
+  the same minute (D63); a subagent shows its session's (D39). The
+  server shortens ids (`events.RunID.Short`) and sends the short form
+  with each run, question, comment, history entry and change request it
+  sends to a session (`short`, `runShort`, `byShort`, `sentToShort`); the frontend
+  never shortens an id itself. Agent ids match
   `[a-z][a-z0-9-]{0,31}`, session and subagent ids `[A-Za-z0-9_.-]{1,128}`
   (`events.RunID` owns the grammar). Hooks log and drop an event whose run
   id falls outside it or names another agent than the adapter's, and
@@ -706,8 +713,9 @@ it touches in full, with those their tickets depend on.
 
 Read-only calls with no resolvable run still work and say `run=unknown`;
 writes are attributed to the run the server starts, or `by: "unknown"` when
-none can be started. A shortened run id (`claude:3f2a9c1e`, as the recovery
-note shows it) is accepted when it names one run.
+none can be started. A shortened run id is accepted when it names one run:
+the short id the recovery note shows (`claude:3f2a9c1e`, `codex:9c4e1f2a`,
+§2) or any start of the full id.
 
 **Run and claim policy.** Each tool declares when it needs its caller's run
 and whether it refuses a ticket another live run holds (`claimed`, §7.2):

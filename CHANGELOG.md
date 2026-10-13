@@ -189,6 +189,19 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Codex sessions started close together no longer look identical on the
+  board (FH-122, D63, agent-protocol §2). Codex's session ids start with
+  the time, so two sessions started in the same minute both showed as,
+  say, `codex:019a7c00` on the Overview, in the Runs tab, on cards and in
+  a ticket's history, and passing that run id from the recovery note
+  answered `ambiguous_run`. A time-ordered id (UUIDv7) is now shortened to
+  its last 8 characters, its random part (`codex:00000001` and
+  `codex:000000ff`), and that short id names its one session when passed
+  as `run`; the start of a full id is still accepted. Claude Code's short
+  ids are unchanged. The server now sends the short form of history and
+  comment authors (`byShort`) and of the session a change request went to
+  (`sentToShort`), so the frontend no longer shortens run ids itself.
+
 - Building after a pull that adds or upgrades frontend packages no longer
   fails on missing modules (FH-119). `scripts/build.sh` (and so
   `scripts/e2e.sh`) and `scripts/e2e-visual.sh` installed the packages only

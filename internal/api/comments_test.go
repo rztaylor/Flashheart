@@ -265,3 +265,29 @@ func TestAReadOnlyServerShowsActivityAndRefusesComments(t *testing.T) {
 		t.Errorf("activity = %s", data)
 	}
 }
+
+// History and comments name a run by its short id, as the rest of the
+// board does (agent-protocol §2): two Codex sessions started in the same
+// minute stay apart (FH-122); a person keeps their name.
+func TestActivityNamesRunsByTheirShortIDs(t *testing.T) {
+	t.Parallel()
+
+	comments, history := activityJSON(board.Activity{
+		Comments: []board.Comment{{ID: "c1", By: "Robert"}},
+		History: []board.History{
+			{ID: "h1", By: "codex:019a7c00-0000-7000-8000-000000000001"},
+			{ID: "h2", By: "codex:019a7c00-0000-7000-8000-0000000000ff"},
+			{ID: "h3", By: "claude:3f2a9c1e-7b4d-4c1a-9e2f-0123456789ab"},
+		},
+	})
+	if comments[0].ByShort != "Robert" {
+		t.Errorf("comment by %q", comments[0].ByShort)
+	}
+	var shorts []string
+	for _, entry := range history {
+		shorts = append(shorts, entry.ByShort)
+	}
+	if want := []string{"codex:00000001", "codex:000000ff", "claude:3f2a9c1e"}; !slices.Equal(shorts, want) {
+		t.Errorf("history by %q, want %q", shorts, want)
+	}
+}

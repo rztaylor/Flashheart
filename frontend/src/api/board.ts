@@ -230,6 +230,9 @@ export interface Comment {
   id: string;
   time: string;
   by: string;
+  // byShort names the author as the board shows them: a run by its short
+  // id (agent-protocol §2), a person as written.
+  byShort: string;
   byPerson: boolean;
   state: string;
   edited: string;
@@ -259,6 +262,7 @@ export interface History {
   id: string;
   time: string;
   by: string;
+  byShort: string;
   byPerson: boolean;
   changes: HistoryChange[];
 }
@@ -417,6 +421,7 @@ export const isComment = (value: unknown): value is Comment =>
   isString(value.id) &&
   isString(value.time) &&
   isString(value.by) &&
+  isString(value.byShort) &&
   typeof value.byPerson === "boolean" &&
   isString(value.state) &&
   isString(value.edited) &&
@@ -429,6 +434,7 @@ const isHistory = (value: unknown): value is History =>
   isString(value.id) &&
   isString(value.time) &&
   isString(value.by) &&
+  isString(value.byShort) &&
   typeof value.byPerson === "boolean" &&
   Array.isArray(value.changes) &&
   value.changes.every(
