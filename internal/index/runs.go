@@ -50,13 +50,15 @@ type projectEvents struct {
 	offsets map[string]int64
 }
 
-// boardKinds are the events recorded with a write to a ticket, review or
-// attachment. A runs-only refold that reads one has the board read too:
-// the file written may be in a folder the watcher does not watch (FH-96).
+// boardKinds are the events recorded with a write to a ticket, review,
+// attachment or activity file. A runs-only refold that reads one has the
+// board read too: the file written may be in a folder the watcher does not
+// watch (FH-96).
 var boardKinds = map[events.Kind]bool{
 	events.Claim: true, events.Release: true, events.Checkpoint: true,
 	events.TicketMoved: true, events.TicketUpdated: true, events.TicketCreated: true,
 	events.ReviewWritten: true, events.AttachmentAdded: true, events.QuestionAnswered: true,
+	events.CommentAdded: true, events.CommentEdited: true,
 }
 
 // update reads new events for the given projects, folds them, and returns

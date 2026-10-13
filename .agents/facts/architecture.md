@@ -21,10 +21,15 @@ Intended layout (packages are created when they get real content):
   columns), blocking rules with reasons, derived workstream status, and the
   ticket-editing rules the board and agents share, each defined once
   (editable fields and their checked change-set, title and section limits,
-  key rules, the blocked-start gate, `NoteLine`; FH-85). No I/O.
+  key rules, the blocked-start gate, `NoteLine`; FH-85), and a ticket's
+  `activity.md` format with the history changes a write made, worked out
+  from the files before and after (D47). No I/O.
 - `internal/store`: the only package that touches the board root: discovery,
   reads, locked atomic writes with hash preconditions, typed ticket edits
-  from the board and agents alike (`EditTicket`), moves, archive,
+  from the board and agents alike (`EditTicket`), moves, archive, each
+  ticket's activity file (a store writing as someone, `As`, appends the
+  history of every ticket write in the same transaction; people's
+  comments are added and edited there, never in the ticket file; D47),
   attachments, path confinement, creating the root (`EnsureRoot`), reading
   `config.yaml` (`ReadConfig`, through the `os.Root`, so a symlink out of
   the root is refused) and telling its own writes from others'

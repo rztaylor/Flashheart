@@ -8,15 +8,17 @@ import "time"
 const Human = "human"
 
 // ByHuman returns the event recording that the human changed a ticket on the
-// board: kind is ticket.moved, ticket.updated or ticket.created, and data
-// names the ticket with at most the columns or field names it changed.
+// board: kind is ticket.moved, ticket.updated, ticket.created,
+// comment.added or comment.edited, and data names the ticket with at most
+// the columns or field names it changed, or the comment's id.
 func ByHuman(at time.Time, project string, kind Kind, data TicketData) Event {
 	data.By = Human
 	return Event{Time: at, Run: Human, Agent: Human, Kind: kind, Project: project, Data: data}
 }
 
-// HumanActivity is one thing the human did on the board: a ticket write, or
-// an answer to an agent's question (whose ticket the event does not name).
+// HumanActivity is one thing the human did on the board: a ticket write, a
+// comment, or an answer to an agent's question (whose ticket the event does
+// not name).
 type HumanActivity struct {
 	Time    time.Time `json:"time"`
 	Project string    `json:"project"`
@@ -32,7 +34,7 @@ func HumanActivityOf(e Event) (HumanActivity, bool) {
 	switch e.Kind {
 	case QuestionAnswered:
 		return activity, true
-	case TicketMoved, TicketUpdated, TicketCreated:
+	case TicketMoved, TicketUpdated, TicketCreated, CommentAdded, CommentEdited:
 		if e.Run != Human {
 			return HumanActivity{}, false
 		}

@@ -1068,3 +1068,30 @@ session's own chat, or an older checkpoint, drops out of Activity; a note
 carries only its day, so a day's notes come before its timed entries. If
 Activity needs the full history, the server can add it without changing
 the timeline's view.
+
+## 2026-10-13 — D48: A ticket's history is worked out from each write, as the writer
+
+Every ticket write by the board or an agent appends one history entry to
+the ticket's `activity.md` (D47, FH-124, board-format §Activity). The
+entry is worked out in `store`'s write transaction by comparing the ticket
+(and, for a review step, its `review.md`) before and after
+(`board.TicketChanges`, `board.ReviewChanges`): moved, the names of the
+fields and sections edited, the criteria and steps ticked; only what no
+diff can tell (created, archived, restored) is stated by the write. Who
+writes is a view of the store, `Store.As(by)`: the API writes as the
+person at the board, each MCP call as its caller's run; the plain store
+(serve's copies of linked files, migrate) records no history. The entry
+is staged in the same transaction as the ticket, so a history that
+cannot be written fails the write; an archive or restore moves its folder
+back.
+
+Options: each API handler and MCP tool appending its own entry, as they
+record events (copies in two adapters, and a new write path such as a
+section edit would have to remember); an author argument on every store
+write (a wide signature change for one value); recording it after the
+write, best effort like events (a ticket's lasting record would silently
+miss writes); deriving it from the before and after in the same write
+(chosen: every write path, raw edits included, is described alike, and
+none names the ticket's text, since keys and sections Flashheart does not
+know are named only as `frontmatter` or `body`). A reorder within a
+column, notes, handoffs and answers are not history.

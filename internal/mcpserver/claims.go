@@ -71,7 +71,7 @@ func (srv *server) claim(c *call, input ClaimInput) (string, error) {
 	}
 	setBranch := ticket.Branch == "" && c.where.Branch != ""
 	if moves || setBranch || len(notes) > 0 {
-		_, err := srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
+		_, err := c.files().UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 			var err error
 			if moves {
 				if data, err = mdfile.SetScalar(data, "status", string(column)); err != nil {

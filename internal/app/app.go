@@ -157,6 +157,7 @@ func newRuntime(options Options, files *store.Store, settings config.Config, api
 	var board *index.Index
 	apiHandler := apiOverride
 	if apiHandler == nil {
+		person := settings.Answerer(user.Current)
 		board = index.New(files, index.Options{
 			Events: events.New(files),
 			Runs:   runs.SettingsFor(settings.QuietMinutes, settings.LeaseMinutes),
@@ -170,13 +171,15 @@ func newRuntime(options Options, files *store.Store, settings config.Config, api
 				Root:            options.Root,
 				Theme:           settings.UI.Theme,
 			},
-			Board:      board,
-			Files:      files,
-			Writer:     files,
+			Board: board,
+			Files: files,
+			// The board writes as the person at it: their ticket writes
+			// append history, and their comments are theirs (D47).
+			Writer:     files.As(person),
 			Events:     events.New(files),
 			DoneLimit:  settings.DoneColumnLimit,
 			Stopping:   stopping.ch,
-			AnsweredBy: settings.Answerer(user.Current),
+			AnsweredBy: person,
 		})
 	}
 	mux := http.NewServeMux()

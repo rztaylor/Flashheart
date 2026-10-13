@@ -25,6 +25,7 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
     │   └── FH-42-card-panel/             one folder per ticket: <id>-<slug>
     │       ├── FH-42-card-panel.md       the ticket, named after its folder
     │       ├── review.md                 review guide (REV-4), optional
+    │       ├── activity.md               comments and history (STO-8), optional
     │       └── files/                    copied files (REV-1, REV-5)
     │           ├── index.yaml
     │           └── 20261005T1412-board-desktop.png
@@ -185,13 +186,16 @@ atomically, one at a time, in this order:
   the ticket's `workstream:` field;
 - creating a workstream: its file, then the other lists giving up its
   initial tickets, then those tickets' fields;
-- placing a ticket: the neighbours it ranks, then the ticket.
+- placing a ticket: the neighbours it ranks, then the ticket;
+- any ticket write from the board or an agent: the files above, then the
+  history entry in each changed ticket's `activity.md` (§Activity).
 
 A crash between two of these leaves the files written so far. Each such
 state is readable: a ticket number above `next_id` is never reused
 (`next_id` is never lower than one past the highest existing number), a
 field and lists that disagree show a warning until the next write puts
-them back in step, and a ranked neighbour keeps its place.
+them back in step, a ranked neighbour keeps its place, and a ticket write
+whose history was not written is a change history does not mention.
 
 ### Order within a column
 
@@ -329,6 +333,113 @@ unfinished one in order that is not blocked, else the first unfinished one.
 `tickets/<folder>/review.md`, in the review template (Summary, Key Files, How
 to Verify, Risks, PR Notes). Screenshots are referenced as
 `![Board at desktop](files/20261004T1412-board-desktop.png)`.
+
+## Activity
+
+`tickets/<folder>/activity.md` holds the ticket's comments and its history,
+one dated, typed entry each, oldest first (STO-8, D47). People comment on a
+ticket; every ticket write by the board or an agent appends what it
+changed. It sits beside the ticket so a comment never contends with an
+agent rewriting `## Handoff`, and history outlives the event log's
+retention: it lasts as long as the ticket, archived with it and removed
+only by its permanent delete. Agents' notes stay in the ticket's
+`## Notes`; handoffs and questions are read from the ticket and the log.
+
+A ticket without the file has no activity; existing tickets need no
+migration. The file is created by its first entry:
+
+```markdown
+# Activity: FH-42
+
+### 2026-10-13T09:10:53Z · history · Robert · 0a1b2c3d
+
+- created: backlog
+
+### 2026-10-13T09:12:00Z · comment · Robert · 4e5f6a7b
+
+state: open
+edited: 2026-10-13T09:20:00Z
+quote: Acceptance Criteria 2
+
+> Tickets keep their place
+> after a reload.
+
+They do not keep it in Done.
+
+### 2026-10-14T08:02:11Z · history · claude:5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13 · 2a3b4c5d
+
+- moved: up-next → in-progress
+- edited: branch
+```
+
+**Entries.** An entry starts at a heading line outside code fences of
+exactly the form `### <time> · <kind> · <author> · <id>` (the separator is
+a space, U+00B7 and a space) and runs to the next one; text before the
+first entry is the file's title and is kept as written.
+
+- `time` is when it was written, RFC 3339 in UTC to the second.
+- `kind` is lower-case letters, digits and `-`: `comment` or `history`.
+  An entry of another kind, or whose time does not parse, is kept as
+  written and not shown, so a later version can add kinds.
+- `author` is who wrote it: a person's name (`user_name` in `config.yaml`,
+  or the computer account's name; RUN-8) for the board's writes, or the
+  agent's full run id (agent-protocol §2), or `unknown` for an agent call
+  with no run. It is one line, at most 300 characters, with `·` written as
+  `-`. A name that is not a run id and not `unknown` is a person.
+- `id` is 1 to 64 letters, digits, `_` or `-`; Flashheart writes eight
+  random hex digits, not used in the file, so two copies of a synced board
+  do not collide.
+
+**Comments** are written by people on the board, never by agents (D47).
+After the heading and a blank line come its attributes, one `key: value`
+line each up to a blank line, always at least `state`:
+
+- `state`: `open` (new), `change-requested`, `addressed` or `resolved`
+  (FH-126); another value reads as `open`.
+- `edited`: when it was last edited, RFC 3339 UTC; absent until then. The
+  board shows the comment as edited.
+- `quote`: where the quoted part of the ticket is from (one line, at most
+  200 characters, such as `Acceptance Criteria 2`); present only with a
+  quote, which follows as a blockquote (`> ` before each line).
+- Other keys are kept, in place, when the comment is edited.
+
+Then its text, markdown, at most 16 KiB (`board.MaxSectionText`); a quote
+is at most 4 KiB. Text and quote pass the secret scrubber (SEC-3), and a
+heading of level 1 to 3 in the text outside code fences becomes level 4
+and a code fence left open is closed, so it cannot start or hide an entry
+(FH-4). It is shown as markdown without raw HTML (SEC-4).
+
+**History** entries list what one write changed, one bullet each, and
+never the ticket's text:
+
+| Bullet | Meaning |
+|---|---|
+| `- created: <status>` | the ticket was created in that column |
+| `- moved: <from> → <to>` | its `status` changed (a column or `rejected`; `->` is read too) |
+| `- edited: <names>` | frontmatter keys (`priority`, `pr`), `title`, sections (`description`, `acceptance-criteria`, `test-plan`, `reproduction`, `context`), `review`; `body` for other text, `frontmatter` for a key Flashheart would not name or frontmatter that does not parse |
+| `- ticked: <items>`, `- unticked: <items>` | `criterion N` and `review step N`, numbered from 1, when only their boxes changed |
+| `- archived`, `- restored` | archived or restored (EDIT-8) |
+
+A bullet of another form is kept and not shown. History is worked out
+from the write itself, comparing the ticket (and, for a review step, its
+`review.md`) before and after, so every write path is described alike (D48).
+`updated` and `rank` are not history, and neither are `## Notes` and
+`## Handoff`: a reorder within a column, a note, a checkpoint or an answer
+records none. A write that changes nothing records nothing.
+
+**Writes.** Every write is under the project lock and atomic (STO-3) and
+never touches the ticket file. A history entry is staged in the same
+write as the ticket change it describes, written after it (§Multi-file
+writes); a history that cannot be staged fails the write, and an archive
+or restore is moved back. A comment is appended to the file as it is under
+the lock; an edit replaces only that comment's entry, its heading,
+unknown attributes and following blank lines kept, and carries the hash of
+the file the person read: a stale hash is a conflict and writes nothing.
+New entries follow a blank line, in the file's line endings (CRLF when its
+first line ends so); every other byte, a byte-order mark included, is kept.
+The file is limited to 1 MiB: a comment that would pass it is refused,
+and history stops being recorded (the ticket's writes go on). Serve's own
+copies of linked files (REV-5) and `migrate` record no history.
 
 ## Files and the files index
 

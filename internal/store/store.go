@@ -39,6 +39,16 @@ var safeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$`)
 // Store reads a board root. Every access goes through an os.Root, so paths
 // and symlinks cannot escape the root (SEC-2).
 type Store struct {
+	*shared
+	// author is who this store writes as (As): the person at the board or
+	// an agent's run id, named in the history each ticket write appends;
+	// "" writes no history.
+	author string
+}
+
+// shared is the root, clock and record of writes every view of a store
+// (As) shares.
+type shared struct {
 	path  string
 	mu    sync.Mutex
 	root  *os.Root
@@ -52,7 +62,18 @@ type Store struct {
 // New returns a store that opens the root on first use and keeps trying
 // until it exists, so a root created after startup is picked up.
 func New(path string) *Store {
-	return &Store{path: path}
+	return &Store{shared: &shared{path: path}}
+}
+
+// As returns the store writing as by: the person at the board (their
+// name) or an agent's run id ("unknown" when the caller has none). Every
+// ticket write it makes appends one history entry naming by to the
+// ticket's activity file, in the same write (board-format §Activity), and
+// comments are added as by. It shares this store's root, clock and record
+// of writes. The store New returns writes as no one and records no
+// history: serve's copies of linked files and migrate.
+func (s *Store) As(by string) *Store {
+	return &Store{shared: s.shared, author: board.Author(by)}
 }
 
 // Open opens the board root at path now. A missing root returns an error
@@ -442,6 +463,13 @@ func readProject(root *os.Root, fsys fs.FS, name string) (board.Project, []strin
 		}
 		if present["files"] != nil {
 			r.readFilesIndex(&project, ticket.ID, path.Join(tickets, folder, "files", "index.yaml"))
+		}
+		// A comment changes only the activity file; the fingerprint sees it,
+		// so the board's revision moves and pages read the ticket again.
+		if entry := present[board.ActivityFile]; entry != nil {
+			if info, err := entry.Info(); err == nil {
+				r.note(path.Join(tickets, folder, board.ActivityFile), info)
+			}
 		}
 	}
 	slices.SortStableFunc(project.Tickets, func(a, b board.Ticket) int {

@@ -96,7 +96,14 @@
   directory is removed (FH-110).
 - Every MCP write tool's run and claim policy (agent-protocol §7.1) is one
   table test, tool × caller (`TestWriteToolPolicies`); a new tool adds its
-  row there. Attribution precedence is tested apart from the tools
+  row there, with the history entries a successful call appends.
+- A ticket's activity file (D47) is tested where it is defined: the format
+  round-trips byte for byte (CRLF, BOM, unknown entries) and history names
+  no ticket text in `board`; every store ticket write appends exactly one
+  entry, comments refuse a stale hash, and concurrent writers all land in
+  `store` (`TestEveryTicketWriteAppendsOneHistoryEntry`); every board write
+  in `api` (`TestBoardWritesAppendOneHistoryEntry`); comments need
+  Singleserve's authentication in `app`. Attribution precedence is tested apart from the tools
   (`TestAttributionPrecedence`).
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`

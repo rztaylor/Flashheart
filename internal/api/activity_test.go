@@ -19,13 +19,14 @@ func activityAPI(t *testing.T) (http.Handler, *events.Log) {
 	t.Helper()
 	root := copyBoard(t, "sample")
 	files := store.New(root)
+	files.SetClock(func() time.Time { return boardWriteTime })
 	t.Cleanup(func() { files.Close() })
 	log := events.New(files)
 	return New(Options{
 		Info:   Info{Root: root, Theme: "system"},
 		Board:  index.New(files, index.Options{}),
 		Files:  files,
-		Writer: files,
+		Writer: files.As("Robert"),
 		Events: log,
 		Now:    func() time.Time { return boardWriteTime },
 	}), log

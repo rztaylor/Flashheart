@@ -105,8 +105,12 @@ func NoteLine(day time.Time, by, text string) string {
 	if by != "" {
 		text = by + ": " + text
 	}
-	return "- " + day.Format("2006-01-02") + " · " + text
+	return "- " + day.Format("2006-01-02") + dot + text
 }
+
+// dot separates the parts of the dated lines Flashheart writes: a note
+// bullet's day and text, and an activity entry heading's parts.
+const dot = " · "
 
 // BlockedStartNote is the ## Notes bullet recording why a blocked ticket
 // was started anyway (EDIT-2), from the board or by an agent's claim.

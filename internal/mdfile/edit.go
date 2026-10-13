@@ -315,13 +315,20 @@ func AppendToSection(data []byte, sectionName, text string) ([]byte, error) {
 // heading outside code fences, which would end the section, becomes a
 // level-3 one, and a code fence left open, which would hide the headings
 // after it, is closed.
-func SectionSafe(content string) string {
+func SectionSafe(content string) string { return HeadingsFrom(content, 3) }
+
+// HeadingsFrom keeps written content inside a part of a file that headings
+// above level would end: each such heading outside code fences becomes a
+// heading of level, and a code fence left open is closed. SectionSafe is
+// HeadingsFrom at level 3; an activity entry's text uses level 4, since its
+// entries start at level-3 headings.
+func HeadingsFrom(content string, level int) string {
 	var out strings.Builder
 	for _, line := range scan(content) {
 		text := line.text
 		if !line.inFence {
-			if match := heading.FindStringSubmatch(strings.TrimRight(text, "\n")); match != nil && len(match[1]) <= 2 {
-				text = strings.Repeat("#", 3-len(match[1])) + strings.TrimLeft(text, " ")
+			if match := heading.FindStringSubmatch(strings.TrimRight(text, "\n")); match != nil && len(match[1]) < level {
+				text = strings.Repeat("#", level-len(match[1])) + strings.TrimLeft(text, " ")
 			}
 		}
 		out.WriteString(text)
