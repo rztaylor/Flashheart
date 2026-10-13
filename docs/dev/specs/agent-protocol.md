@@ -427,9 +427,10 @@ server is registered by running
 because Claude Code owns `~/.claude.json`; without a `claude` command setup
 prints it for the user. The protocol skill goes to
 `~/.claude/skills/flashheart/SKILL.md`, and the kanban-tracker skill, which
-it replaces, moves into the backup (user, 2026-10-06). `--write` backs up
-what it changes in `~/.claude/flashheart-backup/<UTC time>/`;
-`--uninstall --write` restores the backed-up `settings.json` byte for byte
+it replaces, moves into the backup (user, 2026-10-06). Setup shows the
+diff and asks before applying it (`--yes` skips the question; SET-1). It
+backs up what it changes in `~/.claude/flashheart-backup/<UTC time>/`;
+`--uninstall` restores the backed-up `settings.json` byte for byte
 when nothing changed since, else removes only setup's own hooks.
 
 The protocol skill is Flashheart's own code, not user configuration, so it
@@ -479,10 +480,10 @@ text: it sets `command` and `args` in `[mcp_servers.flashheart]` (a new
 table goes after the last MCP server's) and keeps every comment, other
 key and table, the rest of its own table included. A `flashheart` server
 written any other way (dotted keys, an inline `mcp_servers` table) and
-broken TOML are refused with the fix, never rewritten. `--write` backs up
+broken TOML are refused with the fix, never rewritten. Applying backs up
 what it changes in `$CODEX_HOME/flashheart-backup/<UTC time>/` and
 refuses a file that changed since the plan (Codex may have saved trust in
-between). `--uninstall --write` removes the table and its sub-tables,
+between). `--uninstall` removes the table and its sub-tables,
 setup's hooks (restoring the backed-up `hooks.json` byte for byte when
 nothing changed since) and the marked section, each with the blank line
 setup put before it, and deletes a file setup created that is left empty.
@@ -495,7 +496,7 @@ for `hooks.json` (`[hooks.state."<CODEX_HOME>/hooks.json:…"]`) or when
 `[features] hooks = false`; how Codex computes the hash is not recorded,
 so a stale trust after a changed command is not detected. The protocol
 text in `AGENTS.md` is not refreshed by a hook: after an upgrade `doctor`
-reports it out of date and `setup codex --write` replaces it.
+reports it out of date and `setup codex` replaces it.
 
 Setup owns only entries it can identify as its own (a hook whose program is
 a `flashheart` binary run with `hook`, the server named `flashheart`, the
@@ -939,7 +940,7 @@ still folds `tool.used` from older logs, so the last two days read
 correctly across the upgrade. Agents see no difference: the MCP tools, the
 hook registrations and the skill's text keep their shape, and only the
 skill's `flashheart-protocol` metadata changes, which the session-start
-hook refreshes (§5.4); re-running `setup claude --write` updates it too.
+hook refreshes (§5.4); re-running `setup claude` updates it too.
 
 Additive change within version 2 (D33, FH-62, 2026-10-11): activity
 outside any git repository is no longer recorded in a `_scratch` project;

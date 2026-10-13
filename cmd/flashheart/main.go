@@ -28,6 +28,7 @@ func main() {
 		StartBackground: background.Start,
 		OpenServeLog:    func(root string) io.Writer { return logfile.ServeLog(root) },
 		Stdin:           os.Stdin,
+		Interactive:     func() bool { return cli.IsTerminal(os.Stdin) },
 		Getwd:           os.Getwd,
 		FindCLI:         func(agent setup.Agent, home string) string { return agent.FindCLI(home) },
 		OpenHandshake: func() (cli.Handshake, error) {

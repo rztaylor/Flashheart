@@ -19,11 +19,15 @@ app do not run Claude Code and have no hooks. Checked against Claude Code
 ## Set it up
 
 ```sh
-flashheart setup claude            # show what would change
-flashheart setup claude --write    # apply it, with backups
+flashheart setup claude
 ```
 
-`setup claude` changes nothing until you add `--write`. It shows, as a diff:
+`setup claude` shows what it would change, then asks
+`Apply these changes? [y/N]` and writes only if you answer `y`, backing up
+each file first. `--yes` applies without asking (for scripts; `--write` is
+its older name), and `--dry-run` only shows the changes. Run with no
+terminal to ask in, as from a script or an agent, it only shows them unless
+you pass `--yes`. It shows, as a diff:
 
 - the hooks it merges into `~/.claude/settings.json`: every event Flashheart
   handles, each running `<path to flashheart> hook claude <Event>`, and
@@ -41,7 +45,7 @@ flashheart setup claude --write    # apply it, with backups
   Flashheart skill replaces it, and agents should not have two sets of
   ticket rules.
 
-`--write` first copies everything it changes into
+Before writing, setup copies everything it changes into
 `~/.claude/flashheart-backup/<time>/`. Commands use the absolute path of the
 `flashheart` you ran, and pass `--root` only when your board is not at
 `~/reports/Kanban`. Run setup again after moving the binary; it replaces its
@@ -53,8 +57,7 @@ are read when a session starts.
 To undo it:
 
 ```sh
-flashheart setup claude --uninstall           # show what would change
-flashheart setup claude --uninstall --write   # undo it
+flashheart setup claude --uninstall   # shows what would change, then asks
 ```
 
 If `settings.json` has not changed since setup wrote it, uninstalling puts
