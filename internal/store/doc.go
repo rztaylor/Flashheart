@@ -33,7 +33,9 @@
 // EditTicketAddressing), a request for changes moves the ticket and
 // marks its comments in one write (RequestChanges, REV-6), and a comment
 // sent to a session is marked delivered by whoever delivers it, under the
-// lock, after which a person cannot edit it (DeliverComment, FH-127); the board read
+// lock, after which a person cannot edit it (DeliverComment, FH-127),
+// and a person deletes a comment until then on the file's hash
+// (DeleteComment, FH-140; TicketComment reads one); the board read
 // counts an open ticket's change requests (Ticket.Requests),
 // reads every project.yaml through one parser that reports problems as
 // warnings and edits it only through mdfile's plain-YAML editor (FH-77),

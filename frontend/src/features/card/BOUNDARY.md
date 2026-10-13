@@ -9,9 +9,9 @@ reload, criterion and review-step ticks through `editing`'s
 each taking its heading level), `Checklist`, `Attachments` (grid and
 lightbox), `AttachmentDrop` (files dropped or chosen into the ticket on
 the panel's Attachments tab and the page's Files, FH-18), and `TicketComments` (FH-125, FH-128): `ActivityTimeline`, a
-person's comment edited in place, ending in `CommentBox` (posting a
-comment with its quote, and telling a session, FH-127), under each one's
-in-place editing coordinator.
+person's comment edited in place or deleted (`CommentDelete`, FH-140),
+ending in `CommentBox` (posting, quoting, telling a session, FH-127),
+under each one's in-place editing coordinator.
 
 Panel only: `TicketProperties` and `TicketActions` (Move to, Position,
 Archive), and its tabs (`TicketSections`, `EditTab` through

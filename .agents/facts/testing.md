@@ -108,7 +108,7 @@
   switch) and that a word, bold, tick or added item changes only that
   line; `MarkdownEditor.dom.test.tsx` mounts it in happy-dom (checkbox,
   Alt+Enter, the view switch, pasting a web page as markdown or as plain
-  text, dropped files, keys left to the page). Pasted HTML (FH-142, D66)
+  text, dropped files, keys left to the page). Pasted HTML (FH-142, D68)
   is a table of realistic copies in `htmlToMarkdown.dom.test.ts` (unsafe
   schemes, remote images, nested lists, code, Google Docs, a code
   editor's lines, never raw HTML; happy-dom is told not to load frames
@@ -195,6 +195,20 @@
   `frontend/e2e/tell.spec.mjs` sends a comment to a session seeded by
   `agent-runs.mjs`, delivers it through the real prompt hook and ends
   the session for the missed case.
+- Deleting a comment (FH-140, D66): which comments may go, the entry
+  removed byte for byte and the `deleted` history in `board`
+  (`deletion_test.go`); the lock, hash, refusals and a delete racing a
+  delivery in two processes in `store` (`deletecomment_test.go`); a
+  deleted comment or change request left out by `Deliver` and `Withdraw`
+  in `events` (`withdraw_test.go`); one test per delivery path that it is
+  never handed over (`hooks`, `mcpserver`, `await`, each
+  `tell_test.go`); the endpoint, refusals in words, the human's
+  `comment.deleted` and the withdrawal in `api`
+  (`deletecomment_test.go`), its authentication in `app`. The control,
+  confirmation and refusal reasons are `TicketCommentDelete.dom.test.tsx`
+  on the page and the panel; `frontend/e2e/delete-comment.spec.mjs`
+  deletes from both, reloads, checks the real prompt hook never hands
+  over a deleted comment, and shows the refusals, with axe in both themes.
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
   (`internal/mcpserver`) lists tools over the in-memory transport and fails

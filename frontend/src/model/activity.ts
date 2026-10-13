@@ -127,13 +127,6 @@ export function filterActivity(
   return entries;
 }
 
-// shortAuthor names a run by its short id (agent and the session's first
-// eight characters), as the board does elsewhere; a person by name.
-export function shortAuthor(by: string): string {
-  const run = /^([a-z][a-z0-9-]*:)([^\s/]{1,8})\S*$/.exec(by);
-  return run ? `${run[1]}${run[2]}` : by;
-}
-
 const statusTitles = new Map<string, string>(
   STATUSES.map((status) => [status.id, status.title]),
 );
@@ -232,6 +225,8 @@ export function historyWords(changes: HistoryChange[]): string[] {
           "reopened",
           "change requests",
         );
+      case "deleted":
+        return counted(change, "deleted a comment", "deleted", "comments");
       default:
         return change.what;
     }
@@ -393,7 +388,7 @@ function commentEntry(comment: Comment): CommentEntry {
     day: localDay(comment.time),
     time: comment.time,
     id: comment.id,
-    by: comment.byPerson ? comment.by : shortAuthor(comment.by),
+    by: comment.byShort,
     byPerson: comment.byPerson,
     edited: comment.edited,
     state: comment.state,
@@ -417,7 +412,7 @@ function historyOf(detail: ActivityInput): HistoryEntry[] {
       key: `history:${entry.id}`,
       day: localDay(entry.time),
       time: entry.time,
-      by: entry.byPerson ? entry.by : shortAuthor(entry.by),
+      by: entry.byShort,
       byPerson: entry.byPerson,
       words: historyWords(entry.changes),
     }),

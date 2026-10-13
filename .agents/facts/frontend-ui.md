@@ -63,7 +63,9 @@
   (FH-125). The box's Tell a session now (FH-127) offers the runs the
   ticket detail lists (`tellSessions`), grouped and worded by
   `model/tell`; a comment's delivery line and its edit lock once
-  delivered are `ActivityTimeline`'s. Timeline and box are one shared part, `TicketComments`, on
+  delivered are `ActivityTimeline`'s, and its Delete control, with its
+  confirmation and refusal reasons (`model/comments`' `deleteRefusal`),
+  is `card/CommentDelete` (FH-140). Timeline and box are one shared part, `TicketComments`, on
   the page's Activity and the card panel's Comments tab, which has its
   own `InPlaceEditing` and stays mounted across tabs; closing the panel
   or opening another ticket waits on the leave guard (FH-128). The
@@ -101,7 +103,7 @@
   own chunk) and mounts in a shadow root, where its run-time styles are a
   constructed style sheet the CSP (`style-src 'self'`) allows; Tailwind
   does not reach inside, so it is themed with `EditorView.theme` over the
-  token custom properties. Paste (`editor/paste`, D66): files first, then
+  token custom properties. Paste (`editor/paste`, D68): files first, then
   plain text after Ctrl or Cmd with Shift and V (the key is observed, as
   the paste event does not carry it), then copied HTML as markdown
   through `editor/htmlToMarkdown` (our own walk over an inert

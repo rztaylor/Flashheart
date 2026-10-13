@@ -156,7 +156,8 @@ func (c *call) named(runArg string) error {
 			return nil
 		}
 		id := events.RunOf(r.ID)
-		if strings.HasPrefix(id.Session().String(), arg.Session().String()) && id.SubagentID() == arg.SubagentID() {
+		session := arg.Session().String()
+		if (strings.HasPrefix(id.Session().String(), session) || id.Short() == session) && id.SubagentID() == arg.SubagentID() {
 			matches = append(matches, r.ID)
 		}
 	}
@@ -275,8 +276,8 @@ func related(a, b string) bool {
 }
 
 // shortRuns names runs as recovery notes do, or in full when two would
-// look the same (Codex's session ids start with the time, so sessions
-// started in the same minute share a short id).
+// look the same (short ids are 8 characters of the session id, which two
+// sessions can share).
 func shortRuns(ids []string) string {
 	short := make([]string, 0, len(ids))
 	for _, id := range ids {

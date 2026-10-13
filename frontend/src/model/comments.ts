@@ -105,3 +105,36 @@ export function commentInFile(file: string, id: string): string {
   while (end < lines.length && !entryHeading.test(lines[end] ?? "")) end++;
   return lines.slice(start, end).join("\n").trimEnd();
 }
+
+// DeletableComment is what decides whether a comment can be deleted
+// (FH-140): its state as a change request, and where its delivery to a
+// session stands, with the run it was sent to (short).
+export interface DeletableComment {
+  state: string;
+  delivery: string;
+  sentTo: string;
+}
+
+// deleteRefusal says why a comment cannot be deleted, or undefined when it
+// can: once a session has read it, and while it is a change request open
+// or addressed (the server holds the same rule, board.CanDeleteComment).
+export function deleteRefusal(comment: DeletableComment): string | undefined {
+  if (comment.delivery === "delivered")
+    return `It can't be deleted: ${comment.sentTo || "its session"} has read it.`;
+  if (comment.state === "change-requested")
+    return "It can't be deleted while the change it asks for is open. Resolve it first.";
+  if (comment.state === "addressed")
+    return "It can't be deleted while the change request waits for you. Resolve it first.";
+  return undefined;
+}
+
+// deleteNote says what deleting a comment does besides removing it: one
+// sent to a session and still waiting is withdrawn, so the session never
+// reads it; history keeps the deletion, never the text.
+export function deleteNote(comment: DeletableComment): string {
+  const history =
+    "The history keeps that you deleted a comment, not what it said.";
+  return comment.delivery === "waiting"
+    ? `${comment.sentTo || "Its session"} has not taken it yet and never will. ${history}`
+    : history;
+}

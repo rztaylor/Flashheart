@@ -71,7 +71,7 @@ func TestRequestChangesSendsTheRequestsToTheHolder(t *testing.T) {
 	send(t, handler, http.MethodPost, "/api/tickets/AL-2/request-changes", RequestChangesRequest{
 		Comments: []string{posted.Comment.ID}, Comment: &CommentRequest{Body: "Rename the button to Save."},
 	}, http.StatusOK, &result)
-	if result.SentTo != "claude:s1" || len(result.Comments) != 2 || result.ActivityHash == "" || result.Hash == "" {
+	if result.SentTo != "claude:s1" || result.SentToShort != "claude:s1" || len(result.Comments) != 2 || result.ActivityHash == "" || result.Hash == "" {
 		t.Fatalf("result = %+v", result)
 	}
 	detail := ticketDetail(t, handler, "AL-2")
@@ -172,7 +172,7 @@ func TestRequestsAreResolvedAndReopened(t *testing.T) {
 	holding(t, log, "claude:s2", "AL-2")
 	var reopened CommentResponse
 	send(t, handler, http.MethodPatch, path, CommentEditRequest{State: "change-requested"}, http.StatusOK, &reopened)
-	if reopened.Comment.State != "change-requested" || reopened.SentTo != "claude:s2" {
+	if reopened.Comment.State != "change-requested" || reopened.SentTo != "claude:s2" || reopened.SentToShort != "claude:s2" {
 		t.Errorf("reopened = %+v", reopened)
 	}
 	if waiting, _ := log.Take("alpha", events.Mailbox{Session: "claude:s2"}); len(waiting) != 1 || waiting[0].ID != id || waiting[0].Type != events.EntryChangeRequest {

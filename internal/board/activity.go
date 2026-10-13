@@ -100,13 +100,15 @@ const (
 	ChangeAddressed = "addressed"
 	ChangeResolved  = "resolved"
 	ChangeReopened  = "reopened"
+	// ChangeDeleted is a comment a person deleted (FH-140).
+	ChangeDeleted = "deleted"
 )
 
 // Change is one thing a write changed: created (To: the status it starts
 // in), moved (From, To), edited (Fields: frontmatter keys, title, section
 // names), ticked or unticked (Criteria, Steps: 1-based numbers of
 // acceptance criteria and review steps), archived or restored, or a
-// comment state change (Comments: the comments' ids).
+// comment state change or deletion (Comments: the comments' ids).
 type Change struct {
 	What     string
 	From, To string
@@ -344,7 +346,7 @@ func parseChanges(lines []string) []Change {
 				}
 			}
 		case ChangeArchived, ChangeRestored:
-		case ChangeRequested, ChangeAddressed, ChangeResolved, ChangeReopened:
+		case ChangeRequested, ChangeAddressed, ChangeResolved, ChangeReopened, ChangeDeleted:
 			for _, item := range splitList(argument) {
 				if id, ok := strings.CutPrefix(item, "comment "); ok && commentIDPattern.MatchString(id) {
 					change.Comments = append(change.Comments, id)
@@ -554,7 +556,7 @@ func (c Change) line() string {
 			items = append(items, "review step "+strconv.Itoa(n))
 		}
 		return "- " + c.What + ": " + strings.Join(items, ", ")
-	case ChangeRequested, ChangeAddressed, ChangeResolved, ChangeReopened:
+	case ChangeRequested, ChangeAddressed, ChangeResolved, ChangeReopened, ChangeDeleted:
 		items := make([]string, 0, len(c.Comments))
 		for _, id := range c.Comments {
 			items = append(items, "comment "+id)

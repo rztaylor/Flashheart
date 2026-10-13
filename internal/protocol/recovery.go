@@ -51,8 +51,8 @@ type PreviousRun struct {
 	Edits int
 }
 
-// ShortRun shortens a run id to the agent and the first 8 characters of
-// the session id (agent-protocol §2).
+// ShortRun shortens a run id to the agent and 8 characters of the session
+// id, the last for a time-ordered one (agent-protocol §2, events.RunID.Short).
 func ShortRun(id string) string { return events.RunOf(id).Short() }
 
 // RecoveryNote renders the note returned at session start, or "" when there

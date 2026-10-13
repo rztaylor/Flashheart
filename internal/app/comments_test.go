@@ -91,4 +91,30 @@ func TestCommentsNeedTheBoardsAuthentication(t *testing.T) {
 	if len(kinds) != 2 || kinds[0] != events.CommentAdded || kinds[1] != events.TicketMoved {
 		t.Errorf("human events = %v", kinds)
 	}
+
+	// Deleting a comment (FH-140) needs the authentication too.
+	remove := func(client *http.Client) int {
+		t.Helper()
+		body := `{"base":"` + store.Hash(data) + `"}`
+		request, _ := http.NewRequest(http.MethodDelete, launch.BaseURL()+"api/tickets/AL-4/comments/"+posted.Comment.ID, strings.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		response, err := client.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		return response.StatusCode
+	}
+	if status := remove(unauthenticated); status != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated delete status = %d, want 401", status)
+	}
+	if now, _ := os.ReadFile(activity); string(now) != string(data) {
+		t.Fatal("an unauthenticated delete changed the activity file")
+	}
+	if status := remove(launch.Client()); status != http.StatusOK {
+		t.Fatalf("delete status = %d", status)
+	}
+	if now, _ := os.ReadFile(activity); len(board.ParseActivity(now).Comments) != 0 {
+		t.Errorf("the comment is still there:\n%s", now)
+	}
 }

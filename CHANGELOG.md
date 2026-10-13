@@ -8,8 +8,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Delete a comment you posted by mistake (FH-140, D66, `STO-8`). Beside
+  a comment's pencil, on the ticket's full page and the side panel's
+  Comments tab, **Delete comment** asks first, then removes it from the
+  ticket; the history records that you deleted a comment, never what it
+  said. A comment sent to a session that has not taken it yet is
+  withdrawn, so the session never reads it. Once a session has read a
+  comment, or while it is a change request not yet resolved, it stays,
+  and the control says why.
+
 - Pasting from a web page keeps its headings, lists and links (FH-142,
-  D66, `EDIT-12`). Copy part of a page, a document or an issue and paste
+  D68, `EDIT-12`). Copy part of a page, a document or an issue and paste
   it into a section's editor: headings, bold and italic text, code, links,
   lists (nested and numbered), task boxes, quotes and tables arrive as
   markdown. Headings start at level 3, so a pasted heading never splits
@@ -252,6 +261,19 @@ All notable changes to this project are documented here. The project follows
   once. Paths given to the MCP tools are copied as before.
 
 ### Fixed
+
+- Codex sessions started close together no longer look identical on the
+  board (FH-122, D67, agent-protocol §2). Codex's session ids start with
+  the time, so two sessions started in the same minute both showed as,
+  say, `codex:019a7c00` on the Overview, in the Runs tab, on cards and in
+  a ticket's history, and passing that run id from the recovery note
+  answered `ambiguous_run`. A time-ordered id (UUIDv7) is now shortened to
+  its last 8 characters, its random part (`codex:00000001` and
+  `codex:000000ff`), and that short id names its one session when passed
+  as `run`; the start of a full id is still accepted. Claude Code's short
+  ids are unchanged. The server now sends the short form of history and
+  comment authors (`byShort`) and of the session a change request went to
+  (`sentToShort`), so the frontend no longer shortens run ids itself.
 
 - Changes on the side panel's **Edit** tab are no longer lost without
   warning (FH-138). They now stay while you look at another tab, and

@@ -30,7 +30,8 @@ Intended layout (packages are created when they get real content):
   from the board and agents alike (`EditTicket`), moves, archive, each
   ticket's activity file (a store writing as someone, `As`, appends the
   history of every ticket write in the same transaction; people's
-  comments are added and edited there, never in the ticket file; D47),
+  comments are added, edited and deleted there, never in the ticket
+  file; D47, FH-140),
   attachments (a browser upload, `UploadAttachment`, is read no further
   than the limit and stored as what `board.SniffAttachment` says its
   bytes are, REV-7, SEC-7), path confinement, creating the root (`EnsureRoot`), reading
@@ -67,7 +68,10 @@ Intended layout (packages are created when they get real content):
   through, returning what it took even when recording delivery fails
   (FH-78), and handing a comment sent from the board over as its ticket
   has it then, marked delivered there through `store.DeliverComment`
-  (FH-127, D63); `protocol.InboxNote` is the one rendering of what the model is
+  (FH-127, D63), and leaving out a comment or change request the person
+  deleted since it was queued (`store.TicketComment`; `Log.Withdraw`
+  takes a deleted comment's entries out of an inbox; FH-140, D66);
+  `protocol.InboxNote` is the one rendering of what the model is
   shown (the recovery note has its own lines), `runs.Set.PendingDeliveries`
   the fold's undelivered answers. The prompt hook checks one file; the
   other paths also take the old location.

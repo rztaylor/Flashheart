@@ -114,7 +114,7 @@ Later additions: `@fontsource-variable/archivo` and an authored icon set
 (D14), and the interaction-test libraries (D42). A rich text editor needs
 its own decision before it is added (D56): CodeMirror 6 with a live
 preview (D61), its packages in D62. Pasted web HTML is converted by our
-own code over the browser's `DOMParser`, not a library (D66).
+own code over the browser's `DOMParser`, not a library (D68).
 
 ## 2026-10-04 — D11: Safety model
 
@@ -1381,7 +1381,7 @@ Options: the prompt hook checks both locations (a second `stat` on every
 prompt, for a short upgrade window); keep the `answers/` name (rejected
 by D54); drain into the new inbox and check one (chosen).
 
-## 2026-10-13 — D61: The formatted ticket editor is CodeMirror 6 with a live preview (paste revised by D66)
+## 2026-10-13 — D61: The formatted ticket editor is CodeMirror 6 with a live preview (paste revised by D68)
 
 Decision (user, 2026-10-13, after the FH-137 spike): CodeMirror 6 with a
 Flashheart-owned live preview, as recommended below. FH-16 builds it.
@@ -1565,7 +1565,7 @@ Codex release that changes it makes doctor report trusted hooks as
 changed, so re-record with the script when Codex updates its hooks and
 fix the rule if the recordings fail.
 
-## 2026-10-13 — D65: Files from the browser are judged by their bytes; pasted HTML stays text (paste revised by D66)
+## 2026-10-13 — D65: Files from the browser are judged by their bytes; pasted HTML stays text (paste revised by D68)
 
 Decision (FH-18, `REV-7`, `SEC-7`): a file pasted, dropped or chosen on
 the board is sent as the body of `POST /api/tickets/{id}/files`, through
@@ -1605,7 +1605,78 @@ checking the content (a PNG named `.txt` would be served as text); a
 text placeholder in the document (a save during an upload would write
 it); converting pasted HTML (see above).
 
-## 2026-10-13 — D66: Pasted web HTML becomes markdown through a converter of our own
+## 2026-10-13 — D66: A deleted comment leaves the file whole and is never handed to a session
+
+Built by FH-140 within the user's choice in the FH-67 brainstorm (a note
+to a session can be edited or deleted until it is delivered) and D63's
+note that a delivered comment is locked against deletion too. What
+FH-140 decided itself:
+
+- **What may be deleted.** Any person's comment on the board, as with
+  editing (Flashheart is single-user; a comment is not checked against
+  the current `user_name`), unless it is `delivered` or a change request
+  `change-requested` or `addressed`: a request waits on someone until it
+  is resolved, so the person resolves it first. The rule is
+  `board.CanDeleteComment`; the board words the same reasons.
+- **How.** The entry leaves `activity.md`, heading to the next entry,
+  under the project lock on the hash the person read (a stale hash is a
+  conflict, as for an edit), and the write's history says
+  `deleted: comment <id>`, worked out from the file before and after
+  (D58). No tombstone stays in the file, so the text is gone from disk.
+- **The session never reads it.** Delivery already reads a sent
+  comment's text at delivery time under the same lock (D63), so a
+  deleted one is left out with no `comment.delivered`; a change request
+  is now also looked up at delivery and left out once gone. The board
+  also withdraws the comment's queued entries from the inbox of the
+  session it was sent to and the ticket's live claimants, so its text
+  does not wait on disk there. Only an entry taken just before the
+  delete whose ticket then cannot be read would go as queued (D63's
+  nothing-taken-is-lost rule).
+
+Options: a tombstone entry or a `deleted` attribute (keeps the text, or
+needs a second rule to hide it); delivering a "withdrawn" notice (tells
+the session something it never read); deleting without the hash
+(a delete over an edit made in another tab would remove text the person
+had not seen); withdrawing only, without the delivery check (the
+session's home project is known only while its run is in the window).
+
+## 2026-10-13 — D67: A time-ordered session id is shortened to its end
+
+Short ids (agent-protocol §2, D39) were the agent and the first 8
+characters of the session id. Codex's session ids are UUIDv7: they start
+with the time in milliseconds, so the first 8 characters change only
+every 65 seconds or so, and every Codex session started in the same
+minute had the same short id (FH-122). Two Codex sessions side by side
+looked the same on the Overview, in the Runs tab and on cards, and the
+run id the recovery note gave answered `ambiguous_run`.
+
+A session id that is a whole version 7 UUID is now shortened to its last
+8 characters, which are random (`codex:019a7c00-0000-7000-8000-00009c4e1f2a`
+is `codex:9c4e1f2a`); any other id keeps its first 8, so Claude Code's
+random (version 4) ids and the MCP server's `mcp-` ids are unchanged.
+`events.RunID.Short` is the only place the rule lives: the server sends
+the short form with runs and questions (D39) and now with comment and
+history authors (`byShort`) and the session a change request was sent to
+(`sentToShort`), and the frontend's two own shorteners (activity authors,
+the change request toast) are gone. The MCP server's `run` argument
+accepts a run's short id as well as any start of its full id, so a
+recovery note's run id names its session, and agents that pass the old
+prefix or a full id still work; the protocol version is unchanged.
+Notes and handoffs already written keep the short id they were written
+with.
+
+Options: lengthen short ids until they are unique among the runs shown
+(a session's name would change as others start and end, and the
+recovery note, written by a hook, cannot see the board's view); a longer
+prefix for every agent (Claude Code's ids would change, and 12 or 13
+characters of a UUIDv7 still collide for sessions started in the same
+second); hashing the id (stable, but no longer a part of the id anyone
+can search for); the end of a time-ordered id (chosen). Only version 7 is
+treated as time-ordered: version 1 starts with the fast-changing low
+bits of its time, and version 6 ends with a node id that is the same on
+one machine.
+
+## 2026-10-13 — D68: Pasted web HTML becomes markdown through a converter of our own
 
 Decision (FH-142, `EDIT-12`, revising the paste rule of D61 and D65):
 HTML pasted into the formatted editor is converted to markdown by

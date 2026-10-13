@@ -22,6 +22,7 @@ import {
 } from "../editing/InPlace";
 import { RequestPill } from "./ChangeRequests";
 import { QuoteFigure } from "./CommentBox";
+import { CommentDelete } from "./CommentDelete";
 
 // when is an entry's date, and its time when it has one, where the
 // browser is.
@@ -80,11 +81,13 @@ const emptyWords: Record<ActivityFilter, string> = {
 
 // CommentEditing edits people's comments in place (FH-125): detail is the
 // ticket's activity, hashed by the activity file's hash; send saves a
-// comment's text on base.
+// comment's text on base, and remove, where the page can, deletes a
+// comment on base (FH-140).
 export interface CommentEditing {
   detail: { id: string; hash: string; comments: Comment[] };
   send(comment: string, base: string, body: string): Promise<Saved>;
   onSaved(saved: Saved | undefined, what: string): void;
+  remove?(comment: string, base: string): Promise<void>;
 }
 
 // ActivityTimeline is the ticket's activity, oldest first, on one rule
@@ -155,7 +158,8 @@ function Item({
 // CommentItem is a person's comment: who, when and whether it was edited,
 // its quote and its text, and, sent to a session, its delivery (FH-127);
 // where the page can save, a pencil opens its text in place, until it is
-// delivered (an edit already open stays, and its save is refused).
+// delivered (an edit already open stays, and its save is refused), and a
+// Delete control beside it deletes it, or says why it cannot (FH-140).
 function CommentItem({
   entry,
   context,
@@ -171,12 +175,29 @@ function CommentItem({
   const locked = entry.delivery === "delivered" && !item.open;
   const edit =
     editing?.detail.hash && item.editable && !locked ? editing : undefined;
+  const remove =
+    editing?.remove && editing.detail.hash && item.editable && !item.open
+      ? editing.remove
+      : undefined;
   return (
-    <Item entry={entry} className={edit ? editGroup : ""}>
+    <Item entry={entry} className={edit || remove ? editGroup : ""}>
       <Head
         entry={entry}
         action={
-          edit && !item.open ? <EditPencil item={item} name="comment" /> : null
+          (edit && !item.open) || remove ? (
+            <>
+              {edit && !item.open ? (
+                <EditPencil item={item} name="comment" />
+              ) : null}
+              {remove && editing ? (
+                <CommentDelete
+                  entry={entry}
+                  base={editing.detail.hash}
+                  remove={remove}
+                />
+              ) : null}
+            </>
+          ) : null
         }
       />
       {entry.quote ? (
@@ -305,7 +326,9 @@ function Head({ entry, action }: { entry: ActivityEntry; action?: ReactNode }) {
           <RequestPill state={entry.state} />
         ) : null}
       </p>
-      {action ? <span className="-my-1.5">{action}</span> : null}
+      {action ? (
+        <div className="-my-1.5 flex items-center">{action}</div>
+      ) : null}
     </div>
   );
 }

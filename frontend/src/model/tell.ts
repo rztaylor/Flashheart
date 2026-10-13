@@ -3,7 +3,6 @@
 // Pure: the sessions the server offers grouped for the picker, and a sent
 // comment's delivery in words.
 import type { CommentDelivery, TellSession } from "../api/board";
-import { shortRun } from "./requests";
 import { STATE_LABEL } from "./runs";
 
 // TellGroup is one session in the picker with its subagents under it;
@@ -45,10 +44,10 @@ export function noSessionReason(ticket: string): string {
 }
 
 // commentedWords is the toast after posting: where the comment went
-// (sentTo the run it was sent to, "" for none).
+// (sentTo the short id of the run it was sent to, "" for none).
 export function commentedWords(ticket: string, sentTo: string): string {
   return sentTo
-    ? `Commented on ${ticket} and sent it to ${shortRun(sentTo)}.`
+    ? `Commented on ${ticket} and sent it to ${sentTo}.`
     : `Commented on ${ticket}.`;
 }
 

@@ -118,7 +118,8 @@ type Inbox interface {
 // undelivered, whose inbox may be gone), keeps each entry once, hands
 // over each comment sent from the board as its ticket has it now, marking
 // it delivered there (FH-127: one sent to another run, delivered already
-// or gone is left out), and records each delivered (question.delivered
+// or gone is left out), leaves out a change request deleted since it was
+// queued (FH-140), and records each delivered (question.delivered
 // for an answer, comment.delivered otherwise) at at. It returns
 // everything it took even when an inbox, a ticket or the record fails, so
 // the caller shows it: nothing taken may be lost, and an answer whose
@@ -149,7 +150,7 @@ func Deliver(in Inbox, project string, boxes []Mailbox, pending []Entry, at time
 	}
 	kept := list[:0]
 	for _, e := range list {
-		if e.Type == EntryComment && e.Project != "" {
+		if (e.Type == EntryComment || e.Type == EntryChangeRequest) && e.Project != "" {
 			current, ok, err := in.DeliverComment(e, at)
 			if err != nil {
 				// The ticket cannot say: hand it over as it was queued.
@@ -194,14 +195,38 @@ func (l *Log) Queue(project string, e Entry) error {
 // DeliverComment hands over a comment a person sent from the board as its
 // ticket has it now (store.DeliverComment): with its current text, and
 // marked delivered there. ok is false when it is not to be handed over:
-// sent to another run, delivered already or no longer there.
+// sent to another run, delivered already or no longer there. A change
+// request goes as it was queued while its ticket still has it; one the
+// person deleted since (FH-140) is not handed over.
 func (l *Log) DeliverComment(e Entry, at time.Time) (Entry, bool, error) {
+	if e.Type == EntryChangeRequest {
+		_, ok, err := l.store.TicketComment(e.Project, e.Ticket, e.ID)
+		return e, ok, err
+	}
 	comment, ok, err := l.store.DeliverComment(e.Project, e.Ticket, e.ID, e.Run, at)
 	if err != nil || !ok {
 		return e, ok, err
 	}
 	e.Text, e.By = block(comment.Body, MaxInboxText), line(comment.By, MaxNameLength)
 	return e, true, nil
+}
+
+// Withdraw takes comment's entries (a comment or change request on ticket,
+// in ticketProject) out of the inbox of run's session, in project, so a
+// comment the person deleted (FH-140) does not wait there; the rest of the
+// inbox stays. Nothing queued is no error. Delivery leaves out a comment
+// that is gone in any case (Deliver); this keeps its text off the disk.
+func (l *Log) Withdraw(project, run, ticketProject, ticket, comment string) error {
+	id, err := ParseRunID(run)
+	if err != nil {
+		return err
+	}
+	_, err = l.store.TakeInbox(project, id.Session().String(), func(data []byte) bool {
+		e, ok := parseEntry(data)
+		return ok && (e.Type == EntryComment || e.Type == EntryChangeRequest) &&
+			e.ID == comment && e.Ticket == ticket && e.Project == ticketProject
+	})
+	return err
 }
 
 // MarkDelivered records that entries taken from an inbox reached their

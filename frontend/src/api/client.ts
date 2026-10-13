@@ -61,7 +61,7 @@ export async function getJSON<T>(
 // browsers cap such bodies at 64 KiB.
 export async function sendJSON(
   fetcher: AuthenticatedFetch,
-  method: "POST" | "PUT" | "PATCH",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
   options: { keepalive?: boolean } = {},

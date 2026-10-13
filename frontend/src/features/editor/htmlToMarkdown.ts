@@ -1,5 +1,5 @@
 // htmlToMarkdown turns HTML copied from a web page into markdown for the
-// editor (FH-142, D66): headings (demoted to levels 3 and up, so none
+// editor (FH-142, D68): headings (demoted to levels 3 and up, so none
 // starts a new section, D62), paragraphs, emphasis, strikethrough, code,
 // links, lists (nested, numbered, tasks), quotes, tables and rules.
 //

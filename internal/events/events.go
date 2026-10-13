@@ -220,8 +220,8 @@ type TicketData struct {
 	// Home is the claimant's own project on a claim, so a reader of the
 	// ticket's log knows where the holder's activity is recorded.
 	Home string `json:"home,omitempty"`
-	// Comment is the id of the comment a comment.added or comment.edited
-	// names.
+	// Comment is the id of the comment a comment.added, comment.edited or
+	// comment.deleted names.
 	Comment string `json:"comment,omitempty"`
 }
 

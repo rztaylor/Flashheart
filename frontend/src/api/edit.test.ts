@@ -5,6 +5,7 @@ import {
   addComment,
   blockedReasons,
   conflictOf,
+  deleteComment,
   editComment,
   keysInUse,
   moveTicket,
@@ -74,6 +75,7 @@ describe("comments", () => {
     id: "4e5f6a7b",
     time: "2026-10-13T09:12:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     state: "open",
     edited: "",
@@ -98,6 +100,7 @@ describe("comments", () => {
       revision: 7,
       warnings: [],
       sentTo: "",
+      sentToShort: "",
     });
     expect(calls[0]?.url).toBe("/api/tickets/FH-1/comments");
     expect(calls[0]?.init?.method).toBe("POST");
@@ -125,6 +128,7 @@ describe("comments", () => {
       revision: 7,
       warnings: ["It could not be sent now."],
       sentTo: "",
+      sentToShort: "",
     });
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
       body: "Not in Done.",
@@ -134,11 +138,36 @@ describe("comments", () => {
     });
   });
 
+  it("reads the short id of the session a comment was sent to (FH-122)", async () => {
+    const { fetcher } = respond(201, {
+      comment: {
+        ...comment,
+        sentTo: "codex:019a7c00-0000-7000-8000-000000000001",
+        delivery: "waiting",
+      },
+      activityHash: "a2",
+      revision: 7,
+      sentTo: "codex:019a7c00-0000-7000-8000-000000000001",
+      sentToShort: "codex:00000001",
+    });
+    const posted = await addComment(fetcher, "FH-1", {
+      body: "Not in Done.",
+      sendTo: "codex:019a7c00-0000-7000-8000-000000000001",
+    });
+    expect(posted.sentToShort).toBe("codex:00000001");
+  });
+
   it("edits a comment on the activity's hash, a stale one a conflict", async () => {
     const ok = respond(200, { comment, activityHash: "a3", revision: 8 });
     expect(
       await editComment(ok.fetcher, "FH-1", "4e5f6a7b", "a2", "New"),
-    ).toEqual({ hash: "a3", revision: 8, warnings: [], sentTo: "" });
+    ).toEqual({
+      hash: "a3",
+      revision: 8,
+      warnings: [],
+      sentTo: "",
+      sentToShort: "",
+    });
     expect(ok.calls[0]?.url).toBe("/api/tickets/FH-1/comments/4e5f6a7b");
     expect(ok.calls[0]?.init?.method).toBe("PATCH");
     expect(JSON.parse(String(ok.calls[0]?.init?.body))).toEqual({
@@ -160,6 +189,33 @@ describe("comments", () => {
       hash: "a9",
       content: "# Activity: FH-1\n",
     });
+  });
+
+  it("deletes a comment on the activity's hash, a refusal carrying its code (FH-140)", async () => {
+    const ok = respond(200, {
+      comment: "4e5f6a7b",
+      activityHash: "a3",
+      revision: 8,
+    });
+    expect(await deleteComment(ok.fetcher, "FH-1", "4e5f6a7b", "a2")).toEqual({
+      hash: "a3",
+      revision: 8,
+      warnings: [],
+    });
+    expect(ok.calls[0]?.url).toBe("/api/tickets/FH-1/comments/4e5f6a7b");
+    expect(ok.calls[0]?.init?.method).toBe("DELETE");
+    expect(JSON.parse(String(ok.calls[0]?.init?.body))).toEqual({ base: "a2" });
+    const refused = respond(409, {
+      error: { code: "delivered", message: "It was read." },
+    });
+    const error = await deleteComment(
+      refused.fetcher,
+      "FH-1",
+      "4e5f6a7b",
+      "a2",
+    ).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("delivered");
   });
 
   it("refuses a response without its comment", async () => {

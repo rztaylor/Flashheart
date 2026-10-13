@@ -46,7 +46,7 @@ describe("telling a session now (FH-127)", () => {
   it("words why there is no session, where a comment went, and its delivery", () => {
     expect(noSessionReason("FH-42")).toBe("No live session holds FH-42 now.");
     expect(commentedWords("FH-42", "")).toBe("Commented on FH-42.");
-    expect(commentedWords("FH-42", "claude:aaaa1111-2222")).toBe(
+    expect(commentedWords("FH-42", "claude:aaaa1111")).toBe(
       "Commented on FH-42 and sent it to claude:aaaa1111.",
     );
     expect(deliveryWords("waiting", "claude:aaaa1111")).toBe(

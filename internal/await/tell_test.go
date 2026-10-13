@@ -52,3 +52,46 @@ func TestWaitDeliversACommentSentFromTheBoard(t *testing.T) {
 		t.Fatalf("activity = %+v, %v", activity.Comments, err)
 	}
 }
+
+// A comment the person deleted after it was queued (FH-140) does not end
+// the wait and is never handed over: the wait goes on to the answer.
+func TestWaitNeverHandsOverADeletedComment(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture(t)
+	s, err := store.Open(f.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	created, err := s.CreateTicket(project, store.NewTicket{Title: "Colour the header", Key: "AL"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.ask(session, "q-1")
+	f.onSleep = func(call int) {
+		switch call {
+		case 2:
+			robert := s.As("Robert")
+			posted, hash, err := robert.AddComment(project, created.ID, store.Merge, store.NewComment{Body: "Posted by mistake.", SentTo: session})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := f.log.Queue(project, events.Entry{Type: events.EntryComment, ID: posted.ID, Run: session, Ticket: created.ID, Project: project, Text: posted.Body, By: "Robert"}); err != nil {
+				t.Fatal(err)
+			}
+			if _, _, err := robert.DeleteComment(project, created.ID, posted.ID, store.Unchanged(hash)); err != nil {
+				t.Fatal(err)
+			}
+		case 4:
+			f.answer(session, "q-1")
+		}
+	}
+	result, err := Wait(context.Background(), f.log, f.options("q-1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Note, "Posted by mistake") || !strings.Contains(result.Note, `"Push it?" → "Push"`) {
+		t.Fatalf("note:\n%s", result.Note)
+	}
+}
