@@ -556,6 +556,32 @@ func TestPreferencesRememberExpandedWorkstreams(t *testing.T) {
 	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 
+// The section editor's view, formatted or markdown, is remembered (FH-16);
+// a config without the setting opens it formatted.
+func TestPreferencesRememberTheEditorMode(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	var prefs Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
+	if prefs.Editor != "formatted" {
+		t.Fatalf("default editor = %q", prefs.Editor)
+	}
+	prefs.Editor = "markdown"
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	var again Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
+	if again.Editor != "markdown" {
+		t.Errorf("saved editor = %q", again.Editor)
+	}
+	data, _ := os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
+	if !strings.Contains(string(data), "editor: markdown") {
+		t.Errorf("config.yaml lacks the editor:\n%s", data)
+	}
+	prefs.Editor = "rich"
+	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+}
+
 func TestReadOnlyServerRefusesWrites(t *testing.T) {
 	t.Parallel()
 

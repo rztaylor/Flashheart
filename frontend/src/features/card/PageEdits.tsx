@@ -1,8 +1,9 @@
 import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
 import type { TicketDetail } from "../../api/board";
 import type { Saved } from "../../api/edit";
-import { TextArea, TextInput } from "../../components/Field";
+import { TextInput } from "../../components/Field";
 import { Icon } from "../../components/Icon";
+import type { LinkContext } from "../../model/markdown";
 import {
   type Criterion,
   criteriaOf,
@@ -12,6 +13,7 @@ import {
   titleLine,
 } from "../../model/sectionEdit";
 import { InPlaceEditor, type InPlaceItem } from "../editing/InPlace";
+import { MarkdownField } from "../editor/MarkdownField";
 import type { TicketEdits } from "./useTicket";
 
 // The full page's editors for the title and sections (FH-66), each open in
@@ -53,8 +55,16 @@ export function TitleEditor({ item, detail, edit, onSaved }: EditorProps) {
   );
 }
 
-// SectionEditor edits a section's text as markdown, by its heading in the
-// file (an empty or missing section starts empty).
+// Links says where a section's links and ticket ids lead, as in the view.
+interface Links {
+  context: LinkContext;
+  keys: Set<string>;
+}
+
+// SectionEditor edits a section's markdown, by its heading in the file (an
+// empty or missing section starts empty), in the formatted editor (FH-16):
+// the text it saves is the text as edited, so an untouched section saves
+// nothing.
 export function SectionEditor({
   item,
   detail,
@@ -62,13 +72,16 @@ export function SectionEditor({
   onSaved,
   heading,
   title,
-}: EditorProps & { heading: string; title: string }) {
+  context,
+  keys,
+}: EditorProps & Links & { heading: string; title: string }) {
   return (
     <InPlaceEditor
       item={item}
       name={title.toLowerCase()}
       detail={detail}
       read={(ticket: TicketDetail) => sectionSource(ticket.body, heading)}
+      readFile={(file) => sectionSource(file, heading)}
       isDirty={(draft, base) => !sameSection(draft, base)}
       send={(base, value) => edit.section(base, heading, value)}
       mine={(value) => value}
@@ -76,12 +89,12 @@ export function SectionEditor({
       onSaved={onSaved}
     >
       {(value, set) => (
-        <TextArea
-          aria-label={title}
+        <MarkdownField
+          label={title}
           value={value}
           onChange={set}
-          rows={Math.min(20, Math.max(5, value.split("\n").length + 1))}
-          placeholder="Markdown"
+          context={context}
+          keys={keys}
         />
       )}
     </InPlaceEditor>
@@ -97,7 +110,9 @@ export function CriteriaEditor({
   edit,
   onSaved,
   heading,
-}: EditorProps & { heading: string }) {
+  context,
+  keys,
+}: EditorProps & Links & { heading: string }) {
   if (!criteriaOf(sectionSource(detail.body, heading)))
     return (
       <SectionEditor
@@ -107,10 +122,12 @@ export function CriteriaEditor({
         onSaved={onSaved}
         heading={heading}
         title="Acceptance criteria"
+        context={context}
+        keys={keys}
       />
     );
-  const listOf = (ticket: TicketDetail): Row[] => {
-    const criteria = criteriaOf(sectionSource(ticket.body, heading)) ?? [];
+  const listOf = (body: string): Row[] => {
+    const criteria = criteriaOf(sectionSource(body, heading)) ?? [];
     // An empty list starts with one criterion to write.
     const rows = criteria.length ? criteria : [{ text: "", done: false }];
     return rows.map((criterion, key) => ({ ...criterion, key }));
@@ -120,7 +137,8 @@ export function CriteriaEditor({
       item={item}
       name="acceptance criteria"
       detail={detail}
-      read={listOf}
+      read={(ticket) => listOf(ticket.body)}
+      readFile={listOf}
       isDirty={(draft, base) => criteriaText(draft) !== criteriaText(base)}
       send={(base, rows) => edit.section(base, heading, criteriaText(rows))}
       mine={criteriaText}

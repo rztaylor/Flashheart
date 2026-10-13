@@ -14,6 +14,9 @@ export type ColourBy = "type" | "priority" | "age" | "none";
 export type SavedView = "" | "board" | "overview" | "workstreams" | "table";
 // HideableColumn is a real column the Board can hide (FH-41).
 export type HideableColumn = "backlog";
+// EditorMode is how a section opens for editing (FH-16): formatted, a live
+// preview of the markdown, or the markdown as written.
+export type EditorMode = "formatted" | "markdown";
 export type SavedState =
   | ""
   | "all"
@@ -39,6 +42,7 @@ export interface Preferences {
   colourBy: ColourBy;
   // hiddenColumns lists the real columns hidden from the board (FH-41).
   hiddenColumns: HideableColumn[];
+  editor: EditorMode;
   scopes: Record<string, ScopePreferences>;
   // expandedWorkstreams lists per project name the finished workstreams
   // shown expanded on the Workstreams view (FH-68).
@@ -50,6 +54,7 @@ export const defaultPreferences: Preferences = {
   density: "normal",
   colourBy: "type",
   hiddenColumns: [],
+  editor: "formatted",
   scopes: {},
   expandedWorkstreams: {},
 };
@@ -70,6 +75,7 @@ const isView = oneOf<SavedView>([
   "table",
 ]);
 const isHideableColumn = oneOf<HideableColumn>(["backlog"]);
+const isEditorMode = oneOf<EditorMode>(["formatted", "markdown"]);
 const isState = oneOf<SavedState>([
   "",
   "all",
@@ -109,6 +115,7 @@ export function isPreferences(value: unknown): value is Preferences {
     isColourBy(value.colourBy) &&
     Array.isArray(value.hiddenColumns) &&
     value.hiddenColumns.every(isHideableColumn) &&
+    isEditorMode(value.editor) &&
     isRecord(value.scopes) &&
     Object.values(value.scopes).every(isScope) &&
     isRecord(value.expandedWorkstreams) &&

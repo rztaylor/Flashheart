@@ -25,6 +25,7 @@ ui:
 	ui.Density = DensityCompact
 	ui.ColourBy = "priority"
 	ui.HiddenColumns = []string{"backlog"}
+	ui.Editor = EditorMarkdown
 	ui.ExpandedWorkstreams = map[string][]string{"flashheart": {"foundation", "board-ui"}}
 	ui.Scopes = map[string]Scope{
 		"all":        {View: "board", State: "working"},
@@ -34,7 +35,7 @@ ui:
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  hidden_columns: [backlog]\n", "    flashheart: [foundation, board-ui]\n"} {
+	for _, want := range []string{"# Flashheart settings\n", "quiet_minutes: 5 # minutes\n", "custom_key: kept\n", "  extra: preserved\n", "  theme: dark\n", "  hidden_columns: [backlog]\n", "  editor: markdown\n", "    flashheart: [foundation, board-ui]\n"} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("SetUI lost %q:\n%s", want, got)
 		}
@@ -71,21 +72,36 @@ func TestUIPreferencesAreValidated(t *testing.T) {
 	t.Parallel()
 
 	for _, ui := range []UI{
-		{Theme: "sepia", Density: DensityNormal, ColourBy: "type"},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "rainbow"},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"../x": {View: "board"}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {View: "map"}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {State: "weird"}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Age: Choice{Include: []string{"decade"}}}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Type: Choice{Exclude: []string{strings.Repeat("x", 201)}}}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Scopes: map[string]Scope{"alpha": {Priority: Choice{Include: make([]string, 101)}}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", ExpandedWorkstreams: map[string][]string{"../x": {"lines"}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", ExpandedWorkstreams: map[string][]string{"alpha": {"Not A Slug"}}},
-		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", ExpandedWorkstreams: map[string][]string{"alpha": make([]string, 501)}},
+		{Theme: "sepia", Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "rainbow", Editor: EditorFormatted},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, Scopes: map[string]Scope{"../x": {View: "board"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, Scopes: map[string]Scope{"alpha": {View: "map"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, Scopes: map[string]Scope{"alpha": {State: "weird"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, Scopes: map[string]Scope{"alpha": {Age: Choice{Include: []string{"decade"}}}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, Scopes: map[string]Scope{"alpha": {Type: Choice{Exclude: []string{strings.Repeat("x", 201)}}}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, Scopes: map[string]Scope{"alpha": {Priority: Choice{Include: make([]string, 101)}}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, ExpandedWorkstreams: map[string][]string{"../x": {"lines"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, ExpandedWorkstreams: map[string][]string{"alpha": {"Not A Slug"}}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: EditorFormatted, ExpandedWorkstreams: map[string][]string{"alpha": make([]string, 501)}},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type", Editor: "wysiwyg"},
+		{Theme: ThemeLight, Density: DensityNormal, ColourBy: "type"},
 	} {
 		if _, err := SetUI(nil, ui); err == nil {
 			t.Errorf("SetUI(%+v) accepted invalid preferences", ui)
 		}
+	}
+}
+
+// A config written before the formatted editor (FH-16) opens it formatted.
+func TestEditorModeDefaultsToFormatted(t *testing.T) {
+	t.Parallel()
+
+	parsed, err := Parse([]byte("version: 2\nui:\n  theme: dark\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.UI.Editor != EditorFormatted {
+		t.Errorf("editor = %q, want %q", parsed.UI.Editor, EditorFormatted)
 	}
 }
 

@@ -95,6 +95,19 @@
   `TicketPageEdit.dom.test.tsx`; in the browser,
   `frontend/e2e/in-place.spec.mjs` saves, cancels, conflicts (writing the
   file during an edit) and fails a save with `page.route`.
+- The formatted editor (FH-16) is tested in `frontend/src/features/editor`:
+  the live preview's decorations per GFM construct, the commands and the
+  slash menu over `EditorState` in node; `corpus.test.ts` opens every
+  editable section of `testdata/tickets/` and a GFM sample, checks that
+  it comes back exactly (untouched, and through a Formatted/Markdown
+  switch) and that a word, bold, tick or added item changes only that
+  line; `MarkdownEditor.dom.test.tsx` mounts it in happy-dom (checkbox,
+  Alt+Enter, the view switch, plain paste, dropped files, keys left to the
+  page). Layout and real focus in its shadow root (the slash menu, the
+  selection toolbar) are `frontend/e2e/editor.spec.mjs`, which also checks
+  saving over an agent's checkpoint, the conflict, the remembered view,
+  images, that no request leaves the board's origin and no CSP violation.
+  `TicketPageEdit.dom.test.tsx` stands a text area in for the editor.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and
   `internal/api`, FH-96): event appends refold with no read, `Current`

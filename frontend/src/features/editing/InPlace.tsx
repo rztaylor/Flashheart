@@ -312,7 +312,8 @@ export function AddItem({ item, name }: { item: InPlaceItem; name: string }) {
   );
 }
 
-const mac =
+// mac: shortcuts take Cmd (⌘) rather than Ctrl.
+export const mac =
   typeof navigator !== "undefined" &&
   /Mac|iP(hone|ad)/.test(navigator.platform);
 // sendKeys names Ctrl or Cmd and Enter, which saves an open item and posts
@@ -337,6 +338,9 @@ export interface InPlaceEditorProps<D extends { id: string; hash: string }, T> {
   // theirs is the same part of the file now on disk, for "Now on disk";
   // without it the dialog shows the whole file.
   theirs?(file: string): string;
+  // readFile is the item's value in a file's text: a save that conflicts
+  // with a version that left it as it was is saved again (useTicketDraft).
+  readFile?(file: string): T;
   // check refuses a value before it is sent, saying why.
   check?(value: T): string | undefined;
   onSaved(saved: Saved | undefined, what: string): void;
@@ -358,12 +362,13 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
   send,
   mine,
   theirs = (file) => file,
+  readFile,
   check,
   onSaved,
   children,
   className = "",
 }: InPlaceEditorProps<D, T>) {
-  const draft = useTicketDraft({ detail, read, isDirty, onSaved });
+  const draft = useTicketDraft({ detail, read, readFile, isDirty, onSaved });
   const [problem, setProblem] = useState("");
   const frame = useRef<HTMLFieldSetElement>(null);
   const { dirty, busy, value } = draft;
@@ -372,10 +377,13 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
   useEffect(() => item.setDirty(dirty), [dirty]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: registers once, while open.
   useEffect(() => {
+    // A control marked data-autofocus (the formatted editor) takes focus
+    // before the first field.
     const focus = () =>
-      frame.current
-        ?.querySelector<HTMLElement>("input, textarea, select")
-        ?.focus();
+      (
+        frame.current?.querySelector<HTMLElement>("[data-autofocus]") ??
+        frame.current?.querySelector<HTMLElement>("input, textarea, select")
+      )?.focus();
     focus();
     item.setFocus(focus);
     return () => item.setFocus(null);
@@ -398,6 +406,9 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
     if (outcome === "saved") item.finish();
   };
   const onKeyDown = (event: KeyboardEvent) => {
+    // A key a control inside has handled (Escape closing a menu) is not
+    // the item's.
+    if (event.defaultPrevented) return;
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       void save();

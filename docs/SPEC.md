@@ -311,7 +311,7 @@ Full format: `docs/dev/specs/board-format.md`.
   links into another ticket's folder open that ticket's full page
   (`CARD-7`).
 - `CARD-3` Acceptance-criteria checkboxes can be ticked in the rendered view
-  and are saved to the file.
+  and in the editor (`EDIT-11`, `EDIT-12`) and are saved to the file.
 - `CARD-4` A **Blocked by** section explains each blocking reason: ticket
   dependency or workstream dependency.
 - `CARD-5` The **Handoff** section is shown prominently with its author run
@@ -432,9 +432,10 @@ Full format: `docs/dev/specs/board-format.md`.
   as a picker of ticket ids), the status keeps **Move to** and its rules
   (`EDIT-2`); agent, created and changed are read-only. Sections
   (Description, Test plan or Reproduction, Context, the ticket's own) edit
-  as markdown; an empty template section shows **Add <section>** in its
-  place; the acceptance criteria edit as a list (add, reword, tick,
-  remove, reorder; a section with other text edits as markdown), and
+  in the formatted editor (`EDIT-12`); an empty template section shows
+  **Add <section>** in its place; the acceptance criteria edit as a list
+  (add, reword, tick, remove, reorder; a section with other text edits in
+  the formatted editor), and
   ticking one stays one click (`CARD-3`). In Activity a person's comment
   edits as markdown, saved on the hash of the activity file it was read
   from, so an edit over a newer version opens the conflict dialog with
@@ -444,9 +445,35 @@ Full format: `docs/dev/specs/board-format.md`.
   other byte of the file as it was (board-format §Section edits), and an
   untouched save writes nothing; it carries the content hash its edit
   opened on, moved on to a newer version only while that version left the
-  item itself unchanged, so a change to the item on disk opens the
-  conflict dialog (`EDIT-7`). A failed save keeps the item open with the
+  item itself unchanged (a section's save that meets such a version it
+  had not yet seen is made again on it, once), so a change to the item on
+  disk opens the conflict dialog (`EDIT-7`). A failed save keeps the item open with the
   reason beside it. The card panel keeps its Edit tab.
+- `EDIT-12` **Formatted editor** (FH-16, D61, D62): a section edits as
+  markdown shown formatted, as the view renders it (`CARD-2`), except on
+  the lines the cursor or selection is on, where its markdown shows to be
+  edited. Headings, emphasis, strikethrough, code, quotes and lists are
+  styled with their marks hidden; a task's box is a checkbox that ticks
+  it (`CARD-3`); the ticket's own images (`files/`) show, any other image
+  as its words; links, relative `files/` links and ticket ids are styled
+  and open in a new tab with Ctrl or Cmd and a click, or with Alt and
+  Enter on them (on a task's line, Alt and Enter ticks it); tables and
+  fenced code are edited as text. Typing `/` at the start of a line or
+  after a space opens a menu of blocks (heading and subheading, at levels
+  3 and 4 under the section's own, bulleted, numbered and task lists,
+  quote, code block, table, divider, link), chosen with the arrow keys and
+  Enter; Escape closes only the menu. Selected text shows a toolbar (bold,
+  italic, code, link, bulleted list, task list), reached with Tab or Alt
+  and F10 and moved along with the arrow keys, Escape returning to the
+  text; Ctrl or Cmd with B, I, E or K formats too. A **Formatted** /
+  **Markdown** switch shows the markdown as written; switching never
+  changes the text, and the choice is remembered (`CFG-2`). The text saved
+  is the text edited, never re-written, so an untouched section saves
+  nothing and an edit changes only what was typed. Paste inserts plain
+  text (pasted HTML is never parsed), a dropped file is not inserted, raw
+  HTML shows as text and is never rendered, and the editor fetches
+  nothing but the ticket's own images. Tab leaves the editor. It loads on
+  the first edit, so the board's first load does not carry it.
 
 ### 6.7 Runs (`RUN`)
 
@@ -664,7 +691,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `project.yaml` (per project): quiet threshold, event retention, done-column
   limit, `auto_create_projects`, `enforce_handoff`, attachment limits.
 - `CFG-2` UI preferences (theme, density, colour by, hidden columns, each
-  project's view and filters, and the finished workstreams expanded) are
+  project's view and filters, the finished workstreams expanded, and the
+  section editor's Formatted or Markdown view, `EDIT-12`) are
   saved through the backend in the global config, never in browser storage.
   A change is saved shortly after it is made, and at once when the page is
   hidden or closed, so a reload does not lose it. The server answers a

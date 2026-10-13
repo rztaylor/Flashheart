@@ -19,6 +19,28 @@ vi.mock("../../state/useResource", () => ({
   useResource: () => ({ ...resource.state, reload: () => undefined }),
 }));
 
+// The formatted editor (FH-16) is stood in for by a text area: these tests
+// are about the page's in-place items, and the editor has its own tests
+// (features/editor) and runs in the browser suite.
+vi.mock("../editor/MarkdownField", () => ({
+  MarkdownField: ({
+    label,
+    value,
+    onChange,
+  }: {
+    label: string;
+    value: string;
+    onChange(value: string): void;
+  }) => (
+    <textarea
+      aria-label={label}
+      data-autofocus
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}));
+
 class FakeObserver {
   observe() {}
   unobserve() {}

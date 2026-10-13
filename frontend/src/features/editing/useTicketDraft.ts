@@ -61,11 +61,17 @@ export interface TicketDraft<T> {
 export function useTicketDraft<D extends { hash: string }, T>({
   detail,
   read,
+  readFile,
   isDirty,
   onSaved,
 }: {
   detail: D;
   read(detail: D): T;
+  // readFile reads the draft's part from a file's text. With it, a save
+  // that conflicts with a version the page had not heard of yet, which
+  // left that part as it was (an agent's checkpoint during a section
+  // edit), is saved again on that version once, without asking (FH-16).
+  readFile?(content: string): T;
   isDirty(draft: T, base: T): boolean;
   onSaved(saved: Saved | undefined, what: string): void;
 }): TicketDraft<T> {
@@ -110,10 +116,18 @@ export function useTicketDraft<D extends { hash: string }, T>({
   const run = async (
     request: DraftSave,
     from: string,
+    retried = false,
   ): Promise<SaveOutcome["kind"]> => {
     setBusy(true);
     setError("");
     const outcome = await saveWithBase(from, request.send);
+    if (
+      outcome.kind === "conflict" &&
+      readFile &&
+      !retried &&
+      !isDirty(readFile(outcome.conflict.content), base.value)
+    )
+      return run(request, outcome.conflict.hash, true);
     if (outcome.kind === "saved") {
       // Live updates may already have brought the saved version.
       if (latest.current.hash === outcome.saved.hash) reset(latest.current);

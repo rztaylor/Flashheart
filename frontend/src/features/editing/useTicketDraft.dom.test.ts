@@ -112,6 +112,69 @@ describe("useTicketDraft editing part of a file (FH-66)", () => {
     expect(result.current.value).toBe("mine");
   });
 
+  // A save that crosses an agent's write it had not heard of yet: the file
+  // on disk ("part|rest") left the draft's part as it was, so the draft is
+  // saved again on that version without asking (FH-16); a change to the
+  // part itself still asks.
+  const partOfFile = (content: string) => content.split("|")[0] ?? "";
+  const racing = (initial: File) =>
+    renderHook(
+      ({ detail }: { detail: File }) =>
+        useTicketDraft({
+          detail,
+          read: (file: File) => file.text,
+          readFile: partOfFile,
+          isDirty,
+          onSaved: vi.fn(),
+        }),
+      { initialProps: { detail: initial } },
+    );
+
+  it("saves again on a newer version that left its part as it was", async () => {
+    const { sends, send } = fakeSaves();
+    const { result } = racing({ hash: "h1", text: "one", rest: "a" });
+    act(() => result.current.set("mine"));
+    let outcome = "";
+    act(() => {
+      void result.current
+        .save({ send, what: "Saved", mine: "mine" })
+        .then((kind) => {
+          outcome = kind;
+        });
+    });
+    sends[0]?.reject(conflict("h2", "one|b"));
+    await settle();
+    expect(sends[1]?.base).toBe("h2");
+    sends[1]?.resolve(savedAs("h3"));
+    await settle();
+    expect(outcome).toBe("saved");
+    expect(result.current.conflict).toBeNull();
+  });
+
+  it("asks when the newer version changed its part, and retries only once", async () => {
+    const { sends, send } = fakeSaves();
+    const { result } = racing({ hash: "h1", text: "one", rest: "a" });
+    act(() => result.current.set("mine"));
+    act(() => {
+      void result.current.save({ send, what: "Saved", mine: "mine" });
+    });
+    sends[0]?.reject(conflict("h2", "theirs|a"));
+    await settle();
+    expect(sends).toHaveLength(1);
+    expect(result.current.conflict?.current.hash).toBe("h2");
+
+    act(() => result.current.cancel());
+    act(() => {
+      void result.current.save({ send, what: "Saved", mine: "mine" });
+    });
+    sends[1]?.reject(conflict("h3", "one|b"));
+    await settle();
+    sends[2]?.reject(conflict("h4", "one|c"));
+    await settle();
+    expect(sends).toHaveLength(3);
+    expect(result.current.conflict?.current.hash).toBe("h4");
+  });
+
   it("tells the caller how a save ended", async () => {
     const { sends, send } = fakeSaves();
     const { result } = part({ hash: "h1", text: "one", rest: "a" });

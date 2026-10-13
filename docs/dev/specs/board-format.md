@@ -529,6 +529,7 @@ ui:
   density: normal         # compact | normal | detailed
   colour_by: type         # type | priority | age | none
   hidden_columns: []      # real columns left off the Board: backlog (FH-41); absent shows all
+  editor: formatted       # formatted | markdown: how a section opens for editing (FH-16)
   scopes:                 # remembered view and filters, per project or "all"
     flashheart: {view: board, type: {include: [bug, spike]}, workstream: {exclude: [board-ui]}, state: blocked}   # view: board, agents, workstreams or table
   expanded_workstreams:   # finished workstreams shown expanded, per project (FH-68); absent: all collapsed

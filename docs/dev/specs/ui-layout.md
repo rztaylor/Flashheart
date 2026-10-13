@@ -347,7 +347,7 @@ at most 94rem.
   the row's end, while the item is hovered or holds focus (always on
   touch). The pencil, a double-click on the content or Enter opens the
   item in place: its control on a well with a rule border (the title a
-  one-line field in the display cut, a section a markdown text area, the
+  one-line field in the display cut, a section the formatted editor, the
   criteria a list of rows with a done box, the text, Move up, Move down
   and Remove, then *Add a criterion*; a property's name above its select,
   text field or chips, spanning the panel), then **Save**, **Cancel** and
@@ -362,6 +362,18 @@ at most 94rem.
   dialog, *Unsaved changes to the <name>* (a comment being written counts
   when leaving, named *the comment*): **Discard changes** or **Keep
   editing** (primary).
+- **The formatted editor** (`EDIT-12`, FH-16): a row of a muted hint
+  (*Type / for blocks · select text to format · Alt+Enter opens a link
+  or ticks a task*) and the **Formatted** / **Markdown** segmented switch,
+  wrapping on narrow screens, over the text on the card surface with a
+  rule border and control corners. Formatted reads as the section's
+  rendered markdown does (same type scale, task checkboxes, bullets,
+  images, links and ticket ids), with the edited lines' marks in faint
+  ink; Markdown is the text in the code face. The slash menu and the
+  selection toolbar (icon buttons for bold, italic, code, link, bulleted
+  list and task list) are popovers; the toolbar sits above the
+  selection, or below it near the top. While the editor's code loads, a
+  same-sized slot reads *Opening the editor…*.
 - **Below 1280px** the outline becomes a **Jump to** button (naming the
   section in view) at the top of the page, staying in view, opening the
   same list as a menu. From 1024px the properties stay on the right;

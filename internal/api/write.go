@@ -618,8 +618,10 @@ type Preferences struct {
 	Density  string `json:"density"`
 	ColourBy string `json:"colourBy"`
 	// HiddenColumns lists the real columns hidden from the Board (FH-41).
-	HiddenColumns []string                `json:"hiddenColumns"`
-	Scopes        map[string]config.Scope `json:"scopes"`
+	HiddenColumns []string `json:"hiddenColumns"`
+	// Editor is how the section editor opens: formatted or markdown (FH-16).
+	Editor string                  `json:"editor"`
+	Scopes map[string]config.Scope `json:"scopes"`
 	// ExpandedWorkstreams lists per project the finished workstreams shown
 	// expanded (FH-68).
 	ExpandedWorkstreams map[string][]string `json:"expandedWorkstreams"`
@@ -652,7 +654,7 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	if expanded == nil {
 		expanded = map[string][]string{}
 	}
-	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Scopes: scopes, ExpandedWorkstreams: expanded})
+	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Editor: ui.Editor, Scopes: scopes, ExpandedWorkstreams: expanded})
 }
 
 // savePreferences holds back preference reads until it answers: the save
@@ -675,6 +677,7 @@ func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 	}
 	ui.Theme, ui.Density, ui.ColourBy, ui.Scopes = request.Theme, request.Density, request.ColourBy, request.Scopes
 	ui.HiddenColumns = nonNil(request.HiddenColumns)
+	ui.Editor = request.Editor
 	ui.ExpandedWorkstreams = request.ExpandedWorkstreams
 	if len(ui.Scopes) > 500 || len(ui.ExpandedWorkstreams) > 500 {
 		writeError(w, http.StatusBadRequest, "invalid_input", "Too many remembered views or workstreams")

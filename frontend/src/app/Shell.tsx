@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import { restoreProject } from "../api/archive";
 import type { Card, Column } from "../api/board";
 import type { Created } from "../api/edit";
-import type { Preferences } from "../api/preferences";
+import type { EditorMode, Preferences } from "../api/preferences";
 import { AsideProvider } from "../components/Aside";
 import { Toast } from "../components/Toast";
 import { CardPanel } from "../features/card/CardPanel";
 import { TicketPage } from "../features/card/TicketPage";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
+import { EditorModeProvider } from "../features/editor/mode";
 import { ProjectRail } from "../features/projects/ProjectRail";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
 import { shownColumns } from "../model/columns";
@@ -94,6 +95,13 @@ export function Shell({
           if (after !== null) place(shownTicket, shownTicket.column, after);
         }
       : undefined;
+  // The section editor's view, formatted or markdown, is remembered with
+  // the other preferences (FH-16).
+  const editorMode = {
+    mode: preferences.editor,
+    setMode: (editor: EditorMode) =>
+      updatePreferences((current) => ({ ...current, editor })),
+  };
   // The phone column picker falls back to In progress when the column it
   // showed was hidden.
   const pickerColumns = shownColumns(preferences.hiddenColumns);
@@ -213,33 +221,35 @@ export function Shell({
             className="min-h-0 overflow-y-auto"
             aria-label={`Ticket ${route.ticket.id}`}
           >
-            <TicketPage
-              key={route.ticket.id}
-              ticket={route.ticket}
-              fetcher={fetcher}
-              lines={data.lines}
-              workstreams={data.workstreams}
-              keys={data.keys}
-              onOpen={(ticket) =>
-                navigate({ scope: { kind: "all" }, view: "ticket", ticket })
-              }
-              onClose={() =>
-                navigate({ scope: { kind: "all" }, view: "board" })
-              }
-              revision={data.revision}
-              editing={editing}
-              answers={answers}
-              boardLink={(project) => ({
-                href: formatRoute({
-                  scope: { kind: "project", project },
-                  view: "board",
-                  ticket: route.ticket,
-                }),
-                label:
-                  summaries.find((item) => item.name === project)
-                    ?.displayName ?? project,
-              })}
-            />
+            <EditorModeProvider value={editorMode}>
+              <TicketPage
+                key={route.ticket.id}
+                ticket={route.ticket}
+                fetcher={fetcher}
+                lines={data.lines}
+                workstreams={data.workstreams}
+                keys={data.keys}
+                onOpen={(ticket) =>
+                  navigate({ scope: { kind: "all" }, view: "ticket", ticket })
+                }
+                onClose={() =>
+                  navigate({ scope: { kind: "all" }, view: "board" })
+                }
+                revision={data.revision}
+                editing={editing}
+                answers={answers}
+                boardLink={(project) => ({
+                  href: formatRoute({
+                    scope: { kind: "project", project },
+                    view: "board",
+                    ticket: route.ticket,
+                  }),
+                  label:
+                    summaries.find((item) => item.name === project)
+                      ?.displayName ?? project,
+                })}
+              />
+            </EditorModeProvider>
           </main>
         ) : (
           // Below 1440px an open panel shrinks the rail to its key badges so

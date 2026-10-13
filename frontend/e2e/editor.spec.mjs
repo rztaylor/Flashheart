@@ -1,0 +1,465 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { expect, test } from "@playwright/test";
+
+import { writeDemoBoard } from "./demo-board.mjs";
+import {
+  expectNoAxeViolations,
+  launch,
+  makeSandbox,
+  open,
+  shot,
+  stopIfRunning,
+  waitForManualURL,
+} from "./support.mjs";
+
+// The formatted section editor (FH-16, D61) on a ticket's full page, under
+// the app's real CSP: one server over a writable demo board. Tests run in
+// order and each leaves the board as the next expects. Every request the
+// page makes and every CSP violation is recorded and checked at the end.
+test.describe.configure({ mode: "serial" });
+
+let sandbox;
+let server;
+let context;
+let page;
+let origin;
+const requests = [];
+const consoleErrors = [];
+
+test.beforeAll(async ({ browser }) => {
+  sandbox = await makeSandbox();
+  const demo = join(sandbox.home, "demo");
+  await writeDemoBoard(demo);
+  sandbox.root = demo;
+  server = launch(sandbox, ["serve", "--foreground"]);
+  const url = await waitForManualURL(server.child, server.output);
+  origin = new URL(url).origin;
+  context = await browser.newContext();
+  // A CSP violation anywhere, in the document or a shadow root, is noted.
+  await context.addInitScript(() => {
+    window.cspViolations = [];
+    document.addEventListener("securitypolicyviolation", (event) =>
+      window.cspViolations.push(
+        `${event.violatedDirective} ${event.blockedURI}`,
+      ),
+    );
+  });
+  page = await context.newPage();
+  page.on("request", (request) => requests.push(request.url()));
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(url);
+  await page.waitForURL((current) => current.pathname === "/");
+});
+
+test.afterAll(async () => {
+  await context?.close();
+  if (server) await stopIfRunning(server.child);
+  await sandbox?.cleanup();
+});
+
+const ticketFile = async (id) => {
+  const { readdir } = await import("node:fs/promises");
+  const tickets = join(sandbox.root, "flashheart", "tickets");
+  const folder = (await readdir(tickets)).find((name) =>
+    name.startsWith(`${id}-`),
+  );
+  return join(tickets, folder, `${folder}.md`);
+};
+const readTicket = async (id) => readFile(await ticketFile(id), "utf8");
+const withoutUpdated = (text) => text.replace(/^updated: .*\n/m, "");
+
+const main = (id) => page.getByRole("main", { name: `Ticket ${id}` });
+const pencil = (id, name) =>
+  main(id).getByRole("button", { name: `Edit ${name}` });
+const save = (id) =>
+  main(id).getByRole("button", { name: "Save", exact: true });
+const textbox = (id, name) => main(id).getByRole("textbox", { name });
+
+// showAs picks the editor's view by its segment, as a pointer does (the
+// radio itself is visually hidden).
+async function showAs(id, name) {
+  await main(id)
+    .getByRole("group", { name: "Show the text as" })
+    .locator("label", { hasText: name })
+    .click();
+  await expect(main(id).getByRole("radio", { name })).toBeChecked();
+}
+
+// openSection opens a section's editor and waits for it to take focus.
+async function openSection(id, name, title) {
+  await pencil(id, name).click();
+  const editor = textbox(id, title);
+  await expect(editor).toBeFocused();
+  return editor;
+}
+
+const typed = [
+  "Run state is **derived** from hook events.",
+  "",
+  "### Rules",
+  "",
+  "- [ ] A quiet run",
+  "- [ ] A working run",
+  "",
+  "See FH-19 and [the spec](https://example.com/spec).",
+].join("\n");
+
+test("shows markdown formatted as it is typed, its syntax only on the line being edited", async () => {
+  await open(page, "#/ticket/FH-20");
+  const before = await readTicket("FH-20");
+  const editor = await openSection("FH-20", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+a");
+  // Typed as a person types it: Enter continues the task list, and Enter
+  // on an empty item ends it.
+  const keys = page.keyboard;
+  await keys.type("Run state is **derived** from hook events.");
+  await keys.press("Enter");
+  await keys.press("Enter");
+  await keys.type("### Rules");
+  await keys.press("Enter");
+  await keys.press("Enter");
+  await keys.type("- [ ] A quiet run");
+  await keys.press("Enter");
+  await keys.type("A working run");
+  await keys.press("Enter");
+  await keys.press("Enter");
+  await keys.press("Enter");
+  await keys.type("See FH-19 and [the spec](https://example.com/spec).");
+
+  const lines = editor.locator(".cm-line");
+  // The cursor is on the last line, which shows its markdown...
+  await expect(lines.last()).toHaveText(
+    "See FH-19 and [the spec](https://example.com/spec).",
+  );
+  // ...and every other line is drawn formatted.
+  await expect(lines.first()).toHaveText(
+    "Run state is derived from hook events.",
+  );
+  await expect(lines.first().locator(".fh-strong")).toHaveText("derived");
+  await expect(
+    editor.getByRole("heading", { level: 3, name: "Rules" }),
+  ).toBeVisible();
+  await expect(
+    editor.getByRole("checkbox", { name: "A quiet run" }),
+  ).not.toBeChecked();
+  await expect(
+    editor.getByRole("checkbox", { name: "A working run" }),
+  ).not.toBeChecked();
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(page, `editor ${theme}`);
+    await shot(page, `editor-formatted-1440-${theme}`, { keepFocus: true });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+
+  // Moving to the first line shows its syntax and hides the last line's.
+  await page.keyboard.press("ControlOrMeta+Home");
+  await expect(lines.first()).toHaveText(
+    "Run state is **derived** from hook events.",
+  );
+  await expect(lines.last()).toHaveText("See FH-19 and the spec.");
+  await expect(lines.last().locator(".fh-ticket")).toHaveText("FH-19");
+  await shot(page, "editor-line-being-edited-1440-light", { keepFocus: true });
+
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(pencil("FH-20", "description")).toBeFocused();
+  // The section is saved as typed; nothing else in the file changed.
+  const after = await readTicket("FH-20");
+  expect(withoutUpdated(after)).toBe(
+    withoutUpdated(before).replace(
+      /## Description\n\n[^\n]*\n/,
+      `## Description\n\n${typed}\n`,
+    ),
+  );
+  // The view renders what the editor showed.
+  await expect(
+    main("FH-20").getByRole("heading", { level: 3, name: "Rules" }),
+  ).toBeVisible();
+
+  // Opening and saving it untouched writes nothing.
+  await openSection("FH-20", "description", "Description");
+  await save("FH-20").click();
+  await expect(pencil("FH-20", "description")).toBeFocused();
+  expect(await readTicket("FH-20")).toBe(after);
+});
+
+test("ticks a task from its checkbox or with Alt+Enter, changing one character each", async () => {
+  await open(page, "#/ticket/FH-20");
+  const before = await readTicket("FH-20");
+  const editor = await openSection("FH-20", "description", "Description");
+  await shot(page, "editor-task-checkboxes-1440-light", { keepFocus: true });
+  await editor.getByRole("checkbox", { name: "A quiet run" }).click();
+  await expect(
+    editor.getByRole("checkbox", { name: "A quiet run" }),
+  ).toBeChecked();
+  // With the cursor on a task's line, Alt+Enter ticks it.
+  await editor.getByText("A working run").click();
+  await page.keyboard.press("Alt+Enter");
+  await expect(
+    editor.locator(".cm-line", { hasText: "A working run" }),
+  ).toHaveText("- [x] A working run");
+  await save("FH-20").click();
+  await expect(pencil("FH-20", "description")).toBeFocused();
+  expect(withoutUpdated(await readTicket("FH-20"))).toBe(
+    withoutUpdated(before)
+      .replace("- [ ] A quiet run", "- [x] A quiet run")
+      .replace("- [ ] A working run", "- [x] A working run"),
+  );
+});
+
+test("the slash menu inserts blocks by keyboard, and Escape closes only the menu", async () => {
+  await open(page, "#/ticket/FH-20");
+  const editor = await openSection("FH-20", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("/");
+  const menu = main("FH-20").getByRole("listbox", { name: "Blocks" });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("option").first()).toContainText("Heading");
+  await expectNoAxeViolations(page, "slash menu");
+  await shot(page, "editor-slash-menu-1440-light", { keepFocus: true });
+  await page.keyboard.type("task");
+  await expect(menu.getByRole("option", { selected: true })).toContainText(
+    "Task list",
+  );
+  await page.keyboard.press("Enter");
+  await expect(menu).toBeHidden();
+  await page.keyboard.type("Follow up on quiet runs");
+  await expect(editor.locator(".cm-line").last()).toHaveText(
+    "- [ ] Follow up on quiet runs",
+  );
+
+  // Escape closes the menu and keeps the edit open.
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("/");
+  await expect(menu).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(editor).toBeFocused();
+  await page.keyboard.press("Backspace");
+  await page.keyboard.press("Escape");
+  await expect(editor).toHaveCount(0);
+});
+
+test("the selection toolbar formats by pointer and by keyboard", async () => {
+  await open(page, "#/ticket/FH-20");
+  const editor = await openSection("FH-20", "description", "Description");
+  // Select "events" on the first line.
+  await page.keyboard.press("ControlOrMeta+Home");
+  await page.keyboard.press("End");
+  await page.keyboard.press("ArrowLeft");
+  for (let n = 0; n < "events".length; n++)
+    await page.keyboard.press("Shift+ArrowLeft");
+  const toolbar = main("FH-20").getByRole("toolbar", { name: "Format" });
+  await expect(toolbar).toBeVisible();
+  await expectNoAxeViolations(page, "selection toolbar");
+  await shot(page, "editor-selection-toolbar-1440-light", { keepFocus: true });
+  await toolbar.getByRole("button", { name: "Italic" }).click();
+  await expect(editor).toBeFocused();
+  await expect(editor.locator(".cm-line").first()).toContainText("*events*");
+
+  // Alt+F10 reaches it; arrows move along; Escape returns to the text.
+  await page.keyboard.press("Alt+F10");
+  await expect(toolbar.getByRole("button", { name: "Bold" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(toolbar.getByRole("button", { name: "Code" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(editor).toBeFocused();
+  // Tab from a selection reaches the toolbar too, at the button last
+  // used; Enter applies it.
+  await page.keyboard.press("Tab");
+  await expect(toolbar.getByRole("button", { name: "Code" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(editor).toBeFocused();
+  await expect(editor.locator(".cm-line").first()).toContainText("*`events`*");
+  await page.keyboard.press("Escape");
+});
+
+test("Markdown shows the text as written, and the choice is remembered", async () => {
+  await open(page, "#/ticket/FH-20");
+  const editor = await openSection("FH-20", "description", "Description");
+  await showAs("FH-20", "Markdown");
+  await expect(editor.locator(".cm-line").first()).toHaveText(
+    "Run state is **derived** from hook events.",
+  );
+  await expect(editor.getByRole("checkbox")).toHaveCount(0);
+  await shot(page, "editor-markdown-1440-light", { keepFocus: true });
+  const config = join(sandbox.root, ".flashheart", "config.yaml");
+  await expect
+    .poll(() => readFile(config, "utf8").catch(() => ""))
+    .toMatch(/^ {2}editor: markdown$/m);
+  await page.keyboard.press("Escape");
+
+  await page.reload();
+  await open(page, "#/ticket/FH-20");
+  await openSection("FH-20", "description", "Description");
+  await expect(
+    main("FH-20").getByRole("radio", { name: "Markdown" }),
+  ).toBeChecked();
+  await showAs("FH-20", "Formatted");
+  await expect(
+    textbox("FH-20", "Description").getByRole("checkbox").first(),
+  ).toBeVisible();
+  await expect
+    .poll(() => readFile(config, "utf8"))
+    .toMatch(/^ {2}editor: formatted$/m);
+  await page.keyboard.press("Escape");
+});
+
+test("an agent's checkpoint during an edit saves without a conflict; the same section conflicts", async () => {
+  await open(page, "#/ticket/FH-10");
+  // The Handoff is shown but has no editor.
+  await expect(
+    main("FH-10").getByRole("heading", { level: 2, name: "Handoff" }),
+  ).toBeVisible();
+  await expect(
+    main("FH-10").getByRole("button", { name: /^Edit handoff/i }),
+  ).toHaveCount(0);
+  await expect(
+    main("FH-10").getByRole("button", { name: /^Edit notes/i }),
+  ).toHaveCount(0);
+
+  const editor = await openSection("FH-10", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" Mine.");
+  // An agent checkpoints: the Handoff and Notes change on disk.
+  const disk = await readTicket("FH-10");
+  const checkpointed = disk
+    .replace("- Wrote the failing test", "- Wrote the failing test and the fix")
+    .replace("None.", "- 2026-10-13 · claude:demo: Checkpointed.");
+  await writeFile(await ticketFile("FH-10"), checkpointed);
+  await expect(main("FH-10")).toContainText(
+    "Wrote the failing test and the fix",
+  );
+  await expect(editor).toContainText("Mine.");
+  await save("FH-10").click();
+  await expect(pencil("FH-10", "description")).toBeFocused();
+  await expect(
+    page.getByRole("dialog", { name: /changed while you were editing/ }),
+  ).toHaveCount(0);
+  const merged = await readTicket("FH-10");
+  expect(merged).toContain("Wrote the failing test and the fix");
+  expect(merged).toContain("Checkpointed.");
+  expect(merged).toMatch(/## Description\n\n[^\n]* Mine\.\n/);
+
+  // A checkpoint the page has not heard of yet when Save is pressed (its
+  // live updates are held back): the save meets it (409), sees the
+  // section unchanged there and saves again on it, without asking.
+  await openSection("FH-10", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" Later.");
+  const held = [];
+  await page.route("**/api/changes*", (route) => held.push(route));
+  const statuses = [];
+  const onSection = (response) => {
+    if (response.url().endsWith("/api/tickets/FH-10/section"))
+      statuses.push(response.status());
+  };
+  page.on("response", onSection);
+  await writeFile(
+    await ticketFile("FH-10"),
+    merged.replace("Checkpointed.", "Checkpointed again."),
+  );
+  await save("FH-10").click();
+  await expect(pencil("FH-10", "description")).toBeFocused();
+  expect(statuses).toEqual([409, 200]);
+  page.off("response", onSection);
+  await page.unroute("**/api/changes*");
+  for (const route of held) await route.continue().catch(() => undefined);
+  await expect(
+    page.getByRole("dialog", { name: /changed while you were editing/ }),
+  ).toHaveCount(0);
+  const raced = await readTicket("FH-10");
+  expect(raced).toContain("Checkpointed again.");
+  expect(raced).toMatch(/## Description\n\n[^\n]* Mine\. Later\.\n/);
+
+  // A change to the section itself is a conflict, shown, not overwritten.
+  await openSection("FH-10", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type(" Again.");
+  await writeFile(
+    await ticketFile("FH-10"),
+    raced.replace(/(## Description\n\n[^\n]*)\n/, "$1 Theirs.\n"),
+  );
+  await save("FH-10").click();
+  const conflict = page.getByRole("dialog", {
+    name: "FH-10 changed while you were editing",
+  });
+  await expect(conflict).toBeVisible();
+  await expect(
+    conflict.getByRole("region", { name: "Now on disk" }),
+  ).toContainText("Theirs.");
+  await expectNoAxeViolations(page, "editor conflict");
+  await conflict
+    .getByRole("button", { name: "Discard mine and reload" })
+    .click();
+  await expect(main("FH-10")).toContainText("Theirs.");
+  expect(await readTicket("FH-10")).toContain("Theirs.");
+  expect(await readTicket("FH-10")).not.toContain("Again.");
+});
+
+test("shows the ticket's own images and never fetches a remote one", async () => {
+  await open(page, "#/ticket/FH-8");
+  const before = await readTicket("FH-8");
+  // Escape straight after typing cancels the edit.
+  await openSection("FH-8", "description", "Description");
+  await page.keyboard.type("x");
+  await page.keyboard.press("Escape");
+  await expect(textbox("FH-8", "Description")).toHaveCount(0);
+  expect(await readTicket("FH-8")).toBe(before);
+
+  await openSection("FH-8", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.insertText(
+    [
+      "![Store tests passing](files/20261004T1412-store-tests.png)",
+      "",
+      "![remote](https://example.com/remote.png)",
+      "",
+      "End.",
+    ].join("\n"),
+  );
+  const editor = textbox("FH-8", "Description");
+  const image = editor.getByRole("img", { name: "Store tests passing" });
+  await expect(image).toBeVisible();
+  await expect(image).toHaveAttribute(
+    "src",
+    /^\/api\/projects\/flashheart\/tickets\/FH-8\/files\//,
+  );
+  await expect(editor).toContainText("[image: remote]");
+  await shot(page, "editor-image-1440-light", { keepFocus: true });
+  await page.keyboard.press("Escape");
+  await expect(editor).toHaveCount(0);
+});
+
+test("fits a phone and passes axe in both themes", async () => {
+  for (const theme of ["light", "dark"]) {
+    await open(page, "#/ticket/FH-20", { width: 390, height: 844, theme });
+    await openSection("FH-20", "description", "Description");
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    expect(overflow).toBe(false);
+    await expectNoAxeViolations(page, `editor 390 ${theme}`);
+    await shot(page, `editor-390-${theme}`, { keepFocus: true });
+    await page.keyboard.press("Escape");
+  }
+});
+
+test("made no request beyond the board and broke no CSP rule", async () => {
+  const outside = requests.filter(
+    (url) => !url.startsWith(`${origin}/`) && !url.startsWith("data:"),
+  );
+  expect(outside).toEqual([]);
+  expect(await page.evaluate(() => window.cspViolations)).toEqual([]);
+  expect(
+    consoleErrors.filter((text) => /Content Security Policy/i.test(text)),
+  ).toEqual([]);
+});

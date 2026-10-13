@@ -517,7 +517,12 @@ function PageSectionView({
         if (editor && item.open)
           return labelled(
             2,
-            <CriteriaEditor {...editor} heading={section.heading ?? ""} />,
+            <CriteriaEditor
+              {...editor}
+              heading={section.heading ?? ""}
+              context={context}
+              keys={keys}
+            />,
           );
         if (editor && section.empty) return <AddItem item={item} name={name} />;
         return (
@@ -541,6 +546,8 @@ function PageSectionView({
               {...editor}
               heading={section.heading ?? ""}
               title={section.title}
+              context={context}
+              keys={keys}
             />,
           );
         if (editor && section.empty) return <AddItem item={item} name={name} />;
