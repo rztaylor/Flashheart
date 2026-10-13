@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
   STATUSES,
   type TicketDetail,
@@ -17,6 +17,7 @@ import {
 } from "../../model/ticketForm";
 import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 import { ConflictDialog } from "../editing/ConflictDialog";
+import { useHeldDraft } from "../editing/InPlace";
 import { useTicketDraft } from "../editing/useTicketDraft";
 
 // Draft is both editors' text: the typed fields and the raw file. They share
@@ -40,20 +41,67 @@ const isDirty = (draft: Draft, base: Draft) =>
 // EditTab edits a ticket's frontmatter with typed controls, or the whole
 // file in a raw editor (EDIT-6). Every save carries the hash of the version
 // the draft started from (useTicketDraft); a stale hash opens the conflict
-// dialog (EDIT-7).
+// dialog (EDIT-7). Unsaved changes are a held draft of the panel's in-place
+// editing (FH-138): leaving the panel asks about them, Discard drops them,
+// and Keep editing shows the tab (onShow) with focus back in it.
 export function EditTab({
   detail,
   fetcher,
   workstreams,
   onSaved,
+  onShow,
 }: {
   detail: TicketDetail;
   fetcher: AuthenticatedFetch;
   workstreams: WorkstreamBrief[];
   onSaved(saved: Saved | undefined, what: string): void;
+  onShow(): void;
 }) {
   const draft = useTicketDraft({ detail, read: draftOf, isDirty, onSaved });
   const [mode, setMode] = useState<"fields" | "raw">("fields");
+  const frame = useRef<HTMLDivElement>(null);
+  // lastFocus is the control last focused in the tab, where Keep editing
+  // returns; returning counts the returns asked for, each focusing once
+  // the tab shows.
+  const lastFocus = useRef<HTMLElement | null>(null);
+  const [returning, setReturning] = useState(0);
+  useHeldDraft(
+    "edit-tab",
+    "ticket",
+    draft.dirty,
+    () => draft.set(draft.base.value),
+    () => {
+      onShow();
+      setReturning((count) => count + 1);
+    },
+  );
+  // A conflict needs a decision in its dialog, which a hidden tab would
+  // hide: a save that meets one after another tab was chosen shows the
+  // Edit tab again.
+  const conflicted = draft.conflict !== null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: shows the tab when a conflict arrives.
+  useEffect(() => {
+    if (conflicted) onShow();
+  }, [conflicted]);
+  useEffect(() => {
+    const element = frame.current;
+    const remember = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement) lastFocus.current = event.target;
+    };
+    element?.addEventListener("focusin", remember);
+    return () => element?.removeEventListener("focusin", remember);
+  }, []);
+  useEffect(() => {
+    if (returning === 0) return;
+    const last = lastFocus.current;
+    const target =
+      last?.isConnected && frame.current?.contains(last)
+        ? last
+        : frame.current?.querySelector<HTMLElement>(
+            "input:not([type=radio]), select, textarea",
+          );
+    target?.focus();
+  }, [returning]);
   const { form, raw } = draft.value;
   const base = draft.base.value;
   const edits = fieldEdits(draft.value, base);
@@ -86,7 +134,7 @@ export function EditTab({
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={frame} className="flex flex-col gap-4">
       <SegmentedControl<"fields" | "raw">
         label="Edit as"
         value={mode}

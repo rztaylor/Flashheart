@@ -68,7 +68,10 @@
   is `card/CommentDelete` (FH-140). Timeline and box are one shared part, `TicketComments`, on
   the page's Activity and the card panel's Comments tab, which has its
   own `InPlaceEditing` and stays mounted across tabs; closing the panel
-  or opening another ticket waits on the leave guard (FH-128). Leaving
+  or opening another ticket waits on the leave guard (FH-128). The
+  panel's Edit tab stays mounted too and is a held draft whose
+  `returnTo` shows the tab and refocuses it on Keep editing (FH-138).
+  Leaving
   the page with unsaved changes
   goes through the one leave guard, `state/leaveGuard`, which the router
   (`app/route`) asks before every navigation and a link or Back that

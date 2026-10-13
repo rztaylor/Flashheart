@@ -158,7 +158,10 @@
   `frontend/e2e/comments.spec.mjs` (FH-125). The comment tests run on
   both the page and the card panel's Comments tab (`describe.each` over a
   surface); the panel's own flow, from posting there to seeing it on the
-  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128). Change
+  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128), which
+  also drives the Edit tab's unsaved changes; their tab switch, close,
+  Escape and another-ticket paths are `CardPanelEdit.dom.test.tsx`
+  (FH-138). Change
   requests (FH-126, REV-6): who may move a comment's state and its history in `board`
   (`requests_test.go`), the one-write request and addressing in `store`,
   a ticket's live holder in `index` (`TestHolderIsTheLiveClaimant`),

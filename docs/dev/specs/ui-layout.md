@@ -203,10 +203,17 @@ reorders them.
    another tab is shown; closing the panel, Escape or opening another
    ticket with unsaved comment text asks first (*Unsaved changes to the
    comment*: **Discard changes** or **Keep editing**), and focus returns
-   to the card only once the panel closes. The panel's Edit tab is a
-   separate form and is not part of this prompt.
+   to the card only once the panel closes. Unsaved Edit tab changes join
+   the same prompt (item 5).
 5. **Edit tab**: frontmatter form and raw markdown (`EDIT-6`), conflict
-   dialog on save (`EDIT-7`).
+   dialog on save (`EDIT-7`). Its unsaved changes (FH-138) stay while
+   another tab is shown; closing the panel, Escape or opening another
+   ticket asks first (*Unsaved changes to the ticket*, naming the
+   comment too when one is being written): **Discard changes** drops them,
+   **Keep editing** shows the Edit tab again with focus on its control
+   last used (or its first field), unless the prompt was opened from a
+   field, where focus stays. A save that meets a conflict after another
+   tab was chosen shows the Edit tab again with the conflict dialog.
 6. **Runs tab**: runs newest first, each a card with its state (and its
    Needs you reason, in the card's words, `RUN-3`), agent,
    short id, link, branch and time, then its detail and its subagents as a
