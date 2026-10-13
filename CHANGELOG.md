@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Comment on a ticket from the board's side panel (FH-128, D47,
+  `CARD-1`). The panel has a **Comments** tab, counting the ticket's
+  comments, with the same comments and comment box as the full page:
+  post with **Comment** or Ctrl or Cmd with Enter, quote part of the
+  ticket, edit your comments in place, and get the conflict dialog when
+  a comment changed meanwhile. A comment you are writing stays while you
+  look at another tab, and closing the panel, pressing Escape or opening
+  another ticket with it unposted asks first.
+
 - Ask for changes in review and see which ones the agent has addressed
   (FH-126, D47, `REV-6`). On a ticket in review, **Request changes** (in
   its properties) sends comments you pick, a new one, or both back as

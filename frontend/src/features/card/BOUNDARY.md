@@ -3,25 +3,25 @@
 Owns the card panel (CARD-1, ui-layout.md §3) and the ticket's full page
 (`TicketPage`, CARD-7). Both compose shared parts: `useTicket` (load,
 reload, criterion and review-step ticks through `editing`'s
-`saveWithBase`, answers, the page's field and section saves),
+`saveWithBase`, answers, comments, the page's field and section saves),
 `TicketHeader`'s `TicketIdentity`, `TicketTab`'s parts (`RepairNotice`,
 `QuestionsCallout`, `HandoffCallout`, `ReasonList`, `FormatWarnings`,
-each taking its heading level), `Checklist` and `Attachments` (grid and
-lightbox).
+each taking its heading level), `Checklist`, `Attachments` (grid and
+lightbox), and `TicketComments` (FH-125, FH-128): `ActivityTimeline`, a
+person's comment edited in place, ending in `CommentBox` (posting a
+comment with its quote), under each one's in-place editing coordinator.
 
 Panel only: `TicketProperties` and `TicketActions` (Move to, Position,
 Archive), and its tabs (`TicketSections`, `EditTab` through
-`useTicketDraft`, `RunsTab`, `RunDetail`, `ReviewTab`).
+`useTicketDraft`, `RunsTab`, `RunDetail`, `ReviewTab`, the Comments tab
+kept mounted so its drafts survive a tab change).
 
 Page only: `PropertiesPanel` (Move to, a row per field, Archive),
-`SectionOutline` and `JumpTo`, `useSectionInView`, `ChangeRequests` (the
-change requests list, the Request changes dialog and a request's state
-pill, REV-6), `ActivityTimeline`
-(with its filter's state on the page, and a person's comment edited in
-place) and `CommentBox` (posting a comment with its quote, FH-125), and
-what each in-place item edits with (EDIT-11): `PageEdits` (title,
-markdown section, criteria list) and `PropertyEdits` (a row and its typed
-control).
+`SectionOutline` and `JumpTo`, `useSectionInView`, Activity's filter
+state, `ChangeRequests` (the change requests list, the Request changes
+dialog and a request's state pill, REV-6), and what each in-place item
+edits with (EDIT-11): `PageEdits` (title, markdown section, criteria
+list) and `PropertyEdits` (a row and its typed control).
 
 Does not own section order, counts, review sections or which files show
 (`model/ticketSections`), section text and criteria rules

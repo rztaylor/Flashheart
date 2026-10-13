@@ -6,12 +6,15 @@ import type { Comment, History, TicketDetail } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import { leave } from "../../state/leaveGuard";
 import type { Editing } from "../editing/useEditing";
+import { CardPanel } from "./CardPanel";
 import { TicketPage } from "./TicketPage";
 import { detail } from "./ticketFixture";
 
-// Comments and the Activity filter on the ticket's full page (FH-125). The
-// ticket's useResource is mocked, so the page renders a loaded ticket
-// without a server; writes go to a fake server that records them.
+// Comments and the Activity filter on the ticket's full page (FH-125), and
+// the same comments in the card panel's Comments tab (FH-128): the comment
+// tests run on both. The ticket's useResource is mocked, so each renders a
+// loaded ticket without a server; writes go to a fake server that records
+// them.
 const resource = vi.hoisted(() => ({
   state: { status: "loading" } as Record<string, unknown>,
 }));
@@ -121,6 +124,46 @@ function renderPage(data: TicketDetail = detail(), withEditing = true) {
   );
 }
 
+function renderPanel(data: TicketDetail = detail(), withEditing = true) {
+  resource.state = { status: "ready", data };
+  return render(
+    <CardPanel
+      ticket={{ id: data.id }}
+      fetcher={server.fetcher}
+      lines={new Map()}
+      workstreams={new Map()}
+      keys={new Set(["FH"])}
+      onOpen={() => undefined}
+      onClose={() => undefined}
+      revision={0}
+      editing={withEditing ? editing : undefined}
+      initialTab="comments"
+    />,
+  );
+}
+
+// A surface shows a ticket's comments: the full page in its Activity, the
+// card panel in its Comments tab (opened on it).
+interface Surface {
+  name: string;
+  render(data?: TicketDetail, withEditing?: boolean): void;
+  comments(): HTMLElement;
+}
+
+const page: Surface = {
+  name: "the full page",
+  render: renderPage,
+  comments: () => screen.getByRole("region", { name: "Activity" }),
+};
+
+const panel: Surface = {
+  name: "the card panel",
+  render: renderPanel,
+  comments: () => screen.getByRole("tabpanel", { name: /^Comments/ }),
+};
+
+let surface = page;
+
 const withActivity = () =>
   detail({
     comments: [
@@ -156,7 +199,7 @@ const withActivity = () =>
     activityHash: "a1",
   });
 
-const activity = () => screen.getByRole("region", { name: "Activity" });
+const activity = () => surface.comments();
 const box = () => screen.getByRole("textbox", { name: "Add a comment" });
 const commentButton = () =>
   screen.getByRole("button", { name: "Comment" }) as HTMLButtonElement;
@@ -177,131 +220,145 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   resource.state = { status: "loading" };
+  surface = page;
 });
 
-describe("the comment box (FH-125)", () => {
-  it("ends Activity and posts a comment, then clears", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    expect(
-      within(activity()).getByRole("textbox", { name: "Add a comment" }),
-    ).toBeTruthy();
-    await user.type(box(), "Looks right.");
-    await user.click(commentButton());
-    expect(server.requests).toEqual([
-      {
-        method: "POST",
-        path: "/api/tickets/FH-65/comments",
-        body: { body: "Looks right.", quote: "", quoteFrom: "" },
-      },
-    ]);
-    await waitFor(() => expect((box() as HTMLTextAreaElement).value).toBe(""));
-    expect(editing.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "Commented on FH-65." }),
-    );
-  });
-
-  it("posts with Ctrl or Cmd and Enter, and never posts an empty comment", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    expect(commentButton().disabled).toBe(true);
-    await user.type(box(), "   ");
-    await user.keyboard("{Control>}{Enter}{/Control}");
-    expect(commentButton().disabled).toBe(true);
-    expect(server.requests).toEqual([]);
-    await user.type(box(), "Ship it");
-    await user.keyboard("{Meta>}{Enter}{/Meta}");
-    expect(server.requests.map((request) => request.body.body)).toEqual([
-      "   Ship it",
-    ]);
-  });
-
-  it("keeps the text with the error beside it when a post fails", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    server.replies.push(() =>
-      Response.json(
-        { error: { code: "write_failed", message: "The disk is full." } },
-        { status: 500 },
-      ),
-    );
-    await user.type(box(), "Keep me.");
-    await user.click(commentButton());
-    expect(
-      (await within(activity()).findByRole("alert")).textContent,
-    ).toContain("The disk is full.");
-    expect((box() as HTMLTextAreaElement).value).toBe("Keep me.");
-  });
-
-  it("quotes a section, criterion or How to verify step chosen from the page", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    const picker = within(activity()).getByRole("combobox", {
-      name: "Quote",
+describe.each([page, panel])(
+  "the comment box on $name (FH-125, FH-128)",
+  (shown) => {
+    beforeEach(() => {
+      surface = shown;
     });
-    const options = within(picker)
-      .getAllByRole("option")
-      .map((option) => option.textContent);
-    expect(options).toEqual(
-      expect.arrayContaining([
-        "No quote",
-        "Description",
-        "1. Three columns",
-        "2. No tabs",
-        "1. Open the page",
-      ]),
-    );
-    await user.selectOptions(picker, "2. No tabs");
-    const quote = within(activity()).getByRole("figure", {
-      name: "Quoting Acceptance criteria 2",
-    });
-    expect(quote.textContent).toContain("No tabs");
-    await user.type(box(), "Not on narrow screens either.");
-    await user.click(commentButton());
-    expect(server.requests[0]?.body).toEqual({
-      body: "Not on narrow screens either.",
-      quote: "No tabs",
-      quoteFrom: "Acceptance criteria 2",
-    });
-    // Posted: the quote is cleared with the text.
-    await waitFor(() =>
+
+    it("ends Activity and posts a comment, then clears", async () => {
+      const user = userEvent.setup();
+      surface.render();
       expect(
-        within(activity()).queryByRole("figure", { name: /^Quoting/ }),
-      ).toBeNull(),
-    );
-  });
-
-  it("asks before leaving the page with a comment not posted", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    const go = vi.fn();
-    await user.type(box(), "Half a thought");
-    act(() => leave(go));
-    const ask = screen.getByRole("dialog", {
-      name: "Unsaved changes to the comment",
+        within(activity()).getByRole("textbox", { name: "Add a comment" }),
+      ).toBeTruthy();
+      await user.type(box(), "Looks right.");
+      await user.click(commentButton());
+      expect(server.requests).toEqual([
+        {
+          method: "POST",
+          path: "/api/tickets/FH-65/comments",
+          body: { body: "Looks right.", quote: "", quoteFrom: "" },
+        },
+      ]);
+      await waitFor(() =>
+        expect((box() as HTMLTextAreaElement).value).toBe(""),
+      );
+      expect(editing.notify).toHaveBeenCalledWith(
+        expect.objectContaining({ text: "Commented on FH-65." }),
+      );
     });
-    await user.click(within(ask).getByRole("button", { name: "Keep editing" }));
-    expect(go).not.toHaveBeenCalled();
-    expect((box() as HTMLTextAreaElement).value).toBe("Half a thought");
-    act(() => leave(go));
-    await user.click(
-      within(
-        screen.getByRole("dialog", { name: "Unsaved changes to the comment" }),
-      ).getByRole("button", { name: "Discard changes" }),
-    );
-    expect(go).toHaveBeenCalledOnce();
-    act(() => leave(go));
-    expect(go).toHaveBeenCalledTimes(2);
-  });
 
-  it("is not offered on a read-only page", () => {
-    renderPage(withActivity(), false);
-    expect(within(activity()).queryByRole("textbox")).toBeNull();
-    expect(
-      within(activity()).queryByRole("button", { name: "Edit comment" }),
-    ).toBeNull();
-  });
-});
+    it("posts with Ctrl or Cmd and Enter, and never posts an empty comment", async () => {
+      const user = userEvent.setup();
+      surface.render();
+      expect(commentButton().disabled).toBe(true);
+      await user.type(box(), "   ");
+      await user.keyboard("{Control>}{Enter}{/Control}");
+      expect(commentButton().disabled).toBe(true);
+      expect(server.requests).toEqual([]);
+      await user.type(box(), "Ship it");
+      await user.keyboard("{Meta>}{Enter}{/Meta}");
+      expect(server.requests.map((request) => request.body.body)).toEqual([
+        "   Ship it",
+      ]);
+    });
+
+    it("keeps the text with the error beside it when a post fails", async () => {
+      const user = userEvent.setup();
+      surface.render();
+      server.replies.push(() =>
+        Response.json(
+          { error: { code: "write_failed", message: "The disk is full." } },
+          { status: 500 },
+        ),
+      );
+      await user.type(box(), "Keep me.");
+      await user.click(commentButton());
+      expect(
+        (await within(activity()).findByRole("alert")).textContent,
+      ).toContain("The disk is full.");
+      expect((box() as HTMLTextAreaElement).value).toBe("Keep me.");
+    });
+
+    it("quotes a section, criterion or How to verify step chosen from the page", async () => {
+      const user = userEvent.setup();
+      surface.render();
+      const picker = within(activity()).getByRole("combobox", {
+        name: "Quote",
+      });
+      const options = within(picker)
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+      expect(options).toEqual(
+        expect.arrayContaining([
+          "No quote",
+          "Description",
+          "1. Three columns",
+          "2. No tabs",
+          "1. Open the page",
+        ]),
+      );
+      await user.selectOptions(picker, "2. No tabs");
+      const quote = within(activity()).getByRole("figure", {
+        name: "Quoting Acceptance criteria 2",
+      });
+      expect(quote.textContent).toContain("No tabs");
+      await user.type(box(), "Not on narrow screens either.");
+      await user.click(commentButton());
+      expect(server.requests[0]?.body).toEqual({
+        body: "Not on narrow screens either.",
+        quote: "No tabs",
+        quoteFrom: "Acceptance criteria 2",
+      });
+      // Posted: the quote is cleared with the text.
+      await waitFor(() =>
+        expect(
+          within(activity()).queryByRole("figure", { name: /^Quoting/ }),
+        ).toBeNull(),
+      );
+    });
+
+    it("asks before leaving the page with a comment not posted", async () => {
+      const user = userEvent.setup();
+      surface.render();
+      const go = vi.fn();
+      await user.type(box(), "Half a thought");
+      act(() => leave(go));
+      const ask = screen.getByRole("dialog", {
+        name: "Unsaved changes to the comment",
+      });
+      await user.click(
+        within(ask).getByRole("button", { name: "Keep editing" }),
+      );
+      expect(go).not.toHaveBeenCalled();
+      expect((box() as HTMLTextAreaElement).value).toBe("Half a thought");
+      act(() => leave(go));
+      await user.click(
+        within(
+          screen.getByRole("dialog", {
+            name: "Unsaved changes to the comment",
+          }),
+        ).getByRole("button", { name: "Discard changes" }),
+      );
+      expect(go).toHaveBeenCalledOnce();
+      act(() => leave(go));
+      expect(go).toHaveBeenCalledTimes(2);
+    });
+
+    it("is not offered on a read-only page", () => {
+      surface.render(withActivity(), false);
+      expect(within(activity()).queryByRole("textbox")).toBeNull();
+      expect(
+        within(activity()).queryByRole("button", { name: "Edit comment" }),
+      ).toBeNull();
+    });
+  },
+);
 
 describe("comments in Activity", () => {
   it("shows comments with their quote and whether they were edited, among the rest in time order", () => {
@@ -324,10 +381,66 @@ describe("comments in Activity", () => {
     });
     expect(quote.textContent).toContain("No tabs");
   });
+});
+
+describe("comments in the card panel (FH-128)", () => {
+  beforeEach(() => {
+    surface = panel;
+  });
+
+  it("shows only people's comments, with their quote and whether they were edited", () => {
+    renderPanel(withActivity());
+    const list = items();
+    expect(list).toHaveLength(2);
+    expect(list[0]).toContain("Keep the outline.");
+    expect(list[1]).toContain("Not even on narrow screens.");
+    expect(list[1]).toContain("edited");
+    expect(
+      within(activity()).getByRole("figure", {
+        name: "Quoting Acceptance criteria 2",
+      }).textContent,
+    ).toContain("No tabs");
+  });
+
+  it("says when there are no comments yet, over the comment box", () => {
+    renderPanel();
+    expect(within(activity()).getByText("No comments yet.")).toBeTruthy();
+    expect(box()).toBeTruthy();
+  });
+
+  it("names the tab with its count", () => {
+    renderPanel(withActivity());
+    expect(screen.getByRole("tab", { name: "Comments 2" })).toBeTruthy();
+  });
+
+  it("keeps a comment being written while another tab is shown", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await user.type(box(), "Half a thought");
+    await user.click(screen.getByRole("tab", { name: "Ticket" }));
+    expect(screen.queryByRole("textbox", { name: "Add a comment" })).toBeNull();
+    // Leaving the panel still asks about it.
+    const go = vi.fn();
+    act(() => leave(go));
+    await user.click(
+      within(
+        screen.getByRole("dialog", { name: "Unsaved changes to the comment" }),
+      ).getByRole("button", { name: "Keep editing" }),
+    );
+    expect(go).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("tab", { name: "Comments" }));
+    expect((box() as HTMLTextAreaElement).value).toBe("Half a thought");
+  });
+});
+
+describe.each([page, panel])("comments on $name (FH-125, FH-128)", (shown) => {
+  beforeEach(() => {
+    surface = shown;
+  });
 
   it("edits a person's comment in place, on the activity's hash", async () => {
     const user = userEvent.setup();
-    renderPage(withActivity());
+    surface.render(withActivity());
     server.replies.push(() =>
       Response.json({
         comment: comment({ body: "Keep the outline, left.", edited: "x" }),
@@ -357,7 +470,7 @@ describe("comments in Activity", () => {
 
   it("opens the conflict dialog when the comments changed since they were read", async () => {
     const user = userEvent.setup();
-    renderPage(withActivity());
+    surface.render(withActivity());
     server.replies.push(() =>
       Response.json(
         {
@@ -410,7 +523,7 @@ describe("comments in Activity", () => {
   });
 
   it("offers no edit of a comment whose author is not a person", () => {
-    renderPage(
+    surface.render(
       detail({
         comments: [comment({ by: "claude:aaaa1111-2222", byPerson: false })],
         activityHash: "a1",

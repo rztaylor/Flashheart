@@ -15,7 +15,6 @@ import {
   activityOf,
   filterActivity,
 } from "../../model/activity";
-import { quoteChoices } from "../../model/comments";
 import { workstreamTitle } from "../../model/lines";
 import {
   type ImageRef,
@@ -36,15 +35,14 @@ import {
   InPlaceEditing,
   useInPlaceItem,
 } from "../editing/InPlace";
-import { ActivityTimeline } from "./ActivityTimeline";
 import { Attachments } from "./Attachments";
 import type { CardPanelProps } from "./CardPanel";
 import { ChangeRequestList, RequestChangesDialog } from "./ChangeRequests";
 import { Checklist } from "./Checklist";
-import { CommentBox } from "./CommentBox";
 import { CriteriaEditor, SectionEditor, TitleEditor } from "./PageEdits";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { JumpTo, SectionOutline } from "./SectionOutline";
+import { TicketComments } from "./TicketComments";
 import { TicketIdentity } from "./TicketHeader";
 import { TicketSkeleton } from "./TicketSections";
 import {
@@ -626,36 +624,13 @@ function PageSectionView({
             <p className="-mt-1 mb-4 text-xs text-ink-muted">
               {activityWords[filter]}
             </p>
-            <ActivityTimeline
+            <TicketComments
+              detail={detail}
+              ticket={ticket}
               entries={activity}
               filter={filter}
-              context={context}
               keys={keys}
-              editing={
-                ticket.editComment
-                  ? {
-                      detail: {
-                        id: detail.id,
-                        hash: detail.activityHash,
-                        comments: detail.comments,
-                      },
-                      send: ticket.editComment,
-                      onSaved: (saved, what) =>
-                        ticket.saved(
-                          saved,
-                          what === "Saved" ? "Saved your comment on" : what,
-                        ),
-                    }
-                  : undefined
-              }
             />
-            {ticket.comment ? (
-              <CommentBox
-                choices={quoteChoices(detail)}
-                onPost={ticket.comment}
-                renderQuote={(text) => markdown(text)}
-              />
-            ) : null}
           </>,
           undefined,
           <SegmentedControl

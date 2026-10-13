@@ -290,7 +290,14 @@ describe("the ticket page (CARD-7, FH-65)", () => {
     resource.state = { status: "ready", data: detail() };
     render(<CardPanel {...props} editing={editing} />);
     const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
-    expect(tabs).toEqual(["Ticket", "Edit", "Runs", "Attachments 3", "Review"]);
+    expect(tabs).toEqual([
+      "Ticket",
+      "Comments",
+      "Edit",
+      "Runs",
+      "Attachments 3",
+      "Review",
+    ]);
     expect(screen.queryByRole("navigation", { name: "Sections" })).toBeNull();
   });
 });

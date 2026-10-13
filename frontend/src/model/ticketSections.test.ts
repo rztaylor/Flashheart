@@ -13,11 +13,12 @@ import {
 const run = (id: string, parent = "") => ({ id, parent }) as Run;
 const file = (name: string) => ({ file: name }) as Attachment;
 const review = { markdown: "# Review", steps: [] } as unknown as Review;
+const comment = (id: string) => ({ id }) as Comment;
 
 describe("ticketSections", () => {
   it("offers Ticket and Runs for a plain read-only ticket", () => {
     const sections = ticketSections(
-      { runs: [], attachmentFiles: [], review: null },
+      { runs: [], attachmentFiles: [], review: null, comments: [] },
       false,
     );
     expect(sections).toEqual([
@@ -26,17 +27,19 @@ describe("ticketSections", () => {
     ]);
   });
 
-  it("orders Ticket, Edit, Runs, Attachments, Review with their counts", () => {
+  it("orders Ticket, Comments, Edit, Runs, Attachments, Review with their counts", () => {
     const sections = ticketSections(
       {
         runs: [run("claude:a"), run("claude:a/x", "claude:a"), run("claude:b")],
         attachmentFiles: [file("a.png"), file("b.log")],
         review,
+        comments: [comment("c1"), comment("c2"), comment("c3")],
       },
       true,
     );
     expect(sections.map((section) => section.id)).toEqual([
       "ticket",
+      "comments",
       "edit",
       "runs",
       "attachments",
@@ -44,6 +47,7 @@ describe("ticketSections", () => {
     ]);
     expect(sections.map(sectionLabel)).toEqual([
       "Ticket",
+      "Comments 3",
       "Edit",
       "Runs 2",
       "Attachments 2",
@@ -57,15 +61,32 @@ describe("ticketSections", () => {
         runs: [run("claude:a")],
         attachmentFiles: [file("a.png")],
         review: null,
+        comments: [],
       },
       true,
     );
     expect(sections.map(sectionLabel)).toEqual([
       "Ticket",
+      "Comments",
       "Edit",
       "Runs 1",
       "Attachments 1",
     ]);
+  });
+
+  // FH-128: the Comments tab holds the comment box where the ticket can be
+  // edited, so it is offered with no comments yet; read-only, only when
+  // there are comments to read.
+  it("offers Comments read-only only when the ticket has comments", () => {
+    const plain = { runs: [], attachmentFiles: [], review: null };
+    expect(
+      ticketSections({ ...plain, comments: [] }, false).map(sectionLabel),
+    ).toEqual(["Ticket", "Runs"]);
+    expect(
+      ticketSections({ ...plain, comments: [comment("c1")] }, false).map(
+        sectionLabel,
+      ),
+    ).toEqual(["Ticket", "Comments 1", "Runs"]);
   });
 });
 

@@ -30,7 +30,8 @@ wiring lifecycle, API and features together.
 - `useScopeMemory` over `scopeMemory` (pure, tested): the filters, and the
   view and filters remembered per scope.
 - `useTicketPanel`: opening the panel (on a tab) and returning focus to its
-  opener when it closes.
+  opener when it closes, each waiting on the leave guard while the panel
+  holds an unsaved comment.
 - `ViewOutlet`: the routed view's body (read errors with Try again, each
   view's own skeleton while the projects load, the v1 notice
   (`V1Notice`), the missing-root state, archive, Overview, Workstreams, and

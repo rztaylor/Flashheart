@@ -117,8 +117,11 @@
   show, and their budgets, are `internal/mcpserver/comments_test.go`;
   posting, quoting, editing, the conflict, the filter and the leave guard
   are `TicketComments.dom.test.tsx` and, in the browser,
-  `frontend/e2e/comments.spec.mjs` (FH-125). Change requests (FH-126,
-  REV-6): who may move a comment's state and its history in `board`
+  `frontend/e2e/comments.spec.mjs` (FH-125). The comment tests run on
+  both the page and the card panel's Comments tab (`describe.each` over a
+  surface); the panel's own flow, from posting there to seeing it on the
+  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128). Change
+  requests (FH-126, REV-6): who may move a comment's state and its history in `board`
   (`requests_test.go`), the one-write request and addressing in `store`,
   a ticket's live holder in `index` (`TestHolderIsTheLiveClaimant`),
   delivery to the holder's inbox and the move warning in `api`, the
