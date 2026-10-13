@@ -1069,7 +1069,57 @@ carries only its day, so a day's notes come before its timed entries. If
 Activity needs the full history, the server can add it without changing
 the timeline's view.
 
-## 2026-10-13 — D47: A section edited in place is saved by the server, as one section
+## 2026-10-13 — D47: People comment on tickets; activity is typed and durable
+
+A person comments on a ticket mostly before work starts (clarifying what
+to build) and in review (asking for changes instead of telling a Claude or
+Codex session in its chat). Sending a remark to a live session is a
+secondary option, not the feature (FH-67, brainstormed with the user;
+built by FH-124 to FH-128).
+
+- **Typed activity, like Jira.** A ticket's Activity holds typed entries:
+  comments (people), notes (agents' `## Notes`), history (created, moved,
+  fields edited, criteria ticked, archived: who, what and when, never the
+  ticket's text), handoffs and questions. The page filters it All,
+  Comments or History.
+- **Storage.** Comments and history live in a new append-only
+  `activity.md` in the ticket's folder, beside `review.md`: human-readable
+  markdown, one dated, typed entry each. History is kept for the ticket's
+  life, so it outlives the event log's retention; board and agent writes
+  both append it. `## Notes` stays in the ticket file. Comments never
+  contend with agents rewriting `## Handoff` in the ticket file.
+- **Comments.** Ticket-level, optionally quoting part of the ticket (a
+  failing How to verify step). Editable, shown as edited. Agents read
+  them as the user's words, not as agent text: `get_ticket` and `claim`
+  carry them, so the session that takes a ticket gets them with it.
+- **Request changes.** In review, comments can be marked *change
+  requested*; the ticket goes back to In progress on its branch. Open
+  requests reach the live holding session at once, and otherwise the next
+  session through the recovery note and `board_context`. An agent marks
+  each one addressed through the MCP tools; moving to review warns while
+  any is open; the person resolves or reopens them at the next review.
+- **Tell a session now.** A comment may also be sent to a live session
+  that has claimed the ticket, chosen in the comment box; with none, the
+  option is off and nothing is queued. It is delivered through the
+  answers inbox as answers are, shows *Delivered to … at …*, and is
+  locked once delivered.
+- **Protocol.** Additive within version 2 (§14): new event kinds, comments
+  in `get_ticket` and `claim`, open requests in the recovery note and
+  `board_context`, an optional input to mark a request addressed, and
+  skill lines. No setup rerun.
+- **Where.** The ticket's full page first; the card panel later.
+
+Options: notes delivered to sessions as the main feature (rejected once
+the user framed comments as ordinary ticket work); comments in
+`## Notes` or a `## Comments` section of the ticket file (one file, but
+people's saves would race agents' checkpoints, and history would bloat
+the ticket); history from the event log only (lost after retention);
+anchoring comments to criteria or steps (anchors go stale as agents
+rewrite sections; a quote does the job); requested changes as new
+acceptance criteria (cheap, but loses the conversation). Durable history
+supersedes the run-window limits D46 accepted for Activity.
+
+## 2026-10-13 — D48: A section edited in place is saved by the server, as one section
 
 The full page's in-place editing (FH-66, `EDIT-11`) saves a section with
 `PUT /api/tickets/{id}/section` (`base`, `section`, `content`):
