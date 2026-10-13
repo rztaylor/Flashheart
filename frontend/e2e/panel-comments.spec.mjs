@@ -207,6 +207,67 @@ test("a comment being written survives other tabs, and closing the panel asks fi
   await expect(card(page, "Run state derivation table")).toBeFocused();
 });
 
+// The Edit tab holds its unsaved changes the same way (FH-138).
+const editTab = () => panel().getByRole("tab", { name: "Edit" });
+const editPanel = () => panel().getByRole("tabpanel", { name: "Edit" });
+const priority = () => editPanel().getByRole("combobox", { name: "Priority" });
+const askTicket = () =>
+  page.getByRole("dialog", { name: "Unsaved changes to the ticket" });
+
+test("unsaved Edit tab changes survive other tabs, and leaving the panel asks first", async () => {
+  const ticketFile = join(
+    sandbox.root,
+    "flashheart",
+    "tickets",
+    folder,
+    `${folder}.md`,
+  );
+  const before = await readFile(ticketFile, "utf8");
+  for (const theme of ["light", "dark"]) {
+    await open(page, boardWithPanel, { theme });
+    await editTab().click();
+    // A person picking a priority focuses the select.
+    await priority().focus();
+    await priority().selectOption("low");
+    await panel().getByRole("tab", { name: "Ticket" }).click();
+    await editTab().click();
+    await expect(priority()).toHaveValue("low");
+    if (theme === "light")
+      await shot(page, "panel-edit-kept-1440-light", { keepFocus: true });
+
+    // Closing from another tab asks; Keep editing returns to the Edit tab
+    // with focus on the control last used.
+    await panel().getByRole("tab", { name: "Ticket" }).click();
+    await panel().getByRole("button", { name: "Close ticket" }).click();
+    await expect(askTicket()).toBeVisible();
+    await expectNoAxeViolations(page, `panel unsaved edit ${theme}`);
+    await shot(page, `panel-edit-unsaved-1440-${theme}`, { keepFocus: true });
+    await askTicket().getByRole("button", { name: "Keep editing" }).click();
+    await expect(editTab()).toHaveAttribute("aria-selected", "true");
+    await expect(priority()).toBeFocused();
+    await expect(priority()).toHaveValue("low");
+
+    // Opening another ticket asks as well; kept, the panel stays on FH-20.
+    await card(page, "Claude Code hook adapter").click();
+    await expect(askTicket()).toBeVisible();
+    await askTicket().getByRole("button", { name: "Keep editing" }).click();
+    await expect(page).toHaveURL(/\?t=FH-20$/);
+    await expect(priority()).toBeFocused();
+
+    // Escape asks too; discarded, the panel closes, nothing is written and
+    // focus returns to the ticket's card.
+    await page.keyboard.press("Escape");
+    await expect(askTicket()).toBeVisible();
+    await askTicket().getByRole("button", { name: "Discard changes" }).click();
+    await expect(panel()).toHaveCount(0);
+    await expect(card(page, "Run state derivation table")).toBeFocused();
+    expect(await readFile(ticketFile, "utf8")).toBe(before);
+  }
+  await open(page, boardWithPanel);
+  await editTab().click();
+  await expect(priority()).toHaveValue("high");
+});
+
 test("the panel's comments fit a phone and pass axe in both themes", async () => {
   for (const theme of ["light", "dark"]) {
     await showComments({ width: 390, height: 844, theme });

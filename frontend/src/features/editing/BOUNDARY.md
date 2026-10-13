@@ -18,7 +18,8 @@ reload, cancel) for the conflict dialog.
 Owns in-place editing (`InPlace`, EDIT-11): one open item per page or
 card panel (FH-128), the unsaved-changes prompt and holding the leave
 guard (also for held drafts
-outside any item, such as a comment being written), an item's pencil,
+outside any item, such as a comment being written or the panel's Edit
+tab, and Keep editing's return to one), an item's pencil,
 Add slot, double-click and focus return, and an open item's draft with
 Save, Cancel, shortcuts, inline error and conflict.
 
