@@ -17,6 +17,16 @@ All notable changes to this project are documented here. The project follows
   **New ticket**, the new ticket opens on its Edit tab with the cursor in
   its title, ready for the details the dialog does not ask.
 
+- Compare projects at a glance on the All projects Overview (FH-153,
+  `PRJ-6`). Under the pipeline, a Projects list shows every project, most
+  recently active first as in the sidebar, with its key and name, its
+  tickets, its count in each board column, and how many tickets are
+  blocked or need repair and how many agents need you; a repair count is
+  ringed in dashes and a Needs you count sits on the attention colour.
+  Choose a row to open that project's Overview. On a phone, or beside an
+  open ticket, each project's counts stack under its name. One project's
+  Overview has no list.
+
 - Edit a workstream's goal and notes on its own page (FH-139,
   `EDIT-13`). A workstream's name on the Workstreams view now opens its
   page (a finished line has an *Open* link beside its head): its line of
