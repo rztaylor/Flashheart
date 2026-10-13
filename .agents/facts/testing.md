@@ -26,7 +26,11 @@
   manual-URL path opens the page, against a copy of `testdata/boards/sample`.
   Specs share `open`, `card`, `column`, `expectConnected`,
   `expectNoAxeViolations` and `shot` from `frontend/e2e/support.mjs`
-  rather than redefining them.
+  rather than redefining them. After a save, a step waits for what the
+  page shows once the save's own answer is back (its toast, the editor
+  closing, Save disabled again) before going on: the file and the live
+  update show the change first, and a late answer lands in the next step
+  (FH-152).
 - Visual regression (D42): `scripts/e2e-visual.sh` compares the stable
   screenshot set (`frontend/e2e/visual.spec.mjs`: board, panel, table,
   workstreams, Overview and ticket page over the demo board, at a fixed
