@@ -123,6 +123,9 @@ export function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
     raw: "",
     runs: [] as Run[],
     questions: [],
+    comments: [],
+    history: [],
+    activityHash: "",
     ...overrides,
   };
 }

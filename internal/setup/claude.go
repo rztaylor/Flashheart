@@ -230,10 +230,11 @@ func encodeLike(tree *value, original []byte) []byte {
 	return out
 }
 
-// stripOwn removes setup's hooks from the hooks object. With prune, groups
-// and events left empty by the removal go too (uninstall); without it they
-// stay, so reinstalling keeps every event where it was.
-func stripOwn(hooks *value, prune bool) {
+// stripOwn removes setup's hooks from the hooks object. Groups left empty
+// by the removal go, and so do events, except those in keep: reinstalling
+// keeps every event it registers where it was, and drops one it no longer
+// registers (uninstall keeps none).
+func stripOwn(hooks *value, keep []string) {
 	if hooks == nil || !hooks.isObj {
 		return
 	}
@@ -265,7 +266,7 @@ func stripOwn(hooks *value, prune bool) {
 			keptGroups = append(keptGroups, group)
 		}
 		groups.array = keptGroups
-		if prune && removedAny && len(keptGroups) == 0 {
+		if removedAny && len(keptGroups) == 0 && !slices.Contains(keep, hooks.object[index].key) {
 			hooks.object = slices.Delete(hooks.object, index, index+1)
 			index--
 		}
@@ -280,7 +281,7 @@ func installHooks(tree *value, events []string, command func(string) string) {
 		hooks = &value{isObj: true}
 		tree.set("hooks", hooks)
 	}
-	stripOwn(hooks, false)
+	stripOwn(hooks, events)
 	for _, event := range events {
 		entry := &value{isObj: true}
 		entry.set("type", stringValue("command"))
@@ -478,7 +479,7 @@ func uninstalledHooks(backups, name string, data []byte, tree *value, install fu
 		return after
 	}
 	hooks := tree.get("hooks")
-	stripOwn(hooks, true)
+	stripOwn(hooks, nil)
 	if hooks != nil && hooks.isObj && len(hooks.object) == 0 {
 		tree.remove("hooks")
 	}
@@ -511,7 +512,7 @@ func restoredHooks(backups, name string, current []byte, install func([]byte, *v
 	// may hold Flashheart hooks of its own; those go too.
 	_, original, _ := readSettings(filepath.Join(dir, name))
 	hooks := original.get("hooks")
-	stripOwn(hooks, true)
+	stripOwn(hooks, nil)
 	if hooks != nil && hooks.isObj && len(hooks.object) == 0 {
 		original.remove("hooks")
 	}

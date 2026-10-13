@@ -237,7 +237,7 @@ describe("the ticket page (CARD-7, FH-65)", () => {
     expect(within(dialog).getByRole("heading").textContent).toBe("Dark, 1440");
   });
 
-  it("shows Activity as a timeline, oldest first, with no note box", () => {
+  it("shows Activity as a timeline, oldest first, ending with the comment box", () => {
     renderPage();
     const activity = screen.getByRole("region", { name: "Activity" });
     const items = within(activity)
@@ -249,7 +249,11 @@ describe("the ticket page (CARD-7, FH-65)", () => {
     expect(items[1]).toContain("Yes, drop it");
     expect(items[2]).toContain("updated the handoff");
     expect(items[2]).toContain("Verify it");
-    expect(within(activity).queryByRole("textbox")).toBeNull();
+    // Comments are written below the timeline (FH-125); notes stay the
+    // agents'.
+    expect(
+      within(activity).getByRole("textbox", { name: "Add a comment" }),
+    ).toBeTruthy();
   });
 
   it("keeps the properties in one panel with Move to and Archive", () => {

@@ -323,8 +323,16 @@ Full format: `docs/dev/specs/board-format.md`.
   own sections, its *Evidence* screenshots as one captioned gallery that
   opens the lightbox; then **Files**, the attachments neither the review nor
   the ticket links, so each screenshot shows once; then **Activity**, a
-  read-only timeline, oldest first, of the ticket's notes, agents'
-  questions with their answers, and handoff updates. From 1280px an outline
+  timeline, oldest first, of people's comments, agents' notes, the
+  ticket's history (`STO-8`; moves the runs recorded fill in only before
+  the history begins), agents' questions with their answers, and handoff
+  updates, filtered **All**, **Comments** or **History** (the outline's
+  count follows the filter), ending with a comment box: a person posts a
+  comment with **Comment** or Ctrl or Cmd and Enter (never an empty one;
+  a failed post keeps the text with the reason beside it), optionally
+  quoting a section, criterion or How to verify step chosen from the
+  page, shown as a quote in the comment. A person's comment edits in
+  place (`EDIT-11`) and then shows as edited. From 1280px an outline
   of the sections (with counts, empty template sections marked empty, the
   section in view highlighted) sits on the left and the properties (status
   with **Move to …**, priority, type, workstream, branch, pull request,
@@ -418,8 +426,12 @@ Full format: `docs/dev/specs/board-format.md`.
   as markdown; an empty template section shows **Add <section>** in its
   place; the acceptance criteria edit as a list (add, reword, tick,
   remove, reorder; a section with other text edits as markdown), and
-  ticking one stays one click (`CARD-3`). Handoff, the review and Activity
-  are not edited. A save writes only that field or section, leaving every
+  ticking one stays one click (`CARD-3`). In Activity a person's comment
+  edits as markdown, saved on the hash of the activity file it was read
+  from, so an edit over a newer version opens the conflict dialog with
+  that comment as it is now; a comment being written is unsaved work, so leaving the page asks
+  about it too. Handoff, the review, notes and history are not edited. A
+  save writes only that field or section, leaving every
   other byte of the file as it was (board-format §Section edits), and an
   untouched save writes nothing; it carries the content hash its edit
   opened on, moved on to a newer version only while that version left the
@@ -545,7 +557,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   ticket's field and the workstreams' `tickets:` lists in step. The
   ticket tools ask agents to write titles and descriptions for a person,
   with implementation detail under Context, and warn about a title that
-  reads like code (agent-protocol §7.2).
+  reads like code (agent-protocol §7.2). `get_ticket` and `claim` end
+  with the ticket's comments (STO-8), framed as the user's words apart
+  from ticket text, the newest kept within each tool's budget.
 - `MCP-3` Tool outputs are compact text designed for model context;
   `board_context` stays under about 1,500 tokens.
 - `MCP-4` Each call is attributed to a run: from a run id stamped into the
@@ -570,9 +584,12 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 ### 6.10 Setup and the protocol skill (`SET`)
 
 - `SET-1` `flashheart setup claude|codex` shows the exact configuration
-  changes (hooks, MCP server registration, protocol instructions) as a diff
-  and writes nothing. `--write` applies them with timestamped backups.
-  `--uninstall` shows the reverse, and applies it with `--write`.
+  changes (hooks, MCP server registration, protocol instructions) as a diff,
+  then asks `Apply these changes? [y/N]` in a terminal and applies them,
+  with timestamped backups, only on `y` or `yes` (D59). `--yes` (or its
+  older name `--write`) applies without asking; `--dry-run`, or no
+  terminal to ask in without `--yes`, only shows them. `--uninstall` does
+  the same for the reverse.
 - `SET-2` For Claude, setup installs the **Flashheart protocol skill**
   (`~/.claude/skills/flashheart/SKILL.md`), which replaces the kanban-tracker
   skill: tickets are created, read and moved through Flashheart, never by

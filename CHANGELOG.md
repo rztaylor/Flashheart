@@ -8,6 +8,21 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Comment on a ticket from its full page (FH-125, D47, `CARD-7`).
+  Activity ends with a comment box: write a comment and post it with
+  **Comment** or Ctrl or Cmd with Enter, optionally quoting a section, an
+  acceptance criterion or a How to verify step picked from the ticket.
+  An empty comment cannot be posted, a failed post keeps your text with
+  the reason, and leaving the page with a comment not posted asks first.
+  Your comments edit in place, show as edited, and an edit over a newer
+  version opens the conflict dialog. Activity now also shows the ticket's
+  lasting history (moves, edits, ticks, archive and restore, older than
+  the run window too) beside notes, handoffs and questions, oldest first,
+  and filters **All**, **Comments** or **History**, with the outline's
+  count following the filter. Agents get the comments with `get_ticket`
+  and `claim`, framed as the user's own words apart from the ticket's
+  text and kept within each tool's output budget, and the flashheart skill
+  says how to read them (additive within protocol 2; no setup rerun).
 - A ticket's full page edits in place (FH-66, `EDIT-11`). Hovering or
   focusing the title, a section or a property shows a pencil; the pencil,
   a double-click or Enter opens just that item, and Save, Cancel,
@@ -338,6 +353,21 @@ All notable changes to this project are documented here. The project follows
   questions their sessions already settled in chat.
 
 ### Changed
+
+- `flashheart setup` asks before it writes instead of needing a second
+  run with `--write` (FH-129, D59). It shows the diff, then asks
+  `Apply these changes? [y/N]` and applies them only on `y`; `--yes`
+  applies without asking, for scripts, and `--dry-run` only shows the
+  changes. With no terminal to ask in and no `--yes`, it only shows them,
+  as before. `--write` still works as an older name for `--yes`, and
+  doctor's fixes now say `run flashheart setup <agent>`.
+
+- `setup codex` no longer installs a `PreToolUse` hook on Flashheart's own
+  tools (FH-123). Codex's calls are attributed by the session they name
+  (D45), so the hook did nothing but start Flashheart on every board call
+  and ask to be trusted with `/hooks`. Running `setup codex` again
+  removes the hook an earlier setup wrote, and `doctor` warns about a
+  Flashheart hook on an event setup no longer registers.
 
 - Each session has one inbox for what the board sends it (FH-135, D54).
   Answers to its questions, and from FH-126 and FH-127 comments and change

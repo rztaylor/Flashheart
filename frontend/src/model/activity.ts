@@ -1,13 +1,21 @@
-// A ticket's activity for its full page (CARD-7, FH-65): its notes, the
-// agents' questions about it with their answers, and its handoff updates,
-// as one timeline, oldest first. Everything comes from what the ticket
-// API already returns: the notes are the ticket's ## Notes bullets
-// (board.NoteLine), the questions are its open questions and those its
-// linked runs asked about it, and the handoff updates are those runs'
-// checkpoints on it plus the current handoff's _Updated_ line. Runs cover
-// the server's run window (48 hours), so an older question or checkpoint
-// survives only as its note or as the current handoff (D46).
-import type { TicketDetail } from "../api/board";
+// A ticket's activity for its full page (CARD-7, FH-65, FH-125): people's
+// comments, its notes, its history, the agents' questions about it with
+// their answers, and its handoff updates, as one timeline, oldest first.
+// Everything comes from what the ticket API returns: comments and history
+// are its activity file (STO-8, D47), kept for the ticket's life; the notes
+// are the ticket's ## Notes bullets (board.NoteLine); the questions are its
+// open questions and those its linked runs asked about it; and the handoff
+// updates are those runs' checkpoints on it plus the current handoff's
+// _Updated_ line. Runs cover the server's run window (48 hours), so an
+// older question or checkpoint survives only as its note or as the current
+// handoff (D46); agents' moves from the runs fill in only before the
+// activity file's history begins, so no move shows twice.
+import {
+  type Comment,
+  type HistoryChange,
+  STATUSES,
+  type TicketDetail,
+} from "../api/board";
 import type { Question, QuestionKind } from "../api/runs";
 import { markdownSections } from "./markdown";
 import { compareTimes } from "./time";
@@ -50,12 +58,140 @@ export interface HandoffEntry extends Dated {
   next: string[];
 }
 
-export type ActivityEntry = NoteEntry | QuestionEntry | HandoffEntry;
+// CommentEntry is a person's comment (STO-8): edited is when it was last
+// edited ("" if never), quote the part of the ticket it quotes, from
+// quoteFrom.
+export interface CommentEntry extends Dated {
+  kind: "comment";
+  time: string;
+  id: string;
+  by: string;
+  byPerson: boolean;
+  edited: string;
+  quoteFrom: string;
+  quote: string;
+  markdown: string;
+}
+
+// HistoryEntry is one write that changed the ticket, its changes in words
+// (historyWords).
+export interface HistoryEntry extends Dated {
+  kind: "history";
+  time: string;
+  by: string;
+  byPerson: boolean;
+  words: string[];
+}
+
+export type ActivityEntry =
+  | NoteEntry
+  | QuestionEntry
+  | HandoffEntry
+  | CommentEntry
+  | HistoryEntry;
 
 export type ActivityInput = Pick<
   TicketDetail,
-  "id" | "body" | "handoff" | "runs" | "questions"
+  "id" | "body" | "handoff" | "runs" | "questions" | "comments" | "history"
 >;
+
+// ActivityFilter is what Activity shows: everything, people's comments, or
+// the ticket's history of changes (D47).
+export type ActivityFilter = "all" | "comments" | "history";
+
+export const ACTIVITY_FILTERS: { value: ActivityFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "comments", label: "Comments" },
+  { value: "history", label: "History" },
+];
+
+// filterActivity keeps the entries a filter shows.
+export function filterActivity(
+  entries: ActivityEntry[],
+  filter: ActivityFilter,
+): ActivityEntry[] {
+  if (filter === "comments")
+    return entries.filter((entry) => entry.kind === "comment");
+  if (filter === "history")
+    return entries.filter((entry) => entry.kind === "history");
+  return entries;
+}
+
+// shortAuthor names a run by its short id (agent and the session's first
+// eight characters), as the board does elsewhere; a person by name.
+export function shortAuthor(by: string): string {
+  const run = /^([a-z][a-z0-9-]*:)([^\s/]{1,8})\S*$/.exec(by);
+  return run ? `${run[1]}${run[2]}` : by;
+}
+
+const statusTitles = new Map<string, string>(
+  STATUSES.map((status) => [status.id, status.title]),
+);
+const statusTitle = (status: string) => statusTitles.get(status) ?? status;
+
+// The names a history entry gives what was edited (board-format
+// §Activity), in words.
+const fieldWords: Record<string, string> = {
+  title: "the title",
+  description: "the description",
+  "acceptance-criteria": "the acceptance criteria",
+  "test-plan": "the test plan",
+  reproduction: "the reproduction",
+  context: "the context",
+  review: "the review",
+  body: "the ticket's text",
+  frontmatter: "the frontmatter",
+  pr: "the pull request",
+  "depends-on": "its dependencies",
+  "depends-on-workstreams": "its workstream dependencies",
+};
+const fieldWord = (field: string) =>
+  fieldWords[field] ?? `the ${field.replaceAll("-", " ")}`;
+
+// andList joins words as a sentence does: "a, b and c".
+export function andList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
+// numbered names ticked items: "criterion 2", "review steps 1 and 3".
+function numbered(one: string, many: string, numbers: number[]): string[] {
+  if (numbers.length === 0) return [];
+  return [
+    `${numbers.length === 1 ? one : many} ${andList(numbers.map(String))}`,
+  ];
+}
+
+// historyWords says what each change of a write did, in plain words and
+// never with the ticket's text.
+export function historyWords(changes: HistoryChange[]): string[] {
+  return changes.map((change) => {
+    switch (change.what) {
+      case "created":
+        return change.to
+          ? `created it in ${statusTitle(change.to)}`
+          : "created it";
+      case "moved":
+        return change.from
+          ? `moved it from ${statusTitle(change.from)} to ${statusTitle(change.to)}`
+          : `moved it to ${statusTitle(change.to)}`;
+      case "edited":
+        return `edited ${andList(change.fields.map(fieldWord))}`;
+      case "ticked":
+      case "unticked":
+        return `${change.what} ${andList([
+          ...numbered("criterion", "criteria", change.criteria),
+          ...numbered("review step", "review steps", change.steps),
+        ])}`;
+      case "archived":
+        return "archived it";
+      case "restored":
+        return "restored it";
+      default:
+        return change.what;
+    }
+  });
+}
 
 const noteBullet = /^- (\d{4}-\d{2}-\d{2}) · ([\s\S]*)$/;
 const authored = /^([a-z][a-z0-9-]*:[A-Za-z0-9…-]+): ([\s\S]*)$/;
@@ -205,6 +341,79 @@ function handoffsOf(detail: ActivityInput): HandoffEntry[] {
   return entries;
 }
 
+function commentEntry(comment: Comment): CommentEntry {
+  return {
+    kind: "comment",
+    key: `comment:${comment.id}`,
+    day: localDay(comment.time),
+    time: comment.time,
+    id: comment.id,
+    by: comment.byPerson ? comment.by : shortAuthor(comment.by),
+    byPerson: comment.byPerson,
+    edited: comment.edited,
+    quoteFrom: comment.quoteFrom,
+    quote: comment.quote,
+    markdown: comment.body,
+  };
+}
+
+// historyOf is the activity file's history, and before it begins the
+// agents' moves and new tickets the runs recorded: a ticket without the
+// file, or older than it, still shows what the run window holds, and a
+// write the file records shows once.
+function historyOf(detail: ActivityInput): HistoryEntry[] {
+  const durable = detail.history.map(
+    (entry): HistoryEntry => ({
+      kind: "history",
+      key: `history:${entry.id}`,
+      day: localDay(entry.time),
+      time: entry.time,
+      by: entry.byPerson ? entry.by : shortAuthor(entry.by),
+      byPerson: entry.byPerson,
+      words: historyWords(entry.changes),
+    }),
+  );
+  const begins = Math.min(
+    ...detail.history.map((entry) => Date.parse(entry.time) || Infinity),
+  );
+  const seen = new Set<string>();
+  const fromRuns: HistoryEntry[] = [];
+  for (const run of detail.runs) {
+    for (const entry of run.timeline ?? []) {
+      if (entry.ticket !== detail.id || !(Date.parse(entry.time) < begins))
+        continue;
+      const what =
+        entry.kind === "ticket.moved"
+          ? "moved"
+          : entry.kind === "ticket.created"
+            ? "created"
+            : "";
+      const key = `history:${run.short}:${entry.kind}:${entry.time}`;
+      if (!what || seen.has(key)) continue;
+      seen.add(key);
+      fromRuns.push({
+        kind: "history",
+        key,
+        day: localDay(entry.time),
+        time: entry.time,
+        by: run.short,
+        byPerson: false,
+        words: historyWords([
+          {
+            what,
+            from: "",
+            to: what === "moved" ? (entry.detail ?? "") : "",
+            fields: [],
+            criteria: [],
+            steps: [],
+          },
+        ]),
+      });
+    }
+  }
+  return [...fromRuns, ...durable];
+}
+
 // activityOf is the ticket's activity, oldest first: by day, and within a
 // day the notes (which carry only a day) in their order, then the timed
 // entries by time.
@@ -227,9 +436,12 @@ export function activityOf(detail: ActivityInput): ActivityEntry[] {
         (entry) => entry.by === note.by && entry.question === note.question,
       ),
   );
-  const timed = [...asked, ...handoffsOf(detail)].sort((a, b) =>
-    compareTimes(a.time, b.time),
-  );
+  const timed = [
+    ...historyOf(detail),
+    ...asked,
+    ...detail.comments.map(commentEntry),
+    ...handoffsOf(detail),
+  ].sort((a, b) => compareTimes(a.time, b.time));
   const all: ActivityEntry[] = [...notes, ...timed];
   return all
     .map((entry, index) => ({ entry, index }))

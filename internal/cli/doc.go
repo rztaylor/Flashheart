@@ -11,7 +11,9 @@
 // the MCP server on stdio with the agent's project directory
 // (CLAUDE_PROJECT_DIR, else the working directory) and its own binary path,
 // waits for a question's answer (`await`, printing only the answer to
-// stdout), and shows or applies setup's plan. Usage errors exit 2 and failures exit 1, except `hook`,
+// stdout), and shows setup's plan, then applies it when the user says yes
+// in a terminal (IsTerminal) or passes --yes. Usage errors exit 2 and
+// failures exit 1, except `hook`,
 // which always exits 0 and reports problems on stderr and in
 // hook-errors.log (HOOK-1). The wait itself belongs to await,
 // Singleserve composition to app,

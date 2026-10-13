@@ -52,7 +52,11 @@
   double-click, focus return) and `InPlaceEditor` one open item's draft
   with Save, Cancel, the shortcuts, the inline error and the conflict
   dialog; the card feature supplies each item's control
-  (`PageEdits`, `PropertyEdits`). Leaving the page with unsaved changes
+  (`PageEdits`, `PropertyEdits`). A person's comment in Activity is an
+  item too, saved on the activity file's hash (`ActivityTimeline`); a
+  comment being written in `CommentBox` is a held draft
+  (`useHeldDraft`), asked about on leaving but not when opening an item
+  (FH-125). Leaving the page with unsaved changes
   goes through the one leave guard, `state/leaveGuard`, which the router
   (`app/route`) asks before every navigation and a link or Back that
   changed the hash; the browser's `beforeunload` prompt covers reloads.

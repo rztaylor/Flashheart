@@ -245,16 +245,38 @@ at most 94rem.
   kind) that opens the lightbox; *How to verify* is the steps' checklist
   with its count between the section's own text (`REV-3`). Then **Files**
   (h2): the attachments neither the review nor the ticket links, in the
-  attachment grid. Then **Activity** (h2): a timeline on one rule, oldest
+  attachment grid. Then **Activity** (h2), with its filter beside the
+  heading, a segmented control *Show in Activity*: **All**, **Comments**
+  (people's comments) or **History** (the ticket's history); a muted line
+  under the heading says what it lists. A timeline on one rule, oldest
   first by day (a note carries only its day, so a day's notes come before
-  its timed entries), of notes (author, day, text), agents' questions
-  (asker, time, the question and, in a tinted reply box, the answer and
-  who gave it, *Answered in the session's own chat*, or *Waiting for your
-  answer, above* while it is open) and handoff updates (run, time, and the
-  next steps of the current handoff). Activity is read-only: there is no
-  note box. Notes, the user's answers on the board and the current handoff
-  are kept in the ticket; earlier questions and checkpoints show while the
-  runs that made them are within the run window.
+  its timed entries), of people's comments (author, time, *edited* once
+  edited, the quote in a well with a full rule border captioned with where
+  it is from, then the text; a pencil, *Edit comment*, on a person's
+  comment edits its text in place as other items do, FH-125), notes
+  (author, day, text), history (author, what the write changed in words,
+  "moved it from Up next to In progress", "edited the description and the
+  priority", "ticked criterion 2", and time; never the ticket's text),
+  agents' questions (asker, time, the question and, in a tinted reply box,
+  the answer and who gave it, *Answered in the session's own chat*, or
+  *Waiting for your answer, above* while it is open) and handoff updates
+  (run, time, and the next steps of the current handoff). A comment's
+  node is on the selection surface, as a person's answer is; history's on
+  the well. A filter with nothing to show says so (*No comments yet.*,
+  *No history yet.*). Comments and history come from the ticket's
+  `activity.md` and last as long as the ticket; notes, the user's answers
+  on the board and the current handoff are kept in the ticket; earlier
+  questions and checkpoints, and agents' moves from before the history
+  begins, show while the runs that made them are within the run window.
+  Where the page can save, the timeline ends with the **comment box**: a
+  comment node, then a text area *Add a comment*, then **Comment**
+  (primary; disabled while empty, *Posting…* meanwhile), *Quote*, a select
+  of the parts of the ticket a comment can quote (*No quote*, then
+  Sections, Criteria and How to verify steps, numbered), and the hint
+  *⌘Enter posts* (Ctrl on other systems). A chosen quote shows above the
+  text as it will in the comment. A failed post keeps the text with the
+  reason as a danger line under it. Text in the box is unsaved work:
+  leaving the page asks first (*Unsaved changes to the comment*).
 - **Outline** (left, 13rem, from 1280px), staying in view: *Sections*, a
   list of the centre's sections in order: the ticket's, then *Review*
   (its icon) with its sections indented, then Files and Activity. Counts
@@ -262,7 +284,7 @@ at most 94rem.
   when all done), Evidence, Files and Activity a number. A template
   section with nothing in it (criteria, Description, Test plan or
   Reproduction, Context) is listed as *<Name>, empty* in faint italics,
-  not a control. The section crossing the top third of the page is current
+  not a control. Activity counts what its filter shows. The section crossing the top third of the page is current
   (`aria-current`, the selection surface); between sections the last one
   stays. Choosing a section, by mouse or keyboard, scrolls it to the top,
   moves focus to its heading and keeps it current until the person moves
@@ -293,9 +315,11 @@ at most 94rem.
   then a field where Enter or a comma adds one; Depends on offers the
   project's tickets. An empty template section is a dashed *Add
   <section>* slot in its place. Handoff, Blocked by, the review, Files and
-  Activity have no pencil. Opening another item or leaving the page with
-  unsaved changes asks in a dialog, *Unsaved changes to the <name>*:
-  **Discard changes** or **Keep editing** (primary).
+  Activity have no pencil; in Activity only a person's comment has one.
+  Opening another item or leaving the page with unsaved changes asks in a
+  dialog, *Unsaved changes to the <name>* (a comment being written counts
+  when leaving, named *the comment*): **Discard changes** or **Keep
+  editing** (primary).
 - **Below 1280px** the outline becomes a **Jump to** button (naming the
   section in view) at the top of the page, staying in view, opening the
   same list as a menu. From 1024px the properties stay on the right;

@@ -1,7 +1,7 @@
 // Writes to the board (board-editing). Every ticket edit sends the hash the
 // client read; a stale hash fails with a conflict carrying the current file
 // (STO-3, EDIT-7).
-import { type Column, type Status, segment } from "./board";
+import { type Column, isComment, type Status, segment } from "./board";
 import {
   ApiError,
   type AuthenticatedFetch,
@@ -133,6 +133,69 @@ export function answerQuestion(
   return save(fetcher, "POST", `/api/questions/${segment(id)}/answer`, {
     answer,
   });
+}
+
+// NewComment is a person's comment as posted: its text and, optionally,
+// the part of the ticket it quotes and where that is from (STO-8).
+export interface NewComment {
+  body: string;
+  quote?: string;
+  quoteFrom?: string;
+}
+
+// commentSave sends a comment write and reads the activity's new hash as
+// a save's (Saved), so a comment edit goes through the same draft and
+// conflict handling as a ticket edit.
+async function commentSave(
+  fetcher: AuthenticatedFetch,
+  method: "POST" | "PATCH",
+  path: string,
+  body: unknown,
+): Promise<Saved> {
+  const payload = await sendJSON(fetcher, method, path, body);
+  if (
+    !isRecord(payload) ||
+    !isComment(payload.comment) ||
+    typeof payload.activityHash !== "string" ||
+    typeof payload.revision !== "number"
+  )
+    throw new Error("Comment response was invalid");
+  return {
+    hash: payload.activityHash,
+    revision: payload.revision,
+    warnings: [],
+  };
+}
+
+// addComment appends a comment to the ticket's activity (D47); comments
+// are appended as the file is, with no precondition.
+export function addComment(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  comment: NewComment,
+) {
+  return commentSave(fetcher, "POST", `${ticketPath(id)}/comments`, {
+    body: comment.body,
+    quote: comment.quote ?? "",
+    quoteFrom: comment.quoteFrom ?? "",
+  });
+}
+
+// editComment replaces a comment's text on base, the hash of the activity
+// it was read from; a stale base is a conflict carrying the current file.
+export function editComment(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  comment: string,
+  base: string,
+  body: string,
+) {
+  return commentSave(
+    fetcher,
+    "PATCH",
+    `${ticketPath(id)}/comments/${segment(comment)}`,
+    { base, body },
+  );
 }
 
 export function archiveTicket(fetcher: AuthenticatedFetch, id: string) {

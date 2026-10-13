@@ -2,7 +2,8 @@
 
 - Binary: `flashheart`. Commands: `serve` (default), `mcp`, `hook <agent>
   <event>`, `await <question-id> --project NAME [--timeout DUR]`,
-  `setup <agent> [--uninstall] [--write]`, `doctor`, `migrate`, `version`.
+  `setup <agent> [--uninstall] [--yes | --dry-run]`, `doctor`, `migrate`,
+  `version`.
   Global `--root` (else `FLASHHEART_ROOT`, else `~/reports/Kanban`), `--debug`,
   `--help`.
 - `hook` and `mcp` print only protocol output to stdout; `hook` always exits 0
@@ -31,8 +32,12 @@
   it finds one; warnings alone exit 0. Without a Codex home its Codex
   section is one ok line, so people who use only Claude Code see no
   problems.
-- `setup` writes nothing without `--write`; it prints a diff. `--uninstall`
-  previews the reverse and applies it with `--write`. `setup claude`: backups
+- `setup` prints a diff, then asks `Apply these changes? [y/N]` (on
+  stderr, answer read from stdin) and writes only on `y`/`yes` (D59).
+  `--yes` (older name `--write`) applies without asking; `--dry-run` only
+  shows; with no terminal on stdin and no `--yes` it only shows and says to
+  re-run with `--yes`, so agents and scripts never hang or write by
+  surprise. `--uninstall` follows the same rules. `setup claude`: backups
   go to `~/.claude/flashheart-backup/<UTC time>/`; the MCP server is
   registered with `claude mcp add-json --scope user` (printed when no claude
   CLI is found); the kanban-tracker skill is moved into the backup (user,
