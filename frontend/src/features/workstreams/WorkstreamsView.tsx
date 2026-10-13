@@ -17,6 +17,7 @@ import { StaleNote } from "../../components/StaleNote";
 import { StateNote } from "../../components/StateNote";
 import { messageOf } from "../../model/errors";
 import type { Line } from "../../model/lines";
+import { workstreamPageHref } from "../../model/markdown";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
 import { isFinished, keptExpanded } from "./collapse";
@@ -261,6 +262,69 @@ const statusIcon = {
   completed: "check",
 } as const;
 
+// LineStatus is a workstream's derived status in words with its mark.
+export function LineStatus({ workstream }: { workstream: Workstream }) {
+  return (
+    <span
+      className={`flex items-center gap-1 text-xs ${workstream.status === "blocked" ? "font-semibold text-ink" : "text-ink-muted"}`}
+    >
+      <Icon name={statusIcon[workstream.status]} size={12} />
+      {statusLabel[workstream.status]}
+    </span>
+  );
+}
+
+// Served is a workstream's progress: d of t served.
+export function Served({ workstream }: { workstream: Workstream }) {
+  return (
+    <span className="text-sm text-ink-muted">
+      <span className="font-semibold text-ink">{workstream.done}</span> of{" "}
+      {workstream.total} served
+    </span>
+  );
+}
+
+// routeSurface is a route card's wash of its line colour (none in dark),
+// on which its stations sit.
+export function routeSurface(line?: Line): CSSProperties {
+  const colour = line ? `var(--fh-line-${line.colour})` : "var(--fh-ink-faint)";
+  return {
+    "--route-surface": `color-mix(in srgb, ${colour} var(--fh-route-wash), var(--fh-card))`,
+    "--route-ink": line
+      ? `var(--fh-line-ink-${line.colour})`
+      : "var(--fh-card)",
+  } as CSSProperties;
+}
+
+// LineNotes are a workstream's repair, blocker and warning notes.
+export function LineNotes({ workstream }: { workstream: Workstream }) {
+  if (
+    workstream.blockedBy.length === 0 &&
+    workstream.needsRepair.length === 0 &&
+    workstream.warnings.length === 0
+  )
+    return null;
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      {workstream.needsRepair.map((problem) => (
+        <StateNote key={problem} kind="repair">
+          {problem}
+        </StateNote>
+      ))}
+      {workstream.blockedBy.map((reason) => (
+        <StateNote key={reason.text} kind="blocked">
+          {reason.text}
+        </StateNote>
+      ))}
+      {workstream.warnings.map((warning) => (
+        <StateNote key={warning} kind="warning">
+          {warning}
+        </StateNote>
+      ))}
+    </div>
+  );
+}
+
 // WorkstreamLine is one route card. A finished workstream's head is a
 // disclosure button and its body shows only when expanded (FH-68).
 export function WorkstreamLine({
@@ -288,15 +352,8 @@ export function WorkstreamLine({
   const bodyId = `${titleId}-body`;
   const collapsible = isFinished(workstream);
   const open = !collapsible || expanded;
-  // The route card takes a wash of its line colour (none in dark), and its
-  // stations sit on that surface.
-  const colour = line ? `var(--fh-line-${line.colour})` : "var(--fh-ink-faint)";
-  const surface = {
-    "--route-surface": `color-mix(in srgb, ${colour} var(--fh-route-wash), var(--fh-card))`,
-    "--route-ink": line
-      ? `var(--fh-line-ink-${line.colour})`
-      : "var(--fh-card)",
-  } as CSSProperties;
+  const surface = routeSurface(line);
+  const page = workstreamPageHref({ project, slug: workstream.slug });
   // The head reads the same collapsed or not; only a finished workstream's
   // is a button, holding phrasing content only. The title alone names the
   // card.
@@ -310,20 +367,20 @@ export function WorkstreamLine({
             {workstream.title}
           </span>
         ) : (
+          // The title opens the workstream's page (FH-139).
           <Heading id={titleId} className="text-2xl leading-tight display-cut">
-            {workstream.title}
+            <a
+              href={page}
+              className="rounded-control hover:underline decoration-2 underline-offset-4"
+            >
+              {workstream.title}
+            </a>
           </Heading>
         )}
-        <span
-          className={`flex items-center gap-1 text-xs ${workstream.status === "blocked" ? "font-semibold text-ink" : "text-ink-muted"}`}
-        >
-          <Icon name={statusIcon[workstream.status]} size={12} />
-          {statusLabel[workstream.status]}
-        </span>
+        <LineStatus workstream={workstream} />
       </Stack>
-      <span className="ml-auto text-sm text-ink-muted">
-        <span className="font-semibold text-ink">{workstream.done}</span> of{" "}
-        {workstream.total} served
+      <span className="ml-auto">
+        <Served workstream={workstream} />
       </span>
     </>
   );
@@ -334,8 +391,8 @@ export function WorkstreamLine({
       className={`rounded-panel border border-rule bg-(--route-surface) px-5 pt-5 shadow-card ${open ? "pb-3" : "pb-5"}`}
     >
       {collapsible ? (
-        <header>
-          <Heading>
+        <header className="flex items-start gap-2">
+          <Heading className="min-w-0 flex-1">
             <button
               type="button"
               aria-expanded={open}
@@ -351,6 +408,16 @@ export function WorkstreamLine({
               />
             </button>
           </Heading>
+          {/* A finished line's head is its disclosure, so its page opens
+              from a link beside it. */}
+          <a
+            href={page}
+            aria-label={`Open ${workstream.title}`}
+            title={`Open ${workstream.title}`}
+            className="mt-1.5 grid size-8 shrink-0 place-items-center rounded-control text-ink-muted hover:bg-well hover:text-ink"
+          >
+            <Icon name="expand" size={16} />
+          </a>
         </header>
       ) : (
         <header className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -359,27 +426,7 @@ export function WorkstreamLine({
       )}
       {open ? (
         <div id={bodyId}>
-          {workstream.blockedBy.length > 0 ||
-          workstream.needsRepair.length > 0 ||
-          workstream.warnings.length > 0 ? (
-            <div className="mt-2 flex flex-col gap-1">
-              {workstream.needsRepair.map((problem) => (
-                <StateNote key={problem} kind="repair">
-                  {problem}
-                </StateNote>
-              ))}
-              {workstream.blockedBy.map((reason) => (
-                <StateNote key={reason.text} kind="blocked">
-                  {reason.text}
-                </StateNote>
-              ))}
-              {workstream.warnings.map((warning) => (
-                <StateNote key={warning} kind="warning">
-                  {warning}
-                </StateNote>
-              ))}
-            </div>
-          ) : null}
+          <LineNotes workstream={workstream} />
           <TransitLine
             workstream={workstream}
             line={line}

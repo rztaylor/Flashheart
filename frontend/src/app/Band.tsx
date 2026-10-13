@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Button } from "../components/Button";
 import { SearchField } from "../components/Field";
@@ -11,7 +11,7 @@ import { NeedsYouPill } from "./NeedsYouPill";
 import type { View } from "./route";
 
 // BandView is a view the band's tabs open.
-export type BandView = Exclude<View, "archive" | "ticket">;
+export type BandView = Exclude<View, "archive" | "ticket" | "workstream">;
 
 const views: { id: BandView; label: string; icon: IconName }[] = [
   { id: "overview", label: "Overview", icon: "overview" },
@@ -22,7 +22,9 @@ const views: { id: BandView; label: string; icon: IconName }[] = [
 
 // Band is the signage band (ui-layout.md §1): the bolt and wordmark, whose
 // tooltip is a marginal remark, the view tabs, the Needs you plate, search
-// where the view has it, the backend status and Quit.
+// where the view has it, the backend status, the Settings gear and Quit.
+// It clips sideways only and sits above the view and the phone's ticket
+// panel, so the gear's menu drops over them.
 export function Band({
   lifecycle,
   view,
@@ -31,6 +33,7 @@ export function Band({
   needsYouOn,
   onNeedsYou,
   search,
+  settings,
 }: {
   lifecycle: SingleserveLifecycle;
   view: View;
@@ -41,12 +44,14 @@ export function Band({
   onNeedsYou(): void;
   // search is the ticket search, on the Board and Table only.
   search?: { query: string; onChange(query: string): void };
+  // settings is the gear and its menu (SettingsMenu), on every screen.
+  settings: ReactNode;
 }) {
   const [brand] = useState(() => nextRemark("brand").text);
   const { state, ready } = lifecycle;
   const stopping = state.phase === "stopping";
   return (
-    <header className="relative flex min-w-0 items-center gap-1.5 overflow-hidden bg-band px-3 text-on-band sm:gap-6 sm:px-5">
+    <header className="relative z-40 flex min-w-0 items-center gap-1.5 overflow-x-clip bg-band px-3 text-on-band sm:gap-6 sm:px-5">
       <span className="flex items-center gap-2">
         <Bolt />
         <span className="wordmark text-xl max-sm:sr-only" title={brand}>
@@ -94,6 +99,7 @@ export function Band({
           checking={lifecycle.checking}
           onCheck={() => void lifecycle.checkHealth()}
         />
+        {settings}
         <Button
           variant="band"
           className="h-9 py-0 max-sm:px-2"

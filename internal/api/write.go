@@ -27,6 +27,7 @@ type Writer interface {
 	EditTicket(project, id string, pre store.Precondition, changes board.FieldChanges, edit store.Edit) (string, error)
 	UpdateReview(project, id string, pre store.Precondition, edit store.Edit) (string, error)
 	PlaceTicket(project, id string, pre store.Precondition, after string, edit store.Edit) (string, bool, error)
+	ReadWorkstream(project, slug string) ([]byte, string, error)
 	UpdateWorkstream(project, slug string, pre store.Precondition, edit store.Edit) (string, error)
 	CreateTicket(project string, input store.NewTicket) (store.Created, error)
 	SetProjectKey(project, key string) error
@@ -71,6 +72,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/tickets/{id}/files", b.upload)
 	mux.HandleFunc("POST /api/projects/{project}/tickets", b.createTicket)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/order", b.reorderWorkstream)
+	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/section", b.putWorkstreamSection)
 	mux.HandleFunc("PUT /api/projects/{project}/key", b.setKey)
 	mux.HandleFunc("POST /api/questions/{id}/answer", b.answer)
 	mux.HandleFunc("GET /api/preferences", b.preferences)
@@ -104,8 +106,11 @@ func writeStoreError(w http.ResponseWriter, err error) {
 			Message string `json:"message"`
 		}
 		message := "This ticket changed since you opened it."
-		if conflict.Name == "workstream" || strings.Contains(conflict.Name, "/workstreams/") {
+		switch {
+		case conflict.Name == "workstream":
 			message = "This workstream's tickets changed since you opened it."
+		case strings.Contains(conflict.Name, "/workstreams/"):
+			message = "This workstream changed since you opened it."
 		}
 		if conflict.Name == "delete" {
 			message = "Something this delete touches changed since you looked. Review it again."
@@ -384,6 +389,32 @@ func (b boardAPI) putSection(w http.ResponseWriter, r *http.Request) {
 	// record.
 	if hash != request.Base {
 		b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{change.Field()}})
+	}
+	b.saved(w, http.StatusOK, hash, nil)
+}
+
+// putWorkstreamSection is PUT /api/projects/{project}/workstreams/{slug}/section:
+// one section of a workstream's text, edited in place on its page
+// (FH-139), as putSection does a ticket's. A workstream write records no
+// event: the log is of tickets and runs.
+func (b boardAPI) putWorkstreamSection(w http.ResponseWriter, r *http.Request) {
+	writer := b.writer(w)
+	if writer == nil {
+		return
+	}
+	var request SectionRequest
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
+		return
+	}
+	change, err := board.NewWorkstreamSectionChange(request.Section, request.Content)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		return
+	}
+	hash, err := writer.UpdateWorkstream(r.PathValue("project"), r.PathValue("slug"), store.Unchanged(request.Base), change.Apply)
+	if err != nil {
+		writeStoreError(w, err)
+		return
 	}
 	b.saved(w, http.StatusOK, hash, nil)
 }

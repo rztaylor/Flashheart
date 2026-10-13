@@ -23,7 +23,7 @@ wiring lifecycle, API and features together.
 `Shell` is composition only; each concern has one owner beside it:
 
 - `Band`: the band's markup (wordmark, view tabs, Needs you plate, search,
-  status, Quit) and the notices under it.
+  status, the Settings gear's place, Quit) and the notices under it.
 - `useBoardData`: loading the projects and the scope's board, live
   reloads, which failed reload the band's last-good-copy note names
   (`staleError`), editing wired to them with pending moves placed at once, the
@@ -39,7 +39,7 @@ wiring lifecycle, API and features together.
   (`V1Notice`), the missing-root state, archive, Overview, Workstreams, and
   the Board or Table with their toolbar, filter options and paints).
 - `PageHeader` with `PageActions`, `NarrowControls` (the phone control row)
-  and `RailFooter` (theme, board root, version).
+  and `SettingsMenu` (the band's gear: theme, board root, version).
 
 Does not own the Singleserve session (`lifecycle/`), request contracts
 (`api/`), shared primitives (`components/`), loading state (`state/`) or
