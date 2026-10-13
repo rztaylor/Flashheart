@@ -28,7 +28,9 @@
 // the file's comments before and after, the counts a card shows and the
 // warning that names open requests on a move to review; and a comment
 // told to a session (delivery.go, FH-127): the run it was sent to, its
-// delivery once, and the lock on editing it after.
+// delivery once, and the lock on editing it after; and which comments a
+// person may delete and how an entry leaves the file (deletion.go,
+// FH-140).
 //
 // It performs no I/O and knows nothing about HTTP or the index: store reads
 // files and hands their bytes here, and index composes the results.

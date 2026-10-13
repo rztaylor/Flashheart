@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Delete a comment you posted by mistake (FH-140, D66, `STO-8`). Beside
+  a comment's pencil, on the ticket's full page and the side panel's
+  Comments tab, **Delete comment** asks first, then removes it from the
+  ticket; the history records that you deleted a comment, never what it
+  said. A comment sent to a session that has not taken it yet is
+  withdrawn, so the session never reads it. Once a session has read a
+  comment, or while it is a change request not yet resolved, it stays,
+  and the control says why.
 - Look closely at screenshots (FH-146). The lightbox that opens a
   ticket's screenshots now fills the window, less a small margin, at
   every width, and zooms from 25% to 800% of the image's actual size:

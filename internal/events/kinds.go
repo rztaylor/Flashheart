@@ -37,10 +37,12 @@ const (
 	QuestionAsked       Kind = "question.asked"
 	QuestionAnswered    Kind = "question.answered"
 	QuestionDelivered   Kind = "question.delivered"
-	// CommentAdded and CommentEdited record the human commenting on a ticket
-	// on the board (D47): the ticket and the comment's id, never its text.
-	CommentAdded  Kind = "comment.added"
-	CommentEdited Kind = "comment.edited"
+	// CommentAdded, CommentEdited and CommentDeleted record the human
+	// commenting on a ticket on the board (D47, FH-140): the ticket and the
+	// comment's id, never its text.
+	CommentAdded   Kind = "comment.added"
+	CommentEdited  Kind = "comment.edited"
+	CommentDeleted Kind = "comment.deleted"
 	// CommentDelivered records a comment or change request taken from a
 	// session's inbox and shown to it (D54), on the run it was sent to.
 	CommentDelivered Kind = "comment.delivered"
@@ -73,6 +75,7 @@ var kinds = map[Kind]reflect.Type{
 	QuestionDelivered:   reflect.TypeFor[DeliveredData](),
 	CommentAdded:        reflect.TypeFor[TicketData](),
 	CommentEdited:       reflect.TypeFor[TicketData](),
+	CommentDeleted:      reflect.TypeFor[TicketData](),
 	CommentDelivered:    reflect.TypeFor[CommentDeliveredData](),
 }
 

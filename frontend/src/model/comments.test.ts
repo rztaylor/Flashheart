@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { Review } from "../api/board";
-import { commentInFile, quoteChoices } from "./comments";
+import {
+  commentInFile,
+  deleteNote,
+  deleteRefusal,
+  quoteChoices,
+} from "./comments";
 import type { PageInput } from "./ticketSections";
 
 const reviewMarkdown = [
@@ -170,5 +175,55 @@ describe("commentInFile", () => {
 
   it("is the whole file when the comment is not in it", () => {
     expect(commentInFile(file, "ffffffff")).toBe(file);
+  });
+});
+
+describe("deleting a comment (FH-140)", () => {
+  const plain = { state: "open", delivery: "", sentTo: "" };
+
+  it("allows a comment, one still waiting for its session and a resolved request", () => {
+    expect(deleteRefusal(plain)).toBeUndefined();
+    expect(
+      deleteRefusal({
+        ...plain,
+        delivery: "waiting",
+        sentTo: "claude:aaaa1111",
+      }),
+    ).toBeUndefined();
+    expect(
+      deleteRefusal({
+        ...plain,
+        delivery: "missed",
+        sentTo: "claude:aaaa1111",
+      }),
+    ).toBeUndefined();
+    expect(deleteRefusal({ ...plain, state: "resolved" })).toBeUndefined();
+  });
+
+  it("says why one delivered or an open or addressed request cannot go", () => {
+    expect(
+      deleteRefusal({
+        ...plain,
+        delivery: "delivered",
+        sentTo: "claude:aaaa1111",
+      }),
+    ).toBe("It can't be deleted: claude:aaaa1111 has read it.");
+    expect(deleteRefusal({ ...plain, state: "change-requested" })).toBe(
+      "It can't be deleted while the change it asks for is open. Resolve it first.",
+    );
+    expect(deleteRefusal({ ...plain, state: "addressed" })).toBe(
+      "It can't be deleted while the change request waits for you. Resolve it first.",
+    );
+  });
+
+  it("says a waiting comment is withdrawn and history keeps no text", () => {
+    expect(deleteNote(plain)).toBe(
+      "The history keeps that you deleted a comment, not what it said.",
+    );
+    expect(
+      deleteNote({ ...plain, delivery: "waiting", sentTo: "claude:aaaa1111" }),
+    ).toBe(
+      "claude:aaaa1111 has not taken it yet and never will. The history keeps that you deleted a comment, not what it said.",
+    );
   });
 });

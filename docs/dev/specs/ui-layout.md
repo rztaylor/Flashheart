@@ -195,7 +195,8 @@ reorders them.
    comment's delivery line; *No comments
    yet.* when there are none), a person's comment editable in place with
    its pencil, Save, Cancel, shortcuts and the conflict dialog, until it
-   is delivered, and, where
+   is delivered, and deleted with the full page's *Delete comment*
+   (FH-140), and, where
    the ticket can be edited, the comment box with **Tell a session now**,
    **Comment**, *Quote* and the shortcut hint. History, notes, handoffs and questions stay on the
    full page. The tab's comment being written or edited stays while
@@ -313,7 +314,15 @@ at most 94rem.
   its timed entries), of people's comments (author, time, *edited* once
   edited, the quote in a well with a full rule border captioned with where
   it is from, then the text; a pencil, *Edit comment*, on a person's
-  comment edits its text in place as other items do, FH-125; a change
+  comment edits its text in place as other items do, FH-125; beside it a
+  bin, *Delete comment*, revealed as the pencil is, asks in a dialog
+  (*Delete this comment?*: an excerpt of the comment, what deleting
+  does, **Keep it** focused and the red **Delete comment**) and deletes
+  it, FH-140; on a comment its session has read, or a change request
+  open or addressed, the bin is marked unavailable and pressing it shows
+  why in a small note under it (*It can't be deleted: <run> has read
+  it.*, *…while the change it asks for is open. Resolve it first.*); a
+  change
   request's state pill after its time, `REV-6`; a comment sent to a
   session ends with a muted line with an icon, FH-127: *Waiting for <run>
   to take it with its next prompt or tool call.*, *Delivered to <run> at

@@ -31,7 +31,9 @@
 // Detail offers the runs a comment may be sent to now, and a comment
 // posted with one is checked against them again, posted naming the run
 // and queued for it; comments carry where their delivery stands
-// (tell.go, FH-127). An answer is
+// (tell.go, FH-127). A comment deleted (FH-140) is withdrawn from the
+// inboxes of the session it was sent to and the ticket's live claimants.
+// An answer is
 // appended to the event log, queued in the asking session's inbox and noted
 // in the ticket (RUN-8, HOOK-5, STO-6). It owns no
 // filesystem rules, parsing or blocking rules (board), run derivation (runs)
