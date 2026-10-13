@@ -108,7 +108,9 @@
   switch) and that a word, bold, tick or added item changes only that
   line; `MarkdownEditor.dom.test.tsx` mounts it in happy-dom (checkbox,
   Alt+Enter, the view switch, pasting a web page as markdown or as plain
-  text, dropped files, keys left to the page). Pasted HTML (FH-142, D68)
+  text, dropped files, keys left to the page, and an edit reaching the
+  page's state before the next key, outside `act`, as the browser
+  delivers them). Pasted HTML (FH-142, D68)
   is a table of realistic copies in `htmlToMarkdown.dom.test.ts` (unsafe
   schemes, remote images, nested lists, code, Google Docs, a code
   editor's lines, never raw HTML; happy-dom is told not to load frames
