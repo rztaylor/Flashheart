@@ -98,10 +98,15 @@
   own chunk) and mounts in a shadow root, where its run-time styles are a
   constructed style sheet the CSP (`style-src 'self'`) allows; Tailwind
   does not reach inside, so it is themed with `EditorView.theme` over the
-  token custom properties. Paste is plain text. Files (REV-7, FH-18): a
-  pasted screenshot, dropped or chosen files go into the ticket through
-  `MarkdownField`'s `upload` (`editor/uploads`: a placeholder decoration
-  per file, then its reference typed in); the panel's Attachments tab and
+  token custom properties. Paste (`editor/paste`, D66): files first, then
+  plain text after Ctrl or Cmd with Shift and V (the key is observed, as
+  the paste event does not carry it), then copied HTML as markdown
+  through `editor/htmlToMarkdown` (our own walk over an inert
+  `DOMParser` document: allow-listed link schemes, remote images as
+  links, headings from level 3, never raw HTML), else plain text. Files
+  (REV-7, FH-18): a pasted screenshot, dropped or chosen files go into
+  the ticket through `MarkdownField`'s `upload` (`editor/uploads`: a
+  placeholder decoration per file, then its reference typed in); the panel's Attachments tab and
   the page's Files take them through `card/AttachmentDrop`; both use
   `components/FileDrop` and `model/uploads`, and `app/fileDrops` keeps a
   file dropped elsewhere from opening in the tab.

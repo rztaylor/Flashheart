@@ -466,7 +466,7 @@ Full format: `docs/dev/specs/board-format.md`.
   had not yet seen is made again on it, once), so a change to the item on
   disk opens the conflict dialog (`EDIT-7`). A failed save keeps the item open with the
   reason beside it. The card panel keeps its Edit tab.
-- `EDIT-12` **Formatted editor** (FH-16, D61, D62): a section edits as
+- `EDIT-12` **Formatted editor** (FH-16, D61, D62, D66): a section edits as
   markdown shown formatted, as the view renders it (`CARD-2`), except on
   the lines the cursor or selection is on, where its markdown shows to be
   edited. Headings, emphasis, strikethrough, code, quotes and lists are
@@ -486,12 +486,20 @@ Full format: `docs/dev/specs/board-format.md`.
   **Markdown** switch shows the markdown as written; switching never
   changes the text, and the choice is remembered (`CFG-2`). The text saved
   is the text edited, never re-written, so an untouched section saves
-  nothing and an edit changes only what was typed. Paste inserts plain
-  text (pasted HTML, a web page's included, is never parsed, so it
-  fetches nothing and carries no link or script), a pasted screenshot
-  and dropped or chosen files are attached (`REV-7`), raw HTML shows as
-  text and is never rendered, and the editor fetches nothing but the
-  ticket's own images. Tab leaves the editor. It loads on
+  nothing and an edit changes only what was typed. A pasted screenshot
+  and dropped or chosen files are attached (`REV-7`). Pasted HTML, such
+  as a copy from a web page, is inserted as equivalent markdown (FH-142,
+  D66): headings (levels 1 and 2 become 3, so none starts a section),
+  emphasis, strikethrough, inline and fenced code, links, nested lists,
+  task boxes, quotes, tables and rules, blocks on lines of their own.
+  It is parsed without loading or running anything; only `http`,
+  `https`, `mailto` and relative `files/` links survive, any other
+  keeping only its words; a remote image becomes a link to it, any other
+  image its alt text; any other element gives its text and no raw HTML
+  is written. A copy with nothing markdown keeps, and any paste after
+  Ctrl or Cmd with Shift and V, inserts plain text. Raw HTML in the text
+  shows as text and is never rendered, and the editor fetches nothing
+  but the ticket's own images. Tab leaves the editor. It loads on
   the first edit, so the board's first load does not carry it.
 
 ### 6.7 Runs (`RUN`)

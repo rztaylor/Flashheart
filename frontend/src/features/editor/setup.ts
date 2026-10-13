@@ -29,6 +29,7 @@ import {
 } from "./commands";
 import { markdownSupport } from "./language";
 import { type LinkOptions, openTarget, targetAt } from "./links";
+import { pasteInput } from "./paste";
 import { livePreview } from "./preview";
 import { slashCompletions } from "./slash";
 import { editorTheme } from "./theme";
@@ -40,8 +41,9 @@ import {
 } from "./uploads";
 
 // The editor's CodeMirror setup: markdown, history, the keys, the slash
-// menu, plain-text paste, files pasted or dropped, link clicks and, in the formatted view, the live
-// preview. The page around it (InPlaceEditor) owns Ctrl or Cmd with Enter
+// menu, paste (files, then a web page's HTML as markdown, else plain
+// text; Shift for plain text), dropped files, link clicks and, in the
+// formatted view, the live preview. The page around it (InPlaceEditor) owns Ctrl or Cmd with Enter
 // (save) and Escape (cancel), so the editor leaves both alone; Tab is not
 // bound, so it leaves the editor.
 
@@ -149,8 +151,10 @@ export function editorExtensions(
       ...defaultKeymap.filter((binding) => !pageKeys.has(binding.key ?? "")),
     ]),
     linkClicks(options),
-    // Files pasted or dropped are attached where the editor can attach
-    // them (FH-18), and otherwise kept out of the text.
+    // Pasted files are attached where the editor can attach them (FH-18),
+    // pasted web HTML becomes markdown (FH-142); dropped files are
+    // attached likewise, and otherwise kept out of the text.
+    pasteInput(options.onFiles),
     options.onFiles ? fileInput(options.onFiles) : ignoreDroppedFiles,
     pendingUploads,
     modeCompartment.of(modeExtensions(mode, options)),

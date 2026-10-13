@@ -439,6 +439,135 @@ test("shows the ticket's own images and never fetches a remote one", async () =>
   await expect(editor).toHaveCount(0);
 });
 
+// A web page's section as Chrome copies it (FH-142), with what must not
+// survive: a javascript: link, a remote image, a script, a style sheet
+// and a frame, each of which would show itself if it ran or loaded.
+const webPage = [
+  '<meta charset="utf-8"><h1 style="font-size:2em">Install the CLI</h1>',
+  '<p>Flashheart runs <strong>locally</strong>; see the <a href="https://example.com/docs/setup">setup guide</a> or <a href="javascript:window.pastedLinkRan = true">this trick</a>.</p>',
+  "<h2>Steps</h2><ol><li>Download the binary<ul><li>macOS: <code>flashheart-darwin-arm64</code></li><li>Linux: <code>flashheart-linux-amd64</code></li></ul></li><li>Run <code>flashheart setup</code></li></ol>",
+  '<pre><code class="language-sh">flashheart setup --yes\nflashheart serve</code></pre>',
+  "<blockquote><p><em>Note:</em> nothing leaves your machine.</p></blockquote>",
+  '<p><img src="https://images.example.invalid/diagram.png" alt="Architecture diagram" onerror="window.pastedImageLoaded = true" onload="window.pastedImageLoaded = true"></p>',
+  "<table><tr><th>Flag</th><th>Meaning</th></tr><tr><td><code>--yes</code></td><td>Skip the question</td></tr></table>",
+  '<script>window.pastedScriptRan = true</script><link rel="stylesheet" href="https://styles.example.invalid/site.css"><iframe src="https://frames.example.invalid/"></iframe>',
+].join("");
+const webPageText = "Install the CLI\n\nFlashheart runs locally.";
+const webPageMarkdown = [
+  "### Install the CLI",
+  "",
+  "Flashheart runs **locally**; see the [setup guide](https://example.com/docs/setup) or this trick.",
+  "",
+  "### Steps",
+  "",
+  "1. Download the binary",
+  "   - macOS: `flashheart-darwin-arm64`",
+  "   - Linux: `flashheart-linux-amd64`",
+  "2. Run `flashheart setup`",
+  "",
+  "```sh",
+  "flashheart setup --yes",
+  "flashheart serve",
+  "```",
+  "",
+  "> *Note:* nothing leaves your machine.",
+  "",
+  "[Architecture diagram](https://images.example.invalid/diagram.png)",
+  "",
+  "| Flag | Meaning |",
+  "| --- | --- |",
+  "| `--yes` | Skip the question |",
+].join("\n");
+
+// pasteInto pastes a clipboard of HTML and its plain text into the
+// focused editor as the browser would; plainKey first presses Ctrl (Cmd
+// on a Mac) with Shift and V as a key event alone, which the editor
+// notes (a real press would paste the machine's own clipboard).
+async function pasteInto(editor, { html, text, plainKey = false }) {
+  const mac = process.platform === "darwin";
+  await editor.evaluate(
+    (content, { html, text, plainKey, mac }) => {
+      if (plainKey)
+        content.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "V",
+            code: "KeyV",
+            ctrlKey: !mac,
+            metaKey: mac,
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      const data = new DataTransfer();
+      data.setData("text/html", html);
+      data.setData("text/plain", text);
+      content.dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    },
+    { html, text, plainKey, mac },
+  );
+}
+
+test("pastes a web page as markdown, fetching and running nothing; Shift pastes plain text", async () => {
+  await open(page, "#/ticket/FH-20");
+  const editor = await openSection("FH-20", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+a");
+  await pasteInto(editor, { html: webPage, text: webPageText });
+
+  // Drawn formatted: headings, a list, code, a quote, the image as a link.
+  await expect(
+    editor.getByRole("heading", { level: 3, name: "Install the CLI" }),
+  ).toBeVisible();
+  await expect(editor.locator(".fh-strong").first()).toHaveText("locally");
+  await expect(editor).toContainText("Architecture diagram");
+  await expect(editor.locator('img[src*="example.invalid"]')).toHaveCount(0);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expectNoAxeViolations(page, `editor web paste ${theme}`);
+    await shot(page, `editor-web-paste-1440-${theme}`, { keepFocus: true });
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await showAs("FH-20", "Markdown");
+  await expect(editor.locator(".cm-line").first()).toHaveText(
+    "### Install the CLI",
+  );
+  await shot(page, "editor-web-paste-markdown-1440-light", { keepFocus: true });
+  await showAs("FH-20", "Formatted");
+
+  // Nothing in the pasted page loaded or ran.
+  expect(
+    await page.evaluate(() => [
+      window.pastedImageLoaded,
+      window.pastedScriptRan,
+      window.pastedLinkRan,
+    ]),
+  ).toEqual([undefined, undefined, undefined]);
+  expect(requests.filter((url) => url.includes("example.invalid"))).toEqual([]);
+
+  await editor.focus();
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(pencil("FH-20", "description")).toBeFocused();
+  expect(await readTicket("FH-20")).toContain(
+    `## Description\n\n${webPageMarkdown}\n`,
+  );
+
+  // With Ctrl or Cmd and Shift and V, the same copy pastes as plain text.
+  const again = await openSection("FH-20", "description", "Description");
+  await page.keyboard.press("ControlOrMeta+a");
+  await pasteInto(again, { html: webPage, text: webPageText, plainKey: true });
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(pencil("FH-20", "description")).toBeFocused();
+  expect(await readTicket("FH-20")).toContain(
+    `## Description\n\n${webPageText}\n`,
+  );
+});
+
 test("fits a phone and passes axe in both themes", async () => {
   for (const theme of ["light", "dark"]) {
     await open(page, "#/ticket/FH-20", { width: 390, height: 844, theme });

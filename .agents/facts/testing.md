@@ -107,11 +107,19 @@
   it comes back exactly (untouched, and through a Formatted/Markdown
   switch) and that a word, bold, tick or added item changes only that
   line; `MarkdownEditor.dom.test.tsx` mounts it in happy-dom (checkbox,
-  Alt+Enter, the view switch, plain paste, dropped files, keys left to the
-  page). Layout and real focus in its shadow root (the slash menu, the
-  selection toolbar) are `frontend/e2e/editor.spec.mjs`, which also checks
-  saving over an agent's checkpoint, the conflict, the remembered view,
-  images, that no request leaves the board's origin and no CSP violation.
+  Alt+Enter, the view switch, pasting a web page as markdown or as plain
+  text, dropped files, keys left to the page). Pasted HTML (FH-142, D66)
+  is a table of realistic copies in `htmlToMarkdown.dom.test.ts` (unsafe
+  schemes, remote images, nested lists, code, Google Docs, a code
+  editor's lines, never raw HTML; happy-dom is told not to load frames
+  or files, which a browser's `DOMParser` document never does), and the
+  plain-text key behind a key binding in `paste.dom.test.ts`. Layout and
+  real focus in its shadow root (the slash menu, the selection toolbar)
+  are `frontend/e2e/editor.spec.mjs`, which also checks saving over an
+  agent's checkpoint, the conflict, the remembered view, images, pasting
+  a web page (as markdown, with nothing loaded or run, and as plain text
+  after the key), that no request leaves the board's origin and no CSP
+  violation.
   `TicketPageEdit.dom.test.tsx` stands a text area in for the editor.
 - Files from the board (FH-18, REV-7, SEC-7): sniffing is a table test in
   `board` (`TestSniffAttachmentJudgesTheContent`), the upload's name,

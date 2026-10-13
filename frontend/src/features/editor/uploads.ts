@@ -8,7 +8,6 @@ import {
 
 import { hasFiles } from "../../components/FileDrop";
 import {
-  clipboardFiles,
   referenceFor,
   type Upload,
   type UploadResult,
@@ -160,25 +159,11 @@ export type AttachHandler = (
   pasted: boolean,
 ) => void;
 
-// fileInput sends pasted and dropped files to onFiles: a paste that holds
-// files and no text (a screenshot) replaces the selection; a drop goes
-// where it is dropped. Pasted text stays plain text (D61) and is left to
-// the editor.
+// fileInput sends dropped files to onFiles, where they are dropped.
+// Pasted files go through the editor's paste handler (paste.ts), which
+// puts them before pasted text and HTML.
 export function fileInput(onFiles: AttachHandler): Extension {
   return EditorView.domEventHandlers({
-    paste(event, view) {
-      const files = clipboardFiles(event.clipboardData);
-      if (!files.length) return false;
-      event.preventDefault();
-      const { main } = view.state.selection;
-      if (!main.empty)
-        view.dispatch({
-          ...view.state.replaceSelection(""),
-          userEvent: "delete",
-        });
-      onFiles(view, files, view.state.selection.main.head, true);
-      return true;
-    },
     dragover(event) {
       if (!hasFiles(event.dataTransfer)) return false;
       event.preventDefault();
