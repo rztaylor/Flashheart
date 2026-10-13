@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Send a comment straight to the session working on a ticket (FH-127,
+  D47, D63, `CARD-7`). In the comment box, **Tell a session now** also
+  hands the comment, as your own words, to a live session that has
+  claimed the ticket, picked from those sessions with their subagents
+  under them; with none, the option is off and says why, and nothing is
+  ever queued for a later session. The session gets it with its next
+  prompt, Flashheart tool call, `board_context` or `flashheart await`,
+  as the comment reads then, so an edit made before that is what it
+  sees. The comment then shows *Delivered to <run> at <time>* and can no
+  longer be edited; if the session ends first, it stays on the ticket
+  and says it was not delivered. Agent protocol: the inbox entry gains
+  an optional `project` and comments gain `sent-to` and `delivered` in
+  `activity.md` (additive within version 2). Deleting a comment is not
+  offered yet.
 - Sections on a ticket's full page edit in a formatted editor instead of
   a markdown text area (FH-16, D61, D62, `EDIT-12`). Headings, lists,
   emphasis, code, quotes, links, ticket ids and the ticket's own images
@@ -190,7 +204,7 @@ All notable changes to this project are documented here. The project follows
 ### Fixed
 
 - Codex sessions started close together no longer look identical on the
-  board (FH-122, D63, agent-protocol §2). Codex's session ids start with
+  board (FH-122, D65, agent-protocol §2). Codex's session ids start with
   the time, so two sessions started in the same minute both showed as,
   say, `codex:019a7c00` on the Overview, in the Runs tab, on cards and in
   a ticket's history, and passing that run id from the recovery note

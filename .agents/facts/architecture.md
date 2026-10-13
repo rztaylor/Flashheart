@@ -63,7 +63,9 @@ Intended layout (packages are created when they get real content):
   one routine every path (prompt and session-start hooks, `await`,
   `board_context`, the MCP server's tool results) hands them over
   through, returning what it took even when recording delivery fails
-  (FH-78); `protocol.InboxNote` is the one rendering of what the model is
+  (FH-78), and handing a comment sent from the board over as its ticket
+  has it then, marked delivered there through `store.DeliverComment`
+  (FH-127, D63); `protocol.InboxNote` is the one rendering of what the model is
   shown (the recovery note has its own lines), `runs.Set.PendingDeliveries`
   the fold's undelivered answers. The prompt hook checks one file; the
   other paths also take the old location.
@@ -127,9 +129,11 @@ Intended layout (packages are created when they get real content):
   again). Without a watcher `Current` rebuilds on `MaxAge`. Event logs count
   against `FolderBudget`. Snapshots index runs by ticket, id and parent
   once; API read paths use those lookups, never a scan of `Runs` per card
-  (FH-96, D38). `Snapshot.Holder` is a ticket's live claim holder (claim
-  link, not Ended, within the lease): the one rule for which session a
-  change request (FH-126) or comment (FH-127) is sent to now.
+  (FH-96, D38). `Snapshot.Claimants` are a ticket's live claimants (claim
+  link, not Ended, within the lease; each session before its subagents)
+  and `Snapshot.Holder` the first of them: the one rule for which session
+  a change request (FH-126) is sent to, and which runs a person may send
+  a comment to now (FH-127).
 - `internal/archtest`: tests over the module's source (the root
   confinement rule, the one default root); no code outside its tests.
 - `internal/api`: HTTP JSON handlers and request validation; no filesystem

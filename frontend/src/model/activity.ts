@@ -12,6 +12,7 @@
 // activity file's history begins, so no move shows twice.
 import {
   type Comment,
+  type CommentDelivery,
   type HistoryChange,
   STATUSES,
   type TicketDetail,
@@ -71,6 +72,12 @@ export interface CommentEntry extends Dated {
   // state is the comment's state as a change request (REV-6): open for
   // a plain comment, change-requested, addressed or resolved.
   state: string;
+  // delivery is where a comment sent to a session stands (FH-127), ""
+  // for one not sent; sentTo names the run, short, and delivered is when
+  // it was handed over.
+  delivery: CommentDelivery | "";
+  sentTo: string;
+  delivered: string;
   quoteFrom: string;
   quote: string;
   markdown: string;
@@ -383,6 +390,9 @@ function commentEntry(comment: Comment): CommentEntry {
     byPerson: comment.byPerson,
     edited: comment.edited,
     state: comment.state,
+    delivery: comment.delivery ?? "",
+    sentTo: comment.sentToShort ?? "",
+    delivered: comment.delivered ?? "",
     quoteFrom: comment.quoteFrom,
     quote: comment.quote,
     markdown: comment.body,

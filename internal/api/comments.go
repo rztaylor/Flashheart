@@ -8,6 +8,7 @@ import (
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/store"
 )
@@ -20,18 +21,25 @@ import (
 // CommentJSON is a person's comment on a ticket. ByShort names its author
 // as the board shows it (a run's short id, agent-protocol §2); Edited is
 // "" until it is edited; Quote is the part of the ticket it quotes, from
-// QuoteFrom.
+// QuoteFrom. A comment sent to a session (FH-127) names its run (SentTo,
+// SentToShort) and where its delivery stands: waiting, delivered (at
+// Delivered; it can no longer be edited) or missed (the session ended
+// first); Delivery is "" for a comment not sent.
 type CommentJSON struct {
-	ID        string `json:"id"`
-	Time      string `json:"time"`
-	By        string `json:"by"`
-	ByShort   string `json:"byShort"`
-	ByPerson  bool   `json:"byPerson"`
-	State     string `json:"state"`
-	Edited    string `json:"edited"`
-	QuoteFrom string `json:"quoteFrom"`
-	Quote     string `json:"quote"`
-	Body      string `json:"body"`
+	ID          string `json:"id"`
+	Time        string `json:"time"`
+	By          string `json:"by"`
+	ByShort     string `json:"byShort"`
+	ByPerson    bool   `json:"byPerson"`
+	State       string `json:"state"`
+	Edited      string `json:"edited"`
+	SentTo      string `json:"sentTo"`
+	SentToShort string `json:"sentToShort"`
+	Delivery    string `json:"delivery"`
+	Delivered   string `json:"delivered"`
+	QuoteFrom   string `json:"quoteFrom"`
+	Quote       string `json:"quote"`
+	Body        string `json:"body"`
 }
 
 // HistoryJSON is one write that changed the ticket: who (ByShort as the
@@ -59,11 +67,14 @@ type ChangeJSON struct {
 	Comments []string `json:"comments"`
 }
 
-// CommentRequest is POST /api/tickets/{id}/comments.
+// CommentRequest is POST /api/tickets/{id}/comments. SendTo, when set,
+// also sends the comment to that run, a live session holding the ticket
+// or one of its subagents (TicketDetail.TellSessions, FH-127).
 type CommentRequest struct {
 	Body      string `json:"body"`
 	Quote     string `json:"quote"`
 	QuoteFrom string `json:"quoteFrom"`
+	SendTo    string `json:"sendTo,omitempty"`
 }
 
 // CommentEditRequest is PATCH /api/tickets/{id}/comments/{comment}: the
@@ -77,8 +88,9 @@ type CommentEditRequest struct {
 }
 
 // CommentResponse reports a saved comment, the activity's new hash and the
-// board revision; for a reopened change request, the run it was sent to
-// (FH-126), in full and as its short id, and any warning.
+// board revision; for a reopened change request (FH-126) or a comment
+// sent to a session (FH-127), the run it was sent to, in full and as its
+// short id, and any warning.
 type CommentResponse struct {
 	Comment      CommentJSON `json:"comment"`
 	ActivityHash string      `json:"activityHash"`
@@ -107,6 +119,10 @@ func (b boardAPI) addComment(w http.ResponseWriter, r *http.Request) {
 	}
 	_, project, ticket, ok := b.findTicket(w, r)
 	if !ok {
+		return
+	}
+	if request.SendTo != "" {
+		b.tellComment(w, writer, project.Name, ticket, request)
 		return
 	}
 	// A comment is appended to the activity as it is (a merge, STO-3).
@@ -170,10 +186,11 @@ func commentFits(w http.ResponseWriter, body, quote string) bool {
 // revision.
 func (b boardAPI) savedComment(w http.ResponseWriter, status int, comment board.Comment, hash string) {
 	revision := uint64(0)
-	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
+	snapshot, _ := b.board.Rebuild()
+	if snapshot != nil {
 		revision = snapshot.Revision
 	}
-	writeJSON(w, status, CommentResponse{Comment: commentJSON(comment), ActivityHash: hash, Revision: revision})
+	writeJSON(w, status, CommentResponse{Comment: commentJSON(comment, snapshot), ActivityHash: hash, Revision: revision})
 }
 
 // shortAuthor is how the board names an entry's author: a run by its short
@@ -185,7 +202,9 @@ func shortAuthor(by string) string {
 	return protocol.ShortRun(by)
 }
 
-func commentJSON(c board.Comment) CommentJSON {
+// commentJSON is a comment as the API sends it, its delivery judged by the
+// snapshot's runs (nil: waiting until delivered).
+func commentJSON(c board.Comment, snapshot *index.Snapshot) CommentJSON {
 	edited := ""
 	if !c.Edited.IsZero() {
 		edited = c.Edited.UTC().Format(time.RFC3339)
@@ -193,14 +212,15 @@ func commentJSON(c board.Comment) CommentJSON {
 	return CommentJSON{
 		ID: c.ID, Time: c.Time.UTC().Format(time.RFC3339), By: c.By, ByShort: shortAuthor(c.By), ByPerson: board.ByPerson(c.By),
 		State: string(c.State), Edited: edited, QuoteFrom: c.QuoteFrom, Quote: c.Quote, Body: c.Body,
+		SentTo: c.SentTo, SentToShort: protocol.ShortRun(c.SentTo), Delivery: delivery(snapshot, c), Delivered: deliveredAt(c),
 	}
 }
 
 // activityJSON is a ticket's comments and history, oldest first.
-func activityJSON(activity board.Activity) ([]CommentJSON, []HistoryJSON) {
+func activityJSON(activity board.Activity, snapshot *index.Snapshot) ([]CommentJSON, []HistoryJSON) {
 	comments := make([]CommentJSON, 0, len(activity.Comments))
 	for _, comment := range activity.Comments {
-		comments = append(comments, commentJSON(comment))
+		comments = append(comments, commentJSON(comment, snapshot))
 	}
 	history := make([]HistoryJSON, 0, len(activity.History))
 	for _, entry := range activity.History {

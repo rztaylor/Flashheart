@@ -279,7 +279,7 @@ func TestActivityNamesRunsByTheirShortIDs(t *testing.T) {
 			{ID: "h2", By: "codex:019a7c00-0000-7000-8000-0000000000ff"},
 			{ID: "h3", By: "claude:3f2a9c1e-7b4d-4c1a-9e2f-0123456789ab"},
 		},
-	})
+	}, nil)
 	if comments[0].ByShort != "Robert" {
 		t.Errorf("comment by %q", comments[0].ByShort)
 	}
