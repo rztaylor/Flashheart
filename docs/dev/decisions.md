@@ -1046,3 +1046,25 @@ carries (chosen: it needs no hooks, no stamping and no fold). A client that
 names no session keeps `<agent>:mcp-<random>`, which never joins a later
 hook run. `PROTOCOL_VERSION` stays 2: run ids keep the §2 grammar, and the
 API field and the `_meta` read are additive.
+
+## 2026-10-13 — D46: The ticket page's Activity is read from what the ticket already returns
+
+The full page's Activity timeline (FH-65, CARD-7) is derived in the
+browser (`model/activity`) from the ticket the API already sends: the
+`## Notes` bullets (`board.NoteLine`, so authors and days; a question
+answered on the board is its `Question from … Answer (…)` note), the
+questions the ticket's linked runs asked about it and its open questions,
+the runs' `checkpoint` timeline entries on it, and the current handoff's
+`_Updated … by …_` line. A question answered on the board appears once:
+its run's copy, with times, replaces its note.
+
+Options: a new `activity` list in the ticket response, folded on the
+server from the event log beyond the run window (complete, but backend
+scope and a second history of what notes already keep); deriving it in
+the browser (chosen: no API change, and the durable parts, notes, answers
+given on the board and the current handoff, are in the ticket file). Runs
+cover the 48-hour run window, so an older question answered in the
+session's own chat, or an older checkpoint, drops out of Activity; a note
+carries only its day, so a day's notes come before its timed entries. If
+Activity needs the full history, the server can add it without changing
+the timeline's view.

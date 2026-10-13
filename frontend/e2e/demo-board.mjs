@@ -1,7 +1,7 @@
 // Generates a synthetic, realistic board root for visual checks: a
 // 50-ticket project with four workstreams, a smaller project, and the sample
 // board's edge cases. All content is invented for testing.
-import { cp, mkdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { deflateSync } from "node:zlib";
 
@@ -682,7 +682,9 @@ export async function writeDemoBoard(root) {
     flashheart,
   );
   await writeProject(root, "ngplus", "NG+", ngplus);
-  // A review with a screenshot for the Review tab.
+  // A review with a screenshot for the Review tab, a log the review does
+  // not show, and notes, a question and a handoff for the full page's
+  // Activity (FH-65).
   const reviewDir = join(root, "flashheart", "tickets", folders.get("FH-8"));
   await mkdir(join(reviewDir, "files"), { recursive: true });
   await writeFile(
@@ -690,8 +692,49 @@ export async function writeDemoBoard(root) {
     syntheticScreenshot(),
   );
   await writeFile(
+    join(reviewDir, "files", "20261004T1420-store-bench.log"),
+    "BenchmarkReadBoard-8  200  5812345 ns/op  (synthetic)\n",
+  );
+  await writeFile(
     join(reviewDir, "files", "index.yaml"),
-    "- file: 20261004T1412-store-tests.png\n  caption: Store tests passing (synthetic)\n  kind: screenshot\n  run: claude:3f2a9c1e\n  added: 2026-10-04T14:12:09Z\n",
+    [
+      "- file: 20261004T1412-store-tests.png",
+      "  caption: Store tests passing (synthetic)",
+      "  kind: screenshot",
+      "  run: claude:3f2a9c1e",
+      "  added: 2026-10-04T14:12:09Z",
+      "- file: 20261004T1420-store-bench.log",
+      "  caption: Read benchmark (synthetic)",
+      "  kind: log",
+      "  run: claude:3f2a9c1e",
+      "  added: 2026-10-04T14:20:00Z",
+      "",
+    ].join("\n"),
+  );
+  const ticketPath = join(reviewDir, `${folders.get("FH-8")}.md`);
+  const ticketText = await readFile(ticketPath, "utf8");
+  await writeFile(
+    ticketPath,
+    ticketText.replace(
+      "## Notes\n\nNone.\n",
+      [
+        "## Notes",
+        "",
+        "- 2026-10-03 · claude:3f2a9c1e: Reads go through one `os.Root` per project; writes stay as they are.",
+        '- 2026-10-04 · Question from claude:3f2a9c1e — "Treat a symlink out of the root as needs repair?" Answer (Robert): "Yes, and say where it points".',
+        "- 2026-10-04 · claude:3f2a9c1e: Benchmarked the read side; the log is attached.",
+        "",
+        "## Handoff",
+        "",
+        "_Updated 2026-10-04 14:25 UTC by claude:3f2a9c1e (run) on feature/store-read._",
+        "",
+        "**Done**",
+        "- Store reads through os.Root",
+        "**Next**",
+        "- Human verifies the review and merges",
+        "",
+      ].join("\n"),
+    ),
   );
   await writeFile(
     join(reviewDir, "review.md"),
@@ -704,12 +747,14 @@ export async function writeDemoBoard(root) {
       "",
       "Reads every project through an `os.Root`, so symlinks cannot escape the board root. See the [os.Root documentation](https://pkg.go.dev/os#Root).",
       "",
+      "## Evidence",
+      "",
+      "![Store tests passing](files/20261004T1412-store-tests.png)",
+      "",
       "## How to Verify",
       "",
       "1. Run `scripts/check.sh`.",
       "2. Symlink a ticket to a file outside the root and open the board: it shows as needs repair.",
-      "",
-      "![Store tests passing](files/20261004T1412-store-tests.png)",
       "",
       "## Risks / Things to Watch",
       "",

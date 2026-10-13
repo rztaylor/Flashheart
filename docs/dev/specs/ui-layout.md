@@ -214,14 +214,78 @@ reorders them.
 
 ### Ticket page
 
-A ticket's full page (`CARD-7`, `#/ticket/<id>`) is the panel at reading
-width: the band (no view current; its views leave the ticket), then a
-column of at most 64rem, centred, that scrolls as a whole. A quiet *Show on
-the <project> board* link (board icon) leads, then the panel's header with
-the title as the page's h1 (the id plain, being this page's own), the tabs
-and the tab's content, under a visually hidden h2 naming the tab. No close
-button and no Position buttons. Ticket links on the page stay in its tab;
-the browser tab reads `<id> · <title> · Flashheart`.
+A ticket's full page (`CARD-7`, `#/ticket/<id>`, FH-65) shows the whole
+ticket as one continuous page, with no tabs, under the band (no view
+current; its views leave the ticket). It scrolls as a whole in a frame of
+at most 94rem.
+
+```
+┌ Band ────────────────────────────────────────────────────────────────┐
+├────────────┬──────────────────────────────────────────┬──────────────┤
+│ Outline    │ Header: board link, id, title (h1)       │ Properties   │
+│ (in view)  │ Handoff, criteria, description, …        │ (in view)    │
+│            │ Review, in its own sections              │              │
+│            │ Files · Activity                         │              │
+└────────────┴──────────────────────────────────────────┴──────────────┘
+```
+
+- **Header**, over the centre and right columns: a quiet *Show on the
+  <project> board* link (board icon), the id (plain, being this page's own)
+  and project, and the title as the page's h1 in the display page cut.
+- **Centre**, in order, each part only when it has something: Needs repair ·
+  questions for you (`CARD-6`) · Handoff (`CARD-5`) · Blocked by
+  (`CARD-4`) · Acceptance criteria with `d of t`, tickable (`CARD-3`) ·
+  format warnings · Description · Test plan (Reproduction for a bug) ·
+  Context · the ticket's other sections in file order. Each is an h2. Then,
+  only when `review.md` exists, **Review** (h2, review icon) after a rule:
+  the review's lead text, then its own sections as h3s in its order, the
+  template's names in sentence case (Summary, Key files, Evidence, How to
+  verify, Risks / things to watch, Tests). *Evidence* shows its words,
+  then its screenshots once, as a captioned gallery (caption, file name and
+  kind) that opens the lightbox; *How to verify* is the steps' checklist
+  with its count between the section's own text (`REV-3`). Then **Files**
+  (h2): the attachments neither the review nor the ticket links, in the
+  attachment grid. Then **Activity** (h2): a timeline on one rule, oldest
+  first by day (a note carries only its day, so a day's notes come before
+  its timed entries), of notes (author, day, text), agents' questions
+  (asker, time, the question and, in a tinted reply box, the answer and
+  who gave it, *Answered in the session's own chat*, or *Waiting for your
+  answer, above* while it is open) and handoff updates (run, time, and the
+  next steps of the current handoff). Activity is read-only: there is no
+  note box. Notes, the user's answers on the board and the current handoff
+  are kept in the ticket; earlier questions and checkpoints show while the
+  runs that made them are within the run window.
+- **Outline** (left, 13rem, from 1280px), staying in view: *Sections*, a
+  list of the centre's sections in order: the ticket's, then *Review*
+  (its icon) with its sections indented, then Files and Activity. Counts
+  sit right in tabular numerals: criteria and How to verify `d/t` (green
+  when all done), Evidence, Files and Activity a number. A template
+  section with nothing in it (criteria, Description, Test plan or
+  Reproduction, Context) is listed as *<Name>, empty* in faint italics,
+  not a control. The section crossing the top third of the page is current
+  (`aria-current`, the selection surface); between sections the last one
+  stays. Choosing a section, by mouse or keyboard, scrolls it to the top,
+  moves focus to its heading and keeps it current until the person moves
+  the page.
+- **Properties** (right, 20rem; 19rem from 1024px), staying in view, on the
+  column surface with 14px corners under a visually hidden h2: *Move to*
+  as a select in the status's own fill, icon and word (the status pill
+  when read-only), *Blocked* when blocked, then rows of Priority, Type,
+  Workstream (bullet and name), Branch, Pull request (when set), Depends on
+  (ids linked), Tags, Agent (the run speaking for the ticket, its state
+  mark and word), Created and Changed, *None* where empty; then
+  **Archive**. Each row and section is where its in-place edit will sit
+  (FH-66).
+- **Below 1280px** the outline becomes a **Jump to** button (naming the
+  section in view) at the top of the page, staying in view, opening the
+  same list as a menu. From 1024px the properties stay on the right;
+  narrower, they stack above the page. Nothing scrolls sideways at any
+  width.
+
+No close button, no Position buttons, no workstream line strip and no
+Edit, Runs, Attachments or Review tabs (the card panel keeps its tabs).
+Ticket links on the page stay in its tab; the browser tab reads
+`<id> · <title> · Flashheart`.
 
 ### Ticket ids
 

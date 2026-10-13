@@ -17,6 +17,9 @@ export function Checklist({
   items,
   render = (text) => text,
   onToggle,
+  level = 3,
+  intro,
+  outro,
 }: {
   id: string;
   title: string;
@@ -24,6 +27,12 @@ export function Checklist({
   render?(text: string): ReactNode;
   // onToggle resolves false when the change was not saved.
   onToggle?(index: number, checked: boolean): Promise<boolean>;
+  // level is the heading's: 3 in the panel, 2 or 3 on the full page.
+  level?: 2 | 3;
+  // intro and outro are the section's own text around the list (a
+  // review's How to Verify on the full page).
+  intro?: ReactNode;
+  outro?: ReactNode;
 }) {
   const done = items.filter((item) => item.done).length;
   const keyed = items.map((item, index) => ({
@@ -31,9 +40,10 @@ export function Checklist({
     index,
     key: `${index}:${item.text}`,
   }));
+  const Heading = level === 2 ? "h2" : "h3";
   return (
     <section aria-labelledby={id}>
-      <h3
+      <Heading
         id={id}
         className="mb-2 flex items-baseline justify-between text-md heading-cut"
       >
@@ -41,7 +51,8 @@ export function Checklist({
         <span className="text-sm font-normal text-ink-muted">
           {done} of {items.length}
         </span>
-      </h3>
+      </Heading>
+      {intro ? <div className="mb-3">{intro}</div> : null}
       <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
         {keyed.map((item) =>
           onToggle ? (
@@ -74,6 +85,7 @@ export function Checklist({
           ),
         )}
       </ul>
+      {outro ? <div className="mt-3">{outro}</div> : null}
     </section>
   );
 }

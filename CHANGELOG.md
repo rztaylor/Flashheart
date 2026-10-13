@@ -306,6 +306,21 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- A ticket's full page uses the width (FH-65, CARD-7). Instead of the card
+  panel's tabs stretched to one column, it shows the whole ticket as one
+  page: questions waiting for you, the handoff, blockers, criteria and the
+  ticket's sections, then its review in the review's own sections, then
+  Files and a read-only Activity timeline of notes, agents' questions with
+  your answers and handoff updates, oldest first. Each screenshot appears
+  once: the review's Evidence is a captioned gallery that opens the
+  lightbox, and attachments the review does not show are under Files. From
+  1280px an outline on the left lists the sections with their counts,
+  marks the one in view and moves focus to the one you choose, and the
+  properties (Move to, priority, type, workstream, branch, depends on, tags,
+  agent, dates and Archive) stay in view on the right; narrower, a Jump to
+  menu replaces the outline and on a phone the properties come first. The
+  board's card panel keeps its tabs.
+
 - Development: a visual change to the board now fails the build until its
   screenshots are updated on purpose (FH-101, D42). `scripts/e2e-visual.sh`
   compares a stable set of screenshots with committed baselines inside the

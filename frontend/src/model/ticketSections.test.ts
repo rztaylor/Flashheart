@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { Attachment, Review } from "../api/board";
-import type { Run } from "../api/runs";
-import { sectionLabel, ticketSections } from "./ticketSections";
+import type { Attachment, Review, TicketDetail } from "../api/board";
+import type { Question, Run } from "../api/runs";
+import {
+  type PageInput,
+  pageSections,
+  sectionLabel,
+  ticketSections,
+  unreferencedFiles,
+} from "./ticketSections";
 
 const run = (id: string, parent = "") => ({ id, parent }) as Run;
 const file = (name: string) => ({ file: name }) as Attachment;
@@ -60,5 +66,266 @@ describe("ticketSections", () => {
       "Runs 1",
       "Attachments 1",
     ]);
+  });
+});
+
+const body = [
+  "# Outline the page",
+  "",
+  "## Description",
+  "",
+  "Lay it out.",
+  "",
+  "## Acceptance Criteria",
+  "",
+  "- [x] One",
+  "- [ ] Two",
+  "",
+  "## Test Plan",
+  "",
+  "Red first. See ![sketch](files/sketch.png).",
+  "",
+  "## Context",
+  "",
+  "## Rollout",
+  "",
+  "Behind nothing.",
+  "",
+  "## Notes",
+  "",
+  "- 2026-10-11 · claude:2ff6eb1c: a note",
+  "",
+  "## Handoff",
+  "",
+  "**Next**",
+  "- Verify",
+  "",
+].join("\n");
+
+const reviewMarkdown = [
+  "# Review: Outline the page",
+  "",
+  "**Work Item:** FH-65",
+  "",
+  "## Summary",
+  "",
+  "Three columns.",
+  "",
+  "## Key Files",
+  "",
+  "| File | What |",
+  "",
+  "## Evidence",
+  "",
+  "- ![Light, 1440](files/light.png)",
+  "- ![Dark, 1440](files/dark.png)",
+  "",
+  "## How to Verify",
+  "",
+  "### Steps",
+  "1. Open it",
+  "2. [x] Scroll",
+  "",
+  "## Risks / Things to Watch",
+  "",
+  "- None",
+  "",
+].join("\n");
+
+const pageReview: Review = {
+  markdown: reviewMarkdown,
+  hash: "h",
+  before: reviewMarkdown.slice(0, reviewMarkdown.indexOf("## How to Verify")),
+  intro: "\n",
+  steps: [
+    { text: "Open it", done: false },
+    { text: "Scroll", done: true },
+  ],
+  outro: "\n",
+  after: reviewMarkdown.slice(reviewMarkdown.indexOf("## Risks")),
+};
+
+const attachment = (name: string, kind = "screenshot") =>
+  ({ file: name, caption: name, kind, url: `/f/${name}` }) as Attachment;
+
+function input(overrides: Partial<PageInput> = {}): PageInput {
+  return {
+    type: "feature",
+    body,
+    needsRepair: [],
+    questions: [],
+    handoff: null,
+    blockedBy: [],
+    criteriaItems: [
+      { text: "One", done: true },
+      { text: "Two", done: false },
+    ],
+    review: null,
+    attachmentFiles: [],
+    ...overrides,
+  };
+}
+
+const ids = (detail: PageInput, activity = 0) =>
+  pageSections(detail, activity).map((section) => section.id);
+
+describe("pageSections", () => {
+  it("orders the ticket's own sections, then Activity, without a review", () => {
+    expect(ids(input())).toEqual([
+      "criteria",
+      "description",
+      "test-plan",
+      "context",
+      "rollout",
+      "activity",
+    ]);
+  });
+
+  it("leads with repair, questions, handoff and blockers when present", () => {
+    const detail = input({
+      needsRepair: ["Bad frontmatter"],
+      questions: [{ id: "q1" } as Question],
+      handoff: { markdown: "", next: ["Verify"] },
+      blockedBy: [{ kind: "ticket", text: "Depends on FH-1", missing: false }],
+    });
+    expect(ids(detail).slice(0, 5)).toEqual([
+      "repair",
+      "questions",
+      "handoff",
+      "blocked",
+      "criteria",
+    ]);
+  });
+
+  it("follows the ticket with the review in its own sections, then Files and Activity", () => {
+    const detail = input({
+      review: pageReview,
+      attachmentFiles: [
+        attachment("light.png"),
+        attachment("dark.png"),
+        attachment("run.log", "log"),
+      ],
+    });
+    expect(ids(detail, 3)).toEqual([
+      "criteria",
+      "description",
+      "test-plan",
+      "context",
+      "rollout",
+      "review",
+      "review-summary",
+      "review-key-files",
+      "review-evidence",
+      "review-how-to-verify",
+      "review-risks-things-to-watch",
+      "files",
+      "activity",
+    ]);
+  });
+
+  it("counts criteria, evidence, verify steps, files and activity", () => {
+    const sections = pageSections(
+      input({
+        review: pageReview,
+        attachmentFiles: [attachment("light.png"), attachment("run.log")],
+      }),
+      4,
+    );
+    const count = (id: string) =>
+      sections.find((section) => section.id === id)?.count;
+    expect(count("criteria")).toBe("1/2");
+    expect(count("review-evidence")).toBe("2");
+    expect(count("review-how-to-verify")).toBe("1/2");
+    expect(count("files")).toBe("1");
+    expect(count("activity")).toBe("4");
+    expect(count("description")).toBeUndefined();
+  });
+
+  it("marks empty template sections and names them in sentence case", () => {
+    const sections = pageSections(input({ criteriaItems: [] }), 0);
+    const byId = new Map(sections.map((section) => [section.id, section]));
+    expect(byId.get("context")).toMatchObject({
+      title: "Context",
+      empty: true,
+    });
+    expect(byId.get("criteria")).toMatchObject({
+      title: "Acceptance criteria",
+      empty: true,
+    });
+    expect(byId.get("test-plan")).toMatchObject({
+      title: "Test plan",
+      empty: false,
+    });
+    expect(byId.get("activity")?.empty).toBeFalsy();
+  });
+
+  it("lists a missing Reproduction as empty for a bug", () => {
+    const sections = pageSections(
+      input({ type: "bug", body: "# Bug\n\n## Description\n\nIt breaks." }),
+      0,
+    );
+    expect(sections.map((section) => section.id)).toContain("reproduction");
+    expect(
+      sections.find((section) => section.id === "reproduction")?.empty,
+    ).toBe(true);
+  });
+
+  it("gives the Evidence section its images and the rest of its text", () => {
+    const evidence = pageSections(input({ review: pageReview }), 0).find(
+      (section) => section.kind === "evidence",
+    );
+    expect(evidence?.images).toEqual([
+      { alt: "Light, 1440", src: "files/light.png" },
+      { alt: "Dark, 1440", src: "files/dark.png" },
+    ]);
+    expect(evidence?.markdown?.trim()).toBe("");
+  });
+
+  it("splits a review without steps into its sections", () => {
+    const review = { ...pageReview, steps: [], before: reviewMarkdown };
+    const sections = pageSections(input({ review }), 0);
+    const verify = sections.find(
+      (section) => section.id === "review-how-to-verify",
+    );
+    expect(verify?.kind).toBe("review-text");
+    expect(verify?.count).toBeUndefined();
+  });
+
+  it("keeps section ids unique", () => {
+    const sections = pageSections(
+      input({
+        body: "# T\n\n## Description\n\nA\n\n## Files\n\nB\n\n## Files\n\nC",
+      }),
+      0,
+    );
+    const list = sections.map((section) => section.id);
+    expect(new Set(list).size).toBe(list.length);
+  });
+});
+
+describe("unreferencedFiles", () => {
+  it("leaves out files the review or the ticket links, so each shows once", () => {
+    const files = unreferencedFiles(
+      input({
+        review: pageReview,
+        attachmentFiles: [
+          attachment("light.png"),
+          attachment("dark.png"),
+          attachment("sketch.png"),
+          attachment("other.png"),
+          attachment("run.log", "log"),
+        ],
+      }) as Pick<TicketDetail, "body" | "review" | "attachmentFiles">,
+    );
+    expect(files.map((file) => file.file)).toEqual(["other.png", "run.log"]);
+  });
+
+  it("lists every file when nothing links them", () => {
+    const files = unreferencedFiles({
+      body: "# T",
+      review: null,
+      attachmentFiles: [attachment("a.png")],
+    });
+    expect(files).toHaveLength(1);
   });
 });
