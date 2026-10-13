@@ -168,7 +168,7 @@ function RailItem({
               className="flex items-center gap-1"
               title={`${blocked} blocked by a dependency or missing reference`}
             >
-              <Icon name="diamond" size={10} />
+              <Icon name="blocked" size={10} />
               {blocked}
               <span className="sr-only"> blocked</span>
             </span>

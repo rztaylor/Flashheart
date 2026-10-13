@@ -131,6 +131,15 @@ describe("WorkstreamLine", () => {
     expect(markup).toContain('data-station="FH-2"');
   });
 
+  it("marks a blocked workstream with the no-entry sign and the word", () => {
+    const markup = render(
+      workstream([ticket("FH-1", "up-next", { blocked: true })], "blocked"),
+    );
+    expect(markup).toMatch(
+      /data-icon="blocked"(?:(?!<\/svg>)[\s\S])*<\/svg>Blocked</,
+    );
+  });
+
   it("opens the workstream's page from its title, or beside a finished line's head (FH-139)", () => {
     const active = render(workstream([ticket("FH-1", "up-next")], "active"));
     expect(active).toMatch(

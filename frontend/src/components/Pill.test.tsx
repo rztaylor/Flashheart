@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { BlockerPill, StatusPill, Tag } from "./Pill";
+import { BlockerPill, Pill, StatusPill, Tag } from "./Pill";
 
 describe("StatusPill", () => {
   it("says the column's word beside its colour and icon", () => {
@@ -19,12 +19,19 @@ describe("StatusPill", () => {
 });
 
 describe("BlockerPill", () => {
-  it("pairs the diamond with the reason in words", () => {
+  it("pairs the no-entry sign with the reason in words", () => {
     const markup = renderToStaticMarkup(
       <BlockerPill>Depends on FH-4</BlockerPill>,
     );
     expect(markup).toContain('data-tone="blocked"');
+    expect(markup).toContain('data-icon="blocked"');
     expect(markup).toContain("Blocked: </span>Depends on FH-4");
+  });
+
+  it("gives the blocked tone the no-entry sign on any pill", () => {
+    const markup = renderToStaticMarkup(<Pill tone="blocked">Blocked</Pill>);
+    expect(markup).toContain('data-icon="blocked"');
+    expect(markup).toContain("Blocked");
   });
 });
 

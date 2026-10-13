@@ -102,6 +102,7 @@ describe("TableView", () => {
 
   it("shows a blocker as the blocked pill and a live run by its mark", () => {
     expect(markup).toContain('data-tone="blocked"');
+    expect(markup).toContain('data-icon="blocked"');
     expect(markup).toContain('data-run-state="working"');
   });
 });
