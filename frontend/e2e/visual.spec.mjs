@@ -8,6 +8,7 @@ import {
   makeSandbox,
   open,
   stopIfRunning,
+  viewOption,
   waitForManualURL,
 } from "./support.mjs";
 
@@ -83,6 +84,9 @@ async function compare(
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
   });
+  // No hover: a test that clicked (View options) leaves the pointer over
+  // whatever the next view draws there.
+  await page.mouse.move(0, 0);
   await expect(page).toHaveScreenshot(`${name}-${width}-${theme}.png`, {
     // The board root is a new temporary folder each run.
     mask: [page.getByText(sandbox.root, { exact: true })],
@@ -96,6 +100,23 @@ for (const theme of ["light", "dark"]) {
   for (const width of [1280, 1920]) {
     test(`the board, ${width} ${theme}`, async () => {
       await compare("board", "#/p/flashheart/board", column, { width, theme });
+    });
+  }
+  // The other two card layouts (FH-147); Normal is the board above.
+  for (const density of ["Compact", "Detailed"]) {
+    test(`the board, ${density.toLowerCase()} ${theme}`, async () => {
+      await open(page, "#/p/flashheart/board", { width: 1280, theme });
+      await viewOption(page, "Density", density);
+      try {
+        await compare(
+          `board-${density.toLowerCase()}`,
+          "#/p/flashheart/board",
+          column,
+          { theme },
+        );
+      } finally {
+        await viewOption(page, "Density", "Normal");
+      }
     });
   }
   test(`a ticket in the side panel, ${theme}`, async () => {

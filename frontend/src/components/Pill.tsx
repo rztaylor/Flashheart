@@ -1,6 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { type Paint, paintVars } from "../model/paint";
 import { type StateTone, statusOf } from "../model/status";
 import { Icon, type IconName } from "./Icon";
 
@@ -106,30 +105,17 @@ export function BlockerPill({
   );
 }
 
-// Tag is a ticket attribute (type, priority, age). The one chosen in
-// "Colour by" takes its paint (tint fill, strong word); the rest are neutral
-// outlined chips.
+// Tag is a ticket attribute (type, priority, a tag) as a neutral outlined
+// chip, in the panel, the table and the archive. Cards draw type and
+// priority as marks instead (components/TicketMarks, FH-147).
 export function Tag({
-  paint,
   strong,
   children,
 }: {
-  paint?: Paint;
   // strong sets the word in semibold (High priority).
   strong?: boolean;
   children: ReactNode;
 }) {
-  if (paint) {
-    return (
-      <span
-        data-paint={paint.token}
-        style={paintVars(paint) as CSSProperties}
-        className="inline-flex items-center rounded-full bg-(--paint-tint) px-2 text-2xs leading-5 font-semibold text-(--paint) shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--paint)_35%,transparent)]"
-      >
-        {children}
-      </span>
-    );
-  }
   return (
     <span
       className={`inline-flex items-center rounded-full border border-rule px-2 text-2xs leading-[1.125rem] ${strong ? "font-semibold text-ink" : "text-ink-muted"}`}
