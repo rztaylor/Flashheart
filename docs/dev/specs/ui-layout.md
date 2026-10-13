@@ -472,6 +472,9 @@ id a separate link.
 - Route card head: large bullet, name in the display cut, derived status in
   words with its mark (*Running*, *Blocked* with diamond, *Completed* with
   check), and `d of t served` right. Repair, blocker and warning notes follow.
+  The name is a link to the workstream's page (underlined on hover); a
+  finished line's head, being its disclosure button, has instead a quiet
+  expand-icon link after it, *Open <name>* (FH-139).
 - **Finished lines collapse** (FH-68, D35). A workstream whose tickets are all
   Done, Rejected or Archived, with nothing to repair, shows only its head
   with a chevron at the right (pointing right when collapsed, down when
@@ -512,6 +515,39 @@ id a separate link.
 - Tickets with no links on the line follow below the graph, set off by a
   faint rule when there is a graph, wrapping onto rows.
   Shift with Left/Right or drag reorders them (`EDIT-4`).
+
+### Workstream page
+
+A workstream's page (`EDIT-13`, `#/workstream/<project>/<slug>`, FH-139)
+sits under the band like a ticket's page (no view current; its views leave
+it) and scrolls as a whole in a frame of at most 80rem.
+
+```
+┌ Band ────────────────────────────────────────────────────────────────┐
+│ Show in the <project> workstreams                                    │
+│ ● Name (h1)                                         d of t served    │
+│   Running                                                            │
+│ ┌ Stations (route card surface) ───────────────────────────────────┐ │
+│ │ notes · railway graph · independent stations                     │ │
+│ └──────────────────────────────────────────────────────────────────┘ │
+│ Goal ✎                                                               │
+│ Scope ✎ … Success Criteria ✎ … Notes ✎   (at most 48rem wide)        │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+- **Header**: a quiet *Show in the <project> workstreams* link (lines
+  icon) to the project's Workstreams view; the route card's head with the
+  name as the page's h1 in the display cut, its status and progress.
+- **Stations**: the route card's body on its line-coloured surface (repair,
+  blocker and warning notes, the railway graph and independent stations);
+  a station opens the ticket's full page.
+- **Sections**, each an h2 with its pencil, as on a ticket's page: open,
+  the formatted editor with Save and Cancel; empty, a dashed **Add
+  <section>** slot. A read-only board shows the sections without pencils
+  and leaves empty ones out. The conflict dialog is titled *<name> changed
+  while you were editing* and says another saved *this workstream*.
+- Loading shows the head, a track and two section shapes; an error keeps
+  an h1 of the slug with the shared error and Try again.
 
 ## 5. Overview
 

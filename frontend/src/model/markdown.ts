@@ -30,6 +30,18 @@ export function ticketPageHref(id: string): string {
   return `#/ticket/${encodeURIComponent(id)}`;
 }
 
+// workstreamPageHref is a workstream's page (FH-139), opened from its
+// route card.
+export function workstreamPageHref({
+  project,
+  slug,
+}: {
+  project: string;
+  slug: string;
+}): string {
+  return `#/workstream/${encodeURIComponent(project)}/${encodeURIComponent(slug)}`;
+}
+
 export function resolveLink(href: string, context: LinkContext): LinkTarget {
   const trimmed = href.trim();
   if (trimmed.startsWith(ticketLinkPrefix)) {
@@ -61,7 +73,9 @@ export function resolveLink(href: string, context: LinkContext): LinkTarget {
   const file = rest.length === 1 ? ticketFolder.exec(rest[0] ?? "") : null;
   if (file?.[1] === id && rest[0]?.endsWith(".md"))
     return { kind: "ticket", id };
+  // A workstream's text (ticket "") has no files of its own.
   if (
+    id &&
     rest.length === 2 &&
     rest[0] === "files" &&
     rest[1] &&

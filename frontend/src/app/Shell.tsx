@@ -11,6 +11,7 @@ import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { EditorModeProvider } from "../features/editor/mode";
 import { ProjectRail } from "../features/projects/ProjectRail";
+import { WorkstreamPage } from "../features/workstreams/WorkstreamPage";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
 import { shownColumns } from "../model/columns";
 import { messageOf } from "../model/errors";
@@ -110,9 +111,13 @@ export function Shell({
     : "in-progress";
 
   const go = (next: Partial<Route>) => navigate({ ...route, ...next });
-  // From a ticket's full page the band leaves the ticket.
+  // From a ticket's full page or a workstream's page the band leaves it.
   const chooseView = (view: BandView) => {
-    go(route.view === "ticket" ? { view, ticket: undefined } : { view });
+    go(
+      route.view === "ticket" || route.view === "workstream"
+        ? { view, ticket: undefined, workstream: undefined }
+        : { view },
+    );
     memory.rememberView(view);
   };
   // The band's Needs you pill filters All projects' Board or Table, and
@@ -248,6 +253,39 @@ export function Shell({
                     summaries.find((item) => item.name === project)
                       ?.displayName ?? project,
                 })}
+              />
+            </EditorModeProvider>
+          </main>
+        ) : route.view === "workstream" && route.workstream ? (
+          <main
+            className="min-h-0 overflow-y-auto"
+            aria-label={`Workstream ${route.workstream.slug}`}
+          >
+            <EditorModeProvider value={editorMode}>
+              <WorkstreamPage
+                key={`${route.workstream.project}/${route.workstream.slug}`}
+                workstream={route.workstream}
+                fetcher={fetcher}
+                lines={data.lines}
+                keys={data.keys}
+                revision={data.revision}
+                editing={editing}
+                onOpen={(ticket) =>
+                  navigate({ scope: { kind: "all" }, view: "ticket", ticket })
+                }
+                backLink={{
+                  href: formatRoute({
+                    scope: {
+                      kind: "project",
+                      project: route.workstream.project,
+                    },
+                    view: "workstreams",
+                  }),
+                  label:
+                    summaries.find(
+                      (item) => item.name === route.workstream?.project,
+                    )?.displayName ?? route.workstream.project,
+                }}
               />
             </EditorModeProvider>
           </main>
