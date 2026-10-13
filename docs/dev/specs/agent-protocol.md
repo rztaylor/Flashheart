@@ -347,7 +347,7 @@ to the app. The events are `SessionStart`
 |---|---|
 | `SessionStart` | `run.start`; recovery note as `additionalContext` (a developer message) |
 | `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; answered questions as `additionalContext` |
-| `PreToolUse` | nothing yet; stamping `run` into Flashheart's own tools (`updatedInput`, §7.1) is FH-74 |
+| `PreToolUse` (setup registers it for `mcp__flashheart__.*` only) | nothing yet; stamping `run` into Flashheart's own tools (`updatedInput`, §7.1) is FH-74 |
 | `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `plan.updated` (the whole plan) for `update_plan` where Codex offers it, read from its `plan` steps (`step`, `status`) |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
@@ -423,13 +423,58 @@ reads a skill's body from disk when the skill is invoked, so the new text
 applies in the same session; when it reads skill descriptions is not
 documented, so a changed description may only show from the next session.
 
-Codex: `[mcp_servers.flashheart]` with `command = "/usr/local/bin/flashheart"`
-and `args = ["mcp"]` in `~/.codex/config.toml`, and the hooks in
-`~/.codex/hooks.json`.
+Codex (in `$CODEX_HOME`, default `~/.codex`, as Codex reads it; checked
+against Codex 0.160.0, 2026-10-12):
 
-Setup owns only entries it can identify as its own (command path ending in
-`flashheart hook …` / server name `flashheart`), so `--uninstall` never
-touches the user's other hooks.
+```toml
+# config.toml, merged as text: only this table's command and args are set
+[mcp_servers.flashheart]
+command = "/usr/local/bin/flashheart"
+args = ["mcp"]
+```
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "/usr/local/bin/flashheart hook codex SessionStart", "timeout": 5}]}],
+    "PreToolUse":   [{"matcher": "mcp__flashheart__.*", "hooks": [{"type": "command", "command": "/usr/local/bin/flashheart hook codex PreToolUse", "timeout": 5}]}]
+  }
+}
+```
+
+(`hooks.json`, abbreviated; every event in §5.3 is registered the same way,
+merged with the user's hooks as for Claude Code.) The protocol text (§12)
+goes into the global `AGENTS.md` between
+`<!-- BEGIN FLASHHEART: written by flashheart setup codex; edits here are replaced -->`
+and `<!-- END FLASHHEART -->`, appended after a blank line when it is not
+there yet; text outside the markers is the user's. Codex writes
+`config.toml` itself (project trust, hook trust), so setup edits it as
+text: it sets `command` and `args` in `[mcp_servers.flashheart]` (a new
+table goes after the last MCP server's) and keeps every comment, other
+key and table, the rest of its own table included. A `flashheart` server
+written any other way (dotted keys, an inline `mcp_servers` table) and
+broken TOML are refused with the fix, never rewritten. `--write` backs up
+what it changes in `$CODEX_HOME/flashheart-backup/<UTC time>/` and
+refuses a file that changed since the plan (Codex may have saved trust in
+between). `--uninstall --write` removes the table and its sub-tables,
+setup's hooks (restoring the backed-up `hooks.json` byte for byte when
+nothing changed since) and the marked section, each with the blank line
+setup put before it, and deletes a file setup created that is left empty.
+
+Codex runs a hook that is not managed only once the user trusts it with
+`/hooks` in the CLI, by its hash (§5.3), so setup ends by saying so, and a
+hook whose command changed (a moved binary, another `--root`) needs
+trusting again. `doctor` warns when `config.toml` records no trust at all
+for `hooks.json` (`[hooks.state."<CODEX_HOME>/hooks.json:…"]`) or when
+`[features] hooks = false`; how Codex computes the hash is not recorded,
+so a stale trust after a changed command is not detected. The protocol
+text in `AGENTS.md` is not refreshed by a hook: after an upgrade `doctor`
+reports it out of date and `setup codex --write` replaces it.
+
+Setup owns only entries it can identify as its own (a hook whose program is
+a `flashheart` binary run with `hook`, the server named `flashheart`, the
+marked section), so `--uninstall` never touches the user's other hooks,
+servers or text.
 
 ## 6. Claims and linking
 
@@ -728,8 +773,10 @@ another project's ticket is not seen, so it links by branch only (§6).
 
 ## 12. Protocol skill and instructions
 
-`SET-2` installs one text, rendered for each agent; Claude Code's copy is
-kept current by the session-start hook (§5.4). It covers, briefly:
+`SET-2` installs one text, rendered for each agent: Claude Code's skill, kept
+current by the session-start hook, and the same text between markers in
+Codex's global `AGENTS.md`, which `setup codex` refreshes and `doctor`
+checks (§5.4). It covers, briefly:
 
 - at start: read the recovery note; if none, call `board_context`, which
   names your project and its ticket key;
@@ -743,8 +790,8 @@ kept current by the session-start hook (§5.4). It covers, briefly:
   three top-priority bugs"), use `list_tickets`, then `claim` each ticket;
 - before work on a ticket: `claim`; create tickets for new work rather than
   starting untracked work;
-- keep your own plan/todo list current (it is mirrored for you; no tool call
-  needed);
+- keep your own plan/todo list current (where Flashheart's hooks are
+  installed it is mirrored for you; no tool call needed);
 - `checkpoint` at meaningful milestones, before long operations, before
   compaction risk, and always before stopping after edits;
 - use `ask_human` when blocked on a human decision instead of waiting in chat

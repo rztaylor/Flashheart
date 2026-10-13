@@ -3,8 +3,9 @@
 // agent-protocol §8), the answers note added to a prompt (HOOK-5) and the
 // one conversion of delivered answers to what the agent is shown
 // (AnswersOf), and the
-// protocol text (§12) rendered as the MCP server's instructions and the
-// Claude Code skill setup installs, and the shell commands given to agents
+// protocol text (§12) rendered as the MCP server's instructions, the
+// Claude Code skill setup installs and the body setup puts in Codex's
+// AGENTS.md (Body), and the shell commands given to agents
 // and agent configuration (the `flashheart await` command, §7.5, and shell
 // quoting).
 //
