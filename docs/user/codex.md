@@ -36,6 +36,14 @@ as a diff:
   `<!-- BEGIN FLASHHEART … -->` and `<!-- END FLASHHEART -->`. Text outside
   the markers is yours; text inside is replaced by the next setup.
 
+After you upgrade Flashheart, the next Codex session in a git repository
+brings that marked text up to date by itself, once you have trusted the
+hooks (below): its session-start hook rewrites only the text
+between the markers, and tells the session it did so it reads it again.
+It never adds the text to an `AGENTS.md` without it (so an uninstall
+stays uninstalled), and leaves a file whose markers are broken alone for
+`flashheart doctor` to report.
+
 Before writing, setup copies everything it changes into
 `~/.codex/flashheart-backup/<time>/`. Commands use the absolute path of the
 `flashheart` you ran, and pass `--root` only when your board is not at
@@ -72,7 +80,8 @@ deletes a file setup created that would be left empty.
 protocol text against what `setup codex` writes. A missing entry or a
 binary that no longer exists is a problem; another binary, a hook an
 earlier version registered that setup no longer writes, out-of-date
-protocol text (after you upgrade Flashheart, run `setup codex` again),
+protocol text (after an upgrade, until the next Codex session refreshes
+it or you run `setup codex` again),
 hooks turned off with `[features] hooks = false`, or hooks never
 trusted with `/hooks`, are warnings. Doctor cannot tell whether trust is
 still current after a hook changed, so trust them again when setup changed

@@ -2,6 +2,9 @@ package setup
 
 import (
 	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/protocol"
@@ -71,6 +74,46 @@ func installedAgents(data []byte) ([]byte, error) {
 		text += "\n"
 	}
 	return []byte(text + "\n" + agentsSection()), nil
+}
+
+var _ ProtocolRefresher = Codex{}
+
+// RefreshProtocol keeps the protocol section of Codex's global AGENTS.md
+// current (agent-protocol §5.4, D53): when the file has one marked section
+// and it differs from this binary's, only that section is rewritten,
+// atomically, through a symlink to its target. A file without a section is
+// never given one, so an uninstall stays uninstalled, and a file whose
+// markers do not pair is left for setup and doctor to report. It returns
+// the note for the session's context when it wrote. The Codex
+// session-start hook calls it; nothing else does.
+func (Codex) RefreshProtocol(o Options) (string, error) {
+	path := o.codexAgentsPath()
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		if path, err = filepath.EvalSymlinks(path); err != nil {
+			return "", err
+		}
+	}
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	start, end, found, err := findSection(data)
+	if err != nil || !found || sameSection(string(data[start:end])) {
+		return "", nil
+	}
+	if err := writeAtomic(path, []byte(string(data[:start])+agentsSection()+string(data[end:]))); err != nil {
+		return "", err
+	}
+	return protocol.AgentsUpdatedNote(o.codexAgentsPath()), nil
+}
+
+// sameSection reports whether a marked section is this binary's, ignoring
+// a missing newline at the end of the file.
+func sameSection(section string) bool {
+	return strings.TrimSuffix(section, "\n") == strings.TrimSuffix(agentsSection(), "\n")
 }
 
 // uninstalledAgents is AGENTS.md without the protocol section and the

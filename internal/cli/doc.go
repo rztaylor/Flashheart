@@ -7,7 +7,8 @@
 // presents the launch outcome, keeps the one registry of agents (each
 // agent's hook adapter and, unless it has hooks only, its setup.Agent)
 // that hook, setup and doctor read,
-// passes an agent's skill refresh to the session-start hook, runs
+// passes an agent's protocol-text refresh (Claude Code's skill, Codex's
+// section of AGENTS.md in $CODEX_HOME) to the session-start hook, runs
 // the MCP server on stdio with the agent's project directory
 // (CLAUDE_PROJECT_DIR, else the working directory) and its own binary path,
 // waits for a question's answer (`await`, printing only the answer to

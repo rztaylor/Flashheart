@@ -439,34 +439,34 @@ func TestArchivedProjectsRepositoryIsQuiet(t *testing.T) {
 	}
 }
 
-func TestSessionStartRefreshesTheSkill(t *testing.T) {
+func TestSessionStartRefreshesTheProtocolText(t *testing.T) {
 	t.Parallel()
 
 	cwd := repo(t)
-	start := func(root string, refresh func() (bool, error)) string {
+	start := func(root string, refresh func() (string, error)) string {
 		var stdout bytes.Buffer
-		Run(Options{Root: root, Event: "SessionStart", Stdin: strings.NewReader("s1 " + cwd), Stdout: &stdout, Now: func() time.Time { return now }, Adapter: fake{}, RefreshSkill: refresh})
+		Run(Options{Root: root, Event: "SessionStart", Stdin: strings.NewReader("s1 " + cwd), Stdout: &stdout, Now: func() time.Time { return now }, Adapter: fake{}, RefreshProtocol: refresh})
 		return stdout.String()
 	}
 
 	root := t.TempDir()
 	calls := 0
-	refreshed := func() (bool, error) { calls++; return true, nil }
+	refreshed := func() (string, error) { calls++; return protocol.SkillUpdatedNote, nil }
 	if out := start(root, refreshed); !strings.Contains(out, "context:"+protocol.SkillUpdatedNote) {
-		t.Fatalf("output = %q, want the skill note", out)
+		t.Fatalf("output = %q, want the refresher's note", out)
 	}
-	current := func() (bool, error) { calls++; return false, nil }
+	current := func() (string, error) { calls++; return "", nil }
 	if out := start(root, current); out != "" {
-		t.Fatalf("output = %q, want nothing for a current skill", out)
+		t.Fatalf("output = %q, want nothing for current protocol text", out)
 	}
-	// Only session start refreshes the skill.
+	// Only session start refreshes the protocol text.
 	run(t, root, "Prompt", "s1 "+cwd, fake{})
 	if calls != 2 {
 		t.Fatalf("refresh called %d times, want 2", calls)
 	}
 
 	// A failed refresh is logged and the session start goes on.
-	failed := func() (bool, error) { return false, errors.New("skill: permission denied") }
+	failed := func() (string, error) { return "", errors.New("skill: permission denied") }
 	if out := start(root, failed); out != "" {
 		t.Fatalf("output = %q", out)
 	}

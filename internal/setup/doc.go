@@ -6,7 +6,8 @@
 // through the agent's CLI (or prints them when there is none). It refuses
 // to write a file that changed since the plan. Agent is what each agent
 // implements: Install, Uninstall, Diagnose (doctor's checks, as
-// health.Findings) and FindCLI, and optionally RefreshSkill.
+// health.Findings) and FindCLI, and optionally RefreshProtocol
+// (ProtocolRefresher), which the session-start hook calls through cli.
 //
 // Claude (claude.go, claude_diagnose.go, skill.go) is Claude Code: the
 // hooks of agent-protocol §5.2 in ~/.claude/settings.json, the flashheart
@@ -27,7 +28,9 @@
 // scans statements, no TOML library) because Codex writes the file itself;
 // the hooks of agent-protocol §5.3 in hooks.json, with Claude Code's JSON
 // handling; and the protocol text between markers in the global
-// AGENTS.md. It runs no Codex command. Its diagnosis also reports hooks
+// AGENTS.md. RefreshProtocol rewrites only that section, only when it
+// exists and its markers pair, through a symlink to its target. It runs no
+// Codex command. Its diagnosis also reports hooks
 // Codex will skip (turned off, or never trusted with /hooks).
 //
 // Which agents exist, flags and output streams belong to cli; the skill's
