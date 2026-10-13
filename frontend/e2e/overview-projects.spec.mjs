@@ -14,10 +14,11 @@ import {
 } from "./support.mjs";
 
 // The All projects Overview's list of projects (FH-153): every project with
-// its ticket, column, blocked, needs-repair and needs-you counts, in the
-// rail's order, each row leading to the project's own Overview. The demo
-// board's alpha project has a ticket that needs repair and, from the
-// seeded runs, a session waiting on a permission.
+// its ticket, column, blocked, needs-repair, live (FH-162) and needs-you
+// counts, in the rail's order, each row leading to the project's own
+// Overview. The demo board's alpha project has a ticket that needs repair
+// and, from the seeded runs, a session waiting on a permission with
+// subagents still working.
 test.describe.configure({ mode: "serial" });
 
 let sandbox;
@@ -72,13 +73,13 @@ test("lists every project in the rail's order, with its counts", async () => {
   const flashheart = row("Flashheart");
   await expect(flashheart).toHaveAttribute(
     "aria-label",
-    /^Flashheart \(flashheart\): \d+ tickets \(\d+ in backlog, \d+ up next, \d+ in progress, \d+ ready to review, \d+ done\), \d+ blocked, 0 need repair, 0 agents need you$/,
+    /^Flashheart \(flashheart\): \d+ tickets \(\d+ in backlog, \d+ up next, \d+ in progress, \d+ ready to review, \d+ done\), \d+ blocked, 0 need repair, 0 agents live, 0 agents need you$/,
   );
   await expect(flashheart).toContainText("FH");
   // The column words head the counts once, not in every row.
   const head = list().locator("[data-columns]");
   await expect(head).toBeVisible();
-  for (const word of ["Tickets", "In progress", "Blocked", "Needs you"])
+  for (const word of ["Tickets", "In progress", "Blocked", "Live", "Needs you"])
     await expect(head).toContainText(word);
   await expect(flashheart.getByText("In progress")).toBeHidden();
   // Its counts are the badge's: the same tickets and in progress.
@@ -99,11 +100,32 @@ test("Needs you and needs repair stand out on their project's row", async () => 
   const alpha = row("Alpha");
   await expect(alpha).toHaveAttribute(
     "aria-label",
-    /, 1 needs repair, 1 agent needs you$/,
+    /, 1 needs repair, \d+ agents? live, 1 agent needs you$/,
   );
   await expect(alpha.locator("[data-mark=needs-you]")).toHaveText("1");
   await expect(alpha.locator("[data-mark=repair]")).toHaveText("1");
   await expect(row("Flashheart").locator("[data-mark]")).toHaveCount(0);
+});
+
+test("each row shows its project's live agents, a zero faint", async () => {
+  await open(page, "#/all/overview");
+  const alpha = row("Alpha");
+  const [, live] = (await alpha.getAttribute("aria-label")).match(
+    /, (\d+) agents? live,/,
+  );
+  // The session waiting on you and its working subagents are all live;
+  // the ended session is not.
+  expect(Number(live)).toBeGreaterThanOrEqual(3);
+  const cell = alpha.locator("[data-count=live]");
+  await expect(cell).toHaveText(live);
+  await expect(cell).not.toHaveClass(/text-ink-faint/);
+  const none = row("Flashheart").locator("[data-count=live]");
+  await expect(none).toHaveText("0");
+  await expect(none).toHaveClass(/text-ink-faint/);
+  // The column word carries the run-state mark.
+  await expect(
+    list().locator("[data-columns] [data-run-state=working]"),
+  ).toBeVisible();
 });
 
 test("choosing a row switches to that project's Overview, which has no list", async () => {
@@ -134,6 +156,25 @@ test("fits a phone and the panel, and is accessible in both themes", async () =>
       await shot(page, `overview-projects-${width}-${theme}`);
     }
   }
+  // Either side of the table's breakpoint (50rem of the card's width: a
+  // 920px window is just over it) the rows fit, stacked or as a table with
+  // the live column.
+  for (const [width, table] of [
+    [900, false],
+    [920, true],
+    [960, true],
+  ]) {
+    await open(page, "#/all/overview", { width, height: 900, theme: "light" });
+    await expect(rows().first()).toBeVisible();
+    await expect(list().locator("[data-columns]")).toBeVisible({
+      visible: table,
+    });
+    expect(await fits(list()), `${width}`).toBe(true);
+    if (table)
+      for (const cell of await list().locator("[data-count=live]").all())
+        expect(await fits(cell), `${width} live cell`).toBe(true);
+  }
+
   // One project's Overview, with no list.
   await open(page, "#/p/alpha/overview", { theme: "light" });
   await expect(page.locator("[data-pipeline]")).toBeVisible();

@@ -348,6 +348,9 @@ export interface ProjectRow {
   stages: PipelineStage[];
   blocked: number;
   repair: number;
+  // live counts the project's agents still running (FH-162): working,
+  // quiet, waiting and those that need you, subagents too.
+  live: number;
   needsYou: number;
   // label is the row's accessible name: the project and every count.
   label: string;
@@ -365,7 +368,7 @@ const stageWords: Record<Column, string> = {
 // projectRows are the All projects Overview's per-project counts (FH-153,
 // PRJ-6), in the projects' own order (most recently active first, as the
 // rail lists them): tickets, each column as the pipeline counts it, and
-// blocked, needs repair and needs you.
+// blocked, needs repair, live agents (FH-162) and needs you.
 export function projectRows(
   projects: (Pick<
     ProjectSummary,
@@ -376,7 +379,7 @@ export function projectRows(
     | "rejected"
     | "blocked"
     | "needsRepair"
-  > & { runs: Pick<ProjectSummary["runs"], "needsYou"> })[],
+  > & { runs: Pick<ProjectSummary["runs"], "needsYou" | "live"> })[],
 ): ProjectRow[] {
   return projects.map((project) => {
     const stages = pipelineStages([project], project.name);
@@ -393,7 +396,8 @@ export function projectRows(
       .map((stage) => `${stage.count} ${stageWords[stage.column]}`)
       .join(", ");
     const repair = project.needsRepair;
-    const label = `${title}: ${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${needsYou} ${needsYouPhrase(needsYou, true)}`;
+    const live = project.runs.live;
+    const label = `${title}: ${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${live} ${plural(live, "agent", "agents")} live, ${needsYou} ${needsYouPhrase(needsYou, true)}`;
     return {
       name: project.name,
       displayName: project.displayName,
@@ -402,6 +406,7 @@ export function projectRows(
       stages,
       blocked: project.blocked,
       repair: project.needsRepair,
+      live,
       needsYou,
       label,
     };
