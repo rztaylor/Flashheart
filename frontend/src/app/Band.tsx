@@ -23,7 +23,8 @@ const views: { id: BandView; label: string; icon: IconName }[] = [
 // Band is the signage band (ui-layout.md §1): the bolt and wordmark, whose
 // tooltip is a marginal remark, the view tabs, the Needs you plate, search
 // where the view has it, the backend status, the Settings gear and Quit.
-// It clips sideways only, so the gear's menu drops below it.
+// It clips sideways only and sits above the view and the phone's ticket
+// panel, so the gear's menu drops over them.
 export function Band({
   lifecycle,
   view,
@@ -50,7 +51,7 @@ export function Band({
   const { state, ready } = lifecycle;
   const stopping = state.phase === "stopping";
   return (
-    <header className="relative flex min-w-0 items-center gap-1.5 overflow-x-clip bg-band px-3 text-on-band sm:gap-6 sm:px-5">
+    <header className="relative z-40 flex min-w-0 items-center gap-1.5 overflow-x-clip bg-band px-3 text-on-band sm:gap-6 sm:px-5">
       <span className="flex items-center gap-2">
         <Bolt />
         <span className="wordmark text-xl max-sm:sr-only" title={brand}>

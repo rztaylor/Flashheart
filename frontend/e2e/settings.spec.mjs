@@ -135,6 +135,27 @@ test("the menu opens and closes from the keyboard, back on the gear", async () =
   await expect(gear()).toBeFocused();
 });
 
+test("the menu opens over a ticket panel covering a phone's screen", async () => {
+  await open(page, "#/p/flashheart/board?t=FH-36", {
+    width: 390,
+    height: 844,
+  });
+  await expect(
+    page.getByRole("complementary", { name: "Ticket FH-36" }),
+  ).toBeVisible();
+  await gear().click();
+  const radio = (await menu()).getByText("Dark", { exact: true });
+  // The theme's segment is what a click there reaches, not the panel.
+  await expect(radio).toBeVisible();
+  const box = await radio.boundingBox();
+  const hit = await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)?.textContent,
+    { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+  );
+  expect(hit).toBe("Dark");
+  await page.keyboard.press("Escape");
+});
+
 test("the open menu is accessible in both themes, wide and narrow", async () => {
   for (const theme of ["light", "dark"]) {
     for (const [hash, width, height] of [
