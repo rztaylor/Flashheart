@@ -282,6 +282,16 @@ func TestHelperProcess(t *testing.T) {
 		})
 	case "key":
 		err = s.SetProjectKey(args[2], args[3])
+	case "activity":
+		robert := s.As("Robert")
+		switch args[2] {
+		case "comment":
+			_, _, err = robert.AddComment("alpha", "AL-4", Merge, NewComment{Body: args[3]})
+		case "move":
+			_, err = robert.UpdateTicket("alpha", "AL-4", Merge, setStatus(args[3]))
+		case "edit":
+			_, _, err = robert.EditComment("alpha", "AL-4", args[3], Unchanged(args[4]), args[5])
+		}
 	}
 	switch {
 	case err == nil:

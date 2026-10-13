@@ -18,8 +18,9 @@
 // (Deliver: the one routine every delivery path uses; it takes inboxes,
 // adds the fold's undelivered answers, records delivery and returns what
 // it took even when recording fails, so no answer is lost), and the human's board
-// activity: the shape of a board write's event (run `human`, EDIT-10) and
-// which events count as the human acting on the board.
+// activity: the shape of a board write's event (run `human`, EDIT-10;
+// comment.added and comment.edited, D47) and which events count as the
+// human acting on the board.
 //
 // File access goes through store, which confines, locks and names the files.
 // What events mean for a run belongs to runs; turning hook payloads into

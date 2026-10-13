@@ -18,7 +18,10 @@
 // rule (ValidSlug), new tickets' and workstreams' defaults, checks and
 // templates (templates.go, rendered from values, no clock of its own), and
 // the Handoff section's structure (HandoffNote, which RenderHandoff and
-// ParseHandoff round-trip).
+// ParseHandoff round-trip), and a ticket's activity file (activity.go:
+// comment and history entries, parsed and written byte for byte, unknown
+// entries kept; history.go: the changes a write made, worked out from the
+// ticket and review before and after, never their text; D47).
 //
 // It performs no I/O and knows nothing about HTTP or the index: store reads
 // files and hands their bytes here, and index composes the results.

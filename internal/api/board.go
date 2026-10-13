@@ -36,6 +36,7 @@ type BoardSource interface {
 // FileSource reads files that are not kept in the snapshot.
 type FileSource interface {
 	ReadReview(project, folder string) (string, bool, error)
+	ReadTicketActivity(project, folder string) (board.Activity, string, error)
 	OpenAttachment(project, folder, file string) (*os.File, string, error)
 }
 
@@ -215,6 +216,12 @@ type TicketDetail struct {
 	Runs []RunJSON `json:"runs"`
 	// Questions are the open questions about the ticket (CARD-6).
 	Questions []QuestionJSON `json:"questions"`
+	// Comments and History are the ticket's activity file, oldest first
+	// (D47); ActivityHash is its content hash, sent back with a comment
+	// edit, empty when read-only or when the ticket has none.
+	Comments     []CommentJSON `json:"comments"`
+	History      []HistoryJSON `json:"history"`
+	ActivityHash string        `json:"activityHash"`
 }
 
 // TicketResponse is GET /api/tickets/{id} and
@@ -475,6 +482,18 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 		AttachmentFiles:      []AttachmentJSON{},
 		Runs:                 ticketRuns(snapshot, ticket.ID),
 		Questions:            questionsJSON(snapshot.Questions(ticket.ID)),
+		Comments:             []CommentJSON{},
+		History:              []HistoryJSON{},
+	}
+	if b.files != nil {
+		// An activity file that cannot be read shows no activity; the
+		// ticket itself still opens.
+		if activity, activityHash, err := b.files.ReadTicketActivity(project.Name, ticket.Folder); err == nil {
+			detail.Comments, detail.History = activityJSON(activity)
+			if b.write != nil {
+				detail.ActivityHash = activityHash
+			}
+		}
 	}
 	if ticket.Handoff != nil {
 		detail.Handoff = &HandoffJSON{Markdown: ticket.Handoff.Markdown, Next: nonNil(ticket.Handoff.Next)}

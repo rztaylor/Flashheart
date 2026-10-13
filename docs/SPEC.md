@@ -162,8 +162,10 @@ Full format: `docs/dev/specs/board-format.md`.
   changes) carries that content's hash and fails with a conflict if the
   file changed since; a write without a hash is refused. A merge (a move,
   which sets only `status`, a note appended, the Handoff replaced, a
-  workstream list reordered) is computed from the file as it is under the
-  lock, so it needs no hash and cannot lose another writer's change.
+  workstream list reordered, a comment or history entry appended) is
+  computed from the file as it is under the lock, so it needs no hash and
+  cannot lose another writer's change; a comment's edit carries the hash
+  of the activity file it was based on.
 - `STO-4` A ticket whose frontmatter cannot be parsed is shown as a
   *needs repair* card with the parse error, never hidden or rewritten
   automatically.
@@ -177,6 +179,16 @@ Full format: `docs/dev/specs/board-format.md`.
   `## Notes`. A ticket is understandable with the log deleted.
 - `STO-7` External edits (editors, agents editing files directly) are
   detected by file watching and reflected in the UI within one second.
+- `STO-8` Each ticket's comments and history live in its folder's
+  `activity.md` (board-format §Activity, D47), one dated, typed entry
+  each, kept as long as the ticket. People add and edit comments on the
+  board (edits shown as edited; each has a state for change requests:
+  open, change requested, addressed, resolved); agents never write
+  comments. Every ticket write by the board or an agent (create, move,
+  field and raw edits, ticked criteria and review steps, archive,
+  restore) appends one history entry in the same locked write: who, what
+  changed and when, never the ticket's text. A ticket without the file
+  has no activity.
 - `MIG-1` `flashheart migrate` converts a v1 root to v2: it shows the plan
   and writes only with `--write`, numbers tickets once in creation order,
   rewrites references to ids, and moves (never deletes) the v1 tree into
@@ -380,11 +392,12 @@ Full format: `docs/dev/specs/board-format.md`.
   ticket's rank. Board order
   is separate from workstream order (`EDIT-4`) and never changes it.
 - `EDIT-10` Every board write that changes a ticket (new ticket, move or
-  place, field, section, raw and criterion edits, a ticked review step, archive,
-  restore, permanent delete) appends one event to the ticket's project log
-  saying that the human changed it, and when: the ticket's id and at most
-  the columns or names of the fields changed, never their values or any
-  ticket text (agent-protocol §3). With answers to agents' questions
+  place, field, section, raw and criterion edits, a ticked review step,
+  archive, restore, permanent delete) or comments on it (STO-8) appends
+  one event to the ticket's project log saying that the human changed it,
+  and when: the ticket's id and at most the columns or names of the fields
+  changed, or the comment's id, never their values or any ticket or
+  comment text (agent-protocol §3). With answers to agents' questions
   (`RUN-8`), these are the human's board activity, which the server reads
   per project and across projects. Edits made to ticket files outside the
   board are not recorded and do not count.
@@ -557,7 +570,7 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 - `SET-1` `flashheart setup claude|codex` shows the exact configuration
   changes (hooks, MCP server registration, protocol instructions) as a diff,
   then asks `Apply these changes? [y/N]` in a terminal and applies them,
-  with timestamped backups, only on `y` or `yes` (D58). `--yes` (or its
+  with timestamped backups, only on `y` or `yes` (D59). `--yes` (or its
   older name `--write`) applies without asking; `--dry-run`, or no
   terminal to ask in without `--yes`, only shows them. `--uninstall` does
   the same for the reverse.
@@ -653,7 +666,8 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   be inside the root (or, for `attach` sources, an existing regular file the
   process can read) before use; symlinks out of the root are refused.
 - `SEC-3` Stored strings from agents pass through a secret scrubber (API-key,
-  token, private-key and password patterns) before being written.
+  token, private-key and password patterns) before being written, and so
+  do comments, which agents read (STO-8).
 - `SEC-4` Attachments are served with their detected content type,
   `X-Content-Type-Options: nosniff` and a restrictive CSP; markdown renders
   without raw HTML.

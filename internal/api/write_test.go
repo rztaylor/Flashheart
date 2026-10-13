@@ -30,7 +30,7 @@ func writableAPI(t *testing.T) (http.Handler, string) {
 		Info:   Info{Root: root, Theme: "system"},
 		Board:  index.New(files, index.Options{}),
 		Files:  files,
-		Writer: files,
+		Writer: files.As("Robert"),
 	}), root
 }
 

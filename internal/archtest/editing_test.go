@@ -10,7 +10,8 @@ import (
 )
 
 // Every ## Notes bullet Flashheart writes is board.NoteLine's (FH-85): the
-// bullet's " · " separator is spelled once, there.
+// bullet's " · " separator is spelled once, in board, which also heads
+// activity entries with it (D47).
 func TestNoteBulletsComeFromNoteLine(t *testing.T) {
 	t.Parallel()
 
@@ -29,7 +30,7 @@ func TestNoteBulletsComeFromNoteLine(t *testing.T) {
 		}
 	}
 	if len(spelled) != 1 || !strings.HasSuffix(spelled[0], "internal/board/rules.go: \" · \"") {
-		t.Errorf("the note bullet is spelled %v; want it once, in board.NoteLine", spelled)
+		t.Errorf("the note bullet is spelled %v; want it once, in board's separator", spelled)
 	}
 }
 

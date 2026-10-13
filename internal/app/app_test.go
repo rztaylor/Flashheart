@@ -31,9 +31,14 @@ func sampleRoot(t *testing.T) string {
 
 func startRuntime(t *testing.T, options Options, extra http.Handler) (*runtime, *singleserve.Launch) {
 	t.Helper()
+	return startRuntimeWith(t, options, config.Defaults(), extra)
+}
+
+func startRuntimeWith(t *testing.T, options Options, settings config.Config, extra http.Handler) (*runtime, *singleserve.Launch) {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	runtime, err := newRuntime(options, store.New(options.Root), config.Defaults(), extra)
+	runtime, err := newRuntime(options, store.New(options.Root), settings, extra)
 	if err != nil {
 		t.Fatalf("newRuntime(): %v", err)
 	}

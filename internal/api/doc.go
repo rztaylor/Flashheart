@@ -16,12 +16,14 @@
 // token (EDIT-8), project archive, restore and delete (PRJ-5), placement
 // in manual order (EDIT-9), workstream order,
 // project keys, preferences, answers to agents'
-// questions) validate input, apply
+// questions, comments on a ticket, D47) validate input, apply
 // mdfile edits through store's locked, hash-checked writes, and answer a
 // stale hash with 409 and the current file (STO-3, EDIT-7). A preference
 // read waits for any preference save in flight (CFG-2). Each write that
-// changes a ticket appends one event recording that the human did (EDIT-10),
-// best effort once the ticket is saved. An answer is
+// changes or comments on a ticket appends one event recording that the
+// human did (EDIT-10), best effort once the ticket is saved; the Writer
+// writes as the person, so the store appends the ticket's history. Ticket
+// detail carries the ticket's comments and history. An answer is
 // appended to the event log, queued in the asking session's inbox and noted
 // in the ticket (RUN-8, HOOK-5, STO-6). It owns no
 // filesystem rules, parsing or blocking rules (board), run derivation (runs)

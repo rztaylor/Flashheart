@@ -55,7 +55,7 @@ func (srv *server) checkpoint(c *call, input CheckpointInput) (string, error) {
 	same := ticket.Handoff != nil && slices.Equal(ticket.Handoff.Done, done) && slices.Equal(ticket.Handoff.Next, next) &&
 		slices.Equal(ticket.Handoff.Files, files) && slices.Equal(ticket.Handoff.Questions, questions)
 	if !same || note != "" {
-		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
+		_, err = c.files().UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 			if !same {
 				var err error
 				if data, err = mdfile.ReplaceSection(data, board.SectionHandoff, section); err != nil {

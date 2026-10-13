@@ -108,6 +108,7 @@ writing.
 | `question.asked` | MCP | `id`, `ticket`, `kind`, `text` (≤1,000), `options` |
 | `question.answered` | UI | `id`, `answer`, `by` |
 | `question.delivered` | hook | `id` |
+| `comment.added` / `comment.edited` | UI | `ticket`, `comment` (its id in the ticket's `activity.md`), `by: human`; never its text (D47) |
 
 ### Activity records
 
@@ -175,6 +176,7 @@ ticket says:
 | ticked review step (`REV-3`) | `ticket.updated` | `fields: [review]` |
 | archive, restore | `ticket.updated` | `fields: [archived]` |
 | permanent delete | `ticket.updated` | `fields: [deleted]` |
+| comment added, comment edited (`STO-8`) | `comment.added`, `comment.edited` | `comment`: the comment's id |
 
 A blocked start's reason goes into the ticket's `## Notes`, not the event.
 Writes that change no ticket (workstream order, project keys, preferences)
@@ -184,6 +186,23 @@ human's events are no run: run derivation (§4) skips them. With
 board activity, which `serve` reads per project and across projects from
 the whole retained log. Agents' MCP writes are unchanged and are never the
 human's.
+
+### A ticket's history
+
+Besides these events, every ticket write by the board or by an agent's MCP
+tools appends one history entry to the ticket's `activity.md`
+(board-format §Activity, `STO-8`), in the same locked write: who (the
+person's name for the board, the caller's full run id for a tool, or
+`unknown`), when, and what changed (created, moved, the names of the
+fields and sections edited, the numbers of the criteria and review steps
+ticked, archived, restored), never the ticket's text. For the tools that
+is `create_ticket`, `move`, `claim` when it moves the ticket or sets its
+branch, `update_ticket` when it sets fields or ticks criteria, and
+`create_workstream` for the tickets it moves into the workstream; notes,
+checkpoints, reviews, attachments and questions record none. History is
+not an event, so it lasts as long as the ticket, past the log's
+retention. Comments in the same file are written only by people on the
+board: no tool writes one.
 
 ## 4. Run state
 
@@ -957,6 +976,15 @@ Claude run, and `update_ticket`'s description lists
 `depends-on-workstreams`, which it already accepted. A test holds the
 skill and the §7.2 table to the tools the server registers. No tool,
 input or event changes shape, so the version stays 2.
+
+Additive change within version 2 (D47, FH-124, 2026-10-13): the event
+kinds `comment.added` and `comment.edited` (§3, the human's board
+writes), the optional `comment` field of a ticket event's data, and a
+ticket's history in its `activity.md` (§3, A ticket's history), which the
+tools' ticket writes now append. No tool's input or output changes shape,
+a reader that predates the kinds skips them as it skips any unknown kind,
+and an older binary writing a ticket only leaves its history out, so the
+version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

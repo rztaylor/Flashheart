@@ -32,7 +32,7 @@
   section is one ok line, so people who use only Claude Code see no
   problems.
 - `setup` prints a diff, then asks `Apply these changes? [y/N]` (on
-  stderr, answer read from stdin) and writes only on `y`/`yes` (D58).
+  stderr, answer read from stdin) and writes only on `y`/`yes` (D59).
   `--yes` (older name `--write`) applies without asking; `--dry-run` only
   shows; with no terminal on stdin and no `--yes` it only shows and says to
   re-run with `--yes`, so agents and scripts never hang or write by

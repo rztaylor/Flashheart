@@ -19,12 +19,16 @@ const (
 	otherHolder = "other holder" // the caller's ticket is held by another live session
 )
 
-// policyCase is one write tool: its arguments against ticket DM-1 and the
-// code it answers for each caller ("ok" for success).
+// policyCase is one write tool: its arguments against ticket DM-1, the
+// code it answers for each caller ("ok" for success) and how many history
+// entries a successful call appends across the project (board-format
+// §Activity): one for every write that changes a ticket's column, fields
+// or criteria, none for notes, handoffs, reviews, files and questions.
 type policyCase struct {
-	tool  string
-	args  func(e *env) map[string]any
-	codes map[string]string
+	tool    string
+	args    func(e *env) map[string]any
+	codes   map[string]string
+	history int
 }
 
 func ticketArgs(extra map[string]any) func(*env) map[string]any {
@@ -56,27 +60,27 @@ func codes(required, guarded bool, holder string) map[string]string {
 // policyCases mirrors the run and claim policy table in agent-protocol
 // §7.1: every write tool, the code it answers for each caller.
 var policyCases = []policyCase{
-	{"claim", ticketArgs(nil), codes(true, false, "claimed")},
-	{"release", ticketArgs(nil), codes(true, false, "")},
-	{"ask_human", ticketArgs(map[string]any{"kind": "question", "text": "Which schema?"}), codes(true, false, "")},
-	{"checkpoint", ticketArgs(map[string]any{"done": []string{"Panel"}, "next": []string{"Tests"}}), codes(false, true, "")},
-	{"update_ticket", ticketArgs(map[string]any{"append_notes": "Checked."}), codes(false, true, "")},
-	{"move", ticketArgs(map[string]any{"to": "up-next"}), codes(false, true, "")},
-	{"write_review", ticketArgs(map[string]any{"markdown": "# Review: Card panel\n"}), codes(false, true, "")},
+	{"claim", ticketArgs(nil), codes(true, false, "claimed"), 1},
+	{"release", ticketArgs(nil), codes(true, false, ""), 0},
+	{"ask_human", ticketArgs(map[string]any{"kind": "question", "text": "Which schema?"}), codes(true, false, ""), 0},
+	{"checkpoint", ticketArgs(map[string]any{"done": []string{"Panel"}, "next": []string{"Tests"}}), codes(false, true, ""), 0},
+	{"update_ticket", ticketArgs(map[string]any{"set": map[string]any{"priority": "high"}, "append_notes": "Checked."}), codes(false, true, ""), 1},
+	{"move", ticketArgs(map[string]any{"to": "up-next"}), codes(false, true, ""), 1},
+	{"write_review", ticketArgs(map[string]any{"markdown": "# Review: Card panel\n"}), codes(false, true, ""), 0},
 	{"attach", func(e *env) map[string]any {
 		file := filepath.Join(filepath.Dir(e.root), "run.log")
 		if err := os.WriteFile(file, []byte("ok\n"), 0o644); err != nil {
 			e.t.Fatal(err)
 		}
 		return map[string]any{"ticket": "DM-1", "path": file, "caption": "Test run"}
-	}, codes(false, true, "")},
+	}, codes(false, true, ""), 0},
 	{"create_ticket", func(*env) map[string]any {
 		return map[string]any{"type": "bug", "title": "Crash", "description": "It crashes.", "criteria": []string{"No crash"}, "priority": "high"}
-	}, codes(false, false, "")},
+	}, codes(false, false, ""), 1},
 	{"create_workstream", func(*env) map[string]any {
 		return map[string]any{"title": "Cards", "goal": "Card work", "tickets": []string{"DM-1"}}
-	}, codes(false, true, "")},
-	{"set_project_key", func(*env) map[string]any { return map[string]any{"key": "DM"} }, codes(false, false, "")},
+	}, codes(false, true, ""), 1},
+	{"set_project_key", func(*env) map[string]any { return map[string]any{"key": "DM"} }, codes(false, false, ""), 0},
 }
 
 // arrange sets up the caller: hook sessions as their hooks would record
@@ -120,16 +124,40 @@ func TestWriteToolPolicies(t *testing.T) {
 				} else if !failed || !strings.HasPrefix(text, "error "+want+":") || !strings.Contains(text, "\nfix: ") {
 					t.Fatalf("%s as %s = (failed %v)\n%s\nwant error %s", tc.tool, caller, failed, text, want)
 				}
+				history := e.history()
 				switch {
 				case want != "ok":
 					// A refused call records nothing and starts no run.
 					if after := len(e.log()); after != before {
 						t.Fatalf("a refused %s recorded %v", tc.tool, e.log()[before:])
 					}
+					if len(history) != 0 {
+						t.Fatalf("a refused %s wrote history %+v", tc.tool, history)
+					}
 				case caller == noRun:
 					// The run the server started is the caller.
 					if len(e.started()) != 1 {
 						t.Fatalf("%s started %v", tc.tool, e.started())
+					}
+				}
+				if want != "ok" {
+					return
+				}
+				// Every ticket write appends one history entry naming the
+				// caller: its run, the run started for it, or unknown.
+				by := session
+				switch caller {
+				case noRun:
+					by = e.started()[0].Run
+				case otherBranch:
+					by = "unknown"
+				}
+				if len(history) != tc.history {
+					t.Fatalf("%s as %s wrote history %+v, want %d entries", tc.tool, caller, history, tc.history)
+				}
+				for _, entry := range history {
+					if entry.By != by || len(entry.Changes) == 0 {
+						t.Errorf("%s as %s: history %+v, want it by %s", tc.tool, caller, entry, by)
 					}
 				}
 			})

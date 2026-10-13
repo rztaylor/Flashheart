@@ -160,6 +160,12 @@ func (c *call) by() string {
 	return c.run
 }
 
+// files is the store writing as the caller: every ticket write a tool
+// makes through it appends the ticket's history, naming the caller
+// (board-format §Activity). Tools write tickets and reviews only through
+// it.
+func (c *call) files() *store.Store { return c.srv.store.As(c.by()) }
+
 // runLabel is the caller's run as shown to the model.
 func (c *call) runLabel() string {
 	if c.run == "" {
