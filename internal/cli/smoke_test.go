@@ -184,11 +184,19 @@ func mcpCall(t *testing.T, h *harness, root, name string, args map[string]any) s
 // the server's input ends after the call.
 func mcpCallAs(t *testing.T, h *harness, root, client, name string, args map[string]any) string {
 	t.Helper()
-	call, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": map[string]any{"name": name, "arguments": args}})
+	return mcpCallWith(t, h.deps(), root, client, map[string]any{"name": name, "arguments": args})
+}
+
+// mcpCallWith runs flashheart mcp with deps for one tools/call with the
+// given params (name, arguments and any _meta), from a client with the
+// given name, and returns its text.
+func mcpCallWith(t *testing.T, deps Dependencies, root, client string, params map[string]any) string {
+	t.Helper()
+	name := params["name"]
+	call, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": params})
 	requests := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"` + client + `","version":"1"}}}` + "\n" +
 		`{"jsonrpc":"2.0","method":"notifications/initialized"}` + "\n" + string(call) + "\n"
 	out := &lockedBuffer{}
-	deps := h.deps()
 	deps.Stdin = &holdingReader{data: []byte(requests), done: func() bool { return strings.Count(out.String(), "\n") >= 2 }}
 	var stderr bytes.Buffer
 	if code := Run(context.Background(), []string{"mcp", "--root", root}, out, &stderr, deps); code != 0 || stderr.Len() > 0 {
