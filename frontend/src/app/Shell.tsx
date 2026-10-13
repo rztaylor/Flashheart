@@ -300,12 +300,9 @@ export function Shell({
             </EditorModeProvider>
           </main>
         ) : (
-          // Below 1440px an open panel shrinks the rail to its key badges so
-          // the board keeps three whole columns.
-          <div
-            data-panel={route.ticket ? "open" : undefined}
-            className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[4rem_minmax(0,1fr)_auto]"
-          >
+          // The rail is a slim column of key badges at every width from 48rem
+          // (FH-150), so the board keeps its width with the panel open too.
+          <div className="grid min-h-0 grid-cols-1 md:grid-cols-[4rem_minmax(0,1fr)_auto]">
             <div className="hidden min-h-0 border-r border-rail-rule bg-rail md:block">
               <ProjectRail
                 projects={summaries}
