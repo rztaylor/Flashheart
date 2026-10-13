@@ -373,6 +373,9 @@ export interface InPlaceEditorProps<D extends { id: string; hash: string }, T> {
   onSaved(saved: Saved | undefined, what: string): void;
   children(value: T, set: Dispatch<SetStateAction<T>>): ReactNode;
   className?: string;
+  // kind is what the conflict dialog says was saved (default a ticket);
+  // detail.id names it there.
+  kind?: "ticket" | "workstream";
 }
 
 // InPlaceEditor is an open item: its controls (children), then Save and
@@ -394,6 +397,7 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
   onSaved,
   children,
   className = "",
+  kind,
 }: InPlaceEditorProps<D, T>) {
   const draft = useTicketDraft({ detail, read, readFile, isDirty, onSaved });
   const [problem, setProblem] = useState("");
@@ -486,6 +490,7 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
       {draft.conflict ? (
         <ConflictDialog
           id={detail.id}
+          what={kind}
           mine={draft.conflict.mine}
           current={theirs(draft.conflict.current.content)}
           onCancel={draft.cancel}

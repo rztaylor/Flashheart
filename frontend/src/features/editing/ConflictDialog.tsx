@@ -3,9 +3,10 @@ import { Dialog } from "../../components/Dialog";
 
 // ConflictDialog shows a save that lost a race (EDIT-7): what you meant to
 // save beside what is on disk now. Reload keeps the file; Overwrite replaces
-// it with your version deliberately.
+// it with your version deliberately. what names the kind of file saved.
 export function ConflictDialog({
   id,
+  what = "ticket",
   mine,
   current,
   onReload,
@@ -13,6 +14,7 @@ export function ConflictDialog({
   onCancel,
 }: {
   id: string;
+  what?: "ticket" | "workstream";
   mine: string;
   current: string;
   onReload(): void;
@@ -34,7 +36,7 @@ export function ConflictDialog({
       }
     >
       <p className="mb-3 text-ink-muted">
-        Someone else (an agent, an editor or another tab) saved this ticket
+        Someone else (an agent, an editor or another tab) saved this {what}{" "}
         after you opened it. Nothing has been lost yet.
       </p>
       <div className="grid gap-3 md:grid-cols-2">
