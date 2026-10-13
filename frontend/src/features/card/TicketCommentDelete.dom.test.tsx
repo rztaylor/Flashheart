@@ -47,6 +47,7 @@ function comment(overrides: Partial<Comment> = {}): Comment {
     id: "c1",
     time: "2026-10-12T12:10:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     state: "open",
     edited: "",
