@@ -55,11 +55,13 @@
   with Save, Cancel, the shortcuts, the inline error and the conflict
   dialog; the card feature supplies each item's control
   (`PageEdits`, `PropertyEdits`); a section edits in the formatted
-  editor, `features/editor`'s `MarkdownField` (EDIT-12). A workstream's
-  page (EDIT-13, FH-139) is `features/workstreams/WorkstreamPage`, its
-  sections the same `InPlaceEditing` items and `InPlaceEditor` (with
-  `kind="workstream"` for the conflict dialog's words) over
-  `model/workstreamSections`, saved by `saveWorkstreamSection`. A control
+  editor, `features/editor`'s `MarkdownField` (EDIT-12), through
+  `features/editing/InPlaceSection`, the one section editor. A
+  workstream's page (EDIT-13, FH-139) is
+  `features/workstreams/WorkstreamPage`, its sections the same
+  `InPlaceEditing` items and `InPlaceSection` (with `kind="workstream"`
+  for the conflict dialog's words) over `model/workstreamSections`, saved
+  by `saveWorkstreamSection`. A control
   marked `data-autofocus` takes an open item's focus, and a key a
   control has handled (`defaultPrevented`) is not the item's. A person's comment in Activity is an
   item too, saved on the activity file's hash (`ActivityTimeline`); a

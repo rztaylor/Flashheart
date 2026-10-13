@@ -15,7 +15,6 @@ import { StaleNote } from "../../components/StaleNote";
 import { TicketLinksInPlace } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import type { LinkContext } from "../../model/markdown";
-import { sameSection, sectionSource } from "../../model/sectionEdit";
 import {
   type WorkstreamSection,
   workstreamSections,
@@ -26,12 +25,10 @@ import {
   EditPencil,
   editGroup,
   InPlaceEditing,
-  InPlaceEditor,
-  type InPlaceItem,
   useInPlaceItem,
 } from "../editing/InPlace";
+import { InPlaceSection } from "../editing/InPlaceSection";
 import type { Editing } from "../editing/useEditing";
-import { MarkdownField } from "../editor/MarkdownField";
 import { TransitLine } from "./TransitLine";
 import { LineNotes, LineStatus, routeSurface, Served } from "./WorkstreamsView";
 
@@ -250,14 +247,18 @@ function SectionView({
   );
   if (edit && item.open)
     return labelled(
-      <SectionEditor
+      <InPlaceSection
         item={item}
+        name={name}
+        title={section.title}
+        heading={section.heading}
+        kind="workstream"
         detail={detail}
-        section={section}
+        body={(workstream: Editable) => workstream.body}
+        send={edit}
+        onSaved={onSaved}
         context={context}
         keys={keys}
-        save={edit}
-        onSaved={onSaved}
       />,
     );
   if (edit && section.empty) return <AddItem item={item} name={name} />;
@@ -275,55 +276,6 @@ function SectionView({
       </Markdown>
     ),
     edit ? <EditPencil item={item} name={name} /> : undefined,
-  );
-}
-
-// SectionEditor edits a section's markdown by its heading in the file, as
-// a ticket page's does (FH-16): the text saved is the text as edited, so
-// an untouched section saves nothing, and a save over a newer file that
-// left this section as it was is saved again on it.
-function SectionEditor({
-  item,
-  detail,
-  section,
-  context,
-  keys,
-  save,
-  onSaved,
-}: {
-  item: InPlaceItem;
-  detail: Editable;
-  section: WorkstreamSection;
-  context: LinkContext;
-  keys: Set<string>;
-  save: SaveSection;
-  onSaved(saved: Saved | undefined, what: string): void;
-}) {
-  const heading = section.heading;
-  return (
-    <InPlaceEditor
-      item={item}
-      name={itemName(section)}
-      kind="workstream"
-      detail={detail}
-      read={(workstream: Editable) => sectionSource(workstream.body, heading)}
-      readFile={(file) => sectionSource(file, heading)}
-      isDirty={(draft, base) => !sameSection(draft, base)}
-      send={(base, value) => save(base, heading, value)}
-      mine={(value) => value}
-      theirs={(file) => sectionSource(file, heading)}
-      onSaved={onSaved}
-    >
-      {(value, set) => (
-        <MarkdownField
-          label={section.title}
-          value={value}
-          onChange={set}
-          context={context}
-          keys={keys}
-        />
-      )}
-    </InPlaceEditor>
   );
 }
 
