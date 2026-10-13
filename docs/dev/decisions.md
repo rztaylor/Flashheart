@@ -112,7 +112,8 @@ Singleserve is pinned at v0.2.2, which requires Go 1.26.6.
 
 Later additions: `@fontsource-variable/archivo` and an authored icon set
 (D14), and the interaction-test libraries (D42). A rich text editor needs
-its own decision before it is added (D56).
+its own decision before it is added (D56): CodeMirror 6 with a live
+preview (D61).
 
 ## 2026-10-04 — D11: Safety model
 
@@ -1378,3 +1379,65 @@ never holds its text (D47), so it is delivered from the inbox alone.
 Options: the prompt hook checks both locations (a second `stat` on every
 prompt, for a short upgrade window); keep the `answers/` name (rejected
 by D54); drain into the new inbox and check one (chosen).
+
+## 2026-10-13 — D61: The formatted ticket editor is CodeMirror 6 with a live preview
+
+Decision (user, 2026-10-13, after the FH-137 spike): CodeMirror 6 with a
+Flashheart-owned live preview, as recommended below. FH-16 builds it.
+
+Context: FH-16's formatted editor replaces FH-66's markdown text area
+behind the same in-place edit, one section at a time (D57). Tickets are
+shared with agents, so the main test is whether a section saves back
+unchanged when untouched and with only the intended change after a small
+edit (D56).
+
+Options: Tiptap v3 with the official `@tiptap/markdown`; Milkdown 7
+(ProseMirror with remark); CodeMirror 6 with a Flashheart-owned live
+preview, where decorations hide markdown syntax except on the lines being
+edited; a hybrid of two editors (rejected: two bundles and two behaviours
+for one text box); defer and keep the text area (exact, but not what the
+user asked for).
+
+Evidence (throwaway prototypes in Chromium under the app's CSP, versions at
+least two weeks old: Tiptap 3.31.3, Milkdown 7.22.2, `@codemirror/view`
+6.43.13; 135 board tickets, 524 editable sections; small edits are
+replacing a word in a paragraph (389), ticking a criterion (26) and
+adding a list item (163)):
+
+| | Tiptap | Tiptap + block preservation | Milkdown (`bullet: "-"`) | CodeMirror live preview |
+|---|---|---|---|---|
+| Untouched sections unchanged | 75% | 100% | 89% | 100% |
+| Small edits with only that change | 71% | 82% | 67% | 100% |
+| Added, min / gzip (React external) | 561 / 172 KB | same | 478 / 144 KB | 347 / 111 KB |
+| Packages (new to the lockfile) | 62 (56) | same | 108 (38) | 21 (21) |
+| Licences | MIT | MIT | MIT | MIT |
+| CSP (`style-src 'self'`) | clean with `injectCSS: false` | same | clean | injects a `<style>`; clean in a shadow root (or with a nonce) |
+| axe, keyboard | unnamed textbox (one setting); Tab in a list item keeps focus | same | unnamed textbox; task items have no checkbox | axe clean, Tab leaves; lists and headings not exposed to screen readers |
+
+Tiptap rewrites escape `_` and `*` in identifiers (`get_ticket` becomes
+`get\_ticket`), turn `_em_` into `*em*`, bare URLs into `[url](url)`, `<id>`
+into `&lt;id&gt;`, and tighten loose lists. Block preservation (keeping the
+bytes of unchanged top-level blocks) fixes untouched saves but not the
+edited block: ticking one criterion re-serialises the whole list. Milkdown
+by default rewrites every `-` bullet to `*`, creates a new item after a
+ticked criterion already ticked, drops an image without a title (written
+as `<br />`), and keeps a pasted `javascript:` link. CodeMirror never
+re-serialises: the saved text is the edited text, so its raw-markdown
+toggle is exact, and paste is plain text, so pasted HTML is never parsed.
+Each can be loaded on the first edit, so the board's first load need not
+grow. The full results, diffs and screenshots are attached to FH-137.
+
+Recommendation: CodeMirror 6 with a live preview. It is the only option
+that keeps agents' text byte for byte, which makes FH-16's fidelity
+machinery unnecessary rather than something to build and test; it adds
+the fewest packages and bytes; it meets the paste and network rules by
+construction. What it costs: the formatted look is Flashheart's own code
+(syntax-hiding decorations, checkbox and image widgets, a slash menu on
+`@codemirror/autocomplete`, a selection toolbar, a keyboard command to
+tick a criterion), the editor mounts in a shadow root for the CSP, and it
+is less like Notion than Tiptap: syntax shows again on the line being
+edited and tables are edited as text. If the user prefers Tiptap's look,
+the fallback is Tiptap with block preservation, `injectCSS: false`, an
+accessible name, Tab released from lists and custom escaping, accepting
+that an edit rewrites agent text in the block it touches. Milkdown is not
+recommended.
