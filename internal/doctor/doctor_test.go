@@ -135,7 +135,7 @@ func TestDoctorIncludesTheClaudeCodeSetup(t *testing.T) {
 	t.Parallel()
 
 	out, _ := report(Check(fixture(t)))
-	if !strings.Contains(out, "Claude Code\n  problem  Hooks: none installed; run flashheart setup claude --write\n") {
+	if !strings.Contains(out, "Claude Code\n  problem  Hooks: none installed; run flashheart setup claude\n") {
 		t.Fatalf("report:\n%s", out)
 	}
 }

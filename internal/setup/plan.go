@@ -78,8 +78,18 @@ func (p *Plan) commandLine(args []string) string {
 	return strings.Join(quoted, " ")
 }
 
-// Render prints the plan: a diff per file, the moves and the commands.
+// Render prints the plan: a diff per file, the moves, the commands and
+// the notes.
 func (p *Plan) Render(w io.Writer) {
+	p.RenderChanges(w)
+	for _, note := range p.notes {
+		fmt.Fprintln(w, note)
+	}
+}
+
+// RenderChanges prints the plan without its notes, for showing it before
+// Apply, which prints them once it has written.
+func (p *Plan) RenderChanges(w io.Writer) {
 	if p.Empty() {
 		if p.uninstall {
 			fmt.Fprintf(w, "Flashheart is not set up for %s; nothing to remove.\n", p.target.title)
@@ -105,9 +115,6 @@ func (p *Plan) Render(w io.Writer) {
 	}
 	for _, args := range p.commands {
 		fmt.Fprintf(w, "Run: %s\n", p.commandLine(args))
-	}
-	for _, note := range p.notes {
-		fmt.Fprintln(w, note)
 	}
 }
 

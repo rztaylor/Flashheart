@@ -88,7 +88,7 @@ live badges and toggleable virtual columns (Needs you, Agent working).
 Superseded: Agent working became a filter (D27), Needs you the band's
 filter (D31), and the Agents view gave way to the Overview (D32).
 
-## 2026-10-04 — D9: Setup shows a diff and writes only with --write
+## 2026-10-04 — D9: Setup shows a diff and writes only with --write (revised by D59)
 
 `flashheart setup <agent>` prints the exact configuration changes and writes
 them only with `--write`, with backups, owning only its own entries. Editing a
@@ -256,7 +256,7 @@ dependencies and validation are linked from
 contract is `docs/dev/specs/ui-layout.md`. No protocol/storage change or
 cloud deployment is implied.
 
-## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker (kanban-tracker handling retired by D55)
+## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker (kanban-tracker handling retired by D55; --write revised by D59)
 
 Options for registering the user-scope MCP server: edit `~/.claude.json`
 directly; run `claude mcp add-json` / `claude mcp remove`; print the command
@@ -1334,3 +1334,24 @@ miss writes); deriving it from the before and after in the same write
 none names the ticket's text, since keys and sections Flashheart does not
 know are named only as `frontmatter` or `body`). A reorder within a
 column, notes, handoffs and answers are not history.
+
+## 2026-10-13 — D59: Setup asks before it writes; --yes for scripts
+
+Revises D9, and D19's `--uninstall`, which applied with `--write` (as
+D56 noted). `flashheart setup <agent>` showed a diff and wrote only when
+run again with `--write`, the way formatters work (`gofmt -w`,
+`prettier --write`). Setup commands usually apply their change, so this
+took two runs, and someone skimming the diff could think setup had
+worked (FH-129, user's choice).
+
+Setup now follows `terraform apply`: it shows the diff, then asks
+`Apply these changes? [y/N]` on a terminal and writes only on `y` or
+`yes`; any other answer, or none, changes nothing. `--yes` applies
+without asking, `--dry-run` only shows. With no terminal on stdin (a
+pipe, a script, an agent's shell) and no `--yes`, it only shows the diff
+and says to re-run with `--yes`, so nothing hangs waiting for an answer
+and nothing is written unseen. D9's guarantee stands: no agent
+configuration changes without the user seeing the exact diff and saying
+yes. `--write` stays as an older name for `--yes`, so scripts and notes
+that use it keep working. Doctor's fixes say `run flashheart setup
+<agent>`.
