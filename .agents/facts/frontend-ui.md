@@ -9,8 +9,8 @@
   a `data-theme` attribute set from the saved preference (system for now).
 - Layers and dependency direction: `styles/` (tokens) and `model/` (pure
   view models: line assignment, filters, paint, status, remembered scopes, times,
-  markdown links, grid movement, section edits, `messageOf` for a
-  failure's words) →
+  markdown links, grid movement, section edits, lightbox zoom and pan,
+  `messageOf` for a failure's words) →
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
