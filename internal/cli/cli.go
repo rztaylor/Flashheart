@@ -586,7 +586,7 @@ func runMCP(ctx context.Context, env *environment, flags *flag.FlagSet, globals 
 }
 
 // runSetup shows an agent's configuration, then applies it when the user
-// says yes in a terminal or passes --yes (SET-1–SET-3, D9, D48).
+// says yes in a terminal or passes --yes (SET-1–SET-3, D9, D58).
 func runSetup(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
 	registered, found := findAgent(flags.Arg(0))
 	switch {

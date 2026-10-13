@@ -169,6 +169,7 @@ ticket says:
 | new ticket | `ticket.created` | none |
 | move, or a place within or across columns (`EDIT-9`) | `ticket.moved` | `from`, `to` (statuses: a column or `rejected`; equal for a reorder) |
 | field edits (`EDIT-6`) | `ticket.updated` | `fields`: the frontmatter keys or `title` sent |
+| section edit in place (`EDIT-11`) | `ticket.updated` | `fields`: `[description]`, `[criteria]`, `[test-plan]`, `[reproduction]` or `[context]`; `[section]` for a section of the ticket's own, whose name is ticket text; none when the text was the section's own (nothing written) |
 | raw edit | `ticket.updated` | none (what changed is not worked out) |
 | ticked criterion | `ticket.updated` | `fields: [criteria]` |
 | ticked review step (`REV-3`) | `ticket.updated` | `fields: [review]` |

@@ -8,6 +8,25 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- A ticket's full page edits in place (FH-66, `EDIT-11`). Hovering or
+  focusing the title, a section or a property shows a pencil; the pencil,
+  a double-click or Enter opens just that item, and Save, Cancel,
+  Ctrl or Cmd with Enter, and Escape close it, with focus back where it
+  was. Properties use typed controls: selects for priority and type, a
+  workstream picker, tags as chips, depends on as a ticket picker, branch
+  and pull request as text; Move to keeps asking before starting a
+  blocked ticket. Sections edit as markdown, an empty one offers
+  **Add <section>** in its place, and the acceptance criteria edit as a
+  list you can add to, reword, reorder and trim, while ticking stays one
+  click. Handoff, the review and Activity stay read-only. One item is
+  open at a time: switching items or leaving the page with unsaved
+  changes asks whether to keep or discard them. A save changes only that
+  field or section and leaves every other byte of the file as it was; an
+  untouched save writes nothing; a change to the same item on disk opens
+  the conflict dialog, while an agent's change elsewhere in the ticket
+  does not; a failed save stays open with the reason. The card panel
+  keeps its Edit tab.
+
 - One command connects Codex to Flashheart, and `doctor` checks it (FH-75).
   `flashheart setup codex` shows, as a diff, the `[mcp_servers.flashheart]`
   table it adds to `config.toml`, the hooks it merges into `hooks.json` and
@@ -307,7 +326,7 @@ All notable changes to this project are documented here. The project follows
 ### Changed
 
 - `flashheart setup` asks before it writes instead of needing a second
-  run with `--write` (FH-129, D48). It shows the diff, then asks
+  run with `--write` (FH-129, D58). It shows the diff, then asks
   `Apply these changes? [y/N]` and applies them only on `y`; `--yes`
   applies without asking, for scripts, and `--dry-run` only shows the
   changes. With no terminal to ask in and no `--yes`, it only shows them,

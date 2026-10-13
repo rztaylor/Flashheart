@@ -179,6 +179,76 @@ func TestReplaceSection(t *testing.T) {
 	}
 }
 
+// A section saved with the text it already holds, however it is spaced,
+// leaves the file as it was (STO-2), so an untouched in-place save writes
+// nothing (FH-66).
+func TestReplaceSectionWithItsOwnTextChangesNothing(t *testing.T) {
+	t.Parallel()
+
+	for _, data := range []string{
+		ticket,
+		"# T\n\n## Description\n\n\n  Indented first line.\nSecond.  \n\n\n## Notes\n\nNone.\n",
+		"# T\r\n\r\n## Context\r\n\r\nWindows text.\r\n",
+		"# T\n\n## Context\n",
+		"# T\n\n## Context\n\n\n## Notes\n",
+	} {
+		for _, section := range Sections(Parse([]byte(data)).Body) {
+			got, err := ReplaceSection([]byte(data), section.Heading, strings.ReplaceAll(section.Content, "\r\n", "\n"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != data {
+				t.Errorf("ReplaceSection(%q, own text) =\n%q\nwant\n%q", section.Heading, got, data)
+			}
+		}
+	}
+}
+
+// Clearing a section keeps its heading and one blank line before the next,
+// as the template writes an empty section.
+func TestReplaceSectionWithNothingLeavesTheEmptyHeading(t *testing.T) {
+	t.Parallel()
+
+	got, err := ReplaceSection([]byte("# T\n\n## Context\n\nOld.\n\n## Notes\n\nNone.\n"), "Context", "\n")
+	if want := "# T\n\n## Context\n\n## Notes\n\nNone.\n"; err != nil || string(got) != want {
+		t.Errorf("cleared middle = %q, %v; want %q", got, err, want)
+	}
+	got, err = ReplaceSection([]byte("# T\n\n## Context\n\nOld.\n"), "Context", "")
+	if want := "# T\n\n## Context\n"; err != nil || string(got) != want {
+		t.Errorf("cleared last = %q, %v; want %q", got, err, want)
+	}
+}
+
+// PutSection replaces a section, or adds a missing one before the first of
+// the named sections the file has, else at its end.
+func TestPutSectionAddsAMissingSectionInItsPlace(t *testing.T) {
+	t.Parallel()
+
+	data := "# T\n\n## Description\n\nText.\n\n## Notes\n\nNone.\n\n## Handoff\n\nx\n"
+	got, err := PutSection([]byte(data), "Context", "Why.", "Notes", "Handoff")
+	if want := "# T\n\n## Description\n\nText.\n\n## Context\n\nWhy.\n\n## Notes\n\nNone.\n\n## Handoff\n\nx\n"; err != nil || string(got) != want {
+		t.Errorf("PutSection(before Notes) =\n%q, %v\nwant\n%q", got, err, want)
+	}
+	got, err = PutSection([]byte(data), "Context", "Why.", "Reproduction", "Handoff")
+	if want := "# T\n\n## Description\n\nText.\n\n## Notes\n\nNone.\n\n## Context\n\nWhy.\n\n## Handoff\n\nx\n"; err != nil || string(got) != want {
+		t.Errorf("PutSection(before Handoff) =\n%q, %v\nwant\n%q", got, err, want)
+	}
+	got, err = PutSection([]byte("# T\n\n## Description\n\nText.\n"), "Context", "Why.", "Notes")
+	if want := "# T\n\n## Description\n\nText.\n\n## Context\n\nWhy.\n"; err != nil || string(got) != want {
+		t.Errorf("PutSection(at end) =\n%q, %v\nwant\n%q", got, err, want)
+	}
+	got, err = PutSection([]byte(data), "Description", "New.", "Notes")
+	if want := strings.Replace(data, "Text.", "New.", 1); err != nil || string(got) != want {
+		t.Errorf("PutSection(existing) =\n%q, %v\nwant\n%q", got, err, want)
+	}
+	// A heading in a code fence is not a section to insert before.
+	fenced := "# T\n\n## Description\n\n```\n## Notes\n```\n\n## Notes\n\nNone.\n"
+	got, err = PutSection([]byte(fenced), "Context", "Why.", "Notes")
+	if want := "# T\n\n## Description\n\n```\n## Notes\n```\n\n## Context\n\nWhy.\n\n## Notes\n\nNone.\n"; err != nil || string(got) != want {
+		t.Errorf("PutSection(fenced) =\n%q, %v\nwant\n%q", got, err, want)
+	}
+}
+
 func TestAppendToSection(t *testing.T) {
 	t.Parallel()
 

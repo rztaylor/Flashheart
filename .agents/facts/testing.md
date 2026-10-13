@@ -86,6 +86,15 @@
   single: the note bullet is spelled only in `board.NoteLine`, and `api`
   and `mcpserver` never check fields, set titles or change workstreams
   themselves.
+- In-place edits (FH-66) leave the rest of a real ticket byte for byte:
+  `board` replays field and section edits over `testdata/tickets/`
+  (read-only copies of FH tickets, also with CRLF line endings) and
+  checks that only the field's line or the section's text changed and that
+  an edit with the current value writes nothing; `api` checks the
+  section write's precondition, no-op and event. The page's interaction is
+  `TicketPageEdit.dom.test.tsx`; in the browser,
+  `frontend/e2e/in-place.spec.mjs` saves, cancels, conflicts (writing the
+  file during an edit) and fails a save with `page.route`.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and
   `internal/api`, FH-96): event appends refold with no read, `Current`

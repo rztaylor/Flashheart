@@ -9,12 +9,13 @@
   a `data-theme` attribute set from the saved preference (system for now).
 - Layers and dependency direction: `styles/` (tokens) and `model/` (pure
   view models: line assignment, filters, paint, status, remembered scopes, times,
-  markdown links, grid movement, `messageOf` for a failure's words) →
+  markdown links, grid movement, section edits, `messageOf` for a
+  failure's words) →
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
   Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
-  FilterChip, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
+  FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
   ui-layout.md §8) → `features/<feature>/` (board,
   card, editing, overview, workstreams, table, projects, filters, archive; later
@@ -26,7 +27,8 @@
   `src/api/` owns typed requests via `session.fetch` only. `src/state/` owns
   loading and freshness: `useRevision` long-polls `/api/changes` and
   `useResource` keeps the last good value and reloads when the revision
-  moves; `usePreferences` saves UI preferences through the backend.
+  moves; `usePreferences` saves UI preferences through the backend;
+  `leaveGuard` is the one guard on leaving the page with unsaved work.
 - Load states (ui-layout.md §8, FH-103) are one contract: a view whose
   load fails shows `components/LoadError` (the error in words, an alert,
   and Try again calling the resource's `reload`); a view whose reload
@@ -36,12 +38,24 @@
   `ArchiveSkeleton`, `TicketSkeleton`), marked `data-skeleton`.
 - Editing: every edit from the panel carries the ticket's content hash
   through one helper, `features/editing/precondition` (`saveWithBase`:
-  saved, conflict or failed). A draft (the Edit tab now, in-place editors
-  later) is `features/editing/useTicketDraft`: its base hash, adopting the
-  saved version, and a 409 as a pending choice for the conflict dialog;
-  a criterion or review-step tick reloads with a toast on a 409. The
-  form's fields and changes are `model/ticketForm`. Moves from the board
-  set only `status`.
+  saved, conflict or failed). A draft (the panel's Edit tab, each
+  in-place item on the full page) is `features/editing/useTicketDraft`:
+  its base hash (moved on to a newer version that left the draft's own
+  part unchanged), adopting the saved version, and a 409 as a pending
+  choice for the conflict dialog; a criterion or review-step tick reloads
+  with a toast on a 409. The form's fields and changes are
+  `model/ticketForm`; a section's text, its comparison and the criteria
+  list are `model/sectionEdit`. Moves from the board set only `status`.
+  In-place editing on the full page (EDIT-11, FH-66) is
+  `features/editing/InPlace`: `InPlaceEditing` holds the one open item
+  and the unsaved-changes prompt, `useInPlaceItem` an item (pencil, Add,
+  double-click, focus return) and `InPlaceEditor` one open item's draft
+  with Save, Cancel, the shortcuts, the inline error and the conflict
+  dialog; the card feature supplies each item's control
+  (`PageEdits`, `PropertyEdits`). Leaving the page with unsaved changes
+  goes through the one leave guard, `state/leaveGuard`, which the router
+  (`app/route`) asks before every navigation and a link or Back that
+  changed the hash; the browser's `beforeunload` prompt covers reloads.
   Native `<dialog>` for decisions (blocked move, conflict, new ticket); a
   polite toast with Undo for results. Only the latest move offers Undo:
   the toast clears as a move starts, and a save that returns after a later

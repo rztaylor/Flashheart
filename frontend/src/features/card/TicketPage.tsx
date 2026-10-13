@@ -19,10 +19,18 @@ import {
   pageSections,
   unreferencedFiles,
 } from "../../model/ticketSections";
+import {
+  AddItem,
+  EditPencil,
+  editGroup,
+  InPlaceEditing,
+  useInPlaceItem,
+} from "../editing/InPlace";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { Attachments } from "./Attachments";
 import type { CardPanelProps } from "./CardPanel";
 import { Checklist } from "./Checklist";
+import { CriteriaEditor, SectionEditor, TitleEditor } from "./PageEdits";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { JumpTo, SectionOutline } from "./SectionOutline";
 import { TicketIdentity } from "./TicketHeader";
@@ -187,93 +195,151 @@ function LoadedPage({
   const inGroup = (group: PageSection["group"]) =>
     shown.filter((section) => section.group === group);
   const [review, ...reviewSections] = inGroup("review");
+  // An empty template section shows in its place as Add <section> where
+  // the page can save (FH-66); otherwise only the outline lists it.
+  const ticketSections = sections.filter(
+    (section) =>
+      section.group === "ticket" &&
+      (!section.empty || (ticket.edit && section.heading !== undefined)),
+  );
   return (
-    <div className="grid grid-cols-1 gap-x-10 pb-[30vh] lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[13rem_minmax(0,1fr)_20rem]">
-      <header className="pt-1 pb-6 lg:col-span-2 xl:col-span-2 xl:col-start-2">
-        <TicketIdentity detail={detail} level={1} />
-      </header>
-      <div className="mb-6 lg:col-start-2 lg:row-start-2 lg:mb-0 xl:col-start-3">
-        <div className="lg:sticky lg:top-6">
-          <PropertiesPanel
-            detail={detail}
-            line={lines.get(detail.project)?.get(detail.workstream)}
-            workstreamTitle={workstreamTitle(
-              workstreams,
-              detail.project,
-              detail.workstream,
-            )}
-            onMove={onMove}
-            onArchive={onArchive}
-          />
-        </div>
-      </div>
-      <div className="hidden xl:col-start-1 xl:row-start-2 xl:block">
-        <div className="sticky top-6 max-h-[calc(100vh-7rem)] overflow-y-auto pb-4">
-          <SectionOutline
-            sections={sections}
-            current={current}
-            onChoose={choose}
-          />
-        </div>
-      </div>
-      <div
-        ref={page}
-        className="min-w-0 lg:col-start-1 lg:row-start-2 xl:col-start-2"
-      >
-        <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-rule bg-ground px-4 py-2 md:-mx-8 md:px-8 lg:mx-0 lg:px-0 xl:hidden">
-          <JumpTo sections={sections} current={current} onChoose={choose} />
-        </div>
-        {ticket.resource.error ? (
-          <StaleNote error={ticket.resource.error} className="pb-4" />
-        ) : null}
-        <div className="flex flex-col gap-8">
-          {inGroup("ticket").map(show)}
-          <FormatWarnings warnings={detail.warnings} />
-        </div>
-        {review ? (
-          <section
-            aria-labelledby={`${sectionElementId("review")}-heading`}
-            className="mt-12 flex flex-col gap-8 border-t border-rule pt-6"
-          >
-            {show(review)}
-            {reviewSections.map(show)}
-          </section>
-        ) : null}
-        {inGroup("files").map((section) => (
-          <div key={section.id} className="mt-12 border-t border-rule pt-6">
-            {show(section)}
+    <InPlaceEditing>
+      <div className="grid grid-cols-1 gap-x-10 pb-[30vh] lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[13rem_minmax(0,1fr)_20rem]">
+        <header className="pt-1 pb-6 lg:col-span-2 xl:col-span-2 xl:col-start-2">
+          <PageTitle detail={detail} ticket={ticket} />
+        </header>
+        <div className="mb-6 lg:col-start-2 lg:row-start-2 lg:mb-0 xl:col-start-3">
+          <div className="lg:sticky lg:top-6">
+            <PropertiesPanel
+              detail={detail}
+              line={lines.get(detail.project)?.get(detail.workstream)}
+              workstreamTitle={workstreamTitle(
+                workstreams,
+                detail.project,
+                detail.workstream,
+              )}
+              workstreams={workstreams.get(detail.project)}
+              onMove={onMove}
+              onArchive={onArchive}
+              editing={
+                ticket.edit
+                  ? { detail, edit: ticket.edit, onSaved: ticket.saved }
+                  : undefined
+              }
+            />
           </div>
-        ))}
-        {inGroup("activity").map((section) => (
-          <div key={section.id} className="mt-12 border-t border-rule pt-6">
-            {show(section)}
+        </div>
+        <div className="hidden xl:col-start-1 xl:row-start-2 xl:block">
+          <div className="sticky top-6 max-h-[calc(100vh-7rem)] overflow-y-auto pb-4">
+            <SectionOutline
+              sections={sections}
+              current={current}
+              onChoose={choose}
+            />
           </div>
-        ))}
+        </div>
+        <div
+          ref={page}
+          className="min-w-0 lg:col-start-1 lg:row-start-2 xl:col-start-2"
+        >
+          <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-rule bg-ground px-4 py-2 md:-mx-8 md:px-8 lg:mx-0 lg:px-0 xl:hidden">
+            <JumpTo sections={sections} current={current} onChoose={choose} />
+          </div>
+          {ticket.resource.error ? (
+            <StaleNote error={ticket.resource.error} className="pb-4" />
+          ) : null}
+          <div className="flex flex-col gap-8">
+            {ticketSections.map(show)}
+            <FormatWarnings warnings={detail.warnings} />
+          </div>
+          {review ? (
+            <section
+              aria-labelledby={`${sectionElementId("review")}-heading`}
+              className="mt-12 flex flex-col gap-8 border-t border-rule pt-6"
+            >
+              {show(review)}
+              {reviewSections.map(show)}
+            </section>
+          ) : null}
+          {inGroup("files").map((section) => (
+            <div key={section.id} className="mt-12 border-t border-rule pt-6">
+              {show(section)}
+            </div>
+          ))}
+          {inGroup("activity").map((section) => (
+            <div key={section.id} className="mt-12 border-t border-rule pt-6">
+              {show(section)}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </InPlaceEditing>
   );
 }
 
-// SectionHeading is a page section's heading, with a count beside it; the
-// section's element id names it.
+// PageTitle is the ticket's id and title, the page's h1; where the page
+// can save, the title edits in place (FH-66).
+function PageTitle({
+  detail,
+  ticket,
+}: {
+  detail: TicketDetail;
+  ticket: TicketState;
+}) {
+  const item = useInPlaceItem("title", "title");
+  const edit = ticket.edit && item.editable ? ticket.edit : undefined;
+  if (edit && item.open)
+    return (
+      <TicketIdentity
+        detail={detail}
+        level={1}
+        title={
+          <>
+            <h1 className="sr-only">{detail.title}</h1>
+            <div className="mt-1">
+              <TitleEditor
+                item={item}
+                detail={detail}
+                edit={edit}
+                onSaved={ticket.saved}
+              />
+            </div>
+          </>
+        }
+      />
+    );
+  return (
+    <TicketIdentity
+      detail={detail}
+      level={1}
+      onDoubleClick={edit ? item.onDoubleClick : undefined}
+      action={edit ? <EditPencil item={item} name="title" /> : undefined}
+    />
+  );
+}
+
+// SectionHeading is a page section's heading, with a count beside it and
+// its pencil after it; the section's element id names it.
 function SectionHeading({
   id,
   level,
   children,
   aside,
+  action,
   className = "",
 }: {
   id: string;
   level: 2 | 3;
   children: ReactNode;
   aside?: ReactNode;
+  action?: ReactNode;
   className?: string;
 }) {
   const Heading = level === 2 ? "h2" : "h3";
-  return (
+  const heading = (
     <Heading
       id={`${sectionElementId(id)}-heading`}
-      className={`mb-2 flex items-baseline justify-between gap-3 text-md heading-cut ${className}`}
+      className={`flex items-baseline justify-between gap-3 text-md heading-cut ${action ? "flex-1" : "mb-2"} ${className}`}
     >
       {children}
       {aside ? (
@@ -281,11 +347,25 @@ function SectionHeading({
       ) : null}
     </Heading>
   );
+  return action ? (
+    <div className="mb-2 flex items-center gap-2">
+      {heading}
+      <span className="-my-1.5">{action}</span>
+    </div>
+  ) : (
+    heading
+  );
 }
 
+// The template's sections are named in lower case in their edit's words
+// ("Edit test plan", "Add context"); a section of the ticket's own keeps
+// its heading.
+const itemName = (section: PageSection) =>
+  section.template ? section.title.toLowerCase() : section.title;
+
 // PageSectionView is one section of the page, in its element (marked for
-// the outline) and under its heading. Each section is where its in-place
-// edit will sit (FH-66).
+// the outline) and under its heading, with its in-place edit (FH-66)
+// where it has one.
 function PageSectionView({
   section,
   detail,
@@ -309,14 +389,36 @@ function PageSectionView({
         {text}
       </Markdown>
     ) : null;
-  const labelled = (level: 2 | 3, body: ReactNode, aside?: ReactNode) => (
-    <section aria-labelledby={`${sectionElementId(section.id)}-heading`}>
-      <SectionHeading id={section.id} level={level} aside={aside}>
+  const labelled = (
+    level: 2 | 3,
+    body: ReactNode,
+    aside?: ReactNode,
+    action?: ReactNode,
+  ) => (
+    <section
+      aria-labelledby={`${sectionElementId(section.id)}-heading`}
+      className={action ? editGroup : undefined}
+    >
+      <SectionHeading
+        id={section.id}
+        level={level}
+        aside={aside}
+        action={action}
+      >
         {section.title}
       </SectionHeading>
       {body}
     </section>
   );
+  // A ticket section named in the file edits in place (FH-66), on a page
+  // that can save: the criteria and text sections, never Handoff, the
+  // review or Activity.
+  const name = itemName(section);
+  const item = useInPlaceItem(`section-${section.id}`, name);
+  const editor =
+    ticket.edit && section.heading !== undefined && item.editable
+      ? { item, detail, edit: ticket.edit, onSaved: ticket.saved }
+      : undefined;
   const content = (() => {
     switch (section.kind) {
       case "repair":
@@ -343,6 +445,12 @@ function PageSectionView({
           />
         );
       case "criteria":
+        if (editor && item.open)
+          return labelled(
+            2,
+            <CriteriaEditor {...editor} heading={section.heading ?? ""} />,
+          );
+        if (editor && section.empty) return <AddItem item={item} name={name} />;
         return (
           <Checklist
             id="criteria-heading"
@@ -351,10 +459,35 @@ function PageSectionView({
             render={(text) => <LinkedText text={text} keys={keys} />}
             onToggle={ticket.toggle}
             level={2}
+            className={editGroup}
+            onDoubleClick={editor ? item.onDoubleClick : undefined}
+            action={editor ? <EditPencil item={item} name={name} /> : null}
           />
         );
       case "text":
-        return labelled(2, markdown(section.markdown));
+        if (editor && item.open)
+          return labelled(
+            2,
+            <SectionEditor
+              {...editor}
+              heading={section.heading ?? ""}
+              title={section.title}
+            />,
+          );
+        if (editor && section.empty) return <AddItem item={item} name={name} />;
+        return labelled(
+          2,
+          editor ? (
+            // biome-ignore lint/a11y/noStaticElementInteractions: a double-click is a shortcut; the pencil is the control.
+            <div onDoubleClick={item.onDoubleClick}>
+              {markdown(section.markdown)}
+            </div>
+          ) : (
+            markdown(section.markdown)
+          ),
+          undefined,
+          editor ? <EditPencil item={item} name={name} /> : null,
+        );
       case "review":
         return (
           <div>
