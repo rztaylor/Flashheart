@@ -280,6 +280,18 @@ test("each density lays the card's markers out its own way (FH-147)", async () =
     await face.screenshot({
       path: resolve(screenshotDir, "card-busy-15rem-card-light.png"),
     });
+    // Hovering a marker shows its words; the card's button stays on top,
+    // so a click on a marker still opens the card.
+    const priority = await face.locator('[data-mark="priority"]').boundingBox();
+    await page.mouse.move(
+      (priority?.x ?? 0) + (priority?.width ?? 0) / 2,
+      (priority?.y ?? 0) + (priority?.height ?? 0) / 2,
+    );
+    await expect(card(page, "Long titles overflow the column")).toHaveAttribute(
+      "title",
+      "Medium priority",
+    );
+    await page.mouse.move(0, 0);
     let kept = 3;
     for (const width of [240, 220, 200, 190, 180, 170, 160]) {
       const { shown, height } = await atWidth(width);

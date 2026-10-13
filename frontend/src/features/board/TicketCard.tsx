@@ -3,6 +3,7 @@ import {
   forwardRef,
   type HTMLAttributes,
   type KeyboardEvent,
+  type PointerEvent,
   type ReactNode,
 } from "react";
 
@@ -85,16 +86,16 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     const inset = line ? "pl-4" : "pl-3";
     const compact = density === "compact";
     const detailed = density === "detailed";
-    const marks = cardMarks(card, now, onOpen);
+    const marks = cardMarks(card, now);
     const titleClass = `text-base leading-snug font-semibold ${done ? "text-ink-muted" : "text-ink"}`;
     const blocker = card.blockedBy[0];
     const more = card.blockedBy.length - 1;
     // The card is drawn under one button that covers it, so a click
     // anywhere opens the panel and the card stays one keyboard stop. Only
-    // the id, a link to the ticket's full page, and the markers, whose
-    // words are in their tooltips, sit above the button. The drawing is
-    // hidden from assistive technology, which hears the button's name, and
-    // the panel header carries the same link for the keyboard.
+    // the id, a link to the ticket's full page, sits above the button; the
+    // button takes the hovered marker's words as its tooltip. The drawing
+    // is hidden from assistive technology, which hears the button's name,
+    // and the panel header carries the same link for the keyboard.
     return (
       <div
         data-paint={painted?.token}
@@ -255,6 +256,10 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
           onClick={onOpen}
           onKeyDown={onKeyDown}
           onFocus={onFocus}
+          onPointerMove={markTooltip}
+          onPointerLeave={(event) =>
+            event.currentTarget.removeAttribute("title")
+          }
           aria-current={selected ? "true" : undefined}
           data-ticket={card.id}
           aria-label={cardName(card, now, { workstreamTitle, showProject })}
@@ -266,39 +271,52 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
   },
 );
 
-// Mark is one marker drawn on a card, its words in its tooltip. It sits
-// above the card's covering button so the tooltip shows, and a click on it
-// still opens the card.
+// Mark is one marker drawn on a card, its words in its title. It lies under
+// the card's covering button, which a click or drag anywhere reaches; the
+// button shows the words of the marker under the pointer (markTooltip).
 function Mark({
   mark,
   label,
-  onOpen,
   className,
   children,
 }: {
   mark: string;
   label: string;
-  onOpen(): void;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: a pointer shortcut to the card's own button, which is the control.
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the card's button takes the keys.
     <span
       data-mark={mark}
       title={label}
-      onClick={onOpen}
-      className={`relative z-[2] flex h-4 shrink-0 items-center gap-0.5 ${className ?? ""}`}
+      className={`flex h-4 shrink-0 items-center gap-0.5 ${className ?? ""}`}
     >
       {children}
     </span>
   );
 }
 
+// markTooltip gives the covering button the words of the marker under the
+// pointer as its tooltip, and none elsewhere, so every marker's words show
+// on hover while the card stays one button.
+function markTooltip(event: PointerEvent<HTMLButtonElement>) {
+  const button = event.currentTarget;
+  const mark = document
+    .elementsFromPoint(event.clientX, event.clientY)
+    .find(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement &&
+        element.dataset.mark !== undefined &&
+        button.parentElement?.contains(element) === true,
+    );
+  const words = mark?.getAttribute("title");
+  if (words) button.setAttribute("title", words);
+  else button.removeAttribute("title");
+}
+
 // cardMarks are the card's markers, each only when it applies: one set,
 // laid out by each density.
-function cardMarks(card: Card, now: Date, onOpen: () => void) {
+function cardMarks(card: Card, now: Date) {
   const requests = requestWords(card.changeRequests);
   const priority = priorityLabel(card.priority);
   const age = runningTime(card.modified, now);
@@ -310,7 +328,7 @@ function cardMarks(card: Card, now: Date, onOpen: () => void) {
     children: ReactNode,
     className?: string,
   ) => (
-    <Mark mark={name} label={label} onOpen={onOpen} className={className}>
+    <Mark mark={name} label={label} className={className}>
       {children}
     </Mark>
   );

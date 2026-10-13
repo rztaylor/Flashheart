@@ -203,8 +203,9 @@ words:
   the live run with its plan step, questions waiting, change requests,
   type, priority, attachments, review, age, workstream and, in All
   projects, the project.
-- Markers sit above the card's covering button so their tooltips show; a
-  click on one still opens the card, and the card stays one keyboard stop.
+- Markers lie under the card's covering button, so a click or a drag
+  anywhere on the card reaches it and the card stays one keyboard stop; the
+  button takes the words of the marker under the pointer as its tooltip.
 - A card has no overflow menu: moves are drag, Shift with an arrow, or the
   panel's Move to.
 - Selected card: selection ring. Dimmed (another line pressed): 35% opacity.
