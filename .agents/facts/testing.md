@@ -113,6 +113,19 @@
   saving over an agent's checkpoint, the conflict, the remembered view,
   images, that no request leaves the board's origin and no CSP violation.
   `TicketPageEdit.dom.test.tsx` stands a text area in for the editor.
+- Files from the board (FH-18, REV-7, SEC-7): sniffing is a table test in
+  `board` (`TestSniffAttachmentJudgesTheContent`), the upload's name,
+  index entry, streaming limit and refusals in `store`
+  (`upload_test.go`), the endpoint (sniffed type, SEC-4 headers, the
+  human's event, refusals in words, a body cut off at the limit) in
+  `api`, its authentication in `app`; the placeholder, image and link
+  references and refusals over a held upload in
+  `MarkdownEditor.dom.test.tsx`, the drop area in
+  `AttachmentDrop.dom.test.tsx`; in the browser,
+  `frontend/e2e/uploads.spec.mjs` pastes a canvas PNG, drops several
+  files, an SVG and an oversized one, drops on the Attachments tab, uses
+  Attach files by keyboard, saves and reloads, with axe in both themes,
+  390 px, and no request off the board's origin or CSP violation.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and
   `internal/api`, FH-96): event appends refold with no read, `Current`

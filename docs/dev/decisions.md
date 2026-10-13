@@ -1563,3 +1563,43 @@ read only, local, instant). The cost is coupling to Codex's hashing: a
 Codex release that changes it makes doctor report trusted hooks as
 changed, so re-record with the script when Codex updates its hooks and
 fix the rule if the recordings fail.
+
+## 2026-10-13 — D65: Files from the browser are judged by their bytes; pasted HTML stays text
+
+Decision (FH-18, `REV-7`, `SEC-7`): a file pasted, dropped or chosen on
+the board is sent as the body of `POST /api/tickets/{id}/files`, through
+Singleserve's session, and stored by `store.UploadAttachment`, which
+reads no further than the limit (20 MB, or a lower `attachments.max_bytes`)
+and keeps the file only once all of it is accepted. What it is comes from
+its bytes (`board.SniffAttachment`: image and PDF signatures, UTF-8 text
+without binary control bytes; SVG, HTML and XML by their opening or
+name are refused), and it is stored under that type's extension, so the
+attachment endpoint, which types files by extension, serves it as what
+it is. Agents' `attach` keeps its extension check: its paths come from
+the local agent, not the untrusted browser.
+
+The upload writes only the file and its index entry. In the editor the
+reference is typed into the text behind a placeholder decoration, so it
+is saved with the section (`EDIT-11`, D57) and a save during an upload
+carries no placeholder; a cancelled edit leaves the file in the ticket.
+The upload records the human's `ticket.updated` with the field `files`
+(`EDIT-10`) and no history entry, as agents' attachments record none.
+On the full page, Files is the drop target (shown, even empty, where the
+ticket can be edited), matching the panel's Attachments tab.
+
+FH-18 asked for pasted web HTML to be converted to markdown with remote
+images kept as links and unsafe schemes removed. D61 made paste plain
+text, so pasted HTML is never parsed: it arrives as its plain text, which
+fetches nothing and carries no link or scheme at all. That meets the
+criterion's safety intent; converting HTML to markdown would need an
+HTML parser and URL filter in the editor and was not built. A paste that
+carries a file and no text is a screenshot; one with text and a picture
+of it (a range copied from a sheet) pastes as text.
+
+Options: multipart form data (a parser for one file; a raw body with the
+name as a parameter streams as simply); sniffing every attachment,
+agents' included (would change a protocol tool's behaviour for files the
+local agent already chose); keeping the original extension and only
+checking the content (a PNG named `.txt` would be served as text); a
+text placeholder in the document (a save during an upload would write
+it); converting pasted HTML (see above).

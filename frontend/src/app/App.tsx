@@ -1,5 +1,6 @@
 import { useSingleserve } from "../lifecycle/useSingleserve";
 import { usePreferences } from "../state/usePreferences";
+import { useNoFileNavigation } from "./fileDrops";
 import { Shell } from "./Shell";
 import { StoppedScreen } from "./StoppedScreen";
 import { useTheme } from "./theme";
@@ -7,6 +8,7 @@ import { useServerInfo } from "./useServerInfo";
 
 export function App() {
   const lifecycle = useSingleserve();
+  useNoFileNavigation();
   const info = useServerInfo(lifecycle.fetch, lifecycle.ready);
   const { preferences, loaded, update } = usePreferences(
     lifecycle.fetch,

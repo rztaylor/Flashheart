@@ -32,9 +32,15 @@ import { type LinkOptions, openTarget, targetAt } from "./links";
 import { livePreview } from "./preview";
 import { slashCompletions } from "./slash";
 import { editorTheme } from "./theme";
+import {
+  type AttachHandler,
+  fileInput,
+  ignoreDroppedFiles,
+  pendingUploads,
+} from "./uploads";
 
 // The editor's CodeMirror setup: markdown, history, the keys, the slash
-// menu, plain-text paste, link clicks and, in the formatted view, the live
+// menu, plain-text paste, files pasted or dropped, link clicks and, in the formatted view, the live
 // preview. The page around it (InPlaceEditor) owns Ctrl or Cmd with Enter
 // (save) and Escape (cancel), so the editor leaves both alone; Tab is not
 // bound, so it leaves the editor.
@@ -44,6 +50,8 @@ export interface EditorOptions extends LinkOptions {
   label: string;
   // onToolbar moves focus to the selection toolbar (Alt+F10).
   onToolbar?(): boolean;
+  // onFiles attaches files pasted or dropped into the text (FH-18).
+  onFiles?: AttachHandler;
 }
 
 // The keys the page owns: saving and cancelling the open item.
@@ -113,22 +121,10 @@ function linkClicks(options: LinkOptions): Extension {
   });
 }
 
-// ignoreDroppedFiles keeps a dropped file out of the text (CodeMirror
-// would insert its contents); attaching files is FH-18's.
-const ignoreDroppedFiles = EditorView.domEventHandlers({
-  drop(event) {
-    if (!event.dataTransfer?.files.length) return false;
-    event.preventDefault();
-    return true;
-  },
-});
-
-// editorExtensions is the whole setup for one editor in mode; extra adds
-// behaviour from outside (FH-18's paste and drop of files).
+// editorExtensions is the whole setup for one editor in mode.
 export function editorExtensions(
   options: EditorOptions,
   mode: EditorMode,
-  extra: readonly Extension[] = [],
 ): Extension[] {
   return [
     markdownSupport,
@@ -153,9 +149,11 @@ export function editorExtensions(
       ...defaultKeymap.filter((binding) => !pageKeys.has(binding.key ?? "")),
     ]),
     linkClicks(options),
-    ignoreDroppedFiles,
+    // Files pasted or dropped are attached where the editor can attach
+    // them (FH-18), and otherwise kept out of the text.
+    options.onFiles ? fileInput(options.onFiles) : ignoreDroppedFiles,
+    pendingUploads,
     modeCompartment.of(modeExtensions(mode, options)),
     editorTheme,
-    ...extra,
   ];
 }

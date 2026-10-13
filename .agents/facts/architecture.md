@@ -31,7 +31,9 @@ Intended layout (packages are created when they get real content):
   ticket's activity file (a store writing as someone, `As`, appends the
   history of every ticket write in the same transaction; people's
   comments are added and edited there, never in the ticket file; D47),
-  attachments, path confinement, creating the root (`EnsureRoot`), reading
+  attachments (a browser upload, `UploadAttachment`, is read no further
+  than the limit and stored as what `board.SniffAttachment` says its
+  bytes are, REV-7, SEC-7), path confinement, creating the root (`EnsureRoot`), reading
   `config.yaml` (`ReadConfig`, through the `os.Root`, so a symlink out of
   the root is refused) and telling its own writes from others'
   (`WroteLast`, by project, ticket and document).

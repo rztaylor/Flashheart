@@ -13,7 +13,8 @@ band, CARD-7; a navigation waits on the leave guard while an edit is
 unsaved)
 and the Undo after archiving a project, the screen's one marginal remark
 (`AsideProvider`) and wiring which moves earn one, the brand tooltip, the
-shutdown-denial alert, the terminal stopped screen, theme
+shutdown-denial alert, keeping a file dropped outside a drop target from
+opening in the tab (`fileDrops`), the terminal stopped screen, theme
 application to `<html data-theme>`, live updates and saved preferences
 wired into the views (the view and filters remembered per project, the
 section editor's Formatted or Markdown view), and

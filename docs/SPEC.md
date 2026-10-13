@@ -307,11 +307,14 @@ Full format: `docs/dev/specs/board-format.md`.
   markdown), **Comments** (people's comments and the full page's comment
   box, `CARD-7`; when the ticket has comments or can be edited), **Edit**
   (frontmatter form and raw markdown), **Runs** (timeline and subagent
-  tree), **Attachments**, **Review** (when a review file exists).
+  tree), **Attachments** (when the ticket has files or can be edited,
+  where files are dropped or attached, `REV-7`), **Review** (when a
+  review file exists).
 - `CARD-2` Markdown renders GitHub-flavoured markdown (tables, task lists,
   code). Raw HTML is not rendered. Ticket ids in text (`FH-42`) and relative
   links into another ticket's folder open that ticket's full page
-  (`CARD-7`).
+  (`CARD-7`); links to a ticket's files (`files/…`) open the file in a new
+  tab (`SEC-4`).
 - `CARD-3` Acceptance-criteria checkboxes can be ticked in the rendered view
   and in the editor (`EDIT-11`, `EDIT-12`) and are saved to the file.
 - `CARD-4` A **Blocked by** section explains each blocking reason: ticket
@@ -330,7 +333,9 @@ Full format: `docs/dev/specs/board-format.md`.
   ticket's other sections; then, when `review.md` exists, the review in its
   own sections, its *Evidence* screenshots as one captioned gallery that
   opens the lightbox; then **Files**, the attachments neither the review nor
-  the ticket links, so each screenshot shows once; then **Activity**, a
+  the ticket links, so each screenshot shows once (shown, even empty,
+  where the ticket can be edited: files are dropped or attached there,
+  `REV-7`); then **Activity**, a
   timeline, oldest first, of people's comments, agents' notes, the
   ticket's history (`STO-8`; moves the runs recorded fill in only before
   the history begins), agents' questions with their answers, and handoff
@@ -421,7 +426,8 @@ Full format: `docs/dev/specs/board-format.md`.
   is separate from workstream order (`EDIT-4`) and never changes it.
 - `EDIT-10` Every board write that changes a ticket (new ticket, move or
   place, field, section, raw and criterion edits, a ticked review step,
-  archive, restore, permanent delete) or comments on it (STO-8) appends
+  archive, restore, permanent delete, a file added, `REV-7`, recorded as
+  the field `files`) or comments on it (STO-8) appends
   one event to the ticket's project log saying that the human changed it,
   and when: the ticket's id and at most the columns or names of the fields
   changed, or the comment's id, never their values or any ticket or
@@ -481,9 +487,11 @@ Full format: `docs/dev/specs/board-format.md`.
   changes the text, and the choice is remembered (`CFG-2`). The text saved
   is the text edited, never re-written, so an untouched section saves
   nothing and an edit changes only what was typed. Paste inserts plain
-  text (pasted HTML is never parsed), a dropped file is not inserted, raw
-  HTML shows as text and is never rendered, and the editor fetches
-  nothing but the ticket's own images. Tab leaves the editor. It loads on
+  text (pasted HTML, a web page's included, is never parsed, so it
+  fetches nothing and carries no link or script), a pasted screenshot
+  and dropped or chosen files are attached (`REV-7`), raw HTML shows as
+  text and is never rendered, and the editor fetches nothing but the
+  ticket's own images. Tab leaves the editor. It loads on
   the first edit, so the board's first load does not carry it.
 
 ### 6.7 Runs (`RUN`)
@@ -663,8 +671,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 
 - `REV-1` `attach` copies a file into the ticket's `files/` with a caption
   and kind (screenshot, log, other); it never links or moves the original.
+  A person adds one from the board (`REV-7`).
 - `REV-2` Allowed types: PNG, JPEG, GIF, WebP, PDF, plain text, markdown,
-  JSON and log files, at most 20 MB each. SVG and HTML are refused.
+  JSON and log files, at most 20 MB each. SVG and HTML are refused. A
+  file from the browser is judged by its content, not its name (`SEC-7`).
 - `REV-3` The Review tab shows the review file beside the ticket's
   screenshots and the *How to Verify* steps as a checklist. A tick is
   written into the step's own line in `review.md` as a task box, under the
@@ -698,6 +708,24 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   at the next review the person **Resolves** each addressed request or
   **Reopens** it (a reopened request goes to the live holder too). Every
   state change is the ticket's history (STO-8).
+- `REV-7` **Files from the board** (FH-18, D65): in a section's formatted
+  editor (`EDIT-12`), a pasted screenshot (a paste with a file and no
+  text) is stored in the ticket as kind *screenshot*, named
+  `<time>-screenshot.png`, and files dropped on the text, or chosen with
+  **Attach files**, are stored one at a time in the order given. A
+  placeholder, never text, shows where each goes while it uploads, then
+  becomes its reference, `![name](files/<file>)` for an image and
+  `[name](files/<file>)` for anything else, typed into the text at the
+  cursor or the drop. The upload writes only the file and its
+  `files/index.yaml` entry, never the ticket: the reference is saved
+  with the section (`EDIT-11`), and a file whose edit is cancelled stays
+  in the ticket's files. Files dropped on the card panel's
+  **Attachments** tab or the full page's **Files**, or chosen with their
+  **Attach files**, are stored without touching the text. A file over
+  the limit is refused before it is sent; one the server refuses
+  (`REV-2`) or that fails leaves nothing behind: its placeholder goes and
+  its name and the reason show beside the editor or the files, until
+  dismissed. **Attach files** is the keyboard's way to paste and drop.
 
 ### 6.12 Settings (`CFG`)
 
@@ -764,6 +792,18 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   check-ignore`; if git fails or is missing, nothing is copied). The
   checkout is verified on disk, not taken from the synced repos list. Paths
   given to MCP tools come from the local agent and keep the `REV-5` rule.
+- `SEC-7` A file sent from the browser (`REV-7`) is taken only through
+  Singleserve's authenticated session (`POST /api/tickets/{id}/files`,
+  its bytes the body, its name and kind as parameters). It is read no
+  further than the limit (a declared length over it is refused before
+  reading), then judged by its bytes: PNG, JPEG, GIF, WebP and PDF by
+  their signatures, text as UTF-8 without binary control bytes; SVG, HTML
+  and XML (by their opening, or a name that says so) and anything else
+  are refused. It is stored under the extension of what it is, so it is
+  served as that (`SEC-4`), in the ticket's `files/` alone, its name
+  reduced to lowercase letters, digits and dashes with a time prefix and
+  a number on a clash; text is scrubbed (`SEC-3`). Nothing is written
+  unless the whole file is accepted.
 
 ### 6.16 Non-functional (`NFR`)
 

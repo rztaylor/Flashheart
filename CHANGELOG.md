@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Paste a screenshot or drop files straight into a ticket (FH-18, D65,
+  `REV-7`). In a section's editor on the full page, paste a screenshot
+  from the clipboard, drop files, or choose them with **Attach files**:
+  each file is stored in the ticket and its image or link goes in where
+  the cursor (or the drop) was, with a placeholder while it uploads. The
+  reference is saved with the section, like anything you type; a file
+  you added and then cancelled the edit on stays in the ticket's files.
+  Drop files on the side panel's **Attachments** tab or the full page's
+  **Files**, or use their **Attach files**, to add them without touching
+  the text. PNG, JPEG, GIF, WebP, PDF, text, markdown, JSON and log files
+  up to 20 MB are taken, judged by what they contain rather than their
+  name; anything else is refused with the reason beside it. Pasted text,
+  web pages included, still pastes as plain text. Links to a ticket's own
+  files in its text now open the file.
 - Send a comment straight to the session working on a ticket (FH-127,
   D47, D63, `CARD-7`). In the comment box, **Tell a session now** also
   hands the comment, as your own words, to a live session that has
@@ -195,6 +209,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Security
 
+- Files sent from the browser into a ticket (FH-18, `SEC-7`) go through
+  the board's authenticated session only, are read no further than the
+  20 MB limit, and are judged by their bytes: SVG, HTML and XML are
+  refused whatever they are called, and a file is stored under the
+  extension of what it is, so it is served as that, with the attachment
+  headers that stop a browser running it. Names are reduced to letters,
+  digits and dashes inside the ticket's `files/` folder, and nothing is
+  written unless the whole file is accepted.
 - A `.flashheart/config.yaml` that is a symlink to a file outside the board
   root is now refused, like every other board file, instead of being
   followed (FH-108, SEC-2). If yours is, replace the link with the file:

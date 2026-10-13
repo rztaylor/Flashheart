@@ -19,7 +19,8 @@ order with their counts and the files the full page lists (`ticketSections`, CAR
 catalogue (`remarks.md`), placements, selection and which moves to Done
 earn one (`remarks`), a ticket's typed fields as form text and the
 changes to save (`ticketForm`, EDIT-6), a section's text as edited in
-place and the criteria list (`sectionEdit`, EDIT-11), and a failure's words for any thrown value
+place and the criteria list (`sectionEdit`, EDIT-11), files given to a
+ticket (`uploads`, REV-7), and a failure's words for any thrown value
 (`errors`: `messageOf`).
 Everything here is a plain function or type, unit-tested with Vitest.
 

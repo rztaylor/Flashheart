@@ -31,8 +31,9 @@ export interface TicketSection {
 // ticketSections lists the sections a ticket offers: Ticket always,
 // Comments (counting them) when it has any or can be edited, since it then
 // holds the comment box (FH-128), Edit when it can be edited, Runs
-// (counting sessions, not their subagents), Attachments when it has files,
-// and Review when it has review.md.
+// (counting sessions, not their subagents), Attachments (counting files)
+// when it has files or can be edited, since files are then dropped there
+// (FH-18), and Review when it has review.md.
 export function ticketSections(
   detail: Pick<
     TicketDetail,
@@ -56,8 +57,14 @@ export function ticketSections(
       : []),
     ...(editable ? [{ id: "edit" as const, title: "Edit" }] : []),
     { id: "runs", title: "Runs", ...(sessions ? { count: sessions } : {}) },
-    ...(files
-      ? [{ id: "attachments" as const, title: "Attachments", count: files }]
+    ...(files || editable
+      ? [
+          {
+            id: "attachments" as const,
+            title: "Attachments",
+            ...(files ? { count: files } : {}),
+          },
+        ]
       : []),
     ...(detail.review ? [{ id: "review" as const, title: "Review" }] : []),
   ];
@@ -192,11 +199,13 @@ const plain = (heading: string) => heading.trim().toLowerCase();
 // repair, change requests (REV-6), questions waiting, Handoff, Blocked by, Acceptance criteria,
 // Description, Test plan (or Reproduction), Context and the ticket's other
 // sections; then Review, when review.md exists, in its own sections; then
-// Files, the attachments neither the review nor the ticket links; then
-// Activity, with activity entries.
+// Files, the attachments neither the review nor the ticket links (also
+// when there are none, if attachable); then Activity, with activity
+// entries.
 export function pageSections(
   detail: PageInput,
   activity: number,
+  attachable = false,
 ): PageSection[] {
   const list: PageSection[] = [];
   const taken = new Set<string>();
@@ -305,14 +314,16 @@ export function pageSections(
     for (const section of review.sections) add(section);
   }
 
+  // Files shows while the ticket has files to list there, or can take
+  // more (attachable: files are dropped on it, FH-18).
   const files = unreferencedFiles(detail).length;
-  if (files > 0)
+  if (files > 0 || attachable)
     add({
       id: "files",
       kind: "files",
       group: "files",
       title: "Files",
-      count: String(files),
+      ...(files > 0 ? { count: String(files) } : {}),
     });
   add({
     id: "activity",
