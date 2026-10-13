@@ -100,7 +100,9 @@ Escape (focus returns to the button), a click outside or tabbing away.
 workstream of the project in scope (bullet and name), busiest first (most
 tickets neither done nor in the backlog), finished workstreams left out
 unless chosen; right-aligned, one chip per Colour by value present (a round
-paint bullet and the value's word). Both are filters with the menus' click
+paint bullet and the value's word; with Colour by Type, the type's card
+icon in its colour instead of the bullet, so people learn the icons,
+FH-147). Both are filters with the menus' click
 rules: a shown-only chip takes the selection ring, a hidden one is dashed and
 struck through. The row never wraps: chips that do not fit stay out of view,
 colour chips before workstreams; the menus list every value. Hidden when
@@ -152,29 +154,71 @@ load) sit as a full-width strip under the band, above the rail and Main.
 
 ### Ticket card
 
-One anatomy at every density, the same in both themes. Rows appear in this
-order; a density shows or hides rows (as the table says) but never
-reorders them.
+One set of markers, three layouts (FH-147, decided with the user on
+2026-10-13), the same in both themes. Each density answers one question,
+and a marker shows only when it applies.
 
-| # | Row | Compact | Normal | Detailed |
-| --- | --- | --- | --- | --- |
-| 1 | Header: id, project name (All projects only), running time right | ✓ | ✓ | ✓ |
-| 2 | Title, wrapping to at most three lines (full title in its tooltip and the card's name) | ✓ | ✓ | ✓ |
-| 3 | Tags: workstream bullet, type tag, age tag (Colour by Age), and the change requests still waiting as a pill (`REV-6`: *2 changes requested* in progress's amber, *1 addressed* in review's blue, *1 open · 1 addressed*, with the speech-balloon icon; also in the card's name) | ✓ | ✓ | ✓ |
-| 4 | Needs repair note | ✓ | ✓ | ✓ |
-| 5 | Blocker pill (no-entry sign, reason, `+n more`) or quiet wait note | short pill *Blocked* | ✓ | ✓ |
-| 6 | Live badge: run state and agent, its Needs you reason (the words its Runs tab uses, `RUN-3`), last activity; plan step `done/total · step` when the run has a plan (`VIEW-8`) | mark only (Needs you plate) | ✓ | ✓ |
-| 7 | Question waiting plate, when a question needs the user and its run does not | — | ✓ | ✓ |
-| 8 | Description excerpt, three lines | — | — | ✓ |
-| 9 | Handoff next step (arrow) | — | — | ✓ |
-| 10 | Footer: criteria `d/t` left; attachments count and *Review* (Detailed); priority tag right | priority only | ✓ | ✓ |
+**Markers.** Each is a drawing with its words in its tooltip and in the
+card's name:
 
-- The workstream stripe runs the full left edge and is always the bullet's
-  line colour. A ticket with no workstream has neither.
-- Colour by paints the header row with the value's tint and fills that
-  value's tag with its strong shade (`VIEW-6`); unpainted tags are neutral
-  outlined chips. High priority is semibold in either form. A needs-repair
-  card is never painted.
+| Marker | Shown as |
+| --- | --- |
+| Type | The type's icon in its paint colour (feature a star, bug a beetle, infra a server stack, test a beaker, refactor two swapping arrows, docs a page, spike a light bulb); a type without one is a dot in the *other* colour |
+| Id | The id in the id cut, a link to the full page (`CARD-7`); never truncated |
+| Blocked | The no-entry sign in the blocked ink (§7); the reason in its tooltip |
+| Change requests | The speech balloon and the count still waiting (`REV-6`): open in progress's amber, addressed only in review's blue; *2 open · 1 addressed* in its tooltip |
+| Live run | The run-state mark (§7) and, with a plan, `done/total` (`VIEW-8`); the agent, state and step in its tooltip |
+| Attachments | The paper clip and the count |
+| Review | The review page, when a review is written |
+| Age | The running time since the ticket last changed |
+| Priority | Three ascending bars: *High* fills three in the warm priority colour, *Medium* two in neutral grey, *Low* one in blue (`priority-*` tokens); the rest are empty. Not chevrons or arrows |
+| Needs you | The attention plate (§7), when the run or an open question needs the user |
+
+**Compact** (where is everything, and what is on fire?): the title, led by
+its id, wrapping to at most two lines; beside it, in this order, only the
+Needs you plate (disc only), the blocked mark, the change-request mark and
+the priority marker. There is no other row: no type, age, run mark or
+project name.
+
+**Normal** (what do I pick up, and who needs me?):
+
+1. Title, wrapping to at most three lines.
+2. Needs repair note, when the ticket needs repair.
+3. **Meta line**: type, id, *Rejected* pill (a rejected ticket in Done),
+   blocked, change requests, live run, age, review, attachments, then the
+   priority marker at the end. It is always one line: attachments drop
+   first, then review, then age, when the column is too narrow (15rem
+   fits the rest); the id and the other markers never drop, and the line
+   never wraps or clips the id. A dropped marker stays in the card's name.
+4. Needs you line, when the run or an open question needs the user: the
+   plate and the reason in words (the Runs tab's words, `RUN-3`, or
+   *Question waiting*), on its own line so it is never missed.
+
+**Detailed** (why is it stuck, and how does it resume?): Normal, then the
+words:
+
+5. The blocker pill with the first reason and `+n more`.
+6. The run: state, agent and last activity; the plan step
+   `done/total · step` below.
+7. The handoff's next step (arrow), two lines at most.
+8. The description excerpt, two lines at most.
+9. The workstream name, after the project name in All projects.
+
+- The workstream stripe runs the full left edge in the workstream's line
+  colour; a ticket with no workstream has none. Cards show no workstream
+  bullet or initials, and no acceptance criteria count.
+- Colour by tints the whole card with the value's tint (`VIEW-6`; a card in
+  Done at 55%). The value's word is in its colour chip, the marker's
+  tooltip and the card's name. A needs-repair card is never painted.
+- The card's name (its covering button's) says the title, the id and every
+  marker and state the card can show at any density, including those a
+  narrow meta line drops: rejected, blocked with its reason, needs repair,
+  the live run with its plan step, questions waiting, change requests,
+  type, priority, attachments, review, age, workstream and, in All
+  projects, the project.
+- Markers lie under the card's covering button, so a click or a drag
+  anywhere on the card reaches it and the card stays one keyboard stop; the
+  button takes the words of the marker under the pointer as its tooltip.
 - A card has no overflow menu: moves are drag, Shift with an arrow, or the
   panel's Move to.
 - Selected card: selection ring. Dimmed (another line pressed): 35% opacity.
@@ -625,8 +669,8 @@ for another role's job, and none is ever the only carrier of meaning.
 | Frame | Brand surface and the current scope | Band and its current view tab (raspberry light, black dark), rail and its current tile | The tab's or project's name |
 | Action | The primary action | Primary button | Its label |
 | Attention | A run or question that needs the user | Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark | Disc mark and words |
-| Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name |
-| Paint | The Colour by value | Card header tint, filled tag, colour chip bullet | The value's word |
+| Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name (a card's stripe: the name in the card's name and on a Detailed card) |
+| Paint | The Colour by value | Whole-card tint, colour chip bullet, the type icon's colour | The value's word (chip, tooltip, card name) |
 | State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages | Icon and column word |
 | Blocked | A real blocker | Blocker pill, the no-entry sign wherever blocked is marked | No-entry sign and the reason or the word *Blocked* |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
@@ -639,8 +683,8 @@ is dashed and hatched in ink.
 
 Blocked has one symbol, the **no-entry sign** (a filled disc with its
 bar cut out, so the bar shows the surface behind it; FH-148), wherever a
-ticket or workstream is marked blocked: the blocker pill and note (cards,
-the Table, the blocked-move dialog, a route card's blocker notes), the
+ticket or workstream is marked blocked: a card's blocked mark (§2), the
+blocker pill and note (Detailed cards, the Table, the blocked-move dialog, a route card's blocker notes), the
 short *Blocked* pill and any blocked-tone pill (the panel and page
 headers, a station's *Needs FH-n*), the Blocked by heading on the panel
 and full page, a route card's derived status, the rail's blocked count and
@@ -723,9 +767,9 @@ other than the above, the above wins:
   a generated badge.
 - **Sample data**: ticket titles, ids, counts, dates ("Apr 22, 2025"),
   criteria, workstream names and answer options are illustrative.
-- **Colour slips**: a card's stripe always matches its bullet (the light
+- **Colour slips**: a card's stripe always matches its workstream's bullet (the light
   board shows an AR card with an orange stripe); a priority is not shown in
-  the blocked red; the dark board's criteria rings are plain counts.
+  the blocked red; cards show no criteria count (FH-147).
 - **Stations**: a check means Done or Archived only; a dashed route ahead
   (dark workstreams) is solid at 35%, since dashes mean suspended service.
 - **Placement**: view tabs sit in the band (the light workstreams image puts

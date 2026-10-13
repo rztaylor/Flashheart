@@ -499,6 +499,23 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Board cards are less cluttered, and each density shows clearly
+  different detail (FH-147, `VIEW-6`). **Compact** is just the title, led
+  by its id, with what needs attention (Needs you, blocked, change
+  requests) and the priority beside it. **Normal** adds one line of small
+  markers: the type's icon, the id, blocked, change requests, a working
+  session with its plan (2/5), age, review, attachments and priority; when
+  a session or question needs you, why says so on its own line.
+  **Detailed** adds the words: the blocker's reason, the agent and its
+  plan step, the next step, a short excerpt and the workstream. Priority
+  is now three small bars (high three warm, medium two grey, low one
+  blue), and each type has its own icon in its colour, shown on the type
+  chips at the top of the board too. The workstream initials and the
+  acceptance criteria count are gone from cards (the coloured stripe
+  stays), and Colour by tints the whole card. On a narrow column the
+  marker line drops attachments, then review, then age rather than
+  wrapping; every marker's words are in its tooltip and in what a screen
+  reader hears for the card.
 - Blocked tickets are marked with a no-entry sign (FH-148). The small
   hollow diamond that marked a blocked ticket read as decoration at card
   size; a filled no-entry sign now marks blocked everywhere: on cards,
