@@ -1221,6 +1221,79 @@ test("table sorts and opens tickets", async () => {
   ).toBeVisible();
 });
 
+// The card's type icon and priority bars beside their words wherever
+// there is room for both (FH-154, ui-layout.md §2, §3, §6).
+test("the table, panel, page and priority chips show type and priority as cards do (FH-154)", async () => {
+  const page = shared;
+  // mark is the drawing just before a word, in the same tag or row.
+  const marked = (scope, selector, word) =>
+    scope
+      .locator(selector)
+      .locator("xpath=..")
+      .filter({ hasText: new RegExp(`^${word}$`) });
+  for (const theme of ["light", "dark"]) {
+    for (const [width, height] of [
+      [1440, 900],
+      [390, 844],
+    ]) {
+      const size = { width, height, theme };
+      const at = `${width === 390 ? "narrow" : width}-${theme}`;
+
+      await open(page, "#/p/flashheart/table", size);
+      const row = page
+        .getByRole("row")
+        .filter({ hasText: "Locked atomic ticket writes" });
+      await expect(
+        marked(row, '[data-type="feature"]', "feature"),
+      ).toBeVisible();
+      await expect(marked(row, '[data-priority="high"]', "High")).toBeVisible();
+      await expectNoAxeViolations(page, `table marks ${at}`);
+      await shot(page, `marks-table-${at}`);
+
+      await open(page, "#/p/flashheart/board?t=FH-14", size);
+      const panel = page.getByRole("complementary", { name: "Ticket FH-14" });
+      await expect(
+        marked(panel, '[data-priority="high"]', "High priority"),
+      ).toBeVisible();
+      await expect(
+        marked(panel, '[data-type="feature"]', "feature"),
+      ).toBeVisible();
+      await expectNoAxeViolations(page, `panel marks ${at}`);
+      await shot(page, `marks-panel-${at}`);
+
+      await open(page, "#/ticket/FH-14", size);
+      const properties = page.getByRole("region", { name: "Properties" });
+      await expect(
+        properties.locator('dd:has([data-priority="high"])'),
+      ).toContainText("High");
+      await expect(
+        properties.locator('dd:has([data-type="feature"])'),
+      ).toContainText("Feature");
+      await expectNoAxeViolations(page, `page marks ${at}`);
+      await shot(page, `marks-ticket-page-${at}`);
+    }
+
+    await open(page, "#/p/flashheart/board", {
+      width: 1440,
+      height: 900,
+      theme,
+    });
+    await colourBy(page, "Priority");
+    try {
+      const chips = page.getByRole("group", { name: "Filter by priority" });
+      for (const level of ["high", "medium", "low"]) {
+        await expect(
+          chips.locator(`button:has([data-priority="${level}"])`),
+        ).toBeVisible();
+      }
+      await expectNoAxeViolations(page, `priority chips ${theme}`);
+      await shot(page, `marks-priority-chips-${theme}`);
+    } finally {
+      await colourBy(page, "Type");
+    }
+  }
+});
+
 test("every view names its scope in the page header, not the band", async () => {
   const page = shared;
   for (const view of ["board", "overview", "workstreams", "table"]) {

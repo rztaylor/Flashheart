@@ -180,6 +180,11 @@ describe("PanelHeader", () => {
     expect(markup).toContain(">High priority<");
     expect(markup).toContain('data-icon="blocked"');
   });
+
+  it("marks the priority and type tags with the card's bars and icon (FH-154)", () => {
+    expect(markup).toMatch(/data-priority="high"[\s\S]*?<\/svg>High priority</);
+    expect(markup).toMatch(/data-type="feature"[\s\S]*?<\/span>feature</);
+  });
 });
 
 describe("a rejected ticket (FH-58)", () => {
