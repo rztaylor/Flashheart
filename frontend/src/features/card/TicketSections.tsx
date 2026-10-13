@@ -1,6 +1,5 @@
 import { type ReactNode, useId } from "react";
-import type { TicketDetail, TicketRef, WorkstreamBrief } from "../../api/board";
-import type { AuthenticatedFetch } from "../../api/client";
+import type { TicketDetail, TicketRef } from "../../api/board";
 import { panelId, Tabs, tabId } from "../../components/Tabs";
 import {
   type SectionId,
@@ -9,32 +8,27 @@ import {
 } from "../../model/ticketSections";
 import { AttachmentDrop } from "./AttachmentDrop";
 import { Attachments } from "./Attachments";
-import { EditTab } from "./EditTab";
 import { ReviewTab } from "./ReviewTab";
 import { RunsTab } from "./RunsTab";
 import { TicketTab } from "./TicketTab";
 import type { TicketState } from "./useTicket";
 
 // SectionBody is one of the card panel's tabs for a loaded ticket: Ticket,
-// Edit (EDIT-6), Runs, Attachments (REV-1) or Review (REV-3). The full page
-// shows the ticket as one page instead (TicketPage). The panel keeps its
-// Comments tab mounted itself (CardPanel, FH-128).
+// Runs, Attachments (REV-1) or Review (REV-3). The full page shows the
+// ticket as one page instead (TicketPage). The panel keeps its Comments
+// (FH-128) and Edit (EDIT-6, FH-138) tabs mounted itself (CardPanel).
 export function SectionBody({
   section,
   detail,
   ticket,
-  fetcher,
   keys,
   onOpen,
-  workstreams,
 }: {
-  section: Exclude<SectionId, "comments">;
+  section: Exclude<SectionId, "comments" | "edit">;
   detail: TicketDetail;
   ticket: TicketState;
-  fetcher: AuthenticatedFetch;
   keys: Set<string>;
   onOpen(ticket: TicketRef): void;
-  workstreams: Map<string, WorkstreamBrief[]>;
 }) {
   switch (section) {
     case "review":
@@ -53,15 +47,6 @@ export function SectionBody({
       );
     case "runs":
       return <RunsTab detail={detail} onOpen={onOpen} />;
-    case "edit":
-      return (
-        <EditTab
-          detail={detail}
-          fetcher={fetcher}
-          workstreams={workstreams.get(detail.project) ?? []}
-          onSaved={ticket.saved}
-        />
-      );
     default:
       return (
         <TicketTab
