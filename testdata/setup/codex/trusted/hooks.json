@@ -1,0 +1,134 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay /System/Library/Sounds/Glass.aiff",
+            "timeout": 3
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex Stop --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex SessionStart --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex UserPromptSubmit --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex PermissionRequest --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex PostToolUse --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex SubagentStart --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex SubagentStop --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex PreCompact --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex PostCompact --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Interrupt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex Interrupt --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/example/bin/flashheart hook codex SessionEnd --root /Users/example/reports/Kanban",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

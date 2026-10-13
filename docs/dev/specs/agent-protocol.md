@@ -595,10 +595,35 @@ setup put before it, and deletes a file setup created that is left empty.
 Codex runs a hook that is not managed only once the user trusts it with
 `/hooks` in the CLI, by its hash (§5.3), so setup ends by saying so, and a
 hook whose command changed (a moved binary, another `--root`) needs
-trusting again. `doctor` warns when `config.toml` records no trust at all
-for `hooks.json` (`[hooks.state."<CODEX_HOME>/hooks.json:…"]`) or when
-`[features] hooks = false`; how Codex computes the hash is not recorded,
-so a stale trust after a changed command is not detected. The protocol
+trusting again. Codex saves trust in `$CODEX_HOME/config.toml` as
+`[hooks.state."<file>:<event>:<group>:<handler>"]` with
+`trusted_hash = "sha256:<hex>"` (recorded from Codex 0.160.0 on
+2026-10-13, `testdata/hooks/codex/MANIFEST.md`, D64):
+
+- `<file>` is the absolute path of `hooks.json` in `$CODEX_HOME`, which
+  Codex resolves (symlinks followed) when `CODEX_HOME` is set and uses as
+  `~/.codex` otherwise;
+- `<event>` is the event in snake case (`session_start`, `stop`);
+- `<group>` and `<handler>` are the hook's positions, from 0, in the
+  event's array of groups and in its group's `hooks`, counting every entry;
+- the hash is SHA-256 of the compact JSON, object keys sorted and strings
+  escaping only `"`, `\` and control characters, of
+  `{"event_name": <event>, "matcher": <matcher>, "hooks": [<handler>]}`.
+  The handler is `type`, `command`, `timeout` and `async`, plus
+  `statusMessage` and `additionalContextLimit` when set, normalised as
+  Codex runs it: `timeout` defaults to 600 (at least 1), or for
+  `SessionEnd` and `Interrupt` to 1 and is clamped to 1–3;
+  `additionalContextLimit` counts only on `PreToolUse`, `PostToolUse`,
+  `SessionStart`, `UserPromptSubmit` and `SubagentStart` and not at its
+  default of 2500; `matcher` is left out when unset and on
+  `UserPromptSubmit`, `Stop` and `Interrupt`, which ignore it.
+
+A hook runs when its saved hash equals its current one (Codex calls one
+that differs "modified"). `doctor` recomputes the hash of each Flashheart
+hook in `hooks.json`, reads only `config.toml`, and names the events whose
+hook has no trust or trust with another hash (a moved binary, another
+`--root`); it says so as a whole when no Flashheart hook is trusted, and
+warns when `[features] hooks = false`. The protocol
 text in `AGENTS.md` is not refreshed by a hook: after an upgrade `doctor`
 reports it out of date and `setup codex` replaces it.
 
