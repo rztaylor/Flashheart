@@ -419,8 +419,8 @@ line each up to a blank line, always at least `state`:
   of its subagents, the person also sent the comment to when posting it
   (**Tell a session now**, D47, FH-127); absent for a comment not sent.
 - `delivered`: when that session was handed the comment, RFC 3339 UTC;
-  absent until then. Once it is set the comment can no longer be edited:
-  the session has read what it says. Without it, a comment whose run has
+  absent until then. Once it is set the comment can no longer be edited
+  or deleted: the session has read what it says. Without it, a comment whose run has
   ended (or left the run window) was not delivered, and the board says
   so.
 - `quote`: where the quoted part of the ticket is from (one line, at most
@@ -433,6 +433,13 @@ is at most 4 KiB. Text and quote pass the secret scrubber (SEC-3), and a
 heading of level 1 to 3 in the text outside code fences becomes level 4
 and a code fence left open is closed, so it cannot start or hide an entry
 (FH-4). It is shown as markdown without raw HTML (SEC-4).
+
+A person may **delete** a comment posted by mistake (FH-140): its entry
+goes, heading to the next entry, with the blank lines that separated a
+last entry from the one before it, so the file reads as if it had never
+been appended. A comment that is `delivered`, or whose `state` is
+`change-requested` or `addressed`, is not deleted (a request is resolved
+first). The write's history names the comment by id, never its text.
 
 **History** entries list what one write changed, one bullet each, and
 never the ticket's text:
@@ -447,6 +454,7 @@ never the ticket's text:
 | `- change-requested: <comments>` | comments the person asked for as changes (a new one written as one too), as `comment <id>` (REV-6, FH-126) |
 | `- addressed: <comments>` | change requests an agent marked addressed |
 | `- resolved: <comments>`, `- reopened: <comments>` | change requests the person resolved, or asked for again after they were addressed or resolved |
+| `- deleted: <comments>` | comments the person deleted (FH-140), as `comment <id>` |
 
 A bullet of another form is kept and not shown. History is worked out
 from the write itself, comparing the ticket (and, for a review step, its
@@ -464,7 +472,11 @@ or restore is moved back. A comment is appended to the file as it is under
 the lock; an edit replaces only that comment's entry, its heading,
 unknown attributes and following blank lines kept, and carries the hash of
 the file the person read: a stale hash is a conflict and writes nothing.
-An edit of a delivered comment is refused (`delivered`). Marking a comment
+An edit of a delivered comment is refused (`delivered`). A delete, like
+an edit, carries the hash of the file the person read and removes only
+that comment's entry; a delivered comment is refused (`delivered`), an
+open or addressed change request too (`open_request`), and the history
+entry is staged in the same write. Marking a comment
 delivered is done by whoever delivers the session's inbox (agent-protocol
 §4), never by a person; like a state change it rewrites that comment's
 entry, merging with the file as it is under the lock, and writes nothing

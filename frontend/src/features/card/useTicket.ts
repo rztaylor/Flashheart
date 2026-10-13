@@ -7,6 +7,7 @@ import {
 import type { AuthenticatedFetch } from "../../api/client";
 import {
   addComment,
+  deleteComment,
   editComment,
   type FieldValue,
   type NewComment,
@@ -54,6 +55,10 @@ export interface TicketState {
   // editComment saves a comment's new text on base, the hash of the
   // activity it was read from.
   editComment?(id: string, base: string, body: string): Promise<Saved>;
+  // deleteComment deletes a comment on base, the hash of the activity it
+  // was read from (FH-140), then reloads and says so; a refusal or a
+  // conflict reloads too, so the comment shows why, and rejects.
+  deleteComment?(id: string, base: string): Promise<void>;
   // requestChanges asks for changes on a ticket in review (REV-6, FH-126),
   // then reloads and says where they went; a failure rejects with the
   // reason.
@@ -189,6 +194,22 @@ export function useTicket({
       editable && detail
         ? (comment, base, body) =>
             editComment(fetcher, detail.id, comment, base, body)
+        : undefined,
+    deleteComment:
+      editable && detail && editing
+        ? (comment, base) =>
+            deleteComment(fetcher, detail.id, comment, base).then(
+              () => {
+                resource.reload();
+                editing.notify({
+                  text: `Deleted your comment on ${detail.id}.`,
+                });
+              },
+              (failure: unknown) => {
+                resource.reload();
+                throw failure;
+              },
+            )
         : undefined,
     requestChanges:
       editable && detail && editing

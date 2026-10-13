@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -57,6 +58,45 @@ func TestBoardContextDeliversACommentSentFromTheBoard(t *testing.T) {
 		"[Flashheart] Comments from the user on the board (their own words):", `- DM-1 (Robert): "Use the blue one."`)
 	if !e.deliveredMark(id, comment) {
 		t.Error("the comment is not marked delivered")
+	}
+}
+
+// untell deletes a comment the board sent, as the person does after it
+// was queued (FH-140), leaving its inbox entry where it is.
+func (e *env) untell(ticket, comment string) {
+	e.t.Helper()
+	file, err := e.store.TicketFile("demo", ticket)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	_, hash, err := e.store.ReadTicketActivity("demo", path.Base(path.Dir(file)))
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	if _, _, err := e.store.As("Robert").DeleteComment("demo", ticket, comment, store.Unchanged(hash)); err != nil {
+		e.t.Fatal(err)
+	}
+}
+
+// A comment deleted after it was queued (FH-140) is never handed over:
+// not with board_context, nor with a started run's next tool result.
+func TestADeletedCommentIsNeverHandedOver(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel"})
+	e.startSession(session)
+	e.untell(id, e.tell(id, session, "Posted by mistake."))
+	if out := e.ok("board_context", nil); strings.Contains(out, "Posted by mistake") || strings.Contains(out, "Comments from the user") {
+		t.Errorf("board_context handed it over:\n%s", out)
+	}
+
+	codex := e.dial(codexClient)
+	e.okOn(codex, "claim", map[string]any{"ticket": id})
+	run := e.started()[0].Run
+	e.untell(id, e.tell(id, run, "Also by mistake."))
+	if out := e.okOn(codex, "list_tickets", nil); strings.Contains(out, "by mistake") {
+		t.Errorf("a tool result handed it over:\n%s", out)
 	}
 }
 

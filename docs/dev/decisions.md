@@ -1604,7 +1604,42 @@ checking the content (a PNG named `.txt` would be served as text); a
 text placeholder in the document (a save during an upload would write
 it); converting pasted HTML (see above).
 
-## 2026-10-13 — D66: A time-ordered session id is shortened to its end
+## 2026-10-13 — D66: A deleted comment leaves the file whole and is never handed to a session
+
+Built by FH-140 within the user's choice in the FH-67 brainstorm (a note
+to a session can be edited or deleted until it is delivered) and D63's
+note that a delivered comment is locked against deletion too. What
+FH-140 decided itself:
+
+- **What may be deleted.** Any person's comment on the board, as with
+  editing (Flashheart is single-user; a comment is not checked against
+  the current `user_name`), unless it is `delivered` or a change request
+  `change-requested` or `addressed`: a request waits on someone until it
+  is resolved, so the person resolves it first. The rule is
+  `board.CanDeleteComment`; the board words the same reasons.
+- **How.** The entry leaves `activity.md`, heading to the next entry,
+  under the project lock on the hash the person read (a stale hash is a
+  conflict, as for an edit), and the write's history says
+  `deleted: comment <id>`, worked out from the file before and after
+  (D58). No tombstone stays in the file, so the text is gone from disk.
+- **The session never reads it.** Delivery already reads a sent
+  comment's text at delivery time under the same lock (D63), so a
+  deleted one is left out with no `comment.delivered`; a change request
+  is now also looked up at delivery and left out once gone. The board
+  also withdraws the comment's queued entries from the inbox of the
+  session it was sent to and the ticket's live claimants, so its text
+  does not wait on disk there. Only an entry taken just before the
+  delete whose ticket then cannot be read would go as queued (D63's
+  nothing-taken-is-lost rule).
+
+Options: a tombstone entry or a `deleted` attribute (keeps the text, or
+needs a second rule to hide it); delivering a "withdrawn" notice (tells
+the session something it never read); deleting without the hash
+(a delete over an edit made in another tab would remove text the person
+had not seen); withdrawing only, without the delivery check (the
+session's home project is known only while its run is in the window).
+
+## 2026-10-13 — D67: A time-ordered session id is shortened to its end
 
 Short ids (agent-protocol §2, D39) were the agent and the first 8
 characters of the session id. Codex's session ids are UUIDv7: they start

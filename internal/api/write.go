@@ -37,6 +37,7 @@ type Writer interface {
 	UnsendComment(project, id, comment string) (board.Comment, string, error)
 	RequestChanges(project, id string, comments []string, added *store.NewComment) (store.RequestedChanges, error)
 	SetCommentState(project, id, comment string, to board.CommentState) (board.Comment, string, error)
+	DeleteComment(project, id, comment string, pre store.Precondition) (board.Comment, string, error)
 	UploadAttachment(project, id string, input store.Upload) (store.StoredFile, error)
 	ReadConfig() (config.Config, error)
 	UpdateConfig(edit store.Edit) error

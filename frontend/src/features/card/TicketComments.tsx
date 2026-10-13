@@ -42,6 +42,7 @@ export function TicketComments({
                   comments: detail.comments,
                 },
                 send: ticket.editComment,
+                remove: ticket.deleteComment,
                 onSaved: (saved, what) =>
                   ticket.saved(
                     saved,

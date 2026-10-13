@@ -186,12 +186,15 @@ Full format: `docs/dev/specs/board-format.md`.
   open, change requested, addressed, resolved, `REV-6`); agents never
   write comments and change only a request's state, to addressed. A
   comment sent to a session (`CARD-7`) names its run and, once handed
-  over, when; it can no longer be edited after that. Every
+  over, when; it can no longer be edited after that. A person deletes a
+  comment posted by mistake, on the hash of the activity they read,
+  until a session has been handed it, and a change request only once it
+  is resolved (FH-140); its entry leaves the file whole. Every
   ticket write by the board or an agent (create, move, field and raw
   edits, ticked criteria and review steps, archive, restore, comment
-  states) appends one history entry in the same locked write: who, what
-  changed and when, never the ticket's text. A ticket without the file
-  has no activity.
+  states, a deleted comment) appends one history entry in the same
+  locked write: who, what changed and when, never the ticket's text. A
+  ticket without the file has no activity.
 - `MIG-1` `flashheart migrate` converts a v1 root to v2: it shows the plan
   and writes only with `--write`, numbers tickets once in creation order,
   rewrites references to ids, and moves (never deletes) the v1 tree into
@@ -355,7 +358,12 @@ Full format: `docs/dev/specs/board-format.md`.
   delivered when the session ended first, staying on the ticket. A
   person's comment edits in
   place (`EDIT-11`) until it is delivered and then shows as edited, and shows its state when it
-  is a change request. On a ticket in review the properties offer
+  is a change request. Beside its pencil, **Delete comment** asks first
+  (**Keep it** has focus) and deletes it, on the page and in the panel's
+  Comments tab (FH-140); a comment still waiting for its session is
+  withdrawn, so the session never reads it. A comment its session has
+  read, or a change request open or addressed, keeps the control, marked
+  unavailable, which says why when pressed and as its description. On a ticket in review the properties offer
   **Request changes** (`REV-6`). From 1280px an outline
   of the sections (with counts, empty template sections marked empty, the
   section in view highlighted) sits on the left and the properties (status
@@ -427,7 +435,7 @@ Full format: `docs/dev/specs/board-format.md`.
 - `EDIT-10` Every board write that changes a ticket (new ticket, move or
   place, field, section, raw and criterion edits, a ticked review step,
   archive, restore, permanent delete, a file added, `REV-7`, recorded as
-  the field `files`) or comments on it (STO-8) appends
+  the field `files`) or comments on it (STO-8: added, edited, deleted) appends
   one event to the ticket's project log saying that the human changed it,
   and when: the ticket's id and at most the columns or names of the fields
   changed, or the comment's id, never their values or any ticket or

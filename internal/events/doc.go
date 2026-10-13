@@ -20,10 +20,12 @@
 // routine every delivery path uses (it takes inboxes, adds the fold's
 // undelivered answers, hands over a comment sent from the board as its
 // ticket has it then and marks it delivered there through store, FH-127,
-// records delivery and returns what it took even when recording fails,
-// so nothing taken is lost), and the human's board
+// leaves out a comment or change request deleted since it was queued,
+// FH-140, records delivery and returns what it took even when recording
+// fails, so nothing taken is lost), Withdraw, which takes a deleted
+// comment's entries out of an inbox (FH-140), and the human's board
 // activity: the shape of a board write's event (run `human`, EDIT-10;
-// comment.added and comment.edited, D47) and which events count as the
+// comment.added, comment.edited and comment.deleted, D47) and which events count as the
 // human acting on the board.
 //
 // File access goes through store, which confines, locks and names the files.

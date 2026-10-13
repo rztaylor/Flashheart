@@ -58,7 +58,7 @@ var boardKinds = map[events.Kind]bool{
 	events.Claim: true, events.Release: true, events.Checkpoint: true,
 	events.TicketMoved: true, events.TicketUpdated: true, events.TicketCreated: true,
 	events.ReviewWritten: true, events.AttachmentAdded: true, events.QuestionAnswered: true,
-	events.CommentAdded: true, events.CommentEdited: true,
+	events.CommentAdded: true, events.CommentEdited: true, events.CommentDeleted: true,
 	// A delivered comment sent from the board is marked delivered in its
 	// ticket's activity file (FH-127).
 	events.CommentDelivered: true,

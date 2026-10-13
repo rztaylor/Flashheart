@@ -43,7 +43,7 @@ Flashheart tool calls, never turns, plans, edits or permission prompts.
   (`claude:3f2a9c1e`), or the last when the id is a time-ordered UUID
   (version 7, as Codex's are: `codex:019a7c00-…-8000-00009c4e1f2a` shows
   as `codex:9c4e1f2a`), whose start is the same for sessions started in
-  the same minute (D66); a subagent shows its session's (D39). The
+  the same minute (D67); a subagent shows its session's (D39). The
   server shortens ids (`events.RunID.Short`) and sends the short form
   with each run, question, comment, history entry and change request it
   sends to a session (`short`, `runShort`, `byShort`, `sentToShort`); the frontend
@@ -116,7 +116,7 @@ writing.
 | `question.answered` | UI | `id`, `answer`, `by` |
 | `question.delivered` | whoever delivers it (§4) | `id` |
 | `comment.delivered` | whoever delivers it (§4) | `ticket`, `comment` (its id in the ticket's `activity.md`), `type` (`comment` or `change-request`), on the run it was sent to; never its text. A comment a person sent from the board is also marked `delivered` on the comment itself (FH-127) |
-| `comment.added` / `comment.edited` | UI | `ticket`, `comment` (its id in the ticket's `activity.md`), `by: human`; `fields: [state]` on `comment.edited` when only its state changed (a change requested, resolved or reopened, FH-126); never its text (D47) |
+| `comment.added` / `comment.edited` / `comment.deleted` | UI | `ticket`, `comment` (its id in the ticket's `activity.md`), `by: human`; `fields: [state]` on `comment.edited` when only its state changed (a change requested, resolved or reopened, FH-126); never its text (D47); `comment.deleted` when the person deleted it (FH-140) |
 
 ### Activity records
 
@@ -185,6 +185,7 @@ ticket says:
 | archive, restore | `ticket.updated` | `fields: [archived]` |
 | permanent delete | `ticket.updated` | `fields: [deleted]` |
 | comment added, comment edited (`STO-8`) | `comment.added`, `comment.edited` | `comment`: the comment's id |
+| comment deleted (`STO-8`, FH-140) | `comment.deleted` | `comment`: the deleted comment's id |
 | request changes (`REV-6`) | `ticket.moved`, then `comment.added` for a new request and `comment.edited` for each comment marked | `from: review`, `to: in-progress`; `comment`, and `fields: [state]` on each `comment.edited` |
 | resolve or reopen a change request (`REV-6`) | `comment.edited` | `comment`, `fields: [state]` |
 
@@ -206,8 +207,8 @@ person's name for the board, the caller's full run id for a tool, or
 `unknown`), when, and what changed (created, moved, the names of the
 fields and sections edited, the numbers of the criteria and review steps
 ticked, archived, restored, and the ids of the comments asked for as
-changes, addressed, resolved or reopened, FH-126), never the ticket's
-text. For the tools that
+changes, addressed, resolved or reopened, FH-126, or deleted by the
+person, FH-140), never the ticket's text. For the tools that
 is `create_ticket`, `move`, `claim` when it moves the ticket or sets its
 branch, `update_ticket` when it sets fields, ticks criteria or marks
 change requests addressed, and
@@ -343,10 +344,18 @@ comment or change request. A `comment` with a `project` is handed over
 as its ticket has it then (`events.Deliver`, `store.DeliverComment`):
 under that project's lock its text is read, edits included, and the
 comment is marked `delivered` with the time, after which the person can
-no longer edit it. One that is no longer there, was delivered already or
-was not sent to that run is left out; one whose ticket cannot be read
-(archived) goes as it was queued and the failure is logged, since
-nothing taken may be lost. Each path frames every entry by its type, under
+no longer edit or delete it. One that is no longer there, was delivered
+already or was not sent to that run is left out; one whose ticket cannot
+be read (archived) goes as it was queued and the failure is logged, since
+nothing taken may be lost. A `change-request` with a `project` goes as it
+was queued while its ticket still has the comment, and is left out once
+the person has deleted it. A person deletes a comment only before it is
+delivered (FH-140): the board then also takes its entries out of the
+inbox of the session it was sent to and of the ticket's live claimants
+(`events.Log.Withdraw`), so its text does not wait there, and no
+`comment.delivered` is ever recorded for it. Delivery and deletion both
+run under the ticket project's lock, so a session is handed a comment
+only while it exists, and a delete after that is refused. Each path frames every entry by its type, under
 its own heading:
 
 | Type | Heading (prompt hook, tool results, `board_context`, `await`) | Recovery note line (§8) |
@@ -1232,6 +1241,15 @@ comments bullet gains a clause. Agents see the same heading and lines
 they already read, no tool or event changes shape, an entry without
 `project` is delivered as before, and an older binary delivering one
 only leaves the comment unmarked, so the version stays 2.
+
+Additive change within version 2 (FH-140, 2026-10-13): a person may
+delete a comment until it is delivered. The human's event kind
+`comment.deleted` (§3) records it, history gains the bullet `deleted`
+(board-format §Activity), and delivery leaves out a comment or change
+request deleted since it was queued (§4), which the board also withdraws
+from the session's inbox. Agents never saw deleted text and see nothing
+new; no tool, input or inbox entry changes shape, and a reader that
+predates the kind skips it, so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

@@ -173,6 +173,85 @@ func (s *Store) DeliverComment(project, id, comment, run string, at time.Time) (
 	return delivered, ok, nil
 }
 
+// ErrOpenRequest refuses deleting a change request that is not resolved
+// (FH-140).
+var ErrOpenRequest = errors.New("open_request")
+
+// DeleteComment removes comment from a live ticket's activity file, as a
+// person deleting what they posted by mistake (FH-140), under the project
+// lock once pre holds (the hash of the file the person read); the write's
+// history names the comment, never its text. A comment the file does not
+// have is ErrNotFound; one delivered to its session ErrDelivered, and a
+// change request open or addressed ErrOpenRequest. It returns the comment
+// as it was (whom it was sent to, to withdraw it from that session's
+// inbox) and the file's new hash.
+func (s *Store) DeleteComment(project, id, comment string, pre Precondition) (board.Comment, string, error) {
+	if err := s.commenter(); err != nil {
+		return board.Comment{}, "", err
+	}
+	var deleted board.Comment
+	var hash string
+	err := s.inTicket(project, id, func(t *tx, ticket string) error {
+		name := path.Join(path.Dir(ticket), board.ActivityFile)
+		current, err := t.readActivity(name)
+		if err != nil {
+			return err
+		}
+		if err := pre.check(name, current); err != nil {
+			return err
+		}
+		if err := t.editActivity(name, func(data []byte) ([]byte, error) {
+			next, removed, err := board.DeleteComment(data, comment)
+			switch {
+			case errors.Is(err, board.ErrNoComment):
+				return nil, fmt.Errorf("%w: %v", ErrNotFound, err)
+			case errors.Is(err, board.ErrDeleteDelivered):
+				return nil, fmt.Errorf("%w: %v", ErrDelivered, err)
+			case errors.Is(err, board.ErrDeleteRequest):
+				return nil, fmt.Errorf("%w: %v", ErrOpenRequest, err)
+			case err != nil:
+				return nil, err
+			}
+			deleted = removed
+			return next, nil
+		}); err != nil {
+			return err
+		}
+		if err := t.commit(); err != nil {
+			return err
+		}
+		final, err := t.readActivity(name)
+		hash = Hash(final)
+		return err
+	})
+	if err != nil {
+		return board.Comment{}, "", err
+	}
+	return deleted, hash, nil
+}
+
+// TicketComment reads comment of a live ticket as its activity file has
+// it now; ok is false when the file does not have it (deleted, FH-140).
+// It takes no lock: a write replaces the file atomically.
+func (s *Store) TicketComment(project, id, comment string) (board.Comment, bool, error) {
+	if err := s.checkTicket(project, id); err != nil {
+		return board.Comment{}, false, err
+	}
+	ticket, err := s.TicketFile(project, id)
+	if err != nil {
+		return board.Comment{}, false, err
+	}
+	data, err := s.begin().readActivity(path.Join(path.Dir(ticket), board.ActivityFile))
+	if err != nil {
+		return board.Comment{}, false, err
+	}
+	comments := board.ParseActivity(data).Comments
+	if at := slices.IndexFunc(comments, func(c board.Comment) bool { return c.ID == comment }); at >= 0 {
+		return comments[at], true, nil
+	}
+	return board.Comment{}, false, nil
+}
+
 // commenter refuses a store that does not write as a person.
 func (s *Store) commenter() error {
 	if s.author == "" || !board.ByPerson(s.author) {

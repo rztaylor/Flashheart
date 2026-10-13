@@ -225,6 +225,8 @@ export function historyWords(changes: HistoryChange[]): string[] {
           "reopened",
           "change requests",
         );
+      case "deleted":
+        return counted(change, "deleted a comment", "deleted", "comments");
       default:
         return change.what;
     }

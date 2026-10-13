@@ -408,6 +408,15 @@ describe("historyWords", () => {
       "reopened 2 change requests",
     ]);
   });
+
+  it("words a deleted comment without its text (FH-140)", () => {
+    expect(
+      historyWords([
+        change({ what: "deleted", comments: ["a1"] }),
+        change({ what: "deleted", comments: ["a1", "a2"] }),
+      ]),
+    ).toEqual(["deleted a comment", "deleted 2 comments"]);
+  });
 });
 
 describe("filterActivity", () => {
