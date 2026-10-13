@@ -14,9 +14,9 @@ import { RunsTab } from "./RunsTab";
 import { TicketTab } from "./TicketTab";
 import type { TicketState } from "./useTicket";
 
-// SectionBody is one section of a loaded ticket, the same component in the
-// panel and on the page: Ticket, Edit (EDIT-6), Runs, Attachments (REV-1)
-// or Review (REV-3).
+// SectionBody is one of the card panel's tabs for a loaded ticket: Ticket,
+// Edit (EDIT-6), Runs, Attachments (REV-1) or Review (REV-3). The full page
+// shows the ticket as one page instead (TicketPage).
 export function SectionBody({
   section,
   detail,
@@ -64,15 +64,13 @@ export function SectionBody({
 }
 
 // SectionTabs shows a ticket's sections as tabs over one tab panel, which
-// renders the active section. heading names the section in an sr-only h2,
-// for a page whose title is the h1.
+// renders the active section (the card panel's tabs).
 export function SectionTabs({
   sections,
   active,
   onSelect,
   tabsClassName,
   bodyClassName,
-  heading = false,
   children,
 }: {
   sections: TicketSection[];
@@ -80,11 +78,9 @@ export function SectionTabs({
   onSelect(id: SectionId): void;
   tabsClassName: string;
   bodyClassName: string;
-  heading?: boolean;
   children: ReactNode;
 }) {
   const tabsId = useId();
-  const current = sections.find((section) => section.id === active);
   return (
     <>
       <div className={tabsClassName}>
@@ -109,9 +105,6 @@ export function SectionTabs({
         aria-labelledby={tabId(tabsId, active)}
         className={bodyClassName}
       >
-        {heading && current ? (
-          <h2 className="sr-only">{sectionLabel(current)}</h2>
-        ) : null}
         {children}
       </div>
     </>

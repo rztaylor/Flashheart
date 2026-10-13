@@ -300,11 +300,26 @@ Full format: `docs/dev/specs/board-format.md`.
 - `CARD-6` Open questions show with an answer box or option buttons
   (`RUN-8`).
 - `CARD-7` Every ticket has a full page, `#/ticket/<id>`, reachable by URL,
-  reload or a new tab: the panel's header, tabs and content at reading
-  width under the band, the browser tab named `<id> · <title>`, and a link
-  to the ticket beside its project's board. Clicking a card, row or station
-  opens the panel; clicking a ticket id opens the full page in a new tab
-  (`KEY-3`). Ticket links on a full page stay in its tab.
+  reload or a new tab, under the band, the browser tab named
+  `<id> · <title>`, with a link to the ticket beside its project's board.
+  It shows the whole ticket as one continuous page, with no tabs: needs
+  repair, questions waiting for the user, Handoff, Blocked by, Acceptance
+  criteria, Description, Test plan (or Reproduction), Context and the
+  ticket's other sections; then, when `review.md` exists, the review in its
+  own sections, its *Evidence* screenshots as one captioned gallery that
+  opens the lightbox; then **Files**, the attachments neither the review nor
+  the ticket links, so each screenshot shows once; then **Activity**, a
+  read-only timeline, oldest first, of the ticket's notes, agents'
+  questions with their answers, and handoff updates. From 1280px an outline
+  of the sections (with counts, empty template sections marked empty, the
+  section in view highlighted) sits on the left and the properties (status
+  with **Move to …**, priority, type, workstream, branch, pull request,
+  depends on, tags, agent, created, changed and **Archive**) on the right,
+  both staying in view; narrower, the outline is a **Jump to** menu and,
+  on narrow screens, the properties stack above the page. Choosing a
+  section moves focus to it. Clicking a card, row or station opens the
+  panel; clicking a ticket id opens the full page in a new tab (`KEY-3`).
+  Ticket links on a full page stay in its tab.
 
 ### 6.6 Editing (`EDIT`)
 

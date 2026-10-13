@@ -1,6 +1,8 @@
 // Markdown helpers for ticket and review files: link resolution (CARD-2),
 // linking bare ticket ids in markdown and plain text (KEY-3), the ticket's
-// full page, and trimming sections the card panel shows elsewhere.
+// full page, trimming sections the card panel shows elsewhere, and for the
+// full page: splitting a file into its sections and finding the images and
+// the ticket's own files it links.
 
 export type LinkTarget =
   | { kind: "ticket"; id: string }
@@ -177,4 +179,135 @@ export function ticketBody(body: string): string {
     if (!skipping) kept.push(line);
   }
   return kept.join("\n").trim();
+}
+
+export interface MarkdownSection {
+  // title is the heading's text as written.
+  title: string;
+  markdown: string;
+}
+
+// markdownSections splits markdown at its level-2 headings outside code
+// fences, for the ticket's full page (CARD-7): lead is the text before the
+// first one, without a level-1 title that opens the file, and each section
+// its heading's text and its body, trimmed.
+export function markdownSections(markdown: string): {
+  lead: string;
+  sections: MarkdownSection[];
+} {
+  const lead: string[] = [];
+  const sections: { title: string; lines: string[] }[] = [];
+  let inFence = false;
+  let opened = false;
+  for (const line of markdown.split("\n")) {
+    const fenceLine = fence.test(line);
+    const match = !inFence && !fenceLine ? heading.exec(line) : null;
+    if (fenceLine) inFence = !inFence;
+    const level = match?.[1]?.length ?? 0;
+    if (level === 1 && !opened) {
+      opened = true;
+      continue;
+    }
+    if (line.trim()) opened = true;
+    if (level === 2) {
+      sections.push({ title: match?.[2] ?? "", lines: [] });
+      continue;
+    }
+    const current = sections[sections.length - 1];
+    (current ? current.lines : lead).push(line);
+  }
+  return {
+    lead: lead.join("\n").trim(),
+    sections: sections.map((section) => ({
+      title: section.title,
+      markdown: section.lines.join("\n").trim(),
+    })),
+  };
+}
+
+export interface ImageRef {
+  alt: string;
+  src: string;
+}
+
+const image = /!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
+const link = /\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g;
+const codeSpan = /`[^`]*`/g;
+const emptyItem = /^\s*(?:[-*+]|\d+[.)])\s*$/;
+
+// outsideCode calls visit with each line outside fenced code, its code
+// spans blanked, so an image written as code is not taken for one.
+function outsideCode(markdown: string, visit: (line: string) => void) {
+  let inFence = false;
+  for (const line of markdown.split("\n")) {
+    if (fence.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (!inFence)
+      visit(line.replace(codeSpan, (span) => " ".repeat(span.length)));
+  }
+}
+
+// imageRefs lists the images markdown shows, in order, outside code.
+export function imageRefs(markdown: string): ImageRef[] {
+  const refs: ImageRef[] = [];
+  outsideCode(markdown, (line) => {
+    for (const match of line.matchAll(image))
+      refs.push({ alt: match[1] ?? "", src: match[2] ?? "" });
+  });
+  return refs;
+}
+
+// withoutImages removes the images from markdown outside code, and the
+// list items that held only an image, keeping the words around a gallery.
+export function withoutImages(markdown: string): string {
+  const kept: string[] = [];
+  let inFence = false;
+  for (const line of markdown.split("\n")) {
+    const fenceLine = fence.test(line);
+    if (fenceLine) inFence = !inFence;
+    if (inFence || fenceLine) {
+      kept.push(line);
+      continue;
+    }
+    // Split around code spans: the odd parts are code, left as written.
+    const parts = line.split(/(`[^`]*`)/);
+    const text = parts
+      .map((part, index) => (index % 2 ? part : part.replace(image, "")))
+      .join("");
+    if (text === line) {
+      kept.push(line);
+      continue;
+    }
+    const stripped = text
+      .replace(/^(\s*(?:[-*+]|\d+[.)]))\s+/, "$1 ")
+      .trimEnd();
+    if (!stripped.trim() || emptyItem.test(stripped)) continue;
+    kept.push(stripped);
+  }
+  return kept.join("\n");
+}
+
+// localFile names the file a link points to in this ticket's own files
+// folder ("files/a.png" is "a.png"), or "" for anything else.
+export function localFile(target: string): string {
+  const path = target.trim().split(/[?#]/)[0] ?? "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("/")) return "";
+  const parts = path.split("/").filter((part) => part !== "" && part !== ".");
+  if (parts.length !== 2 || parts[0] !== "files" || !parts[1]) return "";
+  return decodeSafely(parts[1]);
+}
+
+// linkedFiles names the ticket's own files that markdown links to or
+// shows, outside code.
+export function linkedFiles(markdown: string): Set<string> {
+  const names = new Set<string>();
+  outsideCode(markdown, (line) => {
+    for (const match of line.matchAll(link)) {
+      const name = localFile(match[1] ?? "");
+      if (name) names.add(name);
+    }
+  });
+  return names;
 }

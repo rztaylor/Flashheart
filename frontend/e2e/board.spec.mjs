@@ -207,7 +207,11 @@ test("a ticket id opens the ticket's full page in a new tab (CARD-7)", async () 
     }),
   ).toBeVisible();
   await expect(full).toHaveTitle(/^AL-5 · Long titles overflow the column/);
-  await expect(main.getByRole("tab", { name: "Ticket" })).toBeVisible();
+  // One continuous page with an outline, not the panel's tabs (FH-65).
+  await expect(main.getByRole("tab")).toHaveCount(0);
+  await expect(
+    main.getByRole("navigation", { name: "Sections" }),
+  ).toBeVisible();
   // Ticket links on the full page stay in its tab.
   const blocker = main
     .getByRole("listitem")
@@ -252,6 +256,224 @@ test("a ticket id opens the ticket's full page in a new tab (CARD-7)", async () 
       .locator('a[href="#/ticket/FH-11"]'),
   ).toHaveCount(1);
   expect(context.pages()).toHaveLength(1);
+});
+
+// sectionHeadings are the full page's section headings in page order.
+async function sectionHeadings(page) {
+  return page
+    .getByRole("main")
+    .locator("[data-section] :is(h2, h3)")
+    .evaluateAll((list) =>
+      list.map((heading) =>
+        [...heading.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent)
+          .join("")
+          .trim(),
+      ),
+    );
+}
+
+test("the full page shows the ticket as one page with an outline and properties (FH-65)", async () => {
+  const page = shared;
+  const main = page.getByRole("main", { name: "Ticket FH-8" });
+  const outline = main.getByRole("navigation", { name: "Sections" });
+  const properties = main.getByRole("region", { name: "Properties" });
+
+  for (const theme of ["light", "dark"]) {
+    for (const width of [1440, 1280]) {
+      await open(page, "#/ticket/FH-8", { width, height: 900, theme });
+      await expect(outline).toBeVisible();
+      await expect(properties).toBeVisible();
+      await expect(main.getByRole("tab")).toHaveCount(0);
+      await expect(main.getByRole("button", { name: "Jump to" })).toBeHidden();
+      await expectNoAxeViolations(page, `ticket page ${theme} ${width}`);
+      await shot(page, `ticket-outline-${width}-${theme}`);
+    }
+  }
+
+  await open(page, "#/ticket/FH-8");
+  // The ticket's sections, then the review's own, then Files and Activity.
+  expect(await sectionHeadings(page)).toEqual([
+    "Handoff",
+    "Acceptance criteria",
+    "Description",
+    "Review",
+    "Summary",
+    "Evidence",
+    "How to verify",
+    "Risks / things to watch",
+    "Files",
+    "Activity",
+  ]);
+  await expect(
+    outline.getByRole("button", { name: "Acceptance criteria 2 of 3" }),
+  ).toBeVisible();
+  await expect(
+    outline.getByRole("button", { name: "Evidence 1" }),
+  ).toBeVisible();
+  await expect(
+    outline.getByRole("button", { name: "How to verify 0 of 2" }),
+  ).toBeVisible();
+  await expect(outline.getByRole("button", { name: "Files 1" })).toBeVisible();
+  await expect(
+    outline.getByRole("button", { name: "Activity 4" }),
+  ).toBeVisible();
+  // The template's empty sections are listed as empty, with nowhere to go.
+  await expect(outline.getByText("Test plan, empty")).toBeVisible();
+  await expect(outline.getByText("Context, empty")).toBeVisible();
+
+  // The properties panel: status as Move to, the ticket's fields, Archive.
+  await expect(
+    properties.getByRole("combobox", { name: "Move to" }),
+  ).toHaveValue("review");
+  for (const term of [
+    "Priority",
+    "Type",
+    "Workstream",
+    "Branch",
+    "Depends on",
+    "Tags",
+    "Agent",
+    "Created",
+    "Changed",
+  ])
+    await expect(properties.locator("dt", { hasText: term })).toBeVisible();
+  await expect(
+    properties.getByRole("button", { name: "Archive" }),
+  ).toBeVisible();
+
+  // Outline entries by keyboard: Tab passes over the empty ones, and focus
+  // moves to the chosen section.
+  const description = outline.getByRole("button", { name: "Description" });
+  await description.focus();
+  await page.keyboard.press("Tab");
+  await expect(outline.getByRole("button", { name: "Review" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    main.getByRole("heading", { level: 2, name: "Review" }),
+  ).toBeFocused();
+  await outline.getByRole("button", { name: "Activity 4" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    main.getByRole("heading", { level: 2, name: "Activity" }),
+  ).toBeFocused();
+  await expect(
+    outline.getByRole("button", { name: "Activity 4" }),
+  ).toHaveAttribute("aria-current", "location");
+  await expect(
+    main.getByRole("heading", { level: 2, name: "Activity" }),
+  ).toBeInViewport();
+  // The outline and the properties stay in view down the page.
+  await expect(outline).toBeInViewport();
+  await expect(properties).toBeInViewport();
+
+  // Activity: notes, the question with its answer and the handoff update,
+  // oldest first, with no note box.
+  const activity = main.getByRole("region", { name: "Activity" });
+  const entries = activity.getByRole("listitem");
+  await expect(entries).toHaveCount(4);
+  await expect(entries.nth(0)).toContainText("one os.Root per project");
+  await expect(entries.nth(1)).toContainText(
+    "Treat a symlink out of the root as needs repair?",
+  );
+  await expect(entries.nth(1)).toContainText("Yes, and say where it points");
+  await expect(entries.nth(3)).toContainText("updated the handoff");
+  await expect(activity.getByRole("textbox")).toHaveCount(0);
+  await shot(page, "ticket-activity-1440-light");
+
+  // Each screenshot once: the Evidence gallery opens the lightbox, and the
+  // log the review does not show is under Files.
+  await outline.getByRole("button", { name: "Evidence 1" }).click();
+  const evidence = main.getByRole("region", { name: /^Evidence/ });
+  await expect(
+    main.locator('img[src$="20261004T1412-store-tests.png"]'),
+  ).toHaveCount(1);
+  await expect(
+    main
+      .getByRole("region", { name: "Files" })
+      .getByRole("link", { name: /Read benchmark/ }),
+  ).toBeVisible();
+  await page.waitForTimeout(150);
+  await shot(page, "ticket-review-1440-light");
+  await evidence
+    .getByRole("button", { name: "Open Store tests passing" })
+    .click();
+  const lightbox = page.getByRole("dialog", { name: "Store tests passing" });
+  await expect(lightbox.getByRole("img")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(lightbox).toHaveCount(0);
+
+  // The outline follows the scroll: halfway down, a later section is
+  // current.
+  await open(page, "#/ticket/FH-8");
+  await main.evaluate((element) => {
+    const target = element.querySelector('[data-section="review-summary"]');
+    element.scrollTop +=
+      target.getBoundingClientRect().top - element.getBoundingClientRect().top;
+  });
+  await expect(
+    outline.getByRole("button", { name: "Summary" }),
+  ).toHaveAttribute("aria-current", "location");
+  await shot(page, "ticket-outline-midscroll-1440-light");
+
+  // A ticket without a review has no Review part.
+  await open(page, "#/ticket/FH-11");
+  await expect(
+    page.getByRole("main", { name: "Ticket FH-11" }).getByRole("heading", {
+      level: 2,
+      name: "Review",
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("main", { name: "Ticket FH-11" })
+      .getByRole("navigation", { name: "Sections" })
+      .getByRole("button", { name: "Review" }),
+  ).toHaveCount(0);
+  await shot(page, "ticket-no-review-1440-light");
+
+  // Narrow: a Jump to menu, the properties above the page, nothing sideways.
+  // Each size starts from the top of a freshly opened page.
+  const fresh = async (size) => {
+    await open(page, "#/ticket/FH-11", size);
+    await open(page, "#/ticket/FH-8", size);
+    await main.evaluate((element) => {
+      element.scrollTop = 0;
+    });
+  };
+  for (const theme of ["light", "dark"]) {
+    await fresh({ width: 390, height: 844, theme });
+    await expect(outline).toBeHidden();
+    const jump = main.getByRole("button", { name: "Jump to" });
+    await expect(jump).toBeVisible();
+    const sideways = await page.evaluate(
+      () => document.scrollingElement.scrollWidth - window.innerWidth,
+    );
+    expect(sideways).toBeLessThanOrEqual(0);
+    const above = await properties.boundingBox();
+    const handoff = await main
+      .getByRole("heading", { level: 2, name: "Handoff" })
+      .boundingBox();
+    expect(above.y + above.height).toBeLessThanOrEqual(handoff.y);
+    await expectNoAxeViolations(page, `ticket page narrow ${theme}`);
+    await shot(page, `ticket-outline-390-${theme}`);
+    await jump.click();
+    await shot(page, `ticket-jump-to-390-${theme}`, { keepFocus: true });
+    await page.getByRole("button", { name: "Activity 4" }).click();
+    await expect(
+      main.getByRole("heading", { level: 2, name: "Activity" }),
+    ).toBeFocused();
+  }
+  // Between phone and wide, Jump to replaces the outline beside the page.
+  await fresh({ width: 1100, height: 900 });
+  await expect(outline).toBeHidden();
+  await expect(main.getByRole("button", { name: "Jump to" })).toBeVisible();
+  const sideways = await page.evaluate(
+    () => document.scrollingElement.scrollWidth - window.innerWidth,
+  );
+  expect(sideways).toBeLessThanOrEqual(0);
+  await shot(page, "ticket-outline-1100-light");
 });
 
 test("the panel sits beside the board and keeps the card's column in view", async () => {
@@ -744,9 +966,8 @@ for (const theme of ["light", "dark"]) {
       await shot(page, `review-${width}-${theme}`);
 
       await open(page, "#/ticket/FH-8", size);
-      await page.getByRole("tab", { name: "Review" }).click();
       await expect(
-        page.getByRole("img", { name: "Store tests passing" }).first(),
+        page.getByRole("button", { name: "Open Store tests passing" }),
       ).toBeVisible();
       await expectNoAxeViolations(page, `full page ${theme} ${width}`);
       await shot(page, `ticket-page-${width}-${theme}`);

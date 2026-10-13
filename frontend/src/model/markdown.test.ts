@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  imageRefs,
   linkTicketIds,
+  localFile,
+  markdownSections,
   resolveLink,
   ticketBody,
   ticketPageHref,
   ticketRefs,
+  withoutImages,
 } from "./markdown";
 
 const context = { project: "alpha", ticket: "AL-2" };
@@ -154,5 +158,64 @@ describe("ticketBody", () => {
     expect(result).not.toContain("**Next**");
     expect(result).not.toContain("- [ ] one");
     expect(result).toContain("## Notes\n\nKept.");
+  });
+});
+
+describe("markdownSections", () => {
+  it("splits at level-2 headings outside fences, dropping the title", () => {
+    const { lead, sections } = markdownSections(
+      "# Title\n\nLead text.\n\n## Description\n\nText\n\n```\n## Not a heading\n```\n\n### Sub\n\nMore\n\n## Context\n\n",
+    );
+    expect(lead).toBe("Lead text.");
+    expect(sections).toEqual([
+      {
+        title: "Description",
+        markdown: "Text\n\n```\n## Not a heading\n```\n\n### Sub\n\nMore",
+      },
+      { title: "Context", markdown: "" },
+    ]);
+  });
+
+  it("keeps a second level-1 heading and text with no sections as the lead", () => {
+    expect(markdownSections("Just text.\n# Again")).toEqual({
+      lead: "Just text.\n# Again",
+      sections: [],
+    });
+  });
+});
+
+describe("imageRefs and withoutImages", () => {
+  const evidence =
+    "Screens of each state.\n\n- ![Board, light](files/a.png)\n- ![](./files/b%20c.png) Caption after\n\n`![code](files/x.png)`\n\n```\n![fenced](files/y.png)\n```\n";
+
+  it("lists the images outside code, in order", () => {
+    expect(imageRefs(evidence)).toEqual([
+      { alt: "Board, light", src: "files/a.png" },
+      { alt: "", src: "./files/b%20c.png" },
+    ]);
+  });
+
+  it("removes the images and the list items they leave empty", () => {
+    const text = withoutImages(evidence);
+    expect(text).not.toContain("files/a.png");
+    expect(text).not.toMatch(/^- *$/m);
+    expect(text).toContain("Screens of each state.");
+    expect(text).toContain("- Caption after");
+    expect(text).toContain("![fenced](files/y.png)");
+  });
+});
+
+describe("localFile", () => {
+  it("names a file in this ticket's files folder", () => {
+    expect(localFile("files/a.png")).toBe("a.png");
+    expect(localFile("./files/b%20c.png")).toBe("b c.png");
+    expect(localFile("files/a.png?x=1")).toBe("a.png");
+  });
+
+  it("ignores other tickets' files, web addresses and other paths", () => {
+    expect(localFile("../FH-1-x/files/a.png")).toBe("");
+    expect(localFile("https://example.com/files/a.png")).toBe("");
+    expect(localFile("notes/a.png")).toBe("");
+    expect(localFile("files/sub/a.png")).toBe("");
   });
 });

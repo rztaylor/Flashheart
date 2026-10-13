@@ -16,14 +16,19 @@ export function isImage(attachment: Attachment): boolean {
 export function AttachmentGrid({
   attachments,
   onOpen,
+  wide = false,
 }: {
   attachments: Attachment[];
   // onOpen opens the lightbox at an index among the images.
   onOpen(index: number): void;
+  // wide adds a third column where the full page has the room.
+  wide?: boolean;
 }) {
   const images = attachments.filter(isImage);
   return (
-    <ul className="grid grid-cols-2 gap-3">
+    <ul
+      className={`grid grid-cols-2 gap-3 ${wide ? "min-[90rem]:grid-cols-3" : ""}`}
+    >
       {attachments.map((attachment) => {
         const name = attachment.caption || attachment.file;
         const label = (

@@ -73,6 +73,11 @@ const text: [string, string, number][] = [
   ["danger", "card", 4.5],
   ["danger", "ground", 4.5],
   ["ink", "select-surface", 4.5],
+  // The ticket page's outline: a count, done or not, on the ground or the
+  // current section's surface (FH-65).
+  ["ink-faint", "select-surface", 4.5],
+  ["state-done-ink", "ground", 4.5],
+  ["state-done-ink", "select-surface", 4.5],
   ["focus", "ground", 3],
   ["focus", "card", 3],
   ...["handoff", "question"].flatMap((callout): [string, string, number][] => [
