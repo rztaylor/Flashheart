@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Sections on a ticket's full page edit in a formatted editor instead of
+  a markdown text area (FH-16, D61, D62, `EDIT-12`). Headings, lists,
+  emphasis, code, quotes, links, ticket ids and the ticket's own images
+  show formatted, as the page shows them, and only the line you are
+  editing shows its markdown. Task boxes tick with a click, or Alt and
+  Enter on their line, which also opens a link or ticket id (as Ctrl or
+  Cmd and a click does). Type `/` for a menu of blocks; select text for a
+  formatting toolbar (Tab or Alt and F10 reach it), or use Ctrl or Cmd
+  with B, I, E or K. A **Formatted** / **Markdown** switch shows the text
+  as written, and the choice is remembered. Nothing you did not change is
+  reformatted: the text saved is exactly the text edited, so agents' text
+  keeps every character. Paste is plain text, raw HTML is never rendered,
+  and the editor loads only when you first edit, so the board loads no
+  more than before. Built on CodeMirror 6 (MIT).
 - Comment on a ticket from the board's side panel (FH-128, D47,
   `CARD-1`). The panel has a **Comments** tab, counting the ticket's
   comments, with the same comments and comment box as the full page:

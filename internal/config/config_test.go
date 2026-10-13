@@ -23,7 +23,7 @@ func TestDefaultsMatchBoardFormat(t *testing.T) {
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
-		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", HiddenColumns: []string{}},
+		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", HiddenColumns: []string{}, Editor: EditorFormatted},
 	}
 	if got := Defaults(); !reflect.DeepEqual(got, want) {
 		t.Errorf("Defaults() = %+v, want %+v", got, want)

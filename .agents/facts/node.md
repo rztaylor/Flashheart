@@ -14,4 +14,5 @@
 - Dependencies: exact versions, pinned in `package-lock.json`, at least two
   weeks old when added; test-only packages are dev dependencies. Each new
   package is recorded with its alternatives in `docs/dev/decisions.md`
-  (D10 the libraries, D42 happy-dom and Testing Library).
+  (D10 the libraries, D42 happy-dom and Testing Library, D61 the
+  CodeMirror editor packages).

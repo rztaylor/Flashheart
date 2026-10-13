@@ -219,10 +219,15 @@ describe("run validators", () => {
       density: "normal",
       colourBy: "type",
       hiddenColumns: [],
+      editor: "formatted",
       scopes: {},
       expandedWorkstreams: {},
     };
     expect(isPreferences(preferences)).toBe(true);
+    // The section editor opens formatted or as markdown (FH-16).
+    expect(isPreferences({ ...preferences, editor: "markdown" })).toBe(true);
+    expect(isPreferences({ ...preferences, editor: "rich" })).toBe(false);
+    expect(isPreferences({ ...preferences, editor: undefined })).toBe(false);
     // Expanded finished workstreams, per project (FH-68).
     expect(
       isPreferences({

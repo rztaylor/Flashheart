@@ -18,7 +18,7 @@
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
   ui-layout.md §8) → `features/<feature>/` (board,
-  card, editing, overview, workstreams, table, projects, filters, archive; later
+  card, editing, editor, overview, workstreams, table, projects, filters, archive; later
   settings) → `app/`
   (shell, hash routing, composition). Shared layers never import features
   or the shell.
@@ -41,7 +41,8 @@
   saved, conflict or failed). A draft (the panel's Edit tab, each
   in-place item on the full page) is `features/editing/useTicketDraft`:
   its base hash (moved on to a newer version that left the draft's own
-  part unchanged), adopting the saved version, and a 409 as a pending
+  part unchanged, and a save that meets such a version saved again on
+  it), adopting the saved version, and a 409 as a pending
   choice for the conflict dialog; a criterion or review-step tick reloads
   with a toast on a 409. The form's fields and changes are
   `model/ticketForm`; a section's text, its comparison and the criteria
@@ -52,7 +53,10 @@
   double-click, focus return) and `InPlaceEditor` one open item's draft
   with Save, Cancel, the shortcuts, the inline error and the conflict
   dialog; the card feature supplies each item's control
-  (`PageEdits`, `PropertyEdits`). A person's comment in Activity is an
+  (`PageEdits`, `PropertyEdits`); a section edits in the formatted
+  editor, `features/editor`'s `MarkdownField` (EDIT-12). A control
+  marked `data-autofocus` takes an open item's focus, and a key a
+  control has handled (`defaultPrevented`) is not the item's. A person's comment in Activity is an
   item too, saved on the activity file's hash (`ActivityTimeline`); a
   comment being written in `CommentBox` is a held draft
   (`useHeldDraft`), asked about on leaving but not when opening an item
@@ -84,7 +88,14 @@
   Storage for anything, permissive CORS, routes under `/_singleserve/`, raw
   HTML in markdown.
 - Drag and drop: `@dnd-kit` with keyboard sensors; every drag has a menu
-  alternative. Markdown: `react-markdown` + `remark-gfm`.
+  alternative. Markdown: `react-markdown` + `remark-gfm` renders it;
+  CodeMirror 6 edits it (`features/editor`, D61, D62): the markdown text
+  itself, never re-serialised, with a Flashheart live preview, slash menu
+  and selection toolbar. It loads on the first edit (a dynamic import, its
+  own chunk) and mounts in a shadow root, where its run-time styles are a
+  constructed style sheet the CSP (`style-src 'self'`) allows; Tailwind
+  does not reach inside, so it is themed with `EditorView.theme` over the
+  token custom properties. Paste is plain text.
 - Desktop first (1280 px and up); narrow widths show one column with a column
   picker. Healthy connection state is visually quiet.
 - Visual direction (D18, D22, 2026-10-06): **Metro Pop** in light (a

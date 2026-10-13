@@ -35,8 +35,15 @@ const (
 	DensityDetailed = "detailed"
 )
 
+// Editor values for UI.Editor: how a section opens for editing (FH-16).
+const (
+	EditorFormatted = "formatted"
+	EditorMarkdown  = "markdown"
+)
+
 var (
 	themes        = []string{ThemeSystem, ThemeLight, ThemeDark}
+	editors       = []string{EditorFormatted, EditorMarkdown}
 	densities     = []string{DensityCompact, DensityNormal, DensityDetailed}
 	hiddenColumns = []string{"backlog"}
 	colourBys     = []string{"type", "priority", "age", "none"}
@@ -103,6 +110,9 @@ type UI struct {
 	// HiddenColumns lists the real columns hidden from the Board; only the
 	// Backlog can be hidden (FH-41).
 	HiddenColumns []string `yaml:"hidden_columns"`
+	// Editor is how the ticket page's section editor opens: formatted (a
+	// live preview) or markdown (the text as written; FH-16).
+	Editor string `yaml:"editor"`
 	// Scopes remembers the view and filters per project name, or "all" for
 	// All projects (VIEW-7).
 	Scopes map[string]Scope `yaml:"scopes,omitempty"`
@@ -173,7 +183,7 @@ func Defaults() Config {
 		EventRetentionDays: 90,
 		DoneColumnLimit:    20,
 		Attachments:        Attachments{MaxBytes: 20 << 20},
-		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", HiddenColumns: []string{}},
+		UI:                 UI{Theme: ThemeSystem, Density: DensityNormal, ColourBy: "type", HiddenColumns: []string{}, Editor: EditorFormatted},
 	}
 }
 
@@ -254,6 +264,7 @@ func (u UI) problems() []string {
 	oneOf("ui.theme", u.Theme, themes)
 	oneOf("ui.density", u.Density, densities)
 	oneOf("ui.colour_by", u.ColourBy, colourBys)
+	oneOf("ui.editor", u.Editor, editors)
 	for _, column := range u.HiddenColumns {
 		oneOf("ui.hidden_columns", column, hiddenColumns)
 	}

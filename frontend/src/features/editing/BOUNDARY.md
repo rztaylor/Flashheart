@@ -10,7 +10,8 @@ each result.
 Owns ticket edits under the content-hash precondition (STO-3, EDIT-7):
 `saveWithBase` is the one save that sends a base hash and sorts saved,
 conflict and failure; `useTicketDraft` is one draft's base, following the
-file (moving on while its own part is unchanged), adopting the saved
+file (moving on while its own part is unchanged, and saving again on a
+conflicting version that left it unchanged), adopting the saved
 version, busy and error, and a conflict as a pending choice (overwrite,
 reload, cancel) for the conflict dialog.
 

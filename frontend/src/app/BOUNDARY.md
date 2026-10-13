@@ -15,7 +15,8 @@ and the Undo after archiving a project, the screen's one marginal remark
 (`AsideProvider`) and wiring which moves earn one, the brand tooltip, the
 shutdown-denial alert, the terminal stopped screen, theme
 application to `<html data-theme>`, live updates and saved preferences
-wired into the views (the view and filters remembered per project), and
+wired into the views (the view and filters remembered per project, the
+section editor's Formatted or Markdown view), and
 wiring lifecycle, API and features together.
 
 `Shell` is composition only; each concern has one owner beside it:

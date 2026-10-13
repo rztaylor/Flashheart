@@ -113,7 +113,7 @@ Singleserve is pinned at v0.2.2, which requires Go 1.26.6.
 Later additions: `@fontsource-variable/archivo` and an authored icon set
 (D14), and the interaction-test libraries (D42). A rich text editor needs
 its own decision before it is added (D56): CodeMirror 6 with a live
-preview (D61).
+preview (D61), its packages in D62.
 
 ## 2026-10-04 — D11: Safety model
 
@@ -1441,3 +1441,58 @@ the fallback is Tiptap with block preservation, `injectCSS: false`, an
 accessible name, Tab released from lists and custom escaping, accepting
 that an edit rewrites agent text in the block it touches. Milkdown is not
 recommended.
+
+## 2026-10-13 — D62: How the formatted editor is built and used
+
+Decision (FH-16, building D61): the packages are `@codemirror/view`
+6.43.13, `state` 6.7.6, `commands` 6.11.1, `language` 6.12.4,
+`lang-markdown` 6.5.2 and `autocomplete` 6.20.3, exact and at least two
+weeks old, all MIT, 21 packages new to the lockfile. The editor imports the
+GFM language alone, not lang-markdown's `markdown()` helper, so the HTML,
+CSS and JavaScript parsers it would add stay out of the build. It is its
+own chunk, loaded on the first edit (363 KB minified, 119 KB gzip); the
+board's first load grows by the lazy entry and the preference (about 1 KB
+gzip). It mounts in a shadow root, whose constructed style sheet the page's
+CSP allows; a per-response nonce would have the server template
+`index.html` and pass the nonce to the page.
+
+Behaviour chosen with it:
+
+- Acceptance criteria that are a plain task list keep FH-66's list editor
+  (add, reword, reorder and remove are list operations); a criteria section
+  with other text, and every other section, use the formatted editor.
+- Keys: Ctrl or Cmd with Enter and Escape stay the page's (save, cancel),
+  so CodeMirror's own bindings for them are dropped, and Escape closes the
+  slash menu only while it shows. Tab leaves the editor (indent with Ctrl or
+  Cmd and `]`), and task checkboxes are not tab stops. Alt+Enter acts on the
+  cursor: it opens the link or ticket id there, else ticks the line's task;
+  it is the keyboard way to open a link (`CARD-2`) and tick (`CARD-3`). A
+  plain click edits a link; Ctrl or Cmd and a click opens it. Links open in
+  a new tab, ticket links too, so the open edit is kept. Tab or Alt+F10
+  reaches the selection toolbar (the usual toolbar key in editors).
+- The slash menu offers headings at levels 3 and 4: a level-2 heading in
+  a section would start a new section when saved.
+- Saving over an agent's write: the section save (D57) and the draft's
+  base moving on while its section is unchanged already merge changes to
+  other sections; FH-16 adds the case where the save meets a version the
+  page has not heard of yet (the 409 carries the file): when that file
+  left the section as it was, the save is made again on it, once, rather
+  than asking. A change to the section itself still opens the conflict
+  dialog. A three-way merge within a section was not built: the editor
+  saves the section's text as edited, and overlapping edits are for the
+  person to resolve (`EDIT-7`).
+- The Formatted or Markdown view is a UI preference, `ui.editor`
+  (`CFG-2`), shared by every section and ticket.
+- Screen readers hear headings as headings and task checkboxes by their
+  task; hidden marks are hidden from them too, so a list reads as lines,
+  and the Markdown view reads every mark.
+- Workstream text has no editing surface yet; FH-139 adds one with this
+  editor.
+
+Options: Escape that first collapses a selection (CodeMirror's default)
+was rejected for one Escape that always cancels; Tab indenting list items
+was rejected for Tab leaving (FH-137's keyboard-trap finding); a separate
+shortcut per action (one to tick, one to open) was rejected for one
+Alt+Enter on whatever the cursor is on; a toolbar always shown above the
+text was rejected for one over the selection, which keeps the section's
+look.

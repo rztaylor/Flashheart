@@ -277,9 +277,9 @@ test("a save over a newer version opens the conflict dialog; a failed save keeps
     .fill("This will not save.");
   await save().click();
   await expect(main().getByRole("alert")).toContainText("The disk is full.");
-  await expect(
-    main().getByRole("textbox", { name: "Description" }),
-  ).toHaveValue("This will not save.");
+  await expect(main().getByRole("textbox", { name: "Description" })).toHaveText(
+    "This will not save.",
+  );
   await shot(page, "in-place-error-1440-light", { keepFocus: true });
   await page.unroute("**/api/tickets/FH-20/section");
   await page.keyboard.press("Escape");

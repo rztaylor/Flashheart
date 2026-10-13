@@ -40,6 +40,11 @@ const paths = {
   check: "M5 12.5l4.5 4.5L19 7.5",
   ring: "M12 4.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15Z",
   half: "M12 4.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15ZM12 4.5v15",
+  // The editor's selection toolbar (FH-16): a link's two chain loops, a
+  // bulleted list, and code's angle brackets.
+  link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+  list: "M9.5 6.5h10M9.5 12h10M9.5 17.5h10M5 6.5h.01M5 12h.01M5 17.5h.01",
+  code: "M8.5 7 3.5 12l5 5M15.5 7l5 5-5 5",
   refresh:
     "M20 11a8 8 0 0 0-14.5-4.5L4 8m0-4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16m0 4v-4h-4",
 } as const;

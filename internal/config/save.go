@@ -43,6 +43,7 @@ func SetUI(data []byte, ui UI) ([]byte, error) {
 	// Needs you and Agent working became filters (FH-42, FH-44).
 	remove(uiNode, "virtual_columns")
 	set(uiNode, "hidden_columns", flowList(ui.HiddenColumns))
+	set(uiNode, "editor", scalarNode(ui.Editor, "!!str"))
 	if len(ui.Scopes) == 0 {
 		remove(uiNode, "scopes")
 	} else {
