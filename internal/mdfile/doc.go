@@ -6,7 +6,8 @@
 //
 // It is pure (no I/O). Parsing never fails: frontmatter errors are returned
 // on the Document so callers can show the file as needing repair (STO-4).
-// Edits (set a field, tick a checkbox, replace or append to a section) touch
+// Edits (set a field, tick a checkbox, replace, add in place or append to
+// a section) touch
 // only the lines they own and keep comments, key order, unknown keys and line
 // endings; an edit that changes nothing returns the input unchanged (STO-2).
 // Content written into a section stays in it (SectionSafe): its level-1

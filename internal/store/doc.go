@@ -20,6 +20,12 @@
 // path (CopyIntoTicket), with one reader and writer of files/index.yaml
 // that keeps what it does not write (REV-1, REV-5),
 // writes reviews (REV-4) and ticks their How to Verify steps (REV-3),
+// keeps each ticket's activity file (board-format §Activity, D47): a
+// store writing as someone (As: the person at the board or an agent's
+// run) appends one history entry, worked out by board from the files
+// before and after, in the same transaction as each ticket write
+// (tx.go), and adds and edits people's comments under the lock with the
+// file's hash, never touching the ticket file (ticketactivity.go),
 // reads every project.yaml through one parser that reports problems as
 // warnings and edits it only through mdfile's plain-YAML editor (FH-77),
 // finds or creates a repository's project

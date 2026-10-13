@@ -9,7 +9,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/health"
 )
 
-const codexFix = "flashheart setup codex --write"
+const codexFix = "flashheart setup codex"
 
 func diagnoseCodex(t *testing.T, o Options) (problems, warnings, ok []string) {
 	t.Helper()

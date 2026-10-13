@@ -291,6 +291,31 @@ describe("pageSections", () => {
     expect(verify?.count).toBeUndefined();
   });
 
+  it("names the file's section each editable one saves to (FH-66)", () => {
+    const sections = pageSections(
+      input({
+        review: pageReview,
+        handoff: { markdown: "", next: ["Verify"] },
+        body: "# T\n\n## description\n\nA\n\n## Rollout\n\nB\n\n## Rollout\n\nC",
+      }),
+      1,
+    );
+    const heading = new Map(
+      sections.map((section) => [section.id, section.heading]),
+    );
+    // As written in the file, else the template's name for a missing one.
+    expect(heading.get("description")).toBe("description");
+    expect(heading.get("criteria")).toBe("Acceptance Criteria");
+    expect(heading.get("test-plan")).toBe("Test Plan");
+    expect(heading.get("context")).toBe("Context");
+    expect(heading.get("rollout")).toBe("Rollout");
+    // A repeated heading saves only to its first section.
+    expect(heading.get("rollout-2")).toBeUndefined();
+    // Handoff, the review and Activity are not edited in place.
+    for (const id of ["handoff", "review", "review-summary", "activity"])
+      expect(heading.get(id)).toBeUndefined();
+  });
+
   it("keeps section ids unique", () => {
     const sections = pageSections(
       input({

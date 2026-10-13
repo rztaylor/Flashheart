@@ -68,6 +68,22 @@ export function patchTicket(
   return save(fetcher, "PATCH", ticketPath(id), { base, fields });
 }
 
+// saveSection replaces one section's text, adding a missing template
+// section in its place (FH-66); Handoff and Notes are refused.
+export function saveSection(
+  fetcher: AuthenticatedFetch,
+  id: string,
+  base: string,
+  section: string,
+  content: string,
+) {
+  return save(fetcher, "PUT", `${ticketPath(id)}/section`, {
+    base,
+    section,
+    content,
+  });
+}
+
 export function saveRaw(
   fetcher: AuthenticatedFetch,
   id: string,

@@ -250,6 +250,25 @@ func (e *env) exists(name string) bool {
 	return err == nil
 }
 
+// history is every history entry in the demo project's tickets' activity
+// files.
+func (e *env) history() []board.History {
+	e.t.Helper()
+	files, err := filepath.Glob(filepath.Join(e.root, "demo", "tickets", "*", board.ActivityFile))
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	var list []board.History
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			e.t.Fatal(err)
+		}
+		list = append(list, board.ParseActivity(data).History...)
+	}
+	return list
+}
+
 func mdfileList(t testing.TB, file, key string) []string {
 	t.Helper()
 	return mdfile.Parse([]byte(file)).List(key)

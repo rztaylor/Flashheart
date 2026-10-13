@@ -19,13 +19,14 @@ func activityAPI(t *testing.T) (http.Handler, *events.Log) {
 	t.Helper()
 	root := copyBoard(t, "sample")
 	files := store.New(root)
+	files.SetClock(func() time.Time { return boardWriteTime })
 	t.Cleanup(func() { files.Close() })
 	log := events.New(files)
 	return New(Options{
 		Info:   Info{Root: root, Theme: "system"},
 		Board:  index.New(files, index.Options{}),
 		Files:  files,
-		Writer: files,
+		Writer: files.As("Robert"),
 		Events: log,
 		Now:    func() time.Time { return boardWriteTime },
 	}), log
@@ -109,6 +110,17 @@ func TestBoardWritesRecordTheHuman(t *testing.T) {
 
 	send(t, handler, http.MethodPost, "/api/tickets/AL-3/criteria", CriterionRequest{Base: ticketDetail(t, handler, "AL-3").Hash, Index: 1, Checked: true}, http.StatusOK, &saved)
 	count = expectRecorded(t, log, count, recorded{kind: events.TicketUpdated, project: "alpha", ticket: "AL-3", fields: []string{"criteria"}})
+
+	// A section saved in place names the template section, never a name
+	// of the ticket's own (FH-66); its own text again records nothing.
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: saved.Hash, Section: "Context", Content: "A secret context."}, http.StatusOK, &saved)
+	count = expectRecorded(t, log, count, recorded{kind: events.TicketUpdated, project: "alpha", ticket: "AL-3", fields: []string{"context"}})
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: saved.Hash, Section: "Secret design", Content: "Secret."}, http.StatusOK, &saved)
+	count = expectRecorded(t, log, count, recorded{kind: events.TicketUpdated, project: "alpha", ticket: "AL-3", fields: []string{"section"}})
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: saved.Hash, Section: "Context", Content: "A secret context."}, http.StatusOK, &saved)
+	if after := len(boardLog(t, log)); after != count {
+		t.Errorf("an untouched section save appended %d events", after-count)
+	}
 
 	// A raw edit names no fields: what changed is not worked out.
 	raw := strings.Replace(ticketDetail(t, handler, "AL-3").Raw, "Fixture ticket.", "A secret body.", 1)

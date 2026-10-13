@@ -33,6 +33,8 @@ type harness struct {
 	serveLog    *bytes.Buffer
 	logRoots    []string
 	stdin       string
+	// terminal makes stdin a terminal setup can ask in.
+	terminal bool
 }
 
 func newHarness(t *testing.T) *harness {
@@ -56,8 +58,9 @@ func (h *harness) deps() Dependencies {
 			h.bgCalls = append(h.bgCalls, options)
 			return h.bgReport, h.bgErr
 		},
-		Executable: func() (string, error) { return "/opt/bin/flashheart", nil },
-		Stdin:      strings.NewReader(h.stdin),
+		Executable:  func() (string, error) { return "/opt/bin/flashheart", nil },
+		Stdin:       strings.NewReader(h.stdin),
+		Interactive: func() bool { return h.terminal },
 		OpenServeLog: func(root string) io.Writer {
 			h.logRoots = append(h.logRoots, root)
 			if h.serveLog == nil {
@@ -781,7 +784,7 @@ func TestSetupClaudeShowsThenWritesThenUninstalls(t *testing.T) {
 
 	code, stdout, stderr := run("setup", "claude")
 	if code != 0 || stderr != "" || !strings.Contains(stdout, `"command": "/opt/bin/flashheart hook claude SessionStart",`) ||
-		!strings.Contains(stdout, "Nothing was changed. Run flashheart setup claude --write to apply these changes.") {
+		!strings.Contains(stdout, "Nothing was changed: setup asks before it writes, and there is no terminal to ask in. Run flashheart setup claude --yes to apply these changes.") {
 		t.Fatalf("dry run: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
 	}
 	if data, _ := os.ReadFile(settings); !bytes.Equal(data, original) || len(ran) > 0 {
@@ -799,10 +802,10 @@ func TestSetupClaudeShowsThenWritesThenUninstalls(t *testing.T) {
 	if len(ran) != 1 || ran[0][0] != "/usr/bin/claude" || ran[0][2] != "add-json" {
 		t.Fatalf("ran = %v", ran)
 	}
-	if code, stdout, _ = run("setup", "claude", "--uninstall"); code != 0 || !strings.Contains(stdout, "Delete ~/.claude/skills/flashheart/SKILL.md.") || !strings.Contains(stdout, "--uninstall --write") {
+	if code, stdout, _ = run("setup", "claude", "--uninstall"); code != 0 || !strings.Contains(stdout, "Delete ~/.claude/skills/flashheart/SKILL.md.") || !strings.Contains(stdout, "--uninstall --yes") {
 		t.Fatalf("uninstall preview: code %d, stdout:\n%s", code, stdout)
 	}
-	if code, _, stderr = run("setup", "claude", "--uninstall", "--write"); code != 0 {
+	if code, _, stderr = run("setup", "claude", "--uninstall", "--yes"); code != 0 {
 		t.Fatalf("uninstall: code %d, stderr %q", code, stderr)
 	}
 	if data, _ := os.ReadFile(settings); !bytes.Equal(data, original) {
@@ -814,13 +817,118 @@ func TestSetupUsage(t *testing.T) {
 	t.Parallel()
 
 	for args, want := range map[string]string{
-		"setup":        "setup needs an agent",
-		"setup gemini": `unknown agent "gemini"`,
+		"setup":                         "setup needs an agent",
+		"setup gemini":                  `unknown agent "gemini"`,
+		"setup codex --dry-run --yes":   "--dry-run and --yes",
+		"setup codex --dry-run --write": "--dry-run and --yes",
 	} {
 		code, _, stderr := newHarness(t).run(strings.Fields(args)...)
 		if code != 2 || !strings.Contains(stderr, want) {
 			t.Errorf("%s: code %d, stderr %q", args, code, stderr)
 		}
+	}
+}
+
+// Setup shows the diff, then asks before it writes (FH-129): in a
+// terminal it applies on y or yes and on nothing else; --yes (or its older
+// name --write) applies without asking; --dry-run and a missing terminal
+// only show.
+func TestSetupAsksBeforeApplying(t *testing.T) {
+	t.Parallel()
+
+	const prompt = "Apply these changes? [y/N] "
+	for _, test := range []struct {
+		name     string
+		terminal bool
+		stdin    string
+		args     []string
+		applied  bool
+		asked    bool
+		says     string
+	}{
+		{name: "y", terminal: true, stdin: "y\n", applied: true, asked: true, says: "Wrote ~/codex-home/hooks.json"},
+		{name: "yes", terminal: true, stdin: "Yes\n", applied: true, asked: true, says: "Wrote ~/codex-home/hooks.json"},
+		{name: "no", terminal: true, stdin: "n\n", asked: true, says: "Nothing was changed."},
+		{name: "empty answer", terminal: true, stdin: "\n", asked: true, says: "Nothing was changed."},
+		{name: "other answer", terminal: true, stdin: "sure\n", asked: true, says: "Nothing was changed."},
+		{name: "end of input", terminal: true, stdin: "", asked: true, says: "Nothing was changed."},
+		{name: "no terminal", stdin: "y\n", says: "there is no terminal to ask in. Run flashheart setup codex --yes to apply these changes."},
+		{name: "--yes", args: []string{"--yes"}, applied: true, says: "Wrote ~/codex-home/hooks.json"},
+		{name: "--write", args: []string{"--write"}, applied: true, says: "Wrote ~/codex-home/hooks.json"},
+		{name: "--yes in a terminal", terminal: true, args: []string{"--yes"}, applied: true, says: "Wrote ~/codex-home/hooks.json"},
+		{name: "--dry-run", terminal: true, stdin: "y\n", args: []string{"--dry-run"}, says: "Nothing was changed (--dry-run). Run flashheart setup codex to apply these changes."},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			codexHome := filepath.Join(h.home, "codex-home")
+			if err := os.MkdirAll(codexHome, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			h.env["CODEX_HOME"] = codexHome
+			h.terminal, h.stdin = test.terminal, test.stdin
+			code, stdout, stderr := h.run(append([]string{"setup", "codex"}, test.args...)...)
+			if code != 0 {
+				t.Fatalf("code %d, stderr %q", code, stderr)
+			}
+			if !strings.Contains(stdout, "Create ~/codex-home/config.toml:") {
+				t.Fatalf("no diff:\n%s", stdout)
+			}
+			if asked := strings.Contains(stderr, prompt); asked != test.asked {
+				t.Fatalf("asked = %v, stderr %q", asked, stderr)
+			}
+			if !strings.Contains(stdout, test.says) {
+				t.Fatalf("stdout lacks %q:\n%s", test.says, stdout)
+			}
+			_, err := os.Stat(filepath.Join(codexHome, "config.toml"))
+			if applied := err == nil; applied != test.applied {
+				t.Fatalf("applied = %v:\n%s", applied, stdout)
+			}
+			if test.applied && !strings.Contains(stdout, "/hooks") {
+				t.Fatalf("no word on trusting the hooks after writing:\n%s", stdout)
+			}
+		})
+	}
+}
+
+// --uninstall asks the same way, and an empty plan asks nothing.
+func TestSetupUninstallAsksBeforeApplying(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	codexHome := filepath.Join(h.home, "codex-home")
+	if err := os.MkdirAll(codexHome, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h.env["CODEX_HOME"] = codexHome
+	if code, _, stderr := h.run("setup", "codex", "--yes"); code != 0 {
+		t.Fatalf("install: %q", stderr)
+	}
+
+	h.terminal, h.stdin = true, "y\n"
+	code, stdout, stderr := h.run("setup", "codex")
+	if code != 0 || strings.Contains(stderr, "Apply these changes?") || !strings.Contains(stdout, "already configured") {
+		t.Fatalf("an empty plan: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+
+	h.terminal, h.stdin = false, ""
+	if _, stdout, _ = h.run("setup", "codex", "--uninstall"); !strings.Contains(stdout, "Run flashheart setup codex --uninstall --yes to apply these changes.") {
+		t.Fatalf("uninstall without a terminal:\n%s", stdout)
+	}
+	if _, stdout, _ = h.run("setup", "codex", "--uninstall", "--dry-run"); !strings.Contains(stdout, "Run flashheart setup codex --uninstall to apply these changes.") {
+		t.Fatalf("uninstall --dry-run:\n%s", stdout)
+	}
+	h.terminal, h.stdin = true, "no\n"
+	if _, _, stderr = h.run("setup", "codex", "--uninstall"); !strings.Contains(stderr, "Apply these changes? [y/N] ") {
+		t.Fatalf("uninstall did not ask: %q", stderr)
+	}
+	if _, err := os.Stat(filepath.Join(codexHome, "config.toml")); err != nil {
+		t.Fatal("declining the uninstall removed config.toml")
+	}
+	h.stdin = "y\n"
+	if code, stdout, stderr = h.run("setup", "codex", "--uninstall"); code != 0 || !strings.Contains(stdout, "Deleted ~/codex-home/config.toml") {
+		t.Fatalf("uninstall: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
 	}
 }
 
@@ -839,13 +947,13 @@ func TestSetupCodexShowsThenWritesThenUninstalls(t *testing.T) {
 	code, stdout, stderr := h.run("setup", "codex", "--root", root)
 	if code != 0 || stderr != "" || !strings.Contains(stdout, "Create ~/codex-home/config.toml:") ||
 		!strings.Contains(stdout, "hook codex SessionStart --root "+root) ||
-		!strings.Contains(stdout, "Nothing was changed. Run flashheart setup codex --write to apply these changes.") {
+		!strings.Contains(stdout, "Run flashheart setup codex --yes to apply these changes.") {
 		t.Fatalf("dry run: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
 	}
 	if entries, _ := os.ReadDir(codexHome); len(entries) != 0 {
 		t.Fatalf("the dry run wrote %v", entries)
 	}
-	if code, stdout, stderr = h.run("setup", "codex", "--write", "--root", root); code != 0 || !strings.Contains(stdout, "Wrote ~/codex-home/hooks.json") {
+	if code, stdout, stderr = h.run("setup", "codex", "--yes", "--root", root); code != 0 || !strings.Contains(stdout, "Wrote ~/codex-home/hooks.json") {
 		t.Fatalf("write: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
 	}
 	if _, err := os.Stat(filepath.Join(h.home, ".codex")); err == nil {
@@ -857,7 +965,7 @@ func TestSetupCodexShowsThenWritesThenUninstalls(t *testing.T) {
 			t.Fatalf("doctor lacks %q:\n%s", want, stdout)
 		}
 	}
-	if code, _, stderr = h.run("setup", "codex", "--uninstall", "--write", "--root", root); code != 0 {
+	if code, _, stderr = h.run("setup", "codex", "--uninstall", "--yes", "--root", root); code != 0 {
 		t.Fatalf("uninstall: code %d, stderr %q", code, stderr)
 	}
 	for _, name := range []string{"config.toml", "hooks.json", "AGENTS.md"} {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 	"slices"
 	"strings"
 
@@ -16,8 +17,10 @@ import (
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
-// Writer is the store's write side (STO-3). Every ticket edit carries the
-// content hash the client read; a stale hash is a 409 with the current file.
+// Writer is the store's write side (STO-3), writing as the person at the
+// board (store.As), so each ticket write appends its history and comments
+// are theirs (D47). Every ticket edit carries the content hash the client
+// read; a stale hash is a 409 with the current file.
 type Writer interface {
 	ReadTicket(project, id string) ([]byte, string, error)
 	UpdateTicket(project, id string, pre store.Precondition, edit store.Edit) (string, error)
@@ -29,6 +32,8 @@ type Writer interface {
 	SetProjectKey(project, key string) error
 	Archive(project, id string) error
 	Unarchive(project, id string) error
+	AddComment(project, id string, pre store.Precondition, comment store.NewComment) (board.Comment, string, error)
+	EditComment(project, id, comment string, pre store.Precondition, body string) (board.Comment, string, error)
 	ReadConfig() (config.Config, error)
 	UpdateConfig(edit store.Edit) error
 }
@@ -52,6 +57,7 @@ type ConflictJSON struct {
 func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/tickets/{id}/move", b.move)
 	mux.HandleFunc("PATCH /api/tickets/{id}", b.patchTicket)
+	mux.HandleFunc("PUT /api/tickets/{id}/section", b.putSection)
 	mux.HandleFunc("PUT /api/tickets/{id}/raw", b.putRaw)
 	mux.HandleFunc("POST /api/tickets/{id}/criteria", b.setCriterion)
 	mux.HandleFunc("POST /api/tickets/{id}/review/steps", b.setReviewStep)
@@ -63,6 +69,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/questions/{id}/answer", b.answer)
 	mux.HandleFunc("GET /api/preferences", b.preferences)
 	mux.HandleFunc("PUT /api/preferences", b.savePreferences)
+	b.registerComments(mux)
 }
 
 // decode reads a bounded JSON body into v, rejecting unknown fields.
@@ -97,6 +104,9 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		if conflict.Name == "delete" {
 			message = "Something this delete touches changed since you looked. Review it again."
 		}
+		if path.Base(conflict.Name) == board.ActivityFile {
+			message = "This ticket's comments changed since you opened them."
+		}
 		writeJSON(w, http.StatusConflict, map[string]any{
 			"error":   body{Code: "conflict", Message: message},
 			"current": ConflictJSON{Hash: conflict.Hash, Content: string(conflict.Current)},
@@ -120,6 +130,8 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusUnprocessableEntity, "needs_repair", "The ticket's frontmatter does not parse; fix it in the raw editor first.")
 	case errors.Is(err, mdfile.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
+	case errors.Is(err, store.ErrTooLarge):
+		writeError(w, http.StatusRequestEntityTooLarge, "too_large", err.Error())
 	case errors.Is(err, store.ErrBusy):
 		writeError(w, http.StatusServiceUnavailable, "busy", err.Error())
 	default:
@@ -315,6 +327,48 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: changes.Keys()})
+	b.saved(w, http.StatusOK, hash, nil)
+}
+
+// SectionRequest is PUT /api/tickets/{id}/section: one section's text,
+// edited in place on the ticket's page (FH-66). A missing section is
+// added in the template's place; Handoff and Notes are refused.
+type SectionRequest struct {
+	Base    string `json:"base"`
+	Section string `json:"section"`
+	Content string `json:"content"`
+}
+
+func (b boardAPI) putSection(w http.ResponseWriter, r *http.Request) {
+	writer := b.writer(w)
+	if writer == nil {
+		return
+	}
+	var request SectionRequest
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
+		return
+	}
+	// Which sections may be rewritten, and where a missing one goes, is
+	// the one rule agents will share (board.SectionChange).
+	change, err := board.NewSectionChange(request.Section, request.Content)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		return
+	}
+	_, project, ticket, ok := b.findTicket(w, r)
+	if !ok {
+		return
+	}
+	hash, err := writer.EditTicket(project.Name, ticket.ID, store.Unchanged(request.Base), board.FieldChanges{}, change.Apply)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	// The section's own text again writes nothing, so there is nothing to
+	// record.
+	if hash != request.Base {
+		b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: []string{change.Field()}})
+	}
 	b.saved(w, http.StatusOK, hash, nil)
 }
 

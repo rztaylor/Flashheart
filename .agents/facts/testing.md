@@ -86,6 +86,15 @@
   single: the note bullet is spelled only in `board.NoteLine`, and `api`
   and `mcpserver` never check fields, set titles or change workstreams
   themselves.
+- In-place edits (FH-66) leave the rest of a real ticket byte for byte:
+  `board` replays field and section edits over `testdata/tickets/`
+  (read-only copies of FH tickets, also with CRLF line endings) and
+  checks that only the field's line or the section's text changed and that
+  an edit with the current value writes nothing; `api` checks the
+  section write's precondition, no-op and event. The page's interaction is
+  `TicketPageEdit.dom.test.tsx`; in the browser,
+  `frontend/e2e/in-place.spec.mjs` saves, cancels, conflicts (writing the
+  file during an edit) and fails a save with `page.route`.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and
   `internal/api`, FH-96): event appends refold with no read, `Current`
@@ -96,7 +105,14 @@
   directory is removed (FH-110).
 - Every MCP write tool's run and claim policy (agent-protocol §7.1) is one
   table test, tool × caller (`TestWriteToolPolicies`); a new tool adds its
-  row there. Attribution precedence is tested apart from the tools
+  row there, with the history entries a successful call appends.
+- A ticket's activity file (D47) is tested where it is defined: the format
+  round-trips byte for byte (CRLF, BOM, unknown entries) and history names
+  no ticket text in `board`; every store ticket write appends exactly one
+  entry, comments refuse a stale hash, and concurrent writers all land in
+  `store` (`TestEveryTicketWriteAppendsOneHistoryEntry`); every board write
+  in `api` (`TestBoardWritesAppendOneHistoryEntry`); comments need
+  Singleserve's authentication in `app`. Attribution precedence is tested apart from the tools
   (`TestAttributionPrecedence`).
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
@@ -109,6 +125,11 @@
   protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
   with `go test`.
+- Setup's question (FH-129) is a table test in `internal/cli`
+  (`TestSetupAsksBeforeApplying`) with the harness's fake stdin and
+  `terminal` flag: each answer, end of input, no terminal, `--yes`,
+  `--write` and `--dry-run`. `IsTerminal` is tested on a pipe and
+  `/dev/null`; a real terminal is checked by hand under a pseudo-terminal.
 - Setup is tested against `testdata/setup/claude/` in a temporary home with
   a fake `claude` CLI, and against the `$CODEX_HOME` fixtures in
   `testdata/setup/codex/` (`user/`: the user's own entries; `stale/`: an

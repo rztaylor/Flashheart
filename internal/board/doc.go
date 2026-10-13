@@ -6,7 +6,9 @@
 // the UI and the MCP tools share, each defined once (FH-85): editable
 // fields and the checked change-set that writes them (fields.go), the
 // title and section text limits, the blocked-start gate and its note,
-// dated notes (NoteLine), review warnings and the project key rules, the
+// dated notes (NoteLine), which sections are rewritten whole and where a
+// missing one goes (SectionChange, FH-66), review warnings and the project
+// key rules, the
 // shorter one agents choose included (EDIT-2, EDIT-3, EDIT-6, KEY-1,
 // KEY-5), a review's How to Verify
 // steps (REV-3), and local links in markdown with the attachment
@@ -16,7 +18,10 @@
 // rule (ValidSlug), new tickets' and workstreams' defaults, checks and
 // templates (templates.go, rendered from values, no clock of its own), and
 // the Handoff section's structure (HandoffNote, which RenderHandoff and
-// ParseHandoff round-trip).
+// ParseHandoff round-trip), and a ticket's activity file (activity.go:
+// comment and history entries, parsed and written byte for byte, unknown
+// entries kept; history.go: the changes a write made, worked out from the
+// ticket and review before and after, never their text; D47).
 //
 // It performs no I/O and knows nothing about HTTP or the index: store reads
 // files and hands their bytes here, and index composes the results.

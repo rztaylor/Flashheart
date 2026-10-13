@@ -1,7 +1,18 @@
 import { useCallback } from "react";
-import { fetchTicket, type TicketDetail } from "../../api/board";
+import {
+  fetchProjectBoard,
+  fetchTicket,
+  type TicketDetail,
+} from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import { type Saved, setCriterion, setReviewStep } from "../../api/edit";
+import {
+  type FieldValue,
+  patchTicket,
+  type Saved,
+  saveSection,
+  setCriterion,
+  setReviewStep,
+} from "../../api/edit";
 import { messageOf } from "../../model/errors";
 import { type Resource, useResource } from "../../state/useResource";
 import { saveWithBase } from "../editing/precondition";
@@ -23,6 +34,16 @@ export interface TicketState {
   verify?(index: number, checked: boolean): Promise<boolean>;
   // answer sends an answer to an agent's question (CARD-6).
   answer?(question: string, text: string): Promise<string | undefined>;
+  // edit saves the full page's in-place edits (FH-66) on base: typed
+  // fields (EDIT-6), or one section's text.
+  edit?: TicketEdits;
+}
+
+export interface TicketEdits {
+  fields(base: string, fields: Record<string, FieldValue>): Promise<Saved>;
+  section(base: string, section: string, content: string): Promise<Saved>;
+  // tickets are the project's tickets, for the depends-on picker.
+  tickets(signal: AbortSignal): Promise<{ id: string; title: string }[]>;
 }
 
 // useTicket loads a ticket, reloading it when the board revision moves
@@ -99,6 +120,19 @@ export function useTicket({
               (base) => setReviewStep(fetcher, detail.id, base, index, checked),
               "review",
             )
+        : undefined,
+    edit:
+      editable && detail
+        ? {
+            fields: (base, fields) =>
+              patchTicket(fetcher, detail.id, base, fields),
+            section: (base, section, content) =>
+              saveSection(fetcher, detail.id, base, section, content),
+            tickets: (signal) =>
+              fetchProjectBoard(fetcher, detail.project, false, signal).then(
+                (board) => board.cards.map(({ id, title }) => ({ id, title })),
+              ),
+          }
         : undefined,
     answer:
       editing && detail && answers
