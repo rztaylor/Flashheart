@@ -10,9 +10,16 @@ each result.
 Owns ticket edits under the content-hash precondition (STO-3, EDIT-7):
 `saveWithBase` is the one save that sends a base hash and sorts saved,
 conflict and failure; `useTicketDraft` is one draft's base, following the
-file, adopting the saved version, busy and error, and a conflict as a
-pending choice (overwrite, reload, cancel) for the conflict dialog.
+file (moving on while its own part is unchanged), adopting the saved
+version, busy and error, and a conflict as a pending choice (overwrite,
+reload, cancel) for the conflict dialog.
+
+Owns in-place editing (`InPlace`, EDIT-11): one open item per page, the
+unsaved-changes prompt and holding the leave guard, an item's pencil, Add
+slot, double-click and focus return, and an open item's draft with Save,
+Cancel, shortcuts, inline error and conflict.
 
 Does not own request shapes (`api/edit`), a draft's fields (`model/`),
-board layout or drag sources (`board/`), the card panel and its tabs
-(`card/`), or routing (`app/`).
+the controls each item edits with or the page (`card/`), board layout or
+drag sources (`board/`), or routing and the guard itself (`app/`,
+`state/`).

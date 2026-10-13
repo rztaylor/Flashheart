@@ -1068,3 +1068,32 @@ session's own chat, or an older checkpoint, drops out of Activity; a note
 carries only its day, so a day's notes come before its timed entries. If
 Activity needs the full history, the server can add it without changing
 the timeline's view.
+
+## 2026-10-13 — D47: A section edited in place is saved by the server, as one section
+
+The full page's in-place editing (FH-66, `EDIT-11`) saves a section with
+`PUT /api/tickets/{id}/section` (`base`, `section`, `content`):
+`board.NewSectionChange` decides which sections may be rewritten whole
+(not Handoff or Notes), the size limit and where a missing template
+section goes, and its `Apply` (`mdfile.PutSection`) replaces only the
+lines between the heading and the next one; `store.EditTicket` writes it
+under the content-hash precondition. Text equal to the section's own
+writes nothing and records nothing; a write records `ticket.updated` with
+the template section's key, or `section` for a name that is ticket text.
+In the browser, a draft whose own part did not change in a newer version
+of the file moves its base hash to that version
+(`useTicketDraft`), so an agent's note or checkpoint during an edit is
+not a conflict, while a change to the item itself still is (`EDIT-7`).
+Leaving the page with unsaved changes goes through one leave guard
+(`state/leaveGuard`) that the router asks before every navigation.
+
+Options: rewrite the whole file in the browser and save it as a raw edit
+(no API change, but the browser would own section splitting, a raw edit
+names no fields in its event, and any change elsewhere in the file would
+conflict); a server-side section replace (chosen: the line-anchored
+splitter and the Handoff rule already live in `mdfile` and `board`, the
+byte-for-byte guarantee is tested against real tickets in Go, and FH-69
+can let agents rewrite a section through the same `SectionChange` and
+`EditTicket`). Rebasing a draft on any newer version was rejected: a
+change to the section being edited must still be shown, never
+overwritten.

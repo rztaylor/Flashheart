@@ -21,7 +21,9 @@ Intended layout (packages are created when they get real content):
   columns), blocking rules with reasons, derived workstream status, and the
   ticket-editing rules the board and agents share, each defined once
   (editable fields and their checked change-set, title and section limits,
-  key rules, the blocked-start gate, `NoteLine`; FH-85). No I/O.
+  key rules, the blocked-start gate, `NoteLine`; FH-85; which sections
+  are rewritten whole and where a missing one goes, `SectionChange`,
+  FH-66). No I/O.
 - `internal/store`: the only package that touches the board root: discovery,
   reads, locked atomic writes with hash preconditions, typed ticket edits
   from the board and agents alike (`EditTicket`), moves, archive,
@@ -150,8 +152,9 @@ Singleserve.
   each `frontend/src/features/<feature>/` and shared frontend layer has a
   `BOUNDARY.md` (≤150 words, ≤2 KiB). Generated assets are exempt.
 - Generated frontend output: `internal/webui/assets/generated/` (untracked).
-- Shared fixtures: `testdata/boards/` (sample roots) and
-  `testdata/hooks/<agent>/<event>/` (recorded, scrubbed hook payloads).
+- Shared fixtures: `testdata/boards/` (sample roots),
+  `testdata/hooks/<agent>/<event>/` (recorded, scrubbed hook payloads) and
+  `testdata/tickets/` (read-only copies of real FH tickets).
 - External integrations: `github.com/rztaylor/singleserve` v0.2.x (v0.2.2);
   `github.com/modelcontextprotocol/go-sdk` v1.7+; Claude Code and Codex hook
   and MCP configuration (`docs/dev/specs/agent-protocol.md`).

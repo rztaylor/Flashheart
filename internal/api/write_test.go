@@ -250,6 +250,69 @@ func TestPatchTicketFields(t *testing.T) {
 	}
 }
 
+// withoutUpdated drops a ticket's `updated:` line, which every save stamps.
+func withoutUpdated(data []byte) string {
+	return regexp.MustCompile(`(?m)^updated: .*\n`).ReplaceAllString(string(data), "")
+}
+
+// A section saved in place rewrites only that section, under the hash it
+// was based on; its own text again writes nothing; Handoff and Notes are
+// not rewritten whole (FH-66).
+func TestPutSectionRewritesOnlyThatSection(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	file := filepath.Join(root, "alpha", "tickets", "AL-3-card-panel", "AL-3-card-panel.md")
+	before, _ := os.ReadFile(file)
+	base := ticketDetail(t, handler, "AL-3").Hash
+
+	var saved WriteResponse
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: base, Section: "Description", Content: "Rewritten **in place**.\n"}, http.StatusOK, &saved)
+	after, _ := os.ReadFile(file)
+	want := strings.Replace(string(before), "## Description\n\nFixture ticket.\n", "## Description\n\nRewritten **in place**.\n", 1)
+	if withoutUpdated(after) != withoutUpdated([]byte(want)) || saved.Hash == base {
+		t.Errorf("after section save (%+v):\n%s", saved, after)
+	}
+
+	// The section's own text again is no write: the file keeps its bytes,
+	// even its updated stamp, and its hash.
+	var again WriteResponse
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: saved.Hash, Section: "description", Content: "\nRewritten **in place**.  \n\n"}, http.StatusOK, &again)
+	if unchanged, _ := os.ReadFile(file); string(unchanged) != string(after) || again.Hash != saved.Hash {
+		t.Errorf("untouched save rewrote the file: hash %s -> %s", saved.Hash, again.Hash)
+	}
+
+	// A stale base is the conflict, with the file as it is now.
+	var conflict struct {
+		Error   struct{ Code string }
+		Current ConflictJSON
+	}
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: base, Section: "Context", Content: "Lost."}, http.StatusConflict, &conflict)
+	if conflict.Error.Code != "conflict" || conflict.Current.Hash != saved.Hash || !strings.Contains(conflict.Current.Content, "Rewritten **in place**.") {
+		t.Errorf("conflict = %+v", conflict)
+	}
+
+	// A missing template section is added in its place.
+	send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", SectionRequest{Base: saved.Hash, Section: "Test Plan", Content: "Red first."}, http.StatusOK, &saved)
+	if added, _ := os.ReadFile(file); !strings.Contains(string(added), "- [ ] Second criterion\n\n## Test Plan\n\nRed first.\n\n## Context\n") {
+		t.Errorf("added Test Plan:\n%s", added)
+	}
+
+	for _, request := range []SectionRequest{
+		{Base: saved.Hash, Section: "Handoff", Content: "Rewritten."},
+		{Base: saved.Hash, Section: "Notes", Content: "Rewritten."},
+		{Base: saved.Hash, Section: "", Content: "x"},
+		{Section: "Context", Content: "No base."},
+		{Base: saved.Hash, Section: "Context", Content: strings.Repeat("x", board.MaxSectionText+1)},
+	} {
+		send(t, handler, http.MethodPut, "/api/tickets/AL-3/section", request, http.StatusBadRequest, nil)
+	}
+	if final, _ := os.ReadFile(file); !strings.Contains(string(final), "**Next**\n- Review tab") || !strings.Contains(string(final), "## Notes\n\nNone.\n") {
+		t.Errorf("Handoff or Notes changed:\n%s", final)
+	}
+	send(t, handler, http.MethodPut, "/api/tickets/AL-99/section", SectionRequest{Base: "x", Section: "Context"}, http.StatusNotFound, nil)
+}
+
 // Changing a ticket's workstream on the board moves it between the
 // workstreams' tickets lists too, as agent edits do (FH-80, board-format
 // "Workstream membership").

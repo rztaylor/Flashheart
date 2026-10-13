@@ -317,9 +317,11 @@ Full format: `docs/dev/specs/board-format.md`.
   depends on, tags, agent, created, changed and **Archive**) on the right,
   both staying in view; narrower, the outline is a **Jump to** menu and,
   on narrow screens, the properties stack above the page. Choosing a
-  section moves focus to it. Clicking a card, row or station opens the
-  panel; clicking a ticket id opens the full page in a new tab (`KEY-3`).
-  Ticket links on a full page stay in its tab.
+  section moves focus to it. The full page has no Edit tab: its title,
+  sections and properties are edited in place (`EDIT-11`). Clicking a
+  card, row or station opens the panel; clicking a ticket id opens the
+  full page in a new tab (`KEY-3`). Ticket links on a full page stay in
+  its tab.
 
 ### 6.6 Editing (`EDIT`)
 
@@ -343,7 +345,8 @@ Full format: `docs/dev/specs/board-format.md`.
   next id (`KEY-2`), a slug from the title, `created`, a chosen column
   (default Backlog) and optional workstream.
 - `EDIT-6` Frontmatter edits use typed controls for known fields (enums,
-  dates, lists) and a raw editor for the whole file.
+  dates, lists) and a raw editor for the whole file (the card panel's
+  Edit tab); the full page edits them in place (`EDIT-11`).
 - `EDIT-7` A save conflict (`STO-3`) shows both versions and lets the user
   reload or overwrite deliberately.
 - `EDIT-8` Deleting takes two deliberate steps. **Archive**, the normal
@@ -375,7 +378,7 @@ Full format: `docs/dev/specs/board-format.md`.
   ticket's rank. Board order
   is separate from workstream order (`EDIT-4`) and never changes it.
 - `EDIT-10` Every board write that changes a ticket (new ticket, move or
-  place, field, raw and criterion edits, a ticked review step, archive,
+  place, field, section, raw and criterion edits, a ticked review step, archive,
   restore, permanent delete) appends one event to the ticket's project log
   saying that the human changed it, and when: the ticket's id and at most
   the columns or names of the fields changed, never their values or any
@@ -383,6 +386,31 @@ Full format: `docs/dev/specs/board-format.md`.
   (`RUN-8`), these are the human's board activity, which the server reads
   per project and across projects. Edits made to ticket files outside the
   board are not recorded and do not count.
+- `EDIT-11` **In-place editing** on a ticket's full page (`CARD-7`,
+  FH-66): hovering or focusing the title, a section or a property shows a
+  pencil named for it ("Edit description"); the pencil, a double-click on
+  the content, or Enter on the focused pencil opens that one item, and
+  Save, Cancel, Ctrl or Cmd with Enter, and Escape close it, returning
+  focus to it. Only one item is open at a time: opening another, or
+  leaving the page, while it has unsaved changes asks whether to keep or
+  discard them (closing or reloading the tab gets the browser's own
+  prompt). The title is one line; properties use typed controls (`EDIT-6`:
+  priority and type selects, a workstream picker of the project's
+  workstreams, branch and pull request as text, tags as chips, depends on
+  as a picker of ticket ids), the status keeps **Move to** and its rules
+  (`EDIT-2`); agent, created and changed are read-only. Sections
+  (Description, Test plan or Reproduction, Context, the ticket's own) edit
+  as markdown; an empty template section shows **Add <section>** in its
+  place; the acceptance criteria edit as a list (add, reword, tick,
+  remove, reorder; a section with other text edits as markdown), and
+  ticking one stays one click (`CARD-3`). Handoff, the review and Activity
+  are not edited. A save writes only that field or section, leaving every
+  other byte of the file as it was (board-format §Section edits), and an
+  untouched save writes nothing; it carries the content hash its edit
+  opened on, moved on to a newer version only while that version left the
+  item itself unchanged, so a change to the item on disk opens the
+  conflict dialog (`EDIT-7`). A failed save keeps the item open with the
+  reason beside it. The card panel keeps its Edit tab.
 
 ### 6.7 Runs (`RUN`)
 

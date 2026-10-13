@@ -8,7 +8,7 @@ import {
 
 import type { Conflict, Saved } from "../../api/edit";
 import { messageOf } from "../../model/errors";
-import { saveWithBase } from "./precondition";
+import { type SaveOutcome, saveWithBase } from "./precondition";
 
 // DraftSave is one save of a draft.
 export interface DraftSave {
@@ -39,9 +39,11 @@ export interface TicketDraft<T> {
   // error is why the last save failed, other than a conflict; "" if none.
   error: string;
   conflict: DraftConflict | null;
-  save(request: DraftSave): Promise<void>;
+  // save resolves to how it ended: saved, a pending conflict, or failed
+  // (error says why).
+  save(request: DraftSave): Promise<SaveOutcome["kind"]>;
   // overwrite saves the conflicting draft again on the current file's hash.
-  overwrite(): void;
+  overwrite(): Promise<SaveOutcome["kind"]>;
   // reload drops the draft for the file now, and takes the next version.
   reload(): void;
   // cancel closes the conflict and keeps the draft.
@@ -91,17 +93,24 @@ export function useTicketDraft<D extends { hash: string }, T>({
     setBase(next);
     set(next.value);
   };
-  // Follow the file while nothing is being edited, and after a save.
+  // Follow the file while nothing is being edited, and after a save. While
+  // editing, a new version that left the draft's own part as it was (an
+  // agent's note under a section being edited) becomes the base, so only a
+  // change to what the draft edits is a conflict (FH-66).
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the file itself changes.
   useEffect(() => {
     if (detail.hash === base.hash) return;
     if (adopt.current || !dirty) {
       adopt.current = false;
       reset(detail);
-    }
+    } else if (!isDirty(read(detail), base.value))
+      setBase({ hash: detail.hash, value: base.value });
   }, [detail.hash]);
 
-  const run = async (request: DraftSave, from: string) => {
+  const run = async (
+    request: DraftSave,
+    from: string,
+  ): Promise<SaveOutcome["kind"]> => {
     setBusy(true);
     setError("");
     const outcome = await saveWithBase(from, request.send);
@@ -118,6 +127,7 @@ export function useTicketDraft<D extends { hash: string }, T>({
       });
     } else setError(messageOf(outcome.error, "Not saved"));
     setBusy(false);
+    return outcome.kind;
   };
 
   return {
@@ -130,9 +140,9 @@ export function useTicketDraft<D extends { hash: string }, T>({
     conflict: pending ? { mine: pending.mine, current: pending.current } : null,
     save: (request) => run(request, base.hash),
     overwrite: () => {
-      if (!pending) return;
+      if (!pending) return Promise.resolve("conflict" as const);
       setPending(null);
-      void run(pending.request, pending.current.hash);
+      return run(pending.request, pending.current.hash);
     },
     reload: () => {
       setPending(null);

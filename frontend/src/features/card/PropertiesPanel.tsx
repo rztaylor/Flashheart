@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
 import {
   STATUSES,
   type Status,
   statusWord,
   type TicketDetail,
+  type WorkstreamBrief,
 } from "../../api/board";
 import { BranchLabel } from "../../components/BranchLabel";
 import { Button } from "../../components/Button";
@@ -22,26 +22,17 @@ import { TicketLink } from "../../components/TicketLink";
 import type { Line } from "../../model/lines";
 import { STATE_LABEL } from "../../model/runs";
 import { priorityLabel, statusOf } from "../../model/status";
+import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 import { absoluteTime, runningTime } from "../../model/time";
-
-// PropertyRow is one property: its name and value. Each row is where an
-// in-place edit of that property will sit (FH-66).
-export function PropertyRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="contents">
-      <dt className="py-1.5 text-ink-muted">{label}</dt>
-      <dd className="flex min-w-0 flex-wrap items-center gap-1.5 py-1.5 text-ink">
-        {children}
-      </dd>
-    </div>
-  );
-}
+import {
+  choiceProperty,
+  dependsOnProperty,
+  EditableProperty,
+  type PropertyEditing,
+  PropertyRow,
+  tagsProperty,
+  textProperty,
+} from "./PropertyEdits";
 
 const none = <span className="text-ink-faint">None</span>;
 
@@ -101,19 +92,26 @@ const word = (text: string) =>
 // PropertiesPanel is the full page's properties (FH-65): the status with
 // Move to, priority, type, workstream, branch, pull request, depends on,
 // tags, agent, created and changed, then Archive. It stays in view beside
-// the page. onMove and onArchive are absent on a read-only server.
+// the page. With editing, priority, type, workstream (one of workstreams),
+// branch, pull request, depends on and tags edit in place with typed
+// controls (FH-66); agent, created and changed stay read-only. onMove,
+// onArchive and editing are absent on a read-only server.
 export function PropertiesPanel({
   detail,
   line,
   workstreamTitle,
+  workstreams = [],
   onMove,
   onArchive,
+  editing,
 }: {
   detail: TicketDetail;
   line?: Line;
   workstreamTitle: string;
+  workstreams?: WorkstreamBrief[];
   onMove?(to: Status): void;
   onArchive?(): void;
+  editing?: PropertyEditing;
 }) {
   const session = detail.sessions;
   return (
@@ -135,59 +133,116 @@ export function PropertiesPanel({
         </Pill>
       ) : null}
       <dl className="mt-3 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 text-sm">
-        <PropertyRow label="Priority">
-          {detail.priority ? (
-            <span className={detail.priority === "high" ? "font-semibold" : ""}>
-              {priorityLabel(detail.priority)}
-            </span>
-          ) : (
-            none
+        <EditableProperty
+          label="Priority"
+          field="priority"
+          editing={editing}
+          {...choiceProperty(
+            "priority",
+            "Priority",
+            PRIORITIES.map((value) => ({
+              value,
+              label: priorityLabel(value),
+            })),
           )}
-        </PropertyRow>
-        <PropertyRow label="Type">
-          {detail.type ? word(detail.type) : none}
-        </PropertyRow>
-        <PropertyRow label="Workstream">
-          {detail.workstream ? (
-            <>
-              <LineBullet line={line} size="sm" />
-              <span className="min-w-0">{workstreamTitle}</span>
-            </>
-          ) : (
-            none
+          view={
+            detail.priority ? (
+              <span
+                className={detail.priority === "high" ? "font-semibold" : ""}
+              >
+                {priorityLabel(detail.priority)}
+              </span>
+            ) : (
+              none
+            )
+          }
+        />
+        <EditableProperty
+          label="Type"
+          field="type"
+          editing={editing}
+          {...choiceProperty(
+            "type",
+            "Type",
+            TICKET_TYPES.map((value) => ({ value, label: word(value) })),
           )}
-        </PropertyRow>
-        <PropertyRow label="Branch">
-          {detail.branch ? (
-            <BranchLabel branch={detail.branch} className="text-xs" />
-          ) : (
-            none
-          )}
-        </PropertyRow>
+          view={detail.type ? word(detail.type) : none}
+        />
+        <EditableProperty
+          label="Workstream"
+          field="workstream"
+          editing={editing}
+          {...choiceProperty("workstream", "Workstream", [
+            { value: "", label: "None" },
+            ...workstreams.map((item) => ({
+              value: item.slug,
+              label: item.title,
+            })),
+          ])}
+          view={
+            detail.workstream ? (
+              <>
+                <LineBullet line={line} size="sm" />
+                <span className="min-w-0">{workstreamTitle}</span>
+              </>
+            ) : (
+              none
+            )
+          }
+        />
+        <EditableProperty
+          label="Branch"
+          field="branch"
+          editing={editing}
+          {...textProperty("branch", "Branch")}
+          view={
+            detail.branch ? (
+              <BranchLabel branch={detail.branch} className="text-xs" />
+            ) : (
+              none
+            )
+          }
+        />
         {detail.pr.trim() ? (
-          <PropertyRow label="Pull request">
-            <PullRequestLabel pr={detail.pr} className="text-xs" />
-          </PropertyRow>
+          <EditableProperty
+            label="Pull request"
+            field="pr"
+            editing={editing}
+            {...textProperty("pr", "Pull request")}
+            view={<PullRequestLabel pr={detail.pr} className="text-xs" />}
+          />
         ) : null}
-        <PropertyRow label="Depends on">
-          {detail.dependsOn.length + detail.dependsOnWorkstreams.length > 0 ? (
-            <>
-              {detail.dependsOn.map((id) => (
-                <TicketLink key={id} id={id} className="text-ink" />
-              ))}
-              {detail.dependsOnWorkstreams.map((slug) => (
-                <span key={slug}>{slug}</span>
-              ))}
-            </>
-          ) : (
-            none
-          )}
-        </PropertyRow>
-        <PropertyRow label="Tags">
-          {detail.tags.length > 0
-            ? detail.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
-            : none}
-        </PropertyRow>
+        <EditableProperty
+          label="Depends on"
+          field="depends-on"
+          editing={editing}
+          {...dependsOnProperty(detail.id, editing?.edit.tickets)}
+          view={
+            detail.dependsOn.length + detail.dependsOnWorkstreams.length > 0 ? (
+              <>
+                {detail.dependsOn.map((id) => (
+                  <TicketLink key={id} id={id} className="text-ink" />
+                ))}
+                {detail.dependsOnWorkstreams.map((slug) => (
+                  <span key={slug}>{slug}</span>
+                ))}
+              </>
+            ) : (
+              none
+            )
+          }
+        />
+        <EditableProperty
+          label="Tags"
+          field="tags"
+          editing={editing}
+          {...tagsProperty()}
+          view={
+            detail.tags.length > 0
+              ? detail.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
+              : none
+          }
+        />
         <PropertyRow label="Agent">
           {session?.short ? (
             <>

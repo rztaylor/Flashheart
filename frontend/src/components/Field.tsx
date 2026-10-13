@@ -1,6 +1,7 @@
 import {
   type ChangeEvent,
   cloneElement,
+  type KeyboardEvent,
   type ReactElement,
   type ReactNode,
   useId,
@@ -166,6 +167,8 @@ export function TextInput({
   onChange(value: string): void;
   id?: string;
   "aria-describedby"?: string;
+  "aria-label"?: string;
+  onKeyDown?(event: KeyboardEvent<HTMLInputElement>): void;
   type?: "text" | "date";
   required?: boolean;
   placeholder?: string;

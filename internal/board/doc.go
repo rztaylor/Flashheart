@@ -6,7 +6,9 @@
 // the UI and the MCP tools share, each defined once (FH-85): editable
 // fields and the checked change-set that writes them (fields.go), the
 // title and section text limits, the blocked-start gate and its note,
-// dated notes (NoteLine), review warnings and the project key rules, the
+// dated notes (NoteLine), which sections are rewritten whole and where a
+// missing one goes (SectionChange, FH-66), review warnings and the project
+// key rules, the
 // shorter one agents choose included (EDIT-2, EDIT-3, EDIT-6, KEY-1,
 // KEY-5), a review's How to Verify
 // steps (REV-3), and local links in markdown with the attachment
