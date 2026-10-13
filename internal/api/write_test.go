@@ -587,6 +587,7 @@ func TestReadOnlyServerRefusesWrites(t *testing.T) {
 
 	handler, _ := sampleAPI(t, nil)
 	send(t, handler, http.MethodPost, "/api/tickets/AL-2/move", MoveRequest{To: "done"}, http.StatusNotImplemented, nil)
+	send(t, handler, http.MethodPost, "/api/projects/alpha/workstreams", NewWorkstreamRequest{Title: "Offline"}, http.StatusNotImplemented, nil)
 	if detail := ticketDetail(t, handler, "AL-2"); detail.Hash != "" {
 		t.Error("read-only detail has a hash")
 	}
