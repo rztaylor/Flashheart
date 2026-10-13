@@ -22,8 +22,8 @@ import { Band, BandNotices, type BandView } from "./Band";
 import { NarrowControls } from "./NarrowControls";
 import { pressNeedsYou } from "./needsYou";
 import { PageActions, PageHeader } from "./PageHeader";
-import { RailFooter } from "./RailFooter";
 import { formatRoute, type Route, type Scope, useRoute } from "./route";
+import { SettingsMenu } from "./SettingsMenu";
 import { useBoardData } from "./useBoardData";
 import { useScopeMemory } from "./useScopeMemory";
 import type { ServerInfoState } from "./useServerInfo";
@@ -214,6 +214,16 @@ export function Shell({
           needsYouOn={filters.needsYou}
           onNeedsYou={toggleNeedsYou}
           search={boardOrTable ? search : undefined}
+          settings={
+            <SettingsMenu
+              root={root}
+              info={info}
+              theme={preferences.theme}
+              onTheme={(theme) =>
+                updatePreferences((current) => ({ ...current, theme }))
+              }
+            />
+          }
         />
         <BandNotices
           shutdownDenied={state.shutdownDenied}
@@ -296,24 +306,14 @@ export function Shell({
             data-panel={route.ticket ? "open" : undefined}
             className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[4rem_minmax(0,1fr)_auto]"
           >
-            <div className="hidden min-h-0 flex-col border-r border-rail-rule bg-rail md:flex">
-              <div className="min-h-0 flex-1">
-                <ProjectRail
-                  projects={summaries}
-                  runs={
-                    projects.status === "ready" ? projects.data.runs : undefined
-                  }
-                  scope={route.scope}
-                  onSelect={selectScope}
-                />
-              </div>
-              <RailFooter
-                root={root}
-                info={info}
-                theme={preferences.theme}
-                onTheme={(theme) =>
-                  updatePreferences((current) => ({ ...current, theme }))
+            <div className="hidden min-h-0 border-r border-rail-rule bg-rail md:block">
+              <ProjectRail
+                projects={summaries}
+                runs={
+                  projects.status === "ready" ? projects.data.runs : undefined
                 }
+                scope={route.scope}
+                onSelect={selectScope}
               />
             </div>
 

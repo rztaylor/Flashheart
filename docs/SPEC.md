@@ -860,7 +860,7 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
 - **Shell**: left rail of projects (with Needs you badges) and **All
   projects**; top bar with view switcher (Overview · Workstreams · Table ·
   Board), search, filters, density, virtual-column toggles; quiet backend
-  status and Quit.
+  status, a Settings gear (theme, board root, version) and Quit.
 - **Board**: columns, cards, live badges; card panel slides over from the
   right and keeps the board visible.
 - **Overview**: the pipeline of the board's columns and their counts, then
