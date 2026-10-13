@@ -262,6 +262,10 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Saving a section right after an edit keeps that edit (FH-142). Pressing
+  Ctrl+Enter (Cmd+Enter on a Mac) a moment after pasting or typing in a
+  section's editor could close it without saving the change, as the page
+  had not yet heard of it; the editor now reports each change at once.
 - Codex sessions started close together no longer look identical on the
   board (FH-122, D67, agent-protocol §2). Codex's session ids start with
   the time, so two sessions started in the same minute both showed as,

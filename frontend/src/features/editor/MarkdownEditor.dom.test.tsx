@@ -141,6 +141,80 @@ describe("MarkdownEditor", () => {
   });
 });
 
+// A save key pressed right after an edit saves that edit (FH-142). Events
+// inside the editor's shadow root leave window.event unset, so React would
+// schedule their state as a later task, and a Ctrl+Enter delivered first
+// would save (or close) the draft as it was.
+describe("MarkdownEditor reporting changes", () => {
+  // Saver reads its value as the page's save does: from its last render.
+  function Saver({ onSave }: { onSave(value: string): void }) {
+    const [value, setValue] = useState("Old text");
+    return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: stands in for the page's key handling.
+      <div
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && (event.ctrlKey || event.metaKey))
+            onSave(value);
+        }}
+      >
+        <MarkdownEditor
+          label="Description"
+          value={value}
+          onChange={setValue}
+          context={context}
+          keys={keys}
+          autoFocus={false}
+        />
+      </div>
+    );
+  }
+
+  it("has the page's state up to date before the next key", async () => {
+    const onSave = vi.fn();
+    const result = render(<Saver onSave={onSave} />);
+    const content = await waitFor(() => {
+      const found = result.container
+        .querySelector("[data-autofocus]")
+        ?.shadowRoot?.querySelector<HTMLElement>(".cm-content");
+      if (!found) throw new Error("the editor did not mount");
+      return found;
+    });
+    const view = EditorView.findFromDOM(content);
+    if (!view) throw new Error("no view");
+    // As the browser delivers them: the paste, then the key, with no
+    // chance for React to catch up in between (no act).
+    const previous = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean })
+      .IS_REACT_ACT_ENVIRONMENT;
+    (
+      globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = false;
+    try {
+      const data = new DataTransfer();
+      data.setData("text/plain", "New text");
+      const paste = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, "clipboardData", { value: data });
+      view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } });
+      content.dispatchEvent(paste);
+      // On the editor's host, as the key reaches the page from its shadow
+      // root.
+      (content.getRootNode() as ShadowRoot).host.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          ctrlKey: true,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        }),
+      );
+    } finally {
+      (
+        globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+      ).IS_REACT_ACT_ENVIRONMENT = previous;
+    }
+    expect(onSave).toHaveBeenCalledWith("New text");
+  });
+});
+
 // Pasted web pages (FH-142): copied HTML pastes as markdown, unless it
 // holds nothing markdown keeps or the person asked for plain text with
 // Shift (Ctrl or Cmd with Shift and V).

@@ -1,6 +1,7 @@
 import { Annotation, EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { type FocusEvent, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import type { EditorMode } from "../../api/preferences";
 import {
@@ -148,11 +149,17 @@ export default function MarkdownEditor({
         extensions: [
           editorExtensions(options, latest.current.mode),
           EditorView.updateListener.of((update) => {
+            // The page hears an edit at once, as it would a text area's:
+            // events in the shadow root leave window.event unset, so React
+            // would otherwise render it as a later task, and a Ctrl+Enter
+            // the browser delivers first would save the text as it was.
             if (
               update.docChanged &&
               !update.transactions.some((tr) => tr.annotation(external))
             )
-              latest.current.onChange(update.state.doc.toString());
+              flushSync(() =>
+                latest.current.onChange(update.state.doc.toString()),
+              );
             if (
               update.selectionSet ||
               update.docChanged ||
