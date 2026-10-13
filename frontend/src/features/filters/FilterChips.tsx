@@ -9,6 +9,7 @@ import {
 import type { Card, WorkstreamBrief } from "../../api/board";
 import { FilterChip } from "../../components/FilterChip";
 import { LineBullet } from "../../components/LineBullet";
+import { TypeIcon } from "../../components/TicketMarks";
 import {
   type ChoiceKey,
   chipWorkstreams,
@@ -110,7 +111,15 @@ export function FilterChips({
                 <FilterChip
                   key={entry.token + entry.value}
                   name={entry.label}
-                  bullet={<PaintBullet paint={entry} />}
+                  bullet={
+                    paint === "type" ? (
+                      <span className="grid size-5 shrink-0 place-items-center">
+                        <TypeIcon type={entry.value} size={16} />
+                      </span>
+                    ) : (
+                      <PaintBullet paint={entry} />
+                    )
+                  }
                   state={choiceState(filters[colourKey], entry.value)}
                   hidden={index >= fits}
                   onToggle={(exclude) =>
@@ -127,7 +136,8 @@ export function FilterChips({
 }
 
 // PaintBullet is a colour chip's bullet: the round mark of a workstream
-// chip, filled with the Colour by paint instead of a line colour.
+// chip, filled with the Colour by paint instead of a line colour. A type
+// chip shows the type's card icon instead, so people learn it (FH-147).
 function PaintBullet({ paint }: { paint: Paint }) {
   return (
     <span

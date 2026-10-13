@@ -8,12 +8,11 @@ import {
   type Criterion,
   criteriaOf,
   criteriaText,
-  sameSection,
   sectionSource,
   titleLine,
 } from "../../model/sectionEdit";
 import { InPlaceEditor, type InPlaceItem } from "../editing/InPlace";
-import { MarkdownField } from "../editor/MarkdownField";
+import { InPlaceSection } from "../editing/InPlaceSection";
 import type { TicketEdits } from "./useTicket";
 
 // The full page's editors for the title and sections (FH-66), each open in
@@ -77,29 +76,19 @@ export function SectionEditor({
   keys,
 }: EditorProps & Links & { heading: string; title: string }) {
   return (
-    <InPlaceEditor
+    <InPlaceSection
       item={item}
       name={title.toLowerCase()}
+      title={title}
+      heading={heading}
       detail={detail}
-      read={(ticket: TicketDetail) => sectionSource(ticket.body, heading)}
-      readFile={(file) => sectionSource(file, heading)}
-      isDirty={(draft, base) => !sameSection(draft, base)}
-      send={(base, value) => edit.section(base, heading, value)}
-      mine={(value) => value}
-      theirs={(file) => sectionSource(file, heading)}
+      body={(ticket) => ticket.body}
+      send={edit.section}
       onSaved={onSaved}
-    >
-      {(value, set) => (
-        <MarkdownField
-          label={title}
-          value={value}
-          onChange={set}
-          context={context}
-          keys={keys}
-          upload={edit.upload}
-        />
-      )}
-    </InPlaceEditor>
+      context={context}
+      keys={keys}
+      upload={edit.upload}
+    />
   );
 }
 

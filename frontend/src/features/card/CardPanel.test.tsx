@@ -178,6 +178,7 @@ describe("PanelHeader", () => {
     expect(markup).toContain(">In progress<");
     expect(markup).toContain('data-tone="blocked"');
     expect(markup).toContain(">High priority<");
+    expect(markup).toContain('data-icon="blocked"');
   });
 });
 
@@ -231,6 +232,12 @@ describe("TicketTab", () => {
     expect(question).toBeLessThan(handoff);
     expect(handoff).toBeLessThan(blocked);
     expect(blocked).toBeLessThan(criteria);
+  });
+
+  it("heads Blocked by with the no-entry sign", () => {
+    expect(markup).toMatch(
+      /data-icon="blocked"(?:(?!<\/svg>)[\s\S])*<\/svg>Blocked by</,
+    );
   });
 
   it("sets the handoff and the question as callouts", () => {

@@ -4,7 +4,6 @@
 const paths = {
   search: "M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Zm5.3-2.2L21 21",
   close: "M6 6l12 12M18 6 6 18",
-  diamond: "M12 3.5 20.5 12 12 20.5 3.5 12Z",
   warning: "M12 4 21 19.5H3L12 4Zm0 6v4.5m0 2.6v.1",
   repair:
     "M14.5 6.5a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.5-7.5Zm0 0L17 4l3 3-2.5 2.5",
@@ -56,9 +55,35 @@ const paths = {
   // trash: a bin with its lid, deleting a comment (FH-140).
   trash:
     "M4.5 6.5h15M9.5 6.5V4h5v2.5M6.5 6.5l1 13.5h9l1-13.5M10.5 10.5v6m3-6v6",
+  // Ticket types (FH-147, components/TicketMarks): feature a star, bug a
+  // beetle, infra a server stack, test a beaker, refactor two swapping
+  // arrows, docs a page of lines, spike a light bulb.
+  star: "M12 3.5l2.6 5.3 5.9.9-4.25 4.1 1 5.8L12 16.85 6.75 19.6l1-5.8L3.5 9.7l5.9-.9Z",
+  bug: "M9 8a3 3 0 0 1 6 0M8 11a4 4 0 0 1 8 0v3.5a4 4 0 0 1-8 0ZM12 11v7.5M4.5 13H8m8 0h3.5M5.5 8.5 8 10m10.5-1.5L16 10M5.5 18.5 8 17m10.5 1.5L16 17",
+  server: "M4.5 4.5h15v6h-15zM4.5 13.5h15v6h-15zM8 7.5h.01M8 16.5h.01",
+  beaker:
+    "M9 3.5h6M10.25 3.5v6.25L5.2 18.6A1.25 1.25 0 0 0 6.3 20.5h11.4a1.25 1.25 0 0 0 1.1-1.9l-5.05-8.85V3.5M7.6 14.5h8.8",
+  swap: "M4 8h14m-3.5-3.5L18 8l-3.5 3.5M20 16H6m3.5-3.5L6 16l3.5 3.5",
+  doc: "M6.5 3.5H14l3.5 3.5v13.5h-11zM13.5 3.5V7.5h4M9.5 12h5m-5 3.5h5",
+  bulb: "M9.5 18h5M10.5 21h3M12 3.5a5.5 5.5 0 0 0-3.25 9.9c.8.6 1.25 1.45 1.25 2.4V16h4v-.2c0-.95.45-1.8 1.25-2.4A5.5 5.5 0 0 0 12 3.5Z",
 } as const;
 
-export type IconName = keyof typeof paths;
+// Filled marks: a solid shape with its inner mark cut out (even-odd), so
+// the cut shows the surface behind it in any theme. blocked is the
+// no-entry sign, the board's one symbol for blocked (FH-148): a disc with
+// a horizontal bar, legible at 10–13px.
+const filled = {
+  blocked:
+    "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM7.75 10.4h8.5a.6.6 0 0 1 .6.6v2a.6.6 0 0 1-.6.6h-8.5a.6.6 0 0 1-.6-.6v-2a.6.6 0 0 1 .6-.6Z",
+} as const;
+
+export type IconName = keyof typeof paths | keyof typeof filled;
+
+// iconNames lists the whole set.
+export const iconNames = [
+  ...Object.keys(paths),
+  ...Object.keys(filled),
+] as IconName[];
 
 export function Icon({
   name,
@@ -69,6 +94,21 @@ export function Icon({
   size?: number;
   className?: string;
 }) {
+  const classes = ["shrink-0", className].filter(Boolean).join(" ");
+  if (name in filled)
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        width={size}
+        height={size}
+        fill="currentColor"
+        aria-hidden="true"
+        data-icon={name}
+        className={classes}
+      >
+        <path fillRule="evenodd" d={filled[name as keyof typeof filled]} />
+      </svg>
+    );
   return (
     <svg
       viewBox="0 0 24 24"
@@ -80,9 +120,10 @@ export function Icon({
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      className={["shrink-0", className].filter(Boolean).join(" ")}
+      data-icon={name}
+      className={classes}
     >
-      <path d={paths[name]} />
+      <path d={paths[name as keyof typeof paths]} />
     </svg>
   );
 }

@@ -14,7 +14,9 @@
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  Table, TailText, BranchLabel, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
+  Table, TailText, BranchLabel, EmptyState, RunState, NeedsYou,
+  TicketMarks (a card's type icon and three-bar priority marker),
+  QuestionCard, Aside, Popover,
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
   ui-layout.md §8) → `features/<feature>/` (board,
@@ -35,7 +37,8 @@
   fails keeps its data and shows `components/StaleNote`; while loading,
   each view shows the one skeleton its feature exports (`BoardSkeleton`,
   `TableSkeleton`, `OverviewSkeleton`, `WorkstreamsSkeleton`,
-  `ArchiveSkeleton`, `TicketSkeleton`), marked `data-skeleton`.
+  `ArchiveSkeleton`, `TicketSkeleton`; the workstream page its own),
+  marked `data-skeleton`.
 - Editing: every edit from the panel carries the ticket's content hash
   through one helper, `features/editing/precondition` (`saveWithBase`:
   saved, conflict or failed). A draft (the panel's Edit tab, each
@@ -54,7 +57,13 @@
   with Save, Cancel, the shortcuts, the inline error and the conflict
   dialog; the card feature supplies each item's control
   (`PageEdits`, `PropertyEdits`); a section edits in the formatted
-  editor, `features/editor`'s `MarkdownField` (EDIT-12). A control
+  editor, `features/editor`'s `MarkdownField` (EDIT-12), through
+  `features/editing/InPlaceSection`, the one section editor. A
+  workstream's page (EDIT-13, FH-139) is
+  `features/workstreams/WorkstreamPage`, its sections the same
+  `InPlaceEditing` items and `InPlaceSection` (with `kind="workstream"`
+  for the conflict dialog's words) over `model/workstreamSections`, saved
+  by `saveWorkstreamSection`. A control
   marked `data-autofocus` takes an open item's focus, and a key a
   control has handled (`defaultPrevented`) is not the item's. A person's comment in Activity is an
   item too, saved on the activity file's hash (`ActivityTimeline`); a
@@ -125,7 +134,8 @@
   one layout and content contract, `docs/dev/specs/ui-layout.md`: a theme
   changes tokens only, never structure. Colour roles are fixed there (§7):
   line colours mean workstreams (bullet, card stripe, route); paint shows
-  the Colour by value as a header tint plus a named tag; status pills
+  the Colour by value as a whole-card tint, named by its colour chip and
+  the card's name; status pills
   (neutral, amber, blue, green) and the blocked pill always carry an icon
   and words; Needs you is the one attention plate; dashes mean suspended
   service, a missing station or needs repair; the Working dot is the only

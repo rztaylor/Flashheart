@@ -256,6 +256,24 @@ func (s *Store) updateTicket(project, id string, pre Precondition, edit Edit, al
 	return hash, nil
 }
 
+// ReadWorkstream returns workstreams/<slug>.md and its content hash.
+func (s *Store) ReadWorkstream(project, slug string) ([]byte, string, error) {
+	if err := s.checkProject(project); err != nil {
+		return nil, "", err
+	}
+	if !board.ValidSlug(slug) {
+		return nil, "", fmt.Errorf("workstream %q: %w", slug, ErrInvalidName)
+	}
+	data, err := s.ReadFile(path.Join(project, "workstreams", slug+".md"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, "", fmt.Errorf("workstream %s in %s: %w", slug, project, ErrNotFound)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	return data, Hash(data), nil
+}
+
 // UpdateWorkstream applies edit to workstreams/<slug>.md under the project
 // lock, once pre holds, as UpdateTicket does (EDIT-4).
 func (s *Store) UpdateWorkstream(project, slug string, pre Precondition, edit Edit) (string, error) {

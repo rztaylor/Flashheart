@@ -249,11 +249,15 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
     .getByRole("region", { name: /^In progress/ })
     .getByRole("button", { name: /^Card panel, AL-3, Claude needs you/ });
   await expect(real).toBeVisible();
-  // The live badge says what the run needs and keeps its plan step; the
-  // card's button covers its drawing, which sits beside it.
+  // The card says what the run needs on a line of its own and keeps its
+  // plan count on the meta line, the step in the mark's tooltip (FH-147);
+  // the card's button covers its drawing, which sits beside it.
   const face = real.locator("xpath=..");
   await expect(face.getByText("Permission for Bash")).toBeVisible();
-  await expect(face.getByText("2/5 · Runs tab timeline")).toBeVisible();
+  const run = face.locator('[data-mark="live"]');
+  await expect(run).toHaveText("2/5");
+  await expect(run).toHaveAttribute("title", /plan 2 of 5: Runs tab timeline/);
+  await expect(real).toHaveAccessibleName(/plan 2 of 5: Runs tab timeline/);
 
   // Needs you and Agent working are filters, never columns (FH-42, FH-44);
   // neither the View options menu nor the chip row offers them.

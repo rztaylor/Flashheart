@@ -15,6 +15,19 @@ import {
 const context = { project: "alpha", ticket: "AL-2" };
 
 describe("resolveLink", () => {
+  it("gives a workstream's text (no ticket) no files of its own", () => {
+    const workstream = { project: "alpha", ticket: "" };
+    expect(resolveLink("files/shot.png", workstream)).toEqual({
+      kind: "none",
+    });
+    expect(
+      resolveLink("../AL-4-drag-and-drop/files/shot.png", workstream),
+    ).toEqual({
+      kind: "attachment",
+      href: "/api/projects/alpha/tickets/AL-4/files/shot.png",
+    });
+  });
+
   it("opens tickets for links into ticket folders", () => {
     expect(
       resolveLink("../AL-4-drag-and-drop/AL-4-drag-and-drop.md", context),

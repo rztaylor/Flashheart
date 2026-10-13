@@ -131,6 +131,31 @@ describe("WorkstreamLine", () => {
     expect(markup).toContain('data-station="FH-2"');
   });
 
+  it("marks a blocked workstream with the no-entry sign and the word", () => {
+    const markup = render(
+      workstream([ticket("FH-1", "up-next", { blocked: true })], "blocked"),
+    );
+    expect(markup).toMatch(
+      /data-icon="blocked"(?:(?!<\/svg>)[\s\S])*<\/svg>Blocked</,
+    );
+  });
+
+  it("opens the workstream's page from its title, or beside a finished line's head (FH-139)", () => {
+    const active = render(workstream([ticket("FH-1", "up-next")], "active"));
+    expect(active).toMatch(
+      /<a href="#\/workstream\/flashheart\/foundation"[^>]*>Foundation<\/a>/,
+    );
+    const collapsed = render(finished);
+    const button = collapsed.slice(
+      collapsed.indexOf("<button"),
+      collapsed.indexOf("</button>"),
+    );
+    expect(button).not.toContain("<a ");
+    expect(collapsed).toMatch(
+      /<a href="#\/workstream\/flashheart\/foundation" aria-label="Open Foundation"/,
+    );
+  });
+
   it("does not animate the chevron beyond the token-driven transition", () => {
     // Reduced motion sets the default transition duration to 0 ms
     // (styles/index.css); an explicit duration would escape it.

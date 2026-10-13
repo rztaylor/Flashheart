@@ -17,6 +17,17 @@ All notable changes to this project are documented here. The project follows
   Choose a row to open that project's Overview. On a phone, or beside an
   open ticket, each project's counts stack under its name. One project's
   Overview has no list.
+- Edit a workstream's goal and notes on its own page (FH-139,
+  `EDIT-13`). A workstream's name on the Workstreams view now opens its
+  page (a finished line has an *Open* link beside its head): its line of
+  stations, then its Goal, Scope, Success Criteria, Notes and any
+  sections of its own. Each edits in place in the same formatted editor
+  as a ticket's sections, with the slash menu, the selection toolbar and
+  your Formatted / Markdown choice. Saving rewrites only that section and
+  an untouched save writes nothing; a change someone made elsewhere in
+  the file saves without asking, and a change to the same section shows
+  both versions to choose from.
+
 - Delete a comment you posted by mistake (FH-140, D66, `STO-8`). Beside
   a comment's pencil, on the ticket's full page and the side panel's
   Comments tab, **Delete comment** asks first, then removes it from the
@@ -505,6 +516,30 @@ All notable changes to this project are documented here. The project follows
   project needs repair. Hover a badge, or listen to it, for the project's
   name and its tickets, in progress, blocked, needs-repair and needs-you
   counts. On a phone the Project picker is unchanged.
+- Board cards are less cluttered, and each density shows clearly
+  different detail (FH-147, `VIEW-6`). **Compact** is just the title, led
+  by its id, with what needs attention (Needs you, blocked, change
+  requests) and the priority beside it. **Normal** adds one line of small
+  markers: the type's icon, the id, blocked, change requests, a working
+  session with its plan (2/5), age, review, attachments and priority; when
+  a session or question needs you, why says so on its own line.
+  **Detailed** adds the words: the blocker's reason, the agent and its
+  plan step, the next step, a short excerpt and the workstream. Priority
+  is now three small bars (high three warm, medium two grey, low one
+  blue), and each type has its own icon in its colour, shown on the type
+  chips at the top of the board too. The workstream initials and the
+  acceptance criteria count are gone from cards (the coloured stripe
+  stays), and Colour by tints the whole card. On a narrow column the
+  marker line drops attachments, then review, then age rather than
+  wrapping; every marker's words are in its tooltip and in what a screen
+  reader hears for the card.
+- Blocked tickets are marked with a no-entry sign (FH-148). The small
+  hollow diamond that marked a blocked ticket read as decoration at card
+  size; a filled no-entry sign now marks blocked everywhere: on cards,
+  blocker pills and notes, the side panel and full page (Blocked by), the
+  blocked-move dialog, the Table, the Workstreams view and the State
+  filter's Blocked. It always sits beside the
+  word or the reason.
 - Theme, board root and version are behind a gear in the title bar
   (FH-149, `CFG-2`). The Settings button sits between the connection dot
   and Quit on every view and on a ticket's full page, at every width. Its

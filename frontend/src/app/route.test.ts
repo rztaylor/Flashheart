@@ -50,6 +50,30 @@ describe("routes", () => {
     });
   });
 
+  it("routes a workstream's page by project and slug (FH-139)", () => {
+    const route = {
+      scope: { kind: "all" as const },
+      view: "workstream" as const,
+      workstream: { project: "my project", slug: "board-ui" },
+    };
+    expect(formatRoute(route)).toBe("#/workstream/my%20project/board-ui");
+    expect(parseRoute("#/workstream/my%20project/board-ui")).toEqual(route);
+    // A slug or project that cannot be one lands on the board.
+    for (const hash of [
+      "#/workstream/alpha",
+      "#/workstream/alpha/Board%20UI",
+      "#/workstream/../board-ui",
+    ])
+      expect(parseRoute(hash)).toEqual({
+        scope: { kind: "all" },
+        view: "board",
+      });
+    expect(parseRoute("#/all/workstream")).toEqual({
+      scope: { kind: "all" },
+      view: "board",
+    });
+  });
+
   it("routes a ticket's full page by id (KEY-3)", () => {
     expect(parseRoute("#/ticket/FH-42")).toEqual({
       scope: { kind: "all" },

@@ -116,6 +116,10 @@ colors:
   paint-age-older: "#9a4426"
   paint-age-older-tint: "#f8e7df"
   paint-age-older-ink: "#ffffff"
+  priority-high: "#c2410c"
+  priority-medium: "#71717a"
+  priority-low: "#0369a1"
+  priority-off: "#e4e4e7"
   night-ground: "#0c0c0d"
   night-panel: "#141415"
   night-card: "#1e1e20"
@@ -229,6 +233,10 @@ colors:
   night-paint-age-older: "#f0a585"
   night-paint-age-older-tint: "#33231c"
   night-paint-age-older-ink: "#111111"
+  night-priority-high: "#ff9a62"
+  night-priority-medium: "#a1a1aa"
+  night-priority-low: "#56b6f0"
+  night-priority-off: "#333338"
 typography:
   wordmark:
     fontFamily: "Archivo Variable, Helvetica Neue, Helvetica, Arial, sans-serif"
@@ -466,8 +474,9 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Action** (`action` #be185d raspberry; `night-action` #c6f432 lime): the primary button only (New ticket, Send answer). Hover darkens or lifts it.
 - **Selection and Focus** (`select`/`focus` #be185d raspberry with `select-surface` #fdf0f6; `night-select`/`night-focus` lime): the selected card ring, the current panel tab's underline, an applied filter's ring, the chosen density segment's edge and the focus outline.
 - **Lines** (`line-0`…`line-8`: red, blue, yellow, green, purple, orange, lime, brown, teal; lifted in dark): workstreams only. Each workstream takes one line stably, by a hash of its slug in creation order, so a newer workstream never recolours an older one. A bullet carries its paired initials ink (`line-ink-*`, AA on its fill). No line is grey: grey would read as an inactive state.
-- **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the card header and fills that value's tag; the strong shade sets the tag's word (always AA on the tint) and the colour key's swatch. Paint is softer than the lines on purpose, so a tag never reads as a workstream.
-- **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross, Blocked red with a diamond and its reason.
+- **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the whole card (FH-147); the strong shade draws the type's icon on cards and type chips and the colour key's swatch. Paint is softer than the lines on purpose, so a tinted card never reads as a workstream.
+- **Priority** (`priority-high` orange-red, `priority-medium` neutral grey, `priority-low` sky blue, `priority-off` the empty bar; lifted in dark): the card's three-bar priority marker only. Each is 3:1 on the card and every paint tint and against an empty bar. Low's sky blue sits apart from the refactor paint and the review state; the bars' shape carries the meaning.
+- **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross, Blocked red with the no-entry sign and its reason.
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
@@ -482,7 +491,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 ### Named Rules
 **The Roles Rule.** Every colour has one job (frame, action, attention, line, paint, state, blocked, danger, focus, selection) and none is the only carrier of meaning: pills carry icons and words, paint carries its word, lines carry initials and names.
 
-**The Lines Are Workstreams Rule.** A line colour appears only where a workstream is named or drawn: bullet, card stripe, route track and stations, the route card's wash. A card's stripe always matches its bullet.
+**The Lines Are Workstreams Rule.** A line colour appears only where a workstream is named or drawn: bullet, card stripe, route track and stations, the route card's wash. A card's stripe always matches its workstream's bullet in the chip row and on the route card.
 
 **The One Attention Rule.** Needs you is the only attention plate and the loudest thing on any view.
 
@@ -548,11 +557,11 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 
 ### Pills and Tags
 - **Status pill:** state fill, state ink, an icon (ring, half, review page, check; a cross for Rejected) and the column's word, or *Rejected*. A rejected card in Done carries its Rejected pill with its tags.
-- **Blocker pill:** blocked fill and ink, diamond, the reason (one line on a card, full in its tooltip and the panel).
-- **Tag:** type, priority and age. The Colour by value's tag takes its paint (tint fill, strong word, a 35% ring); the rest are neutral outlined chips; High priority is semibold.
+- **Blocker pill:** blocked fill and ink, the no-entry sign, the reason (one line on a card, full in its tooltip and the panel). The no-entry sign (a filled disc in the ink with its bar cut out to the surface behind) is the one symbol for blocked, also on its own beside Blocked by and the State filter's Blocked (in the blocked ink); it replaced a hollow diamond that read as decoration at card size (FH-148).
+- **Tag:** type, priority and tags in the panel, the table and the archive: neutral outlined chips; High priority is semibold. Cards draw type and priority as marks instead.
 
 ### Ticket Card
-White, 10px corners, rule border, card shadow, a 4px workstream stripe down the left. Rows (contract §2): header with id, project and running time, then the title (card title, up to three lines) on the paint tint; tags (bullet, type, age); repair; blocker pill or quiet wait; live run (Needs you plate or run mark, agent, time; the permission reason on its own line; plan step); question waiting; excerpt and next step (Detailed); footer with criteria left and the priority tag right. Selected: select border and ring. Dimmed: 35%.
+White (or washed whole in the Colour by tint), 10px corners, rule border, card shadow, a 4px workstream stripe down the left; no bullet, initials or criteria count. One set of markers in three layouts (contract §2, FH-147). Markers are 12px drawings in meta size with their words in tooltips: the type icon in its paint shade, the id in the id cut, the no-entry sign in the blocked ink, a speech balloon with the change-request count in amber (open) or blue (addressed), the run-state mark with `done/total` in ink, the age, the review page and the paper clip with a count in muted ink, and the priority's three ascending bars at the line's end. **Compact:** the card title (two lines) led by its id, with only the Needs you plate (disc only), blocked, change requests and priority beside it. **Normal:** the card title (three lines), then one 16px meta line that never wraps (attachments, review and age drop in that order when it is short), then the Needs you plate and its reason in semibold ink. **Detailed:** Normal, then the blocker pill, the run's state, agent, time and plan step, the next step (arrow), a two-line excerpt in muted extra-small text and the workstream name in muted meta. Selected: select border and ring. Dimmed: 35%.
 
 ### Column Well
 Column well surface, rule border, 14px corners, 10px padding; head with a round count badge and the title in the display head cut.
@@ -561,7 +570,7 @@ Column well surface, rule border, 14px corners, 10px padding; head with a round 
 Card surface, rule border, 14px corners, card shadow; the head on the column surface with a 28px round mark (Needs your decision in the attention disc while anything needs you; review and in progress in their status fills; the rest an ink icon on a card disc), the title in the display head cut and a round count badge; the collapsible ones end in a chevron. Rows divided by rules, roomy (12px by 16px): the id, the title over one muted line of words, a small outlined agent chip, a muted time or count, and the action (Review results in the action fill, Create ticket secondary). An empty section is its head with one muted sentence. No coloured edge strips.
 
 ### Overview Projects List
-All projects only, between the pipeline and the section cards (FH-153): a section card with the board icon on a card disc, *Projects* and a count badge. Rows are links divided by rules that hover to the well. From 50rem of the card's own width (a container query, so the panel narrows it) they are a table: a line of column words in muted semibold label size on the heading cut (each board column's word after its status icon in that state's ink), then per row the accent key badge and the name in semibold small text, and nine centred tabular counts at body size, a zero in faint ink. A needs-repair count other than zero sits in a round dashed ink ring (1.5px); a Needs you count other than zero on a round attention fill. The name column takes 1.6 parts to each count's one, so the counts spread across the card. Narrower, a row stacks: badge and name with the repair and Needs you marks as small word pills beside it, a muted line of tickets and blocked, then the five column counts over their words in meta size.
+All projects only, between the pipeline and the section cards (FH-153): a section card with the board icon on a card disc, *Projects* and a count badge. Rows are links divided by rules that hover to the well. From 50rem of the card's own width (a container query, so the panel narrows it) they are a table: a line of column words in muted semibold label size on the heading cut (each board column's word after its status icon in that state's ink, Blocked after the no-entry sign in the blocked ink), then per row the accent key badge and the name in semibold small text, and nine centred tabular counts at body size, a zero in faint ink. A needs-repair count other than zero sits in a round dashed ink ring (1.5px); a Needs you count other than zero on a round attention fill. The name column takes 1.6 parts to each count's one, so the counts spread across the card. Narrower, a row stacks: badge and name with the repair and Needs you marks as small word pills beside it, a muted line of tickets and blocked, then the five column counts over their words in meta size.
 
 ### Overview Pipeline
 Above the section cards: five equal chevron cards in one row, Backlog to Done, each notched on the left and pointed on the right so they interlock with a 5px ground-coloured gap (the first flat on the left with 10px corners). Each takes its status pill's fill and ink: a display-cut tabular count (1.5rem, 2.25rem from 40rem, 3rem from 64rem) over the column's word, semibold, with its status icon from 40rem. The point is 12px, 22px from 40rem. Clipped shapes take no box shadow or outline, so the row casts `--fh-shadow-chevron` (a drop-shadow filter) and a focused card draws its focus ring as four 2px drop-shadows that follow the shape. Hover lifts a card 2px.
@@ -598,7 +607,7 @@ Where files are added to a ticket (FH-18): the Attachments tab and the page's Fi
 A dialog filling the viewport less a 1rem margin (FH-146): the display-cut caption over a stage on the well with a rule border and card corners, the image centred at Fit and drawn pixel for pixel from 200%; under it the file name in faint mono and a muted hint. The footer (well, rule above) leads with 32px secondary icon buttons for Zoom out and Zoom in around a semibold tabular percentage, then a secondary Fit button with the fit icon; a button at its limit is at 50%. The stage shows a grab cursor while the image can pan. No zoom or pan animation.
 
 ### Filter Chips
-One chip for workstreams and Colour by values alike: a pill with a 20px round bullet (the line bullet, or the value's paint) and the name, card surface and shadow. Shown only takes the select border and ring; hidden is dashed, faint and struck through.
+One chip for workstreams and Colour by values alike: a pill with a 20px round bullet (the line bullet, or the value's paint; a type chip shows the type's card icon in its paint shade instead, so people learn the icons) and the name, card surface and shadow. Shown only takes the select border and ring; hidden is dashed, faint and struck through.
 
 ## Do's and Don'ts
 

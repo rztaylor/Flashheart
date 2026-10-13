@@ -283,6 +283,15 @@ sections that follow it (a ticket's own section above `## Notes` and
 `## Handoff`). `## Handoff` and `## Notes` are never rewritten whole:
 checkpoints write the one, and notes are appended.
 
+A workstream's section edited on its page (FH-139,
+`board.NewWorkstreamSectionChange`) is replaced the same way; a
+workstream has no `updated:` stamp, so nothing else changes. Every one of
+its sections may be rewritten, `## Notes` too, since nothing appends to
+it. A missing template section goes above the template sections that
+follow it (Goal, Scope, Success Criteria, Notes), and a workstream's own
+section above `## Notes`. The write takes the project lock and the
+content-hash precondition (STO-3), and records no event.
+
 ## Blocking
 
 A ticket is **blocked** when any of these holds:

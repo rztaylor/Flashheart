@@ -72,7 +72,14 @@ export function ProjectCounts({
             {stage.title}
           </span>
         ))}
-        <span className="text-center">Blocked</span>
+        <span className="text-center">
+          <Icon
+            name={stateToneIcon.blocked}
+            size={13}
+            className={`mr-1 inline align-[-2px] ${stateToneInk.blocked}`}
+          />
+          Blocked
+        </span>
         <span className="text-center">Needs repair</span>
         <span className="text-center">Needs you</span>
       </div>

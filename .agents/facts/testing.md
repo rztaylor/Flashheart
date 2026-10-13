@@ -123,6 +123,18 @@
   after the key), that no request leaves the board's origin and no CSP
   violation.
   `TicketPageEdit.dom.test.tsx` stands a text area in for the editor.
+- A workstream's page (FH-139): the section rule over copies of the real
+  FH workstreams in `testdata/workstreams/` (also with CRLF) in `board`
+  (`TestWorkstreamSectionChangeLeavesTheRestOfARealWorkstream`: an
+  untouched save writes nothing, an edit changes only that section's
+  text); the read and section endpoints (precondition, no-op, conflict
+  words, a real workstream copy) in `api` (`workstream_test.go`); the
+  page's items in `WorkstreamPage.dom.test.tsx` (the editor stood in, as
+  on the ticket page); in the browser, `frontend/e2e/workstream-page.spec.mjs`
+  opens it from a route card, saves, writes nothing untouched, uses the
+  slash menu, toolbar and remembered view, saves over a change elsewhere
+  (heard of and not yet heard of), conflicts on the same section, works by
+  keyboard and passes axe in both themes at 1440 and 390 px.
 - Files from the board (FH-18, REV-7, SEC-7): sniffing is a table test in
   `board` (`TestSniffAttachmentJudgesTheContent`), the upload's name,
   index entry, streaming limit and refusals in `store`

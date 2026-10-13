@@ -281,26 +281,34 @@ Full format: `docs/dev/specs/board-format.md`.
   tickets as a railway graph of their `depends-on` links, with status,
   blocked state and progress. A finished workstream (every ticket Done,
   Rejected or Archived) shows collapsed to its head until the user expands
-  it; any other workstream always shows in full.
+  it; any other workstream always shows in full. A workstream's name opens
+  its page (`EDIT-13`).
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
-- `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
-  workstream, blocked, live badge, criteria progress), *Detailed* (+
-  description excerpt, handoff "next", attachments count). Every card shows
-  its id and its workstream's line as a stripe and bullet, and, at every
-  density, its change requests still open or addressed (`REV-6`) as a
-  count. **Colour by**
-  (type by default, priority, age or none) tints the card header and names
-  the value in a tag, with colour chips on the board that also filter; the colour is never the
-  only carrier of meaning and never uses the workstream line colours.
+- `VIEW-6` Card density, one set of markers in three layouts (FH-147):
+  *Compact* (the title led by its id, with only Needs you, blocked, change
+  requests and priority beside it), *Normal* (the title, one meta line of
+  type, id, blocked, change requests, live run, age, review, attachments
+  and priority, and a Needs you reason on its own line), *Detailed* (+
+  blocker reason, agent and plan step, handoff "next", description excerpt,
+  workstream name). Every card shows its id and its workstream's line as a
+  stripe, and, at every density, its change requests still open or
+  addressed (`REV-6`) as a count; its accessible name says every marker.
+  Priority is a three-bar marker and type an icon in its colour. **Colour
+  by** (type by default, priority, age or none) tints the whole card, with
+  colour chips on the board that also filter (type chips carry the type
+  icons); the colour is never the only carrier of meaning and never uses
+  the workstream line colours.
 - `VIEW-7` Filters and search across title, slug, body, tags, type, priority,
   workstream, state (blocked, not blocked, needs repair, agent working or
   rejected, FH-59), has-run, has-question. Type, priority,
   workstream and the Colour by value can each show only some values or hide
   some (FH-39). Filters and view choices are remembered per project
   (`CFG-2`).
-- `VIEW-8` Live badge on a card with a live run: agent (Claude/Codex),
-  current plan step ("3/7 · Fix header") when the run has a plan, state, and
-  time since last activity.
+- `VIEW-8` Live run on a card: its state mark and plan count ("3/7") on
+  Normal and Detailed cards, with the agent (Claude/Codex), state and step
+  in its tooltip and the card's name; a Detailed card also says the state,
+  agent, time since last activity and current plan step ("3/7 · Fix
+  header") when the run has a plan.
 
 ### 6.5 Card detail (`CARD`)
 
@@ -509,6 +517,21 @@ Full format: `docs/dev/specs/board-format.md`.
   shows as text and is never rendered, and the editor fetches nothing
   but the ticket's own images. Tab leaves the editor. It loads on
   the first edit, so the board's first load does not carry it.
+- `EDIT-13` **Workstream page** (FH-139): a workstream's page, opened from
+  its name on its route card (`VIEW-4`; beside a finished line's head,
+  which is its disclosure), shows its head and line as the route card
+  does, then its sections: Goal, Scope, Success Criteria, Notes and any of
+  its own, in file order, a missing template section in the template's
+  place. Each section edits in place as a ticket's does (`EDIT-11`: the
+  pencil, a double-click or Enter; Save, Cancel and their keys; one item
+  open at a time; the unsaved-changes prompt) in the formatted editor
+  (`EDIT-12`, without attachments, since a workstream has no files), and
+  an empty one shows **Add <section>**. Every section is a person's to
+  edit, Notes too. A save writes only that section (board-format §Section
+  edits), an untouched save writes nothing, a change elsewhere in the
+  file saves as on a ticket's page, and a change to the section on disk
+  opens the conflict dialog (`EDIT-7`). The title, properties and tickets
+  list are not edited there.
 
 ### 6.7 Runs (`RUN`)
 
