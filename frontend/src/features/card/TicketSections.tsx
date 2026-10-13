@@ -7,6 +7,7 @@ import {
   sectionLabel,
   type TicketSection,
 } from "../../model/ticketSections";
+import { AttachmentDrop } from "./AttachmentDrop";
 import { Attachments } from "./Attachments";
 import { EditTab } from "./EditTab";
 import { ReviewTab } from "./ReviewTab";
@@ -39,7 +40,17 @@ export function SectionBody({
     case "review":
       return <ReviewTab detail={detail} keys={keys} onVerify={ticket.verify} />;
     case "attachments":
-      return <Attachments attachments={detail.attachmentFiles} />;
+      // Files dropped here, or chosen, are attached (FH-18) when the
+      // ticket can be edited.
+      return ticket.edit ? (
+        <AttachmentDrop upload={ticket.edit.upload}>
+          {detail.attachmentFiles.length > 0 ? (
+            <Attachments attachments={detail.attachmentFiles} />
+          ) : null}
+        </AttachmentDrop>
+      ) : (
+        <Attachments attachments={detail.attachmentFiles} />
+      );
     case "runs":
       return <RunsTab detail={detail} onOpen={onOpen} />;
     case "edit":

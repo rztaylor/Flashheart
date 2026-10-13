@@ -35,6 +35,7 @@ import {
   InPlaceEditing,
   useInPlaceItem,
 } from "../editing/InPlace";
+import { AttachmentDrop } from "./AttachmentDrop";
 import { Attachments } from "./Attachments";
 import type { CardPanelProps } from "./CardPanel";
 import { ChangeRequestList, RequestChangesDialog } from "./ChangeRequests";
@@ -188,7 +189,7 @@ function LoadedPage({
       ? () => setRequesting(true)
       : undefined;
   const activity = filterActivity(activityOf(detail), filter);
-  const sections = pageSections(detail, activity.length);
+  const sections = pageSections(detail, activity.length, !!ticket.edit);
   const shown = sections.filter((section) => !section.empty);
   const page = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useSectionInView(
@@ -619,11 +620,21 @@ function PageSectionView({
           />
         );
       }
-      case "files":
+      case "files": {
+        const files = unreferencedFiles(detail);
+        const grid =
+          files.length > 0 ? <Attachments attachments={files} wide /> : null;
+        // Files dropped on Files, or chosen, are attached without
+        // touching the ticket's text (FH-18).
         return labelled(
           2,
-          <Attachments attachments={unreferencedFiles(detail)} wide />,
+          ticket.edit ? (
+            <AttachmentDrop upload={ticket.edit.upload}>{grid}</AttachmentDrop>
+          ) : (
+            grid
+          ),
         );
+      }
       case "activity":
         return labelled(
           2,

@@ -9,7 +9,7 @@ const sample = resolve(import.meta.dirname, "../../testdata/boards/sample");
 
 // syntheticScreenshot draws a plain test-report image (header band, passing
 // rows) so the Review tab has a realistic attachment. It is labelled synthetic.
-function syntheticScreenshot(width = 1200, height = 700) {
+export function syntheticScreenshot(width = 1200, height = 700) {
   const rows = Buffer.alloc((width * 3 + 1) * height);
   const set = (x, y, [r, g, b]) => {
     const offset = y * (width * 3 + 1) + 1 + x * 3;

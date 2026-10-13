@@ -26,7 +26,8 @@ export class ApiError extends Error {
   }
 }
 
-function apiError(response: Response, payload: unknown): ApiError {
+// apiError is the ApiError for an error response and its parsed body.
+export function apiError(response: Response, payload: unknown): ApiError {
   const body = isRecord(payload) ? payload : {};
   const error = isRecord(body.error) ? body.error : undefined;
   return new ApiError(

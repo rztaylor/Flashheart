@@ -588,6 +588,9 @@ Twelve-unit SVG marks in currentColor beside their words: Needs you a disc (on t
 ### Inputs
 Selects 32px, card surface, rule border, chevron. Toolbar filters are 32px buttons of the same look named for their filter; an applied one gains a select border and ring and a count badge, and opens a popover list (check for shown only, a cross and strike for hidden). Checkboxes take the select accent. Search in the band is a band-field well with a band-rule border.
 
+### File Drop
+Where files are added to a ticket (FH-18): the Attachments tab and the page's Files end in a slot with a dashed rule border and 10px corners, the attachment icon in muted ink, *Drop files here to attach them* in body ink over the allowed types in muted meta size, and **Attach files** (secondary, the attachment icon) at its end. While files are dragged over, the slot goes solid on the select surface with a select border and ring, as other drop targets do; the editor's text takes the select border and ring. A file uploading in the text is a quiet chip on the well with a rule border and control corners, its words in muted extra-small text. Under either, a muted status line and refusals in danger words with a warning icon and a Dismiss mark.
+
 ### Filter Chips
 One chip for workstreams and Colour by values alike: a pill with a 20px round bullet (the line bullet, or the value's paint) and the name, card surface and shadow. Shown only takes the select border and ring; hidden is dashed, faint and struck through.
 

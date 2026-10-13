@@ -7,7 +7,8 @@ reload, criterion and review-step ticks through `editing`'s
 `TicketHeader`'s `TicketIdentity`, `TicketTab`'s parts (`RepairNotice`,
 `QuestionsCallout`, `HandoffCallout`, `ReasonList`, `FormatWarnings`,
 each taking its heading level), `Checklist`, `Attachments` (grid and
-lightbox), and `TicketComments` (FH-125, FH-128): `ActivityTimeline`, a
+lightbox), `AttachmentDrop` (files dropped or chosen into the ticket on
+the panel's Attachments tab and the page's Files, FH-18), and `TicketComments` (FH-125, FH-128): `ActivityTimeline`, a
 person's comment edited in place, ending in `CommentBox` (posting a
 comment with its quote, and telling a session, FH-127), under each one's
 in-place editing coordinator.

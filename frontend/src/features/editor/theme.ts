@@ -110,6 +110,17 @@ export const editorTheme = EditorView.theme({
     borderRadius: "var(--radius-card)",
   },
   ".fh-image-note": { color: "var(--fh-ink-muted)" },
+  // A file's place while it uploads (FH-18): a quiet chip, not text.
+  ".fh-upload": {
+    display: "inline-block",
+    margin: "0 2px",
+    padding: "0 6px",
+    border: "1px solid var(--fh-rule)",
+    borderRadius: "var(--radius-control)",
+    backgroundColor: "var(--fh-well)",
+    color: "var(--fh-ink-muted)",
+    fontSize: "var(--text-xs)",
+  },
   ".fh-rule": {
     display: "inline-block",
     width: "100%",
