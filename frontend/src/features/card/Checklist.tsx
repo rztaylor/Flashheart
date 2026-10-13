@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
 
 import { Icon } from "../../components/Icon";
 
@@ -20,6 +20,9 @@ export function Checklist({
   level = 3,
   intro,
   outro,
+  action,
+  onDoubleClick,
+  className = "",
 }: {
   id: string;
   title: string;
@@ -33,6 +36,11 @@ export function Checklist({
   // review's How to Verify on the full page).
   intro?: ReactNode;
   outro?: ReactNode;
+  // action sits beside the heading (the full page's pencil, FH-66), and
+  // onDoubleClick on the heading opens the same edit.
+  action?: ReactNode;
+  onDoubleClick?(event: MouseEvent): void;
+  className?: string;
 }) {
   const done = items.filter((item) => item.done).length;
   const keyed = items.map((item, index) => ({
@@ -42,16 +50,23 @@ export function Checklist({
   }));
   const Heading = level === 2 ? "h2" : "h3";
   return (
-    <section aria-labelledby={id}>
-      <Heading
-        id={id}
-        className="mb-2 flex items-baseline justify-between text-md heading-cut"
+    <section aria-labelledby={id} className={className}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: a double-click is a shortcut; the pencil is the control. */}
+      <div
+        className="mb-2 flex items-center gap-2"
+        onDoubleClick={onDoubleClick}
       >
-        {title}
-        <span className="text-sm font-normal text-ink-muted">
-          {done} of {items.length}
-        </span>
-      </Heading>
+        <Heading
+          id={id}
+          className="flex flex-1 items-baseline justify-between text-md heading-cut"
+        >
+          {title}
+          <span className="text-sm font-normal text-ink-muted">
+            {done} of {items.length}
+          </span>
+        </Heading>
+        {action ? <span className="-my-1.5">{action}</span> : null}
+      </div>
       {intro ? <div className="mb-3">{intro}</div> : null}
       <ul className="divide-y divide-rule overflow-hidden rounded-card border border-rule bg-card">
         {keyed.map((item) =>

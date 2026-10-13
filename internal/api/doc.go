@@ -9,7 +9,8 @@
 //
 // Reads come from index snapshots and, for review and attachment files,
 // store's checks. Writes (moves, field edits decoded into board's
-// change-set and written by store.EditTicket, as agents' are, raw edits,
+// change-set and written by store.EditTicket, as agents' are, one section
+// rewritten in place (board.SectionChange through store.EditTicket), raw edits,
 // criteria, new tickets,
 // archive and restore, permanent delete of archived tickets with its preview
 // token (EDIT-8), project archive, restore and delete (PRJ-5), placement

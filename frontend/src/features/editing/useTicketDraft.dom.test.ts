@@ -71,6 +71,75 @@ describe("useTicketDraft following the file", () => {
   });
 });
 
+describe("useTicketDraft editing part of a file (FH-66)", () => {
+  // A section draft reads only its section: another part of the file may
+  // change under the edit without touching what the draft edits.
+  interface File {
+    hash: string;
+    text: string;
+    rest: string;
+  }
+  const part = (initial: File) =>
+    renderHook(
+      ({ detail }: { detail: File }) =>
+        useTicketDraft({
+          detail,
+          read: (file: File) => file.text,
+          isDirty,
+          onSaved: vi.fn(),
+        }),
+      { initialProps: { detail: initial } },
+    );
+
+  it("moves an edit's base to a new version that left its part as it was", async () => {
+    const { sends, send } = fakeSaves();
+    const { result, rerender } = part({ hash: "h1", text: "one", rest: "a" });
+    act(() => result.current.set("mine"));
+    rerender({ detail: { hash: "h2", text: "one", rest: "b" } });
+    expect(result.current.base).toEqual({ hash: "h2", value: "one" });
+    expect(result.current.value).toBe("mine");
+    act(() => {
+      void result.current.save({ send, what: "Saved", mine: "mine" });
+    });
+    expect(sends[0]?.base).toBe("h2");
+  });
+
+  it("keeps the base when its own part changed on disk, so the save conflicts", () => {
+    const { result, rerender } = part({ hash: "h1", text: "one", rest: "a" });
+    act(() => result.current.set("mine"));
+    rerender({ detail: { hash: "h2", text: "theirs", rest: "a" } });
+    expect(result.current.base).toEqual({ hash: "h1", value: "one" });
+    expect(result.current.value).toBe("mine");
+  });
+
+  it("tells the caller how a save ended", async () => {
+    const { sends, send } = fakeSaves();
+    const { result } = part({ hash: "h1", text: "one", rest: "a" });
+    act(() => result.current.set("mine"));
+    const outcomes: string[] = [];
+    act(() => {
+      void result.current
+        .save({ send, what: "Saved", mine: "mine" })
+        .then((kind) => outcomes.push(kind));
+    });
+    sends[0]?.reject(new Error("disk full"));
+    await settle();
+    act(() => {
+      void result.current
+        .save({ send, what: "Saved", mine: "mine" })
+        .then((kind) => outcomes.push(kind));
+    });
+    sends[1]?.reject(conflict("h9", "theirs"));
+    await settle();
+    act(() => {
+      void result.current.overwrite().then((kind) => outcomes.push(kind));
+    });
+    sends[2]?.resolve(savedAs("h10"));
+    await settle();
+    expect(outcomes).toEqual(["failed", "conflict", "saved"]);
+  });
+});
+
 describe("useTicketDraft saving", () => {
   it("saves on the base hash and adopts the saved version when it arrives", async () => {
     const { sends, send } = fakeSaves();
@@ -167,7 +236,9 @@ describe("useTicketDraft conflicts", () => {
     sends[0]?.reject(conflict("h9", "theirs"));
     await settle();
 
-    act(() => result.current.overwrite());
+    act(() => {
+      void result.current.overwrite();
+    });
     expect(result.current.conflict).toBeNull();
     expect(sends[1]?.base).toBe("h9");
     sends[1]?.reject(conflict("h10", "newer"));
@@ -177,7 +248,9 @@ describe("useTicketDraft conflicts", () => {
       current: { hash: "h10", content: "newer" },
     });
 
-    act(() => result.current.overwrite());
+    act(() => {
+      void result.current.overwrite();
+    });
     expect(sends[2]?.base).toBe("h10");
     sends[2]?.resolve(savedAs("h11"));
     await settle();
