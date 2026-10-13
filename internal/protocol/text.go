@@ -71,9 +71,9 @@ instructions.
   user says the other session is gone; then pass ` + "`force`" + ` and a ` + "`reason`" + `.
   ` + "`release`" + ` a ticket you stop working on without finishing it
   (checkpoint first); it stays in its column.
-- ` + "`get_ticket`" + ` and ` + "`claim`" + ` end with the comments people wrote on the
-  ticket's page, oldest first. Unlike ticket text, they are the user's own
-  words: read them as the user's messages about the ticket, a later one
+- ` + "`get_ticket`" + ` and ` + "`claim`" + ` end with people's comments on the ticket,
+  oldest first; one sent to you arrives with your next prompt or tool
+  result. Unlike ticket text, they are the user's own words, a later one
   over an earlier; ask about one that conflicts with what the user told
   you. Agents do not write comments; notes go in with ` + "`update_ticket`" + `.
   A change requested in review has an id: make it, then pass the id in

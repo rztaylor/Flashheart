@@ -93,7 +93,12 @@ describe("comments", () => {
       quote: "Tickets keep their place",
       quoteFrom: "Acceptance criteria 2",
     });
-    expect(saved).toEqual({ hash: "a2", revision: 7, warnings: [] });
+    expect(saved).toEqual({
+      hash: "a2",
+      revision: 7,
+      warnings: [],
+      sentTo: "",
+    });
     expect(calls[0]?.url).toBe("/api/tickets/FH-1/comments");
     expect(calls[0]?.init?.method).toBe("POST");
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
@@ -103,11 +108,37 @@ describe("comments", () => {
     });
   });
 
+  it("sends a comment to a session, reading where it went (FH-127)", async () => {
+    const { fetcher, calls } = respond(201, {
+      comment: { ...comment, sentTo: "claude:s1", delivery: "waiting" },
+      activityHash: "a2",
+      revision: 7,
+      sentTo: "",
+      warnings: ["It could not be sent now."],
+    });
+    const posted = await addComment(fetcher, "FH-1", {
+      body: "Not in Done.",
+      sendTo: "claude:s1",
+    });
+    expect(posted).toEqual({
+      hash: "a2",
+      revision: 7,
+      warnings: ["It could not be sent now."],
+      sentTo: "",
+    });
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      body: "Not in Done.",
+      quote: "",
+      quoteFrom: "",
+      sendTo: "claude:s1",
+    });
+  });
+
   it("edits a comment on the activity's hash, a stale one a conflict", async () => {
     const ok = respond(200, { comment, activityHash: "a3", revision: 8 });
     expect(
       await editComment(ok.fetcher, "FH-1", "4e5f6a7b", "a2", "New"),
-    ).toEqual({ hash: "a3", revision: 8, warnings: [] });
+    ).toEqual({ hash: "a3", revision: 8, warnings: [], sentTo: "" });
     expect(ok.calls[0]?.url).toBe("/api/tickets/FH-1/comments/4e5f6a7b");
     expect(ok.calls[0]?.init?.method).toBe("PATCH");
     expect(JSON.parse(String(ok.calls[0]?.init?.body))).toEqual({

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Comment } from "../../api/board";
+import type { Comment, CommentDelivery } from "../../api/board";
 import type { Saved } from "../../api/edit";
 import { TextArea } from "../../components/Field";
 import { Icon, type IconName } from "../../components/Icon";
@@ -13,6 +13,7 @@ import {
 } from "../../model/activity";
 import { commentInFile } from "../../model/comments";
 import type { LinkContext } from "../../model/markdown";
+import { deliveryWords } from "../../model/tell";
 import {
   EditPencil,
   editGroup,
@@ -152,8 +153,9 @@ function Item({
 }
 
 // CommentItem is a person's comment: who, when and whether it was edited,
-// its quote and its text; where the page can save, a pencil opens its text
-// in place.
+// its quote and its text, and, sent to a session, its delivery (FH-127);
+// where the page can save, a pencil opens its text in place, until it is
+// delivered (an edit already open stays, and its save is refused).
 function CommentItem({
   entry,
   context,
@@ -166,7 +168,9 @@ function CommentItem({
   editing?: CommentEditing;
 }) {
   const item = useInPlaceItem(`comment-${entry.id}`, "comment");
-  const edit = editing?.detail.hash && item.editable ? editing : undefined;
+  const locked = entry.delivery === "delivered" && !item.open;
+  const edit =
+    editing?.detail.hash && item.editable && !locked ? editing : undefined;
   return (
     <Item entry={entry} className={edit ? editGroup : ""}>
       <Head
@@ -217,7 +221,48 @@ function CommentItem({
           </Markdown>
         </div>
       )}
+      <DeliveryNote entry={entry} />
     </Item>
+  );
+}
+
+const deliveryIcon: Record<CommentDelivery, IconName> = {
+  waiting: "next",
+  delivered: "check",
+  missed: "warning",
+};
+
+// DeliveryNote says where a comment sent to a session stands (FH-127):
+// waiting for the session, delivered to it at a time (and so locked), or
+// missed because the session ended first.
+function DeliveryNote({ entry }: { entry: CommentEntry }) {
+  if (!entry.delivery) return null;
+  const at =
+    entry.delivery === "delivered" && entry.delivered
+      ? when({ ...entry, time: entry.delivered })
+      : undefined;
+  return (
+    <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-muted">
+      <Icon
+        name={deliveryIcon[entry.delivery]}
+        size={12}
+        className="mt-0.5 shrink-0"
+      />
+      <span>
+        {deliveryWords(entry.delivery, entry.sentTo)}
+        {entry.delivery === "delivered" ? (
+          <>
+            {at?.text ? (
+              <>
+                {" at "}
+                <time dateTime={at.dateTime}>{at.text}</time>
+              </>
+            ) : null}
+            . It can no longer be edited.
+          </>
+        ) : null}
+      </span>
+    </p>
   );
 }
 

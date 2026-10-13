@@ -8,8 +8,9 @@
 // once from the files before the window). Each snapshot indexes its runs by
 // ticket, id and parent once, so per-card lookups do not scan every run,
 // and knows each ticket's holder: the live run whose claim on it is within
-// its lease (Holder), which comments and change requests are sent to
-// (FH-126, FH-127).
+// its lease (Holder), which change requests are sent to (FH-126), and its
+// live claimants, the holder's session and live subagents (Claimants),
+// which a person may send a comment to (FH-127).
 //
 // The board and the runs are fingerprinted apart: Rebuild reads both,
 // RefreshRuns folds new events over the board already read (FH-96). The

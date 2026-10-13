@@ -141,7 +141,14 @@ export interface NewComment {
   body: string;
   quote?: string;
   quoteFrom?: string;
+  // sendTo also sends the comment to that run now (FH-127): a live
+  // session holding the ticket, or one of its subagents.
+  sendTo?: string;
 }
+
+// Posted reports a new comment as a save, with the run it was sent to (""
+// when it was not, or could not be sent: warnings say why).
+export type Posted = Saved & { sentTo: string };
 
 // commentSave sends a comment write and reads the activity's new hash as
 // a save's (Saved), so a comment edit goes through the same draft and
@@ -151,7 +158,7 @@ async function commentSave(
   method: "POST" | "PATCH",
   path: string,
   body: unknown,
-): Promise<Saved> {
+): Promise<Posted> {
   const payload = await sendJSON(fetcher, method, path, body);
   if (
     !isRecord(payload) ||
@@ -163,7 +170,12 @@ async function commentSave(
   return {
     hash: payload.activityHash,
     revision: payload.revision,
-    warnings: [],
+    warnings: Array.isArray(payload.warnings)
+      ? payload.warnings.filter(
+          (item): item is string => typeof item === "string",
+        )
+      : [],
+    sentTo: typeof payload.sentTo === "string" ? payload.sentTo : "",
   };
 }
 
@@ -178,6 +190,7 @@ export function addComment(
     body: comment.body,
     quote: comment.quote ?? "",
     quoteFrom: comment.quoteFrom ?? "",
+    ...(comment.sendTo ? { sendTo: comment.sendTo } : {}),
   });
 }
 
