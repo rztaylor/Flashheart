@@ -29,9 +29,9 @@ const columns =
   "grid-cols-5 @min-[50rem]:grid-cols-[minmax(10rem,1.6fr)_repeat(10,minmax(3.25rem,1fr))]";
 
 // ProjectCounts is All projects' list of every project with its counts
-// (FH-153, PRJ-6) and live agents (FH-162), in the rail's order, most recently active first: what
-// the rail's badges keep in their tooltips, side by side. Each row leads to
-// the project's own Overview.
+// (FH-153, PRJ-6) and live agents (FH-162), in the rail's order, most
+// recently active first: what the rail's badges keep in their tooltips,
+// side by side. Each row leads to the project's own Overview.
 export function ProjectCounts({
   projects,
   hrefFor,

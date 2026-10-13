@@ -6,8 +6,9 @@ its tickets and runs through `api/board` and `api/runs` and reloading them
 when the board changes, and drawing the pipeline of the scope's columns
 (`PipelineHeadline`, from the project summaries the shell passes), in the
 All projects scope only the Projects list (`ProjectCounts`, FH-153: every
-project's counts and live agents (FH-162) from the same summaries, as a table or stacked by the
-card's own width, each row a link to the project's Overview) and the
+project's counts and live agents (FH-162) from the same summaries, as a
+table or stacked by the card's own width, each row a link to the
+project's Overview) and the
 sections in one column of rounded section cards, which share their card,
 head, mark and count badge (`sectionParts`): Needs your decision (questions answered in place through the
 shared question card; permission prompts saying which session to answer
