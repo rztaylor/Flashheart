@@ -6,8 +6,8 @@
 // prompt, reports each tool result classified as a shell command or an
 // edit of its paths (which hooks throttles; Codex's tool names stay here)
 // and the checkpoint tool's results, and renders additional context and
-// stop decisions. Stamping the run into Flashheart's own tool calls is not
-// done yet (FH-74).
+// stop decisions. It does not stamp the run into Flashheart's own tool
+// calls: the MCP server reads the session from each call's _meta (D45).
 //
 // Resolving projects, scrubbing, storing and the recovery note belong to
 // hooks. The golden payloads it is tested against, recorded from real

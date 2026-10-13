@@ -11,8 +11,9 @@
 // Needs you, Waiting, Quiet, Ended) with why a run in Needs you needs you
 // (Reason: typed, first match wins, never words), its link to a ticket, a ticket's live
 // claim holder (lease, agent-protocol §6), undelivered answers, whether a
-// question's session (a subagent's is its session's) has ended, and its flags
-// from the fold and a clock. The human's board writes (run `human`) are no
+// question's session (a subagent's is its session's) has ended, whether a
+// run the MCP server started is still MCP-only (no event only hooks
+// record), and its flags from the fold and a clock. The human's board writes (run `human`) are no
 // run and are skipped.
 //
 // It owns the run window every reader folds (Lookback) and what a partial

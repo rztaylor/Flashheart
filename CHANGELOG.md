@@ -22,6 +22,16 @@ All notable changes to this project are documented here. The project follows
   check. The shared protocol text now says plans are mirrored only where
   the hooks are installed (protocol version unchanged).
 
+- A Codex session's claims, checkpoints and questions land on that
+  session's own run (FH-74, D45). Codex names its session in every MCP
+  call, so the server credits the call to the run its hooks record, never
+  to a second `codex:mcp-…` run, and two Codex sessions in one worktree no
+  longer get `ambiguous_run`. A Codex session without hooks gets a run
+  under the same session id, so when its hooks start mid-session the board
+  keeps one claim holder, one Needs you entry and one Overview row, and
+  stops calling it "MCP only". When `ambiguous_run` lists runs whose short
+  ids look the same, it names them in full (protocol version unchanged).
+
 - Codex sessions with Flashheart's hooks are recorded on the board like
   Claude Code ones (FH-73). `flashheart hook codex <Event>` turns Codex's
   hook events, mapped from payloads recorded from the Codex CLI and the
