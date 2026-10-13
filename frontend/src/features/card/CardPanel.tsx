@@ -12,6 +12,7 @@ import type { Step } from "../../model/order";
 import { type SectionId, ticketSections } from "../../model/ticketSections";
 import { InPlaceEditing } from "../editing/InPlace";
 import type { Editing } from "../editing/useEditing";
+import { EditTab } from "./EditTab";
 import { TicketComments } from "./TicketComments";
 import {
   TicketActions,
@@ -132,7 +133,8 @@ export function CardPanel({
             <StaleNote error={resource.error} className="px-6 pb-3" />
           ) : null}
           {/* The panel's comments edit in place and hold a comment being
-              written, as the full page's do (FH-128): closing the panel or
+              written, as the full page's do (FH-128), and the Edit tab
+              holds its unsaved changes (FH-138): closing the panel or
               opening another ticket asks first. */}
           <InPlaceEditing>
             <SectionTabs
@@ -142,20 +144,18 @@ export function CardPanel({
               tabsClassName="px-6"
               bodyClassName="relative min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-10"
             >
-              {active === "comments" ? null : (
+              {active === "comments" || active === "edit" ? null : (
                 <SectionBody
                   section={active}
                   detail={detail}
                   ticket={ticket}
-                  fetcher={fetcher}
                   keys={keys}
                   onOpen={onOpen}
-                  workstreams={workstreams}
                 />
               )}
-              {/* Comments stay mounted while another tab shows, so a
-                  comment being written or edited survives a look at the
-                  ticket. */}
+              {/* Comments and Edit stay mounted while another tab shows, so
+                  a comment being written or edited, or an unsaved edit
+                  (FH-138), survives a look at the ticket. */}
               {sections.some((section) => section.id === "comments") ? (
                 <div hidden={active !== "comments"}>
                   <TicketComments
@@ -164,6 +164,17 @@ export function CardPanel({
                     entries={filterActivity(activityOf(detail), "comments")}
                     filter="comments"
                     keys={keys}
+                  />
+                </div>
+              ) : null}
+              {sections.some((section) => section.id === "edit") ? (
+                <div hidden={active !== "edit"}>
+                  <EditTab
+                    detail={detail}
+                    fetcher={fetcher}
+                    workstreams={workstreams.get(detail.project) ?? []}
+                    onSaved={ticket.saved}
+                    onShow={() => setTab("edit")}
                   />
                 </div>
               ) : null}

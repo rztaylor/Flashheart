@@ -245,6 +245,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Changes on the side panel's **Edit** tab are no longer lost without
+  warning (FH-138). They now stay while you look at another tab, and
+  closing the panel, pressing Escape or opening another ticket with them
+  unsaved asks first (*Unsaved changes to the ticket*), as it does for a
+  comment being written: **Discard changes** drops them, **Keep editing**
+  returns you to the Edit tab with focus where you were.
 - Building after a pull that adds or upgrades frontend packages no longer
   fails on missing modules (FH-119). `scripts/build.sh` (and so
   `scripts/e2e.sh`) and `scripts/e2e-visual.sh` installed the packages only

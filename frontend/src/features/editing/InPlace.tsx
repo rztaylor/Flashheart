@@ -42,12 +42,23 @@ interface Coordinator {
 }
 
 // HeldDraft is unsaved work on the page outside any open item (a comment
-// being written, FH-125): leaving the page asks about it too, and Discard
-// drops it.
+// being written, FH-125; the card panel's Edit tab, FH-138): leaving the
+// page asks about it too, and Discard drops it. returnTo, when given,
+// shows the draft and moves focus into it: Keep editing calls it when the
+// prompt was not opened from a field.
 interface HeldDraft {
   name: string;
   discard(): void;
+  returnTo?(): void;
 }
+
+// inField: focus is in a control that takes text or a choice, where the
+// person was editing when the prompt opened (the dialog returns focus
+// there when it closes).
+const inField = (element: Element | null) =>
+  !!element?.matches(
+    "input, textarea, select, [contenteditable]:not([contenteditable=false])",
+  );
 
 const EditingContext = createContext<Coordinator | null>(null);
 
@@ -70,6 +81,10 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
   openId.current = open?.id ?? null;
   const focusOpen = useRef<{ id: string; focus(): void } | null>(null);
   const release = useRef<(() => void) | null>(null);
+  const held = useRef(drafts);
+  held.current = drafts;
+  const openDirty = useRef(false);
+  openDirty.current = !!open && dirty;
 
   const show = (next: OpenItem | null) => {
     setDirty(false);
@@ -105,9 +120,16 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
     };
   }, [open, dirty, drafts]);
 
-  // Keep editing returns focus to the open item once the prompt is gone.
+  // Keep editing returns focus to the open item once the prompt is gone,
+  // unless only a held draft that can take focus has changes: then focus
+  // stays in the field the prompt was opened from, or else goes back to
+  // that draft (the Edit tab, after Close or another card was pressed).
   useEffect(() => {
-    if (kept > 0) focusOpen.current?.focus();
+    if (kept === 0) return;
+    const back = [...held.current.values()].find((draft) => draft.returnTo);
+    if (focusOpen.current && (openDirty.current || !back))
+      focusOpen.current.focus();
+    else if (back && !inField(document.activeElement)) back.returnTo?.();
   }, [kept]);
 
   const coordinator: Coordinator = {
@@ -246,26 +268,31 @@ export function useInPlaceItem(id: string, name: string): InPlaceItem {
 }
 
 // useHeldDraft holds unsaved work that is not an in-place item (a comment
-// being written) while dirty, so leaving the page asks about it as about
-// the open item; discard empties it. Opening items never asks about it.
+// being written, the panel's Edit tab) while dirty, so leaving the page
+// asks about it as about the open item; discard empties it, and returnTo,
+// when given, shows it and moves focus into it on Keep editing. Opening
+// items never asks about it.
 export function useHeldDraft(
   id: string,
   name: string,
   dirty: boolean,
   discard: () => void,
+  returnTo?: () => void,
 ) {
   const coordinator = useContext(EditingContext);
-  const latest = useRef({ coordinator, name, discard });
-  latest.current = { coordinator, name, discard };
+  const latest = useRef({ coordinator, name, discard, returnTo });
+  latest.current = { coordinator, name, discard, returnTo };
+  const returns = !!returnTo;
   useEffect(() => {
     const { coordinator: held } = latest.current;
     if (!dirty) return;
     held?.holdDraft(id, {
       name: latest.current.name,
       discard: () => latest.current.discard(),
+      ...(returns ? { returnTo: () => latest.current.returnTo?.() } : {}),
     });
     return () => held?.holdDraft(id, null);
-  }, [id, dirty]);
+  }, [id, dirty, returns]);
 }
 
 // editGroup is the class an item's container takes so its pencil shows

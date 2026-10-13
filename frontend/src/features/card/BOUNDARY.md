@@ -15,8 +15,8 @@ in-place editing coordinator.
 
 Panel only: `TicketProperties` and `TicketActions` (Move to, Position,
 Archive), and its tabs (`TicketSections`, `EditTab` through
-`useTicketDraft`, `RunsTab`, `RunDetail`, `ReviewTab`, the Comments tab
-kept mounted so its drafts survive a tab change).
+`useTicketDraft`, `RunsTab`, `RunDetail`, `ReviewTab`; Comments and Edit
+stay mounted, their unsaved drafts held across tab changes).
 
 Page only: `PropertiesPanel` (Move to, a row per field, Archive),
 `SectionOutline` and `JumpTo`, `useSectionInView`, Activity's filter
