@@ -46,7 +46,7 @@ func (srv *server) claim(c *call, input ClaimInput) (string, error) {
 		notes = append(notes, c.note(fmt.Sprintf("Claimed from %s (%s): %s", protocol.ShortRun(holder.ID), c.state(holder), reason)))
 	}
 	reasons := c.blocked(project, ticket)
-	startsBlocked := len(reasons) > 0 && ticket.Column != board.InProgress
+	startsBlocked := board.StartsBlocked(ticket.Column, board.InProgress, len(reasons) > 0)
 	if startsBlocked {
 		if !input.Force {
 			return "", fail("blocked", "work on what blocks it first, or pass force with a reason to start it anyway",

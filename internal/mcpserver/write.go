@@ -1,8 +1,6 @@
 package mcpserver
 
 import (
-	"regexp"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -18,10 +16,6 @@ const (
 	maxNoteText = 2000
 	maxReview   = 256 << 10
 )
-
-// agentKey is the key format agents may choose: 2–5 capitals or digits,
-// starting with a letter (KEY-5).
-var agentKey = regexp.MustCompile(`^[A-Z][A-Z0-9]{1,4}$`)
 
 // registerWrites registers the write tools, each with its run and claim
 // policy (policy.go; agent-protocol §7.1's policy table). The handlers live
@@ -66,5 +60,5 @@ func (c *call) record(project string, list ...events.Event) error {
 
 // note is a dated ## Notes line written for an agent.
 func (c *call) note(text string) string {
-	return board.Note(c.now, protocol.ShortRun(c.by())+": "+text)
+	return board.NoteLine(c.now, protocol.ShortRun(c.by()), text)
 }

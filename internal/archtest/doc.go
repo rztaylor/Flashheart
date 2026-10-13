@@ -7,4 +7,8 @@
 // open, create, list, stat, change or remove files, each with a reason
 // (a path outside the root, or an accepted exception). Everything else
 // reaches the filesystem through store.
+//
+// Editing tests (FH-85) keep the ticket-editing rules defined once: every
+// Notes bullet is board.NoteLine's, and api and mcpserver write typed field
+// edits only through board's change-set and store.EditTicket.
 package archtest

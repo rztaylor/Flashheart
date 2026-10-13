@@ -29,45 +29,38 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 	if err != nil {
 		return "", err
 	}
-	type change struct {
-		key    string
-		value  string
-		list   []string
-		isList bool
-	}
-	var changes []change
+	// Decoding and scrubbing agent text is the tool's; which fields change
+	// and how they are checked and written is the one rule the board shares
+	// (board.NewFieldChanges, store.EditTicket; FH-85).
+	var requested []board.FieldChange
 	for key, raw := range input.Set {
-		ch := change{key: key, isList: slices.Contains(board.ListFields, key)}
+		list, editable := board.EditableField(key)
+		change := board.FieldChange{Key: key}
 		switch {
 		case key == "status":
 			return "", fail("invalid_input", "use move to change a ticket's column", "status is changed with move")
-		case ch.isList:
+		case !editable:
+			return "", fail("invalid_input", "settable fields: "+strings.Join(settable, ", "), "%q cannot be set", key)
+		case list:
 			values, ok := stringList(raw)
 			if !ok {
 				return "", fail("invalid_input", "pass a list of strings", "%s must be a list of strings", key)
 			}
-			values = items(values)
-			for _, value := range values {
-				if err := board.ValidateField(key, value); err != nil {
-					return "", fail("invalid_input", "correct the value", "%v", err)
-				}
-			}
-			ch.list = values
-		case slices.Contains(board.ScalarFields, key):
+			change.List = items(values)
+		default:
 			value, ok := raw.(string)
 			if !ok {
 				return "", fail("invalid_input", "pass a string", "%s must be a string", key)
 			}
-			ch.value = scrub.Text(value, 300)
-			if err := board.ValidateField(key, ch.value); err != nil {
-				return "", fail("invalid_input", "correct the value", "%v", err)
-			}
-		default:
-			return "", fail("invalid_input", "settable fields: "+strings.Join(settable, ", "), "%q cannot be set", key)
+			// No scalar field is longer than a title.
+			change.Value = scrub.Text(value, board.MaxTitle)
 		}
-		changes = append(changes, ch)
+		requested = append(requested, change)
 	}
-	slices.SortFunc(changes, func(a, b change) int { return strings.Compare(a.key, b.key) })
+	changes, err := board.NewFieldChanges(requested)
+	if err != nil {
+		return "", fail("invalid_input", "correct the value", "%v", err)
+	}
 	// Criteria are found in the same bytes whose hash guards the write, so a
 	// reordering in between is a conflict, not a wrong tick (STO-3).
 	data, base, err := srv.store.ReadTicket(project.Name, ticket.ID)
@@ -87,28 +80,13 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 	if text := strings.TrimSpace(scrub.Secrets(input.AppendNotes)); text != "" {
 		note = c.note(c.copier(project.Name, ticket.ID).markdown(board.OneLine(text, maxNoteText)))
 	}
-	if len(changes) == 0 && len(checks) == 0 && note == "" {
+	if changes.Len() == 0 && len(checks) == 0 && note == "" {
 		return "", fail("invalid_input", "pass set, check or append_notes", "nothing to change")
 	}
-	// A workstream change also rewrites the workstreams' tickets lists.
-	workstream := slices.IndexFunc(changes, func(ch change) bool { return ch.key == "workstream" })
+	// Ticks and the note follow the fields in the same write; a workstream
+	// change also rewrites the workstreams' tickets lists.
 	edit := func(data []byte) ([]byte, error) {
 		var err error
-		for _, ch := range changes {
-			switch {
-			case ch.key == "workstream":
-				continue
-			case ch.key == "title":
-				data, err = mdfile.SetTitle(data, ch.value)
-			case ch.isList:
-				data, err = mdfile.SetList(data, ch.key, ch.list)
-			default:
-				data, err = mdfile.SetScalar(data, ch.key, ch.value)
-			}
-			if err != nil {
-				return nil, err
-			}
-		}
 		for _, index := range checks {
 			if data, err = mdfile.SetCheckbox(data, board.SectionCriteria, index, true); err != nil {
 				return nil, err
@@ -119,18 +97,10 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 		}
 		return data, nil
 	}
-	if workstream >= 0 {
-		_, err = srv.store.SetTicketWorkstream(project.Name, ticket.ID, store.Unchanged(base), changes[workstream].value, edit)
-	} else {
-		_, err = srv.store.UpdateTicket(project.Name, ticket.ID, store.Unchanged(base), edit)
-	}
-	if err != nil {
+	if _, err := srv.store.EditTicket(project.Name, ticket.ID, store.Unchanged(base), changes, edit); err != nil {
 		return "", err
 	}
-	var fields []string
-	for _, ch := range changes {
-		fields = append(fields, ch.key)
-	}
+	fields := changes.Keys()
 	if len(checks) > 0 {
 		fields = append(fields, "criteria")
 	}
@@ -141,11 +111,8 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 		return "", err
 	}
 	text := ""
-	for _, ch := range changes {
-		if ch.key != "title" {
-			continue
-		}
-		if advice := titleAdvice(ch.value); advice != "" {
+	if title, ok := changes.Value("title"); ok {
+		if advice := titleAdvice(title); advice != "" {
 			text = "warning: " + advice + "\n"
 		}
 	}
@@ -227,8 +194,8 @@ func (srv *server) move(c *call, input MoveInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if to == board.InProgress && ticket.Column != board.InProgress {
-		if reasons := c.blocked(project, ticket); len(reasons) > 0 {
+	if to == board.InProgress {
+		if reasons := c.blocked(project, ticket); board.StartsBlocked(ticket.Column, to, len(reasons) > 0) {
 			return "", fail("blocked", "claim it with force and a reason to start it anyway", "%s is blocked: %s", ticket.ID, strings.Join(reasons, "; "))
 		}
 	}
@@ -305,7 +272,7 @@ func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error
 		}
 	}
 	created, err := srv.store.CreateTicket(project.Name, store.NewTicket{
-		Title: scrub.Text(input.Title, 300), Type: input.Type, Priority: input.Priority, Status: status,
+		Title: scrub.Text(input.Title, board.MaxTitle), Type: input.Type, Priority: input.Priority, Status: status,
 		Workstream: strings.TrimSpace(input.Workstream), Description: scrub.Secrets(input.Description),
 		Criteria: items(input.Criteria), DependsOn: input.DependsOn, Tags: items(input.Tags),
 		Session: c.by(), PlanOrRepro: scrub.Secrets(input.PlanOrRepro), Context: scrub.Secrets(input.Context), Key: key,
@@ -330,9 +297,9 @@ func (srv *server) createTicket(c *call, input CreateTicketInput) (string, error
 	return text + fmt.Sprintf("\nok ticket=%s\n", created.ID), nil
 }
 
-// maxTitle is the length past which a title no longer reads at a glance on
-// a card.
-const maxTitle = 80
+// glanceTitle is the length past which a title no longer reads at a
+// glance on a card (advice only; board.MaxTitle is the limit).
+const glanceTitle = 80
 
 // codeLike matches a word of a title that is a name from the code rather
 // than words a person uses: a path or file name, snake_case, a call,
@@ -349,8 +316,8 @@ func titleAdvice(title string) string {
 			return fmt.Sprintf("The title reads like code (%q): name what a person would notice or gain, and keep names from the code for the description or Context.", word)
 		}
 	}
-	if length := utf8.RuneCountInString(title); length > maxTitle {
-		return fmt.Sprintf("The title is %d characters: keep it to %d or fewer so it reads at a glance on a card.", length, maxTitle)
+	if length := utf8.RuneCountInString(title); length > glanceTitle {
+		return fmt.Sprintf("The title is %d characters: keep it to %d or fewer so it reads at a glance on a card.", length, glanceTitle)
 	}
 	return ""
 }
@@ -364,7 +331,7 @@ type SetProjectKeyInput struct {
 
 func (c *call) checkKey(key string) (string, error) {
 	key = strings.TrimSpace(key)
-	if !agentKey.MatchString(key) {
+	if !board.ValidAgentKey(key) {
 		return "", fail("invalid_input", "use 2–5 capital letters or digits starting with a letter, like FH", "%q is not a key", key)
 	}
 	return key, nil

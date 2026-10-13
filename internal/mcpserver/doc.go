@@ -27,7 +27,8 @@
 // review.go (with attachments) and questions.go; write.go registers the
 // write tools.
 //
-// Files, locks and copies belong to store; parsing and blocking rules to
-// board; text edits to mdfile; run state to runs; the protocol wording to
+// Files, locks and copies belong to store; parsing, blocking and editing
+// rules (field changes, notes, limits, keys; FH-85) to board; text edits to
+// mdfile; run state to runs; the protocol wording to
 // protocol; stdio wiring to cli. It never uses index, api, app or webui.
 package mcpserver
