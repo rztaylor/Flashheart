@@ -488,6 +488,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- A slim project sidebar gives the board room for another column
+  (FH-150). The sidebar is now a narrow column of project key badges at
+  every width, whether or not a ticket is open, so at 1440px the Done
+  column fits beside the others. A badge keeps what needs you: its Needs
+  you count on the corner and a dashed, hatched mark while a ticket in the
+  project needs repair. Hover a badge, or listen to it, for the project's
+  name and its tickets, in progress, blocked, needs-repair and needs-you
+  counts. On a phone the Project picker is unchanged.
 - Theme, board root and version are behind a gear in the title bar
   (FH-149, `CFG-2`). The Settings button sits between the connection dot
   and Quit on every view and on a ticket's full page, at every width. Its

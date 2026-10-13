@@ -13,7 +13,7 @@ edited as removable chips), `Dialog`, `Toast`,
 dialog that fills the viewport, with zoom, pan and their keys and pointer
 handling; the zoom and pan maths is `model/zoom`), `Table` (the one table look, ui-layout.md §6: card surface,
 sticky head, `HeadCell`, `Row` with dividers, hover and selection),
-`RouteBar`, `FileDrop` (taking files: `AttachButton`, the file picker;
+`FileDrop` (taking files: `AttachButton`, the file picker;
 `FileDropArea`, a drop target that shows it will take files;
 `UploadNotes` and `useUploadNotes`, a batch's status and refusals),
 `TailText` (one line of a path, branch or id cut from its
@@ -25,7 +25,7 @@ title, the text in a `<bdi>` so punctuation keeps its order),
 with Try again) and `StaleNote` (the last good copy's note; ui-layout.md
 §8), `SkeletonTable` (the table look while rows load), `RunState` (run
 state as a mark and words), `NeedsYou` (the one attention plate, ui-layout.md §7: the
-attention colour, `NeedsYouPlate` inline and on the rail, `plateClass` for
+attention colour, `NeedsYouPlate` inline, `NeedsYouCount` on a rail badge's corner, `plateClass` for
 the band's toggle, and `AttentionDisc`; nothing else uses the attention
 colour),
 `QuestionCard` (an

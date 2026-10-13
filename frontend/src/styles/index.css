@@ -62,9 +62,8 @@
   letter-spacing: -0.015em;
 }
 
-/* Hatching: ink, never a line colour. hatched-strong marks the needs-repair
-   edge band; hatched-current draws in the surrounding text colour, for the
-   in-progress stretch of a route bar. */
+/* Hatching: ink, never a line colour. hatched-strong marks needs repair: a
+   card's edge band and a rail badge's top. */
 @utility hatched-strong {
   background-image: repeating-linear-gradient(
     -45deg,
@@ -72,15 +71,6 @@
     transparent 3px 7px
   );
   opacity: 0.55;
-}
-
-@utility hatched-current {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    currentColor 0 3px,
-    transparent 3px 7px
-  );
-  opacity: 0.7;
 }
 
 @utility hatched {

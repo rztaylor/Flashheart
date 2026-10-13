@@ -14,7 +14,7 @@
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
+  Table, TailText, BranchLabel, EmptyState, RunState, NeedsYou, QuestionCard, Aside, Popover,
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
   ui-layout.md §8) → `features/<feature>/` (board,

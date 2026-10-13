@@ -4014,7 +4014,7 @@
     "northStar": "Metro Pop",
     "overview": "A friendly metro system for work: each workstream is a route with its own colour, its tickets are stations, and the board is a bright kanban that still reads as calm, dense tooling. One structure (docs/dev/specs/ui-layout.md), two palettes: Metro Pop light (raspberry band and accent on a clean white ground, cool grey wells, white cards; D22) and Night Service dark (black band, neutral charcoal, lime action, coral attention, lifted route colours). Replaced the Transit Line Map of D14 per D18.",
     "keyCharacteristics": [
-      "A 56px band over a 248px rail; every view opens on a page header naming its scope.",
+      "A 56px band over a 64px rail of key badges; every view opens on a page header naming its scope.",
       "Rounded: 8px controls, 10px cards, 14px wells and route cards, full pills.",
       "Route colours mean workstreams; paint means the Colour by value; status pills carry an icon and a word.",
       "Archivo Variable: heavy condensed display cut for titles, condensed bold for heads, tabular numerals.",
