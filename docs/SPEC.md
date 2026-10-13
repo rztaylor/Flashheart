@@ -171,8 +171,8 @@ Full format: `docs/dev/specs/board-format.md`.
   automatically.
 - `STO-5` Runs, events, claims and questions are stored in the project's
   append-only event log (`.flashheart/events/YYYY-MM-DD.jsonl`), rotated daily,
-  retained for 90 days by default. A session's answers inbox expires with
-  its day's events and its hook activity state after `stale_hours`, so a
+  retained for 90 days by default. A session's inbox (answers, comments
+  and change requests waiting for it, D54) expires with its day's events and its hook activity state after `stale_hours`, so a
   session that never reports its end leaves nothing behind (FH-82).
 - `STO-6` Durable meaning lands in the ticket, not only the log: handoffs are
   written into the ticket body (`## Handoff`), answered questions into
@@ -518,8 +518,10 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
 - `HOOK-4` Permission requests and notifications that the agent is waiting
   for permission put the run in *Needs you*; the next tool result or prompt
   clears it.
-- `HOOK-5` On prompt submit, the hook adds answers to the run's questions that
-  arrived since its last turn.
+- `HOOK-5` On prompt submit, the hook adds what waits in the session's
+  inbox since its last turn: answers to its questions, and comments and
+  change requests sent to it from the board, each framed as what it is
+  (agent-protocol §4, D54). With nothing waiting it costs one file check.
 - `HOOK-6` Optional, per project (`enforce_handoff`): at turn end, if the run
   (with its subagents) edited files since its last checkpoint (by it or any
   of them) and is linked to a ticket, the hook

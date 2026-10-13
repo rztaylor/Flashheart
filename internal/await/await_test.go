@@ -22,9 +22,10 @@ const (
 var t0 = time.Date(2026, 10, 7, 9, 0, 0, 0, time.UTC)
 
 type fixture struct {
-	t   *testing.T
-	log *events.Log
-	now time.Time
+	t    *testing.T
+	root string
+	log  *events.Log
+	now  time.Time
 	// onSleep runs at each sleep, before the clock advances.
 	onSleep func(call int)
 	sleeps  int
@@ -41,7 +42,7 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { s.Close() })
-	return &fixture{t: t, log: events.New(s), now: t0}
+	return &fixture{t: t, root: root, log: events.New(s), now: t0}
 }
 
 func (f *fixture) options(question string) Options {
@@ -75,7 +76,7 @@ func (f *fixture) ask(run, id string) {
 func (f *fixture) answer(run, id string) {
 	f.t.Helper()
 	f.append(run, events.QuestionAnswered, events.AnswerData{ID: id, Answer: "Push", By: "Robert"})
-	if err := f.log.QueueAnswer(project, run, events.Delivery{ID: id, Run: run, Ticket: "AL-1", Question: "Push it?", Answer: "Push", By: "Robert"}); err != nil {
+	if err := f.log.Queue(project, events.Entry{Type: events.EntryAnswer, ID: id, Run: run, Ticket: "AL-1", Question: "Push it?", Text: "Push", By: "Robert"}); err != nil {
 		f.t.Fatal(err)
 	}
 }
@@ -111,7 +112,7 @@ func TestWaitDeliversAnAnswerAlreadyInTheInbox(t *testing.T) {
 	if got := f.delivered(); len(got) != 1 || got[0] != session+" q-1" {
 		t.Fatalf("delivered = %v", got)
 	}
-	if waiting, _ := f.log.TakeAnswers(project, session); len(waiting) != 0 {
+	if waiting, _ := f.log.Take(project, events.Mailbox{Session: session, Legacy: true}); len(waiting) != 0 {
 		t.Fatalf("inbox still holds %+v", waiting)
 	}
 	if f.sleeps != 0 {
@@ -152,7 +153,7 @@ func TestWaitStopsQuietlyWhenTheAnswerWasDeliveredElsewhere(t *testing.T) {
 		if call == 2 {
 			// The user prompted the session first: the prompt hook took it.
 			f.answer(session, "q-3")
-			if _, err := f.log.TakeAnswers(project, session); err != nil {
+			if _, err := f.log.Take(project, events.Mailbox{Session: session, Legacy: true}); err != nil {
 				t.Fatal(err)
 			}
 			f.append(session, events.QuestionDelivered, events.DeliveredData{ID: "q-3"})
@@ -181,7 +182,7 @@ func TestWaitDeliversAnAnswerWhoseInboxWasEmptiedByAFailedDelivery(t *testing.T)
 			f.ask(subagent, "q-9")
 			lose := func() {
 				f.answer(subagent, "q-9")
-				if _, err := f.log.TakeAnswers(project, session); err != nil {
+				if _, err := f.log.Take(project, events.Mailbox{Session: session, Legacy: true}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -304,5 +305,60 @@ func TestWaitRefusesAnInvalidProject(t *testing.T) {
 	options.Project = "../beta"
 	if _, err := Wait(context.Background(), f.log, options); err == nil {
 		t.Fatal("an invalid project was accepted")
+	}
+}
+
+// A comment or change request sent to the session while it waits wakes
+// it too (D54): it is delivered, framed as the user's words, with a line
+// saying the answer has not come yet.
+func TestWaitDeliversACommentAndSaysTheAnswerIsStillToCome(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture(t)
+	f.ask(session, "q-1")
+	f.onSleep = func(call int) {
+		if call == 2 {
+			if err := f.log.Queue(project, events.Entry{Type: events.EntryComment, ID: "c-1", Run: session, Ticket: "AL-1", Text: "Use the blue one.", By: "Robert"}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	result, err := Wait(context.Background(), f.log, f.options("q-1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, part := range []string{
+		"[Flashheart] Comments from the user on the board (their own words):",
+		`- AL-1 (Robert): "Use the blue one."`,
+		"The answer to q-1 has not come yet; run the same await command again to keep waiting.",
+	} {
+		if !strings.Contains(result.Note, part) {
+			t.Fatalf("note missing %q:\n%s", part, result.Note)
+		}
+	}
+}
+
+// An answer an older binary queued in the old answers/ location is
+// delivered (D54).
+func TestWaitDeliversAnAnswerInTheOldInbox(t *testing.T) {
+	t.Parallel()
+
+	f := newFixture(t)
+	f.ask(session, "q-1")
+	f.append(session, events.QuestionAnswered, events.AnswerData{ID: "q-1", Answer: "Push", By: "Robert"})
+	dir := filepath.Join(f.root, project, ".flashheart", "answers")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := `{"id":"q-1","run":"claude:s1","ticket":"AL-1","question":"Push it?","answer":"Push","by":"Robert"}` + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "claude--s1.jsonl"), []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result, err := Wait(context.Background(), f.log, f.options("q-1"))
+	if err != nil || !strings.Contains(result.Note, `AL-1: "Push it?" → "Push" (Robert)`) || strings.Contains(result.Note, "has not come yet") {
+		t.Fatalf("result = %+v, %v", result, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "claude--s1.jsonl")); !os.IsNotExist(err) {
+		t.Fatalf("old inbox left: %v", err)
 	}
 }

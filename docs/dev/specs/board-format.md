@@ -33,7 +33,8 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
     └── .flashheart/
         ├── lock                          advisory project lock (STO-3)
         ├── events/2026-10-05.jsonl       event log (STO-5)
-        ├── answers/<agent>--<session>.jsonl   answers waiting for a session's next prompt (HOOK-5)
+        ├── inbox/<agent>--<session>.jsonl     answers, comments and change requests waiting for a session's next prompt (HOOK-5, D54)
+        ├── answers/<agent>--<session>.jsonl   the inbox before D54, delivered and drained into inbox/
         └── activity/<agent>--<session>.json   tool activity hooks have not recorded yet (agent-protocol §3)
 ```
 
@@ -556,8 +557,9 @@ per line, appended under the project lock by `flashheart hook` (and later
 `mcp` and `serve`). Schema and event kinds:
 `docs/dev/specs/agent-protocol.md` §3. Events name tickets by id. Readers skip
 malformed lines and unknown kinds. Files older than `event_retention_days` are
-deleted by `serve` at startup and daily, with the answers inboxes last
-written on their days; at the same time `serve` deletes activity state no
+deleted by `serve` at startup and daily, with the session inboxes (in
+`inbox/` or the old `answers/`) last written on their days, after which
+`serve` moves any inbox left in `answers/` into `inbox/`; at the same time `serve` deletes activity state no
 hook has written for `stale_hours` (12), left by a session that never
 reported its end (agent-protocol §3, §4; FH-82). The only other deletions are
 permanent deletes the user confirms: of an archived ticket (`EDIT-8`), whose

@@ -339,6 +339,7 @@ func TestTicketEventsInTheTimeline(t *testing.T) {
 		{"a new ticket", events.TicketCreated, events.TicketData{Ticket: "AL-2"}, Entry{Kind: events.TicketCreated, Ticket: "AL-2"}},
 		{"a review", events.ReviewWritten, events.TicketData{Ticket: "AL-1"}, Entry{Kind: events.ReviewWritten, Ticket: "AL-1"}},
 		{"an attachment", events.AttachmentAdded, events.AttachmentData{Ticket: "AL-1", File: "files/shot.png", Kind: "screenshot"}, Entry{Kind: events.AttachmentAdded, Ticket: "AL-1"}},
+		{"a delivered comment names its type", events.CommentDelivered, events.CommentDeliveredData{Ticket: "AL-1", Comment: "c-1", Type: "change-request"}, Entry{Kind: events.CommentDelivered, Ticket: "AL-1", Detail: "change-request"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

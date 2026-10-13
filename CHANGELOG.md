@@ -339,6 +339,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Each session has one inbox for what the board sends it (FH-135, D54).
+  Answers to its questions, and from FH-126 and FH-127 comments and change
+  requests, wait in `<project>/.flashheart/inbox/<agent>--<session>.jsonl`
+  as typed entries, and every way they reach the agent (the next prompt, a
+  hookless session's next tool result, `board_context`, the recovery note
+  and `flashheart await`) puts each type under its own heading: answers as
+  before, as information, comments and change requests as the user's own
+  words. A delivered comment records the new `comment.delivered` event.
+  The prompt hook still checks one file when nothing waits. Inboxes in the
+  old `answers/` folder are still delivered, and `serve` moves them into
+  `inbox/` at startup; retention expires both. Additive within protocol 2:
+  nothing to re-run.
 - A ticket's full page uses the width (FH-65, CARD-7). Instead of the card
   panel's tabs stretched to one column, it shows the whole ticket as one
   page: questions waiting for you, the handoff, blockers, criteria and the

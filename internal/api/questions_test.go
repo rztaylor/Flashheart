@@ -84,8 +84,8 @@ func TestAnsweringAQuestionRecordsAndQueuesIt(t *testing.T) {
 	if !strings.Contains(string(ticket), `- 2026-10-05 · Question from claude:3f2a9c1e — "Keep the old skeleton?" Answer (Robert): "No".`) {
 		t.Fatalf("ticket notes:\n%s", ticket)
 	}
-	waiting, err := log.TakeAnswers("alpha", sampleSession)
-	if err != nil || len(waiting) != 1 || waiting[0].Answer != "No" || waiting[0].Run != sampleSession || waiting[0].Question != "Keep the old skeleton?" {
+	waiting, err := log.Take("alpha", events.Mailbox{Session: sampleSession})
+	if err != nil || len(waiting) != 1 || waiting[0].Type != events.EntryAnswer || waiting[0].Text != "No" || waiting[0].Run != sampleSession || waiting[0].Question != "Keep the old skeleton?" {
 		t.Fatalf("inbox = %+v, %v", waiting, err)
 	}
 	var response RunsResponse
@@ -129,7 +129,7 @@ func TestOnlyOneOfTwoConcurrentAnswersIsAccepted(t *testing.T) {
 			accepted++
 		}
 	}
-	waiting, _ := log.TakeAnswers("alpha", sampleSession)
+	waiting, _ := log.Take("alpha", events.Mailbox{Session: sampleSession})
 	if accepted != 1 || len(waiting) != 1 {
 		t.Fatalf("accepted %d answers, inbox holds %d", accepted, len(waiting))
 	}

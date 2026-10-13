@@ -41,6 +41,9 @@ const (
 	// on the board (D47): the ticket and the comment's id, never its text.
 	CommentAdded  Kind = "comment.added"
 	CommentEdited Kind = "comment.edited"
+	// CommentDelivered records a comment or change request taken from a
+	// session's inbox and shown to it (D54), on the run it was sent to.
+	CommentDelivered Kind = "comment.delivered"
 )
 
 // kinds is the one list of the kinds the log records, each with its data
@@ -70,6 +73,7 @@ var kinds = map[Kind]reflect.Type{
 	QuestionDelivered:   reflect.TypeFor[DeliveredData](),
 	CommentAdded:        reflect.TypeFor[TicketData](),
 	CommentEdited:       reflect.TypeFor[TicketData](),
+	CommentDelivered:    reflect.TypeFor[CommentDeliveredData](),
 }
 
 // Known reports a kind the log records.
@@ -221,6 +225,11 @@ func (d AnswerData) bound() Data {
 
 func (d DeliveredData) bound() Data {
 	d.ID = line(d.ID, maxID)
+	return d
+}
+
+func (d CommentDeliveredData) bound() Data {
+	d.Ticket, d.Comment, d.Type = line(d.Ticket, maxRef), line(d.Comment, maxID), line(d.Type, maxWord)
 	return d
 }
 

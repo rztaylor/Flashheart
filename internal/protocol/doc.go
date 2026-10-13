@@ -1,8 +1,9 @@
 // Package protocol owns the agent protocol version and the text Flashheart
 // gives agents: the recovery note returned at session start (HOOK-3,
-// agent-protocol §8), the answers note added to a prompt (HOOK-5) and the
-// one conversion of delivered answers to what the agent is shown
-// (AnswersOf), and the
+// agent-protocol §8) with its lines for what it took from the inbox, the
+// inbox note every other delivery path shows (InboxNote: each entry type
+// under its own heading, answers as information, comments and change
+// requests as the user's words; HOOK-5, D54), and the
 // protocol text (§12) rendered as the MCP server's instructions, the
 // Claude Code skill setup installs and the body setup puts in Codex's
 // AGENTS.md (Body), and the shell commands given to agents

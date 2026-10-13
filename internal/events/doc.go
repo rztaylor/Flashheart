@@ -11,13 +11,15 @@
 // selective reading that judges a line by its envelope header before
 // decoding its data (ReadSelected, or ReadHeaders for several passes over
 // lines held in memory),
-// expiring files after the retention period (with the answers inboxes last
-// written on those days, FH-82), and the answers inbox's line
-// format (answers queued for a session's next prompt, HOOK-5) with the
-// question.delivered events that record taking them, delivering answers
-// (Deliver: the one routine every delivery path uses; it takes inboxes,
-// adds the fold's undelivered answers, records delivery and returns what
-// it took even when recording fails, so no answer is lost), and the human's board
+// expiring files after the retention period (with the session inboxes last
+// written on those days, FH-82), and the session inbox (inbox.go, D54):
+// its typed entries (answer, comment, change request) and line format,
+// old untyped lines read as answers, queueing an entry (Queue), which
+// entries a delivery takes (Mailbox), the question.delivered and
+// comment.delivered events that record taking them, and Deliver, the one
+// routine every delivery path uses (it takes inboxes, adds the fold's
+// undelivered answers, records delivery and returns what it took even
+// when recording fails, so nothing taken is lost), and the human's board
 // activity: the shape of a board write's event (run `human`, EDIT-10;
 // comment.added and comment.edited, D47) and which events count as the
 // human acting on the board.

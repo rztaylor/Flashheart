@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/events"
@@ -32,7 +33,8 @@ type Options struct {
 	Project, Question string
 	// Timeout bounds the wait; zero means DefaultTimeout.
 	Timeout time.Duration
-	// Poll is how often the inbox is checked (one stat when it is empty);
+	// Poll is how often the inbox is checked (one stat of each location
+	// when it is empty, D54);
 	// Rescan how often the log is read for delivery by another path.
 	Poll, Rescan time.Duration
 	// Now and Sleep are the clock; nil means the real one.
@@ -42,8 +44,9 @@ type Options struct {
 
 // Result is what a finished wait found.
 type Result struct {
-	// Note is the answers note for the agent (information, not
-	// instructions); empty when AlreadyDelivered.
+	// Note is the inbox note for the agent, each entry framed by its type
+	// (answers as information, not instructions; comments and change
+	// requests as the user's words); empty when AlreadyDelivered.
 	Note string
 	// AlreadyDelivered means the answer reached the session another way.
 	AlreadyDelivered bool
@@ -54,8 +57,10 @@ type Result struct {
 
 // Wait blocks until the question's answer is in its session's inbox or the
 // log shows it answered and not delivered, then delivers it with the rest
-// of the inbox (events.Deliver) and returns them as a note. Other answers
-// waiting for the same session are delivered with it.
+// of the inbox (events.Deliver) and returns them as a note. Anything else
+// waiting for the same session (other answers, comments, change requests)
+// is delivered with it, and wakes the session on its own: the note then
+// says the answer has not come yet.
 func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 	o = withDefaults(o)
 	if !store.ValidProject(o.Project) {
@@ -84,15 +89,15 @@ func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 		// The log saying the question was answered but not delivered also
 		// delivers it: its inbox may be gone (taken by a delivery whose
 		// record failed), and the answer must not wait for the timeout.
-		var pending []events.Delivery
+		var pending []events.Entry
 		if q.Answered() {
-			pending = append(pending, q.Delivery())
+			pending = append(pending, q.InboxEntry())
 		}
-		waiting, err := events.Deliver(log, o.Project, []string{session}, pending, o.Now())
+		waiting, err := events.Deliver(log, o.Project, []events.Mailbox{{Session: session, Legacy: true}}, pending, o.Now())
 		if len(waiting) > 0 {
-			// Taken answers are returned even if recording their delivery
+			// Taken entries are returned even if recording their delivery
 			// fails, so they are never lost.
-			return Result{Note: protocol.AnswersNote(protocol.AnswersOf(waiting))}, err
+			return Result{Note: note(waiting, o.Question)}, err
 		}
 		if err != nil {
 			return Result{}, err
@@ -110,6 +115,16 @@ func Wait(ctx context.Context, log *events.Log, o Options) (Result, error) {
 			scanned = o.Now()
 		}
 	}
+}
+
+// note renders what a wait delivered, saying so when the awaited answer
+// is not among it.
+func note(waiting []events.Entry, question string) string {
+	text := protocol.InboxNote(waiting)
+	if !slices.ContainsFunc(waiting, func(e events.Entry) bool { return e.Type == events.EntryAnswer && e.ID == question }) {
+		text += fmt.Sprintf("[Flashheart] The answer to %s has not come yet; run the same await command again to keep waiting.\n", question)
+	}
+	return text
 }
 
 func withDefaults(o Options) Options {

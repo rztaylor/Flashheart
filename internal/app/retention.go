@@ -13,11 +13,13 @@ import (
 
 // pruneExpired expires every project's old files (FH-82), reporting
 // failures to diagnostics: event files older than days
-// (event_retention_days, STO-5) with the answers inboxes last written on
+// (event_retention_days, STO-5) with the session inboxes last written on
 // those days (agent-protocol §4), and the activity state of sessions no
 // hook has written for stale_hours, whose runs the stale rule has ended
 // (agent-protocol §3). Sessions that never report their end, a crash or
-// any Codex session, leave nothing behind for longer than that.
+// any Codex session, leave nothing behind for longer than that. It then
+// moves inboxes an older binary left in the old answers/ location into
+// the inbox the prompt hook checks (D54).
 func pruneExpired(files *store.Store, now time.Time, days int, diagnostics io.Writer) {
 	projects, err := files.Projects()
 	if err != nil {
@@ -31,6 +33,9 @@ func pruneExpired(files *store.Store, now time.Time, days int, diagnostics io.Wr
 		}
 		if _, err := files.PruneActivity(project, stale); err != nil {
 			fmt.Fprintf(diagnostics, "flashheart: expire stale activity state in %s: %v\n", project, err)
+		}
+		if _, err := files.DrainLegacyInboxes(project); err != nil {
+			fmt.Fprintf(diagnostics, "flashheart: move old inboxes in %s: %v\n", project, err)
 		}
 	}
 }

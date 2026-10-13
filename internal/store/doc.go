@@ -31,7 +31,8 @@
 // finds or creates a repository's project
 // (PRJ-2–PRJ-5; outside git there is none, ErrNoProject), resolves working
 // directories through the cwd cache (never caching one outside git), and
-// keeps event files, answers inboxes and the hooks' per-session activity
+// keeps event files, session inboxes (inbox/, draining the old answers/
+// location into it; D54) and the hooks' per-session activity
 // state (read, appended with and replaced under one project lock), and
 // expires those older than retention's cutoffs (FH-82; which ones is
 // events' and app's rule, the lock and the check under it are store's).

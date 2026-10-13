@@ -128,6 +128,20 @@ describe("describeEntry", () => {
     );
     expect(
       describeEntry(
+        entry({ kind: "comment.delivered", detail: "comment", ticket: "FH-1" }),
+      ),
+    ).toBe("Comment on FH-1 delivered");
+    expect(
+      describeEntry(
+        entry({
+          kind: "comment.delivered",
+          detail: "change-request",
+          ticket: "FH-1",
+        }),
+      ),
+    ).toBe("Change request on FH-1 delivered");
+    expect(
+      describeEntry(
         entry({ kind: "question.answered-in-session", ticket: "FH-1" }),
       ),
     ).toBe("Question on FH-1 answered in the session");
