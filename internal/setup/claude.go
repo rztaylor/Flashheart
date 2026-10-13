@@ -114,8 +114,13 @@ func (o Options) replacedPath() string   { return filepath.Join(o.claudeDir(), "
 func (o Options) backupsPath() string    { return filepath.Join(o.claudeDir(), backupDir) }
 func (o Options) claudeJSONPath() string { return filepath.Join(o.Home, ".claude.json") }
 
-func (o Options) hookCommand(event string) string {
-	command := protocol.ShellQuote(o.Binary) + " hook claude " + event
+// hookCommand is Claude Code's hook command for event.
+func (o Options) hookCommand(event string) string { return o.agentHookCommand(Claude{}.Name(), event) }
+
+// agentHookCommand runs this binary's hook handler for an agent's event
+// (agent-protocol §5.1).
+func (o Options) agentHookCommand(agent, event string) string {
+	command := protocol.ShellQuote(o.Binary) + " hook " + agent + " " + event
 	if o.Root != "" {
 		command += " --root " + protocol.ShellQuote(o.Root)
 	}
@@ -134,13 +139,20 @@ func (o Options) serverArgs() []string {
 // skillBackup is the skill's name inside a backup folder.
 var skillBackup = filepath.Join("skills", protocol.SkillName, "SKILL.md")
 
-// readUserSettings reads settings.json, through a symlink to its target (a
-// dotfiles manager's file stays a link), and checks the hooks setup edits.
+// readUserSettings reads settings.json and checks the hooks setup edits.
 func (o Options) readUserSettings() (string, []byte, *value, error) {
-	path := o.settingsPath()
+	return readHooksFile(o.settingsPath())
+}
+
+// readHooksFile reads a JSON file of hooks (Claude Code's settings.json,
+// Codex's hooks.json), through a symlink to its target (a dotfiles
+// manager's file stays a link), and checks the hooks setup edits. It
+// returns the path to write, the content and its tree.
+func readHooksFile(name string) (string, []byte, *value, error) {
+	path := name
 	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
 		if path, err = filepath.EvalSymlinks(path); err != nil {
-			return "", nil, nil, fmt.Errorf("%s is a link that cannot be followed: %w", o.settingsPath(), err)
+			return "", nil, nil, fmt.Errorf("%s is a link that cannot be followed: %w", name, err)
 		}
 	}
 	data, tree, err := readSettings(path)
@@ -148,7 +160,7 @@ func (o Options) readUserSettings() (string, []byte, *value, error) {
 		return "", nil, nil, err
 	}
 	if err := checkHooks(tree); err != nil {
-		return "", nil, nil, fmt.Errorf("%s: %w; fix it before running setup", o.settingsPath(), err)
+		return "", nil, nil, fmt.Errorf("%s: %w; fix it before running setup", name, err)
 	}
 	return path, data, tree, nil
 }
@@ -260,18 +272,19 @@ func stripOwn(hooks *value, prune bool) {
 	}
 }
 
-// installHooks replaces setup's hooks in tree with the current set.
-func (o Options) installHooks(tree *value) {
+// installHooks replaces setup's hooks in tree with one for each event,
+// running command(event); PreToolUse is limited to Flashheart's tools.
+func installHooks(tree *value, events []string, command func(string) string) {
 	hooks := tree.get("hooks")
 	if hooks == nil || !hooks.isObj {
 		hooks = &value{isObj: true}
 		tree.set("hooks", hooks)
 	}
 	stripOwn(hooks, false)
-	for _, event := range claudeEvents {
+	for _, event := range events {
 		entry := &value{isObj: true}
 		entry.set("type", stringValue("command"))
-		entry.set("command", stringValue(o.hookCommand(event)))
+		entry.set("command", stringValue(command(event)))
 		entry.set("timeout", numberValue(hookTimeout))
 		group := &value{isObj: true}
 		if event == "PreToolUse" {
@@ -288,7 +301,7 @@ func (o Options) installHooks(tree *value) {
 }
 
 func (o Options) installedSettings(data []byte, tree *value) []byte {
-	o.installHooks(tree)
+	installHooks(tree, claudeEvents, o.hookCommand)
 	return encodeLike(tree, data)
 }
 
@@ -424,15 +437,7 @@ func (Claude) Uninstall(o Options) (*Plan, error) {
 	if err != nil {
 		return nil, err
 	}
-	after, restored := o.restoredSettings(data)
-	if !restored {
-		hooks := tree.get("hooks")
-		stripOwn(hooks, true)
-		if hooks != nil && hooks.isObj && len(hooks.object) == 0 {
-			tree.remove("hooks")
-		}
-		after = encodeLike(tree, data)
-	}
+	after := uninstalledHooks(o.backupsPath(), "settings.json", data, tree, o.installedSettings)
 	if data != nil && !bytes.Equal(after, data) {
 		p.files = append(p.files, change{path: settings, backup: "settings.json", before: data, after: after})
 	}
@@ -463,31 +468,48 @@ func (Claude) Uninstall(o Options) (*Plan, error) {
 	return p, nil
 }
 
-// restoredSettings returns the backed-up settings when installing over
-// them gives exactly the current file. A nil result with restored set means
-// the file did not exist before setup.
-func (o Options) restoredSettings(current []byte) ([]byte, bool) {
-	dir := latestBackupDir(o.backupsPath(), "settings.json")
+// uninstalledHooks is a hooks file without setup's hooks. When the file is
+// just as setup left it (installing over the newest backup, with install,
+// gives exactly data), the backup is restored byte for byte, or nil when
+// the file did not exist before setup; otherwise only setup's own hooks
+// are removed.
+func uninstalledHooks(backups, name string, data []byte, tree *value, install func([]byte, *value) []byte) []byte {
+	if after, restored := restoredHooks(backups, name, data, install); restored {
+		return after
+	}
+	hooks := tree.get("hooks")
+	stripOwn(hooks, true)
+	if hooks != nil && hooks.isObj && len(hooks.object) == 0 {
+		tree.remove("hooks")
+	}
+	return encodeLike(tree, data)
+}
+
+// restoredHooks returns the backed-up file when installing over it gives
+// exactly the current one. A nil result with restored set means the file
+// did not exist before setup.
+func restoredHooks(backups, name string, current []byte, install func([]byte, *value) []byte) ([]byte, bool) {
+	dir := latestBackupDir(backups, name)
 	if dir == "" {
 		return nil, false
 	}
-	if _, err := os.Stat(filepath.Join(dir, "settings.json.absent")); err == nil {
-		if bytes.Equal(o.installedSettings(nil, &value{isObj: true}), current) {
+	if _, err := os.Stat(filepath.Join(dir, name+".absent")); err == nil {
+		if bytes.Equal(install(nil, &value{isObj: true}), current) {
 			return nil, true
 		}
 		return nil, false
 	}
-	backup, err := os.ReadFile(filepath.Join(dir, "settings.json"))
+	backup, err := os.ReadFile(filepath.Join(dir, name))
 	if err != nil {
 		return nil, false
 	}
-	_, tree, err := readSettings(filepath.Join(dir, "settings.json"))
-	if err != nil || !bytes.Equal(o.installedSettings(backup, tree), current) {
+	_, tree, err := readSettings(filepath.Join(dir, name))
+	if err != nil || !bytes.Equal(install(backup, tree), current) {
 		return nil, false
 	}
 	// A backup from before an earlier setup (or a hand-made configuration)
 	// may hold Flashheart hooks of its own; those go too.
-	_, original, _ := readSettings(filepath.Join(dir, "settings.json"))
+	_, original, _ := readSettings(filepath.Join(dir, name))
 	hooks := original.get("hooks")
 	stripOwn(hooks, true)
 	if hooks != nil && hooks.isObj && len(hooks.object) == 0 {

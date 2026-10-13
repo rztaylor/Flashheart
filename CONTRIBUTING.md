@@ -32,6 +32,12 @@ scripts/e2e.sh      # Playwright lifecycle, accessibility and screenshots (visib
 scripts/e2e-visual.sh   # compare the stable screenshots in Docker; --update-snapshots after a visual change
 ```
 
+`scripts/build.sh`, `scripts/e2e.sh` and `scripts/e2e-visual.sh` reinstall
+the frontend packages (`npm ci`) when they are missing or no longer match
+`frontend/package-lock.json`, for example after pulling a change that adds a
+package, and reuse an up-to-date install; `scripts/check.sh` always runs
+`npm ci`. Both go through `scripts/frontend-deps.sh`.
+
 Tests never touch a real board root or agent configuration; use temporary
 directories and copies of `testdata/boards/sample`.
 

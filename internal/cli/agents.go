@@ -21,8 +21,7 @@ type agent struct {
 // read, in doctor's section order.
 var agents = []agent{
 	{hooks: claude.Adapter{}, setup: setup.Claude{}},
-	// Codex's setup and doctor checks are FH-75.
-	{hooks: codex.Adapter{}},
+	{hooks: codex.Adapter{}, setup: setup.Codex{}},
 }
 
 // name is the agent's name on the command line and in run ids.

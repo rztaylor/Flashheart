@@ -72,7 +72,7 @@ Intended layout (packages are created when they get real content):
   `internal/hooks/claude` and `internal/hooks/codex` are the only places that
   know each agent's payload schema.
 - `internal/mcpserver`: MCP tools over store, events and runs; attributes
-  a Codex call to the session its `_meta` names (D44); starts a run for a
+  a Codex call to the session its `_meta` names (D45); starts a run for a
   connection without hooks and ends it on disconnect (D34).
 - `internal/await`: `flashheart await`: wait for one question's answer in
   its session's inbox (or given and undelivered in the `runs` fold, when a
@@ -81,9 +81,11 @@ Intended layout (packages are created when they get real content):
 - `internal/setup`: an agent-neutral plan engine (`plan.go`: diff, write
   with backup, uninstall moves, commands through the agent's CLI) and the
   `setup.Agent` interface (install, uninstall, diagnose, find its CLI;
-  optional `SkillRefresher`), implemented per agent (`claude.go`; refreshing
-  an installed Claude skill is called by the session-start hook through
-  `cli`; `hooks` never imports `setup`).
+  optional `SkillRefresher`), implemented per agent (`claude.go`; `codex.go`,
+  which edits Codex's `config.toml` as text through its own statement
+  scanner, `toml.go`, with no TOML library; refreshing an installed Claude
+  skill is called by the session-start hook through `cli`; `hooks` never
+  imports `setup`).
 - `internal/health`: a check's `Finding` and `Level`, shared by setup's
   diagnoses and doctor.
 - `internal/doctor`: `flashheart doctor` (SET-4): root checks, a section per

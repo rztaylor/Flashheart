@@ -21,7 +21,7 @@
 // against another session's claim. The wrapper begins the call and applies
 // the policy, so handlers start from a call they may act for. Attribution
 // precedence (§7.1) lives in attribution.go alone, including reading the
-// session a Codex call names in its _meta (D44); connections.go keeps
+// session a Codex call names in its _meta (D45); connections.go keeps
 // per-connection state (the started run, its activity and end, and handing
 // it over to hooks that start mid-session). call.go
 // and projects.go are a call's view of the board; the tools are grouped by

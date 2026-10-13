@@ -104,9 +104,14 @@
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
   with `go test`.
 - Setup is tested against `testdata/setup/claude/` in a temporary home with
-  a fake `claude` CLI; tests never touch the real `~/.claude`. `doctor` is
-  tested the same way, with fixture homes and board roots (a missing hook, a
-  moved binary, a hook-errors log).
+  a fake `claude` CLI, and against the `$CODEX_HOME` fixtures in
+  `testdata/setup/codex/` (`user/`: the user's own entries; `stale/`: an
+  older setup with a moved binary; or empty) copied into a temporary home,
+  for diff, write, uninstall and diagnosis; tests never touch the real
+  `~/.claude` or `~/.codex`. `doctor` is tested the same way, with fixture
+  homes and board roots (a missing hook, a moved binary, a hook-errors log).
+  `setup codex` registers exactly the events recorded in
+  `testdata/hooks/codex/` (`TestCodexHooksAreTheRecordedEvents`).
 - The Runs tab tree is tested from the golden hook payloads' events
   (`TestTicketRunsCarryTheSubagentTree` in `internal/api`), and in the
   browser from subagents the runs e2e starts through the real hook.
@@ -117,7 +122,7 @@
 - Runs the MCP server starts (D34) are tested over the in-memory transport
   with several client connections (`env.dial`), and over stdio by
   `TestHooklessSessionOverStdio` in `internal/cli`.
-- Codex attribution (D44) replays recordings in `internal/mcpserver`
+- Codex attribution (D45) replays recordings in `internal/mcpserver`
   (`codexruns_test.go`): hook events from
   `testdata/hooks/codex/<Event>/<case>.events.json` go into the log
   (`env.codexHooks`) and calls carry the `_meta` of

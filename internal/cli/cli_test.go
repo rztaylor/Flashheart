@@ -822,9 +822,48 @@ func TestSetupUsage(t *testing.T) {
 			t.Errorf("%s: code %d, stderr %q", args, code, stderr)
 		}
 	}
-	code, _, stderr := newHarness(t).run("setup", "codex")
-	if code != 2 || stderr != "flashheart: setup codex is not yet available\n" {
-		t.Errorf("codex: code %d, stderr %q", code, stderr)
+}
+
+// setup codex works in $CODEX_HOME when it is set, as Codex does (FH-75),
+// and doctor checks what it wrote.
+func TestSetupCodexShowsThenWritesThenUninstalls(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	codexHome := filepath.Join(h.home, "codex-home")
+	if err := os.MkdirAll(codexHome, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h.env["CODEX_HOME"] = codexHome
+	root := t.TempDir()
+	code, stdout, stderr := h.run("setup", "codex", "--root", root)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Create ~/codex-home/config.toml:") ||
+		!strings.Contains(stdout, "hook codex SessionStart --root "+root) ||
+		!strings.Contains(stdout, "Nothing was changed. Run flashheart setup codex --write to apply these changes.") {
+		t.Fatalf("dry run: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+	if entries, _ := os.ReadDir(codexHome); len(entries) != 0 {
+		t.Fatalf("the dry run wrote %v", entries)
+	}
+	if code, stdout, stderr = h.run("setup", "codex", "--write", "--root", root); code != 0 || !strings.Contains(stdout, "Wrote ~/codex-home/hooks.json") {
+		t.Fatalf("write: code %d, stderr %q, stdout:\n%s", code, stderr, stdout)
+	}
+	if _, err := os.Stat(filepath.Join(h.home, ".codex")); err == nil {
+		t.Fatal("setup wrote ~/.codex although CODEX_HOME is set")
+	}
+	_, stdout, _ = h.run("doctor", "--root", root)
+	for _, want := range []string{"\nCodex\n  ok       MCP server: configured", "  ok       Protocol text: up to date"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("doctor lacks %q:\n%s", want, stdout)
+		}
+	}
+	if code, _, stderr = h.run("setup", "codex", "--uninstall", "--write", "--root", root); code != 0 {
+		t.Fatalf("uninstall: code %d, stderr %q", code, stderr)
+	}
+	for _, name := range []string{"config.toml", "hooks.json", "AGENTS.md"} {
+		if _, err := os.Stat(filepath.Join(codexHome, name)); err == nil {
+			t.Errorf("%s remains after uninstall", name)
+		}
 	}
 }
 
