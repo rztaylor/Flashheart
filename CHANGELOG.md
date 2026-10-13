@@ -132,6 +132,16 @@ All notable changes to this project are documented here. The project follows
   of secrets; agents never write them. The page to comment from comes
   with FH-125 (protocol version unchanged).
 
+- Codex's Flashheart instructions stay current after an upgrade (FH-121,
+  D53). At the start of each Codex session, Flashheart's hook rewrites the
+  Flashheart section of your global `AGENTS.md` when it is out of date, as
+  Claude Code's skill already was, and tells the session so it reads the
+  section again. Only the text between the markers changes, atomically and
+  through a symlinked file to its target; your text around it stays byte
+  for byte. A file without the section never gets one, and a file whose
+  markers are broken is left alone for `doctor` to report. A failure is
+  logged and the session goes on (protocol version unchanged).
+
 - One command connects Codex to Flashheart, and `doctor` checks it (FH-75).
   `flashheart setup codex` shows, as a diff, the `[mcp_servers.flashheart]`
   table it adds to `config.toml`, the hooks it merges into `hooks.json` and

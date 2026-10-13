@@ -13,7 +13,8 @@
 // project lock and forgetting runs the stale rule has ended
 // (agent-protocol §3), appends the events, renders the
 // recovery note at session start
-// (after calling the caller's skill refresh and noting an update),
+// (after calling the caller's protocol-text refresh and opening the note
+// with the line it returns when it rewrote the text),
 // delivers what waits in the session's inbox with a prompt (checking one
 // file) and in the recovery note (HOOK-5, D54, through events.Deliver:
 // shown even when recording their delivery fails, which is logged), marks a session's turn
@@ -30,7 +31,7 @@
 // Every failure is logged to hook-errors.log and swallowed. In a repository
 // whose project is archived (PRJ-5) a hook records nothing and stays quiet;
 // outside any git repository (PRJ-4) it also writes nothing at all, not
-// even the root or the skill.
+// even the root, the skill or AGENTS.md.
 //
 // Payload schemas and output formats belong to the adapters
 // (hooks/claude, hooks/codex); the board root, its settings (store.ReadConfig) and its

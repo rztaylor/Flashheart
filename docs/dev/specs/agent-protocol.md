@@ -463,7 +463,7 @@ has no use for (FH-123).
 
 | Hook event | Flashheart action |
 |---|---|
-| `SessionStart` | `run.start`; recovery note as `additionalContext` (a developer message) |
+| `SessionStart` | `run.start`; refreshes an out-of-date Flashheart section of the global `AGENTS.md` (§5.4); recovery note as `additionalContext` (a developer message), opened by a line when the section was refreshed |
 | `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; what waits in the session's inbox (§4) as `additionalContext` |
 | `PreToolUse` (not registered) | nothing: Flashheart's tool calls are attributed by the session each call names in `_meta` (below, §7.1), so `run` is not stamped (stamping needs `permissionDecision: "allow"`, which would skip the user's approval of Flashheart's tools) |
 | `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `plan.updated` (the whole plan) for `update_plan` where Codex offers it, read from its `plan` steps (`step`, `status`) |
@@ -616,9 +616,25 @@ that differs "modified"). `doctor` recomputes the hash of each Flashheart
 hook in `hooks.json`, reads only `config.toml`, and names the events whose
 hook has no trust or trust with another hash (a moved binary, another
 `--root`); it says so as a whole when no Flashheart hook is trusted, and
-warns when `[features] hooks = false`. The protocol
-text in `AGENTS.md` is not refreshed by a hook: after an upgrade `doctor`
-reports it out of date and `setup codex` replaces it.
+warns when `[features] hooks = false`.
+
+The protocol text in `AGENTS.md` is kept current as Claude Code's skill
+is (D53): at every Codex `SessionStart` inside a git repository the hook
+reads `$CODEX_HOME/AGENTS.md` (`CODEX_HOME` from the hook's environment,
+default `~/.codex`) and, when it holds exactly one marked section that
+differs from the binary's text (ignoring a missing final newline),
+rewrites that section, begin and end marker lines included, atomically
+and through a symlink to its target, keeping the file's permissions.
+Every byte outside the markers stays as it was. The returned context then
+opens with one line naming the file and saying the section was updated,
+so the session reads it again: Codex may have read `AGENTS.md` before the
+hook ran. A file without a section is never given one, so `--uninstall`
+sticks; a missing file stays missing; and a file whose markers do not pair
+(a begin without an end, an end without a begin, two sections) is left
+untouched for `setup codex` and `doctor` to report. A failure is logged to
+`hook-errors.log` and the session goes on (`HOOK-1`). Only the hook
+writes it this way; between an upgrade and the next Codex session,
+`doctor` reports it out of date and `setup codex` also replaces it.
 
 Setup owns only entries it can identify as its own (a hook whose program is
 a `flashheart` binary run with `hook`, the server named `flashheart`, the
@@ -987,7 +1003,8 @@ another project's ticket is not seen, so it links by branch only (§6).
 
 `SET-2` installs one text, rendered for each agent: Claude Code's skill, kept
 current by the session-start hook, and the same text between markers in
-Codex's global `AGENTS.md`, which `setup codex` refreshes and `doctor`
+Codex's global `AGENTS.md`, which Codex's session-start hook keeps current
+when the section is there, `setup codex` also refreshes, and `doctor`
 checks (§5.4). It covers, briefly:
 
 - at start: read the recovery note; if none, call `board_context`, which
@@ -1189,6 +1206,13 @@ bullet gains a sentence. Nothing that was accepted is refused, no event
 changes shape (`fields` was already optional on ticket events), outputs
 only gain lines, and an older agent that never sends `addressed` leaves
 requests open for the person to resolve, so the version stays 2.
+
+Additive change within version 2 (D53, FH-121, 2026-10-13): Codex's
+`SessionStart` hook refreshes an out-of-date Flashheart section of the
+global `AGENTS.md` and opens its context with a line saying so (§5.4), as
+Claude Code's hook does for the skill. The protocol text, the tools, the
+events and the hook registrations keep their shape, and an older binary
+only leaves the section as `setup codex` wrote it, so the version stays 2.
 
 Additive change within version 2 (D47, D63, FH-127, 2026-10-13): a
 person may send a comment to a live session that has claimed the ticket.
