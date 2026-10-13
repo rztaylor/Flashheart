@@ -54,6 +54,7 @@ export function TicketComments({
       {ticket.comment ? (
         <CommentBox
           choices={quoteChoices(detail)}
+          tell={{ ticket: detail.id, sessions: detail.tellSessions ?? [] }}
           onPost={ticket.comment}
           renderQuote={(text) =>
             text.trim() ? (

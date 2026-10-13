@@ -225,6 +225,10 @@ type TicketDetail struct {
 	Comments     []CommentJSON `json:"comments"`
 	History      []HistoryJSON `json:"history"`
 	ActivityHash string        `json:"activityHash"`
+	// TellSessions are the runs a comment may be sent to now (FH-127):
+	// each live session holding the ticket, then its live subagents; none
+	// when no live session has claimed it.
+	TellSessions []TellSessionJSON `json:"tellSessions"`
 }
 
 // TicketResponse is GET /api/tickets/{id} and
@@ -487,12 +491,13 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 		Questions:            questionsJSON(snapshot.Questions(ticket.ID)),
 		Comments:             []CommentJSON{},
 		History:              []HistoryJSON{},
+		TellSessions:         tellSessions(snapshot, ticket.ID),
 	}
 	if b.files != nil {
 		// An activity file that cannot be read shows no activity; the
 		// ticket itself still opens.
 		if activity, activityHash, err := b.files.ReadTicketActivity(project.Name, ticket.Folder); err == nil {
-			detail.Comments, detail.History = activityJSON(activity)
+			detail.Comments, detail.History = activityJSON(activity, snapshot)
 			detail.ChangeRequests = requestsJSON(board.CountRequests(activity.Comments))
 			if b.write != nil {
 				detail.ActivityHash = activityHash

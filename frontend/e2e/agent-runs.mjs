@@ -212,6 +212,12 @@ export function promptHook(root, sessionID, cwd, prompt = "synthetic") {
   ).toString();
 }
 
+// endSession records a session ending, as Claude Code's SessionEnd hook
+// does when the user closes it.
+export function endSession(root, sessionID, cwd) {
+  session(root, sessionID, cwd).send("SessionEnd", { reason: "other" });
+}
+
 // startSubagent records a subagent of a session starting and using a tool.
 export function startSubagent(root, sessionID, cwd, agentID, type) {
   const sub = { agent_id: agentID, agent_type: type };
