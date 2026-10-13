@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Look closely at screenshots (FH-146). The lightbox that opens a
+  ticket's screenshots now fills the window, less a small margin, at
+  every width, and zooms from 25% to 800% of the image's actual size:
+  with **Zoom in**, **Zoom out** and **Fit** under the image beside the
+  zoom level, Cmd or Ctrl and + or −, or the mouse wheel or a trackpad
+  pinch, which zoom around the pointer. Drag the image, or use the arrow
+  keys while zoomed in, to move around it; at Fit the arrows still step
+  between screenshots. 0 (or Cmd or Ctrl and 0) fits the whole image
+  again, and every screenshot opens fitted, never enlarged past its
+  actual size.
 - Paste a screenshot or drop files straight into a ticket (FH-18, D65,
   `REV-7`). In a section's editor on the full page, paste a screenshot
   from the clipboard, drop files, or choose them with **Attach files**:
@@ -121,6 +131,16 @@ All notable changes to this project are documented here. The project follows
   new `comment.added` and `comment.edited` events. Comments are scrubbed
   of secrets; agents never write them. The page to comment from comes
   with FH-125 (protocol version unchanged).
+
+- Codex's Flashheart instructions stay current after an upgrade (FH-121,
+  D53). At the start of each Codex session, Flashheart's hook rewrites the
+  Flashheart section of your global `AGENTS.md` when it is out of date, as
+  Claude Code's skill already was, and tells the session so it reads the
+  section again. Only the text between the markers changes, atomically and
+  through a symlinked file to its target; your text around it stays byte
+  for byte. A file without the section never gets one, and a file whose
+  markers are broken is left alone for `doctor` to report. A failure is
+  logged and the session goes on (protocol version unchanged).
 
 - One command connects Codex to Flashheart, and `doctor` checks it (FH-75).
   `flashheart setup codex` shows, as a diff, the `[mcp_servers.flashheart]`
@@ -238,6 +258,12 @@ All notable changes to this project are documented here. The project follows
   comment authors (`byShort`) and of the session a change request went to
   (`sentToShort`), so the frontend no longer shortens run ids itself.
 
+- Changes on the side panel's **Edit** tab are no longer lost without
+  warning (FH-138). They now stay while you look at another tab, and
+  closing the panel, pressing Escape or opening another ticket with them
+  unsaved asks first (*Unsaved changes to the ticket*), as it does for a
+  comment being written: **Discard changes** drops them, **Keep editing**
+  returns you to the Edit tab with focus where you were.
 - Building after a pull that adds or upgrades frontend packages no longer
   fails on missing modules (FH-119). `scripts/build.sh` (and so
   `scripts/e2e.sh`) and `scripts/e2e-visual.sh` installed the packages only

@@ -126,6 +126,13 @@
   files, an SVG and an oversized one, drops on the Attachments tab, uses
   Attach files by keyboard, saves and reloads, with axe in both themes,
   390 px, and no request off the board's origin or CSP violation.
+- The lightbox (FH-146): Fit, limits, steps, zooming around a point and
+  pan bounds are `model/zoom.test.ts`; keys, the wheel, dragging and the
+  controls are `components/Lightbox.dom.test.tsx`, which stubs the
+  stage's size and the image's natural size; in the browser,
+  `frontend/e2e/lightbox.spec.mjs` opens it from the page's Evidence and
+  the panel's Attachments, reaches 800% and 25%, pans, checks focus
+  return, axe in both themes and 390 px.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and
   `internal/api`, FH-96): event appends refold with no read, `Current`
@@ -151,7 +158,10 @@
   `frontend/e2e/comments.spec.mjs` (FH-125). The comment tests run on
   both the page and the card panel's Comments tab (`describe.each` over a
   surface); the panel's own flow, from posting there to seeing it on the
-  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128). Change
+  full page, is `frontend/e2e/panel-comments.spec.mjs` (FH-128), which
+  also drives the Edit tab's unsaved changes; their tab switch, close,
+  Escape and another-ticket paths are `CardPanelEdit.dom.test.tsx`
+  (FH-138). Change
   requests (FH-126, REV-6): who may move a comment's state and its history in `board`
   (`requests_test.go`), the one-write request and addressing in `store`,
   a ticket's live holder in `index` (`TestHolderIsTheLiveClaimant`),

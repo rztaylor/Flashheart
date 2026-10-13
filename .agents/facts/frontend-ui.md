@@ -9,8 +9,8 @@
   a `data-theme` attribute set from the saved preference (system for now).
 - Layers and dependency direction: `styles/` (tokens) and `model/` (pure
   view models: line assignment, filters, paint, status, remembered scopes, times,
-  markdown links, grid movement, section edits, `messageOf` for a
-  failure's words) →
+  markdown links, grid movement, section edits, lightbox zoom and pan,
+  `messageOf` for a failure's words) →
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
@@ -66,7 +66,10 @@
   delivered are `ActivityTimeline`'s. Timeline and box are one shared part, `TicketComments`, on
   the page's Activity and the card panel's Comments tab, which has its
   own `InPlaceEditing` and stays mounted across tabs; closing the panel
-  or opening another ticket waits on the leave guard (FH-128). Leaving
+  or opening another ticket waits on the leave guard (FH-128). The
+  panel's Edit tab stays mounted too and is a held draft whose
+  `returnTo` shows the tab and refocuses it on Keep editing (FH-138).
+  Leaving
   the page with unsaved changes
   goes through the one leave guard, `state/leaveGuard`, which the router
   (`app/route`) asks before every navigation and a link or Back that

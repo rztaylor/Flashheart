@@ -12,6 +12,14 @@ const SkillName = "flashheart"
 // out-of-date installed skill (agent-protocol §5.4).
 const SkillUpdatedNote = "[Flashheart] The flashheart skill was updated to this version of Flashheart; use its current text."
 
+// AgentsUpdatedNote opens the session-start context when Codex's hook
+// rewrote the out-of-date Flashheart section of the global AGENTS.md at
+// path (agent-protocol §5.4). Codex may have read the file before the hook
+// ran, so the note asks for the section to be read again.
+func AgentsUpdatedNote(path string) string {
+	return "[Flashheart] The Flashheart section of your global AGENTS.md (" + path + ") was updated to this version of Flashheart; read that section again and use its current text."
+}
+
 // Instructions is the MCP server's instructions field: a short pointer at
 // the protocol (agent-protocol §7).
 func Instructions() string {

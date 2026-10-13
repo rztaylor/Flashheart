@@ -35,6 +35,16 @@ func (Claude) RefreshSkill(home string) (bool, error) {
 	return true, nil
 }
 
+// RefreshProtocol is RefreshSkill for the session-start hook, with the
+// note that the skill was updated.
+func (c Claude) RefreshProtocol(o Options) (string, error) {
+	updated, err := c.RefreshSkill(o.Home)
+	if err != nil || !updated {
+		return "", err
+	}
+	return protocol.SkillUpdatedNote, nil
+}
+
 // ownSkill reports whether a SKILL.md is the protocol skill: frontmatter
 // naming it, with Flashheart's protocol version in its metadata.
 func ownSkill(data []byte) bool {
