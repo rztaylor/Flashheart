@@ -31,6 +31,15 @@ func TestParseIDAndKeys(t *testing.T) {
 			t.Errorf("ValidKey(%q) = %v", key, !want)
 		}
 	}
+	// Agents choose 2–5 characters (KEY-5); every key is 2–10 (KEY-1).
+	for key, want := range map[string]bool{"FH": true, "NG2": true, "ABCDE": true, "ABCDEF": false, "A": false, "2FH": false, "fh": false} {
+		if ValidAgentKey(key) != want {
+			t.Errorf("ValidAgentKey(%q) = %v", key, !want)
+		}
+		if want && !ValidKey(key) {
+			t.Errorf("agent key %q is not a key", key)
+		}
+	}
 	for name, want := range map[string]string{"flashheart": "FLA", "board-ui": "BU", "my_cool app": "MCA", "a": "AX", "9lives": "P9L", "ng": "NG"} {
 		if got := DeriveKey(name); got != want || !ValidKey(got) {
 			t.Errorf("DeriveKey(%q) = %q, want %q", name, got, want)

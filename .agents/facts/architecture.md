@@ -18,9 +18,13 @@ Intended layout (packages are created when they get real content):
 - `internal/mdfile`: pure markdown-with-frontmatter parsing and round-trip
   editing (key order, comments, unknown keys), sections, checkboxes. No I/O.
 - `internal/board`: pure domain model (projects, tickets, workstreams,
-  columns), blocking rules with reasons, derived workstream status. No I/O.
+  columns), blocking rules with reasons, derived workstream status, and the
+  ticket-editing rules the board and agents share, each defined once
+  (editable fields and their checked change-set, title and section limits,
+  key rules, the blocked-start gate, `NoteLine`; FH-85). No I/O.
 - `internal/store`: the only package that touches the board root: discovery,
-  reads, locked atomic writes with hash preconditions, moves, archive,
+  reads, locked atomic writes with hash preconditions, typed ticket edits
+  from the board and agents alike (`EditTicket`), moves, archive,
   attachments, path confinement, creating the root (`EnsureRoot`), reading
   `config.yaml` (`ReadConfig`, through the `os.Root`, so a symlink out of
   the root is refused) and telling its own writes from others'

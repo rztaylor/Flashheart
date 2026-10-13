@@ -21,7 +21,7 @@ import (
 type Writer interface {
 	ReadTicket(project, id string) ([]byte, string, error)
 	UpdateTicket(project, id string, pre store.Precondition, edit store.Edit) (string, error)
-	SetTicketWorkstream(project, id string, pre store.Precondition, workstream string, edit store.Edit) (string, error)
+	EditTicket(project, id string, pre store.Precondition, changes board.FieldChanges, edit store.Edit) (string, error)
 	UpdateReview(project, id string, pre store.Precondition, edit store.Edit) (string, error)
 	PlaceTicket(project, id string, pre store.Precondition, after string, edit store.Edit) (string, bool, error)
 	UpdateWorkstream(project, slug string, pre store.Precondition, edit store.Edit) (string, error)
@@ -192,7 +192,8 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 	}
 	reasons := snapshot.Analysis.Blocked[board.Ref{Project: project.Name, ID: ticket.ID}]
 	reason := strings.TrimSpace(request.Reason)
-	if to == board.InProgress && ticket.Column != board.InProgress && len(reasons) > 0 && reason == "" {
+	startsBlocked := board.StartsBlocked(ticket.Column, to, len(reasons) > 0)
+	if startsBlocked && reason == "" {
 		var described []string
 		for _, item := range reasons {
 			described = append(described, item.Describe())
@@ -209,7 +210,7 @@ func (b boardAPI) move(w http.ResponseWriter, r *http.Request) {
 	}
 	edit := func(data []byte) ([]byte, error) {
 		next, err := mdfile.SetScalar(data, "status", request.To)
-		if err != nil || reason == "" || len(reasons) == 0 || to != board.InProgress {
+		if err != nil || !startsBlocked {
 			return next, err
 		}
 		return mdfile.AppendToSection(next, board.SectionNotes, board.BlockedStartNote(b.now(), reason))
@@ -272,89 +273,48 @@ func (b boardAPI) patchTicket(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &request) || !requireBase(w, request.Base) {
 		return
 	}
-	type change struct {
-		key    string
-		value  string
-		list   []string
-		isList bool
-	}
-	var changes []change
+	// Decoding is the API's; which fields change and how they are checked
+	// and written is the one rule agents share (board.NewFieldChanges,
+	// store.EditTicket; FH-85).
+	var requested []board.FieldChange
 	for key, raw := range request.Fields {
-		c := change{key: key, isList: slices.Contains(board.ListFields, key)}
+		list, editable := board.EditableField(key)
+		change := board.FieldChange{Key: key}
 		switch {
-		case c.isList:
-			if err := json.Unmarshal(raw, &c.list); err != nil {
+		case !editable:
+			writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q cannot be edited here; use the raw editor", key))
+			return
+		case list:
+			if err := json.Unmarshal(raw, &change.List); err != nil {
 				writeError(w, http.StatusBadRequest, "invalid_input", key+" must be a list of strings")
 				return
 			}
-			for index, item := range c.list {
-				c.list[index] = strings.TrimSpace(item)
-				if err := board.ValidateField(key, c.list[index]); err != nil {
-					writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
-					return
-				}
-			}
-			c.list = slices.DeleteFunc(c.list, func(item string) bool { return item == "" })
-		case slices.Contains(board.ScalarFields, key):
-			if err := json.Unmarshal(raw, &c.value); err != nil {
+		default:
+			if err := json.Unmarshal(raw, &change.Value); err != nil {
 				writeError(w, http.StatusBadRequest, "invalid_input", key+" must be a string")
 				return
 			}
-			c.value = strings.TrimSpace(c.value)
-			if err := board.ValidateField(key, c.value); err != nil {
-				writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
-				return
-			}
-		default:
-			writeError(w, http.StatusBadRequest, "invalid_input", fmt.Sprintf("%q cannot be edited here; use the raw editor", key))
-			return
 		}
-		changes = append(changes, c)
+		requested = append(requested, change)
 	}
-	slices.SortFunc(changes, func(a, b change) int { return strings.Compare(a.key, b.key) })
+	changes, err := board.NewFieldChanges(requested)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		return
+	}
 	_, project, ticket, ok := b.findTicket(w, r)
 	if !ok {
 		return
 	}
-	edit := func(data []byte) ([]byte, error) {
-		var err error
-		for _, c := range changes {
-			switch {
-			case c.key == "workstream":
-				continue
-			case c.key == "title":
-				data, err = mdfile.SetTitle(data, c.value)
-			case c.isList:
-				data, err = mdfile.SetList(data, c.key, c.list)
-			default:
-				data, err = mdfile.SetScalar(data, c.key, c.value)
-			}
-			if err != nil {
-				return nil, err
-			}
-		}
-		return data, nil
-	}
 	// A workstream change also moves the ticket between the workstreams'
 	// tickets lists, in the same write under the same base hash, so a stale
 	// base changes no file (board-format.md, Workstream membership).
-	pre := store.Unchanged(request.Base)
-	var hash string
-	var err error
-	if index := slices.IndexFunc(changes, func(c change) bool { return c.key == "workstream" }); index >= 0 {
-		hash, err = writer.SetTicketWorkstream(project.Name, ticket.ID, pre, changes[index].value, edit)
-	} else {
-		hash, err = writer.UpdateTicket(project.Name, ticket.ID, pre, edit)
-	}
+	hash, err := writer.EditTicket(project.Name, ticket.ID, store.Unchanged(request.Base), changes, nil)
 	if err != nil {
 		writeStoreError(w, err)
 		return
 	}
-	fields := make([]string, 0, len(changes))
-	for _, c := range changes {
-		fields = append(fields, c.key)
-	}
-	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: fields})
+	b.recordHuman(project.Name, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: changes.Keys()})
 	b.saved(w, http.StatusOK, hash, nil)
 }
 
@@ -513,7 +473,7 @@ func (b boardAPI) createTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	created, err := writer.CreateTicket(r.PathValue("project"), store.NewTicket{
-		Title: board.OneLine(request.Title, 300), Type: request.Type, Priority: request.Priority,
+		Title: board.OneLine(request.Title, board.MaxTitle), Type: request.Type, Priority: request.Priority,
 		Status: board.Column(request.Status), Workstream: request.Workstream,
 		Description: request.Description, Criteria: request.Criteria,
 		DependsOn: request.DependsOn, Tags: request.Tags, Session: "flashheart-ui", Key: request.Key,

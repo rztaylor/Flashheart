@@ -8,14 +8,22 @@ import (
 )
 
 // TestNotesAreDatedBullets: every note Flashheart writes, from the board or
-// an agent, is "- YYYY-MM-DD · text" (board-format §Notes written by
-// Flashheart; FH-81).
+// an agent, is "- YYYY-MM-DD · text", or "- YYYY-MM-DD · by: text" when it
+// is written for someone (board-format §Notes written by Flashheart; FH-81,
+// FH-85).
 func TestNotesAreDatedBullets(t *testing.T) {
 	t.Parallel()
 
 	day := time.Date(2026, 10, 4, 23, 30, 0, 0, time.UTC)
-	if got := Note(day, "Claimed from claude:3f2a9c1e"); got != "- 2026-10-04 · Claimed from claude:3f2a9c1e" {
-		t.Errorf("Note = %q", got)
+	cases := []struct{ by, text, want string }{
+		{"", "Question from claude:3f2a9c1e — \"Ship?\" Answer (Robert): \"Yes\".", "- 2026-10-04 · Question from claude:3f2a9c1e — \"Ship?\" Answer (Robert): \"Yes\"."},
+		{"claude:3f2a9c1e", "Claimed from codex:77aa (ended): gone", "- 2026-10-04 · claude:3f2a9c1e: Claimed from codex:77aa (ended): gone"},
+		{"unknown", "Plan changed.", "- 2026-10-04 · unknown: Plan changed."},
+	}
+	for _, tc := range cases {
+		if got := NoteLine(day, tc.by, tc.text); got != tc.want {
+			t.Errorf("NoteLine(%q, %q) = %q, want %q", tc.by, tc.text, got, tc.want)
+		}
 	}
 	if got := BlockedStartNote(day, "  Hotfix\nneeded now "); got != "- 2026-10-04 · Started while blocked: Hotfix needed now" {
 		t.Errorf("BlockedStartNote = %q", got)

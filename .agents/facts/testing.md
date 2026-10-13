@@ -80,6 +80,12 @@
   note and skeleton, with screenshots named `state-error-*`,
   `state-stale-*` and `state-loading-*`.
 - Run-state and blocking logic are table tests with a fake clock.
+- Ticket-editing rules (FH-85) are table tests where they are defined:
+  the field change-set, the blocked-start gate and `NoteLine` in `board`,
+  the write in `store` (`TestEditTicket`). `internal/archtest` keeps them
+  single: the note bullet is spelled only in `board.NoteLine`, and `api`
+  and `mcpserver` never check fields, set titles or change workstreams
+  themselves.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and
   `internal/api`, FH-96): event appends refold with no read, `Current`

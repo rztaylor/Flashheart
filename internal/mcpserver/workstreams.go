@@ -47,7 +47,7 @@ func (srv *server) createWorkstream(c *call, input CreateWorkstreamInput) (strin
 	for _, slug := range items(input.DependsOnWorkstreams) {
 		dependencies = append(dependencies, strings.TrimSpace(slug))
 	}
-	title := scrub.Text(input.Title, 300)
+	title := scrub.Text(input.Title, board.MaxTitle)
 	created, err := srv.store.CreateWorkstream(project.Name, store.NewWorkstream{
 		Title: title, Goal: scrub.Secrets(input.Goal), Priority: strings.TrimSpace(input.Priority),
 		Tickets: tickets, DependsOnWorkstreams: dependencies, Tags: items(input.Tags),

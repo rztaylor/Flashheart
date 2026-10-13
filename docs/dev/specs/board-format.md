@@ -259,8 +259,11 @@ Answered questions and override reasons are appended to `## Notes` as dated
 bullets, e.g. `- 2026-10-04 · Question from claude:3f2a… — "Use known
 assessment objectives?" Answer (Robert): "Yes".` A blocked ticket started
 from the board or claimed by an agent with `force` gets the same bullet
-either way: `- 2026-10-04 · Started while blocked: <reason>` (`board.Note`,
-FH-81).
+either way: `- 2026-10-04 · Started while blocked: <reason>` (FH-81). A
+note written for an agent (its `append_notes` or checkpoint `note`, or a
+claim taken from another session) names the agent's short run id first:
+`- 2026-10-04 · claude:3f2a…: <text>`. Every one of these bullets comes
+from `board.NoteLine` (FH-85).
 
 ## Blocking
 

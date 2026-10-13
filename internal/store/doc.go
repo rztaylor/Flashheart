@@ -5,6 +5,8 @@
 // write naming its Precondition (Unchanged with the content hash read, or
 // Merge), in one transaction (tx.go: read, require, edit, stamp, stage,
 // commit, nothing written when a step fails) of atomic replaces (STO-3),
+// writes typed field edits from the board and agents alike (EditTicket,
+// FH-85),
 // places tickets in
 // their column's manual order (EDIT-9), keeps a ticket's
 // workstream field and the workstreams' tickets lists in step and creates
