@@ -51,7 +51,7 @@ func TestDiagnoseCodexHealthy(t *testing.T) {
 		if len(problems)+len(warnings) != 0 {
 			t.Fatalf("%q: problems %q, warnings %q", fixture, problems, warnings)
 		}
-		want := []string{"MCP server: configured", "Hooks: all 12 installed", "Protocol text: up to date"}
+		want := []string{"MCP server: configured", "Hooks: all 11 installed", "Protocol text: up to date"}
 		if len(ok) != len(want) {
 			t.Fatalf("%q: ok = %q", fixture, ok)
 		}
@@ -104,7 +104,7 @@ func TestDiagnoseCodexStaleSetup(t *testing.T) {
 	problems, warnings, _ := diagnoseCodex(t, m.options)
 	for _, want := range []string{
 		"MCP server: runs " + old + ", which does not exist",
-		"Hooks: missing for UserPromptSubmit, PreToolUse",
+		"Hooks: missing for UserPromptSubmit, PermissionRequest",
 		"Hooks: run " + old + ", which does not exist",
 	} {
 		if !containsPrefix(problems, want) {
@@ -116,7 +116,8 @@ func TestDiagnoseCodexStaleSetup(t *testing.T) {
 			t.Errorf("problem without the fix: %q", problem)
 		}
 	}
-	if len(warnings) != 1 || !strings.HasPrefix(warnings[0], "Protocol text: out of date") || !strings.Contains(warnings[0], codexFix) {
+	if len(warnings) != 2 || !strings.HasPrefix(warnings[0], "Hooks: also installed for PreToolUse, which setup no longer registers") ||
+		!strings.HasPrefix(warnings[1], "Protocol text: out of date") || !strings.Contains(warnings[0], codexFix) || !strings.Contains(warnings[1], codexFix) {
 		t.Fatalf("warnings = %q", warnings)
 	}
 

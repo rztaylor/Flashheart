@@ -8,12 +8,19 @@ import (
 )
 
 // codexEvents are the Codex hook events Flashheart registers
-// (agent-protocol §5.3): every event Codex sends, in the order setup
-// registers them. PreToolUse is limited to Flashheart's own tools.
+// (agent-protocol §5.3): every event Codex sends that the adapter acts on,
+// in the order setup registers them.
 var codexEvents = []string{
-	"SessionStart", "UserPromptSubmit", "PreToolUse", "PermissionRequest", "PostToolUse",
+	"SessionStart", "UserPromptSubmit", "PermissionRequest", "PostToolUse",
 	"SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "Stop", "Interrupt", "SessionEnd",
 }
+
+// codexIgnoredEvents are the events Codex sends that the adapter does
+// nothing with, so setup does not register them: a hook there would only
+// start Flashheart and need trusting. PreToolUse is one, since Flashheart's
+// tool calls are attributed by the session in their _meta (D45), not by
+// stamping; setup removes the PreToolUse hook earlier versions wrote.
+var codexIgnoredEvents = []string{"PreToolUse"}
 
 // trustNote says what Codex needs before it runs hooks setup wrote.
 const trustNote = "Codex runs these hooks only once you trust them: start codex, type /hooks and trust each Flashheart hook " +

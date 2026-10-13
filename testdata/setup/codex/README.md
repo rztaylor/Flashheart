@@ -14,5 +14,6 @@ Codex home.
 - `stale/`: an older Flashheart setup made with a binary that has since
   moved: `[mcp_servers.flashheart]` with the old path, a setting and an
   `env` table of the user's; Flashheart hooks for two events, one beside a
-  hook of the user's; and an out-of-date protocol section between the
+  hook of the user's, and a `PreToolUse` hook on Flashheart's tools, which
+  setup no longer registers (FH-123); and an out-of-date protocol section between the
   markers in `AGENTS.md`, with the user's text around it.
