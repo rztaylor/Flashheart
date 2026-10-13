@@ -34,6 +34,7 @@ type Writer interface {
 	Unarchive(project, id string) error
 	AddComment(project, id string, pre store.Precondition, comment store.NewComment) (board.Comment, string, error)
 	EditComment(project, id, comment string, pre store.Precondition, body string) (board.Comment, string, error)
+	UnsendComment(project, id, comment string) (board.Comment, string, error)
 	RequestChanges(project, id string, comments []string, added *store.NewComment) (store.RequestedChanges, error)
 	SetCommentState(project, id, comment string, to board.CommentState) (board.Comment, string, error)
 	ReadConfig() (config.Config, error)
@@ -122,6 +123,8 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusConflict, map[string]body{"error": {Code: "key_taken", Message: taken.Error(), InUse: taken.InUse}})
 	case errors.Is(err, store.ErrExists):
 		writeError(w, http.StatusConflict, "exists", strings.TrimPrefix(err.Error(), store.ErrExists.Error()+": "))
+	case errors.Is(err, store.ErrDelivered):
+		writeError(w, http.StatusConflict, "delivered", "This comment was delivered to its session, so it can no longer be edited.")
 	case errors.Is(err, store.ErrNotInReview):
 		writeError(w, http.StatusConflict, "not_in_review", "This ticket is no longer in review, so changes cannot be requested on it.")
 	case errors.Is(err, store.ErrKeyFixed):

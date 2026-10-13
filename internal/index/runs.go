@@ -59,6 +59,9 @@ var boardKinds = map[events.Kind]bool{
 	events.TicketMoved: true, events.TicketUpdated: true, events.TicketCreated: true,
 	events.ReviewWritten: true, events.AttachmentAdded: true, events.QuestionAnswered: true,
 	events.CommentAdded: true, events.CommentEdited: true,
+	// A delivered comment sent from the board is marked delivered in its
+	// ticket's activity file (FH-127).
+	events.CommentDelivered: true,
 }
 
 // update reads new events for the given projects, folds them, and returns
@@ -401,15 +404,44 @@ func (s *Snapshot) Question(id string) (runs.Question, runs.View, bool) {
 // comment or change request is sent to now (FH-126, FH-127); a run linked
 // by branch alone holds nothing.
 func (s *Snapshot) Holder(ticket string) (runs.View, bool) {
-	var holder runs.View
-	found := false
+	list := s.Claimants(ticket)
+	if len(list) == 0 {
+		return runs.View{}, false
+	}
+	return list[0], true
+}
+
+// Claimants returns the live runs linked to a ticket by a claim, each
+// active within the lease, as Holder judges them: each session before its
+// subagents, which work under its claim, the holder first. They are the
+// runs a person may send a comment to now (FH-127).
+func (s *Snapshot) Claimants(ticket string) []runs.View {
+	var sessions, subagents []runs.View
 	for _, run := range s.linked(ticket) {
-		if run.Link.By != runs.LinkClaim || run.State == runs.Ended || s.BuiltAt.Sub(run.LastActivity) >= s.lease {
-			continue
-		}
-		if !found || (holder.Parent != "" && run.Parent == "") {
-			holder, found = run, true
+		switch {
+		case run.Link.By != runs.LinkClaim || run.State == runs.Ended || s.BuiltAt.Sub(run.LastActivity) >= s.lease:
+		case run.Parent == "":
+			sessions = append(sessions, run)
+		default:
+			subagents = append(subagents, run)
 		}
 	}
-	return holder, found
+	list := make([]runs.View, 0, len(sessions)+len(subagents))
+	placed := map[string]bool{}
+	for _, session := range sessions {
+		list = append(list, session)
+		for _, run := range subagents {
+			if run.Parent == session.ID {
+				list, placed[run.ID] = append(list, run), true
+			}
+		}
+	}
+	// Subagents whose session does not hold the ticket claimed it
+	// themselves.
+	for _, run := range subagents {
+		if !placed[run.ID] {
+			list = append(list, run)
+		}
+	}
+	return list
 }

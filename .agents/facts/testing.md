@@ -144,6 +144,21 @@
   dialog are `TicketRequests.dom.test.tsx`, and
   `frontend/e2e/requests.spec.mjs` drives a live session through the real
   hook and `flashheart mcp`.
+- Telling a session now (FH-127, D63): a comment's `sent-to` and
+  `delivered` and the edit lock in `board` (`delivery_test.go`);
+  delivering once, as the comment reads then, and the lock in `store`;
+  `Deliver`'s choice of what to hand over in `events` (`tell_test.go`);
+  the live claimants in `index`
+  (`TestClaimantsAreTheHolderAndItsLiveSubagents`); offering, re-checking
+  (`not_live`), the delivery states and the 409 `delivered` in `api`
+  (`tell_test.go`); one test per delivery path, each checking the comment
+  is marked delivered: the prompt hook (`hooks`, with a later session's
+  recovery note not delivering it), `board_context` and a started run's
+  tool result (`mcpserver`) and `await`. The box, the picker and the
+  delivery line are `TicketTell.dom.test.tsx` on the page and the panel;
+  `frontend/e2e/tell.spec.mjs` sends a comment to a session seeded by
+  `agent-runs.mjs`, delivers it through the real prompt hook and ends
+  the session for the missed case.
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
   (`internal/mcpserver`) lists tools over the in-memory transport and fails
