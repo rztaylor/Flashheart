@@ -8,6 +8,12 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__flashheart__.*",
+        "hooks": [{"type": "command", "command": "/Users/example/old/flashheart hook codex PreToolUse", "timeout": 5}]
+      }
+    ],
     "Stop": [
       {"hooks": [{"type": "command", "command": "/Users/example/old/flashheart hook codex Stop", "timeout": 5}]}
     ]
