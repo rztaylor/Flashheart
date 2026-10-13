@@ -60,11 +60,12 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "answered_in_session", "This question was answered in the session's own chat")
 		return
 	}
-	// The inbox carries the answer to the run (HOOK-5) and the log records
-	// it; the ticket keeps it for whoever reads the ticket later (STO-6).
+	// The session's inbox carries the answer to the run (HOOK-5, D54) and
+	// the log records it; the ticket keeps it for whoever reads the ticket
+	// later (STO-6).
 	// Queueing first means a failure leaves the question unanswered, so it
 	// can be answered again; an answer queued twice is delivered once.
-	err = b.events.QueueAnswer(run.Project, run.ID, events.Delivery{ID: question.ID, Run: run.ID, Ticket: question.Ticket, Question: question.Text, Answer: answer, By: answeredBy})
+	err = b.events.Queue(run.Project, events.Entry{Type: events.EntryAnswer, ID: question.ID, Run: run.ID, Ticket: question.Ticket, Question: question.Text, Text: answer, By: answeredBy, Time: now})
 	if err == nil {
 		err = b.events.Append(events.Event{Time: now, Run: run.ID, Agent: run.Agent, Kind: events.QuestionAnswered, Project: run.Project,
 			Data: events.AnswerData{ID: question.ID, Answer: answer, By: answeredBy}})

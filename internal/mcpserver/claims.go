@@ -116,6 +116,7 @@ func (srv *server) claim(c *call, input ClaimInput) (string, error) {
 		lines = append(lines, fmt.Sprintf("Unticked criteria (%d of %d):", len(open), len(ticket.Criteria)))
 		lines = append(lines, bullets(open, 15, func(s string) string { return scrub.Limit(s, 300) })...)
 	}
+	lines = append(lines, srv.commentLines(project, ticket, claimCommentsBudget)...)
 	lines = append(lines, "Read it in full with get_ticket. "+dataNote, fmt.Sprintf("ok ticket=%s column=%s", ticket.ID, column))
 	return strings.Join(lines, "\n") + "\n", nil
 }

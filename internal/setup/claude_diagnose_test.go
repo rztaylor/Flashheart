@@ -70,7 +70,7 @@ func TestDiagnoseAMissingHook(t *testing.T) {
 	}
 	m.write(".claude/settings.json", strings.Replace(settings, command, `"say done"`, 1))
 	problems, _, _ := diagnose(t, m.options)
-	if len(problems) != 1 || !strings.Contains(problems[0], "missing for PostToolUse") || !strings.Contains(problems[0], "flashheart setup claude --write") {
+	if len(problems) != 1 || !strings.Contains(problems[0], "missing for PostToolUse") || !strings.Contains(problems[0], "flashheart setup claude") {
 		t.Fatalf("problems = %q", problems)
 	}
 }

@@ -47,9 +47,9 @@ type Input struct {
 	Events []Pending
 	// Recovery asks for the recovery note (session start, HOOK-3).
 	Recovery bool
-	// Answers names the session whose waiting answers go with this prompt
-	// (HOOK-5).
-	Answers string
+	// Inbox names the session whose waiting inbox entries (answers,
+	// comments, change requests) go with this prompt (HOOK-5, D54).
+	Inbox string
 	// Stop marks a turn end that handoff enforcement may block (HOOK-6);
 	// StopActive is the agent saying a stop hook already kept it going.
 	Stop, StopActive bool
@@ -254,12 +254,12 @@ func handle(options Options) error {
 		out.Context, err = recovery(s, log, inboxOf(log), project, info, appended, at, settings)
 		problem = errors.Join(problem, err)
 		out.Context = joinNotes(skillNote, out.Context)
-	case input.Answers != "":
-		// Every prompt gets the session's waiting answers, the user's or
-		// not: a board answer reaches the agent whenever it gets a turn.
-		// Only who answers a question in the session depends on the
-		// prompt's origin (D41).
-		out.Context, err = answers(inboxOf(log), project, input.Answers, at)
+	case input.Inbox != "":
+		// Every prompt gets what waits in the session's inbox, the user's
+		// prompt or not: a board answer or comment reaches the agent
+		// whenever it gets a turn. Only who answers a question in the
+		// session depends on the prompt's origin (D41).
+		out.Context, err = prompted(inboxOf(log), project, input.Inbox, at)
 		problem = errors.Join(problem, err)
 	}
 	return errors.Join(problem, write(options, out))
@@ -300,16 +300,18 @@ func write(options Options, out Output) error {
 	return nil
 }
 
-// inboxOf is the answers inbox delivery uses: the log itself, except in a
-// test that makes recording delivery fail.
+// inboxOf is the session inbox delivery uses: the log itself, except in a
+// test that watches or fails it.
 var inboxOf = func(log *events.Log) events.Inbox { return log }
 
-// answers delivers the answers waiting in a session's inbox and renders
-// them for its prompt (HOOK-5), even when recording their delivery failed.
-// The prompt hook reads no log, so the inbox is all it delivers.
-func answers(inbox events.Inbox, project, session string, at time.Time) (string, error) {
-	waiting, err := events.Deliver(inbox, project, []string{session}, nil, at)
-	return protocol.AnswersNote(protocol.AnswersOf(waiting)), err
+// prompted delivers what waits in a session's inbox and renders it for its
+// prompt (HOOK-5), even when recording its delivery failed. The prompt hook
+// reads no log and checks one file, the session's inbox (HOOK-1): an inbox
+// left in the old location drains into it (D54) or goes with the session's
+// next recovery note, board_context or await.
+func prompted(inbox events.Inbox, project, session string, at time.Time) (string, error) {
+	waiting, err := events.Deliver(inbox, project, []events.Mailbox{{Session: session}}, nil, at)
+	return protocol.InboxNote(waiting), err
 }
 
 // sessionEnd is the index of a session's turn end or end in list, or -1.
@@ -505,16 +507,18 @@ func recovery(s *store.Store, log *events.Log, inbox events.Inbox, project strin
 		}
 		note.Previous = p
 	}
-	// Answers waiting for this session or the previous one in this worktree
-	// go in the note and count as delivered (HOOK-5). The previous
-	// session's inbox goes too, so resuming it later does not deliver the
-	// same answers again. What was taken is shown even if recording its
-	// delivery failed, so it is never lost.
-	sessions := []string{current}
+	// What waits in this session's inbox, in either location (D54), and
+	// the answers waiting for the previous session in this worktree go in
+	// the note and count as delivered (HOOK-5). The previous session's
+	// answers go too, so resuming it later does not deliver them again;
+	// its comments and change requests were sent to it and stay for it.
+	// What was taken is shown even if recording its delivery failed, so it
+	// is never lost.
+	boxes := []events.Mailbox{{Session: current, Legacy: true}}
 	if set.Get(previousID) != nil {
-		sessions = append(sessions, previousID)
+		boxes = append(boxes, events.Mailbox{Session: previousID, AnswersOnly: true, Legacy: true})
 	}
-	waiting, err := events.Deliver(inbox, project, sessions, set.PendingDeliveries(current, previousID), now)
-	note.Answered = protocol.AnswersOf(waiting)
+	waiting, err := events.Deliver(inbox, project, boxes, set.PendingDeliveries(current, previousID), now)
+	note.Inbox = waiting
 	return protocol.RecoveryNote(note), err
 }

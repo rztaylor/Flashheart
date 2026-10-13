@@ -14,7 +14,7 @@ import (
 )
 
 // fix is the remedy doctor findings name.
-var fix = "run flashheart setup " + Claude{}.Name() + " --write"
+var fix = "run flashheart setup " + Claude{}.Name()
 
 // Diagnose checks Claude Code's configuration for Flashheart without
 // changing anything (SET-4): the hooks of §5.2, the MCP server and the
@@ -77,6 +77,9 @@ func (o Options) diagnoseHookEvents(hooks *value, events []string, command func(
 	case len(missing) > 0:
 		findings = append(findings, health.Finding{Level: health.Problem, Text: fmt.Sprintf("Hooks: missing for %s; %s", strings.Join(missing, ", "), remedy)})
 	}
+	if extra := ownedEventsBesides(hooks, events); len(extra) > 0 {
+		findings = append(findings, health.Finding{Level: health.Warning, Text: fmt.Sprintf("Hooks: also installed for %s, which setup no longer registers; %s", strings.Join(extra, ", "), remedy)})
+	}
 	for _, program := range programs {
 		findings = append(findings, o.diagnoseProgram("Hooks: run", program, remedy))
 	}
@@ -87,6 +90,32 @@ func (o Options) diagnoseHookEvents(hooks *value, events []string, command func(
 		findings = append(findings, health.Finding{Level: health.OK, Text: fmt.Sprintf("Hooks: all %d installed", len(events))})
 	}
 	return findings, true
+}
+
+// ownedEventsBesides lists the events outside events that hold one of
+// setup's hooks, such as one an earlier version registered.
+func ownedEventsBesides(hooks *value, events []string) []string {
+	if hooks == nil || !hooks.isObj {
+		return nil
+	}
+	var extra []string
+	for _, member := range hooks.object {
+		if slices.Contains(events, member.key) || !member.value.isArray {
+			continue
+		}
+	owned:
+		for _, group := range member.value.array {
+			if entries := group.get("hooks"); entries != nil {
+				for _, entry := range entries.array {
+					if ownsCommand(entry.get("command").text()) {
+						extra = append(extra, member.key)
+						break owned
+					}
+				}
+			}
+		}
+	}
+	return extra
 }
 
 // resolve finds the file a configured program names, as the shell would:

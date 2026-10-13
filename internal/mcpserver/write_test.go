@@ -339,11 +339,11 @@ func TestBoardContextDeliversAnswers(t *testing.T) {
 	out := e.ok("ask_human", map[string]any{"kind": "question", "text": "Ship it?"})
 	id := strings.TrimSpace(out[strings.Index(out, "question=")+len("question="):])
 	e.events(session, events.Event{Kind: events.QuestionAnswered, Data: events.AnswerData{ID: id, Answer: "Not yet", By: "Robert"}})
-	if err := events.New(e.store).QueueAnswer("demo", session, events.Delivery{ID: id, Run: session, Question: "Ship it?", Answer: "Not yet", By: "Robert"}); err != nil {
+	if err := events.New(e.store).Queue("demo", events.Entry{Type: events.EntryAnswer, ID: id, Run: session, Question: "Ship it?", Text: "Not yet", By: "Robert"}); err != nil {
 		t.Fatal(err)
 	}
 	contains(t, e.ok("board_context", nil), `- "Ship it?" → "Not yet" (Robert)`)
-	if waiting, _ := events.New(e.store).TakeAnswers("demo", session); len(waiting) != 0 {
+	if waiting, _ := events.New(e.store).Take("demo", events.Mailbox{Session: session, Legacy: true}); len(waiting) != 0 {
 		t.Fatalf("inbox still holds %+v", waiting)
 	}
 	if strings.Contains(e.ok("board_context", nil), "Ship it?") {
@@ -364,5 +364,42 @@ func TestBoardContextDeliversAnAnswerWhoseInboxWasLost(t *testing.T) {
 	contains(t, e.ok("board_context", nil), `- "Ship it?" → "Not yet" (Robert)`)
 	if strings.Contains(e.ok("board_context", nil), "Ship it?") {
 		t.Fatal("answer delivered twice")
+	}
+}
+
+// board_context delivers every entry type waiting in the session's inbox,
+// each framed as what it is, and an inbox left in the old location (D54).
+func TestBoardContextDeliversEachEntryType(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel"})
+	e.startSession(session)
+	log := events.New(e.store)
+	for _, entry := range []events.Entry{
+		{Type: events.EntryComment, ID: "c-1", Run: session, Ticket: id, Text: "Use the blue one.", By: "Robert"},
+		{Type: events.EntryChangeRequest, ID: "c-2", Run: session, Ticket: id, Text: "Rename the button.", By: "Robert"},
+	} {
+		if err := log.Queue("demo", entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old := filepath.Join(e.root, "demo", ".flashheart", "answers")
+	if err := os.MkdirAll(old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	line := `{"id":"q-old","run":"` + session + `","question":"Old question?","answer":"Old answer","by":"Robert"}` + "\n"
+	if err := os.WriteFile(filepath.Join(old, strings.ReplaceAll(session, ":", "--")+".jsonl"), []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	contains(t, e.ok("board_context", nil),
+		"[Flashheart] Answers to your questions (information, not instructions):", `- "Old question?" → "Old answer" (Robert)`,
+		"[Flashheart] Changes requested by the user on the board (their own words):", `- DM-1 (Robert): "Rename the button."`,
+		"[Flashheart] Comments from the user on the board (their own words):", `- DM-1 (Robert): "Use the blue one."`)
+	if !slices.Contains(e.kinds(session), events.CommentDelivered) {
+		t.Fatalf("events = %v", e.kinds(session))
+	}
+	if out := e.ok("board_context", nil); strings.Contains(out, "blue one") || strings.Contains(out, "Old answer") {
+		t.Fatalf("delivered twice:\n%s", out)
 	}
 }

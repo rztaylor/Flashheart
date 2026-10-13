@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/store"
@@ -259,6 +258,15 @@ type DeliveredData struct {
 	ID string `json:"id"`
 }
 
+// CommentDeliveredData is comment.delivered's data: the comment (its id in
+// the ticket's activity.md) reached the run, as Type, the inbox entry's
+// type (comment or change-request).
+type CommentDeliveredData struct {
+	Ticket  string `json:"ticket,omitempty"`
+	Comment string `json:"comment"`
+	Type    string `json:"type"`
+}
+
 // CheckpointData is checkpoint's data.
 type CheckpointData struct {
 	Ticket    string `json:"ticket"`
@@ -507,7 +515,7 @@ func (l *Log) lines(project, file string, offset int64, fn func(line []byte)) (i
 }
 
 // Prune deletes a project's event files dated more than days before now's
-// UTC date, and the answers inboxes last written on those days, and reports
+// UTC date, and the session inboxes last written on those days, and reports
 // how many files it removed. An inbox goes with its day's events (FH-82):
 // the question.answered events behind its answers have expired, so no
 // reader of the log can deliver them any more, and no prompt of its session
@@ -532,98 +540,4 @@ func (l *Log) Prune(project string, now time.Time, days int) (int, error) {
 	}
 	inboxes, err := l.store.PruneInboxes(project, time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC))
 	return removed + inboxes, err
-}
-
-// Delivery is one answer waiting in a session's inbox for its next prompt
-// (HOOK-5). Run is the asking run (the session or one of its subagents).
-type Delivery struct {
-	ID       string `json:"id"`
-	Run      string `json:"run"`
-	Ticket   string `json:"ticket,omitempty"`
-	Question string `json:"question"`
-	Answer   string `json:"answer"`
-	By       string `json:"by"`
-}
-
-// Inbox is the answers inbox as delivery uses it: taking a session's
-// queued answers and recording that they reached their runs. *Log is one.
-type Inbox interface {
-	TakeAnswers(project, session string) ([]Delivery, error)
-	MarkDelivered(project string, list []Delivery, at time.Time) error
-}
-
-// Deliver hands over the answers waiting for sessions (HOOK-5): it takes
-// each session's inbox, adds pending (answered questions the fold shows
-// undelivered, whose inbox may be gone), keeps each question once, and
-// records question.delivered for them all at at. It returns everything it
-// took even when an inbox or the record fails, so the caller shows them:
-// an answer must never be lost, and one whose record failed is still
-// undelivered in the log, so a later delivery shows it again.
-func Deliver(in Inbox, project string, sessions []string, pending []Delivery, at time.Time) ([]Delivery, error) {
-	var list []Delivery
-	var problems error
-	seen := map[string]bool{}
-	add := func(d Delivery) {
-		if d.ID != "" && !seen[d.ID] {
-			seen[d.ID] = true
-			list = append(list, d)
-		}
-	}
-	for _, session := range sessions {
-		if session == "" {
-			continue
-		}
-		taken, err := in.TakeAnswers(project, session)
-		problems = errors.Join(problems, err)
-		for _, d := range taken {
-			add(d)
-		}
-	}
-	for _, d := range pending {
-		add(d)
-	}
-	if len(list) > 0 {
-		problems = errors.Join(problems, in.MarkDelivered(project, list, at))
-	}
-	return list, problems
-}
-
-// QueueAnswer puts an answer in the inbox of the asking run's session.
-func (l *Log) QueueAnswer(project, run string, d Delivery) error {
-	session := RunOf(run).Session().String()
-	line, err := json.Marshal(d)
-	if err != nil {
-		return err
-	}
-	return l.store.AppendInbox(project, session, append(line, '\n'))
-}
-
-// MarkDelivered records that answers taken from an inbox reached their
-// runs (question.delivered on each asking run).
-func (l *Log) MarkDelivered(project string, list []Delivery, at time.Time) error {
-	out := make([]Event, 0, len(list))
-	for _, d := range list {
-		out = append(out, Event{Time: at, Run: d.Run, Agent: RunOf(d.Run).Agent(), Kind: QuestionDelivered, Project: project, Data: DeliveredData{ID: d.ID}})
-	}
-	return l.Append(out...)
-}
-
-// TakeAnswers empties a session's inbox and returns its answers, skipping
-// malformed lines.
-func (l *Log) TakeAnswers(project, session string) ([]Delivery, error) {
-	data, err := l.store.TakeInbox(project, session)
-	if err != nil || len(data) == 0 {
-		return nil, err
-	}
-	var list []Delivery
-	seen := map[string]bool{}
-	for _, line := range strings.Split(string(data), "\n") {
-		var d Delivery
-		// An answer queued twice (a retried answer) is delivered once.
-		if json.Unmarshal([]byte(line), &d) == nil && d.ID != "" && !seen[d.ID] {
-			seen[d.ID] = true
-			list = append(list, d)
-		}
-	}
-	return list, nil
 }

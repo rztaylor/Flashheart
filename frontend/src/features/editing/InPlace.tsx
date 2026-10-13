@@ -38,6 +38,15 @@ interface Coordinator {
   finish(id: string): void;
   setDirty(id: string, dirty: boolean): void;
   setFocus(id: string, focus: (() => void) | null): void;
+  holdDraft(id: string, draft: HeldDraft | null): void;
+}
+
+// HeldDraft is unsaved work on the page outside any open item (a comment
+// being written, FH-125): leaving the page asks about it too, and Discard
+// drops it.
+interface HeldDraft {
+  name: string;
+  discard(): void;
 }
 
 const EditingContext = createContext<Coordinator | null>(null);
@@ -54,6 +63,9 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
     discard(): void;
   } | null>(null);
   const [kept, setKept] = useState(0);
+  const [drafts, setDrafts] = useState<ReadonlyMap<string, HeldDraft>>(
+    () => new Map(),
+  );
   const openId = useRef<string | null>(null);
   openId.current = open?.id ?? null;
   const focusOpen = useRef<{ id: string; focus(): void } | null>(null);
@@ -64,17 +76,24 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
     setOpen(next);
   };
 
-  // While the open item has unsaved changes, leaving the page asks first;
-  // Discard lets the navigation go on once nothing guards it any more.
+  // While the open item or a held draft has unsaved changes, leaving the
+  // page asks first, naming them; Discard drops them all and lets the
+  // navigation go on once nothing guards it any more.
   useEffect(() => {
-    if (!open || !dirty) return;
+    const names = [
+      ...(open && dirty ? [open.name] : []),
+      ...[...drafts.values()].map((draft) => draft.name),
+    ];
+    if (names.length === 0) return;
     const drop = guardLeaving((proceed) =>
       setAsking({
-        name: open.name,
+        name: names.join(" and the "),
         discard: () => {
           release.current?.();
           setDirty(false);
           setOpen(null);
+          for (const draft of drafts.values()) draft.discard();
+          setDrafts(new Map());
           proceed();
         },
       }),
@@ -84,7 +103,7 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
       drop();
       if (release.current === drop) release.current = null;
     };
-  }, [open, dirty]);
+  }, [open, dirty, drafts]);
 
   // Keep editing returns focus to the open item once the prompt is gone.
   useEffect(() => {
@@ -110,6 +129,15 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
     setFocus(id, focus) {
       if (focus && openId.current === id) focusOpen.current = { id, focus };
       else if (!focus && focusOpen.current?.id === id) focusOpen.current = null;
+    },
+    holdDraft(id, draft) {
+      setDrafts((held) => {
+        if (!draft && !held.has(id)) return held;
+        const next = new Map(held);
+        if (draft) next.set(id, draft);
+        else next.delete(id);
+        return next;
+      });
     },
   };
 
@@ -217,6 +245,29 @@ export function useInPlaceItem(id: string, name: string): InPlaceItem {
   };
 }
 
+// useHeldDraft holds unsaved work that is not an in-place item (a comment
+// being written) while dirty, so leaving the page asks about it as about
+// the open item; discard empties it. Opening items never asks about it.
+export function useHeldDraft(
+  id: string,
+  name: string,
+  dirty: boolean,
+  discard: () => void,
+) {
+  const coordinator = useContext(EditingContext);
+  const latest = useRef({ coordinator, name, discard });
+  latest.current = { coordinator, name, discard };
+  useEffect(() => {
+    const { coordinator: held } = latest.current;
+    if (!dirty) return;
+    held?.holdDraft(id, {
+      name: latest.current.name,
+      discard: () => latest.current.discard(),
+    });
+    return () => held?.holdDraft(id, null);
+  }, [id, dirty]);
+}
+
 // editGroup is the class an item's container takes so its pencil shows
 // while the item is hovered or holds focus.
 export const editGroup = "group/edit";
@@ -264,8 +315,11 @@ export function AddItem({ item, name }: { item: InPlaceItem; name: string }) {
 const mac =
   typeof navigator !== "undefined" &&
   /Mac|iP(hone|ad)/.test(navigator.platform);
+// sendKeys names Ctrl or Cmd and Enter, which saves an open item and posts
+// a comment.
+export const sendKeys = `${mac ? "⌘" : "Ctrl+"}Enter`;
 // shortcuts names the keys that save and cancel an open item.
-export const shortcuts = `${mac ? "⌘" : "Ctrl+"}Enter saves · Esc cancels`;
+export const shortcuts = `${sendKeys} saves · Esc cancels`;
 
 export interface InPlaceEditorProps<D extends { id: string; hash: string }, T> {
   item: InPlaceItem;

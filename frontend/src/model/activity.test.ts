@@ -1,7 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import type { Comment, History, HistoryChange } from "../api/board";
 import type { Question, Run, TimelineEntry } from "../api/runs";
-import { type ActivityInput, activityOf } from "./activity";
+import {
+  type ActivityFilter,
+  type ActivityInput,
+  activityOf,
+  filterActivity,
+  historyWords,
+} from "./activity";
 
 // Entries are dated where the browser is; these tests read UTC.
 beforeAll(() => {
@@ -68,6 +75,8 @@ function input(overrides: Partial<ActivityInput> = {}): ActivityInput {
     handoff: null,
     runs: [],
     questions: [],
+    comments: [],
+    history: [],
     ...overrides,
   };
 }
@@ -247,4 +256,195 @@ describe("activityOf", () => {
   it("is empty for a ticket with no notes, questions or handoff", () => {
     expect(activityOf(input({ body: "# T\n\n## Notes\n\n" }))).toEqual([]);
   });
+
+  it("reads comments and history from the activity file, in time order with the rest", () => {
+    const entries = activityOf(
+      input({
+        body: notes("- 2026-10-12 · claude:aaaa1111: a note"),
+        handoff: { markdown: notes(), next: ["Verify"] },
+        comments: [
+          comment({ id: "c2", time: "2026-10-13T09:00:00Z", body: "Later" }),
+          comment({
+            id: "c1",
+            time: "2026-10-12T12:10:00Z",
+            edited: "2026-10-12T12:20:00Z",
+            quoteFrom: "Acceptance criteria 2",
+            quote: "No tabs",
+          }),
+        ],
+        history: [
+          history({
+            id: "h1",
+            time: "2026-10-11T08:00:00Z",
+            changes: [change({ what: "created", to: "backlog" })],
+          }),
+          history({
+            id: "h2",
+            time: "2026-10-12T12:40:00Z",
+            by: "claude:aaaa1111-2222-3333",
+            byPerson: false,
+            changes: [change({ what: "moved", from: "up-next", to: "review" })],
+          }),
+        ],
+      }),
+    );
+    expect(entries.map((entry) => entry.key)).toEqual([
+      "history:h1",
+      "note:0",
+      "comment:c1",
+      "handoff:current",
+      "history:h2",
+      "comment:c2",
+    ]);
+    expect(entries[2]).toMatchObject({
+      kind: "comment",
+      id: "c1",
+      by: "Robert",
+      edited: "2026-10-12T12:20:00Z",
+      quoteFrom: "Acceptance criteria 2",
+      quote: "No tabs",
+      markdown: "Not in Done.",
+    });
+    // A run is named by its short id, as elsewhere on the board.
+    expect(entries[4]).toMatchObject({
+      kind: "history",
+      by: "claude:aaaa1111",
+      byPerson: false,
+      words: ["moved it from Up next to Ready to review"],
+    });
+  });
+
+  it("takes agents' moves from the runs only before the activity file's history begins", () => {
+    const moved = (time: string, to: string, ticket = "FH-65") => ({
+      time,
+      kind: "ticket.moved",
+      detail: to,
+      ticket,
+    });
+    const runs = [
+      run({
+        timeline: [
+          moved("2026-10-11T09:00:00Z", "in-progress"),
+          moved("2026-10-11T09:30:00Z", "review", "FH-1"),
+          // The same move the history records: shown once, from history.
+          moved("2026-10-12T10:00:00.400Z", "review"),
+        ],
+      }),
+    ];
+    const withHistory = activityOf(
+      input({
+        runs,
+        history: [
+          history({
+            id: "h1",
+            time: "2026-10-12T10:00:00Z",
+            by: "claude:aaaa1111-2222",
+            byPerson: false,
+            changes: [
+              change({ what: "moved", from: "in-progress", to: "review" }),
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(
+      withHistory.map((entry) =>
+        entry.kind === "history" ? entry.words.join("; ") : entry.kind,
+      ),
+    ).toEqual([
+      "moved it to In progress",
+      "moved it from In progress to Ready to review",
+    ]);
+    // Without an activity file the run window is all there is.
+    expect(activityOf(input({ runs }))).toHaveLength(2);
+  });
 });
+
+describe("historyWords", () => {
+  it("words each change of a write in plain terms, never the ticket's text", () => {
+    expect(
+      historyWords([
+        change({ what: "created", to: "up-next" }),
+        change({ what: "moved", from: "review", to: "rejected" }),
+        change({
+          what: "edited",
+          fields: ["title", "acceptance-criteria", "pr", "depends-on", "body"],
+        }),
+        change({ what: "ticked", criteria: [2], steps: [1, 3] }),
+        change({ what: "unticked", criteria: [1, 4] }),
+        change({ what: "archived" }),
+        change({ what: "restored" }),
+      ]),
+    ).toEqual([
+      "created it in Up next",
+      "moved it from Ready to review to Rejected",
+      "edited the title, the acceptance criteria, the pull request, its dependencies and the ticket's text",
+      "ticked criterion 2 and review steps 1 and 3",
+      "unticked criteria 1 and 4",
+      "archived it",
+      "restored it",
+    ]);
+  });
+});
+
+describe("filterActivity", () => {
+  const entries = activityOf(
+    input({
+      body: notes("- 2026-10-12 · claude:aaaa1111: a note"),
+      comments: [comment({ id: "c1", time: "2026-10-12T12:10:00Z" })],
+      history: [
+        history({
+          id: "h1",
+          time: "2026-10-12T08:00:00Z",
+          changes: [change({ what: "created", to: "backlog" })],
+        }),
+      ],
+    }),
+  );
+
+  it("keeps everything for All, people's comments for Comments and the changes for History", () => {
+    const kinds = (filter: ActivityFilter) =>
+      filterActivity(entries, filter).map((entry) => entry.kind);
+    expect(kinds("all")).toEqual(["note", "history", "comment"]);
+    expect(kinds("comments")).toEqual(["comment"]);
+    expect(kinds("history")).toEqual(["history"]);
+  });
+});
+
+function comment(overrides: Partial<Comment> = {}): Comment {
+  return {
+    id: "c1",
+    time: "2026-10-12T12:00:00Z",
+    by: "Robert",
+    byPerson: true,
+    state: "open",
+    edited: "",
+    quoteFrom: "",
+    quote: "",
+    body: "Not in Done.",
+    ...overrides,
+  };
+}
+
+function history(overrides: Partial<History> = {}): History {
+  return {
+    id: "h1",
+    time: "2026-10-12T12:00:00Z",
+    by: "Robert",
+    byPerson: true,
+    changes: [],
+    ...overrides,
+  };
+}
+
+function change(overrides: Partial<HistoryChange> = {}): HistoryChange {
+  return {
+    what: "edited",
+    from: "",
+    to: "",
+    fields: [],
+    criteria: [],
+    steps: [],
+    ...overrides,
+  };
+}

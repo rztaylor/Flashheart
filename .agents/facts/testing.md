@@ -113,7 +113,11 @@
   `store` (`TestEveryTicketWriteAppendsOneHistoryEntry`); every board write
   in `api` (`TestBoardWritesAppendOneHistoryEntry`); comments need
   Singleserve's authentication in `app`. Attribution precedence is tested apart from the tools
-  (`TestAttributionPrecedence`).
+  (`TestAttributionPrecedence`). The comments `get_ticket` and `claim`
+  show, and their budgets, are `internal/mcpserver/comments_test.go`;
+  posting, quoting, editing, the conflict, the filter and the leave guard
+  are `TicketComments.dom.test.tsx` and, in the browser,
+  `frontend/e2e/comments.spec.mjs` (FH-125).
 - The tool list has three hand-kept copies: the registrations, the
   agent-protocol §7.2 table and the skill. `TestSkillAndSpecNameExactlyTheRegisteredTools`
   (`internal/mcpserver`) lists tools over the in-memory transport and fails
@@ -125,6 +129,11 @@
   protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
   with `go test`.
+- Setup's question (FH-129) is a table test in `internal/cli`
+  (`TestSetupAsksBeforeApplying`) with the harness's fake stdin and
+  `terminal` flag: each answer, end of input, no terminal, `--yes`,
+  `--write` and `--dry-run`. `IsTerminal` is tested on a pipe and
+  `/dev/null`; a real terminal is checked by hand under a pseudo-terminal.
 - Setup is tested against `testdata/setup/claude/` in a temporary home with
   a fake `claude` CLI, and against the `$CODEX_HOME` fixtures in
   `testdata/setup/codex/` (`user/`: the user's own entries; `stale/`: an
@@ -133,7 +142,10 @@
   `~/.claude` or `~/.codex`. `doctor` is tested the same way, with fixture
   homes and board roots (a missing hook, a moved binary, a hook-errors log).
   `setup codex` registers exactly the events recorded in
-  `testdata/hooks/codex/` (`TestCodexHooksAreTheRecordedEvents`).
+  `testdata/hooks/codex/` less those the adapter ignores
+  (`TestCodexHooksAreTheRecordedEvents`); an ignored event's recorded
+  payloads must give the adapter nothing to do
+  (`TestCodexIgnoredEventsAreIgnoredByTheAdapter`).
 - The Runs tab tree is tested from the golden hook payloads' events
   (`TestTicketRunsCarryTheSubagentTree` in `internal/api`), and in the
   browser from subagents the runs e2e starts through the real hook.

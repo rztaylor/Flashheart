@@ -182,40 +182,45 @@ func TestPruneRemovesOnlyExpiredEventFiles(t *testing.T) {
 	}
 }
 
-// An answers inbox goes with the event file of the day it was last written
+// A session inbox goes with the event file of the day it was last written
 // (FH-82): by then no reader of the log can deliver its answers, and no
 // prompt of its session has come since, or it would have taken them.
 func TestPruneRemovesInboxesWithTheirDaysEvents(t *testing.T) {
 	t.Parallel()
 
 	log, root := newRoot(t, "alpha")
-	dir := filepath.Join(root, "alpha", ".flashheart", "answers")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	// The inbox and the old answers/ location alike (D54).
+	dirs := []string{filepath.Join(root, "alpha", ".flashheart", "inbox"), filepath.Join(root, "alpha", ".flashheart", "answers")}
 	inboxes := map[string]time.Time{
 		"claude--expired.jsonl": time.Date(2026, 7, 6, 23, 59, 0, 0, time.UTC),
 		"claude--kept.jsonl":    time.Date(2026, 7, 7, 0, 1, 0, 0, time.UTC),
 	}
-	for name, at := range inboxes {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("{}\n"), 0o644); err != nil {
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Chtimes(filepath.Join(dir, name), at, at); err != nil {
-			t.Fatal(err)
+		for name, at := range inboxes {
+			if err := os.WriteFile(filepath.Join(dir, name), []byte("{}\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chtimes(filepath.Join(dir, name), at, at); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	now := time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)
-	if removed, err := log.Prune("alpha", now, 90); err != nil || removed != 1 {
+	if removed, err := log.Prune("alpha", now, 90); err != nil || removed != 2 {
 		t.Fatalf("Prune = %d, %v", removed, err)
 	}
-	entries, _ := os.ReadDir(dir)
-	var names []string
-	for _, entry := range entries {
-		names = append(names, entry.Name())
-	}
-	if !slices.Equal(names, []string{"claude--kept.jsonl"}) {
-		t.Fatalf("left %v", names)
+	for _, dir := range dirs {
+		entries, _ := os.ReadDir(dir)
+		var names []string
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		if !slices.Equal(names, []string{"claude--kept.jsonl"}) {
+			t.Fatalf("%s: left %v", dir, names)
+		}
 	}
 }
 
@@ -299,13 +304,13 @@ func TestAnInboxDeliversEachAnswerOnce(t *testing.T) {
 	}
 	defer s.Close()
 	log := New(s)
-	answer := Delivery{ID: "q-1", Run: "claude:s/a1", Question: "Q?", Answer: "A", By: "human"}
+	answer := Entry{Type: EntryAnswer, ID: "q-1", Run: "claude:s/a1", Question: "Q?", Text: "A", By: "human"}
 	for range 2 {
-		if err := log.QueueAnswer("alpha", answer.Run, answer); err != nil {
+		if err := log.Queue("alpha", answer); err != nil {
 			t.Fatal(err)
 		}
 	}
-	got, err := log.TakeAnswers("alpha", "claude:s")
+	got, err := log.Take("alpha", Mailbox{Session: "claude:s"})
 	if err != nil || len(got) != 1 || got[0] != answer {
 		t.Fatalf("answers = %+v, %v", got, err)
 	}
@@ -317,23 +322,24 @@ func TestDeliverReturnsWhatItTookWhenRecordingFails(t *testing.T) {
 	t.Parallel()
 
 	log, root := newRoot(t, "alpha")
-	mine := Delivery{ID: "q-1", Run: "claude:s/a1", Question: "Q1?", Answer: "A1", By: "human"}
-	theirs := Delivery{ID: "q-2", Run: "claude:p", Question: "Q2?", Answer: "A2", By: "human"}
-	for _, d := range []Delivery{mine, theirs} {
-		if err := log.QueueAnswer("alpha", d.Run, d); err != nil {
+	mine := Entry{Type: EntryAnswer, ID: "q-1", Run: "claude:s/a1", Question: "Q1?", Text: "A1", By: "human"}
+	theirs := Entry{Type: EntryComment, ID: "c-2", Run: "claude:p", Text: "C2", By: "human"}
+	for _, d := range []Entry{mine, theirs} {
+		if err := log.Queue("alpha", d); err != nil {
 			t.Fatal(err)
 		}
 	}
 	// An unreadable inbox (a directory) and an event file that cannot be
 	// appended to (a directory too).
-	if err := os.MkdirAll(filepath.Join(root, "alpha", ".flashheart", "answers", "claude--broken.jsonl"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "alpha", ".flashheart", "inbox", "claude--broken.jsonl"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(root, "alpha", ".flashheart", "events", FileName(t0)), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	pending := []Delivery{mine, {ID: "q-3", Run: "claude:s", Question: "Q3?", Answer: "A3", By: "human"}}
-	got, err := Deliver(log, "alpha", []string{"claude:s", "claude:broken", "claude:p", ""}, pending, t0)
+	pending := []Entry{mine, {Type: EntryAnswer, ID: "q-3", Run: "claude:s", Question: "Q3?", Text: "A3", By: "human"}}
+	boxes := []Mailbox{{Session: "claude:s"}, {Session: "claude:broken"}, {Session: "claude:p"}, {}}
+	got, err := Deliver(log, "alpha", boxes, pending, t0)
 	if err == nil {
 		t.Fatal("Deliver reported no error")
 	}
@@ -341,11 +347,11 @@ func TestDeliverReturnsWhatItTookWhenRecordingFails(t *testing.T) {
 	for _, d := range got {
 		ids = append(ids, d.ID)
 	}
-	if !slices.Equal(ids, []string{"q-1", "q-2", "q-3"}) {
+	if !slices.Equal(ids, []string{"q-1", "c-2", "q-3"}) {
 		t.Fatalf("delivered %v", ids)
 	}
 	// The inboxes it read are emptied: the answers are the caller's now.
-	if again, err := log.TakeAnswers("alpha", "claude:s"); err != nil || len(again) != 0 {
+	if again, err := log.Take("alpha", Mailbox{Session: "claude:s"}); err != nil || len(again) != 0 {
 		t.Fatalf("inbox after delivery = %+v, %v", again, err)
 	}
 }
@@ -354,11 +360,11 @@ func TestDeliverRecordsEachAnswerDelivered(t *testing.T) {
 	t.Parallel()
 
 	log, _ := newRoot(t, "alpha")
-	d := Delivery{ID: "q-1", Run: "claude:s/a1", Question: "Q?", Answer: "A", By: "human"}
-	if err := log.QueueAnswer("alpha", d.Run, d); err != nil {
+	d := Entry{Type: EntryAnswer, ID: "q-1", Run: "claude:s/a1", Question: "Q?", Text: "A", By: "human"}
+	if err := log.Queue("alpha", d); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := Deliver(log, "alpha", []string{"claude:s"}, []Delivery{d}, t0); err != nil || len(got) != 1 {
+	if got, err := Deliver(log, "alpha", []Mailbox{{Session: "claude:s"}}, []Entry{d}, t0); err != nil || len(got) != 1 {
 		t.Fatalf("Deliver = %+v, %v", got, err)
 	}
 	var delivered []string
@@ -372,7 +378,7 @@ func TestDeliverRecordsEachAnswerDelivered(t *testing.T) {
 	if !slices.Equal(delivered, []string{"claude:s/a1"}) {
 		t.Fatalf("delivered on %v", delivered)
 	}
-	if got, err := Deliver(log, "alpha", []string{"claude:s"}, nil, t0); err != nil || len(got) != 0 {
+	if got, err := Deliver(log, "alpha", []Mailbox{{Session: "claude:s"}}, nil, t0); err != nil || len(got) != 0 {
 		t.Fatalf("second Deliver = %+v, %v", got, err)
 	}
 }

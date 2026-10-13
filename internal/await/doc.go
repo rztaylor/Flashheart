@@ -4,11 +4,12 @@
 // instead of the answer waiting for the user's next prompt.
 //
 // It owns the wait: finding the question in the event log, polling the
-// asking session's answers inbox, delivering (events.Deliver) what it
-// finds or an answer the log shows given and undelivered whose inbox a
+// asking session's inbox in both locations (D54), delivering
+// (events.Deliver) everything it finds, with a line when the answer is not
+// among it, or an answer the log shows given and undelivered whose inbox a
 // failed delivery took, noticing when another path (the prompt hook, the recovery note,
 // board_context) delivered the answer first or that the user answered in
 // the session (its fold belongs to runs), and the timeout. The log, the
-// inbox format and delivery events belong to events; the answers note's
+// inbox format and delivery events belong to events; the inbox note's
 // wording belongs to protocol; flags, exit codes and output belong to cli.
 package await

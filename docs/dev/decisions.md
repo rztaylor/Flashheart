@@ -88,7 +88,7 @@ live badges and toggleable virtual columns (Needs you, Agent working).
 Superseded: Agent working became a filter (D27), Needs you the band's
 filter (D31), and the Agents view gave way to the Overview (D32).
 
-## 2026-10-04 — D9: Setup shows a diff and writes only with --write
+## 2026-10-04 — D9: Setup shows a diff and writes only with --write (revised by D59)
 
 `flashheart setup <agent>` prints the exact configuration changes and writes
 them only with `--write`, with backups, owning only its own entries. Editing a
@@ -112,7 +112,8 @@ Singleserve is pinned at v0.2.2, which requires Go 1.26.6.
 
 Later additions: `@fontsource-variable/archivo` and an authored icon set
 (D14), and the interaction-test libraries (D42). A rich text editor needs
-its own decision before it is added (D56).
+its own decision before it is added (D56): CodeMirror 6 with a live
+preview (D61).
 
 ## 2026-10-04 — D11: Safety model
 
@@ -256,7 +257,7 @@ dependencies and validation are linked from
 contract is `docs/dev/specs/ui-layout.md`. No protocol/storage change or
 cloud deployment is implied.
 
-## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker (kanban-tracker handling retired by D55)
+## 2026-10-06 — D19: Setup registers MCP through the claude CLI and retires kanban-tracker (kanban-tracker handling retired by D55; --write revised by D59)
 
 Options for registering the user-scope MCP server: edit `~/.claude.json`
 directly; run `claude mcp add-json` / `claude mcp remove`; print the command
@@ -1233,7 +1234,7 @@ Options: refresh only between the markers (chosen); move the text into a
 file Flashheart owns outright, if Codex offers one; keep D44 and let
 `doctor` warn.
 
-## 2026-10-13 — D54: One typed inbox per session
+## 2026-10-13 — D54: One typed inbox per session (refined by D60)
 
 Decision (user, FH-130 review): revises D20. The answers inbox becomes a
 session's inbox, holding typed entries (answer, comment, change request),
@@ -1335,10 +1336,54 @@ none names the ticket's text, since keys and sections Flashheart does not
 know are named only as `frontmatter` or `body`). A reorder within a
 column, notes, handoffs and answers are not history.
 
-## 2026-10-13 — D59: The formatted ticket editor (proposed — awaiting the user's choice)
+## 2026-10-13 — D59: Setup asks before it writes; --yes for scripts
 
-Status: proposed by the FH-137 spike; nothing is adopted until the user
-chooses, and FH-16 is updated to match then.
+Revises D9, and D19's `--uninstall`, which applied with `--write` (as
+D56 noted). `flashheart setup <agent>` showed a diff and wrote only when
+run again with `--write`, the way formatters work (`gofmt -w`,
+`prettier --write`). Setup commands usually apply their change, so this
+took two runs, and someone skimming the diff could think setup had
+worked (FH-129, user's choice).
+
+Setup now follows `terraform apply`: it shows the diff, then asks
+`Apply these changes? [y/N]` on a terminal and writes only on `y` or
+`yes`; any other answer, or none, changes nothing. `--yes` applies
+without asking, `--dry-run` only shows. With no terminal on stdin (a
+pipe, a script, an agent's shell) and no `--yes`, it only shows the diff
+and says to re-run with `--yes`, so nothing hangs waiting for an answer
+and nothing is written unseen. D9's guarantee stands: no agent
+configuration changes without the user seeing the exact diff and saying
+yes. `--write` stays as an older name for `--yes`, so scripts and notes
+that use it keep working. Doctor's fixes say `run flashheart setup
+<agent>`.
+
+## 2026-10-13 — D60: Old inboxes drain so the prompt hook checks one file
+
+Refines D54 (FH-135). The inbox is
+`<project>/.flashheart/inbox/<agent>--<session>.jsonl`, one typed entry
+per line (`answer`, `comment`, `change-request`; agent-protocol §4).
+D54 asks readers to deliver from the old `answers/` location while it
+drains, and HOOK-1 asks the prompt hook for one `stat` when nothing
+waits; checking both would cost every prompt a second. So the prompt hook
+checks only the new inbox, and old inboxes drain into it: queueing
+anything for a session moves its old inbox in first, `serve`'s retention
+moves them all at startup and daily, and the recovery note,
+`board_context`, tool results and `flashheart await` take both locations.
+Only an answer an older `serve` queues after the binary is replaced waits
+for one of those. A new session's recovery note takes the previous
+session's answers, as before, but leaves its comments and change
+requests: they were sent to that session. A delivered comment or change
+request records `comment.delivered` on the run it was sent to; the log
+never holds its text (D47), so it is delivered from the inbox alone.
+
+Options: the prompt hook checks both locations (a second `stat` on every
+prompt, for a short upgrade window); keep the `answers/` name (rejected
+by D54); drain into the new inbox and check one (chosen).
+
+## 2026-10-13 — D61: The formatted ticket editor is CodeMirror 6 with a live preview
+
+Decision (user, 2026-10-13, after the FH-137 spike): CodeMirror 6 with a
+Flashheart-owned live preview, as recommended below. FH-16 builds it.
 
 Context: FH-16's formatted editor replaces FH-66's markdown text area
 behind the same in-place edit, one section at a time (D57). Tickets are

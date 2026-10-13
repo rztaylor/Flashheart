@@ -326,7 +326,7 @@ func TestRecoveryNoteAndAnswersReachCodex(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if err := log.QueueAnswer("demo", session, events.Delivery{ID: "q-1", Run: session, Ticket: "DM-1", Question: "Which schema?", Answer: "v2", By: "Robert"}); err != nil {
+	if err := log.Queue("demo", events.Entry{Type: events.EntryAnswer, ID: "q-1", Run: session, Ticket: "DM-1", Question: "Which schema?", Text: "v2", By: "Robert"}); err != nil {
 		t.Fatal(err)
 	}
 	s.Close()

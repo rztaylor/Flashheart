@@ -369,7 +369,7 @@ test("the full page shows the ticket as one page with an outline and properties 
   await expect(properties).toBeInViewport();
 
   // Activity: notes, the question with its answer and the handoff update,
-  // oldest first, with no note box.
+  // oldest first, then the comment box (FH-125).
   const activity = main.getByRole("region", { name: "Activity" });
   const entries = activity.getByRole("listitem");
   await expect(entries).toHaveCount(4);
@@ -379,7 +379,9 @@ test("the full page shows the ticket as one page with an outline and properties 
   );
   await expect(entries.nth(1)).toContainText("Yes, and say where it points");
   await expect(entries.nth(3)).toContainText("updated the handoff");
-  await expect(activity.getByRole("textbox")).toHaveCount(0);
+  await expect(
+    activity.getByRole("textbox", { name: "Add a comment" }),
+  ).toBeVisible();
   await shot(page, "ticket-activity-1440-light");
 
   // Each screenshot once: the Evidence gallery opens the lightbox, and the

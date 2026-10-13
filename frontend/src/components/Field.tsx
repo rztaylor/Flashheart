@@ -17,6 +17,9 @@ interface SelectFieldProps {
   value: string;
   onChange(value: string): void;
   children: ReactNode;
+  // className sizes the field (a max width); with it the select fills the
+  // field and cuts a long choice short instead of passing its container.
+  className?: string;
 }
 
 // SelectField is a labelled native select in the board's control style.
@@ -26,16 +29,19 @@ export function SelectField({
   value,
   onChange,
   children,
+  className = "",
 }: SelectFieldProps) {
   return (
-    <label className="relative flex items-center gap-1.5 text-xs text-ink-muted">
+    <label
+      className={`relative flex items-center gap-1.5 text-xs text-ink-muted ${className}`}
+    >
       <span>{label}</span>
       <select
         value={value}
         onChange={(event: ChangeEvent<HTMLSelectElement>) =>
           onChange(event.target.value)
         }
-        className={`h-8 appearance-none rounded-control border bg-card py-0 pr-7 pl-2.5 text-xs font-medium text-ink transition-colors hover:border-ink-muted ${
+        className={`h-8 appearance-none rounded-control border bg-card py-0 pr-7 pl-2.5 text-xs font-medium text-ink transition-colors hover:border-ink-muted ${className ? "min-w-0 flex-1 truncate" : ""} ${
           value && !plain ? "border-select ring-1 ring-select" : "border-rule"
         }`}
       >

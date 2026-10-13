@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "./client";
 import {
+  addComment,
   blockedReasons,
   conflictOf,
+  editComment,
   keysInUse,
   moveTicket,
   patchTicket,
@@ -64,5 +66,75 @@ describe("ticket writes", () => {
     });
     expect(keysInUse(taken)).toEqual(["FH", "NG"]);
     expect(conflictOf(taken)).toBeUndefined();
+  });
+});
+
+describe("comments", () => {
+  const comment = {
+    id: "4e5f6a7b",
+    time: "2026-10-13T09:12:00Z",
+    by: "Robert",
+    byPerson: true,
+    state: "open",
+    edited: "",
+    quoteFrom: "Acceptance criteria 2",
+    quote: "Tickets keep their place",
+    body: "Not in Done.",
+  };
+
+  it("posts a comment with its quote", async () => {
+    const { fetcher, calls } = respond(201, {
+      comment,
+      activityHash: "a2",
+      revision: 7,
+    });
+    const saved = await addComment(fetcher, "FH-1", {
+      body: "Not in Done.",
+      quote: "Tickets keep their place",
+      quoteFrom: "Acceptance criteria 2",
+    });
+    expect(saved).toEqual({ hash: "a2", revision: 7, warnings: [] });
+    expect(calls[0]?.url).toBe("/api/tickets/FH-1/comments");
+    expect(calls[0]?.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
+      body: "Not in Done.",
+      quote: "Tickets keep their place",
+      quoteFrom: "Acceptance criteria 2",
+    });
+  });
+
+  it("edits a comment on the activity's hash, a stale one a conflict", async () => {
+    const ok = respond(200, { comment, activityHash: "a3", revision: 8 });
+    expect(
+      await editComment(ok.fetcher, "FH-1", "4e5f6a7b", "a2", "New"),
+    ).toEqual({ hash: "a3", revision: 8, warnings: [] });
+    expect(ok.calls[0]?.url).toBe("/api/tickets/FH-1/comments/4e5f6a7b");
+    expect(ok.calls[0]?.init?.method).toBe("PATCH");
+    expect(JSON.parse(String(ok.calls[0]?.init?.body))).toEqual({
+      base: "a2",
+      body: "New",
+    });
+    const stale = respond(409, {
+      error: { code: "conflict", message: "changed" },
+      current: { hash: "a9", content: "# Activity: FH-1\n" },
+    });
+    const error = await editComment(
+      stale.fetcher,
+      "FH-1",
+      "4e5f6a7b",
+      "a2",
+      "New",
+    ).catch((caught: unknown) => caught);
+    expect(conflictOf(error)).toEqual({
+      hash: "a9",
+      content: "# Activity: FH-1\n",
+    });
+  });
+
+  it("refuses a response without its comment", async () => {
+    const { fetcher } = respond(201, { activityHash: "a2", revision: 7 });
+    await expect(addComment(fetcher, "FH-1", { body: "x" })).rejects.toThrow(
+      "Comment response was invalid",
+    );
   });
 });

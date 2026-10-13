@@ -62,8 +62,7 @@ two minutes.
 Connect Claude Code (hooks, the MCP server and the Flashheart skill):
 
 ```sh
-flashheart setup claude             # show the changes as a diff
-flashheart setup claude --write     # apply them, with backups
+flashheart setup claude   # shows the changes as a diff, then asks before applying them
 ```
 
 See [`docs/user/claude-code.md`](docs/user/claude-code.md). Connect Codex

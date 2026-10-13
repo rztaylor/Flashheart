@@ -13,11 +13,14 @@ Works in the Codex CLI, the IDE extension and the ChatGPT app, which share
 ## Set it up
 
 ```sh
-flashheart setup codex            # show what would change
-flashheart setup codex --write    # apply it, with backups
+flashheart setup codex
 ```
 
-`setup codex` changes nothing until you add `--write`. It works in
+`setup codex` shows what it would change, then asks
+`Apply these changes? [y/N]` and writes only if you answer `y`. `--yes`
+applies without asking (for scripts; `--write` is its older name), and
+`--dry-run` only shows the changes; with no terminal to ask in it only
+shows them unless you pass `--yes`. It works in
 `$CODEX_HOME` when you set it, as Codex does, else in `~/.codex`, and shows,
 as a diff:
 
@@ -26,13 +29,14 @@ as a diff:
   `args` are set; your comments, other servers, project trust and anything
   else you put in the table stay as they are;
 - the hooks it merges into `hooks.json`: every event Flashheart handles,
-  each running `<path to flashheart> hook codex <Event>`, and `PreToolUse`
-  limited to Flashheart's own tools. Your other hooks are kept;
+  each running `<path to flashheart> hook codex <Event>`. Your other hooks
+  are kept, and a Flashheart hook an earlier version registered that is no
+  longer needed (`PreToolUse`) is removed;
 - the Flashheart protocol text it adds to your global `AGENTS.md`, between
   `<!-- BEGIN FLASHHEART … -->` and `<!-- END FLASHHEART -->`. Text outside
   the markers is yours; text inside is replaced by the next setup.
 
-`--write` first copies everything it changes into
+Before writing, setup copies everything it changes into
 `~/.codex/flashheart-backup/<time>/`. Commands use the absolute path of the
 `flashheart` you ran, and pass `--root` only when your board is not at
 `~/reports/Kanban`. If Codex changed `config.toml` between the diff and the
@@ -40,7 +44,7 @@ write (it saves trust there), setup stops and asks you to run it again.
 
 ### Trust the hooks
 
-Codex runs hooks only once you trust them. After `--write`:
+Codex runs hooks only once you trust them. After setup has written them:
 
 1. run `codex` in a terminal;
 2. type `/hooks` and trust each Flashheart hook;
@@ -56,8 +60,7 @@ answers to questions arrive with its next Flashheart tool call.
 To undo it:
 
 ```sh
-flashheart setup codex --uninstall           # show what would change
-flashheart setup codex --uninstall --write   # undo it
+flashheart setup codex --uninstall   # shows what would change, then asks
 ```
 
 Uninstalling removes only Flashheart's table, hooks and marked text, and
@@ -67,9 +70,10 @@ deletes a file setup created that would be left empty.
 
 `flashheart doctor` has a Codex section: the MCP server, the hooks and the
 protocol text against what `setup codex` writes. A missing entry or a
-binary that no longer exists is a problem; another binary, out-of-date
-protocol text (after you upgrade Flashheart, run `setup codex --write`
-again), hooks turned off with `[features] hooks = false`, or hooks never
+binary that no longer exists is a problem; another binary, a hook an
+earlier version registered that setup no longer writes, out-of-date
+protocol text (after you upgrade Flashheart, run `setup codex` again),
+hooks turned off with `[features] hooks = false`, or hooks never
 trusted with `/hooks`, are warnings. Doctor cannot tell whether trust is
 still current after a hook changed, so trust them again when setup changed
 them. Without a Codex home, the section only says Codex is not installed.

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rztaylor/flashheart/internal/hooks/codex"
 	"github.com/rztaylor/flashheart/internal/protocol"
 )
 
@@ -207,7 +208,6 @@ func TestCodexInstallShowsADiffAndChangesNothing(t *testing.T) {
 				`+command = "/opt/Flash Heart/bin/flashheart"`,
 				`+args = ["mcp"]`,
 				`"command": "`+quotedBinary+` hook codex SessionStart",`,
-				`"matcher": "mcp__flashheart__.*",`,
 				"+"+agentsBegin,
 				"+# Flashheart board",
 				"/hooks",
@@ -223,6 +223,9 @@ func TestCodexInstallShowsADiffAndChangesNothing(t *testing.T) {
 				if !strings.Contains(out, part) {
 					t.Fatalf("plan missing %q:\n%s", part, out)
 				}
+			}
+			if strings.Contains(out, "+"+`        "matcher": "mcp__flashheart__.*",`) || strings.Contains(out, "+    \"PreToolUse\"") {
+				t.Fatalf("plan adds a PreToolUse hook:\n%s", out)
 			}
 			if after := m.snapshot(); !mapsEqual(before, after) {
 				t.Fatal("rendering the plan changed a file")
@@ -275,12 +278,12 @@ func TestCodexInstallAddsFlashheartAndKeepsTheUsersEntries(t *testing.T) {
 	}
 	for _, event := range codexEvents {
 		want := quotedBinary + " hook codex " + event
-		if event == "PreToolUse" {
-			want = "mcp__flashheart__.* => " + want
-		}
 		if !slices.Contains(hooks[event], want) {
 			t.Errorf("%s hooks = %q, want %q", event, hooks[event], want)
 		}
+	}
+	if _, found := hooks["PreToolUse"]; found {
+		t.Errorf("PreToolUse is registered, which the adapter ignores: %q", hooks["PreToolUse"])
 	}
 	if !slices.Contains(hooks["Stop"], "afplay /System/Library/Sounds/Glass.aiff") || !slices.Contains(hooks["PostToolUse"], "apply_patch => /Users/example/bin/format-changed") {
 		t.Fatalf("the user's hooks are gone: %v", hooks)
@@ -330,6 +333,10 @@ func TestCodexInstallReplacesAStaleSetup(t *testing.T) {
 	hooks := m.codexHooks()
 	if !slices.Contains(hooks["SessionStart"], "echo session started") || strings.Count(m.read("hooks.json"), "hook codex SessionStart") != 1 {
 		t.Fatalf("SessionStart hooks = %q", hooks["SessionStart"])
+	}
+	// The PreToolUse hook an earlier setup wrote goes, event and all.
+	if strings.Contains(m.read("hooks.json"), "PreToolUse") {
+		t.Fatalf("the earlier PreToolUse hook remains:\n%s", m.read("hooks.json"))
 	}
 	agents := m.read("AGENTS.md")
 	if strings.Contains(agents, "An older version") || strings.Count(agents, agentsBegin) != 1 ||
@@ -532,7 +539,7 @@ func TestCodexApplyRefusesAConfigThatChangedSinceThePlan(t *testing.T) {
 }
 
 // Setup registers every event the Codex hook adapter has recorded payloads
-// for (testdata/hooks/codex), and no other.
+// for (testdata/hooks/codex), less those the adapter ignores, and no other.
 func TestCodexHooksAreTheRecordedEvents(t *testing.T) {
 	t.Parallel()
 
@@ -546,10 +553,45 @@ func TestCodexHooksAreTheRecordedEvents(t *testing.T) {
 			recorded = append(recorded, entry.Name())
 		}
 	}
-	registered := slices.Clone(codexEvents)
+	registered := slices.Concat(codexEvents, codexIgnoredEvents)
 	slices.Sort(recorded)
 	slices.Sort(registered)
 	if !slices.Equal(recorded, registered) {
 		t.Fatalf("codexEvents = %v, recorded events = %v", registered, recorded)
+	}
+}
+
+// An event setup leaves out is one the adapter does nothing with: every
+// recorded payload of it gives no events and nothing to say back. When the
+// adapter starts handling one, this fails until setup registers it.
+func TestCodexIgnoredEventsAreIgnoredByTheAdapter(t *testing.T) {
+	t.Parallel()
+
+	for _, event := range codexIgnoredEvents {
+		if slices.Contains(codexEvents, event) {
+			t.Errorf("%s is both registered and ignored", event)
+		}
+		payloads, _ := filepath.Glob(filepath.Join("..", "..", "testdata", "hooks", "codex", event, "*.json"))
+		checked := 0
+		for _, path := range payloads {
+			if strings.HasSuffix(path, ".events.json") || strings.HasSuffix(path, ".output.json") {
+				continue
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			input, err := codex.Adapter{}.Parse(event, data)
+			if err != nil {
+				t.Fatalf("%s: %v", path, err)
+			}
+			if len(input.Events) > 0 || input.Recovery || input.Inbox != "" || input.Stop || input.Reply != nil || input.Settled {
+				t.Errorf("%s: the adapter acts on %s (%+v); register it in codexEvents", path, event, input)
+			}
+			checked++
+		}
+		if checked == 0 {
+			t.Errorf("no recorded %s payloads", event)
+		}
 	}
 }
