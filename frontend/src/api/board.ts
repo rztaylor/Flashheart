@@ -329,6 +329,15 @@ export interface Workstream {
   tickets: WorkstreamTicket[];
 }
 
+// WorkstreamDetail is a workstream's page (FH-139): its line, its body,
+// and, where the board can save, its file and the hash a section save
+// sends ("" when it cannot).
+export interface WorkstreamDetail extends Workstream {
+  body: string;
+  hash: string;
+  raw: string;
+}
+
 const isString = (value: unknown): value is string => typeof value === "string";
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(isString);
@@ -501,18 +510,28 @@ const isTicket = (
   Array.isArray(value.ticket.runs) &&
   value.ticket.runs.every(isRun);
 
+const isWorkstreamLine = (item: unknown): item is Workstream =>
+  isRecord(item) &&
+  isString(item.slug) &&
+  isString(item.status) &&
+  Array.isArray(item.tickets);
+
 const isWorkstreams = (
   value: unknown,
 ): value is { revision: number; workstreams: Workstream[] } =>
   isRecord(value) &&
   Array.isArray(value.workstreams) &&
-  value.workstreams.every(
-    (item) =>
-      isRecord(item) &&
-      isString(item.slug) &&
-      isString(item.status) &&
-      Array.isArray(item.tickets),
-  );
+  value.workstreams.every(isWorkstreamLine);
+
+const isWorkstreamResponse = (
+  value: unknown,
+): value is { revision: number; workstream: WorkstreamDetail } =>
+  isRecord(value) &&
+  isWorkstreamLine(value.workstream) &&
+  isRecord(value.workstream) &&
+  isString(value.workstream.body) &&
+  isString(value.workstream.hash) &&
+  isString(value.workstream.raw);
 
 export const segment = encodeURIComponent;
 
@@ -573,6 +592,22 @@ export async function fetchTicket(
     signal,
   );
   return response.ticket;
+}
+
+export async function fetchWorkstream(
+  fetcher: AuthenticatedFetch,
+  project: string,
+  slug: string,
+  signal?: AbortSignal,
+): Promise<WorkstreamDetail> {
+  const response = await getJSON(
+    fetcher,
+    `/api/projects/${segment(project)}/workstreams/${segment(slug)}`,
+    isWorkstreamResponse,
+    "Workstream response was invalid",
+    signal,
+  );
+  return response.workstream;
 }
 
 export async function fetchWorkstreams(

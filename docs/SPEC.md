@@ -281,7 +281,8 @@ Full format: `docs/dev/specs/board-format.md`.
   tickets as a railway graph of their `depends-on` links, with status,
   blocked state and progress. A finished workstream (every ticket Done,
   Rejected or Archived) shows collapsed to its head until the user expands
-  it; any other workstream always shows in full.
+  it; any other workstream always shows in full. A workstream's name opens
+  its page (`EDIT-13`).
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
 - `VIEW-6` Card density: *Compact* (title, type, priority), *Normal* (+
   workstream, blocked, live badge, criteria progress), *Detailed* (+
@@ -509,6 +510,21 @@ Full format: `docs/dev/specs/board-format.md`.
   shows as text and is never rendered, and the editor fetches nothing
   but the ticket's own images. Tab leaves the editor. It loads on
   the first edit, so the board's first load does not carry it.
+- `EDIT-13` **Workstream page** (FH-139): a workstream's page, opened from
+  its name on its route card (`VIEW-4`; beside a finished line's head,
+  which is its disclosure), shows its head and line as the route card
+  does, then its sections: Goal, Scope, Success Criteria, Notes and any of
+  its own, in file order, a missing template section in the template's
+  place. Each section edits in place as a ticket's does (`EDIT-11`: the
+  pencil, a double-click or Enter; Save, Cancel and their keys; one item
+  open at a time; the unsaved-changes prompt) in the formatted editor
+  (`EDIT-12`, without attachments, since a workstream has no files), and
+  an empty one shows **Add <section>**. Every section is a person's to
+  edit, Notes too. A save writes only that section (board-format §Section
+  edits), an untouched save writes nothing, a change elsewhere in the
+  file saves as on a ticket's page, and a change to the section on disk
+  opens the conflict dialog (`EDIT-7`). The title, properties and tickets
+  list are not edited there.
 
 ### 6.7 Runs (`RUN`)
 
