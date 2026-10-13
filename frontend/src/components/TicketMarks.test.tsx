@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { PriorityMarker, TypeIcon } from "./TicketMarks";
+import { PriorityMarker, PriorityTag, TypeIcon, TypeTag } from "./TicketMarks";
 
 // The card's priority and type marks (FH-147, ui-layout.md §2): priority is
 // three ascending bars, filled by level in its own colour role; type is an
@@ -54,5 +54,38 @@ describe("TypeIcon", () => {
     expect(markup).toContain("data-type-dot");
     expect(markup).toContain("color:var(--fh-paint-type-other)");
     expect(markup).not.toContain("data-icon");
+  });
+});
+
+// Where there is room, the marks stand beside their words (FH-154): the
+// Table, the archive and the card panel's header show type and priority
+// as tags with the card's icon or bars before the word.
+describe("TypeTag and PriorityTag", () => {
+  it("puts the type's icon before its word", () => {
+    const markup = renderToStaticMarkup(<TypeTag type="bug" />);
+    expect(markup).toMatch(/data-icon="bug"[\s\S]*<\/span>bug<\/span>$/);
+  });
+
+  it("puts the priority's bars before its word, set strong for high", () => {
+    const markup = renderToStaticMarkup(<PriorityTag priority="high" />);
+    expect(markup).toMatch(/data-priority="high"[\s\S]*<\/svg>High<\/span>$/);
+    expect(markup).toContain("font-semibold");
+    expect(renderToStaticMarkup(<PriorityTag priority="low" />)).not.toContain(
+      "font-semibold",
+    );
+  });
+
+  it("takes other words for the priority, as the panel's High priority", () => {
+    const markup = renderToStaticMarkup(
+      <PriorityTag priority="medium">Medium priority</PriorityTag>,
+    );
+    expect(markup).toContain('data-priority="medium"');
+    expect(markup).toContain("Medium priority");
+  });
+
+  it("keeps the word alone for a priority without bars", () => {
+    const markup = renderToStaticMarkup(<PriorityTag priority="urgent" />);
+    expect(markup).not.toContain("data-priority");
+    expect(markup).toContain(">urgent</span>");
   });
 });

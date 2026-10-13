@@ -19,6 +19,7 @@ import {
 import { PullRequestLabel } from "../../components/PullRequestLabel";
 import { RunStateMark } from "../../components/RunState";
 import { TicketLink } from "../../components/TicketLink";
+import { PriorityMarker, TypeIcon } from "../../components/TicketMarks";
 import type { Line } from "../../model/lines";
 import { STATE_LABEL } from "../../model/runs";
 import { priorityLabel, statusOf } from "../../model/status";
@@ -161,11 +162,14 @@ export function PropertiesPanel({
           )}
           view={
             detail.priority ? (
-              <span
-                className={detail.priority === "high" ? "font-semibold" : ""}
-              >
-                {priorityLabel(detail.priority)}
-              </span>
+              <>
+                <PriorityMarker priority={detail.priority} />
+                <span
+                  className={detail.priority === "high" ? "font-semibold" : ""}
+                >
+                  {priorityLabel(detail.priority)}
+                </span>
+              </>
             ) : (
               none
             )
@@ -180,7 +184,16 @@ export function PropertiesPanel({
             "Type",
             TICKET_TYPES.map((value) => ({ value, label: word(value) })),
           )}
-          view={detail.type ? word(detail.type) : none}
+          view={
+            detail.type ? (
+              <>
+                <TypeIcon type={detail.type} />
+                {word(detail.type)}
+              </>
+            ) : (
+              none
+            )
+          }
         />
         <EditableProperty
           label="Workstream"

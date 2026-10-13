@@ -278,6 +278,20 @@ describe("the ticket page (CARD-7, FH-65)", () => {
     expect(panel.getByRole("link", { name: "FH-99" })).toBeTruthy();
   });
 
+  it("marks Priority and Type with the card's bars and icon beside the words (FH-154)", () => {
+    renderPage();
+    const properties = screen.getByRole("region", { name: "Properties" });
+    const value = (term: string) =>
+      within(properties).getByText(term, { selector: "dt" })
+        .nextElementSibling as HTMLElement;
+    const priority = value("Priority");
+    expect(priority.querySelector('[data-priority="medium"]')).toBeTruthy();
+    expect(priority.textContent).toContain("Medium");
+    const type = value("Type");
+    expect(type.querySelector('[data-type="feature"]')).toBeTruthy();
+    expect(type.textContent).toContain("Feature");
+  });
+
   it("shows the status without Move to or Archive when read-only", () => {
     renderPage(detail(), false);
     const panel = within(screen.getByRole("region", { name: "Properties" }));

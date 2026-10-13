@@ -92,6 +92,9 @@ describe("stale archives", () => {
     const html = ticketArchive();
     expect(html).toContain("Showing the last good copy: disk full");
     expect(html).toContain("Old idea");
+    // Type and priority show the card's marks beside their words (FH-154).
+    expect(html).toMatch(/data-type="feature"[\s\S]*?<\/span>feature</);
+    expect(html).toMatch(/data-priority="low"[\s\S]*?<\/svg>Low</);
   });
 
   it("keep the archived projects with a note when a reload fails", () => {

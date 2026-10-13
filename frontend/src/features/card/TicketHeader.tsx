@@ -11,9 +11,10 @@ import { Button } from "../../components/Button";
 import { Select } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
-import { Pill, StatusPill, Tag } from "../../components/Pill";
+import { Pill, StatusPill } from "../../components/Pill";
 import { PullRequestLabel } from "../../components/PullRequestLabel";
 import { idCut, TicketLink } from "../../components/TicketLink";
+import { PriorityTag, TypeTag } from "../../components/TicketMarks";
 import type { Line } from "../../model/lines";
 import type { Step } from "../../model/order";
 import { priorityLabel } from "../../model/status";
@@ -91,9 +92,9 @@ export function TicketProperties({
           <Pill tone="blocked">Blocked</Pill>
         ) : null}
         {priority ? (
-          <Tag strong={detail.priority === "high"}>{priority}</Tag>
+          <PriorityTag priority={detail.priority}>{priority}</PriorityTag>
         ) : null}
-        {detail.type ? <Tag>{detail.type}</Tag> : null}
+        {detail.type ? <TypeTag type={detail.type} /> : null}
       </div>
       <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
         {detail.workstream ? (

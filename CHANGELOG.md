@@ -524,6 +524,12 @@ All notable changes to this project are documented here. The project follows
   marker line drops attachments, then review, then age rather than
   wrapping; every marker's words are in its tooltip and in what a screen
   reader hears for the card.
+- Type and priority look the same wherever a ticket appears (FH-154). The
+  Table, the archive, the side panel's header and a ticket's full page
+  show the card's type icon and priority bars beside the words, and with
+  Colour by Priority the chips at the top of the board carry the bars
+  beside their colour, so the marks you learn on cards mean the same
+  everywhere.
 - Blocked tickets are marked with a no-entry sign (FH-148). The small
   hollow diamond that marked a blocked ticket read as decoration at card
   size; a filled no-entry sign now marks blocked everywhere: on cards,
