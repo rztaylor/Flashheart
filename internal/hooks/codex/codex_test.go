@@ -309,7 +309,7 @@ func TestRecoveryNoteAndAnswersReachCodex(t *testing.T) {
 	project(t, root, repo, "")
 
 	note := additionalContext(t, send(t, root, repo, "SessionStart/compact", now.Add(time.Minute)), "SessionStart")
-	for _, part := range []string{"[Flashheart] run=codex:019a7c00 project=demo (key DM) branch=feature/demo", `Ticket DM-1 "Card panel"`, "Next: Wire the Runs tab."} {
+	for _, part := range []string{"[Flashheart] run=codex:00000001 project=demo (key DM) branch=feature/demo", `Ticket DM-1 "Card panel"`, "Next: Wire the Runs tab."} {
 		if !strings.Contains(note, part) {
 			t.Fatalf("recovery note lacks %q:\n%s", part, note)
 		}

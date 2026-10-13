@@ -104,9 +104,9 @@ func (b boardAPI) tellComment(w http.ResponseWriter, writer Writer, project stri
 		return
 	}
 	b.recordHuman(project, events.CommentAdded, events.TicketData{Ticket: ticket.ID, Comment: comment.ID})
-	response := CommentResponse{ActivityHash: hash, SentTo: run.ID}
+	response := CommentResponse{ActivityHash: hash, SentTo: run.ID, SentToShort: protocol.ShortRun(run.ID)}
 	if err := b.queue(run, project, ticket.ID, events.EntryComment, []board.Comment{comment}); err != nil {
-		response.SentTo = ""
+		response.SentTo, response.SentToShort = "", ""
 		response.Warnings = []string{fmt.Sprintf("The comment is on %s, but it could not be sent to %s now (%v); the session sees it when it reads the ticket.", ticket.ID, protocol.ShortRun(run.ID), err)}
 		if unsent, unsentHash, err := writer.UnsendComment(project, ticket.ID, comment.ID); err == nil {
 			comment, response.ActivityHash = unsent, unsentHash

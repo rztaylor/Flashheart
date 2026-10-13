@@ -14,6 +14,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/rztaylor/flashheart/internal/events"
+	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
 )
@@ -153,9 +154,9 @@ func TestCodexCallsLandOnTheirHookRun(t *testing.T) {
 	meta := codexMeta(t, recordedSession, recordedSession)
 	before := len(e.log())
 
-	contains(t, e.okAs(codex, meta, "board_context", nil), "run=codex:019a7c00")
+	contains(t, e.okAs(codex, meta, "board_context", nil), "run=codex:00000001")
 	contains(t, e.okAs(codex, meta, "claim", map[string]any{"ticket": id}), "ok ticket=DM-1")
-	contains(t, e.okAs(codex, meta, "checkpoint", map[string]any{"ticket": id, "done": []string{"Panel"}, "next": []string{"Tests"}}), "by=codex:019a7c00")
+	contains(t, e.okAs(codex, meta, "checkpoint", map[string]any{"ticket": id, "done": []string{"Panel"}, "next": []string{"Tests"}}), "by=codex:00000001")
 	contains(t, e.okAs(codex, meta, "ask_human", map[string]any{"ticket": id, "kind": "question", "text": "Which schema?"}), "ok question=q-")
 
 	if len(e.started()) != 0 {
@@ -210,8 +211,34 @@ func TestTwoCodexSessionsInOneWorktree(t *testing.T) {
 		t.Fatalf("checkpoint without _meta:\n%s", out)
 	}
 	// Codex's session ids start with the time, so two sessions started in
-	// the same minute share a short id: the fix names them in full.
-	contains(t, out, "fix: pass run", "2 sessions", codexRun, "codex:"+other)
+	// the same minute are named by their ends (FH-122), and each name
+	// picks out its session.
+	contains(t, out, "fix: pass run", "2 sessions", "codex:00000001, codex:000000ff")
+	contains(t, e.okOn(e.dial(codexClient), "board_context", map[string]any{"run": "codex:000000ff"}), "run=codex:000000ff")
+}
+
+// Two Codex sessions started in the same minute have their own short ids:
+// the board shows them apart, and the run id each recovery note gives
+// names only that session (FH-122).
+func TestCodexSessionsStartedTogetherHaveTheirOwnShortIDs(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "Card panel"})
+	const other = "019a7c00-0000-7000-8000-0000000000ff"
+	e.codexHooks(recordedSession, "SessionStart/startup", "UserPromptSubmit/prompt")
+	e.codexHooks(other, "SessionStart/startup", "UserPromptSubmit/prompt")
+
+	if mine, theirs := protocol.ShortRun(codexRun), protocol.ShortRun("codex:"+other); mine != "codex:00000001" || theirs != "codex:000000ff" {
+		t.Fatalf("short ids %q and %q", mine, theirs)
+	}
+	contains(t, e.ok("board_context", map[string]any{"run": "codex:00000001"}), "run=codex:00000001")
+	contains(t, e.ok("claim", map[string]any{"ticket": id, "run": "codex:000000ff"}), "ok ticket=DM-1")
+	if holder := e.fold().Get("codex:" + other); holder.Claim != id {
+		t.Fatalf("claim landed on %+v", holder)
+	}
+	// The start of the id, as short ids were before, still names both.
+	e.fails("board_context", map[string]any{"run": "codex:019a7c00"}, "ambiguous_run")
 }
 
 // A Codex session without hooks gets a run under its own session id; when
@@ -246,7 +273,7 @@ func TestCodexHooksThatStartMidSessionJoinItsRun(t *testing.T) {
 	e.codexHooks(recordedSession, "UserPromptSubmit/prompt")
 	before := len(e.log())
 	e.now = e.now.Add(2 * time.Minute)
-	contains(t, e.okAs(codex, meta, "checkpoint", map[string]any{"ticket": id, "done": []string{"Panel"}, "next": []string{"Tests"}}), "by=codex:019a7c00")
+	contains(t, e.okAs(codex, meta, "checkpoint", map[string]any{"ticket": id, "done": []string{"Panel"}, "next": []string{"Tests"}}), "by=codex:00000001")
 	var kinds []events.Kind
 	for _, ev := range e.log()[before:] {
 		kinds = append(kinds, ev.Kind)

@@ -1638,3 +1638,39 @@ the session something it never read); deleting without the hash
 (a delete over an edit made in another tab would remove text the person
 had not seen); withdrawing only, without the delivery check (the
 session's home project is known only while its run is in the window).
+
+## 2026-10-13 — D67: A time-ordered session id is shortened to its end
+
+Short ids (agent-protocol §2, D39) were the agent and the first 8
+characters of the session id. Codex's session ids are UUIDv7: they start
+with the time in milliseconds, so the first 8 characters change only
+every 65 seconds or so, and every Codex session started in the same
+minute had the same short id (FH-122). Two Codex sessions side by side
+looked the same on the Overview, in the Runs tab and on cards, and the
+run id the recovery note gave answered `ambiguous_run`.
+
+A session id that is a whole version 7 UUID is now shortened to its last
+8 characters, which are random (`codex:019a7c00-0000-7000-8000-00009c4e1f2a`
+is `codex:9c4e1f2a`); any other id keeps its first 8, so Claude Code's
+random (version 4) ids and the MCP server's `mcp-` ids are unchanged.
+`events.RunID.Short` is the only place the rule lives: the server sends
+the short form with runs and questions (D39) and now with comment and
+history authors (`byShort`) and the session a change request was sent to
+(`sentToShort`), and the frontend's two own shorteners (activity authors,
+the change request toast) are gone. The MCP server's `run` argument
+accepts a run's short id as well as any start of its full id, so a
+recovery note's run id names its session, and agents that pass the old
+prefix or a full id still work; the protocol version is unchanged.
+Notes and handoffs already written keep the short id they were written
+with.
+
+Options: lengthen short ids until they are unique among the runs shown
+(a session's name would change as others start and end, and the
+recovery note, written by a hook, cannot see the board's view); a longer
+prefix for every agent (Claude Code's ids would change, and 12 or 13
+characters of a UUIDv7 still collide for sessions started in the same
+second); hashing the id (stable, but no longer a part of the id anyone
+can search for); the end of a time-ordered id (chosen). Only version 7 is
+treated as time-ordered: version 1 starts with the fast-changing low
+bits of its time, and version 6 ends with a node id that is the same on
+one machine.

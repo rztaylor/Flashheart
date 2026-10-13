@@ -148,9 +148,9 @@ export interface TimelineEntry {
 
 export interface Run {
   id: string;
-  // short is the run id as people see it: the agent and the first 8
-  // characters of the session id, a subagent's its session's
-  // (agent-protocol §2).
+  // short is the run id as people see it: the agent and 8 characters of
+  // the session id (the last for a time-ordered Codex id), a subagent's
+  // its session's (agent-protocol §2).
   short: string;
   agent: string;
   kind: "session" | "subagent";

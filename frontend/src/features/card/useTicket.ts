@@ -179,7 +179,7 @@ export function useTicket({
               (posted) => {
                 resource.reload();
                 editing.notify({
-                  text: commentedWords(detail.id, posted.sentTo),
+                  text: commentedWords(detail.id, posted.sentToShort),
                   details: posted.warnings,
                 });
               },
@@ -218,7 +218,7 @@ export function useTicket({
               (sent) => {
                 resource.reload();
                 editing.notify({
-                  text: sentWords(detail.id, sent.count, sent.sentTo),
+                  text: sentWords(detail.id, sent.count, sent.sentToShort),
                   details: sent.warnings,
                 });
               },
@@ -233,7 +233,7 @@ export function useTicket({
                 text:
                   state === "resolved"
                     ? `Resolved the change request on ${detail.id}.`
-                    : sentWords(detail.id, 1, sent.sentTo, "Reopened"),
+                    : sentWords(detail.id, 1, sent.sentToShort, "Reopened"),
                 details: sent.warnings,
               });
             })

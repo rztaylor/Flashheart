@@ -253,6 +253,19 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Codex sessions started close together no longer look identical on the
+  board (FH-122, D67, agent-protocol §2). Codex's session ids start with
+  the time, so two sessions started in the same minute both showed as,
+  say, `codex:019a7c00` on the Overview, in the Runs tab, on cards and in
+  a ticket's history, and passing that run id from the recovery note
+  answered `ambiguous_run`. A time-ordered id (UUIDv7) is now shortened to
+  its last 8 characters, its random part (`codex:00000001` and
+  `codex:000000ff`), and that short id names its one session when passed
+  as `run`; the start of a full id is still accepted. Claude Code's short
+  ids are unchanged. The server now sends the short form of history and
+  comment authors (`byShort`) and of the session a change request went to
+  (`sentToShort`), so the frontend no longer shortens run ids itself.
+
 - Changes on the side panel's **Edit** tab are no longer lost without
   warning (FH-138). They now stay while you look at another tab, and
   closing the panel, pressing Escape or opening another ticket with them

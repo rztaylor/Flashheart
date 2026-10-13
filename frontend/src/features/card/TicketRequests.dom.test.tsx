@@ -40,6 +40,7 @@ function comment(overrides: Partial<Comment> = {}): Comment {
     id: "c1",
     time: "2026-10-12T12:10:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     state: "open",
     edited: "",
@@ -155,7 +156,8 @@ describe("Request changes (REV-6)", () => {
         hash: "h2",
         activityHash: "a2",
         revision: 4,
-        sentTo: "claude:3f2a9c1e-aaaa-bbbb",
+        sentTo: "codex:019a7c00-0000-7000-8000-000000000001",
+        sentToShort: "codex:00000001",
         warnings: [],
       }),
     );
@@ -175,7 +177,7 @@ describe("Request changes (REV-6)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(editing.notify).toHaveBeenCalledWith(
       expect.objectContaining({
-        text: "Requested 3 changes on FH-65; sent to claude:3f2a9c1e.",
+        text: "Requested 3 changes on FH-65; sent to codex:00000001.",
       }),
     );
   });
@@ -300,6 +302,7 @@ describe("the change requests list (REV-6)", () => {
         activityHash: "a2",
         revision: 4,
         sentTo: "claude:3f2a9c1e-x",
+        sentToShort: "claude:3f2a9c1e",
       }),
     );
     await user.click(

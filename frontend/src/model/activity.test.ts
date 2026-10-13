@@ -281,7 +281,8 @@ describe("activityOf", () => {
           history({
             id: "h2",
             time: "2026-10-12T12:40:00Z",
-            by: "claude:aaaa1111-2222-3333",
+            by: "codex:019a7c00-0000-7000-8000-000000000001",
+            byShort: "codex:00000001",
             byPerson: false,
             changes: [change({ what: "moved", from: "up-next", to: "review" })],
           }),
@@ -305,10 +306,11 @@ describe("activityOf", () => {
       quote: "No tabs",
       markdown: "Not in Done.",
     });
-    // A run is named by its short id, as elsewhere on the board.
+    // A run is named by the short id the server gives it, as elsewhere on
+    // the board: a Codex session by the end of its id (FH-122).
     expect(entries[4]).toMatchObject({
       kind: "history",
-      by: "claude:aaaa1111",
+      by: "codex:00000001",
       byPerson: false,
       words: ["moved it from Up next to Ready to review"],
     });
@@ -339,6 +341,7 @@ describe("activityOf", () => {
             id: "h1",
             time: "2026-10-12T10:00:00Z",
             by: "claude:aaaa1111-2222",
+            byShort: "claude:aaaa1111",
             byPerson: false,
             changes: [
               change({ what: "moved", from: "in-progress", to: "review" }),
@@ -445,6 +448,7 @@ function comment(overrides: Partial<Comment> = {}): Comment {
     id: "c1",
     time: "2026-10-12T12:00:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     state: "open",
     edited: "",
@@ -460,6 +464,7 @@ function history(overrides: Partial<History> = {}): History {
     id: "h1",
     time: "2026-10-12T12:00:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     changes: [],
     ...overrides,

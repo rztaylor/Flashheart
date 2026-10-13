@@ -19,16 +19,18 @@ import (
 // The store writes them as that person (store.As); this file decodes,
 // checks sizes and records the human's events.
 
-// CommentJSON is a person's comment on a ticket. Edited is "" until it is
-// edited; Quote is the part of the ticket it quotes, from QuoteFrom. A
-// comment sent to a session (FH-127) names its run (SentTo, SentToShort)
-// and where its delivery stands: waiting, delivered (at Delivered; it can
-// no longer be edited) or missed (the session ended first); Delivery is
-// "" for a comment not sent.
+// CommentJSON is a person's comment on a ticket. ByShort names its author
+// as the board shows it (a run's short id, agent-protocol §2); Edited is
+// "" until it is edited; Quote is the part of the ticket it quotes, from
+// QuoteFrom. A comment sent to a session (FH-127) names its run (SentTo,
+// SentToShort) and where its delivery stands: waiting, delivered (at
+// Delivered; it can no longer be edited) or missed (the session ended
+// first); Delivery is "" for a comment not sent.
 type CommentJSON struct {
 	ID          string `json:"id"`
 	Time        string `json:"time"`
 	By          string `json:"by"`
+	ByShort     string `json:"byShort"`
 	ByPerson    bool   `json:"byPerson"`
 	State       string `json:"state"`
 	Edited      string `json:"edited"`
@@ -41,11 +43,13 @@ type CommentJSON struct {
 	Body        string `json:"body"`
 }
 
-// HistoryJSON is one write that changed the ticket: who, when and what.
+// HistoryJSON is one write that changed the ticket: who (ByShort as the
+// board names them), when and what.
 type HistoryJSON struct {
 	ID       string       `json:"id"`
 	Time     string       `json:"time"`
 	By       string       `json:"by"`
+	ByShort  string       `json:"byShort"`
 	ByPerson bool         `json:"byPerson"`
 	Changes  []ChangeJSON `json:"changes"`
 }
@@ -88,12 +92,14 @@ type CommentEditRequest struct {
 
 // CommentResponse reports a saved comment, the activity's new hash and the
 // board revision; for a reopened change request (FH-126) or a comment
-// sent to a session (FH-127), the run it was sent to and any warning.
+// sent to a session (FH-127), the run it was sent to, in full and as its
+// short id, and any warning.
 type CommentResponse struct {
 	Comment      CommentJSON `json:"comment"`
 	ActivityHash string      `json:"activityHash"`
 	Revision     uint64      `json:"revision"`
 	SentTo       string      `json:"sentTo,omitempty"`
+	SentToShort  string      `json:"sentToShort,omitempty"`
 	Warnings     []string    `json:"warnings,omitempty"`
 }
 
@@ -274,6 +280,15 @@ func (b boardAPI) savedComment(w http.ResponseWriter, status int, comment board.
 	writeJSON(w, status, CommentResponse{Comment: commentJSON(comment, snapshot), ActivityHash: hash, Revision: revision})
 }
 
+// shortAuthor is how the board names an entry's author: a run by its short
+// id (agent-protocol §2), a person as written.
+func shortAuthor(by string) string {
+	if board.ByPerson(by) {
+		return by
+	}
+	return protocol.ShortRun(by)
+}
+
 // commentJSON is a comment as the API sends it, its delivery judged by the
 // snapshot's runs (nil: waiting until delivered).
 func commentJSON(c board.Comment, snapshot *index.Snapshot) CommentJSON {
@@ -282,7 +297,7 @@ func commentJSON(c board.Comment, snapshot *index.Snapshot) CommentJSON {
 		edited = c.Edited.UTC().Format(time.RFC3339)
 	}
 	return CommentJSON{
-		ID: c.ID, Time: c.Time.UTC().Format(time.RFC3339), By: c.By, ByPerson: board.ByPerson(c.By),
+		ID: c.ID, Time: c.Time.UTC().Format(time.RFC3339), By: c.By, ByShort: shortAuthor(c.By), ByPerson: board.ByPerson(c.By),
 		State: string(c.State), Edited: edited, QuoteFrom: c.QuoteFrom, Quote: c.Quote, Body: c.Body,
 		SentTo: c.SentTo, SentToShort: protocol.ShortRun(c.SentTo), Delivery: delivery(snapshot, c), Delivered: deliveredAt(c),
 	}
@@ -304,7 +319,7 @@ func activityJSON(activity board.Activity, snapshot *index.Snapshot) ([]CommentJ
 			})
 		}
 		history = append(history, HistoryJSON{
-			ID: entry.ID, Time: entry.Time.UTC().Format(time.RFC3339), By: entry.By, ByPerson: board.ByPerson(entry.By), Changes: changes,
+			ID: entry.ID, Time: entry.Time.UTC().Format(time.RFC3339), By: entry.By, ByShort: shortAuthor(entry.By), ByPerson: board.ByPerson(entry.By), Changes: changes,
 		})
 	}
 	return comments, history

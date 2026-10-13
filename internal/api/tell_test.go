@@ -74,7 +74,7 @@ func TestACommentSentToTheHoldingSessionIsDeliveredAndLocked(t *testing.T) {
 
 	var posted CommentResponse
 	send(t, handler, http.MethodPost, "/api/tickets/AL-2/comments", CommentRequest{Body: "Use the blue one.", SendTo: "claude:s1"}, http.StatusCreated, &posted)
-	if posted.SentTo != "claude:s1" || posted.Comment.SentTo != "claude:s1" || posted.Comment.Delivery != "waiting" || len(posted.Warnings) != 0 {
+	if posted.SentTo != "claude:s1" || posted.SentToShort != "claude:s1" || posted.Comment.SentTo != "claude:s1" || posted.Comment.Delivery != "waiting" || len(posted.Warnings) != 0 {
 		t.Fatalf("posted = %+v", posted)
 	}
 	if got := commentByID(t, ticketDetail(t, handler, "AL-2"), posted.Comment.ID); got.Delivery != "waiting" || got.SentToShort == "" {

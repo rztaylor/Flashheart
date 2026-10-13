@@ -15,6 +15,7 @@ const comment = (id: string, state: string, byPerson = true): Comment => ({
   id,
   time: "2026-10-13T09:00:00Z",
   by: byPerson ? "Robert" : "claude:abc",
+  byShort: byPerson ? "Robert" : "claude:abc",
   byPerson,
   state,
   edited: "",
@@ -78,7 +79,8 @@ describe("change requests (REV-6)", () => {
   });
 
   it("says where the requests went", () => {
-    expect(sentWords("FH-1", 2, "claude:3f2a9c1e-aaaa-bbbb")).toBe(
+    // The run as the server shortens it (agent-protocol §2).
+    expect(sentWords("FH-1", 2, "claude:3f2a9c1e")).toBe(
       "Requested 2 changes on FH-1; sent to claude:3f2a9c1e.",
     );
     expect(sentWords("FH-1", 1, "")).toBe(

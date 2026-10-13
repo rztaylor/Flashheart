@@ -67,6 +67,7 @@ function comment(overrides: Partial<Comment> = {}): Comment {
     id: "c1",
     time: "2026-10-12T12:10:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     state: "open",
     edited: "",
@@ -82,6 +83,7 @@ function history(overrides: Partial<History> = {}): History {
     id: "h1",
     time: "2026-10-11T08:00:00Z",
     by: "Robert",
+    byShort: "Robert",
     byPerson: true,
     changes: [
       {
@@ -183,6 +185,7 @@ const withActivity = () =>
         id: "h2",
         time: "2026-10-12T12:40:00Z",
         by: "claude:aaaa1111-2222",
+        byShort: "claude:aaaa1111",
         byPerson: false,
         changes: [
           {
@@ -525,7 +528,13 @@ describe.each([page, panel])("comments on $name (FH-125, FH-128)", (shown) => {
   it("offers no edit of a comment whose author is not a person", () => {
     surface.render(
       detail({
-        comments: [comment({ by: "claude:aaaa1111-2222", byPerson: false })],
+        comments: [
+          comment({
+            by: "claude:aaaa1111-2222",
+            byShort: "claude:aaaa1111",
+            byPerson: false,
+          }),
+        ],
         activityHash: "a1",
       }),
     );
