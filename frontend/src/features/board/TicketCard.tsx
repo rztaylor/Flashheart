@@ -14,7 +14,11 @@ import { StatusPill } from "../../components/Pill";
 import { RunStateMark } from "../../components/RunState";
 import { StateNote } from "../../components/StateNote";
 import { TicketLink } from "../../components/TicketLink";
-import { PriorityMarker, TypeIcon } from "../../components/TicketMarks";
+import {
+  hasPriorityMarker,
+  PriorityMarker,
+  TypeIcon,
+} from "../../components/TicketMarks";
 import type { Line } from "../../model/lines";
 import { type Paint, paintVars } from "../../model/paint";
 import { requestWords } from "../../model/requests";
@@ -379,7 +383,9 @@ function cardMarks(card: Card, now: Date, onOpen: () => void) {
             </>,
           )
         : null,
-    priority: priority
+    // A priority word beyond the three levels has no bars; the card's name
+    // still says it.
+    priority: hasPriorityMarker(card.priority)
       ? mark(
           "priority",
           `${priority} priority`,

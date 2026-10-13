@@ -155,6 +155,12 @@ describe("TicketCard, at every density", () => {
     expect(marks).toContain('title="High priority"');
   });
 
+  it.each(densities)("leaves a priority without bars to its name (%s)", (d) => {
+    const markup = render({ priority: "urgent" }, d);
+    expect(markup).not.toContain('data-mark="priority"');
+    expect(name(markup)).toContain("urgent priority");
+  });
+
   it.each(densities)("names every marker it can show (%s)", (d) => {
     const label = name(
       render(

@@ -47,6 +47,11 @@ export function TypeIcon({ type, size = 13 }: { type: string; size?: number }) {
 
 const levels: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
+// hasPriorityMarker says whether a priority has bars to draw: a word a
+// file uses beyond high, medium and low has none.
+export const hasPriorityMarker = (priority: string) =>
+  levels[priority] !== undefined;
+
 // PriorityMarker is three ascending bars: high fills all three in its warm
 // colour, medium two in neutral grey, low one in blue; the rest are empty.
 // An unknown or missing priority draws nothing.
