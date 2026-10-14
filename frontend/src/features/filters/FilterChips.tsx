@@ -117,10 +117,9 @@ export function FilterChips({
                         <TypeIcon type={entry.value} size={16} />
                       </span>
                     ) : paint === "priority" ? (
-                      <>
-                        <PaintBullet paint={entry} />
+                      <span className="grid size-5 shrink-0 place-items-center">
                         <PriorityMarker priority={entry.value} />
-                      </>
+                      </span>
                     ) : (
                       <PaintBullet paint={entry} />
                     )
@@ -143,8 +142,8 @@ export function FilterChips({
 // PaintBullet is a colour chip's bullet: the round mark of a workstream
 // chip, filled with the Colour by paint instead of a line colour. A type
 // chip shows the type's card icon instead, so people learn it (FH-147); a
-// priority chip keeps the paint, the key to the cards' tint, and adds the
-// card's priority bars (FH-154).
+// priority chip shows the card's priority bars, whose colours the cards'
+// tint shares (FH-154, FH-166).
 function PaintBullet({ paint }: { paint: Paint }) {
   return (
     <span
