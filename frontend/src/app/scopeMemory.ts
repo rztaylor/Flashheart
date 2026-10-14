@@ -1,7 +1,12 @@
 import type { Preferences, SavedView } from "../api/preferences";
 import type { Filters } from "../model/filters";
-import { filtersFor, rememberScope, sameScope } from "../model/scopes";
-import type { Scope, View } from "./route";
+import {
+  filtersFor,
+  rememberScope,
+  type Scope,
+  sameScope,
+} from "../model/scopes";
+import type { View } from "./route";
 
 // Scope memory: the view and filters remembered per project and for All
 // projects (VIEW-7, CFG-2), saved with the other preferences. The search

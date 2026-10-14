@@ -106,6 +106,13 @@
   note and skeleton, with screenshots named `state-error-*`,
   `state-stale-*` and `state-loading-*`.
 - Run-state and blocking logic are table tests with a fake clock.
+- Layering (FH-106) is tested, not reviewed: `internal/archtest`'s
+  `TestLeanPackagesDoNotLinkTheWebServer` walks `go list -deps` of the
+  hook, MCP, await, setup and doctor packages, and the frontend's
+  `src/layering.test.ts` (Vitest, over `import.meta.glob` raw sources)
+  checks every relative import against the layer rules in
+  `frontend-ui.md`. Both run in `scripts/check.sh` through `go test` and
+  `npm test`.
 - Ticket-editing rules (FH-85) are table tests where they are defined:
   the field change-set, the blocked-start gate and `NoteLine` in `board`,
   the write in `store` (`TestEditTicket`). `internal/archtest` keeps them

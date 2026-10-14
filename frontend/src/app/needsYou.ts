@@ -1,4 +1,5 @@
-import type { Route, Scope } from "./route";
+import type { Scope } from "../model/scopes";
+import type { Route } from "./route";
 
 // NeedsYouPress is what a press of the band's Needs you plate does: the
 // filter's new state, where to go, and the scope to return to.
