@@ -40,7 +40,7 @@ func TestUpdateTicketRewritesSectionsAndCriteria(t *testing.T) {
 	e.startSession(session)
 	out := e.ok("update_ticket", map[string]any{
 		"ticket":   id,
-		"sections": map[string]any{"description": "The scope changed: a drawer, not a panel.", "Context": "See D71."},
+		"sections": map[string]any{"description": "The scope changed: a drawer, not a panel.", "Context": "See D75."},
 		"criteria": []any{
 			map[string]any{"op": "reword", "item": "2", "text": "Closes with Escape"},
 			map[string]any{"op": "remove", "item": "Remembers"},
@@ -54,7 +54,7 @@ func TestUpdateTicketRewritesSectionsAndCriteria(t *testing.T) {
 	contains(t, file,
 		"## Description\n\nThe scope changed: a drawer, not a panel.\n",
 		"## Acceptance Criteria\n\n- [ ] Slides in from the right\n- [x] Opens\n- [x] Closes with Escape\n\n",
-		"## Context\n\nSee D71.\n",
+		"## Context\n\nSee D75.\n",
 		"claude:5b0c7e2a: Scope changed after the design review.",
 		"claude:5b0c7e2a: Rewrote Description and Context; criteria: 2 reworded, 3 removed, one added as 1. The replaced text is in [files/")
 	kept := regexp.MustCompile(`kept=(files/\S+)`).FindStringSubmatch(out)[1]
@@ -91,7 +91,7 @@ func (e *env) ticketPath(id string) string {
 
 // Handoff and Notes are never rewritten, the criteria only by operation,
 // and a section the ticket does not have is refused naming those it has
-// (D71); each refusal writes nothing.
+// (D75); each refusal writes nothing.
 func TestUpdateTicketRefusesSectionsItDoesNotRewrite(t *testing.T) {
 	t.Parallel()
 

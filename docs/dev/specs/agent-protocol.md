@@ -537,12 +537,12 @@ server is registered by running
 `claude mcp add-json --scope user flashheart '{"type":"stdio","command":"/usr/local/bin/flashheart","args":["mcp"]}'`,
 because Claude Code owns `~/.claude.json`; without a `claude` command setup
 prints it for the user. The protocol skill goes to
-`~/.claude/skills/flashheart/SKILL.md`, and the kanban-tracker skill, which
-it replaces, moves into the backup (user, 2026-10-06). Setup shows the
-diff and asks before applying it (`--yes` skips the question; SET-1). It
-backs up what it changes in `~/.claude/flashheart-backup/<UTC time>/`;
-`--uninstall` restores the backed-up `settings.json` byte for byte
-when nothing changed since, else removes only setup's own hooks.
+`~/.claude/skills/flashheart/SKILL.md`. Setup shows the diff and asks
+before applying it (`--yes` skips the question; SET-1). It backs up what
+it changes in `~/.claude/flashheart-backup/<UTC time>/`; `--uninstall`
+restores the backed-up `settings.json` byte for byte when nothing changed
+since, else removes only setup's own hooks, and puts back a kanban-tracker
+skill an earlier setup moved into a backup (D55).
 
 The protocol skill is Flashheart's own code, not user configuration, so it
 is kept current without setup: at every `SessionStart` (startup, resume,
@@ -860,7 +860,7 @@ budget are left out oldest first, and a line after the heading says how
 many (*(3 earlier comments left out; the board shows them all.)*); the
 newest alone is cut to fit. A ticket without comments shows no block.
 
-**Rewriting a ticket when its scope changes (FH-69, D71).** Rather than
+**Rewriting a ticket when its scope changes (FH-69, D75).** Rather than
 a note saying "this supersedes criterion 1", an agent corrects the text:
 
 - `sections` replaces whole sections by heading (case does not matter):
@@ -1328,7 +1328,7 @@ no event changes shape (membership changes record `ticket.updated` with
 `fields: [workstream]` as before), and an older agent that never calls
 the tool works as before, so the version stays 2.
 
-Additive change within version 2 (D71, FH-69, 2026-10-14):
+Additive change within version 2 (D75, FH-69, 2026-10-14):
 `update_ticket` gains the optional inputs `sections` and `criteria`
 (§7.2), its result a `kept=` part when a rewrite kept replaced text, and
 the skill a line on rewriting rather than appending (to stay under

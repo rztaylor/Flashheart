@@ -106,7 +106,7 @@
   note and skeleton, with screenshots named `state-error-*`,
   `state-stale-*` and `state-loading-*`.
 - Run-state and blocking logic are table tests with a fake clock.
-- An agent's rewrite (FH-69, D71): which sections, criteria operations
+- An agent's rewrite (FH-69, D75): which sections, criteria operations
   and what a rewrite replaced are table tests in `board`
   (`rewrite_test.go`, with a corpus check that criteria edits leave the
   rest of real FH tickets byte for byte); the kept text, its index entry,

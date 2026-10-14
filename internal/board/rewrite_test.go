@@ -12,7 +12,7 @@ import (
 const rewriteTicket = "---\nid: FH-1\n---\n# T\n\n## Description\n\nText that mentions ## Handoff inline.\n\n" +
 	"## Acceptance Criteria\n\n- [ ] One\n\n## Design notes\n\nOld.\n\n```\n## Context\n```\n\n## Notes\n\nNone.\n\n## Handoff\n\nx\n"
 
-// Which sections an agent may rewrite (FH-69, D71): Handoff and Notes
+// Which sections an agent may rewrite (FH-69, D75): Handoff and Notes
 // never, the criteria only by operation, a template section even when
 // missing, and otherwise only a section the ticket has, so a misspelt
 // name is refused naming the sections there are.
@@ -86,7 +86,7 @@ func TestAgentSectionChangeMatchesLineAnchoredHeadings(t *testing.T) {
 const criteriaTicket = "---\nid: FH-1\n---\n# T\n\n## Description\n\nText.\n\n## Acceptance Criteria\n\n" +
 	"- [x] One\n- [ ] Two\n  more of two\n- [x] Three\n\n## Notes\n\nNone.\n"
 
-// Criteria are edited by operation (FH-69, D71): items are named by their
+// Criteria are edited by operation (FH-69, D75): items are named by their
 // number before the call, so earlier operations never renumber later
 // ones, and an item reworded or moved keeps its tick.
 func TestCriteriaEdit(t *testing.T) {
@@ -240,7 +240,7 @@ func TestCriteriaEditLeavesTheRestOfARealTicket(t *testing.T) {
 
 // What a rewrite replaced is worked out from the ticket before and after
 // it: the sections whose text changed, and the earlier text of those that
-// had some, never the notes or the handoff (FH-69, D71).
+// had some, never the notes or the handoff (FH-69, D75).
 func TestRewrittenSections(t *testing.T) {
 	t.Parallel()
 

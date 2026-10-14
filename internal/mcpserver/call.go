@@ -116,7 +116,7 @@ func (srv *server) start(inv *invocation, runArg string, write bool) (c *call, e
 		c.archived = project
 	case errors.Is(err, store.ErrNoProject):
 		c.outside = true
-	case errors.Is(err, store.ErrNotFound), errors.Is(err, store.ErrNeedsMigration):
+	case errors.Is(err, store.ErrNotFound):
 	default:
 		return nil, err
 	}

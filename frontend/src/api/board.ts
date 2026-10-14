@@ -152,8 +152,6 @@ export interface ProjectsResponse {
   revision: number;
   root: string;
   rootMissing: boolean;
-  v1Projects: string[];
-  migrateCommand: string;
   projects: ProjectSummary[];
   // archivedProjects counts projects under <root>/.archive/ (PRJ-5).
   archivedProjects: number;
@@ -413,8 +411,6 @@ const isProjects = (value: unknown): value is ProjectsResponse =>
   typeof value.revision === "number" &&
   isString(value.root) &&
   typeof value.rootMissing === "boolean" &&
-  isStringArray(value.v1Projects) &&
-  isString(value.migrateCommand) &&
   Array.isArray(value.projects) &&
   value.projects.every(isSummary) &&
   typeof value.archivedProjects === "number" &&

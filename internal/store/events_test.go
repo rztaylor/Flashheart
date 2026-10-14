@@ -147,22 +147,6 @@ func TestProjectForCreatesAdoptsAndSeparatesRepositories(t *testing.T) {
 	}
 }
 
-// A v1 project is left for flashheart migrate: a hook never writes into it.
-func TestProjectForLeavesV1ProjectsAlone(t *testing.T) {
-	t.Parallel()
-
-	s, root := writable(t)
-	if err := os.MkdirAll(filepath.Join(root, "legacy", "todo"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.ProjectFor("legacy", "/src/legacy", true); !errors.Is(err, ErrNeedsMigration) {
-		t.Fatalf("ProjectFor(v1) = %v, want ErrNeedsMigration", err)
-	}
-	if _, err := os.Stat(filepath.Join(root, "legacy", "project.yaml")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatal("project.yaml written into a v1 project")
-	}
-}
-
 // Repository names that are not usable as directories get a derived name.
 func TestProjectForUnusableNames(t *testing.T) {
 	t.Parallel()

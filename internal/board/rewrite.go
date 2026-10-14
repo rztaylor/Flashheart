@@ -11,7 +11,7 @@ import (
 )
 
 // Rewrites: an agent correcting a ticket's text when its scope changes
-// (FH-69, D71). An agent replaces whole sections it names (not Handoff or
+// (FH-69, D75). An agent replaces whole sections it names (not Handoff or
 // Notes, and not the criteria, which it edits by operation so ticks are
 // kept), and store.ApplyTicketEdit keeps the text a rewrite replaced in
 // the ticket's files, worked out from the ticket before and after it.

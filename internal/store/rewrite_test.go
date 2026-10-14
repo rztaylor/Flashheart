@@ -35,7 +35,7 @@ func rewrite(t *testing.T, data []byte) Edit {
 
 // An agent's rewrite keeps the text it replaced in the ticket's files, in
 // the same write, with a note linking it; the history names who changed
-// which sections, and the kept text restores the ticket (FH-69, D71).
+// which sections, and the kept text restores the ticket (FH-69, D75).
 func TestApplyTicketEditKeepsTheReplacedText(t *testing.T) {
 	t.Parallel()
 

@@ -1,8 +1,8 @@
 # Sample board root (format v2)
 
-Fixture for tests. It is `testdata/boards/sample-v1` migrated with
-`flashheart migrate --key alpha=AL --key beta=BE`, plus the additions marked
-below. Copy it to a temp directory before any test that writes.
+Fixture for tests: two projects, `alpha` (key AL) and `beta` (key BE),
+covering the cases below. Copy it to a temp directory before any test that
+writes.
 
 | Case | Where |
 |---|---|

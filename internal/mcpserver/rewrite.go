@@ -10,7 +10,7 @@ import (
 )
 
 // rewrite is update_ticket's sections and criteria, decoded and checked
-// against the ticket as read (FH-69, D71). Which sections may be
+// against the ticket as read (FH-69, D75). Which sections may be
 // rewritten and how criteria change are board's (NewAgentSectionChange,
 // NewCriteriaEdit); keeping the replaced text is store's
 // (TicketEdit.Rewrite). Its methods are safe on nil, a call without one.
