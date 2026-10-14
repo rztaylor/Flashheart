@@ -1937,3 +1937,52 @@ which FH-167 will give a control on the workstream page.
 
 Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): a new optional
 input, no event changes shape. Board format stays 2: no field is added.
+
+## 2026-10-14 — D76: A project's workstream titles are unique
+
+Decision (FH-163, the user's proposed change on the ticket): a project
+may not have two workstreams with the same title. Two workstreams called
+*Workstream editing* (slugs `workstream-editing` and
+`workstream-editing-2`) read the same in every workstream picker, and
+choosing the wrong one filed tickets under the other without a sign.
+
+- **Refuse, not disambiguate.** Labelling the pickers with the slug when
+  titles collide was the ticket's first idea. A title that needs its slug
+  beside it to be told apart is not doing its job, and every picker,
+  filter and card line would need the same rule. Refusing the duplicate
+  keeps the title the one name people use.
+- **What counts as the same.** Titles are compared by their words in
+  lower case with every run of spaces as one (`board.WorkstreamTitleKey`;
+  the board's `workstreamTitleKey` matches it): *Board UI*, *board ui*
+  and *Board  UI* are the same title; *Board UI!* and *Board-UI* are not.
+  A workstream without an H1 is titled by its slug, as everywhere else.
+  Punctuation and Unicode normalisation are left out: a title that
+  differs only there still reads differently in a list. Other projects'
+  workstreams do not count.
+- **Where it is enforced.** In `store`, in one helper
+  (`checkWorkstreamTitle`) that every write making a workstream or
+  possibly changing its title calls once the file is staged, before the
+  transaction commits: `CreateWorkstream` (the board's New workstream,
+  `POST /api/projects/{project}/workstreams`, `create_workstream`),
+  `EditWorkstream` (`update_workstream`'s `title`, and the coming
+  workstream page rename, FH-167, and slug rename, FH-158) and
+  `UpdateWorkstream` (any raw edit of the file). A refusal is a
+  `*store.WorkstreamTitleTakenError` naming the workstream that has the
+  title; it is `ErrInvalidInput` and writes nothing. The board answers 409
+  `title_taken` and shows it at the Title field; agents get
+  `invalid_input` with a fix that names the workstream to join instead.
+  The New workstream dialog also checks the project's workstreams as it
+  knows them and names a taken title at the field before anything is
+  sent; the server's check covers a workstream made elsewhere meanwhile.
+- **Workstreams that already share a title** (made before this rule, or
+  by hand) are left as they are: the board reads them, nothing renames
+  them, and no read fails. An edit that keeps a workstream's title, in
+  any case or spacing, is not checked, so their other fields and members
+  stay editable; a new title is checked against the others as usual, so
+  retitling one of them parts them. Renaming them automatically would
+  rewrite files the user wrote and pick a winner for them.
+
+Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): no tool,
+input or event changes shape; the one call newly refused made a board
+the user could not read reliably. Board format stays 2: the files do not
+change, and a board with duplicates still loads.
