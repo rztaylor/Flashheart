@@ -210,8 +210,10 @@ project name.
    plate and the reason in words (the Runs tab's words, `RUN-3`, or
    *Question waiting*), on its own line so it is never missed.
 
-**Detailed** (why is it stuck, and how does it resume?): Normal, then the
-words:
+**Detailed** (why is it stuck, and how does it resume?): Normal's title,
+needs-repair note and Needs you line, then the words, then the meta line
+last (FH-168), so the title leads into the words and every card ends on the
+same row of markers:
 
 5. The blocker pill with the first reason and `+n more`.
 6. The run: state, agent and last activity; the plan step
@@ -219,6 +221,7 @@ words:
 7. The handoff's next step (arrow), two lines at most.
 8. The description excerpt, two lines at most.
 9. The workstream name, after the project name in All projects.
+10. The meta line, as in Normal.
 
 - The workstream stripe runs the full left edge in the workstream's line
   colour; a ticket with no workstream has none. Cards show no workstream

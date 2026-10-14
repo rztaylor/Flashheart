@@ -55,8 +55,10 @@ interface TicketCardProps {
 // change requests, live run, age, review, attachments, priority) and, when
 // something needs the user, its reason on a line of its own. Detailed adds
 // the words: the blocker's reason, the run's agent and plan step, the next
-// step, an excerpt and the workstream. The workstream's line runs down the
-// left edge, and Colour by tints the whole card.
+// step, an excerpt and the workstream; its meta line ends the card (FH-168),
+// so the title leads into the words and every card ends on the same row.
+// The workstream's line runs down the left edge, and Colour by tints the
+// whole card.
 export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
   function TicketCard(
     {
@@ -90,6 +92,39 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
     const titleClass = `text-base leading-snug font-semibold ${done ? "text-ink-muted" : "text-ink"}`;
     const blocker = card.blockedBy[0];
     const more = card.blockedBy.length - 1;
+    // The meta line never wraps: the markers that can go (age, review,
+    // attachments, last first) are last in the line, and one that does not
+    // fit wraps out of sight. The rest come first and fit a 15rem column.
+    // Priority holds the end.
+    const metaLine = (
+      <span
+        data-row="meta"
+        className="flex items-center gap-2 text-2xs text-ink-muted"
+      >
+        <span className="flex h-4 min-w-0 flex-1 flex-wrap content-start items-center gap-x-1.5 overflow-hidden">
+          {marks.type}
+          <TicketLink
+            id={card.id}
+            tabIndex={-1}
+            className="relative z-[2] h-4 shrink-0 leading-4 text-ink"
+          />
+          {rejected ? (
+            <StatusPill
+              column={card.column}
+              rejected
+              className="h-4 leading-4"
+            />
+          ) : null}
+          {marks.blocked}
+          {marks.requests}
+          {marks.live}
+          {marks.age}
+          {marks.review}
+          {marks.attachments}
+        </span>
+        {marks.priority}
+      </span>
+    );
     // The card is drawn under one button that covers it, so a click
     // anywhere opens the panel and the card stays one keyboard stop. Only
     // the id, a link to the ticket's full page, sits above the button; the
@@ -174,37 +209,9 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
                 </StateNote>
               ) : null}
 
-              {/* The meta line never wraps: the markers that can go (age,
-                  review, attachments, last first) are last in the line, and
-                  one that does not fit wraps out of sight. The rest come
-                  first and fit a 15rem column. Priority holds the end. */}
-              <span
-                data-row="meta"
-                className="flex items-center gap-2 text-2xs text-ink-muted"
-              >
-                <span className="flex h-4 min-w-0 flex-1 flex-wrap content-start items-center gap-x-1.5 overflow-hidden">
-                  {marks.type}
-                  <TicketLink
-                    id={card.id}
-                    tabIndex={-1}
-                    className="relative z-[2] h-4 shrink-0 leading-4 text-ink"
-                  />
-                  {rejected ? (
-                    <StatusPill
-                      column={card.column}
-                      rejected
-                      className="h-4 leading-4"
-                    />
-                  ) : null}
-                  {marks.blocked}
-                  {marks.requests}
-                  {marks.live}
-                  {marks.age}
-                  {marks.review}
-                  {marks.attachments}
-                </span>
-                {marks.priority}
-              </span>
+              {/* Normal's meta line sits under the title; Detailed's ends
+                  the card, after the words. */}
+              {detailed ? null : metaLine}
 
               {marks.needsLine}
 
@@ -245,6 +252,8 @@ export const TicketCard = forwardRef<HTMLButtonElement, TicketCardProps>(
                   {[showProject, workstreamTitle].filter(Boolean).join(" · ")}
                 </span>
               ) : null}
+
+              {detailed ? metaLine : null}
             </>
           )}
         </span>
