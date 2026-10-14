@@ -12,9 +12,10 @@ import (
 // fields an edit sets and how each is checked, as FieldChanges is a
 // ticket's. A surface decodes its input into FieldChange values;
 // NewWorkstreamChanges checks them; store.EditWorkstream writes them with
-// the workstream's membership changes. The slug never changes: a new
+// the workstream's membership changes. The slug is not a field: a new
 // title renames the workstream as people see it, and every reference to
-// it stays good.
+// it stays good. A slug changes only by an explicit rename
+// (store.WorkstreamEdit.Rename, FH-158), which rewrites every reference.
 
 // WorkstreamFields are the fields a workstream edit sets: its title (the
 // H1), its goal (the ## Goal section), priority, tags and

@@ -87,9 +87,10 @@ type UpdateWorkstreamInput struct {
 	Attribution
 	Workstream    string         `json:"workstream" jsonschema:"the workstream's slug, as board_context lists it"`
 	Project       string         `json:"project,omitempty" jsonschema:"a project name or key; default: your project"`
-	Set           map[string]any `json:"set,omitempty" jsonschema:"fields to set: title, goal, priority (strings); tags, depends-on-workstreams (lists of slugs). The slug stays when the title changes."`
+	Set           map[string]any `json:"set,omitempty" jsonschema:"fields to set: title, goal, priority (strings); tags, depends-on-workstreams (lists of slugs). The slug stays when the title changes; rename it with rename_to."`
 	AddTickets    []string       `json:"add_tickets,omitempty" jsonschema:"ids of the project's tickets to join it, appended in order; each leaves any other workstream"`
 	RemoveTickets []string       `json:"remove_tickets,omitempty" jsonschema:"ids of its tickets to leave it; they then belong to no workstream"`
+	RenameTo      string         `json:"rename_to,omitempty" jsonschema:"a new slug (lower-case letters, digits, '.', '_', '-'): renames its file and rewrites every ticket and workstream that names it"`
 }
 
 func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (string, error) {
@@ -98,9 +99,13 @@ func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (strin
 		return "", err
 	}
 	slug := strings.TrimSpace(input.Workstream)
+	rename := strings.TrimSpace(input.RenameTo)
+	if rename == slug {
+		rename = ""
+	}
 	// Decoding and scrubbing agent text is the tool's; which fields change
 	// and how they are checked and written is board's and store's
-	// (board.NewWorkstreamChanges, store.EditWorkstream; FH-46).
+	// (board.NewWorkstreamChanges, store.EditWorkstream; FH-46, FH-158).
 	var requested []board.FieldChange
 	for key, raw := range input.Set {
 		change := board.FieldChange{Key: key}
@@ -131,7 +136,7 @@ func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (strin
 	}
 	changes, err := board.NewWorkstreamChanges(requested)
 	if errors.Is(err, board.ErrNotEditable) {
-		return "", fail("invalid_input", "set only "+strings.Join(board.WorkstreamFields, ", ")+"; the slug stays as it is, and members change with add_tickets and remove_tickets", "%v", err)
+		return "", fail("invalid_input", "set only "+strings.Join(board.WorkstreamFields, ", ")+"; rename the slug with rename_to, and change members with add_tickets and remove_tickets", "%v", err)
 	}
 	if err != nil {
 		return "", fail("invalid_input", "correct the value", "%v", err)
@@ -147,8 +152,8 @@ func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (strin
 	if err != nil {
 		return "", err
 	}
-	if changes.Len() == 0 && len(add) == 0 && len(remove) == 0 {
-		return "", fail("invalid_input", "pass set, add_tickets or remove_tickets", "nothing to change")
+	if changes.Len() == 0 && len(add) == 0 && len(remove) == 0 && rename == "" {
+		return "", fail("invalid_input", "pass set, add_tickets, remove_tickets or rename_to", "nothing to change")
 	}
 	_, base, err := srv.store.ReadWorkstream(project.Name, slug)
 	if errors.Is(err, store.ErrNotFound) {
@@ -162,14 +167,18 @@ func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (strin
 		return "", err
 	}
 	// The fields are set over the workstream as it was read; a change made
-	// in between is a conflict, not lost (STO-3).
-	_, err = c.files().EditWorkstream(project.Name, slug, store.Unchanged(base), store.WorkstreamEdit{Changes: changes, Add: add, Remove: remove})
+	// in between is a conflict, not lost (STO-3). A rename rewrites the
+	// references in tickets other sessions may hold: it changes only which
+	// slug they name, so it is not refused as claimed (D73).
+	edited, err := c.files().EditWorkstream(project.Name, slug, store.Unchanged(base), store.WorkstreamEdit{Changes: changes, Add: add, Remove: remove, Rename: rename})
 	var cycle *board.CycleError
 	switch {
 	case errors.As(err, &cycle):
 		return "", fail("invalid_input", "leave out the dependency that leads back, or remove it from the workstream that has it", "%v", cycle)
 	case errors.Is(err, store.ErrConflict):
 		return "", fail("conflict", "call update_workstream again", "workstream %s changed while it was being edited", slug)
+	case errors.Is(err, store.ErrExists):
+		return "", fail("invalid_input", "choose another slug for rename_to", "workstream %s already exists in %s", rename, project.Name)
 	case err != nil:
 		return "", err
 	}
@@ -177,20 +186,42 @@ func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (strin
 	for _, id := range slices.Concat(add, remove) {
 		list = append(list, events.Event{Kind: events.TicketUpdated, Data: events.TicketData{Ticket: id, Fields: []string{"workstream"}}})
 	}
+	var rewrote []string
+	for _, ticket := range edited.Rewritten {
+		rewrote = append(rewrote, ticket.ID)
+		if slices.Contains(add, ticket.ID) {
+			continue
+		}
+		list = append(list, events.Event{Kind: events.TicketUpdated, Data: events.TicketData{Ticket: ticket.ID, Fields: ticket.Fields}})
+	}
 	if err := c.record(project.Name, list...); err != nil {
 		return "", err
 	}
 	fields := changes.Keys()
+	if rename != "" {
+		fields = append([]string{"slug"}, fields...)
+	}
 	if len(add)+len(remove) > 0 {
 		fields = append(fields, "tickets")
 	}
-	title := slug
-	if data, _, err := srv.store.ReadWorkstream(project.Name, slug); err == nil {
-		title = board.ParseWorkstream(slug, data).Title
+	title := edited.Slug
+	if data, _, err := srv.store.ReadWorkstream(project.Name, edited.Slug); err == nil {
+		title = board.ParseWorkstream(edited.Slug, data).Title
 	}
-	text := fmt.Sprintf("Updated workstream %s %q", slug, scrub.Limit(title, 200))
+	text := fmt.Sprintf("Updated workstream %s %q", edited.Slug, scrub.Limit(title, 200))
+	var parts []string
+	if rename != "" {
+		part := "renamed from " + slug
+		if len(rewrote) > 0 {
+			part += ", rewrote " + strings.Join(rewrote, ", ")
+		}
+		parts = append(parts, part)
+	}
 	if len(changes.Keys()) > 0 {
-		text += ": " + strings.Join(changes.Keys(), ", ")
+		parts = append(parts, strings.Join(changes.Keys(), ", "))
+	}
+	if len(parts) > 0 {
+		text += ": " + strings.Join(parts, "; ")
 	}
 	if len(add) > 0 {
 		text += "; added " + strings.Join(add, ", ")
@@ -198,5 +229,5 @@ func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (strin
 	if len(remove) > 0 {
 		text += "; removed " + strings.Join(remove, ", ")
 	}
-	return text + fmt.Sprintf(".\nok workstream=%s changed=%s\n", slug, strings.Join(fields, ",")), nil
+	return text + fmt.Sprintf(".\nok workstream=%s changed=%s\n", edited.Slug, strings.Join(fields, ",")), nil
 }

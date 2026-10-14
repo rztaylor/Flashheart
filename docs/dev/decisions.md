@@ -1201,7 +1201,7 @@ board, no session called a plan tool (`TodoWrite`, the task tools or
 `update_plan`), and the Claude desktop app's Code session used for this
 review offered none, so the plan display was always empty. Older logs that hold plans
 still fold. Built by FH-133, which also settles the protocol version
-under agent-protocol §14 (D76: it stays 2).
+under agent-protocol §14 (D77: it stays 2).
 
 Options: criteria and handoff as the plan (chosen); hide the display but
 keep the parsing dormant; agents report a plan through `checkpoint` (more
@@ -1759,7 +1759,7 @@ for copies with no structure. A Sanitizer API pass was not used: it is
 not in every browser the board supports, and the converter reads only
 what it allows anyway.
 
-## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project
+## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73)
 
 Decision (FH-46): a new MCP tool, `update_workstream`, sets a
 workstream's title, goal, priority, tags and `depends-on-workstreams`
@@ -1898,7 +1898,55 @@ frontend's `src/layering.test.ts` over every source's relative imports.
   links the web server in every mode; the Go check covers the mode
   packages, and moving those types is separate work.
 
-## 2026-10-14 — D76: Retiring plans keeps protocol version 2
+## 2026-10-14 — D73: A workstream's slug is renamed on purpose, in one write that rewrites every reference
+
+Decision (FH-158; revises D69's "the slug stays"): a title edit still
+keeps the slug, but a slug can now be renamed explicitly. The rename is
+part of the workstream edit, `store.EditWorkstream` with
+`WorkstreamEdit.Rename`, so a new title, other fields, members and a new
+slug can change in one write under the project lock and the workstream
+file's hash. It moves `workstreams/<old>.md` to `workstreams/<new>.md`,
+sets its `slug:`, and rewrites every reference to the old slug in the
+project: each ticket's `workstream:` and every `depends-on-workstreams`,
+in its workstreams and in its live and archived tickets. Agents reach it
+through `update_workstream`'s optional `rename_to`; the board through
+`PATCH /api/projects/{project}/workstreams/{slug}` (`fields` and `slug`),
+which FH-167 will give a control on the workstream page.
+
+- **Explicit, not with the title.** D69's reasons stand: a wording change
+  should not rewrite many files as a side effect. The board can still
+  rename both together, since one request carries the title and the slug.
+- **One transaction, the old file removed last.** The transaction gains a
+  removal step that runs after every write. The new file is written first
+  (in the old file's place among the staged writes), then the other
+  workstreams, then the tickets, so a crash part-way leaves both files
+  and never neither.
+- **What is a reference.** Frontmatter fields that name a workstream slug
+  (`workstream`, `depends-on-workstreams`). Archived tickets are included:
+  restoring one should not bring back a missing workstream. Prose and
+  links that mention the old slug are text and stay. A file whose
+  frontmatter does not parse is skipped, as membership writes skip it;
+  the renamed workstream's own is refused. UI preferences in
+  `config.yaml` that name the slug (saved filters, expanded finished
+  workstreams) are outside the project and its lock and are left as they
+  are; a follow-up keeps them in step.
+- **Refusals.** A new slug that is not valid (board-format §Workstream)
+  is `invalid_input` / 400; one that a file in `workstreams/` already
+  has, workstream or not, is `invalid_input` for agents and 409 `exists`
+  on the board; a stale hash is a conflict. Each writes nothing. The
+  current slug is no rename.
+- **Claims.** Tickets other sessions hold are rewritten without a
+  `claimed` refusal: the rename changes only which slug they name, and
+  refusing would make a busy workstream impossible to rename.
+- **Events and history.** Each rewritten ticket gets a history entry and
+  an `updated:` stamp like any ticket write, and one `ticket.updated`
+  event naming the fields it changed (an agent's under its run, the
+  board's as the human's).
+
+Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): a new optional
+input, no event changes shape. Board format stays 2: no field is added.
+
+## 2026-10-14 — D77: Retiring plans keeps protocol version 2
 
 Decision (FH-133, settling the question D51 left): removing plans
 (`plan.updated`, the task-list tools' reading and the `TaskCreated` and
