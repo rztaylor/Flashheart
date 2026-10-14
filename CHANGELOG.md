@@ -576,7 +576,9 @@ All notable changes to this project are documented here. The project follows
   high warm orange, medium neutral grey and low blue, in place of red,
   amber and green, so a priority has one colour code on the board. The
   priority chips show the bars and the word, without a separate colour
-  dot.
+  dot. Wherever a priority is chosen from a dropdown (the Priority
+  filter's menu, New ticket, New workstream, the Edit tab and a ticket
+  page's Priority), the bars sit before the word.
 - Blocked tickets are marked with a no-entry sign (FH-148). The small
   hollow diamond that marked a blocked ticket read as decoration at card
   size; a filled no-entry sign now marks blocked everywhere: on cards,

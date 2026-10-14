@@ -19,7 +19,11 @@ import {
 import { PullRequestLabel } from "../../components/PullRequestLabel";
 import { RunStateMark } from "../../components/RunState";
 import { TicketLink } from "../../components/TicketLink";
-import { PriorityMarker, TypeIcon } from "../../components/TicketMarks";
+import {
+  PriorityMarker,
+  priorityMark,
+  TypeIcon,
+} from "../../components/TicketMarks";
 import type { Line } from "../../model/lines";
 import { STATE_LABEL } from "../../model/runs";
 import { priorityLabel, statusOf } from "../../model/status";
@@ -159,6 +163,7 @@ export function PropertiesPanel({
               value,
               label: priorityLabel(value),
             })),
+            priorityMark,
           )}
           view={
             detail.priority ? (
