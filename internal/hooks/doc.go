@@ -22,7 +22,10 @@
 // commands since its last checkpoint (asking gitchange, under a deadline
 // counted from the hook's start, only when it ran one; agent-protocol §4),
 // blocks a stop once for a checkpoint when the project
-// enforces handoffs (HOOK-6), and prints
+// enforces handoffs (HOOK-6), asks a session that changed files holding
+// no ticket once to claim one (HOOK-8, D50: the stop's reason where
+// handoffs are enforced, else context with its next event whose output
+// the adapter says reaches the model; remembered in its state file), and prints
 // adapter-only replies such as run stamping without opening the board.
 // To stay within HOOK-1's budget on a busy log, the recovery note and a
 // session's end fold only the sessions they ask about over the run window
