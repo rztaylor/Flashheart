@@ -2,7 +2,6 @@ package runs
 
 import (
 	"slices"
-	"strconv"
 	"testing"
 	"time"
 
@@ -177,48 +176,6 @@ func TestRunRecordsItsFacts(t *testing.T) {
 	set.Apply(ev(9, session, events.RunEnd, events.RunEndData{Reason: "other"}))
 	if !run.EndedAt.Equal(at(9)) || run.EndReason != "other" {
 		t.Fatalf("end = %v %q", run.EndedAt, run.EndReason)
-	}
-}
-
-func TestPlanReplacesAndMerges(t *testing.T) {
-	t.Parallel()
-
-	set := NewSet()
-	set.Apply(start(0))
-	set.Apply(ev(1, session, events.PlanUpdated, events.PlanData{Items: []events.PlanItem{
-		{Text: "Ticket tab", Status: events.PlanCompleted},
-		{Text: "Review tab", Status: events.PlanInProgress},
-		{Text: "Runs tab", Status: events.PlanPending},
-	}}))
-	run := set.Get(session)
-	progress := run.Progress()
-	if progress.Done != 1 || progress.Total != 3 || progress.Current != "Review tab" {
-		t.Fatalf("progress = %+v", progress)
-	}
-
-	// Task tools merge by id; a later full list replaces everything.
-	set.Apply(ev(2, session, events.PlanUpdated, events.PlanData{Items: []events.PlanItem{{Text: "Only", Status: events.PlanPending}}}))
-	set.Apply(ev(3, session, events.PlanUpdated, events.PlanData{Merge: true, Items: []events.PlanItem{{ID: "1", Text: "Fix header", Status: events.PlanPending}}}))
-	set.Apply(ev(4, session, events.PlanUpdated, events.PlanData{Merge: true, Items: []events.PlanItem{{ID: "2", Text: "Fix footer", Status: events.PlanPending}}}))
-	set.Apply(ev(5, session, events.PlanUpdated, events.PlanData{Merge: true, Items: []events.PlanItem{{ID: "1", Status: events.PlanInProgress}}}))
-	set.Apply(ev(6, session, events.PlanUpdated, events.PlanData{Merge: true, Items: []events.PlanItem{{ID: "2", Status: events.PlanDeleted}}}))
-	set.Apply(ev(7, session, events.PlanUpdated, events.PlanData{Merge: true, Items: []events.PlanItem{{ID: "1", Text: "Fix header", Status: events.PlanCompleted}}}))
-	want := []events.PlanItem{{Text: "Only", Status: events.PlanPending}, {ID: "1", Text: "Fix header", Status: events.PlanCompleted}}
-	if !slices.Equal(run.Plan, want) {
-		t.Fatalf("plan = %+v", run.Plan)
-	}
-	if p := run.Progress(); p.Done != 1 || p.Total != 2 || p.Current != "Only" {
-		t.Fatalf("progress = %+v; with nothing in progress the next pending step is current", p)
-	}
-
-	// The plan stays bounded.
-	var many []events.PlanItem
-	for i := range 80 {
-		many = append(many, events.PlanItem{ID: strconv.Itoa(i), Text: "x", Status: events.PlanPending})
-	}
-	set.Apply(ev(8, session, events.PlanUpdated, events.PlanData{Merge: true, Items: many}))
-	if len(run.Plan) != events.MaxPlanItems {
-		t.Fatalf("plan has %d items", len(run.Plan))
 	}
 }
 
@@ -422,7 +379,7 @@ func TestViewsAreDerivedCopies(t *testing.T) {
 	set := NewSet()
 	set.Apply(start(0))
 	set.Apply(turn(1))
-	set.Apply(ev(2, session, events.PlanUpdated, events.PlanData{Items: []events.PlanItem{{Text: "Step", Status: events.PlanInProgress}}}))
+	set.Apply(ev(2, session, events.Compact, events.CompactData{Phase: "pre"}))
 	set.Apply(tool(3, "Edit", "a.ts"))
 	set.Apply(ev(4, session+"/a1", events.RunStart, events.RunStartData{Kind: events.KindSubagent, Parent: session}))
 	set.Apply(ev(5, session+"/a1", events.ToolUsed, events.ToolData{Tool: "Read", OK: true}))
@@ -433,7 +390,7 @@ func TestViewsAreDerivedCopies(t *testing.T) {
 		t.Fatalf("views = %d", len(views))
 	}
 	v := views[0]
-	if v.ID != session || v.State != Working || v.Link != (Link{Ticket: "AL-3", By: LinkBranch}) || !v.Dirty || v.Progress.Current != "Step" {
+	if v.ID != session || v.State != Working || v.Link != (Link{Ticket: "AL-3", By: LinkBranch}) || !v.Dirty {
 		t.Fatalf("view = %+v", v)
 	}
 	if !v.LastActivity.Equal(at(5)) {
@@ -443,9 +400,9 @@ func TestViewsAreDerivedCopies(t *testing.T) {
 		t.Fatalf("children = %v, child link = %+v", v.Children, views[1].Link)
 	}
 	// Later events do not change a view already taken.
-	set.Apply(ev(7, session, events.PlanUpdated, events.PlanData{Items: []events.PlanItem{{Text: "Other", Status: events.PlanPending}}}))
+	set.Apply(ev(7, session, events.Compact, events.CompactData{Phase: "post"}))
 	set.Apply(tool(8, "Edit", "b.ts"))
-	if v.Plan[0].Text != "Step" || len(v.Timeline) != 4 || len(v.Files) != 1 {
+	if len(v.Timeline) != 4 || len(v.Files) != 1 {
 		t.Fatalf("view changed: %+v", v)
 	}
 }

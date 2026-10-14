@@ -130,6 +130,10 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 The title is the first `#` heading. Unknown keys are preserved in place
 (`STO-2`).
 
+A ticket's plan is its Acceptance Criteria, ticked as they pass, and its
+Handoff's next steps; there is no separate plan section, and agents' own
+task lists are not recorded (D51).
+
 ### Columns
 
 | `status` | Column | Meaning |
@@ -247,10 +251,10 @@ hand-written section without the `_Updated …_` line is read for its lists
 alone.
 
 Text Flashheart writes into any section (a handoff, a note, a ticket's
-description or plan, a workstream's goal) stays inside it: a level-1 or -2
+description or test plan, a workstream's goal) stays inside it: a level-1 or -2
 heading outside code fences becomes level 3, and a code fence left open is
 closed, so it cannot start or hide a section (FH-4). A ticket's
-description, plan (or reproduction) and context, and a workstream's goal,
+description, test plan (or reproduction) and context, and a workstream's goal,
 are each limited to 16 KiB, written from the board or by an agent
 (`board.MaxSectionText`, FH-81); longer text belongs in a linked document.
 

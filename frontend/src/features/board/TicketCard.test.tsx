@@ -54,9 +54,6 @@ const live: Live = {
   short: "claude:3f2a9c1e",
   agent: "claude",
   state: "working",
-  done: 2,
-  total: 5,
-  step: "Fix header",
   reason: noReason,
   lastActivity: "2026-10-06T11:58:00Z",
 };
@@ -176,7 +173,7 @@ describe("TicketCard, at every density", () => {
     for (const words of [
       "Locked atomic ticket writes, FH-7",
       "blocked",
-      "Claude working, plan 2 of 5: Fix header",
+      "Claude working",
       "2 changes requested",
       "feature",
       "high priority",
@@ -186,6 +183,8 @@ describe("TicketCard, at every density", () => {
       "Board core workstream",
     ])
       expect(label, words).toContain(words);
+    // A card never promises a plan (D51).
+    expect(label).not.toMatch(/plan/i);
   });
 
   it.each(densities)(
@@ -329,7 +328,7 @@ describe("a Normal card", () => {
       at('data-mark="priority"'),
     ];
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(meta).toContain(">2/5<");
+    expect(meta).not.toContain(">2/5<");
     expect(meta).toContain(">2h<");
     expect(meta).toContain('data-icon="blocked"');
     expect(meta).toContain('data-icon="star"');
@@ -368,7 +367,7 @@ describe("a Normal card", () => {
       'title="Blocked: Depends on FH-4, which is in Backlog"',
     );
     expect(part(markup, 'data-mark="live"')).toContain(
-      'title="Claude: Working · plan 2 of 5: Fix header"',
+      'title="Claude: Working"',
     );
   });
 
@@ -393,12 +392,13 @@ describe("a Detailed card", () => {
     expect(part(markup, 'data-part="title"')).toContain("line-clamp-3");
   });
 
-  it("adds the blocker's reason, the agent and plan step, and the next step", () => {
+  it("adds the blocker's reason, the agent, and the next step", () => {
     expect(markup).toContain("Depends on FH-4, which is in Backlog (+1 more)");
     expect(markup).toContain('data-tone="blocked"');
     const run = part(markup, 'data-row="run"');
     expect(run).toContain("Claude");
-    expect(run).toContain("2/5 · Fix header");
+    expect(run).not.toContain("2/5");
+    expect(run).not.toContain("Fix header");
     expect(markup).toContain("Add the multi-process test");
   });
 

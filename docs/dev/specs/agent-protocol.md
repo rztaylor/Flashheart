@@ -16,7 +16,7 @@ user's agent configuration; change it deliberately and bump
 
 | Layer | Carries | Reliability | Cost to the agent |
 |---|---|---|---|
-| **Hooks** | Lifecycle facts: sessions, turns, tools, plans, permissions, subagents | Deterministic | None |
+| **Hooks** | Lifecycle facts: sessions, turns, tools, permissions, subagents | Deterministic | None |
 | **MCP tools** | Meaning only the model has: claims, checkpoints, questions, reviews, attachments | Depends on the model | Tokens per call |
 | **Protocol instructions** | When and how to use the tools | Guidance | Context once per session |
 | **Handoff enforcement** (opt-in) | Ensures a checkpoint after edits | Deterministic | One extra turn when triggered |
@@ -25,7 +25,7 @@ Hooks are the deterministic layer. An agent that reaches the MCP server
 without them (Codex before its hooks are set up and trusted, a user who
 declined hooks, a new agent) still gets a run, which the server starts for its
 connection (§7.1): it reports claims, checkpoints, questions and its
-Flashheart tool calls, never turns, plans, edits or permission prompts.
+Flashheart tool calls, never turns, edits or permission prompts.
 
 ## 2. Identity
 
@@ -100,7 +100,7 @@ writing.
 | `turn.end` | stop | `blocked_for_handoff` (bool); optional `worktree_changed: true` (§4) |
 | `activity` | post tool use, throttled (below); MCP server, for the Flashheart tool calls of a run it started, throttled the same way (§7.1) | `tools` (tool results since the run's previous `activity`), optional `failed` (how many of them failed), `paths` (the repo-relative edit paths the run had not recorded in this turn or since its last checkpoint; omitted outside the worktree), `shell` (≤20 `{from, to}` windows of its successful shell commands, §4, merged where they meet) |
 | `tool.used` | post tool use, before protocol 2; still read | `tool`, `ok`, optional `path` (repo-relative, edits only), optional `summary` (≤120 chars) |
-| `plan.updated` | post tool use of plan tools; task created/completed | `items: [{id?, text ≤200, status: pending/in_progress/completed}]` (≤50 items) replaces the plan; with `merge: true` the items are added or updated by `id`, and status `deleted` removes one |
+| `plan.updated` | before D51 (FH-133): post tool use of plan tools; task created/completed. No longer written, and readers skip it as an unknown kind | `items: [{id?, text, status}]`, optional `merge`; never read |
 | `permission.requested` | permission request / notification | `tool`, optional `summary` |
 | `permission.resolved` | permission denied | `outcome` (allowed/denied/unknown), optional `tool`. A pending request is also resolved, without an event, by the run's next tool result, prompt, turn end or end (§4) |
 | `notification` | notification hook | `type` (e.g. idle, permission), never the message body unless it is a known short status |
@@ -430,8 +430,9 @@ their tickets' `activity.md`.
   default). Payload on stdin; Flashheart reads at most 1 MB.
 - Always exit 0 and print nothing, except the outputs listed below. Any
   internal error is logged to `hook-errors.log` and swallowed (`HOOK-1`).
-- Tool inputs are read only to extract edited file paths and plan items;
-  nothing else from them is stored (`HOOK-2`).
+- Tool inputs are read only to extract edited file paths; nothing else
+  from them is stored (`HOOK-2`). Agents' own task lists and plans are not
+  read (D51).
 - The agent's adapter classifies each tool result: whether it is a shell
   command, and the files it edited. One result that edits several files
   (Codex's `apply_patch`) is one tool use with every path. Hooks and the
@@ -446,12 +447,11 @@ their tickets' `activity.md`.
 | `SessionStart` (`source`: startup, resume, clear, compact) | `run.start` | Recovery note as `hookSpecificOutput.additionalContext` (§8) |
 | `UserPromptSubmit` | `turn.start` with its `origin` (resolves a pending permission and, from the user, answers open questions in the session, §4): `task` for a prompt starting `<task-notification>` (a background command or agent finished) or `<ci-monitor-event>` (the desktop app's pull request monitor), `agent` for one starting `<agent-message`, alone or after the desktop app's line `Another Claude session sent a message:` (a subagent's hand-back or another agent's message), otherwise `user` (also when the app put a `<system-reminder>` first); `question.delivered` or `comment.delivered` for each entry handed over | What waits in the session's inbox (answers, comments, change requests), each framed by its type (§4), as `additionalContext` (`HOOK-5`), then a due claim reminder (§9, `HOOK-8`) |
 | `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping: `hookSpecificOutput.updatedInput` is the tool input with `run` set to the calling run (the subagent's when `agent_id` is present), and no permission decision (§7.1) |
-| `PostToolUse` | a tool use counted into `activity` (throttled, §3); `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`); `mcp__flashheart__checkpoint` lets the session record its edited paths again. A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
+| `PostToolUse` | a tool use counted into `activity` (throttled, §3); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`); `mcp__flashheart__checkpoint` lets the session record its edited paths again. A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
 | `PostToolUseFailure` | a failed tool use counted into `activity` | — |
 | `PermissionRequest` | `permission.requested` | — (never decides the permission) |
 | `PermissionDenied` | `permission.resolved` denied | — |
 | `Notification` | `notification` with type `permission` (`permission_prompt`), `idle` (`idle_prompt`) or the agent's own short type; permission type also → `permission.requested` | — |
-| `TaskCreated`, `TaskCompleted` | `plan.updated` (merge) | — |
 | `SubagentStart` / `SubagentStop` | child `run.start` (with `parent`, `agent_type`) / `run.end` (`reason: completed`), keyed by `agent_id` | — |
 | `PreCompact` / `PostCompact` | `compact` | — |
 | `Stop` | `turn.end`, with `worktree_changed` from the worktree check (§4); handoff enforcement and the claim reminder (§9) | `{"decision":"block","reason":…}` only when enforcing |
@@ -462,7 +462,9 @@ A `PostToolUse` or `PostToolUseFailure` of the session itself (no
 (§9, `HOOK-8`); otherwise those events print nothing.
 
 Not registered by default: per-tool `PreToolUse` other than Flashheart's own
-tools (noise and latency).
+tools (noise and latency), and `TaskCreated` and `TaskCompleted`, which
+setup registered before D51 to record plans: `setup claude` removes them,
+`doctor` warns while they remain, and the hook records nothing for them.
 
 ### 5.3 Codex
 
@@ -487,7 +489,7 @@ has no use for (FH-123).
 | `SessionStart` | `run.start`; refreshes an out-of-date Flashheart section of the global `AGENTS.md` (§5.4); recovery note as `additionalContext` (a developer message), opened by a line when the section was refreshed |
 | `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; what waits in the session's inbox (§4) as `additionalContext`, then a due claim reminder (§9, `HOOK-8`) |
 | `PreToolUse` (not registered) | nothing: Flashheart's tool calls are attributed by the session each call names in `_meta` (below, §7.1), so `run` is not stamped (stamping needs `permissionDecision: "allow"`, which would skip the user's approval of Flashheart's tools) |
-| `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `plan.updated` (the whole plan) for `update_plan` where Codex offers it, read from its `plan` steps (`step`, `status`) |
+| `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `update_plan`, where Codex offers it, is an ordinary tool use (D51) |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
 | `PreCompact` / `PostCompact` | `compact` |
@@ -681,7 +683,7 @@ servers or text.
 - A run holds at most one explicit claim; claiming another releases the
   first (with an event).
 - A run's **project** is its home: where it records its own events
-  (`run.start`, turns, activity, plans, questions), or the `home` its claim
+  (`run.start`, turns, activity, questions), or the `home` its claim
   names; never the project of a ticket it claimed, released, moved,
   updated, reviewed, attached to or checkpointed elsewhere, whose events
   sit in that ticket's log. The latest such event wins; a run seen only
@@ -765,7 +767,7 @@ to record in (an archived project, or none created) starts no run.
 
 **A session whose hooks start later.** A run the server started is
 *MCP-only* until any event only hooks record (a `run.start` with another
-source, `turn.start`, `turn.end`, `tool.used`, `plan.updated`,
+source, `turn.start`, `turn.end`, `tool.used`,
 `permission.*`, `notification`, `compact`) reaches it; the board says
 "MCP only" and that an answer waits for the next tool call only while it
 is. A Codex session's run is named by its session (step 2), so when its
@@ -1082,7 +1084,7 @@ reminded themselves (their edits count toward their session's).
 ## 10. Orchestrators and subagents
 
 - Subagent runs come from hooks automatically and nest under their parent in
-  the UI; their plans and tool use roll up to the parent's ticket.
+  the UI; their tool use rolls up to the parent's ticket.
 - An orchestrator that splits work into tickets creates them (`create_ticket`)
   and passes the ticket id and its own run id in each subagent's prompt;
   subagents `claim` (as themselves) and `checkpoint` against that ticket.
@@ -1139,8 +1141,9 @@ checks (§5.4). It covers, briefly:
   that project's board (`create_ticket`'s `project`, §7.1); a session that
   edits holding no ticket is asked once by the hooks to claim or create
   one (§9);
-- keep your own plan/todo list current (where Flashheart's hooks are
-  installed it is mirrored for you; no tool call needed);
+- the ticket's acceptance criteria and the handoff's next steps are its
+  plan for the user; Flashheart does not read the agent's own todo list
+  (D51);
 - `checkpoint` at meaningful milestones, before long operations, before
   compaction risk, and always before stopping after edits;
 - use `ask_human` when blocked on a human decision instead of waiting in chat
@@ -1394,6 +1397,22 @@ in Claude Code, tool result; Claude Code reads `additionalContext` from
 `PostToolUse`, which printed nothing before). The skill gains a sentence saying so, and the session's activity
 state file a field. No event, tool or hook registration changes shape,
 and an older binary simply never asks, so the version stays 2.
+
+Removal within version 2 (D51, D77, FH-133, 2026-10-14): plans are no
+longer recorded. Hooks stop writing `plan.updated` and stop reading the
+agents' task-list tools (`TodoWrite`, `TaskCreate`, `TaskUpdate`,
+Codex's `update_plan`); `setup claude` no longer registers `TaskCreated`
+and `TaskCompleted`; readers skip `plan.updated` as an unknown kind; runs
+and cards carry no plan; and the skill's line asking agents to keep their
+todo list current becomes one saying a ticket's criteria and handoff are
+its plan. A removal, but the version stays 2 (D77): nothing anyone reads
+changes meaning. A version 2 binary without this change reading a newer
+log sees no plans, which it already showed as none for every session
+that kept no list (all of them on this board); a newer reader skips old
+plans; and agents see the same tools, inputs, outputs and refusals. An
+older registration of the task events runs the hook, which records
+nothing, until `setup claude` removes it; `doctor` says so meanwhile, so
+re-running setup is advised, not required.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

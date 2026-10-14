@@ -227,20 +227,57 @@ func TestPruneRemovesInboxesWithTheirDaysEvents(t *testing.T) {
 func TestEncodeBoundsLines(t *testing.T) {
 	t.Parallel()
 
-	items := make([]PlanItem, 0, MaxPlanItems)
-	for i := range MaxPlanItems {
-		items = append(items, PlanItem{ID: strconv.Itoa(i), Text: strings.Repeat("x", MaxPlanText), Status: PlanPending})
+	// The largest line is an activity record with every path and window.
+	paths := make([]string, 0, MaxToolPaths)
+	for i := range MaxToolPaths {
+		paths = append(paths, strconv.Itoa(i)+strings.Repeat("x", maxPaths))
 	}
-	line, err := Event{Time: t0, Run: "claude:a", Agent: "claude", Kind: PlanUpdated, Project: "alpha", Data: PlanData{Items: items}}.MarshalLine()
+	spans := make([]Span, MaxActivitySpans)
+	for i := range spans {
+		spans[i] = Span{From: t0, To: t0.Add(time.Second)}
+	}
+	line, err := Event{Time: t0, Run: "claude:a", Agent: "claude", Kind: Activity, Project: "alpha", Data: ActivityData{Tools: 1 << 20, Failed: 1 << 20, Paths: paths, Shell: spans}}.MarshalLine()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(line) > MaxLineBytes {
-		t.Fatalf("largest plan line is %d bytes; MaxLineBytes is %d", len(line), MaxLineBytes)
+		t.Fatalf("largest activity line is %d bytes; MaxLineBytes is %d", len(line), MaxLineBytes)
 	}
 	var check map[string]any
 	if err := json.Unmarshal(line, &check); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Logs from before D51 hold plan.updated, which hooks no longer write
+// (FH-133): readers skip it like any unknown kind, and every other line of
+// the log still reads; a writer is refused it.
+func TestOldPlanEventsReadAsSkipped(t *testing.T) {
+	t.Parallel()
+
+	log, root := newRoot(t, "alpha")
+	dir := filepath.Join(root, "alpha", ".flashheart", "events")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Join([]string{
+		`{"v":1,"ts":"2026-10-04T13:00:00.000Z","run":"claude:a","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"session","cwd":"/src/alpha","branch":"main"}}`,
+		`{"v":1,"ts":"2026-10-04T13:00:01.000Z","run":"claude:a","agent":"claude","kind":"plan.updated","project":"alpha","data":{"items":[{"text":"Read the code","status":"completed"},{"text":"Fix it","status":"in_progress"}]}}`,
+		`{"v":1,"ts":"2026-10-04T13:00:02.000Z","run":"claude:a","agent":"claude","kind":"plan.updated","project":"alpha","data":{"merge":true,"items":[{"id":"1","status":"deleted"}]}}`,
+		`{"v":1,"ts":"2026-10-04T13:00:03.000Z","run":"claude:a","agent":"claude","kind":"turn.end","project":"alpha","data":{}}`,
+	}, "\n") + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "2026-10-04.jsonl"), []byte(lines), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var kinds []Kind
+	if err := log.Read("alpha", time.Time{}, func(e Event) { kinds = append(kinds, e.Kind) }); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(kinds, []Kind{RunStart, TurnEnd}) {
+		t.Fatalf("Read = %v, want run.start and turn.end with the plans skipped", kinds)
+	}
+	if Kind("plan.updated").Known() {
+		t.Fatal("plan.updated is still a kind the log records")
 	}
 }
 

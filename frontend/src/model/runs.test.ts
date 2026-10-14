@@ -52,8 +52,6 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     tools: 0,
     edits: 0,
     files: [],
-    plan: [],
-    progress: { done: 0, total: 0 },
     questions: [],
     ...patch,
   };
@@ -106,9 +104,6 @@ describe("describeEntry", () => {
     expect(describeEntry(entry({ kind: "compact", detail: "pre" }))).toBe(
       "Compacting context",
     );
-    expect(
-      describeEntry(entry({ kind: "plan.updated", detail: "Fix header" })),
-    ).toBe("Plan: Fix header");
     expect(describeEntry(entry({ kind: "notification", detail: "idle" }))).toBe(
       "Idle at the prompt",
     );
@@ -189,7 +184,6 @@ describe("describeEntry", () => {
       "turn.end",
       "tool.used",
       "activity",
-      "plan.updated",
       "permission.requested",
       "permission.resolved",
       "notification",
