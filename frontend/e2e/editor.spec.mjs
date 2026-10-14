@@ -228,6 +228,11 @@ test("the slash menu inserts blocks by keyboard, and Escape closes only the menu
   await expect(menu.getByRole("option", { selected: true })).toContainText(
     "Task list",
   );
+  // CodeMirror ignores Enter for 75 ms after the list last updated (its
+  // interaction delay), and the list can still update after the choice
+  // reads "Task list"; give it longer than that so Enter is the menu's
+  // (FH-172).
+  await page.waitForTimeout(200);
   await page.keyboard.press("Enter");
   await expect(menu).toBeHidden();
   await page.keyboard.type("Follow up on quiet runs");
