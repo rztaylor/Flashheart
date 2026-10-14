@@ -70,7 +70,7 @@ describe("ProjectCounts (FH-153)", () => {
   it("names each row with the project and its counts", () => {
     const { rows } = setup();
     expect(rows[1]?.getAttribute("aria-label")).toBe(
-      "Flashheart (flashheart): 50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 30 done), 22 blocked, 1 needs repair, 5 agents live, 2 agents need you",
+      "Flashheart (flashheart): 50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 30 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
     );
     expect(rows[0]?.getAttribute("aria-label")).toMatch(
       /^Quill \(quill\): 7 tickets \(/,
@@ -118,7 +118,7 @@ describe("ProjectCounts (FH-153)", () => {
     const [quill, flashheart] = rows as [HTMLElement, HTMLElement];
     const live = (row: HTMLElement) =>
       row.querySelector<HTMLElement>("[data-count=live]");
-    expect(live(flashheart)?.textContent).toBe("5");
+    expect(live(flashheart)?.textContent).toBe("3");
     expect(live(flashheart)?.className).toContain("text-ink");
     expect(live(flashheart)?.className).not.toContain("text-ink-faint");
     expect(live(quill)?.textContent).toBe("0");
@@ -129,7 +129,7 @@ describe("ProjectCounts (FH-153)", () => {
     expect(
       within(head).getByText("Live").querySelector("[data-run-state]"),
     ).not.toBeNull();
-    expect(flashheart.textContent).toContain("22 blocked · 5 live");
+    expect(flashheart.textContent).toContain("22 blocked · 3 live");
     expect(quill.textContent).toContain("0 blocked · 0 live");
   });
 

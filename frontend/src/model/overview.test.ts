@@ -624,7 +624,7 @@ describe("projectRows", () => {
     rejected: 0,
     blocked: 0,
     needsRepair: 0,
-    runs: { needsYou: 1, live: 1 },
+    runs: { needsYou: 1, working: 0, waiting: 0, quiet: 0 },
   };
   const projects = [
     {
@@ -635,7 +635,7 @@ describe("projectRows", () => {
       rejected: 2,
       blocked: 22,
       needsRepair: 1,
-      runs: { needsYou: 2, live: 5 },
+      runs: { needsYou: 2, working: 2, waiting: 1, quiet: 0 },
     },
     ng,
   ];
@@ -651,7 +651,7 @@ describe("projectRows", () => {
       tickets: 50,
       blocked: 22,
       repair: 1,
-      live: 5,
+      live: 3,
       needsYou: 2,
     });
     // Columns as the pipeline counts them: Done is the accepted work.
@@ -665,17 +665,33 @@ describe("projectRows", () => {
   it("names a row with its project and every count, zeros included", () => {
     const [first, second] = projectRows(projects);
     expect(first?.label).toBe(
-      "Flashheart (flashheart): 50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 28 done), 22 blocked, 1 needs repair, 5 agents live, 2 agents need you",
+      "Flashheart (flashheart): 50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 28 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
     );
     expect(second?.label).toBe(
-      "NG+ (ng-plus): 2 tickets (1 in backlog, 0 up next, 1 in progress, 0 ready to review, 0 done), 0 blocked, 0 need repair, 1 agent live, 1 agent needs you",
+      "NG+ (ng-plus): 2 tickets (1 in backlog, 0 up next, 1 in progress, 0 ready to review, 0 done), 0 blocked, 0 need repair, 0 agents live, 1 agent needs you",
     );
   });
 
-  // Live counts every agent still running in the project (FH-162):
-  // working, quiet, waiting and those that need you, subagents too.
+  // Live counts the project's agents that do not need you (FH-162):
+  // working, waiting and quiet, subagents too; Needs you counts the rest.
+  it("leaves agents that need you out of Live", () => {
+    const [row] = projectRows([
+      {
+        ...ng,
+        runs: { needsYou: 2, working: 1, waiting: 1, quiet: 1 },
+      },
+    ]);
+    expect(row?.live).toBe(3);
+    expect(row?.needsYou).toBe(2);
+  });
+
   it("counts and names no live agents as zero", () => {
-    const [row] = projectRows([{ ...ng, runs: { needsYou: 0, live: 0 } }]);
+    const [row] = projectRows([
+      {
+        ...ng,
+        runs: { needsYou: 0, working: 0, waiting: 0, quiet: 0 },
+      },
+    ]);
     expect(row?.live).toBe(0);
     expect(row?.label).toMatch(/, 0 agents live, 0 agents need you$/);
   });
