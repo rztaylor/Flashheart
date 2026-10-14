@@ -1,6 +1,6 @@
 {
-  "route": "PUT /api/preferences",
-  "request": "PUT /api/preferences",
+  "route": "PATCH /api/preferences",
+  "request": "PATCH /api/preferences",
   "status": 204,
   "body": null
 }

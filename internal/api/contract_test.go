@@ -256,7 +256,7 @@ func runContract(t *testing.T) *contract {
 	get("changes", "/api/changes", "/api/changes?since=0", ChangesResponse{})
 	get("workstreams", "/api/projects/{project}/workstreams", "/api/projects/alpha/workstreams", WorkstreamsResponse{})
 	workstream := decodeAs[WorkstreamResponse](t, get("workstream", "/api/projects/{project}/workstreams/{slug}", "/api/projects/alpha/workstreams/board-ui", WorkstreamResponse{})).Workstream
-	c.do(exchange{name: "preferences-saved", route: "PUT /api/preferences", method: http.MethodPut, path: "/api/preferences", status: http.StatusNoContent,
+	c.do(exchange{name: "preferences-saved", route: "PATCH /api/preferences", method: http.MethodPatch, path: "/api/preferences", status: http.StatusNoContent,
 		body: map[string]any{
 			"theme": "dark", "density": "compact", "colourBy": "priority", "hiddenColumns": []string{"backlog"}, "editor": "markdown",
 			"scopes": map[string]any{"alpha": map[string]any{
@@ -307,8 +307,15 @@ func runContract(t *testing.T) *contract {
 	createdWorkstream := decodeAs[CreatedWorkstreamResponse](t, c.do(exchange{name: "workstream-created", route: createWorkstream, method: http.MethodPost,
 		path: "/api/projects/alpha/workstreams", body: NewWorkstreamRequest{Title: "Sync", Goal: "Share the board.", Priority: "low", DependsOnWorkstreams: []string{"board-ui"}},
 		status: http.StatusCreated, shape: CreatedWorkstreamResponse{}}))
-	c.do(exchange{name: "workstream-edited", route: "PATCH /api/projects/{project}/workstreams/{slug}", method: http.MethodPatch, path: "/api/projects/alpha/workstreams/sync",
-		body:   map[string]any{"base": createdWorkstream.Hash, "fields": map[string]any{"title": "Sync everywhere", "tags": []string{"sync"}}, "slug": "sync-everywhere"},
+	editWorkstream := "PATCH /api/projects/{project}/workstreams/{slug}"
+	editedWorkstream := decodeAs[EditedWorkstreamResponse](t, c.do(exchange{name: "workstream-edited", route: editWorkstream, method: http.MethodPatch,
+		path: "/api/projects/alpha/workstreams/sync", body: map[string]any{"base": createdWorkstream.Hash, "fields": map[string]any{"title": "Sync everywhere", "tags": []string{"sync"}}, "slug": "sync-everywhere"},
+		status: http.StatusOK, shape: EditedWorkstreamResponse{}}))
+	// A name whose slug another workstream has (FH-167).
+	c.do(exchange{name: "error-name-exists", route: editWorkstream, method: http.MethodPatch, path: "/api/projects/alpha/workstreams/sync-everywhere",
+		body: map[string]any{"base": editedWorkstream.Hash, "fields": map[string]any{"title": "Offline"}, "slugFromTitle": true}, status: http.StatusConflict})
+	c.do(exchange{name: "workstream-named", route: editWorkstream, method: http.MethodPatch, path: "/api/projects/alpha/workstreams/sync-everywhere",
+		body:   map[string]any{"base": editedWorkstream.Hash, "fields": map[string]any{"title": "Sync anywhere"}, "slugFromTitle": true},
 		status: http.StatusOK, shape: EditedWorkstreamResponse{}})
 	c.do(exchange{name: "error-title-taken", route: createWorkstream, method: http.MethodPost, path: "/api/projects/alpha/workstreams",
 		body: NewWorkstreamRequest{Title: "Board UI", Goal: "Again.", Priority: "low"}, status: http.StatusConflict})

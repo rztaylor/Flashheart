@@ -25,6 +25,7 @@ import {
   isConflictBody,
   isCreated,
   isCreatedWorkstream,
+  isEditedWorkstream,
   isKeyTakenBody,
   isSaved,
 } from "./edit";
@@ -135,9 +136,8 @@ const contract: Record<string, { guard: Guard; optional?: string[] }> = {
   uploaded: { guard: isUploaded },
   "ticket-created": { guard: isCreated },
   "workstream-created": { guard: isCreatedWorkstream },
-  // An edit answers as a create does: the slug (renamed or not), hash and
-  // revision.
-  "workstream-edited": { guard: isCreatedWorkstream },
+  "workstream-edited": { guard: isEditedWorkstream },
+  "workstream-named": { guard: isEditedWorkstream },
   "workstream-ordered": { guard: isSaved },
   "workstream-section-saved": { guard: isSaved },
   "key-set": { guard: isSaved },
@@ -171,6 +171,7 @@ const contract: Record<string, { guard: Guard; optional?: string[] }> = {
   "error-confirm-blocked": { guard: isBlockedBody },
   "error-key-taken": { guard: isKeyTakenBody },
   "error-title-taken": { guard: isErrorBody },
+  "error-name-exists": { guard: isErrorBody },
 };
 
 type Path = (string | number)[];

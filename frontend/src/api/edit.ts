@@ -170,6 +170,17 @@ export function saveWorkstreamSection(
   );
 }
 
+// isEditedWorkstream checks a workstream edit's response
+// (api.EditedWorkstreamResponse): its slug, renamed or not, the file's
+// hash and the board revision.
+export const isEditedWorkstream = (
+  value: unknown,
+): value is { slug: string; hash: string; revision: number } =>
+  isRecord(value) &&
+  isString(value.slug) &&
+  isString(value.hash) &&
+  isNumber(value.revision);
+
 // Renamed is a workstream's name saved: its slug after the save, which the
 // name may have changed (FH-167).
 export type Renamed = Saved & { slug: string };
@@ -191,12 +202,7 @@ export async function nameWorkstream(
     `/api/projects/${segment(project)}/workstreams/${segment(slug)}`,
     { base, fields: { title }, slugFromTitle: true },
   );
-  if (
-    !isRecord(payload) ||
-    typeof payload.slug !== "string" ||
-    typeof payload.hash !== "string" ||
-    typeof payload.revision !== "number"
-  )
+  if (!isEditedWorkstream(payload))
     throw new Error("Save response was invalid");
   return {
     slug: payload.slug,
