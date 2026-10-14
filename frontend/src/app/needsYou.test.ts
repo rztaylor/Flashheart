@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
+import type { Scope } from "../model/scopes";
 import { pressNeedsYou } from "./needsYou";
-import type { Scope } from "./route";
 
 const all: Scope = { kind: "all" };
 const alpha: Scope = { kind: "project", project: "alpha" };

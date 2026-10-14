@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 
 import type { Preferences } from "../api/preferences";
 import { emptyFilters, type Filters } from "../model/filters";
-import type { Route, Scope, View } from "./route";
+import type { Scope } from "../model/scopes";
+import type { Route, View } from "./route";
 import {
   rememberIn,
   restoredFilters,
