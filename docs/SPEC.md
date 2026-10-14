@@ -596,7 +596,8 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   works in, never one where it only claimed a ticket) has `branch:` equal
   to the run's branch.
   Subagent runs inherit their parent's link. Unlinked runs show under
-  under *Work with no ticket* on the Overview while they are live.
+  *Work with no ticket* on the Overview while they are live; an unlinked
+  session that changes files is asked once to claim a ticket (`HOOK-8`).
 - `RUN-6` A claim is a lease renewed by any event from the claiming run. A
   ticket held by a live claim cannot be claimed by another run without
   `force` and a reason, which both runs' tickets record.
@@ -639,7 +640,7 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
 - `HOOK-1` `flashheart hook <agent> <event>` reads the agent's hook JSON on
   stdin, appends normalised events, and exits 0 within 100 ms (p95 50 ms) on
   a warm cache. Errors go to `<root>/.flashheart/hook-errors.log`, never to the
-  agent, and never change the exit status (except `HOOK-6`).
+  agent, and never change the exit status (except `HOOK-6` and `HOOK-8`).
 - `HOOK-2` Hooks record how many tools a run used and how many failed, in
   at most one activity record per run per `activity_seconds` (default 60;
   agent-protocol §3), edited file paths relative to the repository (each
@@ -666,6 +667,15 @@ Mappings per agent: `docs/dev/specs/agent-protocol.md` §5.
 - `HOOK-7` Claude Code (CLI, IDE and desktop Code tab) and Codex (CLI, IDE and
   app) are first-class. Each agent has an isolated adapter so changes in one
   agent's hook schema touch one package.
+- `HOOK-8` A session that changed files since its last checkpoint (with
+  its subagents, through the edit tools or, as the worktree check finds,
+  shell commands) while it holds no ticket, by claim or by branch, is
+  asked once to claim one or create one, naming the tools (D50,
+  agent-protocol §9). Where the project enforces handoffs (`HOOK-6`) the
+  request holds that turn's stop; otherwise it goes as additional context
+  with the session's next prompt (and, in Claude Code, its next tool
+  result). It is asked at most once per session, never of a subagent, and
+  recorded only in the session's activity state.
 
 ### 6.9 MCP server (`MCP`)
 
