@@ -99,7 +99,8 @@ offers All states, Blocked (with the no-entry sign after the word, §7), Not
 blocked, Needs repair, Agent working and
 Rejected (tickets in Done whose status is rejected, FH-59; the Done limit
 still applies, so older ones need *Show all*). Type,
-Priority and Workstream open a list of values that toggle as chips do: a
+Priority and Workstream open a list of values that toggle as chips do
+(each priority with the card's bars before its word, FH-166): a
 click shows only that value (with any others shown), a Cmd click (Ctrl off
 macOS) or Cmd/Ctrl with Enter hides it, struck through, and a click on a
 chosen value restores it; values of one filter match any, filters combine.
@@ -462,8 +463,9 @@ at most 94rem.
   as a select in the status's own fill, icon and word (the status pill
   when read-only), on a ticket in review where the page can save a full
   width secondary **Request changes** (speech balloon; `REV-6`) under it,
-  *Blocked* when blocked, then rows of Priority (bars and word), Type
-  (icon and word),
+  *Blocked* when blocked, then rows of Priority (bars and word; while
+  editing, its select keeps the chosen priority's bars before the word,
+  FH-166), Type (icon and word),
   Workstream (bullet and name), Branch, Pull request (when set), Depends on
   (ids linked), Tags, Agent (the run speaking for the ticket, its state
   mark and word), Created and Changed, *None* where empty; then
@@ -489,7 +491,8 @@ at most 94rem.
   item in place: its control on a well with a rule border (the title a
   one-line field in the display cut, a section the formatted editor, the
   criteria a list of rows with a done box, the text, Move up, Move down
-  and Remove, then *Add a criterion*; a property's name above its select,
+  and Remove, then *Add a criterion*; a property's name above its select
+  (Priority's with the chosen priority's bars before the word, FH-166),
   text field or chips, spanning the panel), then **Save**, **Cancel** and
   the shortcut hint (*⌘Enter saves · Esc cancels*, Ctrl on other
   systems). A failed save's reason is a danger line above the buttons;
@@ -599,7 +602,7 @@ id a separate link.
 - **New workstream** (`EDIT-14`, FH-17) opens a dialog like New ticket's:
   *Project* (only in the all scope), **Title** (focused), *Goal* (a text
   area, *The shared outcome its tickets deliver.*), *Priority* (default
-  medium) and, when the project has workstreams, *Depends on workstreams*:
+  medium, the chosen priority's bars before the word) and, when the project has workstreams, *Depends on workstreams*:
   a bordered, scrolling list of checkboxes named by title, wrapping long
   names, with the hint *Its tickets wait until every ticket in these is in
   review or done.* **Create workstream** (primary, off until there is a
@@ -666,7 +669,8 @@ narrows it too) the rows are a table under one line of column words:
 Project (key badge and name), Tickets, the five board columns (each word
 after its status icon in its state ink), Blocked (after the no-entry sign
 in the blocked ink), Needs repair, Live (after the Working run-state mark,
-still) and Needs you, the counts centred in tabular numerals, zeros faint.
+still) and Needs you, the counts centred in tabular numerals, a zero a
+faint en dash (the row's name says the number).
 Live (FH-162) counts the project's running agents that do not need you,
 subagents included: working, waiting and quiet; an agent that needs you
 counts under Needs you instead, never in both. Tickets counts every ticket; the columns

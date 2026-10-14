@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
   expectNoAxeViolations,
+  filterMenu,
   launch,
   makeSandbox,
   open,
@@ -371,4 +372,77 @@ test("a save that fails after the page was left says so, with a way back (FH-156
   expect(await readTicket()).toContain(
     "## Description\n\nKept while the save was on its way.\n",
   );
+});
+
+// Wherever a priority is chosen from a dropdown, the card's bars lead the
+// word (FH-166): the Priority filter's menu lists each priority with its
+// bars, and the New ticket, New workstream and in-place Priority selects
+// draw the chosen priority's bars on their face, following the choice.
+test("priority dropdowns show the bars before the word (FH-166)", async () => {
+  // bars is the priority drawn on a select's face.
+  const bars = (select) =>
+    select.locator("xpath=..").locator("[data-priority]");
+  for (const theme of ["light", "dark"]) {
+    const size = { width: 1440, height: 900, theme };
+
+    await open(page, "#/p/flashheart/board", size);
+    const menu = await filterMenu(page, "Priority");
+    for (const [word, level] of [
+      ["High", "high"],
+      ["Medium", "medium"],
+      ["Low", "low"],
+    ]) {
+      await expect(
+        menu
+          .getByRole("button", { name: word })
+          .locator(`[data-priority="${level}"]`),
+      ).toBeVisible();
+    }
+    await expectNoAxeViolations(page, `priority menu ${theme}`);
+    await shot(page, `priority-menu-1440-${theme}`, { keepFocus: true });
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "New ticket", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "New ticket" });
+    const newPriority = dialog.getByRole("combobox", { name: "Priority" });
+    await expect(bars(newPriority)).toHaveAttribute("data-priority", "medium");
+    await newPriority.selectOption("high");
+    await expect(bars(newPriority)).toHaveAttribute("data-priority", "high");
+    await expectNoAxeViolations(page, `new ticket priority ${theme}`);
+    await shot(page, `priority-new-ticket-1440-${theme}`, { keepFocus: true });
+    await newPriority.selectOption("medium");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+
+    await open(page, "#/p/flashheart/workstreams", size);
+    await page
+      .getByRole("button", { name: "New workstream", exact: true })
+      .click();
+    const workstream = page.getByRole("dialog", { name: "New workstream" });
+    const wsPriority = workstream.getByRole("combobox", { name: "Priority" });
+    await expect(bars(wsPriority)).toHaveAttribute("data-priority", "medium");
+    await wsPriority.selectOption("low");
+    await expect(bars(wsPriority)).toHaveAttribute("data-priority", "low");
+    await shot(page, `priority-new-workstream-1440-${theme}`, {
+      keepFocus: true,
+    });
+    await wsPriority.selectOption("medium");
+    await page.keyboard.press("Escape");
+    await expect(workstream).toHaveCount(0);
+
+    await open(page, "#/ticket/FH-20", size);
+    await pencil("priority").click();
+    const priority = main().getByRole("combobox", { name: "Priority" });
+    const before = await priority.inputValue();
+    await expect(bars(priority)).toHaveAttribute("data-priority", before);
+    await priority.selectOption(before === "high" ? "low" : "high");
+    await expect(bars(priority)).toHaveAttribute(
+      "data-priority",
+      before === "high" ? "low" : "high",
+    );
+    await expectNoAxeViolations(page, `in-place priority ${theme}`);
+    await shot(page, `priority-in-place-1440-${theme}`, { keepFocus: true });
+    await page.keyboard.press("Escape");
+    await expect(pencil("priority")).toBeFocused();
+  }
 });

@@ -213,24 +213,32 @@ test("a change elsewhere in the file saves; the same section conflicts", async (
 
   // A change the page has not heard of yet when Save is pressed: the
   // save meets it (409), sees the Goal unchanged there and saves again.
+  // The file is written as the first save leaves the page, so the page
+  // cannot have heard of it (holding back /api/changes cannot promise
+  // that: a long poll already waiting still answers, FH-164).
   await openSection("goal", "Goal");
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type(" Later.");
-  const held = [];
-  await page.route("**/api/changes*", (route) => held.push(route));
+  const section = "**/workstreams/board-core/section";
+  let written = false;
+  await page.route(section, async (route) => {
+    if (!written) {
+      written = true;
+      await writeFile(file(), merged.replace("Theirs.", "Theirs again."));
+    }
+    await route.continue();
+  });
   const statuses = [];
   const onSection = (response) => {
     if (response.url().endsWith("/workstreams/board-core/section"))
       statuses.push(response.status());
   };
   page.on("response", onSection);
-  await writeFile(file(), merged.replace("Theirs.", "Theirs again."));
   await save().click();
   await expect(pencil("goal")).toBeFocused();
   expect(statuses).toEqual([409, 200]);
   page.off("response", onSection);
-  await page.unroute("**/api/changes*");
-  for (const route of held) await route.continue().catch(() => undefined);
+  await page.unroute(section);
   const raced = await readWorkstream();
   expect(raced).toContain("Theirs again.");
   expect(raced).toContain("Mine. Later.\n");

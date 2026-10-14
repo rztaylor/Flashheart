@@ -100,6 +100,11 @@ export function PriorityMarker({
   );
 }
 
+// priorityMark is the bars for a control that shows a chosen priority (a
+// Select's leading slot, a menu item), nothing for a word without bars.
+export const priorityMark = (priority: string): ReactNode =>
+  hasPriorityMarker(priority) ? <PriorityMarker priority={priority} /> : null;
+
 // TypeTag and PriorityTag are a type and a priority in words, as a Tag with
 // the card's mark before the word (FH-154): the Table, the archive and the
 // card panel's header, where there is room for both. children replaces the

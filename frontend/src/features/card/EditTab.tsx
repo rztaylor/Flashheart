@@ -9,6 +9,7 @@ import { patchTicket, type Saved, saveRaw } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
 import { SegmentedControl } from "../../components/SegmentedControl";
+import { priorityMark } from "../../components/TicketMarks";
 import {
   changes,
   fieldsText,
@@ -217,7 +218,11 @@ export function EditTab({
               </Select>
             </FormField>
             <FormField label="Priority">
-              <Select value={form.priority} onChange={set("priority")}>
+              <Select
+                value={form.priority}
+                onChange={set("priority")}
+                leading={priorityMark(form.priority)}
+              >
                 {[
                   ...new Set([...PRIORITIES, form.priority].filter(Boolean)),
                 ].map((item) => (

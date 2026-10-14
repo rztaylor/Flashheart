@@ -5,6 +5,7 @@ import { CheckboxField } from "../../components/Field";
 import { filterHandlers, filterHint } from "../../components/FilterChip";
 import { Popover } from "../../components/Popover";
 import { SegmentedControl } from "../../components/SegmentedControl";
+import { priorityMark } from "../../components/TicketMarks";
 import { setColumnShown } from "../../model/columns";
 import {
   type Choice,
@@ -28,6 +29,8 @@ import { Icon } from "../../components/Icon";
 interface Option {
   value: string;
   label: string;
+  // mark is drawn before the word in the menu (a priority's bars, FH-166).
+  mark?: ReactNode;
 }
 
 // ViewSettings are the Board's view options (VIEW-6, FH-41), kept behind
@@ -86,6 +89,7 @@ export function FilterBar({
         options={options.priorities.map((priority) => ({
           value: priority,
           label: priorityLabel(priority),
+          mark: priorityMark(priority),
         }))}
         choice={filters.priority}
         onChange={(priority) => set({ priority })}
@@ -209,7 +213,14 @@ function ChoiceMenu({
                   onChange(toggleChoice(choice, option.value, exclude)),
                 )}
               >
-                {option.label}
+                {option.mark ? (
+                  <span className="flex items-center gap-1.5">
+                    {option.mark}
+                    {option.label}
+                  </span>
+                ) : (
+                  option.label
+                )}
               </MenuItem>
             );
           })}

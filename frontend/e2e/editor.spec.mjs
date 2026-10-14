@@ -349,30 +349,39 @@ test("an agent's checkpoint during an edit saves without a conflict; the same se
   expect(merged).toContain("Checkpointed.");
   expect(merged).toMatch(/## Description\n\n[^\n]* Mine\.\n/);
 
-  // A checkpoint the page has not heard of yet when Save is pressed (its
-  // live updates are held back): the save meets it (409), sees the
-  // section unchanged there and saves again on it, without asking.
+  // A checkpoint the page has not heard of yet when Save is pressed: the
+  // save meets it (409), sees the section unchanged there and saves again
+  // on it, without asking. The checkpoint is written as the first save
+  // leaves the page, so the page cannot have heard of it (holding back
+  // /api/changes cannot promise that: a long poll already waiting still
+  // answers, FH-145).
   await openSection("FH-10", "description", "Description");
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type(" Later.");
-  const held = [];
-  await page.route("**/api/changes*", (route) => held.push(route));
+  const section = "**/api/tickets/FH-10/section";
+  const checkpointFile = await ticketFile("FH-10");
+  let written = false;
+  await page.route(section, async (route) => {
+    if (!written) {
+      written = true;
+      await writeFile(
+        checkpointFile,
+        merged.replace("Checkpointed.", "Checkpointed again."),
+      );
+    }
+    await route.continue();
+  });
   const statuses = [];
   const onSection = (response) => {
     if (response.url().endsWith("/api/tickets/FH-10/section"))
       statuses.push(response.status());
   };
   page.on("response", onSection);
-  await writeFile(
-    await ticketFile("FH-10"),
-    merged.replace("Checkpointed.", "Checkpointed again."),
-  );
   await save("FH-10").click();
   await expect(pencil("FH-10", "description")).toBeFocused();
   expect(statuses).toEqual([409, 200]);
   page.off("response", onSection);
-  await page.unroute("**/api/changes*");
-  for (const route of held) await route.continue().catch(() => undefined);
+  await page.unroute(section);
   await expect(
     page.getByRole("dialog", { name: /changed while you were editing/ }),
   ).toHaveCount(0);

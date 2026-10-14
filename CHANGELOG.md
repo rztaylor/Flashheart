@@ -35,14 +35,15 @@ All notable changes to this project are documented here. The project follows
   Needs you: the project's running agents that do not need you (working,
   waiting or quiet), subagents included; those that need you count under
   Needs you instead. A project with none
-  shows a faint zero; on a phone it reads *N live* after the tickets and
+  shows a faint dash; on a phone it reads *N live* after the tickets and
   blocked counts.
 - Compare projects at a glance on the All projects Overview (FH-153,
   `PRJ-6`). Under the pipeline, a Projects list shows every project, most
   recently active first as in the sidebar, with its key and name, its
   tickets, its count in each board column, and how many tickets are
   blocked or need repair and how many agents need you; a repair count is
-  ringed in dashes and a Needs you count sits on the attention colour.
+  ringed in dashes, a Needs you count sits on the attention colour and a
+  zero is a faint dash, so the counts that matter stand out.
   Choose a row to open that project's Overview. On a phone, or beside an
   open ticket, each project's counts stack under its name. One project's
   Overview has no list.
@@ -584,7 +585,9 @@ All notable changes to this project are documented here. The project follows
   high warm orange, medium neutral grey and low blue, in place of red,
   amber and green, so a priority has one colour code on the board. The
   priority chips show the bars and the word, without a separate colour
-  dot.
+  dot. Wherever a priority is chosen from a dropdown (the Priority
+  filter's menu, New ticket, New workstream, the Edit tab and a ticket
+  page's Priority), the bars sit before the word.
 - Blocked tickets are marked with a no-entry sign (FH-148). The small
   hollow diamond that marked a blocked ticket read as decoration at card
   size; a filled no-entry sign now marks blocked everywhere: on cards,

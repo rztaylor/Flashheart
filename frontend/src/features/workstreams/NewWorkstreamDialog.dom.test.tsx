@@ -124,6 +124,29 @@ describe("NewWorkstreamDialog", () => {
     });
   });
 
+  // The Priority select carries the card's bars before the chosen word
+  // (FH-166), following the choice.
+  it("shows the chosen priority's bars before the select", async () => {
+    const user = userEvent.setup();
+    render(
+      <NewWorkstreamDialog
+        fetcher={server(201, { slug: "x", hash: "h", revision: 1 }).fetcher}
+        projects={[flashheart]}
+        project="flashheart"
+        onCreated={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    const select = screen.getByRole("combobox", { name: "Priority" });
+    const bars = () =>
+      select.parentElement
+        ?.querySelector("[data-priority]")
+        ?.getAttribute("data-priority");
+    expect(bars()).toBe("medium");
+    await user.selectOptions(select, "high");
+    expect(bars()).toBe("high");
+  });
+
   it("shows a refusal in words and keeps the form", async () => {
     const user = userEvent.setup();
     const { fetcher } = server(404, {

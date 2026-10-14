@@ -34,7 +34,11 @@
   `saveChanges(panel)` (support.mjs) disabled, which waits past
   *Saving…*, are those answers (FH-156). To find steps that skip it, a
   local, uncommitted context route that fetches every non-GET `/api`
-  request and fulfils it 0 to 1.5 s later reproduces a slow machine.
+  request and fulfils it 0 to 1.5 s later reproduces a slow machine. A
+  step that needs the page not to have heard of an outside write writes
+  the file in a `page.route` handler for the save request itself, before
+  continuing it; holding back `/api/changes` cannot promise that, since a
+  long poll already waiting still answers (FH-164).
 - A save that fails after its item was left (FH-156, D70): the page, the
   Edit tab and the comment box in `LateSave.dom.test.tsx`, a harness
   standing for the shell over `LateSavesProvider`, with writes held until
