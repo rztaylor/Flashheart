@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ProjectsResponse } from "../api/board";
 import { defaultPreferences } from "../api/preferences";
 import { noRuns } from "../api/runs";
-import { emptyFilters } from "../model/filters";
+import { emptyFilters, type Filters } from "../model/filters";
 import type { Route, View } from "./route";
 import { type BoardDataState, staleError } from "./useBoardData";
 import { ViewOutlet } from "./ViewOutlet";
@@ -47,6 +47,7 @@ function render(
   boardData = data(),
   preferences = defaultPreferences,
   scope: Route["scope"] = { kind: "all" },
+  filters: Filters = emptyFilters,
 ) {
   return renderToStaticMarkup(
     <ViewOutlet
@@ -57,7 +58,7 @@ function render(
       root="/board"
       preferences={preferences}
       updatePreferences={vi.fn()}
-      filters={emptyFilters}
+      filters={filters}
       onFilters={vi.fn()}
       visible={[]}
       narrowColumn="in-progress"
@@ -128,6 +129,95 @@ describe("ViewOutlet", () => {
     );
     expect(html).toContain("This board could not be loaded: disk full");
     expect(html).toContain("Try again");
+  });
+});
+
+// emptyBoard is a ready board whose filters keep no card, with agents
+// needing the user that no card shows: needsYouUnticketed of them across
+// every project, inAlpha of them in the alpha project.
+function emptyBoard(needsYouUnticketed: number, inAlpha = needsYouUnticketed) {
+  const runs = { ...noRuns, needsYou: needsYouUnticketed, needsYouUnticketed };
+  return data({
+    projects: {
+      status: "ready",
+      data: { ...projectsResponse, runs },
+      reload: vi.fn(),
+    },
+    board: {
+      status: "ready",
+      data: { cards: [], doneTotal: 0, doneShown: 0 },
+      reload: vi.fn(),
+    },
+    current: {
+      name: "alpha",
+      runs: { ...noRuns, needsYouUnticketed: inAlpha },
+    },
+  } as unknown as Partial<BoardDataState>);
+}
+
+const needsYou: Filters = { ...emptyFilters, needsYou: true };
+
+// The Needs you filter with nothing a card can show (FH-157): the board
+// and table say why and where to answer, never to clear a filter.
+describe("ViewOutlet's Needs you filter with no card to show", () => {
+  it.each(["board", "table"] as const)(
+    "explains agents with no ticket on the %s",
+    (view) => {
+      const html = render(
+        view,
+        emptyBoard(1),
+        defaultPreferences,
+        undefined,
+        needsYou,
+      );
+      expect(html).toContain("1 agent needs you, not about a ticket");
+      expect(html).toContain("Answer it in the Overview");
+      expect(html).not.toContain("No tickets match these filters");
+      expect(html).not.toContain("Clear a filter");
+      // The strip above cards is for when some cards show.
+      expect(html.match(/Agents without a ticket/g)).toHaveLength(1);
+    },
+  );
+
+  it("counts a project's own agents in its scope", () => {
+    const html = render(
+      "board",
+      emptyBoard(2, 1),
+      defaultPreferences,
+      { kind: "project", project: "alpha" },
+      needsYou,
+    );
+    expect(html).toContain("1 agent needs you, not about a ticket");
+  });
+
+  it("says nothing needs you when the filter alone empties the board", () => {
+    const html = render(
+      "board",
+      emptyBoard(0),
+      defaultPreferences,
+      undefined,
+      needsYou,
+    );
+    expect(html).toContain("Nothing needs you right now");
+    expect(html).not.toContain("Clear a filter");
+  });
+
+  it("keeps the filter advice when other filters may be the reason", () => {
+    const html = render("board", emptyBoard(0), defaultPreferences, undefined, {
+      ...needsYou,
+      query: "zzz",
+    });
+    expect(html).toContain("No tickets match these filters");
+  });
+
+  it("names other filters beside agents with no ticket", () => {
+    const html = render("board", emptyBoard(1), defaultPreferences, undefined, {
+      ...needsYou,
+      query: "zzz",
+    });
+    expect(html).toContain("1 agent needs you, not about a ticket");
+    expect(html).toContain("Other filters are on too");
+    expect(html).not.toContain("No tickets match these filters");
   });
 });
 
