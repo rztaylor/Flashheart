@@ -54,7 +54,7 @@ interface TicketCardProps {
 // it. Normal is the title, one meta line of markers (type, id, blocked,
 // change requests, live run, age, review, attachments, priority) and, when
 // something needs the user, its reason on a line of its own. Detailed adds
-// the words: the blocker's reason, the run's agent and plan step, the next
+// the words: the blocker's reason, the run's state and agent, the next
 // step, an excerpt and the workstream; its meta line ends the card (FH-168),
 // so the title leads into the words and every card ends on the same row.
 // The workstream's line runs down the left edge, and Colour by tints the
@@ -375,19 +375,8 @@ function cardMarks(card: Card, now: Date) {
     live: live
       ? mark(
           "live",
-          `${agentName(live.agent)}: ${STATE_LABEL[live.state]}${
-            live.total > 0
-              ? ` · plan ${live.done} of ${live.total}${live.step ? `: ${live.step}` : ""}`
-              : ""
-          }`,
-          <>
-            <RunStateMark state={live.state} size={11} />
-            {live.total > 0 ? (
-              <span className="font-medium text-ink">
-                {live.done}/{live.total}
-              </span>
-            ) : null}
-          </>,
+          `${agentName(live.agent)}: ${STATE_LABEL[live.state]}`,
+          <RunStateMark state={live.state} size={11} />,
           live.state === "working" || live.state === "needs-you"
             ? "text-ink"
             : undefined,
@@ -513,21 +502,12 @@ function liveLabel(live: Live): string {
     live.state === "needs-you"
       ? `needs you: ${needsReason(live.reason)}`
       : STATE_LABEL[live.state].toLowerCase();
-  const plan =
-    live.total > 0
-      ? `, plan ${live.done} of ${live.total}${live.step ? `: ${live.step}` : ""}`
-      : "";
-  return `${agentName(live.agent)} ${state}${plan}`;
+  return `${agentName(live.agent)} ${state}`;
 }
 
 // RunLine is Detailed's live run in words (VIEW-8): its state, the agent
-// and the time since its last activity, then the plan step when it has a
-// plan.
+// and the time since its last activity.
 function RunLine({ live, now }: { live: Live; now: Date }) {
-  const step =
-    live.total > 0
-      ? `${live.done}/${live.total}${live.step ? ` · ${live.step}` : ""}`
-      : "";
   return (
     <span
       data-row="run"
@@ -547,11 +527,6 @@ function RunLine({ live, now }: { live: Live; now: Date }) {
           {runningTime(live.lastActivity, now)}
         </span>
       </span>
-      {step ? (
-        <span className="truncate text-ink" title={live.step}>
-          {step}
-        </span>
-      ) : null}
     </span>
   );
 }

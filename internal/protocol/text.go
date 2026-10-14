@@ -88,12 +88,12 @@ instructions.
 - New work gets a ticket first: ` + "`create_ticket`" + `, then claim it. Do not
   start untracked work, and do not start a ticket you just created for
   follow-up work unless the user asks. File another repository's
-  follow-up there, naming it in ` + "`project`" + `.
+  follow-up there, naming it in ` + "`project`" + `. If you edit files holding no
+  ticket, the hooks ask you once to claim or create one.
 
 ## While working
 
-- Keep your plan or todo list current; Flashheart's hooks mirror it for
-  the user.
+- A ticket's criteria and handoff are its plan.
 - ` + "`checkpoint`" + ` at milestones, before long operations or a compaction,
   and always before you stop after editing files: what is done, what is
   next, the files that matter, and open questions. The next session
@@ -106,16 +106,15 @@ instructions.
   caption and gives the markdown to link it from the review.
 - When you need a human decision, ` + "`ask_human`" + ` (with options when there
   are clear choices). The board
-  shows the user; the answer arrives in a later prompt, or, where
-  Flashheart's hooks are not installed, with your next flashheart tool
-  result. Carry on with other work if you can. If the user
+  shows the user; the answer arrives with a later prompt or, without
+  Flashheart's hooks, with your next flashheart tool result. Carry on with other work if you can. If the user
   replies in this chat instead, that reply is the answer: with hooks, the
   board stops showing the question; without them, ask the user to answer
   it on the board too.
 - ` + "`ask_human`" + ` also returns a ` + "`flashheart await`" + ` command. If you can run
   a background command that wakes you when it exits (in Claude Code, Bash
   with ` + "`run_in_background`" + `), run it: the answer then reaches you as soon
-  as it is given, not with the user's next prompt. If the user answers in
+  as it is given. If the user answers in
   the chat first, the command exits and says so.
 - If your turn ends with a question for the user, ask it with
   ` + "`ask_human`" + ` as well, even at the end of a status summary. A question
@@ -140,7 +139,7 @@ instructions.
 ## Writing tickets
 
 The board is how the user sees the work, so write each ticket for someone
-who has not read the code; the technical detail comes second.
+who has not read the code.
 
 - The title says what a person would notice or gain, in plain words and
   under 80 characters, with no file, function, test or type names.

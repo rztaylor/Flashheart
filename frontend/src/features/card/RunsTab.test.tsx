@@ -35,8 +35,6 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     tools: 1,
     edits: 0,
     files: [],
-    plan: [],
-    progress: { done: 0, total: 0 },
     questions: [],
     timeline: [],
     ...patch,
@@ -44,7 +42,8 @@ function run(id: string, patch: Partial<Run> = {}): Run {
 }
 
 // The Runs tab of an orchestrated run (agent-protocol §10): the session's
-// three subagents hang beneath it, each with its own state, ticket and step.
+// three subagents hang beneath it, each with its own state, ticket and
+// tool and edit counts.
 describe("RunsTab with subagents", () => {
   const runs = [
     run(session, {
@@ -63,11 +62,8 @@ describe("RunsTab with subagents", () => {
       agentType: "general-purpose",
       ticket: "AL-2",
       ticketTitle: "Board columns",
-      plan: [
-        { text: "Read the board", status: "completed" },
-        { text: "Write the tests", status: "in_progress" },
-      ],
-      progress: { done: 1, total: 2, current: "Write the tests" },
+      tools: 4,
+      edits: 2,
     }),
     run(`${session}/b3`, {
       state: "needs-you",
@@ -110,10 +106,9 @@ describe("RunsTab with subagents", () => {
     );
   });
 
-  it("names the ticket a subagent claimed and its current step", () => {
+  it("names the ticket a subagent claimed and its tool and edit counts", () => {
     expect(markup).toContain("AL-2");
-    expect(markup).toContain("Write the tests");
-    expect(markup).toContain("1/2");
+    expect(markup).toContain("4 tools, 2 edits");
   });
 
   it("says which subagent holds the session", () => {
@@ -141,35 +136,21 @@ describe("RunsTab for a subagent on its own ticket", () => {
   });
 });
 
-// Most sessions never record a plan (FH-54): the Runs tab shows plan UI
-// only for a run that has one.
+// A ticket's plan is its criteria and handoff (D51): no run shows a plan,
+// even one whose log recorded one before.
 describe("RunsTab plan", () => {
-  const render = (patch: Partial<Run>) =>
-    renderToStaticMarkup(
+  it("shows no plan section, even for a run from an older log", () => {
+    const old = {
+      plan: [{ text: "Read the board", status: "completed" }],
+      progress: { done: 1, total: 1, current: "Read the board" },
+    } as Partial<Run>;
+    const markup = renderToStaticMarkup(
       <RunsTab
-        detail={{ id: "AL-3", branch: "", runs: [run(session, patch)] }}
+        detail={{ id: "AL-3", branch: "", runs: [run(session, old)] }}
       />,
     );
-
-  it("shows no plan section for a run with no plan", () => {
-    const markup = render({});
     expect(markup).not.toMatch(/>Plan<\/h4>/);
-    expect(markup).not.toContain("No plan");
+    expect(markup).not.toContain("Read the board");
     expect(markup).toContain("Edited files");
-  });
-
-  it("shows the route and current step of a run with a plan", () => {
-    const markup = render({
-      plan: [
-        { text: "Read the board", status: "completed" },
-        { text: "Write the tests", status: "in_progress" },
-        { text: "Open the PR", status: "pending" },
-      ],
-      progress: { done: 1, total: 3, current: "Write the tests" },
-    });
-    expect(markup).toMatch(/>Plan<\/h4>/);
-    expect(markup).toContain("Done: </span>Read the board");
-    expect(markup).toContain("In progress: </span>Write the tests");
-    expect(markup).toContain("To do: </span>Open the PR");
   });
 });

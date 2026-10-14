@@ -115,7 +115,7 @@ export function agentName(agent: string): string {
 
 // mcpOnly reports a run the MCP server started for an agent without
 // Flashheart's hooks: it reports tool calls, claims and questions only,
-// never a plan, edits or permission prompts (agent-protocol §7.1).
+// never edits or permission prompts (agent-protocol §7.1).
 export function mcpOnly(run: Run): boolean {
   return Boolean(run.mcpOnly);
 }
@@ -190,8 +190,6 @@ export function describeEntry(entry: TimelineEntry): string {
       return entry.detail === "pre"
         ? "Compacting context"
         : "Context compacted";
-    case "plan.updated":
-      return entry.detail ? `Plan: ${entry.detail}` : "Plan updated";
     case "notification":
       return entry.detail === "idle"
         ? "Idle at the prompt"

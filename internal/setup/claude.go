@@ -20,7 +20,7 @@ import (
 // (agent-protocol §5.2), in the order setup registers them.
 var claudeEvents = []string{
 	"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PostToolUseFailure",
-	"PermissionRequest", "PermissionDenied", "Notification", "TaskCreated", "TaskCompleted",
+	"PermissionRequest", "PermissionDenied", "Notification",
 	"SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "Stop", "SessionEnd",
 }
 

@@ -58,7 +58,8 @@ payloads have the same fields as the CLI's. Archiving a thread sends
 `transcript_path` stops existing. The app also starts an MCP server for
 its own helper thread (the one that names a new thread), which never calls
 a tool. Asked to plan, the model asked what to
-plan instead, so whether the app offers `update_plan` is still open.
+plan instead, so whether the app offers `update_plan` is still open (moot
+since D51: plans are not recorded).
 
 ## Answers
 
