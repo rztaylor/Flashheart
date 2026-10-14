@@ -2,8 +2,9 @@
 
 The on-disk format Flashheart reads and writes. Tickets stay plain markdown
 with YAML frontmatter, readable in any editor; Flashheart owns the layout
-(decision D15). Version 1, the kanban-tracker column-folder layout, is read
-only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
+(decision D15). Version 1, the column-folder layout, is not read; its
+one-off conversion is retired (D55). Requirement ids refer to
+`docs/SPEC.md`.
 
 ## Layout
 
@@ -12,7 +13,6 @@ only by `flashheart migrate`. Requirement ids refer to `docs/SPEC.md`.
 ├── .flashheart/
 │   ├── config.yaml                       version: 2, settings, UI preferences (CFG-1, CFG-2)
 │   ├── cache/cwd.json                    cwd → project/branch cache, validated by HEAD's mtime (agent-protocol §2)
-│   ├── backup/v1-<UTC timestamp>/        the v1 tree moved aside by migrate
 │   ├── lock                              advisory root lock for choosing keys (KEY-5)
 │   ├── retired.yaml                      keys of permanently deleted projects (KEY-5)
 │   ├── hook-errors.log                   hook failures (HOOK-1), rotated at 1 MB
@@ -117,7 +117,7 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 | `status` | yes | The column, or `rejected` (shown in Done). Missing reads as `backlog` with a warning; an unknown value marks the ticket *needs repair* (shown in Backlog). |
 | `type` | yes | `feature`, `test`, `bug`, `refactor`, `infra`, `docs`, `spike`. |
 | `priority` | yes | `high`, `medium`, `low`. |
-| `created` | yes | `YYYY-MM-DD`. Orders numbering at migration and ties in sorting. |
+| `created` | yes | `YYYY-MM-DD`. Breaks ties in sorting. |
 | `branch` | no | Used for provisional run links (`RUN-5`). |
 | `pr` | no | The ticket's pull request, one line, usually its URL (FH-114, D43). Set by the agent that opens it, or edited on the board. The board links it only when it is an `http(s)` URL and never fetches it. New tickets carry it empty; a ticket without it reads as having none. |
 | `workstream` | no | Slug of a workstream in this project. |
@@ -530,7 +530,7 @@ New entries follow a blank line, in the file's line endings (CRLF when its
 first line ends so); every other byte, a byte-order mark included, is kept.
 The file is limited to 1 MiB: a comment that would pass it is refused,
 and history stops being recorded (the ticket's writes go on). Serve's own
-copies of linked files (REV-5) and `migrate` record no history.
+copies of linked files (REV-5) record no history.
 
 ## Files and the files index
 
@@ -630,8 +630,9 @@ it is refused, as unreadable settings (`serve` does not start, hooks log the
 error to `hook-errors.log` and record nothing, MCP tools fail, `doctor`
 reports a problem). A file larger than 1 MiB is refused the same way.
 
-A root without `config.yaml` is version 2 unless a project in it still has v1
-column folders (`todo/`, `in-progress/`, `ready-to-review/`, `done/`).
+A root without `config.yaml` is version 2. A `version` below 2 is
+invalid settings (format 1 is no longer read, D55), and Flashheart refuses
+to write to a root with a newer version than it understands.
 
 ## Event log
 
@@ -665,34 +666,3 @@ adds its key to `<root>/.flashheart/retired.yaml` (`keys: [AL]`), and
 removes the directory. All of it is by project name, never a path, and a
 symbolic link anywhere on the project's path is refused. A writer that was waiting for a
 project's lock while it was archived finds it gone and writes nothing.
-
-## Migration from v1
-
-`flashheart migrate` shows the plan and changes nothing; `--write` applies it
-(`MIG-1`):
-
-1. Each project gets a key: its existing `key`, a `--key <project>=<KEY>`
-   argument, or the derived default.
-2. Tickets, including archived ones, are numbered once in `created` order
-   (then by v1 slug) and written to `tickets/<id>-<slug>/<id>-<slug>.md` with `id`
-   and `status` inserted at the top of the frontmatter (v1 `todo` becomes
-   `backlog`, `ready-to-review` becomes `review`) and the `<type>--` prefix
-   dropped from the slug. Unparseable tickets are copied byte for byte and
-   stay *needs repair*.
-3. `depends-on` slugs and workstream `tickets:` lists are rewritten to ids;
-   reviews become `review.md`; attachments move to `files/`; ticket links in
-   reviews and tickets are rewritten to ids.
-4. The v1 files and folders are moved, never deleted, to
-   `.flashheart/backup/v1-<UTC timestamp>/`, and `config.yaml` records
-   `version: 2`.
-
-Every frontmatter and YAML edit keeps the file's line endings and
-byte-order mark (`STO-2`). `--write` runs under the root lock and the
-locks of the projects it converts, and stops without writing if those
-projects are no longer v1. A `project.yaml` or `config.yaml` that does
-not parse stops the plan before anything is written; a workstream file
-that does not parse is warned about and kept as written.
-
-`serve` on a v1 root shows the migration command instead of the board and
-writes nothing. Flashheart refuses to write to a root with a newer version
-than it understands.

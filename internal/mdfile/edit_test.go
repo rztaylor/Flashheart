@@ -85,28 +85,6 @@ func TestSetScalarAppendsMissingFieldAndReplacesBlockValues(t *testing.T) {
 	}
 }
 
-func TestSetScalarFirstAddsAMissingFieldAtTheTop(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]string{
-		"---\n# lead\ntype: bug\n---\n# T\n":           "---\nid: FH-1\n# lead\ntype: bug\n---\n# T\n",
-		"---\ntype: bug\nid: FH-9\n---\n# T\n":         "---\ntype: bug\nid: FH-1\n---\n# T\n",
-		"# T\n":                                        "---\nid: FH-1\n---\n# T\n",
-		"\ufeff---\r\ntype: bug\r\n---\r\n# T\r\n":     "\ufeff---\r\nid: FH-1\r\ntype: bug\r\n---\r\n# T\r\n",
-		"---\r\ncreated: 2026-10-03\r\n---\r\n# T\r\n": "---\r\nid: FH-1\r\ncreated: 2026-10-03\r\n---\r\n# T\r\n",
-		"---\ntype: bug\nid: FH-1\n---\n# T\n":         "---\ntype: bug\nid: FH-1\n---\n# T\n",
-	}
-	for input, want := range tests {
-		got, err := SetScalarFirst([]byte(input), "id", "FH-1")
-		if err != nil || string(got) != want {
-			t.Errorf("SetScalarFirst(%q) = %q, %v; want %q", input, got, err, want)
-		}
-	}
-	if _, err := SetScalarFirst([]byte("---\ntags: [oops\n---\n"), "id", "FH-1"); !errors.Is(err, ErrBrokenFrontmatter) {
-		t.Errorf("SetScalarFirst(broken) error = %v", err)
-	}
-}
-
 func TestSetFieldCreatesFrontmatterAndRefusesBrokenOne(t *testing.T) {
 	t.Parallel()
 
