@@ -1,0 +1,49 @@
+{
+  "route": "GET /api/preferences",
+  "request": "GET /api/preferences",
+  "status": 200,
+  "body": {
+    "theme": "dark",
+    "density": "compact",
+    "colourBy": "priority",
+    "hiddenColumns": [
+      "backlog"
+    ],
+    "editor": "markdown",
+    "scopes": {
+      "alpha": {
+        "view": "board",
+        "type": {
+          "include": [
+            "bug"
+          ],
+          "exclude": []
+        },
+        "priority": {
+          "include": [],
+          "exclude": [
+            "low"
+          ]
+        },
+        "workstream": {
+          "include": [
+            "board-ui"
+          ],
+          "exclude": []
+        },
+        "age": {
+          "include": [
+            "week"
+          ],
+          "exclude": []
+        },
+        "state": "blocked"
+      }
+    },
+    "expandedWorkstreams": {
+      "alpha": [
+        "board-ui"
+      ]
+    }
+  }
+}

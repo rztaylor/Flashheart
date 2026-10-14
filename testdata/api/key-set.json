@@ -1,0 +1,10 @@
+{
+  "route": "PUT /api/projects/{project}/key",
+  "request": "PUT /api/projects/gamma/key",
+  "status": 200,
+  "body": {
+    "hash": "",
+    "revision": 24,
+    "warnings": []
+  }
+}

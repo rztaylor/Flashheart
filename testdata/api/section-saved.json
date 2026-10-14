@@ -1,0 +1,10 @@
+{
+  "route": "PUT /api/tickets/{id}/section",
+  "request": "PUT /api/tickets/AL-4/section",
+  "status": 200,
+  "body": {
+    "hash": "hash-14",
+    "revision": 13,
+    "warnings": []
+  }
+}

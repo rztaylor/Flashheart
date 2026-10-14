@@ -1,0 +1,10 @@
+{
+  "route": "POST /api/tickets/{id}/criteria",
+  "request": "POST /api/tickets/AL-3/criteria",
+  "status": 200,
+  "body": {
+    "hash": "hash-16",
+    "revision": 15,
+    "warnings": []
+  }
+}

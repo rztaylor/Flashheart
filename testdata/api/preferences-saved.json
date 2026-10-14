@@ -1,0 +1,6 @@
+{
+  "route": "PUT /api/preferences",
+  "request": "PUT /api/preferences",
+  "status": 204,
+  "body": null
+}

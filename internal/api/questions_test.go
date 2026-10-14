@@ -68,7 +68,7 @@ func TestQuestionsAreShownOnRunsCardsAndTickets(t *testing.T) {
 			t.Fatalf("AL-1 card = %+v", card)
 		}
 		// AL-3's session waits on a permission prompt, which it names first.
-		if card.ID == "AL-3" && (card.Live == nil || card.Live.Reason != runs.Reason{Kind: runs.ReasonPermission, Permission: "Bash"}) {
+		if card.ID == "AL-3" && (card.Live == nil || card.Live.Reason != reasonJSON(runs.Reason{Kind: runs.ReasonPermission, Permission: "Bash"})) {
 			t.Fatalf("AL-3 live = %+v", card.Live)
 		}
 	}
@@ -213,7 +213,7 @@ func TestASubagentsQuestionNeedsYouWhileItsSessionIsLive(t *testing.T) {
 	now := time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC)
 
 	type agreement struct {
-		reason    runs.Reason
+		reason    NeedsReasonJSON
 		cardCount int
 		overview  int
 	}
@@ -242,7 +242,7 @@ func TestASubagentsQuestionNeedsYouWhileItsSessionIsLive(t *testing.T) {
 	}
 
 	live := observe(runsAPI(t, now, lines...))
-	want := agreement{reason: runs.Reason{Kind: runs.ReasonQuestion, Question: "decision", WaitingOn: child, AgentType: "Explore"}, cardCount: 1, overview: 1}
+	want := agreement{reason: reasonJSON(runs.Reason{Kind: runs.ReasonQuestion, Question: "decision", WaitingOn: child, AgentType: "Explore"}), cardCount: 1, overview: 1}
 	if live != want {
 		t.Fatalf("with the session live: %+v, want %+v", live, want)
 	}

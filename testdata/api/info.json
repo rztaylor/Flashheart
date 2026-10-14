@@ -1,0 +1,15 @@
+{
+  "route": "/api/info",
+  "request": "GET /api/info",
+  "status": 200,
+  "body": {
+    "name": "Flashheart",
+    "version": "1.2.3",
+    "commit": "abc1234",
+    "buildDate": "2026-10-04",
+    "protocolVersion": 2,
+    "root": "/board",
+    "theme": "system",
+    "answers": true
+  }
+}

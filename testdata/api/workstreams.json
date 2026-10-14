@@ -1,0 +1,119 @@
+{
+  "route": "/api/projects/{project}/workstreams",
+  "request": "GET /api/projects/alpha/workstreams",
+  "status": 200,
+  "body": {
+    "revision": 1,
+    "workstreams": [
+      {
+        "slug": "board-ui",
+        "title": "Board UI",
+        "status": "active",
+        "suspended": false,
+        "declaredStatus": "active",
+        "priority": "high",
+        "created": "2026-10-01",
+        "done": 2,
+        "total": 4,
+        "next": "AL-3",
+        "blockedBy": [],
+        "dependsOnWorkstreams": [],
+        "tags": [
+          "ui"
+        ],
+        "needsRepair": [],
+        "warnings": [],
+        "tickets": [
+          {
+            "id": "AL-2",
+            "title": "Board columns",
+            "column": "review",
+            "rejected": false,
+            "blocked": false,
+            "held": false,
+            "missing": false,
+            "dependsOn": [],
+            "outside": []
+          },
+          {
+            "id": "AL-3",
+            "title": "Card panel",
+            "column": "in-progress",
+            "rejected": false,
+            "blocked": false,
+            "held": false,
+            "missing": false,
+            "dependsOn": [],
+            "outside": []
+          },
+          {
+            "id": "AL-4",
+            "title": "Drag and drop",
+            "column": "up-next",
+            "rejected": false,
+            "blocked": true,
+            "held": false,
+            "missing": false,
+            "dependsOn": [
+              "AL-3"
+            ],
+            "outside": []
+          },
+          {
+            "id": "AL-8",
+            "title": "AL-8",
+            "column": "archived",
+            "rejected": false,
+            "blocked": false,
+            "held": false,
+            "missing": false,
+            "dependsOn": [],
+            "outside": []
+          }
+        ]
+      },
+      {
+        "slug": "offline",
+        "title": "Offline",
+        "status": "blocked",
+        "suspended": true,
+        "declaredStatus": "active",
+        "priority": "low",
+        "created": "2026-10-02",
+        "done": 0,
+        "total": 1,
+        "next": "AL-6",
+        "blockedBy": [
+          {
+            "kind": "workstream",
+            "text": "Depends on workstream board-ui, which has 2 tickets not yet in review or done",
+            "workstream": "board-ui",
+            "pending": 2,
+            "missing": false
+          }
+        ],
+        "dependsOnWorkstreams": [
+          "board-ui"
+        ],
+        "tags": [],
+        "needsRepair": [],
+        "warnings": [],
+        "tickets": [
+          {
+            "id": "AL-6",
+            "title": "Offline mode",
+            "column": "backlog",
+            "rejected": false,
+            "blocked": true,
+            "held": true,
+            "missing": false,
+            "dependsOn": [],
+            "outside": [
+              "feat--does-not-exist"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

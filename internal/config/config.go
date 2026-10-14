@@ -55,6 +55,17 @@ var (
 	workstreamSlug = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,99}$`)
 )
 
+// Choices lists the values each UI setting accepts, by its name in the
+// API's preferences (CFG-2), so the frontend's copies can be checked
+// against them (FH-97). The lists are copies.
+func Choices() map[string][]string {
+	return map[string][]string{
+		"theme": slices.Clone(themes), "density": slices.Clone(densities), "colourBy": slices.Clone(colourBys),
+		"editor": slices.Clone(editors), "hiddenColumns": slices.Clone(hiddenColumns),
+		"view": slices.Clone(views), "state": slices.Clone(states), "age": slices.Clone(ages),
+	}
+}
+
 // Config is the global configuration (CFG-1, CFG-2).
 type Config struct {
 	Version            int  `yaml:"version"`

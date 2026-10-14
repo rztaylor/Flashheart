@@ -455,6 +455,10 @@ function comment(overrides: Partial<Comment> = {}): Comment {
     quoteFrom: "",
     quote: "",
     body: "Not in Done.",
+    sentTo: "",
+    sentToShort: "",
+    delivery: "",
+    delivered: "",
     ...overrides,
   };
 }

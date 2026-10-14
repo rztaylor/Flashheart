@@ -1,0 +1,10 @@
+{
+  "route": "PUT /api/projects/{project}/workstreams/{slug}/order",
+  "request": "PUT /api/projects/alpha/workstreams/board-ui/order",
+  "status": 200,
+  "body": {
+    "hash": "hash-20",
+    "revision": 22,
+    "warnings": []
+  }
+}

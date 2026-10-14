@@ -1,0 +1,22 @@
+{
+  "route": "GET /api/archived-projects/{project}",
+  "request": "GET /api/archived-projects/beta",
+  "status": 200,
+  "body": {
+    "name": "beta",
+    "displayName": "beta",
+    "key": "BE",
+    "tickets": 1,
+    "references": [
+      {
+        "project": "alpha",
+        "id": "AL-1",
+        "title": "Project skeleton",
+        "dependsOn": [
+          "BE-1"
+        ]
+      }
+    ],
+    "token": "hash-35"
+  }
+}

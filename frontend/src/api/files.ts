@@ -14,13 +14,18 @@ export interface Uploaded {
   reused: boolean;
 }
 
-function isUploaded(value: unknown): value is Uploaded {
+// isUploaded checks the upload response (api.UploadResponse), which also
+// carries the board revision that lists the file.
+export function isUploaded(
+  value: unknown,
+): value is Uploaded & { revision: number } {
   return (
     isRecord(value) &&
     typeof value.file === "string" &&
     typeof value.kind === "string" &&
     typeof value.image === "boolean" &&
-    typeof value.reused === "boolean"
+    typeof value.reused === "boolean" &&
+    typeof value.revision === "number"
   );
 }
 

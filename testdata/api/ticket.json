@@ -1,0 +1,366 @@
+{
+  "route": "/api/tickets/{id}",
+  "request": "GET /api/tickets/AL-3",
+  "status": 200,
+  "body": {
+    "revision": 25,
+    "ticket": {
+      "project": "alpha",
+      "id": "AL-3",
+      "slug": "card-panel",
+      "column": "in-progress",
+      "rejected": false,
+      "title": "Card panel",
+      "type": "feature",
+      "priority": "high",
+      "workstream": "board-ui",
+      "tags": [
+        "ui",
+        "markdown"
+      ],
+      "created": "2026-10-02",
+      "updated": "2026-10-04T13:30:00Z",
+      "modified": "2026-10-04T12:00:00Z",
+      "branch": "feature/card-panel",
+      "pr": "",
+      "dependsOn": [],
+      "criteria": {
+        "done": 2,
+        "total": 2
+      },
+      "excerpt": "Fixture ticket.",
+      "handoffNext": "Review tab",
+      "attachments": 1,
+      "hasReview": false,
+      "blocked": false,
+      "blockedBy": [],
+      "needsRepair": [],
+      "warnings": [],
+      "searchText": "\n# Card panel\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [x] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\n- 2026-10-04 · Question from claude:3f2a9c1e — \"Keep the old panel?\" Answer (Robert): \"Yes\".\n\n## Handoff\n\n_Updated 2026-10-04 13:20 UTC by claude:3f2a9c1e (run) on feature/card-panel._\n\n**Done**\n- Ticket tab renders markdown\n**Next**\n- Review tab\n**Files**\n- frontend/src/features/card/CardPanel.tsx\n**Open questions**\n- None\n",
+      "live": {
+        "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+        "short": "claude:3f2a9c1e",
+        "agent": "claude",
+        "state": "needs-you",
+        "reason": {
+          "kind": "permission",
+          "permission": "Bash",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
+        "lastActivity": "2026-10-04T13:30:00Z"
+      },
+      "needsYou": true,
+      "agentWorking": false,
+      "openQuestions": 1,
+      "changeRequests": {
+        "open": 0,
+        "addressed": 0
+      },
+      "sessions": {
+        "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+        "short": "claude:3f2a9c1e",
+        "agent": "claude",
+        "state": "needs-you",
+        "lastActivity": "2026-10-04T13:30:00Z",
+        "noLiveSession": false,
+        "dirty": true,
+        "noHandoff": false,
+        "subagents": {
+          "done": 1,
+          "running": 0,
+          "needsYou": 0
+        }
+      },
+      "body": "\n# Card panel\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [x] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\n- 2026-10-04 · Question from claude:3f2a9c1e — \"Keep the old panel?\" Answer (Robert): \"Yes\".\n\n## Handoff\n\n_Updated 2026-10-04 13:20 UTC by claude:3f2a9c1e (run) on feature/card-panel._\n\n**Done**\n- Ticket tab renders markdown\n**Next**\n- Review tab\n**Files**\n- frontend/src/features/card/CardPanel.tsx\n**Open questions**\n- None\n",
+      "frontmatter": "id: AL-3\nstatus: in-progress\ntype: feature\nproject: alpha\ncreated: 2026-10-02\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: feature/card-panel\nworkstream: board-ui\ndepends-on: []\ndepends-on-workstreams: []\ntags: [ui, markdown]\nupdated: 2026-10-04T13:30:00Z\n",
+      "session": "fixture",
+      "gitRef": "0000000",
+      "dependsOnWorkstreams": [],
+      "criteriaItems": [
+        {
+          "text": "First criterion",
+          "done": true
+        },
+        {
+          "text": "Second criterion",
+          "done": true
+        }
+      ],
+      "handoff": {
+        "markdown": "_Updated 2026-10-04 13:20 UTC by claude:3f2a9c1e (run) on feature/card-panel._\n\n**Done**\n- Ticket tab renders markdown\n**Next**\n- Review tab\n**Files**\n- frontend/src/features/card/CardPanel.tsx\n**Open questions**\n- None",
+        "next": [
+          "Review tab"
+        ]
+      },
+      "review": null,
+      "attachmentFiles": [
+        {
+          "file": "20261004T1330-panel.png",
+          "caption": "panel.png",
+          "kind": "screenshot",
+          "run": "Robert",
+          "added": "2026-10-04T13:30:00Z",
+          "url": "/api/projects/alpha/tickets/AL-3/files/20261004T1330-panel.png"
+        }
+      ],
+      "hash": "hash-22",
+      "raw": "---\nid: AL-3\nstatus: in-progress\ntype: feature\nproject: alpha\ncreated: 2026-10-02\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: feature/card-panel\nworkstream: board-ui\ndepends-on: []\ndepends-on-workstreams: []\ntags: [ui, markdown]\nupdated: 2026-10-04T13:30:00Z\n---\n\n# Card panel\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [x] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\n- 2026-10-04 · Question from claude:3f2a9c1e — \"Keep the old panel?\" Answer (Robert): \"Yes\".\n\n## Handoff\n\n_Updated 2026-10-04 13:20 UTC by claude:3f2a9c1e (run) on feature/card-panel._\n\n**Done**\n- Ticket tab renders markdown\n**Next**\n- Review tab\n**Files**\n- frontend/src/features/card/CardPanel.tsx\n**Open questions**\n- None\n",
+      "runs": [
+        {
+          "id": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "short": "claude:3f2a9c1e",
+          "agent": "claude",
+          "kind": "session",
+          "parent": "",
+          "children": [
+            "claude:3f2a9c1e-0000-0000-0000-000000000000/a1"
+          ],
+          "project": "alpha",
+          "cwd": "/Users/example/src/alpha",
+          "branch": "feature/card-panel",
+          "worktree": "/Users/example/src/alpha",
+          "source": "startup",
+          "agentType": "",
+          "state": "needs-you",
+          "ticket": "AL-3",
+          "ticketTitle": "Card panel",
+          "linkedBy": "claim",
+          "dirty": true,
+          "noHandoff": false,
+          "permission": "Bash",
+          "reason": {
+            "kind": "permission",
+            "permission": "Bash",
+            "question": "",
+            "answered": false,
+            "waitingOn": "",
+            "agentType": "",
+            "mcpOnly": false
+          },
+          "started": "2026-10-04T13:00:00Z",
+          "lastActivity": "2026-10-04T13:30:00Z",
+          "ended": "",
+          "endReason": "",
+          "tools": 2,
+          "edits": 1,
+          "files": [
+            "frontend/src/features/card/ReviewTab.tsx",
+            "frontend/src/features/card/CardPanel.tsx"
+          ],
+          "questions": [
+            {
+              "id": "q-1",
+              "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+              "ticket": "AL-3",
+              "kind": "decision",
+              "text": "Keep the old panel?",
+              "options": [
+                "Yes",
+                "No"
+              ],
+              "asked": "2026-10-04T13:28:00Z",
+              "answer": "Yes",
+              "answeredBy": "Robert",
+              "answeredAt": "2026-10-04T13:30:00Z",
+              "runShort": "claude:3f2a9c1e"
+            }
+          ],
+          "timeline": [
+            {
+              "time": "2026-10-04T13:00:00Z",
+              "kind": "run.start",
+              "detail": "startup"
+            },
+            {
+              "time": "2026-10-04T13:00:05Z",
+              "kind": "turn.start"
+            },
+            {
+              "time": "2026-10-04T13:00:20Z",
+              "kind": "claim",
+              "ticket": "AL-3"
+            },
+            {
+              "time": "2026-10-04T13:05:00Z",
+              "kind": "tool.used",
+              "tool": "Edit",
+              "path": "frontend/src/features/card/CardPanel.tsx"
+            },
+            {
+              "time": "2026-10-04T13:20:00Z",
+              "kind": "checkpoint",
+              "ticket": "AL-3"
+            },
+            {
+              "time": "2026-10-04T13:25:00Z",
+              "kind": "tool.used",
+              "tool": "Write",
+              "path": "frontend/src/features/card/ReviewTab.tsx"
+            },
+            {
+              "time": "2026-10-04T13:26:00Z",
+              "kind": "permission.requested",
+              "tool": "Bash"
+            },
+            {
+              "time": "2026-10-04T13:28:00Z",
+              "kind": "question.asked",
+              "detail": "decision",
+              "ticket": "AL-3"
+            },
+            {
+              "time": "2026-10-04T13:30:00Z",
+              "kind": "question.answered",
+              "ticket": "AL-3"
+            }
+          ],
+          "mcpOnly": false
+        },
+        {
+          "id": "claude:3f2a9c1e-0000-0000-0000-000000000000/a1",
+          "short": "claude:3f2a9c1e",
+          "agent": "claude",
+          "kind": "subagent",
+          "parent": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "children": [],
+          "project": "alpha",
+          "cwd": "",
+          "branch": "",
+          "worktree": "",
+          "source": "",
+          "agentType": "Explore",
+          "state": "ended",
+          "ticket": "AL-3",
+          "ticketTitle": "Card panel",
+          "linkedBy": "claim",
+          "dirty": false,
+          "noHandoff": false,
+          "permission": "",
+          "reason": {
+            "kind": "",
+            "permission": "",
+            "question": "",
+            "answered": false,
+            "waitingOn": "",
+            "agentType": "",
+            "mcpOnly": false
+          },
+          "started": "2026-10-04T13:06:00Z",
+          "lastActivity": "2026-10-04T13:08:00Z",
+          "ended": "2026-10-04T13:08:00Z",
+          "endReason": "completed",
+          "tools": 0,
+          "edits": 0,
+          "files": [],
+          "questions": [],
+          "timeline": [
+            {
+              "time": "2026-10-04T13:06:00Z",
+              "kind": "run.start",
+              "detail": "Explore"
+            },
+            {
+              "time": "2026-10-04T13:08:00Z",
+              "kind": "run.end",
+              "detail": "completed"
+            }
+          ],
+          "mcpOnly": false
+        }
+      ],
+      "questions": [
+        {
+          "id": "q-1",
+          "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "ticket": "AL-3",
+          "kind": "decision",
+          "text": "Keep the old panel?",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "asked": "2026-10-04T13:28:00Z",
+          "answer": "Yes",
+          "answeredBy": "Robert",
+          "answeredAt": "2026-10-04T13:30:00Z",
+          "runShort": "claude:3f2a9c1e"
+        }
+      ],
+      "comments": [
+        {
+          "id": "entry-04",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "state": "open",
+          "edited": "",
+          "sentTo": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "sentToShort": "claude:3f2a9c1e",
+          "delivery": "waiting",
+          "delivered": "",
+          "quoteFrom": "",
+          "quote": "",
+          "body": "Use the shared panel."
+        }
+      ],
+      "history": [
+        {
+          "id": "entry-23",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "deleted",
+              "from": "",
+              "to": "",
+              "fields": [],
+              "criteria": [],
+              "steps": [],
+              "comments": [
+                "entry-10"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "entry-24",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "ticked",
+              "from": "",
+              "to": "",
+              "fields": [],
+              "criteria": [
+                2
+              ],
+              "steps": [],
+              "comments": []
+            }
+          ]
+        }
+      ],
+      "activityHash": "hash-25",
+      "tellSessions": [
+        {
+          "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "short": "claude:3f2a9c1e",
+          "agent": "claude",
+          "state": "needs-you",
+          "parent": "",
+          "agentType": ""
+        }
+      ]
+    }
+  }
+}

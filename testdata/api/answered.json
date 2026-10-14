@@ -1,0 +1,10 @@
+{
+  "route": "POST /api/questions/{id}/answer",
+  "request": "POST /api/questions/q-1/answer",
+  "status": 200,
+  "body": {
+    "hash": "",
+    "revision": 25,
+    "warnings": []
+  }
+}

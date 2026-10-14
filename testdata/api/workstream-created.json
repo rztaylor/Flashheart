@@ -1,0 +1,10 @@
+{
+  "route": "POST /api/projects/{project}/workstreams",
+  "request": "POST /api/projects/alpha/workstreams",
+  "status": 201,
+  "body": {
+    "slug": "sync",
+    "hash": "hash-19",
+    "revision": 21
+  }
+}

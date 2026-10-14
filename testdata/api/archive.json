@@ -1,0 +1,22 @@
+{
+  "route": "GET /api/projects/{project}/archive",
+  "request": "GET /api/projects/alpha/archive",
+  "status": 200,
+  "body": {
+    "revision": 25,
+    "tickets": [
+      {
+        "id": "AL-8",
+        "title": "Old idea",
+        "type": "spike",
+        "priority": "low",
+        "workstream": "",
+        "column": "done",
+        "rejected": false,
+        "archived": "",
+        "attachments": 0,
+        "hasReview": false
+      }
+    ]
+  }
+}

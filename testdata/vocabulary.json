@@ -1,0 +1,124 @@
+{
+  "ticketTypes": [
+    "feature",
+    "test",
+    "bug",
+    "refactor",
+    "infra",
+    "docs",
+    "spike"
+  ],
+  "priorities": [
+    "high",
+    "medium",
+    "low"
+  ],
+  "columns": [
+    "backlog",
+    "up-next",
+    "in-progress",
+    "review",
+    "done"
+  ],
+  "runStates": [
+    "needs-you",
+    "working",
+    "quiet",
+    "waiting",
+    "ended"
+  ],
+  "questionKinds": [
+    "question",
+    "decision",
+    "review",
+    "blocked"
+  ],
+  "preferences": {
+    "age": [
+      "today",
+      "week",
+      "older"
+    ],
+    "colourBy": [
+      "type",
+      "priority",
+      "age",
+      "none"
+    ],
+    "density": [
+      "compact",
+      "normal",
+      "detailed"
+    ],
+    "editor": [
+      "formatted",
+      "markdown"
+    ],
+    "hiddenColumns": [
+      "backlog"
+    ],
+    "state": [
+      "",
+      "all",
+      "blocked",
+      "unblocked",
+      "repair",
+      "working",
+      "rejected"
+    ],
+    "theme": [
+      "system",
+      "light",
+      "dark"
+    ],
+    "view": [
+      "",
+      "board",
+      "overview",
+      "workstreams",
+      "table"
+    ]
+  },
+  "ticketIds": {
+    "1H-1": false,
+    "A1-7": true,
+    "AB-100": true,
+    "ABCDEFGHIJ-3": true,
+    "ABCDEFGHIJK-3": false,
+    "F-1": false,
+    "FH--1": false,
+    "FH-0": false,
+    "FH-01": false,
+    "FH-1": true,
+    "FH-1x": false,
+    "FH-42": true,
+    "FH1": false,
+    "fh-1": false
+  },
+  "errorCodes": [
+    "already_answered",
+    "answered_in_session",
+    "board_unavailable",
+    "board_unreadable",
+    "busy",
+    "config_unreadable",
+    "confirm_blocked",
+    "conflict",
+    "delivered",
+    "exists",
+    "invalid_input",
+    "key_fixed",
+    "key_taken",
+    "method_not_allowed",
+    "needs_repair",
+    "not_found",
+    "not_in_review",
+    "not_live",
+    "open_request",
+    "read_only",
+    "too_large",
+    "type_not_allowed",
+    "unreadable",
+    "write_failed"
+  ]
+}

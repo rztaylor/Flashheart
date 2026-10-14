@@ -1,0 +1,11 @@
+{
+  "route": "POST /api/projects/{project}/tickets",
+  "request": "POST /api/projects/alpha/tickets",
+  "status": 201,
+  "body": {
+    "id": "AL-9",
+    "hash": "hash-18",
+    "key": "",
+    "revision": 20
+  }
+}

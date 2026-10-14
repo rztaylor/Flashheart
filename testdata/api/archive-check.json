@@ -1,0 +1,20 @@
+{
+  "route": "GET /api/projects/{project}/archive-check",
+  "request": "GET /api/projects/beta/archive-check",
+  "status": 200,
+  "body": {
+    "name": "beta",
+    "displayName": "beta",
+    "tickets": 1,
+    "counts": {
+      "backlog": 1,
+      "done": 0,
+      "in-progress": 0,
+      "review": 0,
+      "up-next": 0
+    },
+    "liveRuns": 0,
+    "claimed": 0,
+    "openQuestions": 0
+  }
+}

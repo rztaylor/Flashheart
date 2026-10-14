@@ -1,0 +1,10 @@
+{
+  "route": "PATCH /api/tickets/{id}",
+  "request": "PATCH /api/tickets/AL-4",
+  "status": 200,
+  "body": {
+    "hash": "hash-13",
+    "revision": 12,
+    "warnings": []
+  }
+}

@@ -43,12 +43,31 @@ func countsJSON(c index.RunCounts) RunCountsJSON {
 // LiveJSON is a card's live badge (VIEW-8): the linked run that most needs
 // attention, with why it needs you (the reason its Runs tab words too).
 type LiveJSON struct {
-	Run          string      `json:"run"`
-	Short        string      `json:"short"`
-	Agent        string      `json:"agent"`
-	State        string      `json:"state"`
-	Reason       runs.Reason `json:"reason"`
-	LastActivity string      `json:"lastActivity"`
+	Run          string          `json:"run"`
+	Short        string          `json:"short"`
+	Agent        string          `json:"agent"`
+	State        string          `json:"state"`
+	Reason       NeedsReasonJSON `json:"reason"`
+	LastActivity string          `json:"lastActivity"`
+}
+
+// NeedsReasonJSON is why a run needs you (runs.Reason, D39): typed, for
+// the frontend to word. Kind is "" when nothing needs you.
+type NeedsReasonJSON struct {
+	Kind       string `json:"kind"`
+	Permission string `json:"permission"`
+	Question   string `json:"question"`
+	Answered   bool   `json:"answered"`
+	WaitingOn  string `json:"waitingOn"`
+	AgentType  string `json:"agentType"`
+	MCPOnly    bool   `json:"mcpOnly"`
+}
+
+func reasonJSON(reason runs.Reason) NeedsReasonJSON {
+	return NeedsReasonJSON{
+		Kind: reason.Kind, Permission: reason.Permission, Question: reason.Question, Answered: reason.Answered,
+		WaitingOn: reason.WaitingOn, AgentType: reason.AgentType, MCPOnly: reason.MCPOnly,
+	}
 }
 
 // SessionsJSON summarises the sessions working for a ticket (RUN-9): the
@@ -97,54 +116,102 @@ func sessionsJSON(snapshot *index.Snapshot, ticket board.Ticket) *SessionsJSON {
 // RunJSON is one run (RUN-2). Timeline is sent only for a single run or a
 // ticket's runs.
 type RunJSON struct {
-	ID           string         `json:"id"`
-	Short        string         `json:"short"`
-	Agent        string         `json:"agent"`
-	Kind         string         `json:"kind"`
-	Parent       string         `json:"parent"`
-	Children     []string       `json:"children"`
-	Project      string         `json:"project"`
-	Cwd          string         `json:"cwd"`
-	Branch       string         `json:"branch"`
-	Worktree     string         `json:"worktree"`
-	Source       string         `json:"source"`
-	AgentType    string         `json:"agentType"`
-	State        string         `json:"state"`
-	Ticket       string         `json:"ticket"`
-	TicketTitle  string         `json:"ticketTitle"`
-	LinkedBy     string         `json:"linkedBy"`
-	Dirty        bool           `json:"dirty"`
-	NoHandoff    bool           `json:"noHandoff"`
-	Permission   string         `json:"permission"`
-	Reason       runs.Reason    `json:"reason"`
-	Started      string         `json:"started"`
-	LastActivity string         `json:"lastActivity"`
-	Ended        string         `json:"ended"`
-	EndReason    string         `json:"endReason"`
-	Tools        int            `json:"tools"`
-	Edits        int            `json:"edits"`
-	Files        []string       `json:"files"`
-	Questions    []QuestionJSON `json:"questions"`
-	Timeline     []runs.Entry   `json:"timeline,omitempty"`
+	ID           string          `json:"id"`
+	Short        string          `json:"short"`
+	Agent        string          `json:"agent"`
+	Kind         string          `json:"kind"`
+	Parent       string          `json:"parent"`
+	Children     []string        `json:"children"`
+	Project      string          `json:"project"`
+	Cwd          string          `json:"cwd"`
+	Branch       string          `json:"branch"`
+	Worktree     string          `json:"worktree"`
+	Source       string          `json:"source"`
+	AgentType    string          `json:"agentType"`
+	State        string          `json:"state"`
+	Ticket       string          `json:"ticket"`
+	TicketTitle  string          `json:"ticketTitle"`
+	LinkedBy     string          `json:"linkedBy"`
+	Dirty        bool            `json:"dirty"`
+	NoHandoff    bool            `json:"noHandoff"`
+	Permission   string          `json:"permission"`
+	Reason       NeedsReasonJSON `json:"reason"`
+	Started      string          `json:"started"`
+	LastActivity string          `json:"lastActivity"`
+	Ended        string          `json:"ended"`
+	EndReason    string          `json:"endReason"`
+	Tools        int             `json:"tools"`
+	Edits        int             `json:"edits"`
+	Files        []string        `json:"files"`
+	Questions    []QuestionJSON  `json:"questions"`
+	Timeline     []EntryJSON     `json:"timeline,omitempty"`
 	// MCPOnly marks a run the MCP server started that no hook reports
 	// (runs.Run.MCPOnly): the board calls it "MCP only".
 	MCPOnly bool `json:"mcpOnly"`
 }
 
-// QuestionJSON is a question with its asking run's short id, as people see
-// it (agent-protocol §2).
-type QuestionJSON struct {
-	runs.Question
-	RunShort string `json:"runShort"`
+// EntryJSON is one entry of a run's timeline (runs.Entry).
+type EntryJSON struct {
+	Time     string `json:"time"`
+	Kind     string `json:"kind"`
+	Tool     string `json:"tool,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Failed   bool   `json:"failed,omitempty"`
+	Tools    int    `json:"tools,omitempty"`
+	Failures int    `json:"failures,omitempty"`
+	Detail   string `json:"detail,omitempty"`
+	Ticket   string `json:"ticket,omitempty"`
+	Branch   string `json:"branch,omitempty"`
 }
 
-// questionsJSON adds each question's run short id. Whether a question's
+func timelineJSON(list []runs.Entry) []EntryJSON {
+	out := make([]EntryJSON, len(list))
+	for index, entry := range list {
+		out[index] = EntryJSON{
+			Time: timestamp(entry.Time), Kind: string(entry.Kind), Tool: entry.Tool, Path: entry.Path, Failed: entry.Failed,
+			Tools: entry.Tools, Failures: entry.Failures, Detail: entry.Detail, Ticket: entry.Ticket, Branch: entry.Branch,
+		}
+	}
+	return out
+}
+
+// QuestionJSON is an agent's question (runs.Question, RUN-8) with its
+// asking run's short id, as people see it (agent-protocol §2). Answer,
+// AnsweredBy and AnsweredAt are set once it is answered on the board,
+// Delivered once the run was told; AnsweredInSession when the user
+// answered in the session's own chat; SessionEnded when the session it
+// waits on has ended, so it does not need you (VIEW-2); MCPOnly when the
+// asking run reports through the MCP server alone.
+type QuestionJSON struct {
+	ID                string   `json:"id"`
+	Run               string   `json:"run"`
+	Ticket            string   `json:"ticket,omitempty"`
+	Kind              string   `json:"kind"`
+	Text              string   `json:"text"`
+	Options           []string `json:"options,omitempty"`
+	Asked             string   `json:"asked"`
+	Answer            string   `json:"answer,omitempty"`
+	AnsweredBy        string   `json:"answeredBy,omitempty"`
+	AnsweredAt        string   `json:"answeredAt,omitempty"`
+	Delivered         bool     `json:"delivered,omitempty"`
+	AnsweredInSession bool     `json:"answeredInSession,omitempty"`
+	SessionEnded      bool     `json:"sessionEnded,omitempty"`
+	MCPOnly           bool     `json:"mcpOnly,omitempty"`
+	RunShort          string   `json:"runShort"`
+}
+
+// questionsJSON maps questions to the API's shape. Whether a question's
 // session has ended is the run view's SessionEnded (RUN-8), so the card,
 // the ticket and the runs the Overview reads agree (FH-112).
 func questionsJSON(list []runs.Question) []QuestionJSON {
 	out := make([]QuestionJSON, len(list))
 	for index, q := range list {
-		out[index] = QuestionJSON{Question: q, RunShort: protocol.ShortRun(q.Run)}
+		out[index] = QuestionJSON{
+			ID: q.ID, Run: q.Run, Ticket: q.Ticket, Kind: q.Kind, Text: q.Text, Options: q.Options, Asked: timestamp(q.Asked),
+			Answer: q.Answer, AnsweredBy: q.AnsweredBy, AnsweredAt: timestamp(q.AnsweredAt), Delivered: q.Delivered,
+			AnsweredInSession: q.AnsweredInSession, SessionEnded: q.SessionEnded, MCPOnly: q.MCPOnly,
+			RunShort: protocol.ShortRun(q.Run),
+		}
 	}
 	return out
 }
@@ -174,7 +241,7 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 		ID: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, Kind: v.Kind, Parent: v.Parent,
 		Children: nonNil(v.Children), Project: v.Project, Cwd: v.Cwd, Branch: v.Branch, Worktree: v.Worktree,
 		Source: v.Source, AgentType: v.AgentType, State: string(v.State), MCPOnly: v.MCPOnly,
-		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission, Reason: v.Reason,
+		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission, Reason: reasonJSON(v.Reason),
 		Started: timestamp(v.Started), LastActivity: timestamp(v.LastActivity), Ended: timestamp(v.EndedAt), EndReason: v.EndReason,
 		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files),
 		Questions: questionsJSON(v.Questions),
@@ -185,7 +252,7 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 		}
 	}
 	if timeline {
-		result.Timeline = nonNil(v.Timeline)
+		result.Timeline = timelineJSON(v.Timeline)
 	}
 	return result
 }
@@ -253,7 +320,7 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 	}
 	card.Live = &LiveJSON{
 		Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(v.State),
-		Reason: v.Reason, LastActivity: timestamp(v.LastActivity),
+		Reason: reasonJSON(v.Reason), LastActivity: timestamp(v.LastActivity),
 	}
 	card.NeedsYou = card.NeedsYou || v.State == runs.NeedsYou
 	card.AgentWorking = v.State == runs.Working || v.State == runs.Quiet

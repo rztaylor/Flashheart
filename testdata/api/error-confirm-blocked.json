@@ -1,0 +1,14 @@
+{
+  "route": "POST /api/tickets/{id}/move",
+  "request": "POST /api/tickets/AL-5/move",
+  "status": 409,
+  "body": {
+    "error": {
+      "code": "confirm_blocked",
+      "message": "This ticket is blocked. Give a reason to start it anyway.",
+      "blockedBy": [
+        "Depends on AL-4, which is in Backlog"
+      ]
+    }
+  }
+}

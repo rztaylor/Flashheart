@@ -1,0 +1,146 @@
+{
+  "route": "/api/tickets/{id}",
+  "request": "GET /api/tickets/AL-4",
+  "status": 200,
+  "body": {
+    "revision": 25,
+    "ticket": {
+      "project": "alpha",
+      "id": "AL-4",
+      "slug": "drag-and-drop",
+      "column": "backlog",
+      "rejected": false,
+      "title": "Drag and drop",
+      "type": "feature",
+      "priority": "high",
+      "workstream": "board-ui",
+      "tags": [
+        "ui"
+      ],
+      "created": "2026-10-02",
+      "updated": "2026-10-04T13:30:00Z",
+      "modified": "2026-10-04T12:00:00Z",
+      "branch": "",
+      "pr": "",
+      "dependsOn": [
+        "AL-3"
+      ],
+      "criteria": {
+        "done": 1,
+        "total": 2
+      },
+      "excerpt": "Fixture ticket.",
+      "handoffNext": "",
+      "attachments": 0,
+      "hasReview": false,
+      "blocked": true,
+      "blockedBy": [
+        {
+          "kind": "ticket",
+          "text": "Depends on AL-3, which is In progress",
+          "ticket": {
+            "project": "alpha",
+            "id": "AL-3"
+          },
+          "column": "in-progress",
+          "missing": false
+        }
+      ],
+      "needsRepair": [],
+      "warnings": [],
+      "searchText": "\n# Drag and drop\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nUse the pointer events API.\n\n## Notes\n\nNone.\n",
+      "needsYou": false,
+      "agentWorking": false,
+      "openQuestions": 0,
+      "changeRequests": {
+        "open": 0,
+        "addressed": 0
+      },
+      "body": "\n# Drag and drop\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nUse the pointer events API.\n\n## Notes\n\nNone.\n",
+      "frontmatter": "id: AL-4\nstatus: backlog\ntype: feature\nproject: alpha\ncreated: 2026-10-02\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: \nworkstream: board-ui\ndepends-on: [AL-3]\ndepends-on-workstreams: []\ntags: [ui]\nupdated: 2026-10-04T13:30:00Z\n",
+      "session": "fixture",
+      "gitRef": "0000000",
+      "dependsOnWorkstreams": [],
+      "criteriaItems": [
+        {
+          "text": "First criterion",
+          "done": true
+        },
+        {
+          "text": "Second criterion",
+          "done": false
+        }
+      ],
+      "handoff": null,
+      "review": null,
+      "attachmentFiles": [],
+      "hash": "hash-14",
+      "raw": "---\nid: AL-4\nstatus: backlog\ntype: feature\nproject: alpha\ncreated: 2026-10-02\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: \nworkstream: board-ui\ndepends-on: [AL-3]\ndepends-on-workstreams: []\ntags: [ui]\nupdated: 2026-10-04T13:30:00Z\n---\n\n# Drag and drop\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nUse the pointer events API.\n\n## Notes\n\nNone.\n",
+      "runs": [],
+      "questions": [],
+      "comments": [],
+      "history": [
+        {
+          "id": "entry-30",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "moved",
+              "from": "up-next",
+              "to": "backlog",
+              "fields": [],
+              "criteria": [],
+              "steps": [],
+              "comments": []
+            }
+          ]
+        },
+        {
+          "id": "entry-31",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "edited",
+              "from": "",
+              "to": "",
+              "fields": [
+                "priority"
+              ],
+              "criteria": [],
+              "steps": [],
+              "comments": []
+            }
+          ]
+        },
+        {
+          "id": "entry-32",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "edited",
+              "from": "",
+              "to": "",
+              "fields": [
+                "context"
+              ],
+              "criteria": [],
+              "steps": [],
+              "comments": []
+            }
+          ]
+        }
+      ],
+      "activityHash": "hash-33",
+      "tellSessions": []
+    }
+  }
+}

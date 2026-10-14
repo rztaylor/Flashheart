@@ -1,0 +1,10 @@
+{
+  "route": "POST /api/projects/{project}/archive/{id}/delete",
+  "request": "POST /api/projects/alpha/archive/AL-8/delete",
+  "status": 200,
+  "body": {
+    "hash": "",
+    "revision": 26,
+    "warnings": []
+  }
+}

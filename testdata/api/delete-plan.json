@@ -1,0 +1,26 @@
+{
+  "route": "GET /api/projects/{project}/archive/{id}",
+  "request": "GET /api/projects/alpha/archive/AL-8",
+  "status": 200,
+  "body": {
+    "id": "AL-8",
+    "title": "Old idea",
+    "files": [
+      "AL-8-old-idea.md"
+    ],
+    "tickets": [
+      {
+        "project": "alpha",
+        "id": "AL-1",
+        "title": "Project skeleton"
+      }
+    ],
+    "workstreams": [
+      {
+        "slug": "board-ui",
+        "title": "Board UI"
+      }
+    ],
+    "token": "hash-34"
+  }
+}

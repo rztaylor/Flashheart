@@ -27,7 +27,7 @@ export function fetchInfo(
   );
 }
 
-function isServerInfo(value: unknown): value is ServerInfo {
+export function isServerInfo(value: unknown): value is ServerInfo {
   return (
     isRecord(value) &&
     value.name === "Flashheart" &&
