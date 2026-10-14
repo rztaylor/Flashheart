@@ -168,6 +168,11 @@ test("an edit over a newer version opens the conflict dialog", async () => {
   await shot(page, "comments-conflict-1440-light", { keepFocus: true });
   await conflict.getByRole("button", { name: "Overwrite with mine" }).click();
   await expect.poll(readActivity).toContain("Mine: keep both wordings.");
+  // The file shows the overwrite before its answer is back; the editor
+  // closes on the answer, which must not land in the next test.
+  await expect(
+    main().getByRole("textbox", { name: "Comment", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("a failed post keeps the text with the error beside it", async () => {
