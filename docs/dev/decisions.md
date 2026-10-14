@@ -1751,7 +1751,7 @@ for copies with no structure. A Sanitizer API pass was not used: it is
 not in every browser the board supports, and the converter reads only
 what it allows anyway.
 
-## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D71 and D77)
+## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73 and D77)
 
 Decision (FH-46): a new MCP tool, `update_workstream`, sets a
 workstream's title, goal, priority, tags and `depends-on-workstreams`
@@ -1890,7 +1890,7 @@ frontend's `src/layering.test.ts` over every source's relative imports.
   links the web server in every mode; the Go check covers the mode
   packages, and moving those types is separate work.
 
-## 2026-10-14 — D71: A workstream's slug is renamed on purpose, in one write that rewrites every reference
+## 2026-10-14 — D73: A workstream's slug is renamed on purpose, in one write that rewrites every reference
 
 Decision (FH-158; revises D69's "the slug stays"): a title edit still
 keeps the slug, but a slug can now be renamed explicitly. The rename is
@@ -1946,11 +1946,11 @@ pencil, a double-click, Save or Ctrl/Cmd+Enter, Escape, the inline
 error, the conflict dialog). Saving a new name also renames the slug to
 the one the name makes, so "all references to the old name" (the
 ticket's words) follow: members' `workstream`, every
-`depends-on-workstreams` and the file name, through D71's rename. The
+`depends-on-workstreams` and the file name, through D73's rename. The
 saved UI preferences that name the slug follow too, for any rename.
 
 - **The slug follows the name on the board, not for agents.** D69 and
-  D71 keep a title change and a rename apart for agents, whose title
+  D73 keep a title change and a rename apart for agents, whose title
   edits are often wording. A person renaming a line on its page means
   the line, and a slug that no longer says its name is what the ticket
   calls a reference left behind. Agents still choose `rename_to`.

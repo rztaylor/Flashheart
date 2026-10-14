@@ -369,7 +369,7 @@ to the workstream stay as they are (D69). A slug changes only by an
 explicit rename (an agent's `update_workstream` with `rename_to`, or the
 board's `PATCH /api/projects/<project>/workstreams/<slug>` with `slug`,
 or with `slugFromTitle` from the workstream page's name edit, which takes
-the slug New workstream makes from the new name; FH-158, D71, FH-167,
+the slug New workstream makes from the new name; FH-158, D73, FH-167,
 D77): one write under the project lock and the workstream file's
 hash that moves the file to `workstreams/<new>.md`, sets its `slug:`, and
 rewrites every reference to the old slug in the project: each ticket's

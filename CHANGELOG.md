@@ -18,7 +18,7 @@ All notable changes to this project are documented here. The project follows
   the field, which stays open.
 
 - A workstream's short name (slug) can be renamed without editing files
-  by hand (FH-158, D71, `MCP-2`). `update_workstream` takes an optional
+  by hand (FH-158, D73, `MCP-2`). `update_workstream` takes an optional
   `rename_to`: in the same write it renames the workstream's file and
   rewrites every ticket and workstream that names the old slug (members'
   workstream, and every workstream dependency, archived tickets

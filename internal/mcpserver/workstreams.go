@@ -169,7 +169,7 @@ func (srv *server) updateWorkstream(c *call, input UpdateWorkstreamInput) (strin
 	// The fields are set over the workstream as it was read; a change made
 	// in between is a conflict, not lost (STO-3). A rename rewrites the
 	// references in tickets other sessions may hold: it changes only which
-	// slug they name, so it is not refused as claimed (D71).
+	// slug they name, so it is not refused as claimed (D73).
 	edited, err := c.files().EditWorkstream(project.Name, slug, store.Unchanged(base), store.WorkstreamEdit{Changes: changes, Add: add, Remove: remove, Rename: rename})
 	var cycle *board.CycleError
 	switch {
