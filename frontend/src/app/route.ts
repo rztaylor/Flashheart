@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TICKET_ID, type TicketRef } from "../api/board";
 import { ticketPageHref, workstreamPageHref } from "../model/markdown";
+import type { Scope } from "../model/scopes";
 import { guarded, leave } from "../state/leaveGuard";
 
 // archive is reached from the page header, not the band (EDIT-8); ticket
@@ -15,7 +16,6 @@ export type View =
   | "archive"
   | "ticket"
   | "workstream";
-export type Scope = { kind: "all" } | { kind: "project"; project: string };
 
 // WorkstreamRef names a workstream: its project and slug.
 export interface WorkstreamRef {

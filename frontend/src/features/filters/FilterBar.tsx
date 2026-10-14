@@ -1,8 +1,10 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
+import type { Density, HideableColumn } from "../../api/preferences";
 import { Button } from "../../components/Button";
 import { CheckboxField } from "../../components/Field";
 import { filterHandlers, filterHint } from "../../components/FilterChip";
+import { Icon } from "../../components/Icon";
 import { Popover } from "../../components/Popover";
 import { SegmentedControl } from "../../components/SegmentedControl";
 import { priorityMark } from "../../components/TicketMarks";
@@ -20,11 +22,6 @@ import {
 } from "../../model/filters";
 import { PAINT_MODES, type PaintMode } from "../../model/paint";
 import { priorityLabel } from "../../model/status";
-
-export type { Density } from "../../api/preferences";
-
-import type { Density, HideableColumn } from "../../api/preferences";
-import { Icon } from "../../components/Icon";
 
 interface Option {
   value: string;
