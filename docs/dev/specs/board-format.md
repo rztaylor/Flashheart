@@ -201,6 +201,8 @@ atomically, one at a time, in this order:
   tickets that name it, and last the removal of the old file, so a crash
   part-way leaves both files and never neither;
 - placing a ticket: the neighbours it ranks, then the ticket;
+- an agent rewriting a ticket's text (FH-69): the file keeping the
+  replaced text and `files/index.yaml`, then the files above;
 - any ticket write from the board or an agent: the files above, then the
   history entry in each changed ticket's `activity.md` (§Activity).
 
@@ -297,6 +299,25 @@ template section is added in the template's place, above the template
 sections that follow it (a ticket's own section above `## Notes` and
 `## Handoff`). `## Handoff` and `## Notes` are never rewritten whole:
 checkpoints write the one, and notes are appended.
+
+An agent rewrites sections the same way through `update_ticket`'s
+`sections` (FH-69, D75, `board.NewAgentSectionChange`), with two more
+rules: `## Acceptance Criteria` is never rewritten whole, and a section
+outside the template must already be in the ticket. Its `criteria`
+operations (`board.NewCriteriaEdit`) change only the criteria section:
+each top-level task item there owns its line and the lines up to the
+next item (after the last, only its indented continuation), so a
+reworded item keeps its bullet and box, a moved one all its lines, and
+an added one is `- [ ] <text>` in the list's bullet; text before and
+after the list is kept, and a placeholder such as `None.` gives way to
+the first item. The old text of every section the rewrite changed is
+kept in the ticket's `files/` as `<time>-<id>-earlier-text.md`
+(`board.EarlierText`: a `# <id>: text replaced by <run> at <time>`
+title, a line on restoring, then each section under its own `## `
+heading as it was), listed in `files/index.yaml` with kind `other`, the
+run, and a caption naming the sections, and staged before the ticket in
+the same write. A dated note under the run says what changed and links
+the file. A section only added keeps nothing.
 
 A workstream's section edited on its page (FH-139,
 `board.NewWorkstreamSectionChange`) is replaced the same way; a
@@ -570,7 +591,10 @@ list of files is reported and never replaced. A file added from its bytes
 the extension of what its content is (`SEC-7`): a PNG sent as `notes.txt`
 is stored as `<time>-notes.png`; a pasted screenshot is
 `<time>-screenshot.png`. Adding a file does not change the ticket file
-and records no history (the event log records it, `EDIT-10`).
+and records no history (the event log records it, `EDIT-10`). The one
+exception is the text an agent's rewrite replaced (§Section edits),
+added in the same write as the ticket it was replaced in, with no
+`source`.
 
 ## project.yaml
 

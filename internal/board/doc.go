@@ -7,7 +7,10 @@
 // fields and the checked change-set that writes them (fields.go), the
 // title and section text limits, the blocked-start gate and its note,
 // dated notes (NoteLine), which sections are rewritten whole and where a
-// missing one goes (SectionChange, FH-66; a workstream's, FH-139), a
+// missing one goes (SectionChange, FH-66; a workstream's, FH-139), an
+// agent's rewrite of a ticket (rewrite.go, FH-69: which sections it may
+// replace, criteria operations that keep ticks, and which sections a
+// rewrite replaced with the file that keeps their old text), a
 // workstream's editable fields, their checked change-set and the
 // dependency cycle rule (workstreamedit.go, FH-46) and when two of its
 // titles are the same (WorkstreamTitleKey, D76), review warnings and the project

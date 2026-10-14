@@ -34,6 +34,19 @@ All notable changes to this project are documented here. The project follows
   list past it raises the budget on purpose and says why (agent-protocol
   §7.2).
 
+- Agents can correct a ticket when its scope changes, instead of adding
+  a note that contradicts it (FH-69, D75, `MCP-2`). `update_ticket`
+  takes `sections`, which replaces a section such as the Description,
+  Test Plan or Context, and `criteria`, which adds, rewords, removes or
+  moves acceptance criteria while ticked ones stay ticked. Handoff and
+  Notes are never rewritten, and a misspelt section name is refused with
+  the list of sections there are. The text an agent replaces is kept in
+  the ticket's files, linked from a note that says who changed what, so
+  you can copy it back; the ticket's Activity shows the edit too. Nothing
+  else in the file changes, and an edit made on a ticket that changed
+  since the agent read it is refused. The flashheart skill says when to
+  rewrite (and no longer mentions plan mirroring, which D51 retired).
+  Agent protocol stays 2.
 - Agents can change a workstream after creating it, and file tickets on
   another project's board (FH-46, D69, `MCP-2`). The new
   `update_workstream` tool sets a workstream's title, goal, priority,
