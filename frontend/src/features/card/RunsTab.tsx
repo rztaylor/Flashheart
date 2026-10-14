@@ -25,9 +25,9 @@ import { useNow } from "../../state/useNow";
 import { RunDetail } from "./RunDetail";
 
 // RunsTab lists the agent runs linked to a ticket, most recent first (CARD-1):
-// each session with its state, plan, edited files and activity, and its
+// each session with its state, edited files and activity, and its
 // subagents beneath it as a tree (agent-protocol §10), each opening to its
-// own plan, files and checkpoints. A focused subagent row keeps focus as
+// own files and checkpoints. A focused subagent row keeps focus as
 // its session moves down the list, and hands it on when it goes (FH-84).
 export function RunsTab({
   detail,
@@ -120,7 +120,7 @@ function RunCard({
                 className="font-medium text-ink"
                 title={
                   mcpOnly(run)
-                    ? "Started by Flashheart's MCP server: without hooks it reports tool calls, claims and questions, never a plan, edits or permission prompts"
+                    ? "Started by Flashheart's MCP server: without hooks it reports tool calls, claims and questions, never edits or permission prompts"
                     : undefined
                 }
               >
@@ -203,9 +203,9 @@ function RunCard({
 }
 
 // SubagentRow is one subagent in a session's tree: its state, type, the
-// ticket it claimed when that is another, and its current step (or, with
-// no plan, its tool and edit counts); it opens to the subagent's own plan,
-// files and activity, where its checkpoints show.
+// ticket it claimed when that is another, and its tool and edit counts; it
+// opens to the subagent's own files and activity, where its checkpoints
+// show.
 function SubagentRow({
   run,
   ticket,
@@ -275,21 +275,11 @@ function SubagentRow({
               )}{" "}
             </>
           ) : null}
-          {run.progress.total > 0 ? (
-            <span title={run.progress.current}>
-              <span className="tabular-nums">
-                {run.progress.done}/{run.progress.total}
-              </span>
-              {run.progress.current ? ` · ${run.progress.current}` : ""}
-            </span>
-          ) : null}
         </span>
-        {run.progress.total === 0 ? (
-          <span className="shrink-0 text-ink-muted">
-            {counted(run.tools, "tool")}
-            {run.edits > 0 ? `, ${counted(run.edits, "edit")}` : ""}
-          </span>
-        ) : null}
+        <span className="shrink-0 text-ink-muted">
+          {counted(run.tools, "tool")}
+          {run.edits > 0 ? `, ${counted(run.edits, "edit")}` : ""}
+        </span>
         <time
           dateTime={run.lastActivity}
           title={`Last activity ${absoluteTime(run.lastActivity)}`}

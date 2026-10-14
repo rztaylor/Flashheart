@@ -59,8 +59,7 @@ instructions.
   ticket if you have one, answers waiting for you, and what is up next.
 - If your project has no key yet, choose 2–5 capital letters a person would
   use for it in conversation (` + "`FH`" + ` for Flashheart) and set it with
-  ` + "`set_project_key`" + ` before creating tickets. If it is taken, pick
-  another.
+  ` + "`set_project_key`" + ` before creating tickets; if taken, pick another.
 - Outside a git repository there is no project and nothing is recorded:
   tools that need your project answer ` + "`no_project`" + `. Talk to the user in chat instead of creating tickets or
   asking with ` + "`ask_human`" + `.
@@ -87,10 +86,12 @@ instructions.
 - New work gets a ticket first: ` + "`create_ticket`" + `, then claim it. Do not
   start untracked work, and do not start a ticket you just created for
   follow-up work unless the user asks. File another repository's
-  follow-up there, naming it in ` + "`project`" + `.
+  follow-up there, naming it in ` + "`project`" + `. If you edit files holding no
+  ticket, the hooks ask you once to claim or create one.
 
 ## While working
 
+- A ticket's criteria and handoff are its plan.
 - ` + "`checkpoint`" + ` at milestones, before long operations or a compaction,
   and always before you stop after editing files: what is done, what is
   next, the files that matter, and open questions. The next session
@@ -103,8 +104,8 @@ instructions.
   ` + "`update_ticket`" + `, so the board links to it.
 - ` + "`attach`" + ` copies a screenshot or log into a ticket and gives the
   markdown to link it from the review.
-- When you need a human decision, ` + "`ask_human`" + ` (with options when there
-  are clear choices). The board shows the user; the answer arrives in a
+- When you need a human decision, ` + "`ask_human`" + ` (with options for
+  clear choices). The board shows the user; the answer arrives in a
   later prompt or, without Flashheart's hooks, with your next flashheart
   tool result. Carry on with other work if you can. If the user
   replies in this chat instead, that reply is the answer: with hooks, the
@@ -113,12 +114,12 @@ instructions.
 - ` + "`ask_human`" + ` also returns a ` + "`flashheart await`" + ` command. If you can run
   a background command that wakes you when it exits (in Claude Code, Bash
   with ` + "`run_in_background`" + `), run it: the answer then reaches you as soon
-  as it is given, not with the user's next prompt. If the user answers in
+  as it is given. If the user answers in
   the chat first, the command exits and says so.
 - If your turn ends with a question for the user, ask it with
   ` + "`ask_human`" + ` as well, even at the end of a status summary. A question
   asked only in chat leaves your run in Waiting, not Needs you, and the
-  user may not see it.
+  user may miss it.
 
 ## Finishing
 
@@ -138,7 +139,7 @@ instructions.
 ## Writing tickets
 
 The board is how the user sees the work, so write each ticket for someone
-who has not read the code; the technical detail comes second.
+who has not read the code.
 
 - The title says what a person would notice or gain, in plain words and
   under 80 characters, with no file, function, test or type names.
@@ -147,7 +148,7 @@ who has not read the code; the technical detail comes second.
 - The description, in plain words: the problem as someone experiences it,
   why it matters (who it affects, what it costs), and the proposed change.
 - Implementation detail (files, functions, design notes) goes in
-  ` + "`context`" + `, the ticket's Context section.
+  ` + "`context`" + `.
 
 ## Ticket conventions
 
@@ -159,11 +160,11 @@ who has not read the code; the technical detail comes second.
   red, green, refactor: failing tests first, then the implementation.
 - Bug tickets carry a Reproduction: write a failing test that shows the
   defect before fixing it, and name that test in the review.
-- Test tickets add coverage; bugs they find become new bug tickets.
+- Test tickets add coverage; bugs they find become bug tickets.
 - Spikes produce a written recommendation and follow-up tickets, not
   production code.
-- A workstream groups tickets with a shared goal, like an epic: they may be
-  worked on in sequence or in parallel. Its order never blocks; a ticket
+- A workstream groups tickets with a shared goal, like an epic, worked on
+  in sequence or in parallel. Its order never blocks; a ticket
   waits only for the tickets its ` + "`depends_on`" + ` names and for workstreams it
   or its workstream depends on. Give each ticket the dependencies it really
   needs, naming several tickets in ` + "`depends_on`" + ` when it needs them all;

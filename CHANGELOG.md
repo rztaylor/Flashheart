@@ -17,6 +17,23 @@ All notable changes to this project are documented here. The project follows
   nothing changes. The board's API gains the same rename, with the title,
   for the workstream page to use (FH-167). A title change alone still
   keeps the slug. Agent protocol stays 2.
+- Sessions that change files without a ticket are asked to claim one
+  (FH-132, D50, `HOOK-8`). A Claude Code or Codex session that edits
+  files, with the edit tools or shell commands, while it holds no ticket
+  by claim or branch match is asked once to claim the ticket its work
+  belongs to or create one, naming the tools, so its work shows on the
+  board and leaves a handoff. Where handoff enforcement is on, the
+  request holds that stop; otherwise it reaches the session with the next
+  prompt (or, in Claude Code, its next tool result). It is never repeated
+  in a session, and subagents are never asked. Agent protocol stays 2.
+- What the MCP tools cost every agent's context is measured (FH-134,
+  D52). A test sizes the tool list and the server's instructions as an
+  agent receives them, in bytes and estimated tokens, reports each tool's
+  share, and fails past a budget of 16,500 bytes (about 4,100 tokens;
+  14,224 bytes today), naming the largest tools. A change that grows the
+  list past it raises the budget on purpose and says why (agent-protocol
+  §7.2).
+
 - Agents can correct a ticket when its scope changes, instead of adding
   a note that contradicts it (FH-69, D75, `MCP-2`). `update_ticket`
   takes `sections`, which replaces a section such as the Description,
@@ -824,6 +841,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Removed
 
+- Agents' plans (FH-133, D51, D77, `RUN-4` retired). No session on this
+  board ever recorded one, so the plan section on the Runs tab, the plan
+  count on cards and the plan step in their tooltips were always empty. A
+  ticket's plan is its ticked acceptance criteria and its handoff's next
+  steps. Hooks no longer read Claude Code's task-list tools or Codex's
+  `update_plan`, and `flashheart setup claude` no longer registers the
+  `TaskCreated` and `TaskCompleted` hooks: re-run it to remove them
+  (`flashheart doctor` warns while they remain; meanwhile they record
+  nothing). Older event logs with plans still read. The protocol skill's
+  line about keeping your todo list current now says a ticket's criteria
+  and handoff are its plan. Agent protocol stays 2.
 - The one-off upgrades from before Flashheart's own board format (FH-136,
   D55, D71). `flashheart migrate`, which converted boards in the old
   column-folder format, is gone, and so is the notice the board showed

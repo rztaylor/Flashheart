@@ -28,8 +28,6 @@ const base = {
   tools: 0,
   edits: 0,
   files: [],
-  plan: [],
-  progress: { done: 0, total: 0 },
 };
 const decision = {
   id: "q-1",
@@ -81,9 +79,6 @@ function fixture(ownQuestion: boolean) {
     short: session.short,
     agent: "claude",
     state: "needs-you",
-    done: 0,
-    total: 0,
-    step: "",
     reason,
     lastActivity: "",
   };

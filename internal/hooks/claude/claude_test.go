@@ -25,10 +25,12 @@ var fixtures = filepath.Join("..", "..", "..", "testdata", "hooks", "claude")
 
 var now = time.Date(2026, 10, 5, 14, 12, 9, 0, time.UTC)
 
-// mapped lists every Claude Code hook event in agent-protocol §5.2.
+// mapped lists every Claude Code hook event in agent-protocol §5.2. The
+// task events, which hooks registered before D51, keep golden payloads
+// that record nothing.
 var mapped = []string{
 	"SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse", "PostToolUseFailure",
-	"PermissionRequest", "PermissionDenied", "Notification", "TaskCreated", "TaskCompleted",
+	"PermissionRequest", "PermissionDenied", "Notification",
 	"SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "Stop", "SessionEnd",
 }
 
@@ -128,8 +130,9 @@ func TestGoldenPayloads(t *testing.T) {
 				gotJSON, _ := json.MarshalIndent(got, "", "  ")
 				t.Fatalf("events =\n%s\nwant\n%s", gotJSON, wantRaw)
 			}
-			// Nothing from tool inputs beyond paths and plan items is stored.
-			for _, secret := range []string{"sk-ant-", "rm -rf", "curl", "old_string", "hello", "signed in", "Signed in", "Header overlaps", "Found 3 files", "Done.", "Add a line", "Synthetic report", "Fix the demo"} {
+			// Nothing from tool inputs beyond paths is stored, plans'
+			// items included (D51).
+			for _, secret := range []string{"sk-ant-", "rm -rf", "curl", "old_string", "hello", "signed in", "Signed in", "Header overlaps", "Found 3 files", "Done.", "Add a line", "Synthetic report", "Fix the demo", "Write notes", "Edit the readme", "Fix the header", "Run the e2e suite"} {
 				if strings.Contains(string(mustRead(t, root)), secret) {
 					t.Fatalf("event log stores %q", secret)
 				}

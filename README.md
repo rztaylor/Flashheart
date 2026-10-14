@@ -9,7 +9,8 @@ local Go binary that is two things at once:
   on plain markdown tickets you own; and
 - an **MCP server and hook handler** for Claude Code and Codex, so agents,
   orchestrators and subagents record what they are doing on the same tickets:
-  their plan, checkpoints, questions for you, screenshots and review guides.
+  the criteria they tick, checkpoints, questions for you, screenshots and
+  review guides.
 
 When a session dies or runs out of context, the next one (in either agent) is
 told where the work stood and carries on. Meanwhile you can see, for every
@@ -39,7 +40,7 @@ Browser ◀── loopback, authenticated ──▶ flashheart serve (watches th
   folder per ticket (`tickets/FH-42-<slug>/`) with its column in
   frontmatter, readable in any editor or Obsidian. See
   [`docs/dev/specs/board-format.md`](docs/dev/specs/board-format.md).
-- **Hooks do the bookkeeping.** Session starts, plans, permission prompts,
+- **Hooks do the bookkeeping.** Session starts, edits, permission prompts,
   subagents and stops are recorded automatically; the model only reports what
   only it knows. See
   [`docs/dev/specs/agent-protocol.md`](docs/dev/specs/agent-protocol.md).
