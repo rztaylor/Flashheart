@@ -1,4 +1,4 @@
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
@@ -305,6 +305,188 @@ test("fits a phone and passes axe in both themes", async () => {
       });
       await page.keyboard.press("Escape");
     }
+});
+
+// ticketFiles are the project's ticket files, live and archived, by path.
+async function ticketFiles(project) {
+  const out = new Map();
+  for (const dir of ["tickets", join(".archive", "tickets")]) {
+    const base = join(sandbox.root, project, dir);
+    const folders = await readdir(base).catch(() => []);
+    for (const folder of folders) {
+      const path = join(base, folder, `${folder}.md`);
+      const text = await readFile(path, "utf8").catch(() => undefined);
+      if (text !== undefined) out.set(path, text);
+    }
+  }
+  return out;
+}
+
+test("renames the workstream from its name: references follow and the page moves (FH-167, FH-170)", async () => {
+  const dir = join(sandbox.root, "flashheart", "workstreams");
+  const config = join(sandbox.root, ".flashheart", "config.yaml");
+  // A saved Board filter that hides the line: the rename keeps it
+  // (FH-170; the expanded choice is in the store's and api's tests).
+  // Written before a reload, so the page loads it as its preferences.
+  await writeFile(
+    config,
+    [
+      "version: 2",
+      "ui:",
+      "  theme: system",
+      "  density: normal",
+      "  colour_by: type",
+      "  hidden_columns: []",
+      "  editor: formatted",
+      "  scopes:",
+      "    flashheart:",
+      "      view: board",
+      "      workstream: {include: [], exclude: [board-editing]}",
+      "",
+    ].join("\n"),
+  );
+  await page.reload();
+  await open(page, "#/p/flashheart/workstreams");
+  await page
+    .getByRole("article", { name: "Board editing" })
+    .getByRole("link", { name: "Board editing" })
+    .click();
+  await expect(page).toHaveURL(/#\/workstream\/flashheart\/board-editing$/);
+  const before = await ticketFiles("flashheart");
+  const members = [...before].filter(([, text]) =>
+    /^workstream: board-editing$/m.test(text),
+  );
+  expect(members.length).toBeGreaterThan(0);
+
+  const page1 = page.getByRole("main", { name: "Workstream board-editing" });
+  await page1.getByRole("button", { name: "Edit name" }).click();
+  const name = page1.getByRole("textbox", { name: "Name" });
+  await expect(name).toBeFocused();
+  await expect(name).toHaveValue("Board editing");
+  await shot(page, "workstream-name-1440-light", { keepFocus: true });
+
+  // A name another workstream has (FH-163) is named at the field without
+  // being sent; one whose slug another has is the server's refusal. Each
+  // keeps the field open with what was typed, and writes nothing.
+  const files = await readdir(dir);
+  const patches = [];
+  const onPatch = (request) => {
+    if (request.method() === "PATCH") patches.push(request.url());
+  };
+  page.on("request", onPatch);
+  await name.fill("board  CORE");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  const alert = page1.getByRole("alert");
+  await expect(alert).toHaveText(
+    "Flashheart already has a workstream called Board core. Choose another name.",
+  );
+  expect(patches).toEqual([]);
+  page.off("request", onPatch);
+  await name.fill("Board core!");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(alert).toContainText("already has the short name board-core");
+  await expect(alert).toContainText("choose another name");
+  await expect(name).toHaveValue("Board core!");
+  await expect(name).toBeVisible();
+  expect(await readdir(dir)).toEqual(files);
+  await expectNoAxeViolations(page, "workstream name taken");
+  await shot(page, "workstream-name-taken-1440-light", { keepFocus: true });
+
+  // A free name: the slug follows it, with every reference.
+  await name.fill("Board editing in place");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(page).toHaveURL(
+    /#\/workstream\/flashheart\/board-editing-in-place$/,
+  );
+  const page2 = page.getByRole("main", {
+    name: "Workstream board-editing-in-place",
+  });
+  await expect(
+    page2.getByRole("heading", { level: 1, name: "Board editing in place" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Renamed Board editing to Board editing in place."),
+  ).toBeVisible();
+  await expect(page).toHaveTitle("Board editing in place · Flashheart");
+  await expect(page2.getByText(/could not be loaded/)).toHaveCount(0);
+  const renamed = await readFile(
+    join(dir, "board-editing-in-place.md"),
+    "utf8",
+  );
+  expect(renamed).toMatch(/^slug: board-editing-in-place$/m);
+  expect(renamed).toContain("\n# Board editing in place\n");
+  expect((await readdir(dir)).includes("board-editing.md")).toBe(false);
+  expect(await readFile(join(dir, "agent-runs.md"), "utf8")).toMatch(
+    /^depends-on-workstreams: \[board-editing-in-place\]$/m,
+  );
+  const after = await ticketFiles("flashheart");
+  for (const [path] of members)
+    expect(after.get(path)).toMatch(/^workstream: board-editing-in-place$/m);
+  for (const text of after.values())
+    expect(text).not.toMatch(/\bboard-editing\b(?!-in-place)/);
+  // The saved preferences name the new slug, and the page's own copy
+  // does too: its next save does not put the old one back.
+  const hidesNew = /exclude: \[board-editing-in-place\]/;
+  await expect.poll(() => readFile(config, "utf8")).toMatch(hidesNew);
+  await page2.getByRole("button", { name: "Edit goal" }).click();
+  await page2
+    .getByRole("group", { name: "Show the text as" })
+    .locator("label", { hasText: "Markdown" })
+    .click();
+  await expect
+    .poll(() => readFile(config, "utf8"))
+    .toMatch(/^ {2}editor: markdown$/m);
+  expect(await readFile(config, "utf8")).toMatch(hidesNew);
+  await page2
+    .getByRole("group", { name: "Show the text as" })
+    .locator("label", { hasText: "Formatted" })
+    .click();
+  await page.keyboard.press("Escape");
+
+  // Back leaves the page for where it came from, not the old address;
+  // Forward comes back to the renamed one.
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/p\/flashheart\/workstreams$/);
+  await expect(
+    page.getByRole("article", { name: "Board editing in place" }),
+  ).toBeVisible();
+  await page.goForward();
+  await expect(
+    page2.getByRole("heading", { level: 1, name: "Board editing in place" }),
+  ).toBeVisible();
+
+  // The name edit in both themes and on a phone.
+  for (const [width, height] of [
+    [1440, 900],
+    [390, 844],
+  ])
+    for (const theme of ["light", "dark"]) {
+      await open(page, "#/workstream/flashheart/board-editing-in-place", {
+        width,
+        height,
+        theme,
+      });
+      await page2.getByRole("button", { name: "Edit name" }).click();
+      await expect(page2.getByRole("textbox", { name: "Name" })).toBeFocused();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflow).toBe(false);
+      await expectNoAxeViolations(page, `workstream name ${width} ${theme}`);
+      await shot(page, `workstream-name-${width}-${theme}`, {
+        keepFocus: true,
+      });
+      if (width === 390 && theme === "dark") {
+        await page2.getByRole("textbox", { name: "Name" }).fill("Board core!");
+        await page2.getByRole("button", { name: "Save", exact: true }).click();
+        await expect(page2.getByRole("alert")).toContainText(
+          "choose another name",
+        );
+        await shot(page, "workstream-name-taken-390-dark", { keepFocus: true });
+      }
+      await page.keyboard.press("Escape");
+    }
+  await open(page, "#/workstream/flashheart/board-editing-in-place");
 });
 
 test("made no request beyond the board", async () => {

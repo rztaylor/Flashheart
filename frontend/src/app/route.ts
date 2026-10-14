@@ -103,7 +103,12 @@ function decode(value: string): string {
 // edit is unsaved, leaving asks first (state/leaveGuard, FH-66): its own
 // navigation waits, and a link or Back that already changed the hash is
 // put back until the person agrees to drop the edit.
-export function useRoute(): [Route, (next: Route) => void] {
+// Navigate changes the route; replace puts the new route in place of the
+// current history entry (a renamed workstream's page, FH-167), so Back
+// does not return to an address that is gone.
+export type Navigate = (next: Route, options?: { replace?: boolean }) => void;
+
+export function useRoute(): [Route, Navigate] {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));
   // shown is the hash of the route on screen, to put back a held change.
   const shown = useRef(window.location.hash);
@@ -136,11 +141,13 @@ export function useRoute(): [Route, (next: Route) => void] {
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
-  const navigate = useCallback((next: Route) => {
+  const navigate = useCallback<Navigate>((next, options) => {
     leave(() => {
       const hash = formatRoute(next);
       shown.current = hash;
-      if (window.location.hash !== hash) window.location.hash = hash;
+      // Replacing fires no hashchange; the route is set here either way.
+      if (options?.replace) window.history.replaceState(null, "", hash);
+      else if (window.location.hash !== hash) window.location.hash = hash;
       setRoute(next);
     });
   }, []);

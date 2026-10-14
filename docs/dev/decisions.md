@@ -1762,7 +1762,7 @@ for copies with no structure. A Sanitizer API pass was not used: it is
 not in every browser the board supports, and the converter reads only
 what it allows anyway.
 
-## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73)
+## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73 and D78)
 
 Decision (FH-46): a new MCP tool, `update_workstream`, sets a
 workstream's title, goal, priority, tags and `depends-on-workstreams`
@@ -1932,7 +1932,7 @@ which FH-167 will give a control on the workstream page.
   the renamed workstream's own is refused. UI preferences in
   `config.yaml` that name the slug (saved filters, expanded finished
   workstreams) are outside the project and its lock and are left as they
-  are; a follow-up keeps them in step.
+  are by this write; D78 (FH-170) keeps them in step after it.
 - **Refusals.** A new slug that is not valid (board-format §Workstream)
   is `invalid_input` / 400; one that a file in `workstreams/` already
   has, workstream or not, is `invalid_input` for agents and 409 `exists`
@@ -2111,3 +2111,57 @@ records this as a removal within version 2.
 
 Options: keep 2 (chosen); bump to 3, which would ask every user to
 re-run setup for a change no agent or reader can observe.
+
+## 2026-10-14 — D78: A workstream's name is edited on its page, and its slug and saved preferences follow
+
+Decision (FH-167, FH-170): the workstream page's h1, its name (the
+file's H1, `title`), edits in place like a ticket's title (EDIT-11: its
+pencil, a double-click, Save or Ctrl/Cmd+Enter, Escape, the inline
+error, the conflict dialog). Saving a new name also renames the slug to
+the one the name makes, so "all references to the old name" (the
+ticket's words) follow: members' `workstream`, every
+`depends-on-workstreams` and the file name, through D73's rename. The
+saved UI preferences that name the slug follow too, for any rename.
+
+- **The slug follows the name on the board, not for agents.** D69 and
+  D73 keep a title change and a rename apart for agents, whose title
+  edits are often wording. A person renaming a line on its page means
+  the line, and a slug that no longer says its name is what the ticket
+  calls a reference left behind. Agents still choose `rename_to`.
+- **The server makes the slug.** The page sends the new title with
+  `slugFromTitle: true` on `PATCH /api/projects/{p}/workstreams/{slug}`;
+  the API derives the slug with `store.WorkstreamSlugFor`, the same
+  derivation New workstream uses (`slugify`), so the browser holds no
+  slug rule. A name that makes the current slug changes the title only.
+  A slug New workstream made unique (`offline-2` for a second "Offline")
+  is kept for a name that makes its base, so a small edit to such a name
+  does not meet its sibling's slug.
+- **A taken name is the person's to change.** A name whose slug another
+  file in `workstreams/` has is 409 `exists`, worded in names ("already
+  has the short name … choose another name") rather than the agent's
+  slug words; a name another workstream already has (FH-163, D76) is
+  named at the field before it is sent, as New workstream does
+  (`takenWorkstream` over the project's workstreams), and the server's
+  409 `title_taken` covers a list that is out of date. Each shows beside
+  the field, which stays open with what was typed; nothing is written.
+- **The page moves with it.** After a rename the page replaces its
+  address with the new slug's (`useRoute`'s `replace`), so Back leaves
+  the page for where it came from rather than for an address that is
+  gone, and Forward returns to the renamed page.
+- **Preferences follow every rename (FH-170).** After a rename commits
+  and the project lock is released, `store.EditWorkstream` rewrites the
+  old slug to the new one in `config.yaml`'s
+  `ui.scopes.<project>.workstream` include and exclude and
+  `ui.expanded_workstreams.<project>`, under the root lock, so MCP and
+  the board both get it. It is best effort: a `config.yaml` that is
+  missing, unreadable as settings or unwritable leaves the rename as it
+  is and the file untouched. All projects' scope (`all`) and other
+  projects' choices stay: their bare slugs may name another project's
+  workstream. The board applies the same rewrite to its loaded copy
+  (`renameWorkstreamIn`), as it saves preferences whole and would
+  otherwise put the old slug back. A rename by an agent while a board
+  tab is open is not heard by that tab's copy; its next preference save
+  can still restore the old slug there (FH-173).
+
+Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format
+stays 2 (no field is added; the preferences keep their shape).

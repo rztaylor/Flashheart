@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Rename a workstream from its page (FH-167, D78, `EDIT-13`). The
+  workstream's name has a pencil like a ticket's title: change it and
+  save, and its short name (slug) follows the new name as New
+  workstream would make it, so its tickets, the workstreams that wait
+  for it, its file and your saved filters all follow, and the page moves
+  to its new address (Back leaves the page rather than finding the old
+  one gone). A name another workstream already has is refused beside
+  the field, which stays open.
+
 - A workstream's short name (slug) can be renamed without editing files
   by hand (FH-158, D73, `MCP-2`). `update_workstream` takes an optional
   `rename_to`: in the same write it renames the workstream's file and
@@ -352,6 +361,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Saved filters and expanded workstreams keep a workstream after it is
+  renamed (FH-170, D78). A rename by an agent or on the board now
+  rewrites the old short name in the project's saved Board filter and
+  its expanded finished workstreams, which otherwise stopped matching
+  without saying why. The rename stands even if the settings file cannot
+  be updated.
 - Two workstreams in a project can no longer have the same name (FH-163,
   D76). A second *Workstream editing* used to be made with a different
   file name, and the two then looked identical in every workstream

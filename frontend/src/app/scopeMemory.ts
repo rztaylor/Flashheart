@@ -39,6 +39,52 @@ export function rememberIn(
     : { ...preferences, scopes: { ...preferences.scopes, [name]: entry } };
 }
 
+// renameWorkstreamIn is the preferences with workstream from of project
+// named to (FH-170), as the server rewrote them on the rename: the
+// project's remembered workstream filter and its expanded finished
+// workstreams. All projects' and other projects' choices stay, as a bare
+// slug there may name another project's workstream. It returns
+// preferences itself when nothing names from.
+export function renameWorkstreamIn(
+  preferences: Preferences,
+  project: string,
+  from: string,
+  to: string,
+): Preferences {
+  const renamed = (values: string[] | undefined) =>
+    values?.includes(from)
+      ? [...new Set(values.map((value) => (value === from ? to : value)))]
+      : undefined;
+  let next = preferences;
+  const scope = preferences.scopes[project];
+  const include = renamed(scope?.workstream.include);
+  const exclude = renamed(scope?.workstream.exclude);
+  if (scope && (include || exclude))
+    next = {
+      ...next,
+      scopes: {
+        ...next.scopes,
+        [project]: {
+          ...scope,
+          workstream: {
+            include: include ?? scope.workstream.include,
+            exclude: exclude ?? scope.workstream.exclude,
+          },
+        },
+      },
+    };
+  const expanded = renamed(preferences.expandedWorkstreams[project]);
+  if (expanded)
+    next = {
+      ...next,
+      expandedWorkstreams: {
+        ...next.expandedWorkstreams,
+        [project]: expanded,
+      },
+    };
+  return next;
+}
+
 // restoredFilters are a scope's remembered filters with the current search
 // and Needs you carried over.
 export function restoredFilters(

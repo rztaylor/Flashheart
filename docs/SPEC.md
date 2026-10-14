@@ -546,8 +546,14 @@ Full format: `docs/dev/specs/board-format.md`.
   edit, Notes too. A save writes only that section (board-format §Section
   edits), an untouched save writes nothing, a change elsewhere in the
   file saves as on a ticket's page, and a change to the section on disk
-  opens the conflict dialog (`EDIT-7`). The title, properties and tickets
-  list are not edited there.
+  opens the conflict dialog (`EDIT-7`). Its name, the h1, edits in place
+  the same way (FH-167, D78): saving a new name renames its slug to the
+  one the name makes, as **New workstream** makes it, so members,
+  workstream dependencies, the file name and saved filters follow, and
+  the page moves to the new address in place of the old one; a name that
+  makes the same slug changes only the name, and one whose slug or name
+  another workstream has is refused beside the field, which stays open.
+  Its properties and tickets list are not edited there.
 - `EDIT-14` **New workstream** (FH-17), in the Workstreams view's header,
   creates `workstreams/<slug>.md` from the board-format template: a title
   (unique in the project, ignoring case and spacing, D76; its slug made
