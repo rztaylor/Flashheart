@@ -110,7 +110,7 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 	case "UserPromptSubmit":
 		from := origin(p.Prompt)
 		add(session, events.TurnStart, events.TurnStartData{Origin: from, Background: from != events.OriginUser})
-		input.Inbox = session
+		input.Inbox, input.Notes = session, true
 	case "PreToolUse":
 		input.Reply = stamp(p.ToolName, p.ToolInput, actor)
 	case "PostToolUse", "PostToolUseFailure":
@@ -120,6 +120,9 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		// may be recorded again; a failed one may still have been written,
 		// and recording a path twice is harmless.
 		input.Settled = p.ToolName == checkpointTool
+		// Claude Code shows the model a tool result's additionalContext,
+		// so a due claim reminder can go with it (D50).
+		input.Notes = true
 	case "PermissionRequest":
 		add(actor, events.PermissionRequested, events.PermissionData{Tool: p.ToolName})
 	case "PermissionDenied":

@@ -5,7 +5,8 @@
 // under its own heading, answers as information, comments and change
 // requests as the user's words, a change request with its id and how to
 // mark it addressed; HOOK-5, D54, FH-126), the linked ticket's open
-// change requests in the recovery note (ChangeRequests), and the
+// change requests in the recovery note (ChangeRequests), the reminder
+// to claim a ticket (ClaimReminder, HOOK-8, D50), and the
 // protocol text (§12) rendered as the MCP server's instructions, the
 // Claude Code skill setup installs and the body setup puts in Codex's
 // AGENTS.md (Body), and the shell commands given to agents

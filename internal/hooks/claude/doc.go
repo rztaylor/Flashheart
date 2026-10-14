@@ -7,8 +7,10 @@
 // paths (which
 // hooks throttles; Claude Code's tool names stay here) and the checkpoint
 // tool's results, stamps the run into Flashheart's own MCP tool calls at
-// PreToolUse (agent-protocol §7.1), and renders additional context,
-// updated tool input and stop decisions.
+// PreToolUse (agent-protocol §7.1), says that a prompt's and a tool
+// result's context reach the model (Input.Notes, for the claim reminder,
+// D50), and renders additional context, updated tool input and stop
+// decisions.
 //
 // Resolving projects, scrubbing, storing and the recovery note belong to
 // hooks; the golden payloads it is tested against live in
