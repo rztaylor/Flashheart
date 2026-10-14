@@ -385,6 +385,15 @@ tags: []
 ## Notes
 ```
 
+A workstream's title is its H1, or its slug when it has none. A
+project's workstream titles are unique, compared by their words in
+lower case with every run of spaces as one (*Board UI* and *board  ui*
+are the same title; D76). Every Flashheart write that creates a
+workstream or changes its title refuses one another of the project's
+workstreams has, and writes nothing. Workstreams that already share a
+title (made earlier or by hand) still load as they are; an edit that
+keeps a workstream's title is not checked, and retitling one parts them.
+
 A title change (its H1) keeps the slug: the file name and every reference
 to the workstream stay as they are (D69). A slug changes only by an
 explicit rename (an agent's `update_workstream` with `rename_to`, or the

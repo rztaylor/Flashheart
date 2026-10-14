@@ -85,3 +85,29 @@ export function workstreamTitle(
       ?.title ?? slug
   );
 }
+
+// workstreamTitleKey is what a workstream's title is compared by: its
+// words in lower case, every run of spaces as one. It is the server's rule
+// (board.WorkstreamTitleKey): a project's workstreams have distinct keys,
+// so no two read the same in a picker (FH-163, D76).
+export function workstreamTitleKey(title: string): string {
+  return title.trim().split(/\s+/).join(" ").toLowerCase();
+}
+
+// takenWorkstream is the workstream among a project's that already has
+// title, other than except (the slug of a workstream being retitled);
+// none for an empty title. The server refuses such a title; this lets a
+// form say so before sending it.
+export function takenWorkstream(
+  workstreams: WorkstreamBrief[],
+  title: string,
+  except = "",
+): WorkstreamBrief | undefined {
+  const key = workstreamTitleKey(title);
+  if (key === "") return undefined;
+  return workstreams.find(
+    (workstream) =>
+      workstream.slug !== except &&
+      workstreamTitleKey(workstream.title) === key,
+  );
+}

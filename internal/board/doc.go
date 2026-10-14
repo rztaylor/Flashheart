@@ -12,7 +12,8 @@
 // replace, criteria operations that keep ticks, and which sections a
 // rewrite replaced with the file that keeps their old text), a
 // workstream's editable fields, their checked change-set and the
-// dependency cycle rule (workstreamedit.go, FH-46), review warnings and the project
+// dependency cycle rule (workstreamedit.go, FH-46) and when two of its
+// titles are the same (WorkstreamTitleKey, D76), review warnings and the project
 // key rules, the
 // shorter one agents choose included (EDIT-2, EDIT-3, EDIT-6, KEY-1,
 // KEY-5), a review's How to Verify
