@@ -363,3 +363,49 @@ func Checkboxes(content string) []Checkbox {
 	}
 	return boxes
 }
+
+// TaskItems splits a section's content at its top-level task-list items
+// outside code fences (FH-69): the text before the first item; each item
+// with the lines that belong to it, which are those up to the next item
+// and, after the last, its indented continuation lines and the blank
+// lines between them; and the text after the last item. Joined, the parts
+// are content again. Content without items is all head.
+func TaskItems(content string) (head string, items []string, tail string) {
+	lines := scan(content)
+	var starts []int
+	for index, line := range lines {
+		if !line.inFence && taskItem.MatchString(strings.TrimRight(line.text, "\n")) {
+			starts = append(starts, index)
+		}
+	}
+	join := func(from, to int) string {
+		var out strings.Builder
+		for _, line := range lines[from:to] {
+			out.WriteString(line.text)
+		}
+		return out.String()
+	}
+	if len(starts) == 0 {
+		return content, nil, ""
+	}
+	last := starts[len(starts)-1]
+	end := last + 1
+	for next := end; next < len(lines); next++ {
+		text := lines[next].text
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+		if !strings.HasPrefix(text, " ") && !strings.HasPrefix(text, "\t") {
+			break
+		}
+		end = next + 1
+	}
+	for index, start := range starts {
+		to := end
+		if index+1 < len(starts) {
+			to = starts[index+1]
+		}
+		items = append(items, join(start, to))
+	}
+	return join(0, starts[0]), items, join(end, len(lines))
+}

@@ -61,3 +61,28 @@ describe("useRoute with the leave guard", () => {
     });
   });
 });
+
+// A renamed workstream's page moves to its new slug in place of the old
+// one (FH-167): Back leaves the page rather than landing on a slug that
+// is gone.
+describe("useRoute replacing the route", () => {
+  it("replaces the history entry, so Back skips the old address", () => {
+    window.history.replaceState(null, "", "#/all/board");
+    window.history.pushState(null, "", "#/workstream/alpha/board-ui");
+    const { result } = renderHook(() => useRoute());
+    const length = window.history.length;
+    act(() =>
+      result.current[1](
+        {
+          scope: { kind: "all" },
+          view: "workstream",
+          workstream: { project: "alpha", slug: "board-lanes" },
+        },
+        { replace: true },
+      ),
+    );
+    expect(window.location.hash).toBe("#/workstream/alpha/board-lanes");
+    expect(result.current[0].workstream?.slug).toBe("board-lanes");
+    expect(window.history.length).toBe(length);
+  });
+});

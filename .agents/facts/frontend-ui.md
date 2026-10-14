@@ -70,7 +70,12 @@
   `features/workstreams/WorkstreamPage`, its sections the same
   `InPlaceEditing` items and `InPlaceSection` (with `kind="workstream"`
   for the conflict dialog's words) over `model/workstreamSections`, saved
-  by `saveWorkstreamSection`. A control
+  by `saveWorkstreamSection`. Its name is `workstreams/WorkstreamName`,
+  an `InPlaceEditor` saved by `nameWorkstream` (`slugFromTitle`: the
+  server makes the slug, FH-167, D78); a new slug moves the page with
+  `useRoute`'s `replace` and rewrites the loaded preferences
+  (`app/scopeMemory`'s `renameWorkstreamIn`, as the server did, FH-170).
+  A control
   marked `data-autofocus` takes an open item's focus, and a key a
   control has handled (`defaultPrevented`) is not the item's. A person's comment in Activity is an
   item too, saved on the activity file's hash (`ActivityTimeline`); a

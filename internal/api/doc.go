@@ -22,7 +22,8 @@
 // rewritten in place (board.NewWorkstreamSectionChange through
 // store.UpdateWorkstream, FH-139), a workstream's fields and slug
 // (decoded into board's workstream change-set and written with a rename
-// by store.EditWorkstream, as update_workstream's are, FH-158),
+// by store.EditWorkstream, as update_workstream's are, FH-158; or a
+// slug the store makes from the new title, FH-167),
 // project keys, preferences, answers to agents'
 // questions, comments on a ticket, D47, files uploaded into a ticket,
 // REV-7, whose limit it reads from the config) validate input, apply

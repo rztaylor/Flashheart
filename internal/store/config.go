@@ -67,3 +67,30 @@ func (s *Store) readConfigFile() ([]byte, error) {
 func (s *Store) configPath() string {
 	return filepath.Join(s.path, filepath.FromSlash(ConfigFile))
 }
+
+// renamePreferences renames workstream from of project to in config.yaml's
+// UI preferences (config.UI.RenameWorkstream: its saved filter scope and
+// its expanded finished workstreams), under the root lock, after the
+// rename has committed (FH-170). It is best effort: the rename stands
+// whatever happens here, so a config.yaml that is missing, cannot be read
+// as settings or cannot be written is left as it is.
+func (s *Store) renamePreferences(project, from, to string) {
+	_ = s.UpdateConfig(func(data []byte) ([]byte, error) {
+		if data == nil {
+			return nil, nil
+		}
+		settings, err := config.Parse(data)
+		if err != nil {
+			return data, nil
+		}
+		ui, changed := settings.UI.RenameWorkstream(project, from, to)
+		if !changed {
+			return data, nil
+		}
+		next, err := config.SetUI(data, ui)
+		if err != nil {
+			return data, nil
+		}
+		return next, nil
+	})
+}

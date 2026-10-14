@@ -3,7 +3,9 @@
 Owns the application shell and composition (`docs/dev/specs/ui-layout.md`
 §1): the band with view tabs (Board, Overview, Workstreams, Table), the Needs
 you plate and its Board and Table filter with the notice for runs no card
-shows, which opens the Overview (VIEW-2), old Agents routes landing on the
+shows, above the cards or in place of the empty state (`NeedsYouNotice`,
+`NeedsYouEmpty`), whose button opens the scope's Overview focused on Needs
+your decision (VIEW-2, FH-157), old Agents routes landing on the
 Overview, New ticket in a chosen project (the Overview's Create ticket;
 the new ticket opens on the Edit tab), New workstream from the
 Workstreams header (its page opens), opening the panel on a tab (Review
@@ -12,7 +14,8 @@ identity, the view's summary line and the Archive link, the archive route
 (a project's archived tickets, or the projects archive in All projects),
 the ticket page route (`#/ticket/<id>`, a ticket's full page under the
 band, CARD-7; a navigation waits on the leave guard while an edit is
-unsaved)
+unsaved), a renamed workstream's page moving to its new slug in place of
+the old address with the saved filters following it (FH-167, FH-170)
 and the Undo after archiving a project, the screen's one marginal remark
 (`AsideProvider`) and wiring which moves earn one, the brand tooltip, the
 shutdown-denial alert, keeping a file dropped outside a drop target from

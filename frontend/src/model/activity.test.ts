@@ -316,6 +316,42 @@ describe("activityOf", () => {
     });
   });
 
+  it("shows an agent's rewrite: who edited which sections, and the note linking the replaced text (FH-69)", () => {
+    const kept = "files/20261014T2042-fh-65-earlier-text.md";
+    const entries = activityOf(
+      input({
+        body: notes(
+          `- 2026-10-14 · claude:2ff6eb1c: Rewrote Description; criteria: 2 reworded. The replaced text is in [${kept}](${kept}).`,
+        ),
+        history: [
+          history({
+            id: "h1",
+            time: "2026-10-14T20:42:34Z",
+            by: "claude:2ff6eb1c-9261-47a2-abdd-2233822a2b1b",
+            byShort: "claude:2ff6eb1c",
+            byPerson: false,
+            changes: [
+              change({ fields: ["description", "acceptance-criteria"] }),
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(entries).toMatchObject([
+      {
+        kind: "note",
+        by: "claude:2ff6eb1c",
+        markdown: `Rewrote Description; criteria: 2 reworded. The replaced text is in [${kept}](${kept}).`,
+      },
+      {
+        kind: "history",
+        by: "claude:2ff6eb1c",
+        byPerson: false,
+        words: ["edited the description and the acceptance criteria"],
+      },
+    ]);
+  });
+
   it("takes agents' moves from the runs only before the activity file's history begins", () => {
     const moved = (time: string, to: string, ticket = "FH-65") => ({
       time,

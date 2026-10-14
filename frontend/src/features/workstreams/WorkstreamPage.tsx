@@ -6,7 +6,11 @@ import {
   type WorkstreamDetail,
 } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
-import { type Saved, saveWorkstreamSection } from "../../api/edit";
+import {
+  nameWorkstream,
+  type Saved,
+  saveWorkstreamSection,
+} from "../../api/edit";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { LoadError } from "../../components/LoadError";
@@ -31,6 +35,13 @@ import { InPlaceSection } from "../editing/InPlaceSection";
 import type { EditPlace } from "../editing/lateSaves";
 import type { Editing } from "../editing/useEditing";
 import { TransitLine } from "./TransitLine";
+import {
+  type Editable,
+  type Named,
+  type SendName,
+  type Siblings,
+  WorkstreamName,
+} from "./WorkstreamName";
 import { LineNotes, LineStatus, routeSurface, Served } from "./WorkstreamsView";
 
 interface WorkstreamPageProps {
@@ -44,6 +55,11 @@ interface WorkstreamPageProps {
   // editing enables the in-place edits; absent when read-only.
   editing?: Editing;
   onOpen(ticket: TicketRef): void;
+  // onRenamed hears the workstream's new slug after its name was saved
+  // with one (FH-167), for the route to follow it.
+  onRenamed?(slug: string): void;
+  // siblings are the project's workstreams, for the name's check.
+  siblings?: Siblings;
   // backLink is the project's Workstreams view and the project's name.
   backLink: { href: string; label: string };
 }
@@ -61,6 +77,8 @@ export function WorkstreamPage({
   revision,
   editing,
   onOpen,
+  onRenamed,
+  siblings,
   backLink,
 }: WorkstreamPageProps) {
   const load = useCallback(
@@ -95,6 +113,19 @@ export function WorkstreamPage({
             content,
           )
       : undefined;
+  const sendName: SendName | undefined =
+    editing && detail?.hash
+      ? (base, name) =>
+          nameWorkstream(fetcher, ref.project, ref.slug, base, name)
+      : undefined;
+  // named follows a saved name: to the new slug's page, which loads it,
+  // or a reload of this one.
+  const named = (result?: Named) => {
+    if (!result || result.slug === ref.slug) resource.reload();
+    if (result && editing)
+      editing.notify({ text: `Renamed ${title} to ${result.name}.` });
+    if (result && result.slug !== ref.slug) onRenamed?.(result.slug);
+  };
   return (
     <TicketLinksInPlace>
       <div className="mx-auto w-full max-w-[80rem] px-4 pt-4 pb-[30vh] md:px-8">
@@ -137,6 +168,9 @@ export function WorkstreamPage({
               onOpen={onOpen}
               save={save}
               onSaved={saved}
+              sendName={sendName}
+              onNamed={named}
+              siblings={siblings}
             />
           </>
         ) : null}
@@ -144,10 +178,6 @@ export function WorkstreamPage({
     </TicketLinksInPlace>
   );
 }
-
-// Editable is the workstream as its in-place items take it: named by its
-// title, which the conflict dialog says.
-type Editable = WorkstreamDetail & { id: string };
 
 type SaveSection = (
   base: string,
@@ -164,6 +194,9 @@ function LoadedPage({
   onOpen,
   save,
   onSaved,
+  sendName,
+  onNamed,
+  siblings,
 }: {
   // place is the page, for an edit whose save failed after it was left
   // (FH-156).
@@ -175,14 +208,22 @@ function LoadedPage({
   onOpen(ticket: TicketRef): void;
   save?: SaveSection;
   onSaved(saved: Saved | undefined, what: string): void;
+  sendName?: SendName;
+  onNamed(named?: Named): void;
+  siblings?: Siblings;
 }) {
   const editable: Editable = { ...detail, id: detail.title };
   return (
     <InPlaceEditing place={place}>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 pb-6">
         <LineBullet line={line} size="xl" />
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h1 className="text-3xl leading-tight display-cut">{detail.title}</h1>
+        <div className="flex min-w-0 flex-1 basis-64 flex-col gap-0.5">
+          <WorkstreamName
+            detail={editable}
+            send={sendName}
+            onNamed={onNamed}
+            siblings={siblings}
+          />
           <LineStatus workstream={detail} />
         </div>
         <span className="ml-auto">

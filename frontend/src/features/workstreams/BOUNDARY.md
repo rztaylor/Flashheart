@@ -23,11 +23,13 @@ Owns the workstream page too (EDIT-13, FH-139, ui-layout.md §4
 "Workstream page"): it loads one workstream (its line, body and hash),
 shows the route card's head and stations, and edits each section in place
 through `editing/`'s `InPlaceEditing` and `InPlaceEditor` with `editor/`'s
-`MarkdownField`, saving one section on the hash it opened on. Which
+`MarkdownField`, saving one section on the hash it opened on, and its
+name in place (`WorkstreamName`, FH-167): saved with the slug the server
+makes from it, telling the shell the new slug so the page can follow. Which
 sections show, and where a missing template one goes, is
 `model/workstreamSections`. The route card's name links to the page.
 
 Does not own line colour assignment (`model/lines`), blocking rules
 (backend), routing, the card panel, the in-place editing, conflict dialog
 and toast (`editing/`), the editor (`editor/`), or which sections may be
-rewritten, slugs or the template (backend), or ticket membership (`card/`).
+rewritten, slugs, how a name makes one, or the template (backend), or ticket membership (`card/`).

@@ -126,6 +126,14 @@
   note and skeleton, with screenshots named `state-error-*`,
   `state-stale-*` and `state-loading-*`.
 - Run-state and blocking logic are table tests with a fake clock.
+- An agent's rewrite (FH-69, D75): which sections, criteria operations
+  and what a rewrite replaced are table tests in `board`
+  (`rewrite_test.go`, with a corpus check that criteria edits leave the
+  rest of real FH tickets byte for byte); the kept text, its index entry,
+  the history and restoring from it in `store` (`rewrite_test.go`); the
+  inputs, refusals, `claimed` and `conflict` in `mcpserver`, the
+  conflict through the server's `betweenReadAndWrite` seam, which changes
+  the ticket between `update_ticket`'s read and its write.
 - Layering (FH-106) is tested, not reviewed: `internal/archtest`'s
   `TestLeanPackagesDoNotLinkTheWebServer` walks `go list -deps` of the
   hook, MCP, await, setup and doctor packages, and the frontend's
@@ -155,6 +163,20 @@
   write nothing, in `store` (`workstreamrename_test.go`); `rename_to` and
   its events in `mcpserver` (`workstreams_test.go`); the board's PATCH in
   `api` (`TestPatchWorkstreamRenamesIt`) and its authentication in `app`.
+  Renaming from the page's name (FH-167, D78): the slug made from the
+  name, kept when it is the same or made unique, and a taken name in
+  words of names in `api` (`TestPatchWorkstreamNamesItsSlugFromTheTitle`)
+  and `store` (`TestWorkstreamSlugFor`); the saved preferences a rename
+  rewrites, the ones it leaves, and a broken `config.yaml` that does not
+  stop it in `store` (`workstreamprefs_test.go`), `config`
+  (`TestUIRenameWorkstream`) and `api`
+  (`TestPatchWorkstreamRenameKeepsSavedPreferences`), the page's copy in
+  `app/scopeMemory.test.ts`; the name item in
+  `WorkstreamPage.dom.test.tsx`, the route's replace in
+  `route.dom.test.ts`; in the browser, `workstream-page.spec.mjs`
+  renames a line from its route card's page (the taken name, every
+  reference, the saved filter through a later preference save, Back and
+  Forward, both themes, 390 px, axe).
 - In-place edits (FH-66) leave the rest of a real ticket byte for byte:
   `board` replays field and section edits over `testdata/tickets/`
   (read-only copies of FH tickets, also with CRLF line endings) and

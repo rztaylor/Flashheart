@@ -836,7 +836,7 @@ still works, attributed to `unknown`.
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff, unticked criteria, then the ticket's comments (below), within 3 KiB |
 | `release` | `ticket`, `reason?` | §6 | ok |
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
-| `update_ticket` | `ticket`, `set?` (frontmatter fields, including `pr`, the pull request URL; an empty value clears it), `check?` (criteria text or index), `append_notes?`, `addressed?` (ids of the user's change requests on the ticket that the agent has made, FH-126) | frontmatter/body edit with hash precondition; `addressed` marks each change request addressed in the ticket's `activity.md` in the same write (one history entry), refusing a plain comment or a resolved request (`invalid_input`; one already addressed is no change) or an unknown id (`not_found`); setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4) | changed fields; a title advice warning (below) when it sets the title |
+| `update_ticket` | `ticket`, `set?` (frontmatter fields, including `pr`, the pull request URL; an empty value clears it), `check?` (criteria text or index), `append_notes?`, `addressed?` (ids of the user's change requests on the ticket that the agent has made, FH-126), `sections?` (heading → new text, FH-69), `criteria?` (operations `{op, item?, text?, position?}`, FH-69) | frontmatter/body edit with hash precondition; `addressed` marks each change request addressed in the ticket's `activity.md` in the same write (one history entry), refusing a plain comment or a resolved request (`invalid_input`; one already addressed is no change) or an unknown id (`not_found`); setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4); `sections` and `criteria` rewrite the ticket's text (below) | changed fields, and `kept=files/…` when a rewrite kept replaced text; a title advice warning (below) when it sets the title |
 | `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file, the criteria and the ticket's open change requests, naming each with its id and the start of its text, and returns warnings (never refuses, `EDIT-3`, `REV-6`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `context?` (implementation detail, written under `## Context`), `project_key?` (only for a project with no key yet), `project?` (a name or key; default the caller's, §7.1) | new ticket folder with the next id (`KEY-2`) in that project; a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` (of that project) is joined (§7.4) | id; a title advice warning (below) |
@@ -868,6 +868,36 @@ text (at most 2,000), indented. Comments that do not fit the tool's
 budget are left out oldest first, and a line after the heading says how
 many (*(3 earlier comments left out; the board shows them all.)*); the
 newest alone is cut to fit. A ticket without comments shows no block.
+
+**Rewriting a ticket when its scope changes (FH-69, D75).** Rather than
+a note saying "this supersedes criterion 1", an agent corrects the text:
+
+- `sections` replaces whole sections by heading (case does not matter):
+  Description, Test Plan, Reproduction or Context, each added in the
+  template's place when the ticket lacks it, or any other section the
+  ticket already has. Headings are matched only at the start of a line
+  outside code fences, the text between the heading and the next one is
+  replaced, and every other byte of the file stays as it was
+  (board-format §Section edits). Refused with `invalid_input` and a fix:
+  `Handoff` (use `checkpoint`), `Notes` (use `append_notes`),
+  `Acceptance Criteria` (use `criteria`), and a section the ticket does
+  not have, naming those that may be rewritten.
+- `criteria` is a list of operations made in order: `add` (`text`,
+  `position?`, default last), `reword` (`item`, `text`), `remove`
+  (`item`), `move` (`item`, `position`). `item` is a criterion's number
+  before this call (1 is the first) or its text, so earlier operations
+  never renumber later ones; `position` counts the list as the
+  operations before it left it. A reworded or moved criterion keeps its
+  tick, an added one is unticked; `check` in the same call ticks by the
+  same numbers, before the operations.
+- The write keeps the old text of each section it changed in the
+  ticket's files (`files/<time>-<id>-earlier-text.md`, listed in its
+  index), so a person can restore it, and appends a note under the
+  caller's run naming what changed and linking that file; the history
+  entry names the sections (board-format §Activity). A section only
+  added keeps nothing; text the ticket already has writes nothing. All of
+  it is one write under the hash precondition: a ticket changed since
+  the read is `conflict`, and nothing is written.
 
 **Tickets for a person (FH-113, D40).** Tickets are written for someone
 who has not read the code; implementation detail is welcome below, in
@@ -906,6 +936,20 @@ and any local file referenced in its text, into `files/` (`REV-5`).
 
 There is deliberately no delete, archive or bulk tool for agents.
 
+**The tool list's cost (D52, FH-134).** Every session receives the tool
+list (`tools/list`: each tool's name, description and input schema) and
+the server's instructions (`initialize`) before it does any work. A test
+measures both as the JSON a client receives, in bytes and estimated
+tokens (bytes / 4), reports each tool's share
+(`go test -v -run TestToolListStaysWithinItsBudget ./internal/mcpserver`),
+and fails when the total passes the budget, naming the largest tools.
+The tool list's budget is 16,500 bytes (about 4,100 tokens): 14,224 bytes
+were measured when it was set, 15,711 with the inputs FH-69 and FH-158
+add, and the budget is that plus about 5%. A new ability first becomes an
+optional input on an existing tool, in few words (D52); a change that
+still passes the budget raises it here and in the test together, to the
+new size plus about 5%, and says why in its pull request.
+
 ### 7.4 Workstream membership
 
 A workstream's `tickets:` list defines membership and display order; order
@@ -938,8 +982,9 @@ same write it moves the file and rewrites every reference to the old slug
 in the project, each ticket's `workstream:` and every
 `depends-on-workstreams` of its workstreams and its live and archived
 tickets, each rewritten ticket recording `ticket.updated` with the fields
-it named. Links and prose that mention the old slug are text and stay as
-they are. Tickets other sessions hold are rewritten too: the rename
+it named, and the board's saved preferences that name it follow,
+best effort (FH-170, D78). Links and prose that mention the old slug are
+text and stay as they are. Tickets other sessions hold are rewritten too: the rename
 changes only which slug they name, so it is not refused as `claimed`.
 
 A project's workstream titles are unique, compared ignoring letter case
@@ -1141,6 +1186,10 @@ checks (§5.4). It covers, briefly:
   `ask_human` returns (§7.5);
 - when you open a pull request for a ticket, set its `pr` to the pull
   request's URL with `update_ticket` (board-format §Frontmatter);
+- when a decision changes a ticket's scope, rewrite its sections and
+  criteria with `update_ticket`'s `sections` and `criteria` rather than
+  adding a note that contradicts them; Handoff and Notes are never
+  rewritten (§7.2, FH-69);
 - finishing: evidence in the review (§11): captioned screenshots of every
   state a visible change touched, or "No visible change: <why>";
   `write_review`, `move` to `review`; never move to `done`;
@@ -1186,7 +1235,8 @@ checks (§5.4). It covers, briefly:
   window with that many events a day. Session start and enforcing stop
   stay under 50 ms at 50,000 events a day.
 - **State table tests** for §4, including clock-driven transitions.
-- **MCP contract tests** through the Go SDK's in-memory transport.
+- **MCP contract tests** through the Go SDK's in-memory transport,
+  including the tool list's size against its budget (§7.2).
 - **End-to-end smoke**: a scripted sequence (start → claim → edits → stop
   blocked → checkpoint → end → new session recovery note) against a temp root.
   A cross-agent leg runs it from Claude Code to Codex and from Codex to
@@ -1373,6 +1423,16 @@ before, deliberately: the duplicate it made looked identical to the
 other in every picker. No tool, input, output or event changes shape,
 an agent already handles `invalid_input`, and the skill is unchanged,
 so the version stays 2.
+Additive change within version 2 (D75, FH-69, 2026-10-14):
+`update_ticket` gains the optional inputs `sections` and `criteria`
+(§7.2), its result a `kept=` part when a rewrite kept replaced text, and
+the skill a line on rewriting rather than appending (to stay under
+8 KiB, it drops the line saying hooks mirror the agent's plan, which D51
+retired, and shortens a few others, saying the same). The new refusals
+are of inputs no older agent sends; no event changes shape
+(`ticket.updated` names the rewritten sections as the board's section
+edits do, D57), and an agent that sends neither writes what it wrote
+before, so the version stays 2.
 
 Additive change within version 2 (D50, FH-132, 2026-10-14): the claim
 reminder (§9, `HOOK-8`). A session that edits holding no ticket is asked

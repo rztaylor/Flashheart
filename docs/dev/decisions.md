@@ -1224,6 +1224,9 @@ in its decision. Every tool's name, description and schema is in every
 agent's context before it does any work (principle 3), so the list's size
 is measured: a test fails when it grows past a recorded budget, and a
 change that raises the budget says why (FH-134). "No delete" stands.
+The measure covers the `tools/list` result and the server's instructions,
+both sent to every session; the budget and the rule for raising it are in
+agent-protocol §7.2.
 
 Options: extend existing tools first, with a measured size (chosen); a
 hard token budget alone; add tools freely.
@@ -1759,7 +1762,7 @@ for copies with no structure. A Sanitizer API pass was not used: it is
 not in every browser the board supports, and the converter reads only
 what it allows anyway.
 
-## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73)
+## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73 and D78)
 
 Decision (FH-46): a new MCP tool, `update_workstream`, sets a
 workstream's title, goal, priority, tags and `depends-on-workstreams`
@@ -1929,7 +1932,7 @@ which FH-167 will give a control on the workstream page.
   the renamed workstream's own is refused. UI preferences in
   `config.yaml` that name the slug (saved filters, expanded finished
   workstreams) are outside the project and its lock and are left as they
-  are; a follow-up keeps them in step.
+  are by this write; D78 (FH-170) keeps them in step after it.
 - **Refusals.** A new slug that is not valid (board-format §Workstream)
   is `invalid_input` / 400; one that a file in `workstreams/` already
   has, workstream or not, is `invalid_input` for agents and 409 `exists`
@@ -1945,6 +1948,100 @@ which FH-167 will give a control on the workstream page.
 
 Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): a new optional
 input, no event changes shape. Board format stays 2: no field is added.
+
+## 2026-10-14 — D74: The Needs you filter says why an agent has no card, and sends the user to answer it
+
+Decision (FH-157): while the Needs you filter is on, agents that need the
+user with no ticket on the board (they asked about a project or a
+workstream, not a ticket) are explained where the user looks, not in a
+quiet strip beside misleading advice. With cards to show, the strip above
+them says why no card can show the rest. With no card left, the
+explanation replaces the empty state, and *Clear a filter or the search*
+is never shown when the Needs you filter is the reason. Both carry one
+primary button whose label says what it gets on its own, **Answer it in
+the Overview** (*them* for several), as the user asked: *Open Overview*
+named a view, not a result.
+
+- **Where the button goes.** The Overview of the same scope (a project's
+  count is that project's agents), with keyboard focus on the *Needs your
+  decision* heading, so a keyboard or screen reader user lands on the list
+  that holds the question. The focus is a one-time arrival held by the
+  app shell and dropped on any other view, not a route parameter: a
+  reload or a shared link opens the Overview as usual, and no new URL
+  form needs supporting. *Needs your decision* is already the Overview's
+  first section, so no scroll position needs keeping.
+- **Wording.** "Asked" covers questions and permission prompts alike; a
+  ticket that was archived or deleted is rare enough that "not about a
+  ticket" stays accurate in spirit.
+- **Other filters.** When other filters are on too, the explanation
+  stays and adds that clearing them may show tickets that need the user;
+  with nobody waiting and other filters on, the generic empty state
+  stays, as those filters may be the reason. With nobody waiting and no
+  other filter, the empty state is *Nothing needs you right now*.
+
+## 2026-10-14 — D75: Agents rewrite a ticket's sections and criteria; the replaced text is kept in its files
+
+Decision (FH-69): `update_ticket` gains two optional inputs. `sections`
+replaces whole sections by heading (`board.NewAgentSectionChange`, built
+on D57's `SectionChange`, so headings match only at the start of a line
+outside code fences and every other byte stays as it was). `criteria`
+edits the acceptance criteria by operation (`board.NewCriteriaEdit`).
+The rewrite is written by `store.ApplyTicketEdit` in the same write as
+the call's fields, ticks, notes and addressed requests, under the
+project lock and the ticket's content hash (a ticket changed since the
+read is a `conflict`; one another live session holds is `claimed`).
+
+- **An unknown section is refused.** Options: refuse it naming the
+  sections there are; create it, as the board's in-place editor adds a
+  missing one. A misspelt name ("Descripton") would quietly add a stray
+  section that the next session reads beside the real one, the very
+  contradiction FH-69 removes. So a section that is not in the template
+  must already be in the ticket; a template section the ticket lacks
+  (Description, Test Plan, Reproduction, Context) is added in its place.
+  The refusal is `invalid_input` naming every section that may be
+  rewritten, with "put the text in Context" as the fix.
+- **Never whole: Handoff, Notes and Acceptance Criteria.** `checkpoint`
+  writes Handoff and `append_notes` adds to Notes (D57), as before. The
+  criteria are refused too, so a rewrite can never drop a tick.
+- **Criteria by operation, not as a full list.** Options: operations
+  (add, reword, remove, move); a full replacement list matched by index.
+  A full list makes the agent restate every criterion and its tick, and a
+  tick a person made between the read and the write is lost or lands on
+  the wrong item when items are matched by index. Operations name only
+  what changes: a reworded or moved criterion keeps its box, an added one
+  starts unticked. Items are numbered as the ticket had them before the
+  call (by number or text, as `check` takes them), so an earlier
+  operation never renumbers a later one; `position` counts the list as
+  the operations before it left it. `check` in the same call ticks by the
+  same numbers, before the operations.
+- **Where the replaced text is kept: a file in the ticket's `files/`.**
+  Options: in the history entry (D58 keeps ticket text out of history,
+  and the Activity feed would carry whole sections); inline in a note
+  (notes are one-line bullets every session reads in `get_ticket`, so
+  old sections would bloat every later read); git (the board root need
+  not be a repository, D12); a file beside the ticket. The write keeps
+  the old text of every section whose text changed, under its own
+  heading, in `files/<time>-<id>-earlier-text.md` (`board.EarlierText`),
+  listed in `files/index.yaml` (kind `other`, the caller's run, a caption
+  naming the sections) and staged before the ticket, so a crash leaves a
+  listed file rather than a note pointing at nothing. A section that was
+  only added keeps nothing. A person restores a section by copying its
+  text back on the ticket's page. Which sections changed is worked out
+  from the ticket before and after the rewrite (`board.Rewritten`), as
+  history is (D58).
+- **Who changed what.** The ticket's Activity shows the history entry
+  D58 already writes (`edited: description, acceptance-criteria` by the
+  run), and the write appends a note under the caller's run:
+  *Rewrote Description and Context; criteria: 2 reworded, 3 removed, one
+  added as 1. The replaced text is in [files/…](files/…).* The result
+  ends with `kept=files/…`. A rewrite to the text the ticket already has
+  writes nothing, keeps nothing and notes nothing.
+
+Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): two new
+optional inputs on an existing tool (D52), no event changes shape
+(`ticket.updated` names the sections as D57's section edits do), and an
+agent that sends neither writes what it wrote before. Board format stays
+2: the kept file is an ordinary attachment.
 
 ## 2026-10-14 — D76: A project's workstream titles are unique
 
@@ -2014,6 +2111,60 @@ records this as a removal within version 2.
 
 Options: keep 2 (chosen); bump to 3, which would ask every user to
 re-run setup for a change no agent or reader can observe.
+
+## 2026-10-14 — D78: A workstream's name is edited on its page, and its slug and saved preferences follow
+
+Decision (FH-167, FH-170): the workstream page's h1, its name (the
+file's H1, `title`), edits in place like a ticket's title (EDIT-11: its
+pencil, a double-click, Save or Ctrl/Cmd+Enter, Escape, the inline
+error, the conflict dialog). Saving a new name also renames the slug to
+the one the name makes, so "all references to the old name" (the
+ticket's words) follow: members' `workstream`, every
+`depends-on-workstreams` and the file name, through D73's rename. The
+saved UI preferences that name the slug follow too, for any rename.
+
+- **The slug follows the name on the board, not for agents.** D69 and
+  D73 keep a title change and a rename apart for agents, whose title
+  edits are often wording. A person renaming a line on its page means
+  the line, and a slug that no longer says its name is what the ticket
+  calls a reference left behind. Agents still choose `rename_to`.
+- **The server makes the slug.** The page sends the new title with
+  `slugFromTitle: true` on `PATCH /api/projects/{p}/workstreams/{slug}`;
+  the API derives the slug with `store.WorkstreamSlugFor`, the same
+  derivation New workstream uses (`slugify`), so the browser holds no
+  slug rule. A name that makes the current slug changes the title only.
+  A slug New workstream made unique (`offline-2` for a second "Offline")
+  is kept for a name that makes its base, so a small edit to such a name
+  does not meet its sibling's slug.
+- **A taken name is the person's to change.** A name whose slug another
+  file in `workstreams/` has is 409 `exists`, worded in names ("already
+  has the short name … choose another name") rather than the agent's
+  slug words; a name another workstream already has (FH-163, D76) is
+  named at the field before it is sent, as New workstream does
+  (`takenWorkstream` over the project's workstreams), and the server's
+  409 `title_taken` covers a list that is out of date. Each shows beside
+  the field, which stays open with what was typed; nothing is written.
+- **The page moves with it.** After a rename the page replaces its
+  address with the new slug's (`useRoute`'s `replace`), so Back leaves
+  the page for where it came from rather than for an address that is
+  gone, and Forward returns to the renamed page.
+- **Preferences follow every rename (FH-170).** After a rename commits
+  and the project lock is released, `store.EditWorkstream` rewrites the
+  old slug to the new one in `config.yaml`'s
+  `ui.scopes.<project>.workstream` include and exclude and
+  `ui.expanded_workstreams.<project>`, under the root lock, so MCP and
+  the board both get it. It is best effort: a `config.yaml` that is
+  missing, unreadable as settings or unwritable leaves the rename as it
+  is and the file untouched. All projects' scope (`all`) and other
+  projects' choices stay: their bare slugs may name another project's
+  workstream. The board applies the same rewrite to its loaded copy
+  (`renameWorkstreamIn`), as it saves preferences whole and would
+  otherwise put the old slug back. A rename by an agent while a board
+  tab is open is not heard by that tab's copy; its next preference save
+  can still restore the old slug there (FH-173).
+
+Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format
+stays 2 (no field is added; the preferences keep their shape).
 
 ## 2026-10-14 — D79: The browser's API contract is checked by golden fixtures; vocabularies by test
 
