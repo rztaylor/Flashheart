@@ -141,7 +141,8 @@ Intended layout (packages are created when they get real content):
   a change request (FH-126) is sent to, and which runs a person may send
   a comment to now (FH-127).
 - `internal/archtest`: tests over the module's source (the root
-  confinement rule, the one default root); no code outside its tests.
+  confinement rule, the one default root, the lean packages' import
+  graph); no code outside its tests.
 - `internal/api`: HTTP JSON handlers and request validation; no filesystem
   rules.
 - `internal/app`: Singleserve composition and lifecycle, shutdown guard.
@@ -155,7 +156,16 @@ import no I/O packages; `runs` imports only `events`' types. Nothing below `app`
 Singleserve.
 
 - `hook` and `mcp` modes never use `index`, `api`, `app` or `webui`; they
-  must start in under 30 ms (`NFR-4`). `hooks` is agent-neutral and takes an
+  must start in under 30 ms (`NFR-4`). Checked by `internal/archtest`
+  (`TestLeanPackagesDoNotLinkTheWebServer`, FH-106): `go list -deps` of
+  `mcpserver`, `hooks` (and its adapters), `await`, `setup` and `doctor`
+  must not reach `index`, `api`, `app`, `webui` or `net/http`. The one
+  allowance: `mcpserver` links `net/http` through the MCP SDK, which
+  imports it for transports Flashheart does not use (D72); the import
+  chain is not followed into the SDK, and the test fails when the
+  allowance is no longer needed. `cli` itself still imports `app` (for
+  `app.Options` and `app.Launched`), so the binary links the web server
+  in every mode; the check covers the mode packages, not `cli`. `hooks` is agent-neutral and takes an
   `Adapter`; `cli` picks the adapter by agent name.
 - Developer tools: `scripts/hookbench` (Go command behind
   `scripts/hook-bench.sh`), not part of the binary.

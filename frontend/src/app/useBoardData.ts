@@ -13,9 +13,10 @@ import { type Movable, useEditing } from "../features/editing/useEditing";
 import { linesByProject } from "../model/lines";
 import { placeCard } from "../model/order";
 import { moveRemark, nextRemark } from "../model/remarks";
+import type { Scope } from "../model/scopes";
 import { type Resource, useResource } from "../state/useResource";
 import { useRevision } from "../state/useRevision";
-import type { Scope, View } from "./route";
+import type { View } from "./route";
 
 type BoardData = { cards: Card[]; doneTotal: number; doneShown: number };
 

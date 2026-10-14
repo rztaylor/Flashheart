@@ -1,6 +1,6 @@
 import type { ProjectSummary } from "../api/board";
 import { SearchField, SelectField } from "../components/Field";
-import type { Scope } from "./route";
+import type { Scope } from "../model/scopes";
 
 // NarrowControls take the rail's place below 48rem (ui-layout.md §1):
 // search on the Board and Table, the Project picker and, on the Board, the

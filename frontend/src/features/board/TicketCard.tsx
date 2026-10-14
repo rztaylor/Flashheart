@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import type { Card } from "../../api/board";
+import type { Density } from "../../api/preferences";
 import type { Live } from "../../api/runs";
 import { Icon } from "../../components/Icon";
 import { NeedsYouPlate, plateClass } from "../../components/NeedsYou";
@@ -26,7 +27,6 @@ import { requestWords } from "../../model/requests";
 import { agentName, needsReason, STATE_LABEL } from "../../model/runs";
 import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
-import type { Density } from "../filters/FilterBar";
 
 interface TicketCardProps {
   card: Card;
