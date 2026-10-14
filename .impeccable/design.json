@@ -1605,35 +1605,35 @@
       "paint-priority-high": {
         "role": "secondary",
         "displayName": "Paint Priority High Strong",
-        "canonical": "#b3362b",
-        "oklch": "oklch(51.8% 0.163 29.0)",
-        "purpose": "Tag word and colour-key swatch for Colour by priority high.",
+        "canonical": "#b93d0b",
+        "oklch": "oklch(53.4% 0.168 38.2)",
+        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority high.",
         "tonalRamp": [
-          "#280000",
-          "#4a0000",
-          "#6e120c",
-          "#942b22",
-          "#c74c3f",
-          "#ec7667",
-          "#ffa293",
-          "#ffcec0"
+          "#2d0000",
+          "#4c0000",
+          "#7b0000",
+          "#9c1f00",
+          "#c94c21",
+          "#ec6c43",
+          "#ff8c63",
+          "#ffbc9d"
         ]
       },
       "paint-priority-high-tint": {
         "role": "secondary",
         "displayName": "Paint Priority High Tint",
-        "canonical": "#fde9e6",
-        "oklch": "oklch(94.9% 0.022 27.8)",
-        "purpose": "Card header wash and tag fill for Colour by priority high.",
+        "canonical": "#fdece0",
+        "oklch": "oklch(95.3% 0.024 57.7)",
+        "purpose": "Whole-card wash for Colour by priority high.",
         "tonalRamp": [
-          "#100908",
-          "#291f1e",
-          "#433736",
-          "#60514f",
-          "#877673",
-          "#ab9a97",
-          "#d0c0be",
-          "#f5e8e5"
+          "#130803",
+          "#2b1f16",
+          "#45382e",
+          "#605248",
+          "#86776c",
+          "#a4958a",
+          "#c4b4a8",
+          "#e5d4c8"
         ]
       },
       "paint-priority-high-ink": {
@@ -1656,35 +1656,35 @@
       "paint-priority-medium": {
         "role": "secondary",
         "displayName": "Paint Priority Medium Strong",
-        "canonical": "#845700",
-        "oklch": "oklch(49.4% 0.105 74.4)",
-        "purpose": "Tag word and colour-key swatch for Colour by priority medium.",
+        "canonical": "#52525b",
+        "oklch": "oklch(44.2% 0.015 285.8)",
+        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority medium.",
         "tonalRamp": [
-          "#190500",
-          "#351b00",
-          "#533300",
-          "#724d0b",
-          "#9e702b",
-          "#c29658",
-          "#e5bd87",
-          "#ffe5b6"
+          "#0a0a11",
+          "#212128",
+          "#3a3a42",
+          "#54545d",
+          "#797983",
+          "#9797a1",
+          "#b6b6c1",
+          "#d6d6e1"
         ]
       },
       "paint-priority-medium-tint": {
         "role": "secondary",
         "displayName": "Paint Priority Medium Tint",
-        "canonical": "#fdf0cf",
-        "oklch": "oklch(95.7% 0.045 89.1)",
-        "purpose": "Card header wash and tag fill for Colour by priority medium.",
+        "canonical": "#ededef",
+        "oklch": "oklch(94.7% 0.003 286.3)",
+        "purpose": "Whole-card wash for Colour by priority medium.",
         "tonalRamp": [
-          "#100a01",
-          "#282110",
-          "#423a25",
-          "#5e543c",
-          "#85795c",
-          "#a99e82",
-          "#cdc3aa",
-          "#f4ebd4"
+          "#0b0b0c",
+          "#212123",
+          "#3a3a3c",
+          "#555557",
+          "#7a7a7c",
+          "#98989a",
+          "#b7b7b9",
+          "#d7d7d9"
         ]
       },
       "paint-priority-medium-ink": {
@@ -1707,35 +1707,35 @@
       "paint-priority-low": {
         "role": "secondary",
         "displayName": "Paint Priority Low Strong",
-        "canonical": "#2b7346",
-        "oklch": "oklch(49.8% 0.102 153.1)",
-        "purpose": "Tag word and colour-key swatch for Colour by priority low.",
+        "canonical": "#0369a1",
+        "oklch": "oklch(50.0% 0.119 242.7)",
+        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority low.",
         "tonalRamp": [
-          "#001201",
-          "#002b10",
-          "#104626",
-          "#28633d",
-          "#468b5e",
-          "#70af83",
-          "#9cd4ab",
-          "#c8fad5"
+          "#000438",
+          "#002255",
+          "#003e72",
+          "#005a91",
+          "#2b81bb",
+          "#4ea0dc",
+          "#6ec0fd",
+          "#8ee1ff"
         ]
       },
       "paint-priority-low-tint": {
         "role": "secondary",
         "displayName": "Paint Priority Low Tint",
-        "canonical": "#e2f4e8",
-        "oklch": "oklch(95.1% 0.025 156.7)",
-        "purpose": "Card header wash and tag fill for Colour by priority low.",
+        "canonical": "#e2f0f9",
+        "oklch": "oklch(94.7% 0.019 235.7)",
+        "purpose": "Whole-card wash for Colour by priority low.",
         "tonalRamp": [
-          "#060d09",
-          "#1b241e",
-          "#333e36",
-          "#4c5950",
-          "#6f7f75",
-          "#94a399",
-          "#bac8bf",
-          "#e2efe7"
+          "#040c12",
+          "#19232a",
+          "#313c43",
+          "#4b575f",
+          "#707c84",
+          "#8d9aa3",
+          "#acbac2",
+          "#ccdae3"
         ]
       },
       "paint-priority-low-ink": {
@@ -3492,35 +3492,35 @@
       "night-paint-priority-high": {
         "role": "secondary",
         "displayName": "Night Paint Priority High Strong",
-        "canonical": "#ff9187",
-        "oklch": "oklch(77.2% 0.134 26.1)",
-        "purpose": "Tag word and colour-key swatch for Colour by priority high. Dark theme.",
+        "canonical": "#ff9a62",
+        "oklch": "oklch(78.0% 0.141 48.7)",
+        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority high. Dark theme.",
         "tonalRamp": [
-          "#240000",
-          "#440607",
-          "#661e1b",
-          "#8a3631",
-          "#bc574f",
-          "#e07f76",
-          "#ffa99f",
-          "#ffd4cb"
+          "#2c0000",
+          "#4a0000",
+          "#6f1300",
+          "#8f3500",
+          "#ba5c1f",
+          "#dc7b42",
+          "#ff9a62",
+          "#ffbf90"
         ]
       },
       "night-paint-priority-high-tint": {
         "role": "secondary",
         "displayName": "Night Paint Priority High Tint",
-        "canonical": "#33201e",
-        "oklch": "oklch(26.7% 0.030 25.9)",
-        "purpose": "Card header wash and tag fill for Colour by priority high. Dark theme.",
+        "canonical": "#35241a",
+        "oklch": "oklch(27.8% 0.031 51.5)",
+        "purpose": "Whole-card wash for Colour by priority high. Dark theme.",
         "tonalRamp": [
-          "#120807",
-          "#2b1e1c",
-          "#463634",
-          "#63504e",
-          "#8b7471",
-          "#af9896",
-          "#d3bfbc",
-          "#f9e6e4"
+          "#150702",
+          "#2e1d13",
+          "#48362c",
+          "#645146",
+          "#8a756a",
+          "#a99387",
+          "#c9b2a6",
+          "#e9d2c5"
         ]
       },
       "night-paint-priority-high-ink": {
@@ -3543,35 +3543,35 @@
       "night-paint-priority-medium": {
         "role": "secondary",
         "displayName": "Night Paint Priority Medium Strong",
-        "canonical": "#e8c460",
-        "oklch": "oklch(83.2% 0.126 89.7)",
-        "purpose": "Tag word and colour-key swatch for Colour by priority medium. Dark theme.",
+        "canonical": "#b4b4bc",
+        "oklch": "oklch(77.2% 0.011 286.1)",
+        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority medium. Dark theme.",
         "tonalRamp": [
-          "#170700",
-          "#321d00",
-          "#4e3600",
-          "#6d5100",
-          "#977600",
-          "#ba9b41",
-          "#dec175",
-          "#ffe9a8"
+          "#0b0a10",
+          "#212127",
+          "#3a3a40",
+          "#54545b",
+          "#797981",
+          "#97979f",
+          "#b6b6be",
+          "#d6d6df"
         ]
       },
       "night-paint-priority-medium-tint": {
         "role": "secondary",
         "displayName": "Night Paint Priority Medium Tint",
-        "canonical": "#2e2814",
-        "oklch": "oklch(27.8% 0.034 93.2)",
-        "purpose": "Card header wash and tag fill for Colour by priority medium. Dark theme.",
+        "canonical": "#2a2a2e",
+        "oklch": "oklch(28.7% 0.007 285.9)",
+        "purpose": "Whole-card wash for Colour by priority medium. Dark theme.",
         "tonalRamp": [
-          "#0e0b03",
-          "#252115",
-          "#3f3a2b",
-          "#5b5543",
-          "#817a64",
-          "#a59e89",
-          "#cac4b1",
-          "#f0ebda"
+          "#0b0b0e",
+          "#212125",
+          "#3a3a3e",
+          "#555559",
+          "#7a7a7e",
+          "#98989d",
+          "#b7b7bc",
+          "#d7d7dc"
         ]
       },
       "night-paint-priority-medium-ink": {
@@ -3594,35 +3594,35 @@
       "night-paint-priority-low": {
         "role": "secondary",
         "displayName": "Night Paint Priority Low Strong",
-        "canonical": "#7fdc9e",
-        "oklch": "oklch(82.0% 0.126 153.6)",
-        "purpose": "Tag word and colour-key swatch for Colour by priority low. Dark theme.",
+        "canonical": "#56b6f0",
+        "oklch": "oklch(74.2% 0.123 238.1)",
+        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority low. Dark theme.",
         "tonalRamp": [
-          "#001300",
-          "#002c0b",
-          "#004821",
-          "#0e6637",
-          "#318f57",
-          "#61b37d",
-          "#90d8a6",
-          "#befdd0"
+          "#000636",
+          "#002353",
+          "#003f72",
+          "#005c91",
+          "#1583ba",
+          "#40a2db",
+          "#63c2fd",
+          "#87e3ff"
         ]
       },
       "night-paint-priority-low-tint": {
         "role": "secondary",
         "displayName": "Night Paint Priority Low Tint",
-        "canonical": "#16301f",
-        "oklch": "oklch(28.3% 0.045 153.8)",
-        "purpose": "Card header wash and tag fill for Colour by priority low. Dark theme.",
+        "canonical": "#152a3b",
+        "oklch": "oklch(27.6% 0.042 244.6)",
+        "purpose": "Whole-card wash for Colour by priority low. Dark theme.",
         "tonalRamp": [
-          "#030e06",
-          "#16261b",
-          "#2c4032",
-          "#455c4b",
-          "#66826e",
-          "#8ba693",
-          "#b3cbba",
-          "#dcf2e2"
+          "#000c1b",
+          "#0f2434",
+          "#273d4f",
+          "#42586b",
+          "#667d92",
+          "#839cb1",
+          "#a2bbd1",
+          "#c1dbf2"
         ]
       },
       "night-paint-priority-low-ink": {
