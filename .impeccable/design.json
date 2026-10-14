@@ -1607,7 +1607,7 @@
         "displayName": "Paint Priority High Strong",
         "canonical": "#b93d0b",
         "oklch": "oklch(53.4% 0.168 38.2)",
-        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority high.",
+        "purpose": "Strong shade for Colour by priority high, in the priority bars' hue (FH-166).",
         "tonalRamp": [
           "#2d0000",
           "#4c0000",
@@ -1658,7 +1658,7 @@
         "displayName": "Paint Priority Medium Strong",
         "canonical": "#52525b",
         "oklch": "oklch(44.2% 0.015 285.8)",
-        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority medium.",
+        "purpose": "Strong shade for Colour by priority medium, in the priority bars' hue (FH-166).",
         "tonalRamp": [
           "#0a0a11",
           "#212128",
@@ -1709,7 +1709,7 @@
         "displayName": "Paint Priority Low Strong",
         "canonical": "#0369a1",
         "oklch": "oklch(50.0% 0.119 242.7)",
-        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority low.",
+        "purpose": "Strong shade for Colour by priority low, in the priority bars' hue (FH-166).",
         "tonalRamp": [
           "#000438",
           "#002255",
@@ -3494,7 +3494,7 @@
         "displayName": "Night Paint Priority High Strong",
         "canonical": "#ff9a62",
         "oklch": "oklch(78.0% 0.141 48.7)",
-        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority high. Dark theme.",
+        "purpose": "Strong shade for Colour by priority high, in the priority bars' hue (FH-166). Dark theme.",
         "tonalRamp": [
           "#2c0000",
           "#4a0000",
@@ -3545,7 +3545,7 @@
         "displayName": "Night Paint Priority Medium Strong",
         "canonical": "#b4b4bc",
         "oklch": "oklch(77.2% 0.011 286.1)",
-        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority medium. Dark theme.",
+        "purpose": "Strong shade for Colour by priority medium, in the priority bars' hue (FH-166). Dark theme.",
         "tonalRamp": [
           "#0b0a10",
           "#212127",
@@ -3596,7 +3596,7 @@
         "displayName": "Night Paint Priority Low Strong",
         "canonical": "#56b6f0",
         "oklch": "oklch(74.2% 0.123 238.1)",
-        "purpose": "Colour-key shade, the priority bars' hue (FH-166), for Colour by priority low. Dark theme.",
+        "purpose": "Strong shade for Colour by priority low, in the priority bars' hue (FH-166). Dark theme.",
         "tonalRamp": [
           "#000636",
           "#002353",
