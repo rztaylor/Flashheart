@@ -98,14 +98,14 @@ colors:
   paint-type-other: "#4b5563"
   paint-type-other-tint: "#eef0f3"
   paint-type-other-ink: "#ffffff"
-  paint-priority-high: "#b3362b"
-  paint-priority-high-tint: "#fde9e6"
+  paint-priority-high: "#b93d0b"
+  paint-priority-high-tint: "#fdece0"
   paint-priority-high-ink: "#ffffff"
-  paint-priority-medium: "#845700"
-  paint-priority-medium-tint: "#fdf0cf"
+  paint-priority-medium: "#52525b"
+  paint-priority-medium-tint: "#ededef"
   paint-priority-medium-ink: "#ffffff"
-  paint-priority-low: "#2b7346"
-  paint-priority-low-tint: "#e2f4e8"
+  paint-priority-low: "#0369a1"
+  paint-priority-low-tint: "#e2f0f9"
   paint-priority-low-ink: "#ffffff"
   paint-age-today: "#2b7346"
   paint-age-today-tint: "#e2f4e8"
@@ -215,14 +215,14 @@ colors:
   night-paint-type-other: "#b8bec8"
   night-paint-type-other-tint: "#27282b"
   night-paint-type-other-ink: "#111111"
-  night-paint-priority-high: "#ff9187"
-  night-paint-priority-high-tint: "#33201e"
+  night-paint-priority-high: "#ff9a62"
+  night-paint-priority-high-tint: "#35241a"
   night-paint-priority-high-ink: "#111111"
-  night-paint-priority-medium: "#e8c460"
-  night-paint-priority-medium-tint: "#2e2814"
+  night-paint-priority-medium: "#b4b4bc"
+  night-paint-priority-medium-tint: "#2a2a2e"
   night-paint-priority-medium-ink: "#111111"
-  night-paint-priority-low: "#7fdc9e"
-  night-paint-priority-low-tint: "#16301f"
+  night-paint-priority-low: "#56b6f0"
+  night-paint-priority-low-tint: "#152a3b"
   night-paint-priority-low-ink: "#111111"
   night-paint-age-today: "#7fdc9e"
   night-paint-age-today-tint: "#16301f"
@@ -474,7 +474,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Action** (`action` #be185d raspberry; `night-action` #c6f432 lime): the primary button only (New ticket, Send answer). Hover darkens or lifts it.
 - **Selection and Focus** (`select`/`focus` #be185d raspberry with `select-surface` #fdf0f6; `night-select`/`night-focus` lime): the selected card ring, the current panel tab's underline, an applied filter's ring, the chosen density segment's edge and the focus outline.
 - **Lines** (`line-0`…`line-8`: red, blue, yellow, green, purple, orange, lime, brown, teal; lifted in dark): workstreams only. Each workstream takes one line stably, by a hash of its slug in creation order, so a newer workstream never recolours an older one. A bullet carries its paired initials ink (`line-ink-*`, AA on its fill). No line is grey: grey would read as an inactive state.
-- **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the whole card (FH-147); the strong shade draws the type's icon on cards, type chips and type tags and rows (FH-154) and the colour key's swatch; a priority chip keeps its swatch and adds the priority bars. Paint is softer than the lines on purpose, so a tinted card never reads as a workstream.
+- **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the whole card (FH-147); the strong shade draws the type's icon on cards, type chips and type tags and rows (FH-154) and the colour key's swatch. Priority paint is the priority bars' own colours, warm, grey and blue (FH-166), so a priority has one colour code: its chip shows the bars instead of a swatch. Paint is softer than the lines on purpose, so a tinted card never reads as a workstream.
 - **Priority** (`priority-high` orange-red, `priority-medium` neutral grey, `priority-low` sky blue, `priority-off` the empty bar; lifted in dark): the three-bar priority marker only, on cards and beside the priority's word (the Table, archive, panel, full page and Colour by Priority chips, FH-154). Each is 3:1 on the card and every paint tint, on the well, selected-row, panel, column and ground surfaces, and against an empty bar. Low's sky blue sits apart from the refactor paint and the review state; the bars' shape carries the meaning.
 - **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross, Blocked red with the no-entry sign and its reason.
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.

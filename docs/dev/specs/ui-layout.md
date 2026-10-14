@@ -112,8 +112,9 @@ tickets neither done nor in the backlog), finished workstreams left out
 unless chosen; right-aligned, one chip per Colour by value present (a round
 paint bullet and the value's word; with Colour by Type, the type's card
 icon in its colour instead of the bullet, so people learn the icons,
-FH-147; with Colour by Priority, the bullet then the card's priority bars,
-FH-154). Both are filters with the menus' click
+FH-147; with Colour by Priority, the card's priority bars instead of the
+bullet, as the cards' priority tint takes the bars' colours, FH-154,
+FH-166). Both are filters with the menus' click
 rules: a shown-only chip takes the selection ring, a hidden one is dashed and
 struck through. The row never wraps: chips that do not fit stay out of view,
 colour chips before workstreams; the menus list every value. Hidden when

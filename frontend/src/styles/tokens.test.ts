@@ -41,15 +41,27 @@ function contrast(a: string, b: string): number {
   return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
 }
 
-// chroma is OKLCH chroma: 0 for a true grey.
-function chroma(hex: string): number {
+// oklab gives a colour's OKLab a and b axes.
+function oklab(hex: string): [number, number] {
   const [r, g, b] = channels(hex);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
-  const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
-  return Math.hypot(A, B);
+  return [
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+// hue is OKLCH hue in degrees.
+function hue(hex: string): number {
+  const [a, b] = oklab(hex);
+  return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+}
+
+// chroma is OKLCH chroma: 0 for a true grey.
+function chroma(hex: string): number {
+  return Math.hypot(...oklab(hex));
 }
 
 const surfaces = ["ground", "card", "column", "well", "panel", "popover"];
@@ -259,5 +271,32 @@ describe.each(Object.entries(themes))("%s marks beside words", (_, tokens) => {
     expect(a, `--fh-${fg}`).toBeDefined();
     expect(b, `--fh-${bg}`).toBeDefined();
     expect(contrast(a ?? "", b ?? "")).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// Colour by Priority tints cards in the priority bars' own colours, so a
+// priority has one colour code on the board (FH-166): high and low share
+// their bar's hue, medium stays a neutral grey like its bars.
+describe.each(Object.entries(themes))("%s priority paint", (_, tokens) => {
+  it.each(["high", "low"])("%s paint and tint share the bar's hue", (level) => {
+    const bar = hue(tokens.get(`priority-${level}`) ?? "");
+    for (const name of [
+      `paint-priority-${level}`,
+      `paint-priority-${level}-tint`,
+    ]) {
+      const shade = tokens.get(name);
+      expect(shade, `--fh-${name}`).toBeDefined();
+      const apart = Math.abs(hue(shade ?? "") - bar);
+      expect(Math.min(apart, 360 - apart), name).toBeLessThan(20);
+    }
+  });
+
+  it("medium paint and tint are neutral grey", () => {
+    for (const name of [
+      "paint-priority-medium",
+      "paint-priority-medium-tint",
+    ]) {
+      expect(chroma(tokens.get(name) ?? ""), name).toBeLessThan(0.02);
+    }
   });
 });

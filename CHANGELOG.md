@@ -568,9 +568,13 @@ All notable changes to this project are documented here. The project follows
 - Type and priority look the same wherever a ticket appears (FH-154). The
   Table, the archive, the side panel's header and a ticket's full page
   show the card's type icon and priority bars beside the words, and with
-  Colour by Priority the chips at the top of the board carry the bars
-  beside their colour, so the marks you learn on cards mean the same
-  everywhere.
+  Colour by Priority the chips at the top of the board carry the bars, so
+  the marks you learn on cards mean the same everywhere.
+- Colour by Priority tints cards in the priority bars' own colours (FH-166):
+  high warm orange, medium neutral grey and low blue, in place of red,
+  amber and green, so a priority has one colour code on the board. The
+  priority chips show the bars and the word, without a separate colour
+  dot.
 - Blocked tickets are marked with a no-entry sign (FH-148). The small
   hollow diamond that marked a blocked ticket read as decoration at card
   size; a filled no-entry sign now marks blocked everywhere: on cards,

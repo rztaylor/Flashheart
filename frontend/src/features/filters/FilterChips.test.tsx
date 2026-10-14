@@ -79,7 +79,7 @@ describe("FilterChips", () => {
     expect(markup).not.toContain("data-priority");
   });
 
-  it("adds the card's priority bars to each priority chip, after its paint (FH-154)", () => {
+  it("shows each priority chip's bars and word, with no paint dot (FH-166)", () => {
     const markup = renderToStaticMarkup(
       <FilterChips
         workstreams={[]}
@@ -94,12 +94,10 @@ describe("FilterChips", () => {
         onChange={() => undefined}
       />,
     );
-    expect(markup).toMatch(
-      /--fh-paint-priority-high[\s\S]*?data-priority="high"[\s\S]*?>High</,
-    );
-    expect(markup).toMatch(
-      /--fh-paint-priority-low[\s\S]*?data-priority="low"[\s\S]*?>Low</,
-    );
+    expect(markup).toMatch(/data-priority="high"[\s\S]*?>High</);
+    expect(markup).toMatch(/data-priority="low"[\s\S]*?>Low</);
+    // The bars share the cards' tint colours, so the dot would repeat them.
+    expect(markup).not.toContain("--paint:var(--fh-paint-priority");
   });
 
   it("shows an excluded workstream as hidden", () => {
