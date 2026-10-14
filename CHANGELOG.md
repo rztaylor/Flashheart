@@ -820,6 +820,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Removed
 
+- Agents' plans (FH-133, D51, D77, `RUN-4` retired). No session on this
+  board ever recorded one, so the plan section on the Runs tab, the plan
+  count on cards and the plan step in their tooltips were always empty. A
+  ticket's plan is its ticked acceptance criteria and its handoff's next
+  steps. Hooks no longer read Claude Code's task-list tools or Codex's
+  `update_plan`, and `flashheart setup claude` no longer registers the
+  `TaskCreated` and `TaskCompleted` hooks: re-run it to remove them
+  (`flashheart doctor` warns while they remain; meanwhile they record
+  nothing). Older event logs with plans still read. The protocol skill's
+  line about keeping your todo list current now says a ticket's criteria
+  and handoff are its plan. Agent protocol stays 2.
 - The one-off upgrades from before Flashheart's own board format (FH-136,
   D55, D71). `flashheart migrate`, which converted boards in the old
   column-folder format, is gone, and so is the notice the board showed

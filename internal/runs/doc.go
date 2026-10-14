@@ -1,5 +1,5 @@
 // Package runs derives agent runs from events (RUN-1–RUN-5, agent-protocol
-// §4): it folds a project's events into runs (start, end, turns, plan,
+// §4): it folds a project's events into runs (start, end, turns,
 // tools from activity records and, in older logs, tool.used, edits since
 // checkpoint, which a session counts with its
 // subagents' and where a turn end or end that found the worktree changed

@@ -48,6 +48,12 @@ app, like the CLI recording, sends `SubagentStop` for internal helper agents
 it never reported starting; the run fold ignores those. No session has yet
 exercised `TodoWrite` or the task tools for real.
 
+Since D51 (FH-133) plans are not recorded: the `TodoWrite` and task-tool
+cases expect only their tool use, and `TaskCreated/created` and
+`TaskCompleted/completed` (events setup no longer registers) expect
+nothing; their payloads stay to show an older registration records
+nothing and that no task text is stored.
+
 Re-record with `scripts/record-claude-hooks.sh` when Claude Code changes its
 hook schema, and move cases from the second row to the first as recordings
 replace them. Recorded payloads win over the documentation

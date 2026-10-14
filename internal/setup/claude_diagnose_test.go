@@ -54,8 +54,35 @@ func TestDiagnoseAHealthySetup(t *testing.T) {
 	if len(problems)+len(warnings) != 0 {
 		t.Fatalf("problems %q, warnings %q", problems, warnings)
 	}
-	if want := []string{"Hooks: all 16 installed", "MCP server: registered", "Skill: up to date"}; strings.Join(ok, "|") != strings.Join(want, "|") {
+	if want := []string{"Hooks: all 14 installed", "MCP server: registered", "Skill: up to date"}; strings.Join(ok, "|") != strings.Join(want, "|") {
 		t.Fatalf("ok = %q", ok)
+	}
+}
+
+// Setups before D51 registered the task events to record plans: doctor
+// says they are no longer registered, and setup takes them out (FH-133).
+func TestDiagnoseAndRemoveTheRetiredTaskHooks(t *testing.T) {
+	t.Parallel()
+
+	m := installed(t)
+	settings := string(m.read(".claude/settings.json"))
+	entry := func(event string) string {
+		return `"` + event + `": [{"hooks": [{"type": "command", "command": "` + m.options.hookCommand(event) + `", "timeout": 5}]}],`
+	}
+	if !strings.Contains(settings, `"hooks": {`) {
+		t.Fatalf("no hooks in %s", settings)
+	}
+	m.write(".claude/settings.json", strings.Replace(settings, `"hooks": {`, `"hooks": {`+entry("TaskCreated")+entry("TaskCompleted"), 1))
+	problems, warnings, _ := diagnose(t, m.options)
+	if len(problems) != 0 || len(warnings) != 1 || !strings.HasPrefix(warnings[0], "Hooks: also installed for TaskCreated, TaskCompleted, which setup no longer registers") {
+		t.Fatalf("problems %q, warnings %q", problems, warnings)
+	}
+	m.apply(true)
+	if after := string(m.read(".claude/settings.json")); strings.Contains(after, "TaskCreated") || strings.Contains(after, "TaskCompleted") {
+		t.Fatalf("setup kept the task hooks:\n%s", after)
+	}
+	if problems, warnings, _ := diagnose(t, m.options); len(problems)+len(warnings) != 0 {
+		t.Fatalf("after setup: problems %q, warnings %q", problems, warnings)
 	}
 }
 

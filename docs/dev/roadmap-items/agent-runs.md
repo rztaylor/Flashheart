@@ -18,14 +18,15 @@ its recovery note and branch link (FH-1). The session made no task list, so
 Remaining, met by dogfooding Flashheart's own sessions rather than staged
 ones (user, 2026-10-06):
 
-- `Notification`, `PostCompact`, `PermissionDenied` and the task-list
-  tools (`TodoWrite`, `TaskCreate`, `TaskUpdate`, `TaskCreated`,
-  `TaskCompleted`) seen mapped as expected in a dogfood session's event
-  log. Payloads recorded 2026-10-06 cover every other mapped event; the
+- `Notification`, `PostCompact` and `PermissionDenied` seen mapped as
+  expected in a dogfood session's event log (the task-list tools no longer
+  map to anything: D51, FH-133). Payloads recorded 2026-10-06 cover every other mapped event; the
   fixtures for these stay documented-schema (`testdata/hooks/claude/MANIFEST.md`),
   and recording them with `scripts/record-claude-hooks.sh` is optional, not
   part of closing this item (user, 2026-10-06).
-- A session that keeps a task list shows its plan in the Agents view.
+- ~~A session that keeps a task list shows its plan in the Agents view.~~
+  Retired with plans (D51, FH-133): a ticket's plan is its criteria and
+  handoff.
 
 ## Goal
 
