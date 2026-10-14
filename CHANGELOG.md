@@ -542,6 +542,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- A Detailed card ends on its row of markers (type, id, blocked, change
+  requests, live run, age, review, attachments, priority) instead of
+  carrying it under the title (FH-168): the title leads straight into the
+  blocker's reason, the run, the next step, the excerpt and the
+  workstream, and every card ends on the same row. The Needs you line
+  stays under the title. Compact and Normal cards do not change.
+
 - Moving on while a save is still on its way no longer asks about
   unsaved changes (FH-156, D70, `EDIT-11`). Once you press Save (or
   Comment), leaving the page, closing the side panel or opening another

@@ -410,6 +410,25 @@ describe("a Detailed card", () => {
     expect(where).toContain("Board core");
     expect(where).toContain("Flashheart");
   });
+
+  // The markers end a Detailed card (FH-168): the title leads straight into
+  // the words, and the needs-you line stays under the title where Normal
+  // has it. Normal keeps the meta line under the title.
+  it("ends on its meta line, with Needs you still under the title", () => {
+    const rows = markup.match(/data-row="[\w-]+"/g) ?? [];
+    expect(rows).toEqual([
+      'data-row="needs-you"',
+      'data-row="run"',
+      'data-row="excerpt"',
+      'data-row="workstream"',
+      'data-row="meta"',
+    ]);
+    const normal = render({ live: needsYou }, "normal");
+    expect(normal.match(/data-row="[\w-]+"/g)).toEqual([
+      'data-row="meta"',
+      'data-row="needs-you"',
+    ]);
+  });
 });
 
 describe("change requests on a card (REV-6)", () => {
