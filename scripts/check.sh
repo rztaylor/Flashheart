@@ -1,5 +1,6 @@
 #!/bin/sh
-# Full local validation: a clean frontend install (always npm ci, through
+# Full local validation: boundary-note sizes (scripts/check-boundaries.sh),
+# a clean frontend install (always npm ci, through
 # scripts/frontend-deps.sh), frontend lint, unit tests and build, then Go
 # format, vet, tests (plain and -race, then the indexing timing test alone)
 # and the binary build. The browser suite runs separately with scripts/e2e.sh.
@@ -8,6 +9,7 @@ set -eu
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_root"
 
+scripts/check-boundaries.sh
 scripts/frontend-deps.sh --always
 npm --cache "$project_root/.cache/npm" --prefix frontend run lint
 npm --cache "$project_root/.cache/npm" --prefix frontend test
