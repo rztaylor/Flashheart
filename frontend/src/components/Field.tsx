@@ -134,24 +134,33 @@ export function CheckboxField({
 }
 
 const formControl =
-  "w-full rounded-control border border-rule bg-card px-2.5 text-sm text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted";
+  "w-full rounded-control border border-rule bg-card px-2.5 text-sm text-ink transition-colors placeholder:text-ink-muted hover:border-ink-muted aria-invalid:border-danger";
 
 // FormField is a stacked label and control for dialog and edit forms. The
 // hint below the control is linked to it with aria-describedby, so it never
-// becomes part of the control's name.
+// becomes part of the control's name. An error (the value cannot be used,
+// in words) shows below the control as an alert, marks the control
+// invalid and is linked to it the same way.
 export function FormField({
   label,
   hint,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
-  children: ReactElement<{ id?: string; "aria-describedby"?: string }>;
+  error?: string;
+  children: ReactElement<FieldControlProps>;
 }) {
   const id = useId();
+  const described = [error ? `${id}-error` : "", hint ? `${id}-hint` : ""]
+    .filter(Boolean)
+    .join(" ");
   const control = cloneElement(children, {
     id,
-    "aria-describedby": hint ? `${id}-hint` : undefined,
+    "aria-describedby": described || undefined,
+    "aria-invalid": error ? true : undefined,
+    "aria-errormessage": error ? `${id}-error` : undefined,
   });
   return (
     <div className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -159,9 +168,22 @@ export function FormField({
         {label}
       </label>
       {control}
+      {error ? (
+        <span id={`${id}-error`} role="alert" className="text-sm text-danger">
+          {error}
+        </span>
+      ) : null}
       {hint ? <span id={`${id}-hint`}>{hint}</span> : null}
     </div>
   );
+}
+
+// FieldControlProps are what FormField gives its control.
+interface FieldControlProps {
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+  "aria-errormessage"?: string;
 }
 
 export function TextInput({
@@ -173,6 +195,8 @@ export function TextInput({
   onChange(value: string): void;
   id?: string;
   "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+  "aria-errormessage"?: string;
   "aria-label"?: string;
   onKeyDown?(event: KeyboardEvent<HTMLInputElement>): void;
   type?: "text" | "date";

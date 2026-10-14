@@ -12,9 +12,10 @@ import (
 // fields an edit sets and how each is checked, as FieldChanges is a
 // ticket's. A surface decodes its input into FieldChange values;
 // NewWorkstreamChanges checks them; store.EditWorkstream writes them with
-// the workstream's membership changes. The slug never changes: a new
+// the workstream's membership changes. The slug is not a field: a new
 // title renames the workstream as people see it, and every reference to
-// it stays good.
+// it stays good. A slug changes only by an explicit rename
+// (store.WorkstreamEdit.Rename, FH-158), which rewrites every reference.
 
 // WorkstreamFields are the fields a workstream edit sets: its title (the
 // H1), its goal (the ## Goal section), priority, tags and
@@ -129,6 +130,18 @@ func (c WorkstreamChanges) Apply(data []byte) ([]byte, error) {
 	}
 	return data, nil
 }
+
+// WorkstreamTitleKey is what a workstream's title is compared by: its
+// words in lower case, with every run of spaces as one (FH-163, D76). A
+// project's workstreams have distinct keys, so no two read the same in a
+// picker.
+func WorkstreamTitleKey(title string) string {
+	return strings.ToLower(strings.Join(strings.Fields(title), " "))
+}
+
+// SameWorkstreamTitle reports whether two workstream titles read the same
+// (WorkstreamTitleKey).
+func SameWorkstreamTitle(a, b string) bool { return WorkstreamTitleKey(a) == WorkstreamTitleKey(b) }
 
 // CycleError is a workstream dependency that would lead back to the
 // workstream: Path runs from it through its dependencies to itself.

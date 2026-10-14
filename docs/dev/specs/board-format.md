@@ -195,6 +195,11 @@ atomically, one at a time, in this order:
 - editing a workstream (an agent's `update_workstream`, FH-46): its file
   (fields and its own list), then the other lists giving up the tickets
   that join it, then the tickets' fields;
+- renaming a workstream's slug (FH-158), with any edit above: its file
+  under the new name, in its place in that order, then the other
+  workstreams' `depends-on-workstreams`, then the live and archived
+  tickets that name it, and last the removal of the old file, so a crash
+  part-way leaves both files and never neither;
 - placing a ticket: the neighbours it ranks, then the ticket;
 - any ticket write from the board or an agent: the files above, then the
   history entry in each changed ticket's `activity.md` (§Activity).
@@ -203,8 +208,10 @@ A crash between two of these leaves the files written so far. Each such
 state is readable: a ticket number above `next_id` is never reused
 (`next_id` is never lower than one past the highest existing number), a
 field and lists that disagree show a warning until the next write puts
-them back in step, a ranked neighbour keeps its place, and a ticket write
-whose history was not written is a change history does not mention.
+them back in step, a ranked neighbour keeps its place, a ticket write
+whose history was not written is a change history does not mention, and
+a rename cut short leaves the old workstream beside the new one, the
+tickets not yet rewritten still naming the old slug.
 
 ### Order within a column
 
@@ -361,9 +368,28 @@ tags: []
 ## Notes
 ```
 
+A workstream's title is its H1, or its slug when it has none. A
+project's workstream titles are unique, compared by their words in
+lower case with every run of spaces as one (*Board UI* and *board  ui*
+are the same title; D76). Every Flashheart write that creates a
+workstream or changes its title refuses one another of the project's
+workstreams has, and writes nothing. Workstreams that already share a
+title (made earlier or by hand) still load as they are; an edit that
+keeps a workstream's title is not checked, and retitling one parts them.
+
 A title change (its H1) keeps the slug: the file name and every reference
-to the workstream stay as they are (D69). Renaming a slug, which would
-rewrite every reference, is planned (FH-158).
+to the workstream stay as they are (D69). A slug changes only by an
+explicit rename (an agent's `update_workstream` with `rename_to`, or the
+board's `PATCH /api/projects/<project>/workstreams/<slug>` with `slug`;
+FH-158, D73): one write under the project lock and the workstream file's
+hash that moves the file to `workstreams/<new>.md`, sets its `slug:`, and
+rewrites every reference to the old slug in the project: each ticket's
+`workstream:` and every `depends-on-workstreams`, in its workstreams and
+its live and archived tickets (§Multi-file writes). A new slug that is not
+valid, or that a file in `workstreams/` already has, is refused and
+nothing is written. A file whose frontmatter does not parse is left as it
+is (the renamed workstream's own is refused); links and prose that
+mention the old slug are text and are not rewritten.
 
 The UI derives status (`completed` when every ticket is in review or done,
 `blocked` when its own `depends-on-workstreams` are incomplete or every

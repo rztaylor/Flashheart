@@ -49,8 +49,9 @@ func (p Precondition) check(name string, current []byte) error {
 // tx is one write of a project's files under its lock. Each step reads a
 // file as the transaction has left it, checks its precondition, applies an
 // edit and stamps a changed ticket; nothing is written until commit, which
-// writes each changed file atomically in the order it was staged. A
-// failure before commit writes nothing; a crash during commit leaves the
+// writes each changed file atomically in the order it was staged, then
+// removes the files it removes (a renamed file's old name). A failure
+// before commit writes nothing; a crash during commit leaves the
 // files written so far (board-format.md, Multi-file writes).
 //
 // For a store writing as someone (As), commit first stages one history
@@ -63,6 +64,9 @@ func (p Precondition) check(name string, current []byte) error {
 type tx struct {
 	s     *Store
 	files []staged
+	// removed are files the transaction removes, after every write
+	// (a renamed workstream's old name, FH-158).
+	removed []string
 	// before holds the ticket, review and activity files the transaction
 	// edited (an activity file only for its comments' states), as
 	// it first read them; noted holds the changes a write states, by
@@ -87,6 +91,9 @@ func (t *tx) read(name string) ([]byte, error) {
 			return t.files[index].data, nil
 		}
 	}
+	if slices.Contains(t.removed, name) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
 	return t.s.ReadFile(name)
 }
 
@@ -101,6 +108,7 @@ func (t *tx) require(name string, pre Precondition) ([]byte, error) {
 
 // put stages data as name's content, created or replaced.
 func (t *tx) put(name string, data []byte) {
+	t.removed = slices.DeleteFunc(t.removed, func(removed string) bool { return removed == name })
 	for index := range t.files {
 		if t.files[index].name == name {
 			t.files[index].data = data
@@ -108,6 +116,24 @@ func (t *tx) put(name string, data []byte) {
 		}
 	}
 	t.files = append(t.files, staged{name: name, data: data})
+}
+
+// rename stages from's content, as the transaction has it, as to's, in
+// from's place among the staged files (first, when from is not staged
+// yet), and from's removal after every write: a crash part-way leaves the
+// new file and the old one, never neither. to must not exist.
+func (t *tx) rename(from, to string) error {
+	data, err := t.read(from)
+	if err != nil {
+		return err
+	}
+	if index := slices.IndexFunc(t.files, func(file staged) bool { return file.name == from }); index >= 0 {
+		t.files[index].name = to
+	} else {
+		t.files = slices.Insert(t.files, 0, staged{name: to, data: data})
+	}
+	t.removed = append(t.removed, from)
+	return nil
 }
 
 // edit applies edit (nil for none) to name under pre and stages the
@@ -162,8 +188,8 @@ func (t *tx) folder(folder string) {
 	}
 }
 
-// commit stages the history of a store writing as someone, then writes
-// the staged files in order.
+// commit stages the history of a store writing as someone, writes the
+// staged files in order, then removes the files the transaction removes.
 func (t *tx) commit() error {
 	if err := t.history(); err != nil {
 		return err
@@ -171,6 +197,18 @@ func (t *tx) commit() error {
 	for _, file := range t.files {
 		if err := t.s.WriteFileAtomic(file.name, file.data); err != nil {
 			return err
+		}
+	}
+	if len(t.removed) == 0 {
+		return nil
+	}
+	root, _, err := t.s.handle()
+	if err != nil {
+		return err
+	}
+	for _, name := range t.removed {
+		if err := root.Remove(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("remove %s: %w", name, err)
 		}
 	}
 	return nil

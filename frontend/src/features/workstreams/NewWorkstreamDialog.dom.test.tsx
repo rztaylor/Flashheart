@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -179,6 +185,104 @@ describe("NewWorkstreamDialog", () => {
     expect(
       screen.getByRole("button", { name: "Create workstream" }),
     ).toHaveProperty("disabled", false);
+  });
+
+  // A project's workstream titles are unique (FH-163, D76): a title one of
+  // its workstreams has, in any case or spacing, is named at the field and
+  // cannot be sent; the server's refusal of one the page has not heard of
+  // yet shows there too.
+  it("names a taken title at the field and does not send it", async () => {
+    const user = userEvent.setup();
+    const { fetcher, calls } = server(201, {
+      slug: "x",
+      hash: "h",
+      revision: 1,
+    });
+    render(
+      <NewWorkstreamDialog
+        fetcher={fetcher}
+        projects={[flashheart, project("alpha")]}
+        project=""
+        onCreated={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+    const title = screen.getByRole("textbox", { name: "Title" });
+    const create = screen.getByRole("button", { name: "Create workstream" });
+    await user.type(title, "board  ui");
+    expect(title.getAttribute("aria-invalid")).toBe("true");
+    expect(title.getAttribute("aria-errormessage")).toBeTruthy();
+    const message = document.getElementById(
+      title.getAttribute("aria-errormessage") ?? "",
+    );
+    expect(message?.textContent).toBe(
+      "Flashheart already has a workstream called Board UI. Choose another title.",
+    );
+    expect(create).toHaveProperty("disabled", true);
+    // Enter in the title submits the form; a taken title is not sent.
+    const form = title.closest("form");
+    if (!form) throw new Error("no form");
+    fireEvent.submit(form);
+    expect(calls).toHaveLength(0);
+    // The field's message is the one alert.
+    expect(screen.getAllByRole("alert")).toEqual([message]);
+
+    // Another project's workstreams do not take it.
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Project" }),
+      "alpha",
+    );
+    expect(title.getAttribute("aria-invalid")).toBeNull();
+    expect(create).toHaveProperty("disabled", false);
+    // Nor does a title that only shares words.
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Project" }),
+      "flashheart",
+    );
+    await user.type(title, " v2");
+    expect(title.getAttribute("aria-invalid")).toBeNull();
+    expect(create).toHaveProperty("disabled", false);
+  });
+
+  it("shows the server's refusal of a taken title at the field", async () => {
+    const user = userEvent.setup();
+    const { fetcher } = server(409, {
+      error: {
+        code: "title_taken",
+        message:
+          'a workstream called "Offline sync" is already in flashheart (offline-sync); choose another title',
+      },
+    });
+    const onCreated = vi.fn();
+    render(
+      <NewWorkstreamDialog
+        fetcher={fetcher}
+        projects={[flashheart]}
+        project="flashheart"
+        onCreated={onCreated}
+        onClose={() => undefined}
+      />,
+    );
+    const title = screen.getByRole("textbox", { name: "Title" });
+    await user.type(title, "Offline sync");
+    await user.click(screen.getByRole("button", { name: "Create workstream" }));
+    await waitFor(() =>
+      expect(title.getAttribute("aria-invalid")).toBe("true"),
+    );
+    const message = document.getElementById(
+      title.getAttribute("aria-errormessage") ?? "",
+    );
+    expect(message?.textContent).toContain(
+      'a workstream called "Offline sync" is already in flashheart',
+    );
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("alert")).toEqual([message]);
+    expect(
+      screen.getByRole("button", { name: "Create workstream" }),
+    ).toHaveProperty("disabled", true);
+    // A changed title clears it.
+    await user.type(title, " 2");
+    expect(title.getAttribute("aria-invalid")).toBeNull();
   });
 
   it("offers dependencies only where the project has workstreams, and the project only in the all scope", async () => {

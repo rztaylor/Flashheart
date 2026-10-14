@@ -37,6 +37,60 @@ func (e *WorkstreamNotFoundError) Error() string {
 // Unwrap lets errors.Is match ErrNotFound.
 func (e *WorkstreamNotFoundError) Unwrap() error { return ErrNotFound }
 
+// WorkstreamTitleTakenError refuses a workstream title that another of the
+// project's workstreams already has, compared by board.SameWorkstreamTitle
+// (FH-163, D76). Slug and Title name that workstream as it is.
+type WorkstreamTitleTakenError struct {
+	Project, Slug, Title string
+}
+
+func (e *WorkstreamTitleTakenError) Error() string {
+	return fmt.Sprintf("a workstream called %q is already in %s (%s); choose another title", e.Title, e.Project, e.Slug)
+}
+
+// Unwrap lets errors.Is match ErrInvalidInput.
+func (e *WorkstreamTitleTakenError) Unwrap() error { return ErrInvalidInput }
+
+// checkWorkstreamTitle refuses the title workstream slug has in t with a
+// *WorkstreamTitleTakenError when another of the project's workstreams
+// has the same one (board.SameWorkstreamTitle). A title is the file's H1,
+// or its slug without one (board.ParseWorkstream). Every write that makes
+// a workstream or may change its title calls it once the file is staged,
+// before the transaction commits. A title the workstream already had
+// before t, in any case or spacing, is not checked: workstreams that share
+// one from before titles were unique, or from a hand edit, still take
+// every other edit, and either can be retitled apart (D76). Callers hold
+// the project lock.
+func (s *Store) checkWorkstreamTitle(t *tx, project, slug string) error {
+	dir := path.Join(project, "workstreams")
+	name := path.Join(dir, slug+".md")
+	data, err := t.read(name)
+	if err != nil {
+		return err
+	}
+	title := board.ParseWorkstream(slug, data).Title
+	if before, err := s.ReadFile(name); err == nil && board.SameWorkstreamTitle(board.ParseWorkstream(slug, before).Title, title) {
+		return nil
+	}
+	slugs, err := s.workstreamSlugs(project)
+	if err != nil {
+		return err
+	}
+	for _, other := range slugs {
+		if other == slug {
+			continue
+		}
+		data, err := t.read(path.Join(dir, other+".md"))
+		if err != nil {
+			return err
+		}
+		if taken := board.ParseWorkstream(other, data).Title; board.SameWorkstreamTitle(taken, title) {
+			return &WorkstreamTitleTakenError{Project: project, Slug: other, Title: taken}
+		}
+	}
+	return nil
+}
+
 // workstreamSlugs lists the project's workstream slugs in sorted order.
 // Callers hold the project lock.
 func (s *Store) workstreamSlugs(project string) ([]string, error) {
@@ -180,8 +234,9 @@ type CreatedWorkstream struct {
 
 // CreateWorkstream writes workstreams/<slug>.md from the board-format
 // template with a slug made unique from the title, and moves its initial
-// tickets into it, all under the project lock. Nothing is written when any
-// input is refused.
+// tickets into it, all under the project lock. A title another of the
+// project's workstreams has is a *WorkstreamTitleTakenError (D76).
+// Nothing is written when any input is refused.
 func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWorkstream, error) {
 	if err := s.checkProject(project); err != nil {
 		return CreatedWorkstream{}, err
@@ -222,6 +277,9 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 	// (the new file already lists them), then the tickets' fields
 	// (board-format.md, Multi-file writes).
 	t.put(path.Join(project, "workstreams", slug+".md"), data)
+	if err := s.checkWorkstreamTitle(t, project, slug); err != nil {
+		return CreatedWorkstream{}, err
+	}
 	if err := s.membership(t, project, input.Tickets, ""); err != nil {
 		return CreatedWorkstream{}, err
 	}
@@ -254,92 +312,262 @@ func (s *Store) dependencies(t *tx, project string) func(string) []string {
 
 // WorkstreamEdit is one edit of a workstream (FH-46): its fields
 // (board.NewWorkstreamChanges), the project's tickets that join it (Add,
-// appended to its list in order, each leaving any other workstream) and
-// its tickets that leave it (Remove, then in no workstream).
+// appended to its list in order, each leaving any other workstream), its
+// tickets that leave it (Remove, then in no workstream) and a new slug
+// (Rename, FH-158; "" or the current slug keeps it).
 type WorkstreamEdit struct {
 	Changes     board.WorkstreamChanges
 	Add, Remove []string
+	Rename      string
+}
+
+// EditedWorkstream reports an edited workstream: its slug (the new one
+// when it was renamed), its file's hash after the edit, and the tickets,
+// live and archived, whose files the rename rewrote.
+type EditedWorkstream struct {
+	Slug, Hash string
+	Rewritten  []RewrittenTicket
+}
+
+// RewrittenTicket is a ticket a workstream's rename rewrote and the
+// fields it changed: workstream, depends-on-workstreams or both.
+type RewrittenTicket struct {
+	ID     string
+	Fields []string
 }
 
 // EditWorkstream applies edit to workstreams/<slug>.md and the tickets
 // joining and leaving it in one write under the project lock, once pre
 // holds for the workstream file: its fields, then the lists, then the
 // tickets' workstream fields (board-format.md, Multi-file writes), so the
-// field and the lists agree after. Every file is prepared before any is
-// written: a workstream, ticket or dependency the project does not have
-// (ErrNotFound; a *WorkstreamNotFoundError for a workstream), a removed
-// ticket that is not a member, a ticket added and removed, or a
-// dependency that leads back to the workstream (a *board.CycleError; both
-// ErrInvalidInput) writes nothing. The slug never changes. It returns
-// the workstream file's hash after the call.
-func (s *Store) EditWorkstream(project, slug string, pre Precondition, edit WorkstreamEdit) (string, error) {
+// field and the lists agree after. A rename (edit.Rename) also moves the
+// file to its new slug and rewrites every reference to the old one: each
+// ticket's workstream field and every depends-on-workstreams, in the
+// project's workstreams and its live and archived tickets. Every file is
+// prepared before any is written: a workstream, ticket or dependency the
+// project does not have (ErrNotFound; a *WorkstreamNotFoundError for a
+// workstream), a removed ticket that is not a member, a ticket added and
+// removed, a dependency that leads back to the workstream (a
+// *board.CycleError; both ErrInvalidInput), a new title another workstream
+// has (a *WorkstreamTitleTakenError, D76), an invalid new slug
+// (ErrInvalidName) or one a file already has (ErrExists) writes nothing.
+func (s *Store) EditWorkstream(project, slug string, pre Precondition, edit WorkstreamEdit) (EditedWorkstream, error) {
 	if err := s.checkProject(project); err != nil {
-		return "", err
+		return EditedWorkstream{}, err
 	}
 	if !board.ValidSlug(slug) {
-		return "", fmt.Errorf("workstream %q: %w", slug, ErrInvalidName)
+		return EditedWorkstream{}, fmt.Errorf("workstream %q: %w", slug, ErrInvalidName)
+	}
+	rename := edit.Rename != "" && edit.Rename != slug
+	if rename && !board.ValidSlug(edit.Rename) {
+		return EditedWorkstream{}, fmt.Errorf("new slug %q: %w: use lower-case letters, digits, '.', '_' and '-', starting with a letter or digit, at most 100 characters", edit.Rename, ErrInvalidName)
 	}
 	moved := slices.Concat(edit.Add, edit.Remove)
 	for index, id := range moved {
 		if _, _, ok := board.ParseID(id); !ok {
-			return "", fmt.Errorf("%w: %q is not a ticket id", ErrInvalidInput, id)
+			return EditedWorkstream{}, fmt.Errorf("%w: %q is not a ticket id", ErrInvalidInput, id)
 		}
 		if slices.Contains(moved[:index], id) {
-			return "", fmt.Errorf("%w: %s is listed twice", ErrInvalidInput, id)
+			return EditedWorkstream{}, fmt.Errorf("%w: %s is listed twice", ErrInvalidInput, id)
 		}
 	}
 	release, err := s.lock(project)
 	if err != nil {
-		return "", err
+		return EditedWorkstream{}, err
 	}
 	defer release()
 
 	slugs, err := s.workstreamSlugs(project)
 	if err != nil {
-		return "", err
+		return EditedWorkstream{}, err
 	}
 	if !slices.Contains(slugs, slug) {
-		return "", &WorkstreamNotFoundError{Project: project, Slug: slug, Available: slugs}
+		return EditedWorkstream{}, &WorkstreamNotFoundError{Project: project, Slug: slug, Available: slugs}
+	}
+	if rename && (slices.Contains(slugs, edit.Rename) || s.Exists(path.Join(project, "workstreams", edit.Rename+".md"))) {
+		return EditedWorkstream{}, fmt.Errorf("workstream %s in %s %w; choose another slug", edit.Rename, project, ErrExists)
 	}
 	name := path.Join(project, "workstreams", slug+".md")
 	t := s.begin()
 	if dependencies, ok := edit.Changes.List("depends-on-workstreams"); ok {
 		for _, dependency := range dependencies {
 			if !slices.Contains(slugs, dependency) {
-				return "", &WorkstreamNotFoundError{Project: project, Slug: dependency, Available: slugs}
+				return EditedWorkstream{}, &WorkstreamNotFoundError{Project: project, Slug: dependency, Available: slugs}
 			}
 		}
 		if err := board.WorkstreamCycle(slug, dependencies, s.dependencies(t, project)); err != nil {
-			return "", fmt.Errorf("%w: %w", ErrInvalidInput, err)
+			return EditedWorkstream{}, fmt.Errorf("%w: %w", ErrInvalidInput, err)
 		}
 	}
 	if _, err := t.edit(name, pre, edit.Changes.Apply, false); err != nil {
-		return "", err
+		return EditedWorkstream{}, err
+	}
+	if err := s.checkWorkstreamTitle(t, project, slug); err != nil {
+		return EditedWorkstream{}, err
 	}
 	if err := s.checkMembers(t, project, slug, edit.Remove); err != nil {
-		return "", err
+		return EditedWorkstream{}, err
 	}
 	if err := s.membership(t, project, edit.Add, slug); err != nil {
-		return "", err
+		return EditedWorkstream{}, err
 	}
 	if err := s.membership(t, project, edit.Remove, ""); err != nil {
-		return "", err
+		return EditedWorkstream{}, err
 	}
 	for _, id := range edit.Add {
 		if _, err := s.joinTicket(t, project, id, Merge, slug, nil); err != nil {
-			return "", err
+			return EditedWorkstream{}, err
 		}
 	}
 	for _, id := range edit.Remove {
 		if _, err := s.joinTicket(t, project, id, Merge, "", nil); err != nil {
-			return "", err
+			return EditedWorkstream{}, err
 		}
+	}
+	out := EditedWorkstream{Slug: slug}
+	if rename {
+		if out.Rewritten, err = s.renameWorkstream(t, project, slug, edit.Rename); err != nil {
+			return EditedWorkstream{}, err
+		}
+		out.Slug, name = edit.Rename, path.Join(project, "workstreams", edit.Rename+".md")
 	}
 	data, err := t.read(name)
 	if err != nil {
-		return "", err
+		return EditedWorkstream{}, err
 	}
-	return Hash(data), t.commit()
+	out.Hash = Hash(data)
+	return out, t.commit()
+}
+
+// renameWorkstream stages workstream from's move to slug to, in its
+// file's place among the staged files, then every reference to from
+// rewritten: other workstreams' depends-on-workstreams, then each live
+// and archived ticket's workstream and depends-on-workstreams; the old
+// file is removed after every write (board-format.md, Multi-file writes).
+// A file whose frontmatter does not parse is left alone, as its
+// references cannot be read; the renamed workstream's own is refused. It
+// returns the tickets it rewrote. Callers hold the project lock and have
+// checked that to is free.
+func (s *Store) renameWorkstream(t *tx, project, from, to string) ([]RewrittenTicket, error) {
+	dir := path.Join(project, "workstreams")
+	name := path.Join(dir, to+".md")
+	if err := t.rename(path.Join(dir, from+".md"), name); err != nil {
+		return nil, err
+	}
+	if _, err := t.edit(name, Merge, func(data []byte) ([]byte, error) { return mdfile.SetScalar(data, "slug", to) }, false); err != nil {
+		return nil, fmt.Errorf("workstream %s: %w", from, err)
+	}
+	slugs, err := s.workstreamSlugs(project)
+	if err != nil {
+		return nil, err
+	}
+	for _, slug := range slugs {
+		if slug == from {
+			continue
+		}
+		if _, err := t.edit(path.Join(dir, slug+".md"), Merge, renameReferences(from, to), false); err != nil {
+			return nil, err
+		}
+	}
+	var rewritten []RewrittenTicket
+	for _, tickets := range ticketDirs {
+		files, err := s.ticketFiles(path.Join(project, tickets))
+		if err != nil {
+			return nil, err
+		}
+		for _, file := range files {
+			before, err := t.read(file)
+			if err != nil {
+				return nil, err
+			}
+			after, err := t.edit(file, Merge, renameReferences(from, to), true)
+			if err != nil {
+				return nil, err
+			}
+			if after == Hash(before) {
+				continue
+			}
+			id, _, _ := board.ParseFolder(path.Base(path.Dir(file)))
+			ticket := RewrittenTicket{ID: id}
+			doc := mdfile.Parse(before)
+			if field, _ := doc.String("workstream"); field == from {
+				ticket.Fields = append(ticket.Fields, "workstream")
+			}
+			if slices.Contains(doc.List("depends-on-workstreams"), from) {
+				ticket.Fields = append(ticket.Fields, "depends-on-workstreams")
+			}
+			rewritten = append(rewritten, ticket)
+		}
+	}
+	return rewritten, nil
+}
+
+// renameReferences rewrites a ticket's or workstream's references to
+// workstream from as to: its workstream field and its
+// depends-on-workstreams. A file whose frontmatter does not parse, or
+// that names from in neither, is left as it is.
+func renameReferences(from, to string) Edit {
+	return func(data []byte) ([]byte, error) {
+		doc := mdfile.Parse(data)
+		if doc.FrontmatterError != nil {
+			return data, nil
+		}
+		var err error
+		if field, ok := doc.String("workstream"); ok && field == from {
+			if data, err = mdfile.SetScalar(data, "workstream", to); err != nil {
+				return nil, err
+			}
+		}
+		dependencies := doc.List("depends-on-workstreams")
+		if slices.Contains(dependencies, from) {
+			next := make([]string, 0, len(dependencies))
+			for _, dependency := range dependencies {
+				if dependency == from {
+					dependency = to
+				}
+				if !slices.Contains(next, dependency) {
+					next = append(next, dependency)
+				}
+			}
+			if data, err = mdfile.SetList(data, "depends-on-workstreams", next); err != nil {
+				return nil, err
+			}
+		}
+		return data, nil
+	}
+}
+
+// ticketFiles lists the ticket files under dir (a project's tickets or
+// archived tickets), one per ticket folder, in folder order; a folder
+// without one, or that is not a ticket folder, is left out. A missing
+// dir has none.
+func (s *Store) ticketFiles(dir string) ([]string, error) {
+	entries, err := s.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, entry := range entries {
+		folder := entry.Name()
+		if _, _, ok := board.ParseFolder(folder); !ok || !entry.IsDir() {
+			continue
+		}
+		files, err := s.ReadDir(path.Join(dir, folder))
+		if err != nil {
+			return nil, err
+		}
+		names := make([]string, 0, len(files))
+		for _, file := range files {
+			names = append(names, file.Name())
+		}
+		if name, _, ok := board.TicketFile(folder, names); ok {
+			out = append(out, path.Join(dir, folder, name))
+		}
+	}
+	return out, nil
 }
 
 // checkMembers refuses ids that are not members of slug: neither in its

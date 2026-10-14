@@ -146,6 +146,12 @@
   `board_context` show in `mcpserver` (`workstreams_test.go`, with
   `TestWriteToolPolicies`' row). `internal/archtest` keeps `mcpserver`
   from editing a workstream file itself.
+- Workstream slug renames (FH-158): every reference rewritten (members,
+  other workstreams' and live and archived tickets' dependencies) with
+  edits in the same write, and refusals (taken, invalid, stale) that
+  write nothing, in `store` (`workstreamrename_test.go`); `rename_to` and
+  its events in `mcpserver` (`workstreams_test.go`); the board's PATCH in
+  `api` (`TestPatchWorkstreamRenamesIt`) and its authentication in `app`.
 - In-place edits (FH-66) leave the rest of a real ticket byte for byte:
   `board` replays field and section edits over `testdata/tickets/`
   (read-only copies of FH tickets, also with CRLF line endings) and
@@ -198,10 +204,24 @@
   and `store`; the dialog in `NewWorkstreamDialog.dom.test.tsx`, the
   panel opened ready to edit in `CardPanelEdit.dom.test.tsx`; in the
   browser, `frontend/e2e/workstream-editing.spec.mjs` creates a
-  workstream (Enter, the toast, its page, a second of the same name), a
-  refusal, the dialog in both themes and at 390 px with axe, New ticket's
-  panel on its Edit tab with Title focused, and adds and removes a
-  ticket through the picker, reading both files.
+  workstream (Enter, the toast, its page, a second whose title makes the
+  same slug), a refusal, the dialog in both themes and at 390 px with
+  axe, New ticket's panel on its Edit tab with Title focused, and adds
+  and removes a ticket through the picker, reading both files.
+- Unique workstream titles (FH-163, D76): the comparison is a table test
+  in `board` (`TestSameWorkstreamTitle`) and `model/lines.test.ts`
+  (`takenWorkstream`, the same rule); the one store check, through
+  create, field edit and raw edit, refusals that write nothing, another
+  project, and duplicates made earlier that still load and edit, in
+  `store` (`workstreamtitle_test.go`); 409 `title_taken` in `api`
+  (`TestCreateWorkstreamWritesTheTemplate`); `invalid_input` with the
+  fix in `mcpserver` (`TestCreateWorkstream`,
+  `TestUpdateWorkstreamRefusesAndWritesNothing`); the field's message,
+  nothing sent, and the server's refusal at the field in
+  `NewWorkstreamDialog.dom.test.tsx`; in the browser,
+  `workstream-editing.spec.mjs` shows a taken title at the field (axe,
+  390 px in both themes) and a title written to disk in the POST's
+  `page.route` handler refused by the server.
 - Files from the board (FH-18, REV-7, SEC-7): sniffing is a table test in
   `board` (`TestSniffAttachmentJudgesTheContent`), the upload's name,
   index entry, streaming limit and refusals in `store`
