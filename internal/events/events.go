@@ -19,8 +19,6 @@ const MaxLineBytes = 64 << 10
 
 // Limits on agent-written strings in event data (HOOK-2, agent-protocol §3).
 const (
-	MaxPlanItems  = 50
-	MaxPlanText   = 200
 	MaxSummary    = 120
 	MaxNameLength = 200
 	MaxReasonText = 200
@@ -33,14 +31,6 @@ const (
 	MaxActivitySpans = 20
 	// MaxToolPaths bounds the paths of one tool result.
 	MaxToolPaths = 50
-)
-
-// Plan item statuses; "deleted" appears only in merges and removes the item.
-const (
-	PlanPending    = "pending"
-	PlanInProgress = "in_progress"
-	PlanCompleted  = "completed"
-	PlanDeleted    = "deleted"
 )
 
 // Run kinds in RunStartData.Kind.
@@ -158,21 +148,6 @@ type ActivityData struct {
 	Failed int      `json:"failed,omitempty"`
 	Paths  []string `json:"paths,omitempty"`
 	Shell  []Span   `json:"shell,omitempty"`
-}
-
-// PlanItem is one entry of a run's plan. ID is set by agents whose plan
-// tools name items, so merges can update them.
-type PlanItem struct {
-	ID     string `json:"id,omitempty"`
-	Text   string `json:"text,omitempty"`
-	Status string `json:"status"`
-}
-
-// PlanData is plan.updated's data: the whole plan, or with Merge, items to
-// add, update or (status deleted) remove by ID.
-type PlanData struct {
-	Merge bool       `json:"merge,omitempty"`
-	Items []PlanItem `json:"items"`
 }
 
 // PermissionData is permission.requested's data.

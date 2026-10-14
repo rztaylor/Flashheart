@@ -2,7 +2,7 @@
 // the only package that knows Codex's hook payloads and output format. It
 // maps each hook event to Flashheart events (an Interrupt ends the turn as
 // a Stop does, but is never blocked), reading tool inputs only for the
-// files an apply_patch names and update_plan's items (HOOK-2) and never a
+// files an apply_patch names (HOOK-2; never plans, D51) and never a
 // prompt, reports each tool result classified as a shell command or an
 // edit of its paths (which hooks throttles; Codex's tool names stay here)
 // and the checkpoint tool's results, and renders additional context and

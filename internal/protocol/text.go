@@ -92,8 +92,7 @@ instructions.
 
 ## While working
 
-- Keep your plan or todo list current; Flashheart's hooks mirror it for
-  the user.
+- A ticket's criteria and handoff are its plan.
 - ` + "`checkpoint`" + ` at milestones, before long operations or a compaction,
   and always before you stop after editing files: what is done, what is
   next, the files that matter, and open questions. The next session

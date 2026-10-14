@@ -11,8 +11,8 @@ it: hooks before MCP, Claude Code before Codex, recovery before polish.
 ## Execution order
 
 1. [`agent-runs`](roadmap-items/agent-runs.md) — **Partial**. Built; open:
-   the remaining real Claude Code payloads and a session with a task list
-   (evidence from dogfooding).
+   the remaining real Claude Code payloads (evidence from dogfooding).
+   Plans were retired (D51, FH-133), so no session needs a task list.
 2. [`mcp-protocol`](roadmap-items/mcp-protocol.md) — **Partial**. Built (MCP
    server, claims, checkpoints, questions, `setup claude`, protocol skill,
    handoff enforcement); open: the real-session acceptance criteria, met by

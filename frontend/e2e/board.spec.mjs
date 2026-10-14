@@ -188,7 +188,7 @@ test("blocked is marked with the no-entry sign in every view (FH-148)", async ()
 });
 
 // busy makes AL-5 a ticket with every marker (FH-147): blocked already, a
-// working run with a plan, change requests, attachments and a review. The
+// working run, change requests, attachments and a review. The
 // board's response is changed in the browser; the server is the real one.
 // busy.needsYou turns the run to waiting on a permission for Bash.
 async function routeBusyCard(page, busy = { needsYou: false }) {
@@ -204,9 +204,6 @@ async function routeBusyCard(page, busy = { needsYou: false }) {
           short: "claude:busy0001",
           agent: "claude",
           state: busy.needsYou ? "needs-you" : "working",
-          done: 2,
-          total: 5,
-          step: "Write the drop test",
           reason: {
             kind: busy.needsYou ? "permission" : "",
             permission: busy.needsYou ? "Bash" : "",
@@ -256,7 +253,10 @@ test("each density lays the card's markers out its own way (FH-147)", async () =
     });
     await open(page, "#/p/alpha/board", { width: 1280, height: 900 });
     const face = cardFace(page, "Long titles overflow the column");
-    await expect(face.locator('[data-mark="live"]')).toHaveText("2/5");
+    await expect(face.locator('[data-mark="live"]')).toHaveAttribute(
+      "title",
+      "Claude: Working",
+    );
     const column = await page
       .locator('section[data-column="backlog"]')
       .boundingBox();
@@ -310,7 +310,7 @@ test("each density lays the card's markers out its own way (FH-147)", async () =
     await expect(
       card(page, "Long titles overflow the column"),
     ).toHaveAccessibleName(
-      /blocked: .*Claude working, plan 2 of 5: Write the drop test.*2 changes requested.*bug.*3 attachments, review written, changed/,
+      /blocked: .*Claude working, 2 changes requested.*bug.*3 attachments, review written, changed/,
     );
 
     for (const theme of ["light", "dark"]) {
@@ -359,9 +359,9 @@ test("each density lays the card's markers out its own way (FH-147)", async () =
       /^AL-5\s*Long titles overflow the column$/,
     );
     await viewOption(page, "Density", "Detailed");
-    await expect(face.locator('[data-row="run"]')).toContainText(
-      "2/5 · Write the drop test",
-    );
+    await expect(face.locator('[data-row="run"]')).toContainText("Claude");
+    // A card never promises a plan (D51).
+    await expect(face).not.toContainText("2/5");
     await expect(face).toContainText("Depends on AL-4, which is Up next");
 
     // A run that needs the user: its reason on a line of its own (Normal,

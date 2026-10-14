@@ -77,9 +77,6 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		// Codex has no failure event: a failed command is an ordinary result.
 		add(actor, events.ToolUsed, toolResult(p.ToolName, p.ToolInput, p.Cwd))
 		input.Settled = p.ToolName == checkpointTool
-		if plan, found := planUpdate(p.ToolName, p.ToolInput); found {
-			add(actor, events.PlanUpdated, plan)
-		}
 	case "PermissionRequest":
 		add(actor, events.PermissionRequested, events.PermissionData{Tool: p.ToolName})
 	case "SubagentStart":
@@ -150,37 +147,6 @@ func patchPaths(input json.RawMessage, cwd string) []string {
 		}
 	}
 	return paths
-}
-
-func planStatus(value string) string {
-	switch value {
-	case events.PlanInProgress, events.PlanCompleted:
-		return value
-	}
-	return events.PlanPending
-}
-
-// planUpdate reads the whole plan from update_plan (RUN-4). No recorded
-// Codex surface offered the tool (MANIFEST.md); its input is Codex's tool
-// definition: plan, a list of steps with a status.
-func planUpdate(tool string, input json.RawMessage) (events.PlanData, bool) {
-	if tool != "update_plan" {
-		return events.PlanData{}, false
-	}
-	var fields struct {
-		Plan []struct {
-			Step   string `json:"step"`
-			Status string `json:"status"`
-		} `json:"plan"`
-	}
-	if json.Unmarshal(input, &fields) != nil || fields.Plan == nil {
-		return events.PlanData{}, false
-	}
-	plan := events.PlanData{Items: []events.PlanItem{}}
-	for _, item := range fields.Plan {
-		plan.Items = append(plan.Items, events.PlanItem{Text: item.Step, Status: planStatus(item.Status)})
-	}
-	return plan, true
 }
 
 // Render returns Codex's hook output: a stop decision, additional context

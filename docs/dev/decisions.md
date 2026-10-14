@@ -1201,11 +1201,19 @@ board, no session called a plan tool (`TodoWrite`, the task tools or
 `update_plan`), and the Claude desktop app's Code session used for this
 review offered none, so the plan display was always empty. Older logs that hold plans
 still fold. Built by FH-133, which also settles the protocol version
-under agent-protocol §14.
+under agent-protocol §14 (D72: it stays 2).
 
 Options: criteria and handoff as the plan (chosen); hide the display but
 keep the parsing dormant; agents report a plan through `checkpoint` (more
 tokens per call, and it repeats the criteria); keep plans as they are.
+
+Built (FH-133): `plan.updated` is no longer an event kind, so readers
+skip it in older logs as any unknown kind; runs, the API, cards and the
+Runs tab carry no plan or plan count; the Claude Code adapter no longer
+reads `TodoWrite` or the task tools and `setup claude` stops registering
+`TaskCreated` and `TaskCompleted` (and removes them; `doctor` warns while
+they remain); Codex's `update_plan` is an ordinary tool use; `RUN-4` is
+retired; and the marginal remarks about plans (32–40, 54) are deferred.
 
 ## 2026-10-13 — D52: New abilities extend existing MCP tools first
 
@@ -1837,3 +1845,23 @@ opens again themselves also takes back its held text.
 - **A held draft that is still mounted** (the panel's Edit tab while
   another tab shows) is not a late save. A failure there shows the Edit
   tab again with the reason, as a conflict already did.
+
+## 2026-10-14 — D72: Retiring plans keeps protocol version 2
+
+Decision (FH-133, settling the question D51 left): removing plans
+(`plan.updated`, the task-list tools' reading and the `TaskCreated` and
+`TaskCompleted` registrations) keeps `PROTOCOL_VERSION` 2. Agent-protocol
+§14 says a removal bumps the version; the rule exists so that a reader or
+writer on one side of an upgrade does not misread the other, and here
+none can. A version 2 binary without the change, reading a newer log,
+finds no plans, which it already showed as none for every session
+without a task list; a newer reader skips old plans as an unknown kind;
+agents call the same tools with the same inputs and get the same
+outputs and refusals; and the skill changes one line, which the
+session-start hook refreshes. An older Claude Code registration of the
+task events still runs the hook, which records nothing for them, until
+`setup claude` removes it; `doctor` warns while it remains. §14 now
+records this as a removal within version 2.
+
+Options: keep 2 (chosen); bump to 3, which would ask every user to
+re-run setup for a change no agent or reader can observe.

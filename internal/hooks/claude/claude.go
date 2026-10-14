@@ -29,12 +29,9 @@ type payload struct {
 	Reason           string          `json:"reason"`
 	ToolName         string          `json:"tool_name"`
 	ToolInput        json.RawMessage `json:"tool_input"`
-	ToolResponse     json.RawMessage `json:"tool_response"`
 	AgentID          string          `json:"agent_id"`
 	AgentType        string          `json:"agent_type"`
 	NotificationType string          `json:"notification_type"`
-	TaskID           flexibleID      `json:"task_id"`
-	TaskSubject      string          `json:"task_subject"`
 	StopHookActive   bool            `json:"stop_hook_active"`
 }
 
@@ -76,22 +73,6 @@ func origin(prompt string) string {
 		return events.OriginAgent
 	}
 	return events.OriginUser
-}
-
-// flexibleID accepts a string or a number.
-type flexibleID string
-
-func (f *flexibleID) UnmarshalJSON(data []byte) error {
-	var s string
-	if err := json.Unmarshal(data, &s); err == nil {
-		*f = flexibleID(s)
-		return nil
-	}
-	var n json.Number
-	if err := json.Unmarshal(data, &n); err == nil {
-		*f = flexibleID(n.String())
-	}
-	return nil
 }
 
 // Agent returns "claude".
@@ -139,11 +120,6 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		// may be recorded again; a failed one may still have been written,
 		// and recording a path twice is harmless.
 		input.Settled = p.ToolName == checkpointTool
-		if ok {
-			if plan, found := planUpdate(p.ToolName, p.ToolInput, p.ToolResponse); found {
-				add(actor, events.PlanUpdated, plan)
-			}
-		}
 	case "PermissionRequest":
 		add(actor, events.PermissionRequested, events.PermissionData{Tool: p.ToolName})
 	case "PermissionDenied":
@@ -153,14 +129,6 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		add(actor, events.Notification, events.NotificationData{Type: kind})
 		if kind == "permission" {
 			add(actor, events.PermissionRequested, events.PermissionData{})
-		}
-	case "TaskCreated", "TaskCompleted":
-		status := events.PlanPending
-		if event == "TaskCompleted" {
-			status = events.PlanCompleted
-		}
-		if p.TaskID != "" {
-			add(actor, events.PlanUpdated, events.PlanData{Merge: true, Items: []events.PlanItem{{ID: string(p.TaskID), Text: p.TaskSubject, Status: status}}})
 		}
 	case "SubagentStart":
 		if p.AgentID != "" {
@@ -250,66 +218,6 @@ func editPath(tool string, input json.RawMessage) string {
 		return fields.NotebookPath
 	}
 	return ""
-}
-
-func planStatus(value string) string {
-	switch value {
-	case events.PlanInProgress, events.PlanCompleted, events.PlanDeleted:
-		return value
-	}
-	return events.PlanPending
-}
-
-// planUpdate reads the plan from TodoWrite (the whole list) and the task
-// tools (one item, merged by id) (RUN-4).
-func planUpdate(tool string, input, response json.RawMessage) (events.PlanData, bool) {
-	switch tool {
-	case "TodoWrite":
-		var todo struct {
-			Todos []struct {
-				Content string `json:"content"`
-				Status  string `json:"status"`
-			} `json:"todos"`
-		}
-		if json.Unmarshal(input, &todo) != nil {
-			return events.PlanData{}, false
-		}
-		plan := events.PlanData{Items: []events.PlanItem{}}
-		for _, item := range todo.Todos {
-			plan.Items = append(plan.Items, events.PlanItem{Text: item.Content, Status: planStatus(item.Status)})
-		}
-		return plan, true
-	case "TaskCreate":
-		var in struct {
-			Subject string `json:"subject"`
-		}
-		var out struct {
-			Task struct {
-				ID flexibleID `json:"id"`
-			} `json:"task"`
-		}
-		_ = json.Unmarshal(input, &in)
-		_ = json.Unmarshal(response, &out)
-		id := string(out.Task.ID)
-		if id == "" {
-			id = in.Subject
-		}
-		if id == "" {
-			return events.PlanData{}, false
-		}
-		return events.PlanData{Merge: true, Items: []events.PlanItem{{ID: id, Text: in.Subject, Status: events.PlanPending}}}, true
-	case "TaskUpdate":
-		var in struct {
-			TaskID  flexibleID `json:"taskId"`
-			Status  string     `json:"status"`
-			Subject string     `json:"subject"`
-		}
-		if json.Unmarshal(input, &in) != nil || in.TaskID == "" || in.Status == "" {
-			return events.PlanData{}, false
-		}
-		return events.PlanData{Merge: true, Items: []events.PlanItem{{ID: string(in.TaskID), Text: in.Subject, Status: planStatus(in.Status)}}}, true
-	}
-	return events.PlanData{}, false
 }
 
 // Render returns Claude Code's hook output: a stop decision, a tool's

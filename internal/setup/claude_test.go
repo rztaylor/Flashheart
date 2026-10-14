@@ -188,6 +188,12 @@ func TestInstallWritesKeepsTheUsersSettingsAndIsIdempotent(t *testing.T) {
 	if len(settings.Hooks) != len(claudeEvents) || len(settings.Hooks["Notification"]) != 2 || len(settings.Hooks["PostToolUse"]) != 2 {
 		t.Fatalf("hooks = %v", settings.Hooks)
 	}
+	// Plans are not recorded (D51), so the task events are not registered.
+	for _, event := range []string{"TaskCreated", "TaskCompleted"} {
+		if _, found := settings.Hooks[event]; found {
+			t.Fatalf("hooks register %s", event)
+		}
+	}
 	// Values setup does not own keep their exact bytes, escapes included.
 	for _, kept := range []string{`"NOTE": "escaped \u2014 dash, \"quote\" and tab\t kept as written"`, `"LIMIT": 1.50`} {
 		if !strings.Contains(string(data), kept) {

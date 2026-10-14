@@ -793,6 +793,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Removed
 
+- Agents' plans (FH-133, D51, D72, `RUN-4` retired). No session on this
+  board ever recorded one, so the plan section on the Runs tab, the plan
+  count on cards and the plan step in their tooltips were always empty. A
+  ticket's plan is its ticked acceptance criteria and its handoff's next
+  steps. Hooks no longer read Claude Code's task-list tools or Codex's
+  `update_plan`, and `flashheart setup claude` no longer registers the
+  `TaskCreated` and `TaskCompleted` hooks: re-run it to remove them
+  (`flashheart doctor` warns while they remain; meanwhile they record
+  nothing). Older event logs with plans still read. The protocol skill's
+  line about keeping your todo list current now says a ticket's criteria
+  and handoff are its plan. Agent protocol stays 2.
 - The `_scratch` project (FH-62, D33). Agent activity outside a git
   repository is no longer recorded: hooks there write and print nothing,
   `board_context` and `list_tickets` say there is no current project, and

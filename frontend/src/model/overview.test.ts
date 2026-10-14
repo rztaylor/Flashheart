@@ -96,8 +96,6 @@ function run(id: string, patch: Partial<Run> = {}): Run {
     tools: 0,
     edits: 0,
     files: [],
-    plan: [],
-    progress: { done: 0, total: 0 },
     questions: [],
     ...patch,
   };

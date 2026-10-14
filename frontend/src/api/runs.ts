@@ -70,9 +70,6 @@ export interface Live {
   short: string;
   agent: string;
   state: RunState;
-  done: number;
-  total: number;
-  step: string;
   reason: NeedsReason;
   lastActivity: string;
 }
@@ -122,12 +119,6 @@ export interface Question {
   // mcpOnly: the asking run reports through the MCP server alone (no
   // hooks), so the answer goes with its next Flashheart tool call (D34).
   mcpOnly?: boolean;
-}
-
-export interface PlanItem {
-  id?: string;
-  text?: string;
-  status: "pending" | "in_progress" | "completed";
 }
 
 export interface TimelineEntry {
@@ -180,8 +171,6 @@ export interface Run {
   tools: number;
   edits: number;
   files: string[];
-  plan: PlanItem[];
-  progress: { done: number; total: number; current?: string };
   questions: Question[];
   timeline?: TimelineEntry[];
 }
@@ -232,9 +221,6 @@ export function isLive(value: unknown): value is Live {
     isString(value.short) &&
     isString(value.agent) &&
     isRunState(value.state) &&
-    isNumber(value.done) &&
-    isNumber(value.total) &&
-    isString(value.step) &&
     isReason(value.reason) &&
     isString(value.lastActivity)
   );
@@ -308,8 +294,6 @@ export function isRun(value: unknown): value is Run {
     isNumber(value.tools) &&
     isNumber(value.edits) &&
     Array.isArray(value.files) &&
-    Array.isArray(value.plan) &&
-    isRecord(value.progress) &&
     Array.isArray(value.questions) &&
     value.questions.every(isQuestion) &&
     (value.timeline === undefined ||
