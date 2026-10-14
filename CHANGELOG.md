@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
-- Rename a workstream from its page (FH-167, D74, `EDIT-13`). The
+- Rename a workstream from its page (FH-167, D77, `EDIT-13`). The
   workstream's name has a pencil like a ticket's title: change it and
   save, and its short name (slug) follows the new name as New
   workstream would make it, so its tickets, the workstreams that wait
@@ -332,7 +332,7 @@ All notable changes to this project are documented here. The project follows
 ### Fixed
 
 - Saved filters and expanded workstreams keep a workstream after it is
-  renamed (FH-170, D74). A rename by an agent or on the board now
+  renamed (FH-170, D77). A rename by an agent or on the board now
   rewrites the old short name in the project's saved Board filter and
   its expanded finished workstreams, which otherwise stopped matching
   without saying why. The rename stands even if the settings file cannot

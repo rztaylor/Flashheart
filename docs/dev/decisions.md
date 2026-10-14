@@ -1751,7 +1751,7 @@ for copies with no structure. A Sanitizer API pass was not used: it is
 not in every browser the board supports, and the converter reads only
 what it allows anyway.
 
-## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D71 and D74)
+## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D71 and D77)
 
 Decision (FH-46): a new MCP tool, `update_workstream`, sets a
 workstream's title, goal, priority, tags and `depends-on-workstreams`
@@ -1888,7 +1888,7 @@ which FH-167 will give a control on the workstream page.
   the renamed workstream's own is refused. UI preferences in
   `config.yaml` that name the slug (saved filters, expanded finished
   workstreams) are outside the project and its lock and are left as they
-  are by this write; D74 (FH-170) keeps them in step after it.
+  are by this write; D77 (FH-170) keeps them in step after it.
 - **Refusals.** A new slug that is not valid (board-format §Workstream)
   is `invalid_input` / 400; one that a file in `workstreams/` already
   has, workstream or not, is `invalid_input` for agents and 409 `exists`
@@ -1905,7 +1905,7 @@ which FH-167 will give a control on the workstream page.
 Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): a new optional
 input, no event changes shape. Board format stays 2: no field is added.
 
-## 2026-10-14 — D74: A workstream's name is edited on its page, and its slug and saved preferences follow
+## 2026-10-14 — D77: A workstream's name is edited on its page, and its slug and saved preferences follow
 
 Decision (FH-167, FH-170): the workstream page's h1, its name (the
 file's H1, `title`), edits in place like a ticket's title (EDIT-11: its
@@ -1952,7 +1952,7 @@ saved UI preferences that name the slug follow too, for any rename.
   (`renameWorkstreamIn`), as it saves preferences whole and would
   otherwise put the old slug back. A rename by an agent while a board
   tab is open is not heard by that tab's copy; its next preference save
-  can still restore the old slug there (follow-up ticket).
+  can still restore the old slug there (FH-173).
 
 Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format
 stays 2 (no field is added; the preferences keep their shape).

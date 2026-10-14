@@ -332,6 +332,29 @@ describe("WorkstreamPage", () => {
     expect(onRenamed).not.toHaveBeenCalled();
   });
 
+  it("keeps the name open when another workstream has the name (FH-163)", async () => {
+    const user = userEvent.setup();
+    const onRenamed = vi.fn();
+    renderPage(workstream(), true, onRenamed);
+    await user.click(screen.getByRole("button", { name: "Edit name" }));
+    const words =
+      'a workstream called "Offline" is already in alpha (offline); choose another title';
+    server.replies.push(() =>
+      Response.json(
+        { error: { code: "title_taken", message: words } },
+        { status: 409 },
+      ),
+    );
+    const name = screen.getByRole("textbox", { name: "Name" });
+    await user.clear(name);
+    await user.type(name, "Offline");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(words);
+    expect(screen.getByRole("textbox", { name: "Name" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onRenamed).not.toHaveBeenCalled();
+  });
+
   it("refuses an empty name without sending it, and Escape cancels", async () => {
     const user = userEvent.setup();
     renderPage();
