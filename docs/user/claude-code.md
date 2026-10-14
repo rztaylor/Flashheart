@@ -3,8 +3,10 @@
 Flashheart works with Claude Code in two ways:
 
 - **Hooks** record what every session does, with no effort from the model:
-  starts and ends, prompts (never their text), tools, edited files, its task
-  list as a plan, permission prompts and subagents. The board shows every
+  starts and ends, prompts (never their text), tools, edited files,
+  permission prompts and subagents. A ticket's plan is its acceptance
+  criteria and its handoff's next steps; the session's own task list is not
+  recorded. The board shows every
   session live in the **Agents** view, badges the ticket it works on, and
   lifts sessions that need you into **Needs you**.
 - **The `flashheart` MCP server** lets the model do what only it can: find
@@ -153,7 +155,6 @@ created on first contact with a `project.yaml` but no ticket key yet:
   text), turns finished and compaction;
 - tool names, success or failure, and for edits the file path relative to
   the repository;
-- the session's own task list (`TodoWrite` and the task tools), as its plan;
 - permission requests and notifications, by type only;
 - the model's claims, checkpoints, ticket changes and questions, and your
   answers.

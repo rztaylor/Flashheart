@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
-	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/runs"
@@ -48,9 +47,6 @@ type LiveJSON struct {
 	Short        string      `json:"short"`
 	Agent        string      `json:"agent"`
 	State        string      `json:"state"`
-	Done         int         `json:"done"`
-	Total        int         `json:"total"`
-	Step         string      `json:"step"`
 	Reason       runs.Reason `json:"reason"`
 	LastActivity string      `json:"lastActivity"`
 }
@@ -101,37 +97,35 @@ func sessionsJSON(snapshot *index.Snapshot, ticket board.Ticket) *SessionsJSON {
 // RunJSON is one run (RUN-2). Timeline is sent only for a single run or a
 // ticket's runs.
 type RunJSON struct {
-	ID           string            `json:"id"`
-	Short        string            `json:"short"`
-	Agent        string            `json:"agent"`
-	Kind         string            `json:"kind"`
-	Parent       string            `json:"parent"`
-	Children     []string          `json:"children"`
-	Project      string            `json:"project"`
-	Cwd          string            `json:"cwd"`
-	Branch       string            `json:"branch"`
-	Worktree     string            `json:"worktree"`
-	Source       string            `json:"source"`
-	AgentType    string            `json:"agentType"`
-	State        string            `json:"state"`
-	Ticket       string            `json:"ticket"`
-	TicketTitle  string            `json:"ticketTitle"`
-	LinkedBy     string            `json:"linkedBy"`
-	Dirty        bool              `json:"dirty"`
-	NoHandoff    bool              `json:"noHandoff"`
-	Permission   string            `json:"permission"`
-	Reason       runs.Reason       `json:"reason"`
-	Started      string            `json:"started"`
-	LastActivity string            `json:"lastActivity"`
-	Ended        string            `json:"ended"`
-	EndReason    string            `json:"endReason"`
-	Tools        int               `json:"tools"`
-	Edits        int               `json:"edits"`
-	Files        []string          `json:"files"`
-	Plan         []events.PlanItem `json:"plan"`
-	Progress     runs.Progress     `json:"progress"`
-	Questions    []QuestionJSON    `json:"questions"`
-	Timeline     []runs.Entry      `json:"timeline,omitempty"`
+	ID           string         `json:"id"`
+	Short        string         `json:"short"`
+	Agent        string         `json:"agent"`
+	Kind         string         `json:"kind"`
+	Parent       string         `json:"parent"`
+	Children     []string       `json:"children"`
+	Project      string         `json:"project"`
+	Cwd          string         `json:"cwd"`
+	Branch       string         `json:"branch"`
+	Worktree     string         `json:"worktree"`
+	Source       string         `json:"source"`
+	AgentType    string         `json:"agentType"`
+	State        string         `json:"state"`
+	Ticket       string         `json:"ticket"`
+	TicketTitle  string         `json:"ticketTitle"`
+	LinkedBy     string         `json:"linkedBy"`
+	Dirty        bool           `json:"dirty"`
+	NoHandoff    bool           `json:"noHandoff"`
+	Permission   string         `json:"permission"`
+	Reason       runs.Reason    `json:"reason"`
+	Started      string         `json:"started"`
+	LastActivity string         `json:"lastActivity"`
+	Ended        string         `json:"ended"`
+	EndReason    string         `json:"endReason"`
+	Tools        int            `json:"tools"`
+	Edits        int            `json:"edits"`
+	Files        []string       `json:"files"`
+	Questions    []QuestionJSON `json:"questions"`
+	Timeline     []runs.Entry   `json:"timeline,omitempty"`
 	// MCPOnly marks a run the MCP server started that no hook reports
 	// (runs.Run.MCPOnly): the board calls it "MCP only".
 	MCPOnly bool `json:"mcpOnly"`
@@ -182,7 +176,7 @@ func runJSON(snapshot *index.Snapshot, v runs.View, timeline bool) RunJSON {
 		Source: v.Source, AgentType: v.AgentType, State: string(v.State), MCPOnly: v.MCPOnly,
 		Ticket: v.Link.Ticket, LinkedBy: v.Link.By, Dirty: v.Dirty, NoHandoff: v.NoHandoff, Permission: v.Permission, Reason: v.Reason,
 		Started: timestamp(v.Started), LastActivity: timestamp(v.LastActivity), Ended: timestamp(v.EndedAt), EndReason: v.EndReason,
-		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files), Plan: nonNil(v.Plan), Progress: v.Progress,
+		Tools: v.Tools, Edits: v.Edits, Files: nonNil(v.Files),
 		Questions: questionsJSON(v.Questions),
 	}
 	if v.Link.Ticket != "" {
@@ -259,7 +253,6 @@ func liveBadge(snapshot *index.Snapshot, card *Card) {
 	}
 	card.Live = &LiveJSON{
 		Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(v.State),
-		Done: v.Progress.Done, Total: v.Progress.Total, Step: v.Progress.Current,
 		Reason: v.Reason, LastActivity: timestamp(v.LastActivity),
 	}
 	card.NeedsYou = card.NeedsYou || v.State == runs.NeedsYou

@@ -13,7 +13,8 @@ type Kind string
 
 // Event kinds. ToolUsed is one tool call: since protocol 2 (FH-55) hooks
 // write throttled Activity records instead, and readers still fold
-// tool.used from older logs.
+// tool.used from older logs. plan.updated, an agent's plan, is no longer a
+// kind (D51, FH-133): readers skip it in older logs as any unknown kind.
 const (
 	RunStart            Kind = "run.start"
 	RunEnd              Kind = "run.end"
@@ -21,7 +22,6 @@ const (
 	TurnEnd             Kind = "turn.end"
 	ToolUsed            Kind = "tool.used"
 	Activity            Kind = "activity"
-	PlanUpdated         Kind = "plan.updated"
 	PermissionRequested Kind = "permission.requested"
 	PermissionResolved  Kind = "permission.resolved"
 	Notification        Kind = "notification"
@@ -57,7 +57,6 @@ var kinds = map[Kind]reflect.Type{
 	TurnEnd:             reflect.TypeFor[TurnEndData](),
 	ToolUsed:            reflect.TypeFor[ToolData](),
 	Activity:            reflect.TypeFor[ActivityData](),
-	PlanUpdated:         reflect.TypeFor[PlanData](),
 	PermissionRequested: reflect.TypeFor[PermissionData](),
 	PermissionResolved:  reflect.TypeFor[ResolvedData](),
 	Notification:        reflect.TypeFor[NotificationData](),
@@ -108,7 +107,7 @@ func checkData(kind Kind, data any) (Data, error) {
 
 // Bounds of strings without a limit of their own.
 const (
-	maxID    = 64   // question and plan item ids
+	maxID    = 64   // question ids
 	maxRef   = 300  // run ids, `by`, tickets, files
 	maxWord  = 40   // enums written by adapters: kinds, sources, statuses
 	maxPath  = 1000 // working directories and worktrees
@@ -167,18 +166,6 @@ func (d ActivityData) bound() Data {
 	if len(d.Shell) > MaxActivitySpans {
 		d.Shell = d.Shell[len(d.Shell)-MaxActivitySpans:]
 	}
-	return d
-}
-
-func (d PlanData) bound() Data {
-	if d.Items == nil {
-		return d
-	}
-	items := make([]PlanItem, 0, min(len(d.Items), MaxPlanItems))
-	for _, item := range d.Items[:min(len(d.Items), MaxPlanItems)] {
-		items = append(items, PlanItem{ID: line(item.ID, maxID), Text: line(item.Text, MaxPlanText), Status: line(item.Status, maxWord)})
-	}
-	d.Items = items
 	return d
 }
 

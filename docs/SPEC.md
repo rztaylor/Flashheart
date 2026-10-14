@@ -46,7 +46,7 @@ several repositories, often in parallel and often unattended.
 | "What is going on across my projects?" | Click through chat tabs and terminals | One board, every project, live agent state |
 | "Which session needs me?" | Notice a stalled tab by chance | A **Needs you** lane and badge across all projects |
 | "My session died; where was it?" | Re-read history, re-explain | The ticket's handoff; the next session is told on start |
-| "What did the agent actually do?" | Scroll a transcript | Plan, checkpoints, files, screenshots and review guide on the card |
+| "What did the agent actually do?" | Scroll a transcript | Ticked criteria, checkpoints, files, screenshots and review guide on the card |
 | "What should run next?" | Remember | Prioritised, dependency-aware tickets and workstreams |
 
 A secondary user is **the agent itself**: it needs a small, reliable,
@@ -84,7 +84,7 @@ low-token way to find its work, claim it, report progress and hand off.
 | **Review** | A human verification guide for a ticket in `reviews/`. |
 | **Attachment** | A file (screenshot, log, PDF) copied into the ticket's `files/` folder. |
 | **Run** | One agent session or subagent, from start to end. Runs live in the event log, not in tickets. |
-| **Event** | One append-only record in a project's event log (session started, plan updated, checkpoint …). |
+| **Event** | One append-only record in a project's event log (session started, permission requested, checkpoint …). |
 | **Claim** | A run's lease on a ticket, renewed by its activity. |
 | **Handoff** | The `## Handoff` section of a ticket: done, next, files, open questions. Rewritten at each checkpoint. |
 | **Question** | A run's request for a human decision, answer or review; it puts the run in **Needs you**. |
@@ -269,7 +269,7 @@ Full format: `docs/dev/specs/board-format.md`.
   no ticket, with project, branch, state and **Create ticket**) and *Up
   next* (the top of each project's Up next, blocked or ready). At risk and
   In progress start open when they have something; every section has a
-  one-line empty state. Run detail (tools, edited files, plan, subagents)
+  one-line empty state. Run detail (tools, edited files, subagents)
   stays on the card's Runs tab. The Agents view it replaced is gone; its
   old routes and a remembered Agents view open the Overview.
 - `VIEW-4` **Workstreams**: swimlanes in workstream order, each showing its
@@ -285,7 +285,7 @@ Full format: `docs/dev/specs/board-format.md`.
   requests and priority beside it), *Normal* (the title, one meta line of
   type, id, blocked, change requests, live run, age, review, attachments
   and priority, and a Needs you reason on its own line), *Detailed* (+
-  blocker reason, agent and plan step, handoff "next", description excerpt,
+  blocker reason, run state and agent, handoff "next", description excerpt,
   workstream name). Every card shows its id and its workstream's line as a
   stripe, and, at every density, its change requests still open or
   addressed (`REV-6`) as a count; its accessible name says every marker.
@@ -300,11 +300,11 @@ Full format: `docs/dev/specs/board-format.md`.
   workstream and the Colour by value can each show only some values or hide
   some (FH-39). Filters and view choices are remembered per project
   (`CFG-2`).
-- `VIEW-8` Live run on a card: its state mark and plan count ("3/7") on
-  Normal and Detailed cards, with the agent (Claude/Codex), state and step
-  in its tooltip and the card's name; a Detailed card also says the state,
-  agent, time since last activity and current plan step ("3/7 · Fix
-  header") when the run has a plan.
+- `VIEW-8` Live run on a card: its state mark on Normal and Detailed cards,
+  with the agent (Claude/Codex) and state in its tooltip and the card's
+  name; a Detailed card also says the state, agent and time since last
+  activity. A card never shows a plan: a ticket's progress is its ticked
+  criteria and its handoff's next steps (D51).
 
 ### 6.5 Card detail (`CARD`)
 
@@ -567,10 +567,10 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   MCP write, keyed `<agent>:mcp-<random>`, or `<agent>:<session-id>` when
   the call names its session (Codex, D45); such a run lasts as long as its
   MCP connection and reports claims, checkpoints, questions and tool calls,
-  not turns, plans or edits (D34), until hooks of that session report it.
+  not turns or edits (D34), until hooks of that session report it.
 - `RUN-2` A run records agent, kind (session/subagent), parent, project, cwd,
   branch, worktree, linked ticket and how it was linked (claim or branch
-  match), plan, start, last activity, end and end reason.
+  match), start, last activity, end and end reason.
 - `RUN-3` Run state is derived from events: *Working* (turn in progress),
   *Needs you* (permission request, open question or review requested),
   *Waiting* (turn finished, session open), *Quiet* (working but no event for
@@ -583,8 +583,10 @@ Full model: `docs/dev/specs/agent-protocol.md` §2–§4.
   ticket has edits since its last checkpoint (through the edit tools, or
   files the turn-end hook finds changed in the worktree during the run's
   own shell commands, not while it waited) are flagged **no handoff**.
-- `RUN-4` A run's **plan** mirrors the agent's own task list (Claude Code's
-  task/todo tools, Codex's plan tool) from hook events, without model effort.
+- `RUN-4` Retired (D51, FH-133): runs record no plan. A ticket's plan is
+  its acceptance criteria and its handoff's next steps, which agents
+  already write; hooks do not read agents' own task lists, and older logs
+  that hold plans still read.
 - `RUN-5` A run links to a ticket by an explicit claim, or provisionally when
   exactly one *in-progress* ticket in the run's home project (the one it
   works in, never one where it only claimed a ticket) has `branch:` equal

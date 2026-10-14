@@ -65,9 +65,6 @@ func TestRunsEndpointListsRunsWithState(t *testing.T) {
 	if session.Ticket != "AL-3" || session.TicketTitle != "Card panel" || session.LinkedBy != "claim" || !session.Dirty {
 		t.Fatalf("session link = %+v", session)
 	}
-	if session.Progress.Done != 1 || session.Progress.Total != 3 || session.Progress.Current != "Review tab" {
-		t.Fatalf("progress = %+v", session.Progress)
-	}
 	if len(session.Children) != 1 || session.Timeline != nil {
 		t.Fatalf("children = %v, timeline sent in the list = %v", session.Children, session.Timeline)
 	}
@@ -153,7 +150,7 @@ func TestCardsAndProjectsCarryLiveRuns(t *testing.T) {
 	var board BoardResponse
 	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
 	card := cardByID(t, board.Cards, "AL-3")
-	if card.Live == nil || card.Live.State != "needs-you" || card.Live.Agent != "claude" || card.Live.Step != "Review tab" || card.Live.Done != 1 || card.Live.Total != 3 || !card.NeedsYou || card.AgentWorking {
+	if card.Live == nil || card.Live.State != "needs-you" || card.Live.Agent != "claude" || !card.NeedsYou || card.AgentWorking {
 		t.Fatalf("AL-3 live = %+v needsYou %v working %v", card.Live, card.NeedsYou, card.AgentWorking)
 	}
 	if other := cardByID(t, board.Cards, "AL-4"); other.Live != nil || other.NeedsYou {
@@ -237,9 +234,73 @@ func golden(t *testing.T, payload, run, ts string) []string {
 	return lines
 }
 
+// The sample log, like any from before D51, holds a plan.updated (FH-133):
+// it still folds, with the session's state, link and timeline as before,
+// and no run, card or timeline carries a plan.
+func TestOldPlanEventsFoldWithoutAPlan(t *testing.T) {
+	t.Parallel()
+
+	handler := runsAPI(t, time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC))
+	var raw struct {
+		Runs []map[string]json.RawMessage `json:"runs"`
+	}
+	getJSON(t, handler, "/api/runs", http.StatusOK, &raw)
+	if len(raw.Runs) != 2 {
+		t.Fatalf("runs = %d, want the session and its subagent", len(raw.Runs))
+	}
+	for _, run := range raw.Runs {
+		for _, field := range []string{"plan", "progress"} {
+			if _, found := run[field]; found {
+				t.Errorf("run %s carries %q: %s", run["id"], field, run[field])
+			}
+		}
+	}
+	var panel struct {
+		Ticket struct {
+			Runs []struct {
+				State    string `json:"state"`
+				Timeline []struct {
+					Kind string `json:"kind"`
+				} `json:"timeline"`
+			} `json:"runs"`
+		} `json:"ticket"`
+	}
+	getJSON(t, handler, "/api/tickets/AL-3", http.StatusOK, &panel)
+	if len(panel.Ticket.Runs) == 0 || panel.Ticket.Runs[0].State != "needs-you" {
+		t.Fatalf("AL-3 runs = %+v", panel.Ticket.Runs)
+	}
+	for _, entry := range panel.Ticket.Runs[0].Timeline {
+		if entry.Kind == "plan.updated" {
+			t.Fatalf("timeline shows a plan: %+v", panel.Ticket.Runs[0].Timeline)
+		}
+	}
+	var board struct {
+		Cards []struct {
+			ID   string                     `json:"id"`
+			Live map[string]json.RawMessage `json:"live"`
+		} `json:"cards"`
+	}
+	getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+	live := false
+	for _, card := range board.Cards {
+		if card.ID != "AL-3" {
+			continue
+		}
+		live = card.Live != nil
+		for _, field := range []string{"done", "total", "step"} {
+			if _, found := card.Live[field]; found {
+				t.Errorf("AL-3's live run carries %q", field)
+			}
+		}
+	}
+	if !live {
+		t.Fatal("AL-3 has no live run")
+	}
+}
+
 // An orchestrated run with three subagents shows as a tree on its ticket's
 // Runs tab (agent-protocol §10): every subagent under its session with its
-// own state, plan and checkpoints, including one that claimed another
+// own state and checkpoints, including one that claimed another
 // ticket.
 func TestTicketRunsCarryTheSubagentTree(t *testing.T) {
 	t.Parallel()
@@ -277,7 +338,7 @@ func TestTicketRunsCarryTheSubagentTree(t *testing.T) {
 		}
 	}
 	child := byID[working]
-	if child.Ticket != "AL-2" || child.TicketTitle == "" || child.Progress.Current != "Write the tests" {
+	if child.Ticket != "AL-2" || child.TicketTitle == "" {
 		t.Fatalf("working child = %+v", child)
 	}
 	checkpointed := false

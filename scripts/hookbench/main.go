@@ -138,7 +138,7 @@ func run(o options) error {
 
 // mixes are each agent's recorded payloads for the mix and tools
 // scenarios. mix is a realistic session: mostly tool results, with
-// prompts, plans and stops. tools is tool results within a minute of each
+// prompts and stops. tools is tool results within a minute of each
 // other: all but the first and each newly edited path's are held in the
 // session's state.
 var mixes = map[string]map[string][]string{
