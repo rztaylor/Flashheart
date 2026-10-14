@@ -29,6 +29,7 @@ type Writer interface {
 	PlaceTicket(project, id string, pre store.Precondition, after string, edit store.Edit) (string, bool, error)
 	ReadWorkstream(project, slug string) ([]byte, string, error)
 	UpdateWorkstream(project, slug string, pre store.Precondition, edit store.Edit) (string, error)
+	EditWorkstream(project, slug string, pre store.Precondition, edit store.WorkstreamEdit) (store.EditedWorkstream, error)
 	CreateTicket(project string, input store.NewTicket) (store.Created, error)
 	CreateWorkstream(project string, input store.NewWorkstream) (store.CreatedWorkstream, error)
 	SetProjectKey(project, key string) error
@@ -73,6 +74,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/tickets/{id}/files", b.upload)
 	mux.HandleFunc("POST /api/projects/{project}/tickets", b.createTicket)
 	mux.HandleFunc("POST /api/projects/{project}/workstreams", b.createWorkstream)
+	mux.HandleFunc("PATCH /api/projects/{project}/workstreams/{slug}", b.patchWorkstream)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/order", b.reorderWorkstream)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/section", b.putWorkstreamSection)
 	mux.HandleFunc("PUT /api/projects/{project}/key", b.setKey)
@@ -641,6 +643,86 @@ func (b boardAPI) createWorkstream(w http.ResponseWriter, r *http.Request) {
 		revision = snapshot.Revision
 	}
 	writeJSON(w, http.StatusCreated, CreatedWorkstreamResponse{Slug: created.Slug, Hash: created.Hash, Revision: revision})
+}
+
+// WorkstreamPatchRequest is PATCH /api/projects/{project}/workstreams/{slug}:
+// the workstream's fields (board.WorkstreamFields; values are strings or
+// lists of strings) and a new slug ("" keeps it; FH-158), over the file
+// as the client read it (Base).
+type WorkstreamPatchRequest struct {
+	Base   string                     `json:"base"`
+	Fields map[string]json.RawMessage `json:"fields,omitempty"`
+	Slug   string                     `json:"slug,omitempty"`
+}
+
+// EditedWorkstreamResponse reports an edited workstream: its slug, the new
+// one after a rename, and its file's hash.
+type EditedWorkstreamResponse struct {
+	Slug     string `json:"slug"`
+	Hash     string `json:"hash"`
+	Revision uint64 `json:"revision"`
+}
+
+// patchWorkstream sets a workstream's fields and renames its slug in one
+// write (store.EditWorkstream): a rename moves the file and rewrites every
+// ticket and workstream that names the old slug (FH-158). Decoding is the
+// API's; which fields change and how they are checked is board's
+// (board.NewWorkstreamChanges), as update_workstream's are. Each ticket
+// the rename rewrote is recorded as the human's change of the fields it
+// named.
+func (b boardAPI) patchWorkstream(w http.ResponseWriter, r *http.Request) {
+	writer := b.writer(w)
+	if writer == nil {
+		return
+	}
+	var request WorkstreamPatchRequest
+	if !decode(w, r, &request) || !requireBase(w, request.Base) {
+		return
+	}
+	var requested []board.FieldChange
+	for key, raw := range request.Fields {
+		list, known := board.WorkstreamField(key)
+		change := board.FieldChange{Key: key}
+		switch {
+		case !known:
+			// board refuses it, naming the fields it sets.
+		case list:
+			if err := json.Unmarshal(raw, &change.List); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_input", key+" must be a list of strings")
+				return
+			}
+		default:
+			if err := json.Unmarshal(raw, &change.Value); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_input", key+" must be a string")
+				return
+			}
+			if key == "title" {
+				change.Value = board.OneLine(change.Value, board.MaxTitle)
+			}
+		}
+		requested = append(requested, change)
+	}
+	changes, err := board.NewWorkstreamChanges(requested)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		return
+	}
+	project := r.PathValue("project")
+	edited, err := writer.EditWorkstream(project, r.PathValue("slug"), store.Unchanged(request.Base), store.WorkstreamEdit{
+		Changes: changes, Rename: strings.TrimSpace(request.Slug),
+	})
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	for _, ticket := range edited.Rewritten {
+		b.recordHuman(project, events.TicketUpdated, events.TicketData{Ticket: ticket.ID, Fields: ticket.Fields})
+	}
+	revision := uint64(0)
+	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
+		revision = snapshot.Revision
+	}
+	writeJSON(w, http.StatusOK, EditedWorkstreamResponse{Slug: edited.Slug, Hash: edited.Hash, Revision: revision})
 }
 
 // OrderRequest is PUT /api/projects/{project}/workstreams/{slug}/order: the
