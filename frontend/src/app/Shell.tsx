@@ -30,6 +30,7 @@ import { pressNeedsYou } from "./needsYou";
 import { PageActions, PageHeader } from "./PageHeader";
 import { formatRoute, type Route, type Scope, useRoute } from "./route";
 import { SettingsMenu } from "./SettingsMenu";
+import { renameWorkstreamIn } from "./scopeMemory";
 import { useBoardData } from "./useBoardData";
 import { useScopeMemory } from "./useScopeMemory";
 import type { ServerInfoState } from "./useServerInfo";
@@ -321,6 +322,23 @@ export function Shell({
                   onOpen={(ticket) =>
                     navigate({ scope: { kind: "all" }, view: "ticket", ticket })
                   }
+                  onRenamed={(slug) => {
+                    // The page moves to the new slug in place of the old
+                    // address (FH-167), and the saved filters and expanded
+                    // choices follow it as the server's did (FH-170).
+                    const { project, slug: from } = route.workstream ?? {
+                      project: "",
+                      slug: "",
+                    };
+                    updatePreferences((current) =>
+                      renameWorkstreamIn(current, project, from, slug),
+                    );
+                    data.reloadAll();
+                    navigate(
+                      { ...route, workstream: { project, slug } },
+                      { replace: true },
+                    );
+                  }}
                   backLink={{
                     href: formatRoute({
                       scope: {

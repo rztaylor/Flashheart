@@ -102,6 +102,42 @@ export function saveWorkstreamSection(
   );
 }
 
+// Renamed is a workstream's name saved: its slug after the save, which the
+// name may have changed (FH-167).
+export type Renamed = Saved & { slug: string };
+
+// nameWorkstream sets a workstream's name (its title) and renames its slug
+// to the one the name makes, as New workstream makes it, rewriting every
+// reference (FH-167, FH-158): the server derives the slug. A name whose
+// slug another workstream has is refused (409 exists).
+export async function nameWorkstream(
+  fetcher: AuthenticatedFetch,
+  project: string,
+  slug: string,
+  base: string,
+  title: string,
+): Promise<Renamed> {
+  const payload = await sendJSON(
+    fetcher,
+    "PATCH",
+    `/api/projects/${segment(project)}/workstreams/${segment(slug)}`,
+    { base, fields: { title }, slugFromTitle: true },
+  );
+  if (
+    !isRecord(payload) ||
+    typeof payload.slug !== "string" ||
+    typeof payload.hash !== "string" ||
+    typeof payload.revision !== "number"
+  )
+    throw new Error("Save response was invalid");
+  return {
+    slug: payload.slug,
+    hash: payload.hash,
+    revision: payload.revision,
+    warnings: [],
+  };
+}
+
 export function saveRaw(
   fetcher: AuthenticatedFetch,
   id: string,

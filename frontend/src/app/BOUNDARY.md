@@ -12,7 +12,8 @@ identity, the view's summary line and the Archive link, the archive route
 (a project's archived tickets, or the projects archive in All projects),
 the ticket page route (`#/ticket/<id>`, a ticket's full page under the
 band, CARD-7; a navigation waits on the leave guard while an edit is
-unsaved)
+unsaved), a renamed workstream's page moving to its new slug in place of
+the old address with the saved filters following it (FH-167, FH-170)
 and the Undo after archiving a project, the screen's one marginal remark
 (`AsideProvider`) and wiring which moves earn one, the brand tooltip, the
 shutdown-denial alert, keeping a file dropped outside a drop target from

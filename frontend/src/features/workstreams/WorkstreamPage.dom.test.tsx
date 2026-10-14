@@ -111,7 +111,11 @@ const conflict = (content: string) => () =>
 let server: ReturnType<typeof fakeServer>;
 let editing: Editing;
 
-function renderPage(data = workstream(), withEditing = true) {
+function renderPage(
+  data = workstream(),
+  withEditing = true,
+  onRenamed?: (slug: string) => void,
+) {
   resource.state = { status: "ready", data };
   return render(
     <WorkstreamPage
@@ -122,6 +126,7 @@ function renderPage(data = workstream(), withEditing = true) {
       revision={1}
       editing={withEditing ? editing : undefined}
       onOpen={() => undefined}
+      onRenamed={onRenamed}
       backLink={{ href: "#/p/alpha/workstreams", label: "Alpha" }}
     />,
   );
@@ -242,6 +247,106 @@ describe("WorkstreamPage", () => {
     });
     expect(dialog.textContent).toContain("Theirs.");
     expect(dialog.textContent).toContain("workstream");
+  });
+
+  it("renames the workstream in place and moves to its new slug (FH-167)", async () => {
+    const user = userEvent.setup();
+    const onRenamed = vi.fn();
+    renderPage(workstream(), true, onRenamed);
+    await user.click(screen.getByRole("button", { name: "Edit name" }));
+    const name = screen.getByRole("textbox", { name: "Name" });
+    expect((name as HTMLInputElement).value).toBe("Board UI");
+    expect(document.activeElement).toBe(name);
+    // The page keeps its h1 for the outline while the name is edited.
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Board UI" }),
+    ).toBeTruthy();
+    server.replies.push(() =>
+      Response.json({ slug: "board-lanes", hash: "renamed", revision: 3 }),
+    );
+    await user.clear(name);
+    await user.type(name, "  Board lanes ");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    await waitFor(() =>
+      expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull(),
+    );
+    expect(server.requests).toEqual([
+      {
+        method: "PATCH",
+        path: "/api/projects/alpha/workstreams/board-ui",
+        body: {
+          base: "base",
+          fields: { title: "Board lanes" },
+          slugFromTitle: true,
+        },
+      },
+    ]);
+    expect(onRenamed).toHaveBeenCalledWith("board-lanes");
+    expect(editing.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Renamed Board UI to Board lanes." }),
+    );
+  });
+
+  it("keeps the slug's page when the new name makes the same slug", async () => {
+    const user = userEvent.setup();
+    const onRenamed = vi.fn();
+    renderPage(workstream(), true, onRenamed);
+    await user.click(screen.getByRole("button", { name: "Edit name" }));
+    server.replies.push(() =>
+      Response.json({ slug: "board-ui", hash: "renamed", revision: 3 }),
+    );
+    const name = screen.getByRole("textbox", { name: "Name" });
+    await user.clear(name);
+    await user.type(name, "Board ui");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(server.requests).toHaveLength(1));
+    await waitFor(() =>
+      expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull(),
+    );
+    expect(onRenamed).not.toHaveBeenCalled();
+    expect(resource.reloads).toBeGreaterThan(0);
+  });
+
+  it("keeps the name open with the reason when the name is taken", async () => {
+    const user = userEvent.setup();
+    const onRenamed = vi.fn();
+    renderPage(workstream(), true, onRenamed);
+    await user.click(screen.getByRole("button", { name: "Edit name" }));
+    const words =
+      'Another workstream in alpha already has the short name offline that "Offline" would take; choose another name.';
+    server.replies.push(() =>
+      Response.json(
+        { error: { code: "exists", message: words } },
+        { status: 409 },
+      ),
+    );
+    const name = screen.getByRole("textbox", { name: "Name" });
+    await user.clear(name);
+    await user.type(name, "Offline");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect((await screen.findByRole("alert")).textContent).toBe(words);
+    expect(
+      (screen.getByRole("textbox", { name: "Name" }) as HTMLInputElement).value,
+    ).toBe("Offline");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onRenamed).not.toHaveBeenCalled();
+  });
+
+  it("refuses an empty name without sending it, and Escape cancels", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Edit name" }));
+    await user.clear(screen.getByRole("textbox", { name: "Name" }));
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.getByRole("alert").textContent).toBe(
+      "A workstream needs a name.",
+    );
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Edit name" }),
+    );
+    expect(server.requests).toEqual([]);
   });
 
   it("offers no edits where the board cannot save", () => {

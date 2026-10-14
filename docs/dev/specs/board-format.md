@@ -367,8 +367,10 @@ tags: []
 A title change (its H1) keeps the slug: the file name and every reference
 to the workstream stay as they are (D69). A slug changes only by an
 explicit rename (an agent's `update_workstream` with `rename_to`, or the
-board's `PATCH /api/projects/<project>/workstreams/<slug>` with `slug`;
-FH-158, D71): one write under the project lock and the workstream file's
+board's `PATCH /api/projects/<project>/workstreams/<slug>` with `slug`,
+or with `slugFromTitle` from the workstream page's name edit, which takes
+the slug New workstream makes from the new name; FH-158, D71, FH-167,
+D74): one write under the project lock and the workstream file's
 hash that moves the file to `workstreams/<new>.md`, sets its `slug:`, and
 rewrites every reference to the old slug in the project: each ticket's
 `workstream:` and every `depends-on-workstreams`, in its workstreams and
@@ -376,7 +378,9 @@ its live and archived tickets (§Multi-file writes). A new slug that is not
 valid, or that a file in `workstreams/` already has, is refused and
 nothing is written. A file whose frontmatter does not parse is left as it
 is (the renamed workstream's own is refused); links and prose that
-mention the old slug are text and are not rewritten.
+mention the old slug are text and are not rewritten. After the write,
+the rename is made in `config.yaml`'s UI preferences too, best effort
+(§config.yaml, FH-170).
 
 The UI derives status (`completed` when every ticket is in review or done,
 `blocked` when its own `depends-on-workstreams` are incomplete or every
@@ -620,6 +624,14 @@ is ignored, and dropped when preferences are next saved.
 `expanded_workstreams` lists at most 500 workstream slugs per project. The
 Workstreams view drops a slug once its workstream is no longer finished or
 no longer exists, so the choice lasts only while the workstream stays finished.
+
+A workstream's rename (FH-170, D74) rewrites its old slug to the new one
+in its project's scope (`workstream` include and exclude) and
+`expanded_workstreams` list, under the root lock once the rename has
+been written. It is best effort: a `config.yaml` that cannot be read as
+settings or written is left as it is and the rename stands. The `all`
+scope and other projects' choices are left, as their bare slugs may name
+other projects' workstreams.
 
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
 other settings, unknown keys and comments.

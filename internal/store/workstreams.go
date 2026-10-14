@@ -278,7 +278,7 @@ type RewrittenTicket struct {
 	Fields []string
 }
 
-// EditWorkstream applies edit to workstreams/<slug>.md and the tickets
+// editWorkstream applies edit to workstreams/<slug>.md and the tickets
 // joining and leaving it in one write under the project lock, once pre
 // holds for the workstream file: its fields, then the lists, then the
 // tickets' workstream fields (board-format.md, Multi-file writes), so the
@@ -292,7 +292,18 @@ type RewrittenTicket struct {
 // removed, a dependency that leads back to the workstream (a
 // *board.CycleError; both ErrInvalidInput), an invalid new slug
 // (ErrInvalidName) or one a file already has (ErrExists) writes nothing.
+// EditWorkstream edits a workstream (editWorkstream), then, after a
+// rename has committed and the project lock is released, renames it in
+// the saved UI preferences too (renamePreferences, FH-170).
 func (s *Store) EditWorkstream(project, slug string, pre Precondition, edit WorkstreamEdit) (EditedWorkstream, error) {
+	edited, err := s.editWorkstream(project, slug, pre, edit)
+	if err == nil && edited.Slug != slug {
+		s.renamePreferences(project, slug, edited.Slug)
+	}
+	return edited, err
+}
+
+func (s *Store) editWorkstream(project, slug string, pre Precondition, edit WorkstreamEdit) (EditedWorkstream, error) {
 	if err := s.checkProject(project); err != nil {
 		return EditedWorkstream{}, err
 	}

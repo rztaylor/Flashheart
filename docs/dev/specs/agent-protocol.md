@@ -929,8 +929,9 @@ same write it moves the file and rewrites every reference to the old slug
 in the project, each ticket's `workstream:` and every
 `depends-on-workstreams` of its workstreams and its live and archived
 tickets, each rewritten ticket recording `ticket.updated` with the fields
-it named. Links and prose that mention the old slug are text and stay as
-they are. Tickets other sessions hold are rewritten too: the rename
+it named, and the board's saved preferences that name it follow,
+best effort (FH-170, D74). Links and prose that mention the old slug are
+text and stay as they are. Tickets other sessions hold are rewritten too: the rename
 changes only which slug they name, so it is not refused as `claimed`.
 
 ### 7.5 Waiting for an answer (`flashheart await`)

@@ -624,7 +624,7 @@ it) and scrolls as a whole in a frame of at most 80rem.
 ```
 ┌ Band ────────────────────────────────────────────────────────────────┐
 │ Show in the <project> workstreams                                    │
-│ ● Name (h1)                                         d of t served    │
+│ ● Name (h1) ✎                                       d of t served    │
 │   Running                                                            │
 │ ┌ Stations (route card surface) ───────────────────────────────────┐ │
 │ │ notes · railway graph · independent stations                     │ │
@@ -637,6 +637,15 @@ it) and scrolls as a whole in a frame of at most 80rem.
 - **Header**: a quiet *Show in the <project> workstreams* link (lines
   icon) to the project's Workstreams view; the route card's head with the
   name as the page's h1 in the display cut, its status and progress.
+  The name has its pencil (*Edit name*) beside it and edits in place as a
+  ticket's title does (FH-167): open, one line in the display cut at the
+  title field's size filling the head's width (the progress wraps below
+  it on a phone), then Save, Cancel and the shortcuts; an empty name says
+  *A workstream needs a name.* A saved name that makes a new slug moves
+  the page to its address in place of the old one (Back leaves the page)
+  with the toast *Renamed <old> to <new>.*; a name that is taken shows
+  the server's reason under the field, which stays open with what was
+  typed.
 - **Stations**: the route card's body on its line-coloured surface (repair,
   blocker and warning notes, the railway graph and independent stations);
   a station opens the ticket's full page.

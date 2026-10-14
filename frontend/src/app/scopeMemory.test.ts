@@ -4,6 +4,7 @@ import { defaultPreferences, type Preferences } from "../api/preferences";
 import { emptyFilters } from "../model/filters";
 import {
   rememberIn,
+  renameWorkstreamIn,
   restoredFilters,
   savedView,
   scopeName,
@@ -93,5 +94,56 @@ describe("scope memory (VIEW-7, CFG-2)", () => {
     expect(
       viewFor(unset, { kind: "project", project: "flashheart" }, "workstreams"),
     ).toBe("workstreams");
+  });
+});
+
+// A renamed workstream keeps its project's saved filter and expanded
+// choice (FH-170), as the server rewrote them: the page's copy follows,
+// so its next save does not put the old slug back.
+describe("renaming a workstream in the preferences", () => {
+  const preferences: Preferences = {
+    ...defaultPreferences,
+    scopes: {
+      alpha: {
+        view: "board",
+        type: { include: [], exclude: [] },
+        priority: { include: [], exclude: [] },
+        workstream: { include: ["board-ui", "board"], exclude: ["x"] },
+        age: { include: [], exclude: [] },
+        state: "",
+      },
+      all: {
+        view: "",
+        type: { include: [], exclude: [] },
+        priority: { include: [], exclude: [] },
+        workstream: { include: [], exclude: ["board-ui"] },
+        age: { include: [], exclude: [] },
+        state: "",
+      },
+    },
+    expandedWorkstreams: { alpha: ["a", "board-ui"], beta: ["board-ui"] },
+  };
+
+  it("rewrites the project's choices only, once", () => {
+    const next = renameWorkstreamIn(preferences, "alpha", "board-ui", "board");
+    expect(next.scopes.alpha?.workstream).toEqual({
+      include: ["board"],
+      exclude: ["x"],
+    });
+    expect(next.scopes.all?.workstream.exclude).toEqual(["board-ui"]);
+    expect(next.expandedWorkstreams).toEqual({
+      alpha: ["a", "board"],
+      beta: ["board-ui"],
+    });
+    expect(preferences.expandedWorkstreams.alpha).toEqual(["a", "board-ui"]);
+  });
+
+  it("returns the preferences themselves when nothing names the slug", () => {
+    expect(renameWorkstreamIn(preferences, "alpha", "offline", "away")).toBe(
+      preferences,
+    );
+    expect(renameWorkstreamIn(preferences, "gamma", "board-ui", "b")).toBe(
+      preferences,
+    );
   });
 });

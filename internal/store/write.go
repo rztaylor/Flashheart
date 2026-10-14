@@ -392,6 +392,19 @@ func (s *Store) CreateTicket(project string, input NewTicket) (Created, error) {
 // hyphens, at most 48 characters, cut at a word boundary.
 func Slugify(title string) string { return slugify(title, "ticket") }
 
+// WorkstreamSlugFor is the slug a workstream now at slug current takes
+// when it is named title on the board (FH-167): the slug New workstream
+// makes from title (CreateWorkstream), or current itself when current is
+// that slug made unique (offline-2 for "Offline"), as New workstream
+// would have made it.
+func WorkstreamSlugFor(current, title string) string {
+	base := slugify(title, "workstream")
+	if suffix, ok := strings.CutPrefix(current, base+"-"); ok && suffix != "" && strings.Trim(suffix, "0123456789") == "" {
+		return current
+	}
+	return base
+}
+
 // slugify is Slugify with the slug used when the title has no ASCII words.
 func slugify(title, fallback string) string {
 	var words []string

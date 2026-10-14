@@ -648,11 +648,14 @@ func (b boardAPI) createWorkstream(w http.ResponseWriter, r *http.Request) {
 // WorkstreamPatchRequest is PATCH /api/projects/{project}/workstreams/{slug}:
 // the workstream's fields (board.WorkstreamFields; values are strings or
 // lists of strings) and a new slug ("" keeps it; FH-158), over the file
-// as the client read it (Base).
+// as the client read it (Base). SlugFromTitle, with a title among the
+// fields and no Slug, renames the slug to the one the title makes
+// (store.WorkstreamSlugFor): the workstream page's name edit (FH-167).
 type WorkstreamPatchRequest struct {
-	Base   string                     `json:"base"`
-	Fields map[string]json.RawMessage `json:"fields,omitempty"`
-	Slug   string                     `json:"slug,omitempty"`
+	Base          string                     `json:"base"`
+	Fields        map[string]json.RawMessage `json:"fields,omitempty"`
+	Slug          string                     `json:"slug,omitempty"`
+	SlugFromTitle bool                       `json:"slugFromTitle,omitempty"`
 }
 
 // EditedWorkstreamResponse reports an edited workstream: its slug, the new
@@ -707,10 +710,25 @@ func (b boardAPI) patchWorkstream(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
 		return
 	}
-	project := r.PathValue("project")
-	edited, err := writer.EditWorkstream(project, r.PathValue("slug"), store.Unchanged(request.Base), store.WorkstreamEdit{
-		Changes: changes, Rename: strings.TrimSpace(request.Slug),
+	project, slug := r.PathValue("project"), r.PathValue("slug")
+	rename, name := strings.TrimSpace(request.Slug), ""
+	if request.SlugFromTitle {
+		at := slices.IndexFunc(requested, func(change board.FieldChange) bool { return change.Key == "title" })
+		if at < 0 || rename != "" {
+			writeError(w, http.StatusBadRequest, "invalid_input", "slugFromTitle needs a title and no slug")
+			return
+		}
+		name = strings.TrimSpace(requested[at].Value)
+		rename = store.WorkstreamSlugFor(slug, name)
+	}
+	edited, err := writer.EditWorkstream(project, slug, store.Unchanged(request.Base), store.WorkstreamEdit{
+		Changes: changes, Rename: rename,
 	})
+	if err != nil && request.SlugFromTitle && errors.Is(err, store.ErrExists) {
+		// The person chose a name, not a slug: say so in names.
+		writeError(w, http.StatusConflict, "exists", fmt.Sprintf("Another workstream in %s already has the short name %s that %q would take; choose another name.", project, rename, name))
+		return
+	}
 	if err != nil {
 		writeStoreError(w, err)
 		return
