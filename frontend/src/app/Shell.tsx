@@ -353,6 +353,9 @@ export function Shell({
                         (item) => item.name === route.workstream?.project,
                       )?.displayName ?? route.workstream.project,
                   }}
+                  siblings={summaries.find(
+                    (item) => item.name === route.workstream?.project,
+                  )}
                 />
               </EditorModeProvider>
             </main>

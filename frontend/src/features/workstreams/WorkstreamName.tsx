@@ -1,7 +1,8 @@
 import { useRef } from "react";
 
-import type { WorkstreamDetail } from "../../api/board";
+import type { WorkstreamBrief, WorkstreamDetail } from "../../api/board";
 import type { Renamed, Saved } from "../../api/edit";
+import { takenWorkstream } from "../../model/lines";
 import { titleLine } from "../../model/sectionEdit";
 import {
   EditPencil,
@@ -20,6 +21,13 @@ export type Editable = WorkstreamDetail & { id: string };
 // SendName saves a new name on base and answers with the slug after it.
 export type SendName = (base: string, name: string) => Promise<Renamed>;
 
+// Siblings are the project's workstreams, by which a name another of them
+// has is named at the field before it is sent (FH-163).
+export interface Siblings {
+  displayName: string;
+  workstreams: WorkstreamBrief[];
+}
+
 // Named is a name saved: the name, the slug after it and the save.
 export interface Named {
   name: string;
@@ -34,15 +42,18 @@ export interface Named {
 // follows; onNamed hears the name saved and the slug after it, for the
 // page's route to follow, or nothing when the page reloaded instead (the
 // conflict dialog's Reload). A name another workstream's slug or name has
-// is refused with the reason beside the field, which stays open.
+// is refused with the reason beside the field, which stays open; one
+// that another of siblings has is named there without sending it.
 export function WorkstreamName({
   detail,
   send,
   onNamed,
+  siblings,
 }: {
   detail: Editable;
   send?: SendName;
   onNamed(named?: Named): void;
+  siblings?: Siblings;
 }) {
   const item = useInPlaceItem("name", "name");
   const edit = send && item.editable ? send : undefined;
@@ -61,9 +72,15 @@ export function WorkstreamName({
           detail={detail}
           read={(workstream: Editable) => workstream.title}
           isDirty={(draft, base) => draft.trim() !== base.trim()}
-          check={(value) =>
-            value.trim() ? undefined : "A workstream needs a name."
-          }
+          check={(value) => {
+            if (!value.trim()) return "A workstream needs a name.";
+            const taken =
+              siblings &&
+              takenWorkstream(siblings.workstreams, value, detail.slug);
+            return taken
+              ? `${siblings.displayName} already has a workstream called ${taken.title}. Choose another name.`
+              : undefined;
+          }}
           send={async (base, value) => {
             const name = value.trim();
             const saved = await edit(base, name);

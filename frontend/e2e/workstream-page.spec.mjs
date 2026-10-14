@@ -366,15 +366,28 @@ test("renames the workstream from its name: references follow and the page moves
   await expect(name).toHaveValue("Board editing");
   await shot(page, "workstream-name-1440-light", { keepFocus: true });
 
-  // A name whose slug another workstream has: the reason beside the
-  // field, which stays open with what was typed, and nothing written.
+  // A name another workstream has (FH-163) is named at the field without
+  // being sent; one whose slug another has is the server's refusal. Each
+  // keeps the field open with what was typed, and writes nothing.
   const files = await readdir(dir);
-  await name.fill("Board core");
+  const patches = [];
+  const onPatch = (request) => {
+    if (request.method() === "PATCH") patches.push(request.url());
+  };
+  page.on("request", onPatch);
+  await name.fill("board  CORE");
   await page.keyboard.press("ControlOrMeta+Enter");
   const alert = page1.getByRole("alert");
+  await expect(alert).toHaveText(
+    "Flashheart already has a workstream called Board core. Choose another name.",
+  );
+  expect(patches).toEqual([]);
+  page.off("request", onPatch);
+  await name.fill("Board core!");
+  await page.keyboard.press("ControlOrMeta+Enter");
   await expect(alert).toContainText("already has the short name board-core");
   await expect(alert).toContainText("choose another name");
-  await expect(name).toHaveValue("Board core");
+  await expect(name).toHaveValue("Board core!");
   await expect(name).toBeVisible();
   expect(await readdir(dir)).toEqual(files);
   await expectNoAxeViolations(page, "workstream name taken");
@@ -465,7 +478,7 @@ test("renames the workstream from its name: references follow and the page moves
         keepFocus: true,
       });
       if (width === 390 && theme === "dark") {
-        await page2.getByRole("textbox", { name: "Name" }).fill("Board core");
+        await page2.getByRole("textbox", { name: "Name" }).fill("Board core!");
         await page2.getByRole("button", { name: "Save", exact: true }).click();
         await expect(page2.getByRole("alert")).toContainText(
           "choose another name",

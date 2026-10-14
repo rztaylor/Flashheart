@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { WorkstreamDetail } from "../../api/board";
+import type { WorkstreamBrief, WorkstreamDetail } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
 import type { Editing } from "../editing/useEditing";
 import { WorkstreamPage } from "./WorkstreamPage";
@@ -115,7 +115,15 @@ function renderPage(
   data = workstream(),
   withEditing = true,
   onRenamed?: (slug: string) => void,
+  project?: {
+    displayName: string;
+    workstreams: { slug: string; title: string }[];
+  },
 ) {
+  const siblings = project && {
+    displayName: project.displayName,
+    workstreams: project.workstreams as WorkstreamBrief[],
+  };
   resource.state = { status: "ready", data };
   return render(
     <WorkstreamPage
@@ -127,6 +135,7 @@ function renderPage(
       editing={withEditing ? editing : undefined}
       onOpen={() => undefined}
       onRenamed={onRenamed}
+      siblings={siblings}
       backLink={{ href: "#/p/alpha/workstreams", label: "Alpha" }}
     />,
   );
@@ -353,6 +362,34 @@ describe("WorkstreamPage", () => {
     expect(screen.getByRole("textbox", { name: "Name" })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(onRenamed).not.toHaveBeenCalled();
+  });
+
+  it("names a sibling's name at the field before sending it (FH-163)", async () => {
+    const user = userEvent.setup();
+    renderPage(workstream(), true, undefined, {
+      displayName: "Alpha",
+      workstreams: [
+        { slug: "board-ui", title: "Board UI" },
+        { slug: "offline", title: "Offline mode" },
+      ],
+    });
+    await user.click(screen.getByRole("button", { name: "Edit name" }));
+    const name = screen.getByRole("textbox", { name: "Name" });
+    await user.clear(name);
+    await user.type(name, "  offline   MODE");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Alpha already has a workstream called Offline mode. Choose another name.",
+    );
+    expect(server.requests).toEqual([]);
+    // Its own name in other letters is not taken.
+    await user.clear(name);
+    await user.type(name, "board ui");
+    server.replies.push(() =>
+      Response.json({ slug: "board-ui", hash: "renamed", revision: 3 }),
+    );
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    await waitFor(() => expect(server.requests).toHaveLength(1));
   });
 
   it("refuses an empty name without sending it, and Escape cancels", async () => {

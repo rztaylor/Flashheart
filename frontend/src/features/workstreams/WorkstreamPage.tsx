@@ -39,6 +39,7 @@ import {
   type Editable,
   type Named,
   type SendName,
+  type Siblings,
   WorkstreamName,
 } from "./WorkstreamName";
 import { LineNotes, LineStatus, routeSurface, Served } from "./WorkstreamsView";
@@ -57,6 +58,8 @@ interface WorkstreamPageProps {
   // onRenamed hears the workstream's new slug after its name was saved
   // with one (FH-167), for the route to follow it.
   onRenamed?(slug: string): void;
+  // siblings are the project's workstreams, for the name's check.
+  siblings?: Siblings;
   // backLink is the project's Workstreams view and the project's name.
   backLink: { href: string; label: string };
 }
@@ -75,6 +78,7 @@ export function WorkstreamPage({
   editing,
   onOpen,
   onRenamed,
+  siblings,
   backLink,
 }: WorkstreamPageProps) {
   const load = useCallback(
@@ -166,6 +170,7 @@ export function WorkstreamPage({
               onSaved={saved}
               sendName={sendName}
               onNamed={named}
+              siblings={siblings}
             />
           </>
         ) : null}
@@ -191,6 +196,7 @@ function LoadedPage({
   onSaved,
   sendName,
   onNamed,
+  siblings,
 }: {
   // place is the page, for an edit whose save failed after it was left
   // (FH-156).
@@ -204,6 +210,7 @@ function LoadedPage({
   onSaved(saved: Saved | undefined, what: string): void;
   sendName?: SendName;
   onNamed(named?: Named): void;
+  siblings?: Siblings;
 }) {
   const editable: Editable = { ...detail, id: detail.title };
   return (
@@ -211,7 +218,12 @@ function LoadedPage({
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 pb-6">
         <LineBullet line={line} size="xl" />
         <div className="flex min-w-0 flex-1 basis-64 flex-col gap-0.5">
-          <WorkstreamName detail={editable} send={sendName} onNamed={onNamed} />
+          <WorkstreamName
+            detail={editable}
+            send={sendName}
+            onNamed={onNamed}
+            siblings={siblings}
+          />
           <LineStatus workstream={detail} />
         </div>
         <span className="ml-auto">
