@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ProjectSummary } from "../../api/board";
 import { noRuns } from "../../api/runs";
-import type { Scope } from "../../app/route";
+import type { Scope } from "../../model/scopes";
 import { ProjectRail } from "./ProjectRail";
 
 function project(

@@ -7,6 +7,8 @@ VIEW-7, FH-39), running times and time order (`time`), markdown
 link resolution, ticket-id linking (KEY-3), section trimming and splitting (CARD-2),
 card paint for "Colour by" (`paint`, VIEW-6), ticket status tones and
 priority wording (`status`), the page header's summary line (`summary`),
+the scope the board shows, all projects or one, with its remembered view
+and filters (`scopes`),
 the words for why a run needs you
 (the server derives the reason, D39) and the session part of the server's
 short run id, timeline wording (`runs`), the Overview's sections, their

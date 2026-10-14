@@ -23,8 +23,14 @@
   ui-layout.md §8) → `features/<feature>/` (board,
   card, editing, editor, overview, workstreams, table, projects, filters, archive; later
   settings) → `app/`
-  (shell, hash routing, composition). Shared layers never import features
-  or the shell.
+  (shell, hash routing, composition). Shared layers (`styles/`, `model/`,
+  `components/`, `api/`, `state/`, `lifecycle/`, `test/`) never import
+  features or the shell, `model/` never imports components, and a feature
+  never imports the shell; features may use each other. Checked by
+  `src/layering.test.ts` (FH-106), which reads every source's relative
+  imports, so `npm test` and `scripts/check.sh` fail on a wrong one. A
+  type two layers need lives in the lower one (`Scope` in
+  `model/scopes`, `Density` in `api/preferences`).
 - `src/lifecycle/` owns the single Singleserve session (`connect` from
   `/_singleserve/client.js`), heartbeat, backend-lost and terminal states.
   `src/api/` owns typed requests via `session.fetch` only. `src/state/` owns

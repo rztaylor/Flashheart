@@ -33,7 +33,7 @@ import {
   type TicketRef,
   type WorkstreamBrief,
 } from "../../api/board";
-import type { HideableColumn } from "../../api/preferences";
+import type { Density, HideableColumn } from "../../api/preferences";
 import { Aside } from "../../components/Aside";
 import { Button } from "../../components/Button";
 import { EmptySlot, WellHead, wellSurface } from "../../components/ColumnWell";
@@ -56,7 +56,6 @@ import {
 } from "../../model/order";
 import { type PaintMode, paintFor } from "../../model/paint";
 import { useNow } from "../../state/useNow";
-import type { Density } from "../filters/FilterBar";
 import { TicketCard } from "./TicketCard";
 
 interface BoardViewProps {
