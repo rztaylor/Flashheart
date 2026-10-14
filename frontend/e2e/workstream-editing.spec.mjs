@@ -8,6 +8,7 @@ import {
   launch,
   makeSandbox,
   open,
+  saveChanges,
   shot,
   stopIfRunning,
   waitForManualURL,
@@ -230,7 +231,9 @@ test("the panel's workstream picker adds the ticket and takes it out", async () 
   // By slug: the second workstream of the same name is listed too.
   await picker.selectOption("workstream-editing");
   await shot(page, "workstream-picker-1440-light", { keepFocus: true });
-  await panel.getByRole("button", { name: "Save changes" }).click();
+  await saveChanges(panel).click();
+  // The save's answer is back (FH-156) before the panel is left.
+  await expect(saveChanges(panel)).toBeDisabled();
   await expect
     .poll(async () => members(await readWorkstream("workstream-editing")))
     .toEqual([created]);
@@ -250,7 +253,8 @@ test("the panel's workstream picker adds the ticket and takes it out", async () 
   await again
     .getByRole("combobox", { name: "Workstream" })
     .selectOption({ label: "None" });
-  await again.getByRole("button", { name: "Save changes" }).click();
+  await saveChanges(again).click();
+  await expect(saveChanges(again)).toBeDisabled();
   await expect
     .poll(async () => members(await readWorkstream("workstream-editing")))
     .toEqual([]);

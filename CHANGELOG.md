@@ -541,6 +541,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Moving on while a save is still on its way no longer asks about
+  unsaved changes (FH-156, D70, `EDIT-11`). Once you press Save (or
+  Comment), leaving the page, closing the side panel or opening another
+  item goes ahead at once. If that save then fails or meets a newer
+  version after you have moved on, a message at the foot of the screen
+  says what was not saved and why, and **Back to the edit** takes you
+  back to it with your text, or to the side-by-side conflict view.
+  Closing or reloading the browser tab still asks until the save's
+  answer arrives.
 - A slim project sidebar gives the board room for another column
   (FH-150). The sidebar is now a narrow column of project key badges at
   every width, whether or not a ticket is open, so at 1440px the Done

@@ -174,6 +174,8 @@ test("a comment the session never took says so, and the option is then off", asy
   await box().fill("Also check the footer.");
   await tell().check();
   await box().press("Control+Enter");
+  // The box empties once the post's answer is back (FH-156).
+  await expect(box()).toHaveValue("");
   await expect(comment("Also check the footer.")).toContainText("Waiting for");
   endSession(sandbox.root, SESSION, claimed.cwd);
   await expect(comment("Also check the footer.")).toContainText(

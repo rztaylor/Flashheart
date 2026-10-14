@@ -467,7 +467,16 @@ Full format: `docs/dev/specs/board-format.md`.
   focus to it. Only one item is open at a time: opening another, or
   leaving the page, while it has unsaved changes asks whether to keep or
   discard them (closing or reloading the tab gets the browser's own
-  prompt). The title is one line; properties use typed controls (`EDIT-6`:
+  prompt). A save still waiting for its answer is not unsaved (D70,
+  FH-156): opening another item or leaving then asks nothing (closing or
+  reloading the tab still gets the browser's prompt until the answer
+  arrives). If that save then fails or meets a conflict with its item no
+  longer open, a toast says what was not saved and why, and its **Back
+  to the edit** returns to where it was made and reopens the item with
+  the person's text and the reason, or the conflict dialog; an item
+  opened again takes back its text too. The same holds for the card
+  panel's Edit tab and its comments, and for a comment being posted.
+  The title is one line; properties use typed controls (`EDIT-6`:
   priority and type selects, a workstream picker of the project's
   workstreams, branch and pull request as text, tags as chips, depends on
   as a picker of ticket ids), the status keeps **Move to** and its rules
@@ -480,7 +489,7 @@ Full format: `docs/dev/specs/board-format.md`.
   ticking one stays one click (`CARD-3`). In Activity a person's comment
   edits as markdown, saved on the hash of the activity file it was read
   from, so an edit over a newer version opens the conflict dialog with
-  that comment as it is now; a comment being written is unsaved work, so leaving the page asks
+  that comment as it is now; a comment being written is unsaved work until it is posted, so leaving the page asks
   about it too. Handoff, the review, notes and history are not edited. A
   save writes only that field or section, leaving every
   other byte of the file as it was (board-format §Section edits), and an

@@ -8,6 +8,7 @@ import {
 
 import type { Conflict, Saved } from "../../api/edit";
 import { messageOf } from "../../model/errors";
+import { guardUnloading } from "../../state/leaveGuard";
 import { type SaveOutcome, saveWithBase } from "./precondition";
 
 // DraftSave is one save of a draft.
@@ -26,6 +27,18 @@ export interface DraftSave {
 export interface DraftConflict {
   mine: string;
   current: Conflict;
+}
+
+// DraftLeft is a draft whose save failed or met a conflict after it was
+// unmounted (its item closed, the panel or page left; FH-156): its base,
+// its value as last edited, and why it was not saved, so its item can take
+// it back as it was (restore).
+export interface DraftLeft<T> {
+  base: { hash: string; value: T };
+  value: T;
+  // error is why the save failed; "" when it met a conflict.
+  error: string;
+  conflict: (DraftConflict & { request: DraftSave }) | null;
 }
 
 export interface TicketDraft<T> {
@@ -48,6 +61,8 @@ export interface TicketDraft<T> {
   reload(): void;
   // cancel closes the conflict and keeps the draft.
   cancel(): void;
+  // restore takes back a draft left by a late failure.
+  restore(left: DraftLeft<T>): void;
 }
 
 // useTicketDraft owns an edit of a ticket under the content-hash
@@ -57,13 +72,18 @@ export interface TicketDraft<T> {
 // under it, adopts the saved version after a save, and turns a conflict
 // into a pending choice: overwrite, reload or cancel. onSaved hears each
 // save (and a reload, with no result) so the caller can reload and
-// announce it.
+// announce it. A save in flight keeps the browser's prompt on a reload or
+// closed tab (state/leaveGuard); one that fails or meets a conflict after
+// the draft was unmounted goes to left, if given, with the draft as it was
+// (FH-156), and one that succeeds is still heard by onSaved.
 export function useTicketDraft<D extends { hash: string }, T>({
   detail,
   read,
   readFile,
   isDirty,
   onSaved,
+  left,
+  initial,
 }: {
   detail: D;
   read(detail: D): T;
@@ -74,24 +94,37 @@ export function useTicketDraft<D extends { hash: string }, T>({
   readFile?(content: string): T;
   isDirty(draft: T, base: T): boolean;
   onSaved(saved: Saved | undefined, what: string): void;
+  left?(draft: DraftLeft<T>): void;
+  // initial starts the draft as a late failure left it.
+  initial?: DraftLeft<T>;
 }): TicketDraft<T> {
   // base is the version of the file the draft started from. Edits are
   // measured against it and saved with its hash, so a change on disk since
   // then is a conflict, never a silent overwrite.
-  const [base, setBase] = useState(() => ({
-    hash: detail.hash,
-    value: read(detail),
-  }));
-  const [value, set] = useState(base.value);
+  const [base, setBase] = useState(
+    () => initial?.base ?? { hash: detail.hash, value: read(detail) },
+  );
+  const [value, set] = useState(initial?.value ?? base.value);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initial?.error ?? "");
   const [pending, setPending] = useState<
     (DraftConflict & { request: DraftSave }) | null
-  >(null);
+  >(initial?.conflict ?? null);
   // adopt takes the next version of the file after a save or a reload.
   const adopt = useRef(false);
   const latest = useRef(detail);
   latest.current = detail;
+  // now is the draft and its callers as last rendered, for a save that
+  // answers after the draft was unmounted.
+  const now = useRef({ base, value, onSaved, left });
+  now.current = { base, value, onSaved, left };
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const dirty = isDirty(value, base.value);
 
   const reset = (from: D) => {
@@ -120,7 +153,8 @@ export function useTicketDraft<D extends { hash: string }, T>({
   ): Promise<SaveOutcome["kind"]> => {
     setBusy(true);
     setError("");
-    const outcome = await saveWithBase(from, request.send);
+    const saving = guardUnloading();
+    const outcome = await saveWithBase(from, request.send).finally(saving);
     if (
       outcome.kind === "conflict" &&
       readFile &&
@@ -128,6 +162,25 @@ export function useTicketDraft<D extends { hash: string }, T>({
       !isDirty(readFile(outcome.conflict.content), base.value)
     )
       return run(request, outcome.conflict.hash, true);
+    if (!mounted.current) {
+      // The person moved on while the save was in flight (FH-156).
+      const { base: from, value: last, onSaved: heard, left } = now.current;
+      if (outcome.kind === "saved") heard(outcome.saved, request.what);
+      else
+        left?.({
+          base: from,
+          value: last,
+          error:
+            outcome.kind === "failed"
+              ? messageOf(outcome.error, "Not saved")
+              : "",
+          conflict:
+            outcome.kind === "conflict"
+              ? { request, mine: request.mine, current: outcome.conflict }
+              : null,
+        });
+      return outcome.kind;
+    }
     if (outcome.kind === "saved") {
       // Live updates may already have brought the saved version.
       if (latest.current.hash === outcome.saved.hash) reset(latest.current);
@@ -166,5 +219,11 @@ export function useTicketDraft<D extends { hash: string }, T>({
       onSaved(undefined, "Reloaded");
     },
     cancel: () => setPending(null),
+    restore: (draft) => {
+      setBase(draft.base);
+      set(draft.value);
+      setError(draft.error);
+      setPending(draft.conflict);
+    },
   };
 }

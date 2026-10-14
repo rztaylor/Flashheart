@@ -224,6 +224,7 @@ function CommentItem({
             value.trim() ? undefined : "A comment needs some text."
           }
           onSaved={edit.onSaved}
+          unsaved={`Your edit to a comment on ${edit.detail.id} was not saved`}
         >
           {(value, set) => (
             <TextArea

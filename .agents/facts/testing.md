@@ -30,7 +30,20 @@
   page shows once the save's own answer is back (its toast, the editor
   closing, Save disabled again) before going on: the file and the live
   update show the change first, and a late answer lands in the next step
-  (FH-152).
+  (FH-152). The pencil focused, the comment box empty, and
+  `saveChanges(panel)` (support.mjs) disabled, which waits past
+  *Saving…*, are those answers (FH-156). To find steps that skip it, a
+  local, uncommitted context route that fetches every non-GET `/api`
+  request and fulfils it 0 to 1.5 s later reproduces a slow machine.
+- A save that fails after its item was left (FH-156, D70): the page, the
+  Edit tab and the comment box in `LateSave.dom.test.tsx`, a harness
+  standing for the shell over `LateSavesProvider`, with writes held until
+  the test answers them (no prompt while in flight, the toast, Back to
+  the edit with the text, the conflict, reopening by hand, the reload
+  prompt); the leave guard's reload-only hold in `leaveGuard.dom.test.ts`;
+  in the browser, `frontend/e2e/in-place.spec.mjs` holds a save's reply
+  with `page.route`, leaves, fails it, and uses the toast's action, with
+  axe and screenshots of the toast.
 - Visual regression (D42): `scripts/e2e-visual.sh` compares the stable
   screenshot set (`frontend/e2e/visual.spec.mjs`: board, panel, table,
   workstreams, Overview and ticket page over the demo board, at a fixed

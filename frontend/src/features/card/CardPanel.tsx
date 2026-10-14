@@ -135,8 +135,12 @@ export function CardPanel({
           {/* The panel's comments edit in place and hold a comment being
               written, as the full page's do (FH-128), and the Edit tab
               holds its unsaved changes (FH-138): closing the panel or
-              opening another ticket asks first. */}
-          <InPlaceEditing>
+              opening another ticket asks first. An edit asked back after
+              its save failed late (FH-156) reopens on its tab. */}
+          <InPlaceEditing
+            place={{ kind: "panel", id: detail.id, tab: "comments" }}
+            onReturn={() => setTab("comments")}
+          >
             <SectionTabs
               sections={sections}
               active={active}

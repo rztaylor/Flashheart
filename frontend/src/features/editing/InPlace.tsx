@@ -18,19 +18,33 @@ import { Dialog } from "../../components/Dialog";
 import { Icon } from "../../components/Icon";
 import { guardLeaving } from "../../state/leaveGuard";
 import { ConflictDialog } from "./ConflictDialog";
-import { useTicketDraft } from "./useTicketDraft";
+import {
+  type EditPlace,
+  type LateSave,
+  notSaved,
+  useLateSaves,
+  useReturning,
+} from "./lateSaves";
+import { type DraftLeft, useTicketDraft } from "./useTicketDraft";
 
 // In-place editing (FH-66): one item of a ticket (its title, a section, a
 // property) open for editing at a time, where it is shown. InPlaceEditing
 // coordinates the items on a page: opening another item, or leaving the
 // page, while the open one has unsaved changes asks whether to keep or
 // discard them. Each item opens with useInPlaceItem and edits in an
-// InPlaceEditor, one draft per open item (useTicketDraft).
+// InPlaceEditor, one draft per open item (useTicketDraft). A save waiting
+// for its answer is not unsaved (FH-156, D70): one that fails after its
+// item was left is held as a late save (lateSaves) for its place, which
+// reopens it on Back to the edit.
 
 interface OpenItem {
   id: string;
   name: string;
 }
+
+// Late is a late save as an item or held draft reports it; its place is
+// the coordinator's.
+type Late = Omit<LateSave, "place">;
 
 interface Coordinator {
   open: string | null;
@@ -39,6 +53,15 @@ interface Coordinator {
   setDirty(id: string, dirty: boolean): void;
   setFocus(id: string, focus: (() => void) | null): void;
   holdDraft(id: string, draft: HeldDraft | null): void;
+  // place is where the page is, for late saves; none, none are held.
+  place?: EditPlace;
+  // late holds a save that failed after its item was left; tab, for an
+  // edit in the card panel, is the panel tab it goes back to.
+  late(save: Late, tab?: "comments" | "edit"): void;
+  // peekLate is an item's held edit, and forgetLate lets it go once the
+  // item has taken it.
+  peekLate(id: string): LateSave | undefined;
+  forgetLate(save: LateSave): void;
 }
 
 // HeldDraft is unsaved work on the page outside any open item (a comment
@@ -64,7 +87,19 @@ const EditingContext = createContext<Coordinator | null>(null);
 
 // InPlaceEditing holds the page's one open item, its unsaved-changes
 // prompt, and the guard on leaving the page while it has unsaved changes.
-export function InPlaceEditing({ children }: { children: ReactNode }) {
+// place names the page (a ticket's full page, the card panel, a
+// workstream's page) for late saves (FH-156): an item's edit asked back to
+// it reopens, and onReturn shows where it is (the panel's Comments tab).
+export function InPlaceEditing({
+  place,
+  onReturn,
+  children,
+}: {
+  place?: EditPlace;
+  onReturn?(): void;
+  children: ReactNode;
+}) {
+  const late = useLateSaves();
   const [open, setOpen] = useState<OpenItem | null>(null);
   const [dirty, setDirty] = useState(false);
   // asking is the prompt shown: the open item's name, and what Discard
@@ -161,7 +196,29 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
         return next;
       });
     },
+    place,
+    late(save, tab) {
+      if (!late || !place) return;
+      late.hold({
+        ...save,
+        place: place.kind === "panel" && tab ? { ...place, tab } : place,
+      });
+    },
+    peekLate: (id) => (late && place ? late.peek(place, id) : undefined),
+    forgetLate: (save) => late?.forget(save),
   };
+
+  // Back to the edit (FH-156): an item's edit asked back to this page
+  // opens it, asking first about the open item's unsaved changes; the item
+  // takes its edit as it opens. Held drafts take theirs (useLateDraft).
+  useReturning(place, (saves) => {
+    const items = saves.filter((save) => !save.draft);
+    for (const save of items) {
+      late?.answered(save);
+      coordinator.request(save.item, save.name);
+    }
+    if (items.length > 0) onReturn?.();
+  });
 
   return (
     <EditingContext.Provider value={coordinator}>
@@ -206,6 +263,7 @@ export function InPlaceEditing({ children }: { children: ReactNode }) {
 }
 
 export interface InPlaceItem {
+  id: string;
   // editable: the item is on a page that edits in place.
   editable: boolean;
   open: boolean;
@@ -220,6 +278,12 @@ export interface InPlaceItem {
   // onDoubleClick opens the item from its content, unless the double
   // click was on a link or control.
   onDoubleClick(event: MouseEvent): void;
+  // late holds the item's edit after its save failed with the item left
+  // (FH-156); heldLate is that edit, for the item to take back as it
+  // opens, and forgetLate lets it go once taken.
+  late(text: string, edit: unknown): void;
+  heldLate(): LateSave | undefined;
+  forgetLate(save: LateSave): void;
 }
 
 // useInPlaceItem is one editable item of the page: id is unique on the
@@ -251,6 +315,7 @@ export function useInPlaceItem(id: string, name: string): InPlaceItem {
     coordinator?.finish(id);
   };
   return {
+    id,
     editable: !!coordinator,
     open,
     trigger,
@@ -264,6 +329,10 @@ export function useInPlaceItem(id: string, name: string): InPlaceItem {
         return;
       coordinator?.request(id, name);
     },
+    late: (text, edit) =>
+      coordinator?.late({ item: id, draft: false, name, text, edit }),
+    heldLate: () => coordinator?.peekLate(id),
+    forgetLate: (save) => coordinator?.forgetLate(save),
   };
 }
 
@@ -293,6 +362,30 @@ export function useHeldDraft(
     });
     return () => held?.holdDraft(id, null);
   }, [id, dirty, returns]);
+}
+
+// useLateDraft is a held draft's late saves (FH-156): the returned hold
+// keeps its edit, saying text, when its save or post fails after it was
+// unmounted (the panel closed, the page left), and an edit asked back to
+// its place by Back to the edit goes to restore, as it mounts or while it
+// is mounted. tab is the card panel's tab the draft is on.
+export function useLateDraft<E>(
+  id: string,
+  name: string,
+  restore: (edit: E) => void,
+  tab?: "comments" | "edit",
+): (text: string, edit: E) => void {
+  const coordinator = useContext(EditingContext);
+  const latest = useRef(restore);
+  latest.current = restore;
+  useReturning(coordinator?.place, (saves) => {
+    const save = saves.find((save) => save.draft && save.item === id);
+    if (!save) return;
+    coordinator?.forgetLate(save);
+    latest.current(save.edit as E);
+  });
+  return (text, edit) =>
+    coordinator?.late({ item: id, draft: true, name, text, edit }, tab);
 }
 
 // editGroup is the class an item's container takes so its pencil shows
@@ -376,13 +469,19 @@ export interface InPlaceEditorProps<D extends { id: string; hash: string }, T> {
   // kind is what the conflict dialog says was saved (default a ticket);
   // detail.id names it there.
   kind?: "ticket" | "workstream";
+  // unsaved says what a save that failed after the item was left did not
+  // save (default "Your edit to the <name> of <id> was not saved").
+  unsaved?: string;
 }
 
 // InPlaceEditor is an open item: its controls (children), then Save and
 // Cancel. Ctrl or Cmd and Enter saves, Escape cancels; a save with nothing
 // changed writes nothing. A save that fails keeps the item open with the
 // reason beside it, and one over a newer version opens the conflict
-// dialog (EDIT-7). Focus starts in its first control.
+// dialog (EDIT-7). Focus starts in its first control. While its save waits
+// for the answer the item has no unsaved changes (FH-156): another item or
+// page may be opened, and a failure that comes after is held as a late
+// save, which the item takes back as it opens again.
 export function InPlaceEditor<D extends { id: string; hash: string }, T>({
   item,
   name,
@@ -398,14 +497,44 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
   children,
   className = "",
   kind,
+  unsaved = `Your edit to the ${name} of ${detail.id} was not saved`,
 }: InPlaceEditorProps<D, T>) {
-  const draft = useTicketDraft({ detail, read, readFile, isDirty, onSaved });
+  const [held] = useState(item.heldLate);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: takes the held edit once, as the item opens.
+  useEffect(() => {
+    if (held) item.forgetLate(held);
+  }, []);
+  const initial = held?.edit as DraftLeft<T> | undefined;
+  const draft = useTicketDraft({
+    detail,
+    read,
+    readFile,
+    isDirty,
+    onSaved,
+    initial,
+    left: (left) =>
+      item.late(
+        notSaved(
+          unsaved,
+          detail.id,
+          left.conflict ? { conflict: true } : { error: left.error },
+        ),
+        left,
+      ),
+  });
   const [problem, setProblem] = useState("");
   const frame = useRef<HTMLFieldSetElement>(null);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const { dirty, busy, value } = draft;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: tells the page whenever the draft becomes dirty or clean.
-  useEffect(() => item.setDirty(dirty), [dirty]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tells the page whenever the draft becomes dirty or clean; a save in flight is not unsaved (FH-156).
+  useEffect(() => item.setDirty(dirty && !busy), [dirty, busy]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: registers once, while open.
   useEffect(() => {
     // A control marked data-autofocus (the formatted editor) takes focus
@@ -434,7 +563,8 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
       what: "Saved",
       mine: mine(value),
     });
-    if (outcome === "saved") item.finish();
+    // An item left while its save was in flight stays as it is now.
+    if (outcome === "saved" && mounted.current) item.finish();
   };
   const onKeyDown = (event: KeyboardEvent) => {
     // A key a control inside has handled (Escape closing a menu) is not
@@ -500,7 +630,7 @@ export function InPlaceEditor<D extends { id: string; hash: string }, T>({
           }}
           onOverwrite={() =>
             void draft.overwrite().then((outcome) => {
-              if (outcome === "saved") item.finish();
+              if (outcome === "saved" && mounted.current) item.finish();
             })
           }
         />

@@ -8,7 +8,8 @@ and saves UI preferences through the backend (CFG-2), coalescing a burst of
 changes into one save and flushing a pending save, kept alive, when the page
 is hidden or unloaded. `leaveGuard` is the one guard on leaving the page
 with unsaved work (FH-66): its holder is asked before the router moves, and
-the browser prompts on reload.
+the browser prompts on reload; a save in flight holds only the browser's
+prompt (`guardUnloading`, FH-156, D70).
 
 Does not own request shapes (`api/`), the Singleserve session
 (`lifecycle/`), routing (`app/`), view models (`model/`) or presentation.

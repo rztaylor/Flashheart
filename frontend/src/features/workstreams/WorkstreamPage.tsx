@@ -28,6 +28,7 @@ import {
   useInPlaceItem,
 } from "../editing/InPlace";
 import { InPlaceSection } from "../editing/InPlaceSection";
+import type { EditPlace } from "../editing/lateSaves";
 import type { Editing } from "../editing/useEditing";
 import { TransitLine } from "./TransitLine";
 import { LineNotes, LineStatus, routeSurface, Served } from "./WorkstreamsView";
@@ -124,6 +125,11 @@ export function WorkstreamPage({
               <StaleNote error={resource.error} className="pb-4" />
             ) : null}
             <LoadedPage
+              place={{
+                kind: "workstream",
+                project: ref.project,
+                slug: ref.slug,
+              }}
               detail={detail}
               line={lines.get(ref.project)?.get(ref.slug)}
               context={{ project: ref.project, ticket: "" }}
@@ -150,6 +156,7 @@ type SaveSection = (
 ) => Promise<Saved>;
 
 function LoadedPage({
+  place,
   detail,
   line,
   context,
@@ -158,6 +165,9 @@ function LoadedPage({
   save,
   onSaved,
 }: {
+  // place is the page, for an edit whose save failed after it was left
+  // (FH-156).
+  place: EditPlace;
   detail: WorkstreamDetail;
   line?: Line;
   context: LinkContext;
@@ -168,7 +178,7 @@ function LoadedPage({
 }) {
   const editable: Editable = { ...detail, id: detail.title };
   return (
-    <InPlaceEditing>
+    <InPlaceEditing place={place}>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 pb-6">
         <LineBullet line={line} size="xl" />
         <div className="flex min-w-0 flex-col gap-0.5">

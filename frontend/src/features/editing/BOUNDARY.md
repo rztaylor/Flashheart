@@ -21,7 +21,11 @@ guard (also for held drafts
 outside any item, such as a comment being written or the panel's Edit
 tab, and Keep editing's return to one), an item's pencil,
 Add slot, double-click and focus return, and an open item's draft with
-Save, Cancel, shortcuts, inline error and conflict; and `InPlaceSection`,
+Save, Cancel, shortcuts, inline error and conflict; late saves
+(`lateSaves`, FH-156, D70): a save in flight is not unsaved work, and
+one that fails or conflicts after its item, panel or page was left is
+held in the tab's memory with a toast whose Back to the edit reopens it
+where it was made (the shell supplies the navigation); and `InPlaceSection`,
 one level-2 section of a file's body edited by its heading in `editor/`'s
 `MarkdownField`, compared and saved again over a newer file as one rule
 for a ticket's sections (`card/`) and a workstream's (`workstreams/`,

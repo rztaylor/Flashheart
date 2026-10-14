@@ -361,3 +361,87 @@ describe("useTicketDraft conflicts", () => {
     expect(result.current.base.hash).toBe("h1");
   });
 });
+
+describe("useTicketDraft answered after it was left (FH-156)", () => {
+  function leftDraft() {
+    const onSaved = vi.fn();
+    const left = vi.fn();
+    const view = renderHook(() =>
+      useTicketDraft({ detail: one, read, isDirty, onSaved, left }),
+    );
+    return { ...view, onSaved, left };
+  }
+
+  it("hands a failure that comes after unmounting to left, as the draft was", async () => {
+    const { sends, send } = fakeSaves();
+    const { result, unmount, left } = leftDraft();
+    act(() => result.current.set("mine"));
+    act(() => {
+      void result.current.save({ send, what: "Saved", mine: "mine" });
+    });
+    unmount();
+    sends[0]?.reject(new ApiError("The project is busy", 503, "busy"));
+    await settle();
+    expect(left).toHaveBeenCalledWith({
+      base: { hash: "h1", value: "one" },
+      value: "mine",
+      error: "The project is busy",
+      conflict: null,
+    });
+  });
+
+  it("hands a conflict to left with its pending choice, and a success to onSaved", async () => {
+    const { sends, send } = fakeSaves();
+    const first = leftDraft();
+    act(() => first.result.current.set("mine"));
+    act(() => {
+      void first.result.current.save({ send, what: "Saved", mine: "mine" });
+    });
+    first.unmount();
+    sends[0]?.reject(conflict("h9", "theirs"));
+    await settle();
+    expect(first.left.mock.calls[0]?.[0]).toMatchObject({
+      value: "mine",
+      error: "",
+      conflict: { mine: "mine", current: { hash: "h9", content: "theirs" } },
+    });
+
+    const second = leftDraft();
+    act(() => second.result.current.set("mine"));
+    act(() => {
+      void second.result.current.save({ send, what: "Saved", mine: "mine" });
+    });
+    second.unmount();
+    sends[1]?.resolve(savedAs("h2"));
+    await settle();
+    expect(second.left).not.toHaveBeenCalled();
+    expect(second.onSaved).toHaveBeenCalledWith(savedAs("h2"), "Saved");
+  });
+
+  it("starts as a left draft and restores one", () => {
+    const left = {
+      base: { hash: "h1", value: "one" },
+      value: "mine",
+      error: "The project is busy",
+      conflict: null,
+    };
+    const view = renderHook(() =>
+      useTicketDraft({
+        detail: one,
+        read,
+        isDirty,
+        onSaved: vi.fn(),
+        initial: left,
+      }),
+    );
+    expect(view.result.current.value).toBe("mine");
+    expect(view.result.current.error).toBe("The project is busy");
+    expect(view.result.current.dirty).toBe(true);
+
+    const other = draftOf(one);
+    act(() => other.result.current.restore(left));
+    expect(other.result.current.value).toBe("mine");
+    expect(other.result.current.base).toEqual({ hash: "h1", value: "one" });
+    expect(other.result.current.error).toBe("The project is busy");
+  });
+});

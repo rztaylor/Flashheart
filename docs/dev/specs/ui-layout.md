@@ -286,8 +286,11 @@ words:
    **Keep editing** shows the Edit tab again with focus on its control
    last used (or its first field), unless the prompt was opened from a
    field, where focus stays. The ticket New ticket created opens on this
-   tab with focus in its Title, ready to edit (FH-17). A save that meets a conflict after another
-   tab was chosen shows the Edit tab again with the conflict dialog.
+   tab with focus in its Title, ready to edit (FH-17). A save that meets a conflict, or fails, after another
+   tab was chosen shows the Edit tab again with the conflict dialog or
+   the reason. While a save waits for its answer (*Saving…*) nothing is
+   unsaved: closing the panel asks nothing, and a late failure is a toast
+   (§8, *Late save*).
 6. **Runs tab**: runs newest first, each a card with its state (and its
    Needs you reason, in the card's words, `RUN-3`), agent,
    short id, link, branch and time, then its detail and its subagents as a
@@ -440,7 +443,8 @@ at most 94rem.
   *⌘Enter posts* (Ctrl on other systems). A chosen quote shows above the
   text as it will in the comment. A failed post keeps the text with the
   reason as a danger line under it. Text in the box is unsaved work:
-  leaving the page asks first (*Unsaved changes to the comment*).
+  leaving the page asks first (*Unsaved changes to the comment*), except
+  while it is posting (§8, *Late save*).
 - **Outline** (left, 13rem, from 1280px), staying in view: *Sections*, a
   list of the centre's sections in order: the ticket's, then *Review*
   (its icon) with its sections indented, then Files and Activity. Counts
@@ -497,7 +501,8 @@ at most 94rem.
   Opening another item or leaving the page with unsaved changes asks in a
   dialog, *Unsaved changes to the <name>* (a comment being written counts
   when leaving, named *the comment*): **Discard changes** or **Keep
-  editing** (primary).
+  editing** (primary). An item whose save is on its way (*Saving…*) has
+  no unsaved changes; a late failure is a toast (§8, *Late save*).
 - **The formatted editor** (`EDIT-12`, FH-16): a row of a muted hint
   (*Type / for blocks · select text to format · Alt+Enter opens a link
   or ticks a task*) and the **Formatted** / **Markdown** segmented switch,
@@ -767,6 +772,7 @@ the station.
 | Long content | Titles wrap (card three lines, then clamped); ids never cut; paths, branches and run ids cut from the start |
 | Narrow (< 48rem) | Rail hidden, control row with Project and Column pickers, band tabs as icons, Needs you plate keeps its words, the Settings gear stays with its menu inside the screen, panel covers the view |
 | Backend lost / stopped | Band status in words; the stopped screen replaces the app (`LIFE-1`) |
+| Late save | A save that fails or conflicts after its item was left (D70, FH-156): the toast at the foot says what and why (*Your edit to the description of FH-42 was not saved: FH-42 changed on disk*; *Your changes to FH-42 were not saved: …*; *Your comment on FH-42 was not posted: …*) with **Back to the edit** (pencil icon), which returns to the page or panel tab and reopens the item with the text and the reason, or the conflict dialog. It stays 20 s, as any toast with an action |
 | Marginal remark | At most one per screen: one quiet line in faint ink under a real quiet state, chosen once from its placement's lines (below) and kept while shown, never the line shown last. Never in errors, blockers, permissions, controls or anything to act on; identical in both themes; no motion |
 
 Marginal remarks come from the reviewed collection in

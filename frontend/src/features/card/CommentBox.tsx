@@ -2,7 +2,9 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
+  useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 
@@ -14,7 +16,19 @@ import { Icon } from "../../components/Icon";
 import type { QuoteGroup } from "../../model/comments";
 import { messageOf } from "../../model/errors";
 import { noSessionReason, tellGroups, tellLabel } from "../../model/tell";
-import { sendKeys, useHeldDraft } from "../editing/InPlace";
+import { guardUnloading } from "../../state/leaveGuard";
+import { sendKeys, useHeldDraft, useLateDraft } from "../editing/InPlace";
+import { notSaved } from "../editing/lateSaves";
+
+// Left is a comment whose post failed after the box was left (FH-156), as
+// it was, for Back to the edit to put back.
+interface Left {
+  text: string;
+  quoteKey: string;
+  telling: boolean;
+  target: string;
+  error: string;
+}
 
 // QuoteFigure is the part of the ticket a comment quotes, named by where
 // it is from: on a well, with a full rule border (no side stripe).
@@ -53,13 +67,18 @@ export interface Tell {
 // has claimed the ticket, chosen per comment (FH-127). An empty comment
 // cannot be posted; a failed post keeps the text with the reason beside
 // it. While it holds text, leaving the page asks first (the page's
-// in-place editing holds it).
+// in-place editing holds it), except while it is posting (FH-156): a post
+// that fails after the page or panel was left is held with a toast, and
+// Back to the edit puts the comment back.
 export function CommentBox({
+  ticket,
   choices,
   tell,
   onPost,
   renderQuote,
 }: {
+  // ticket is the ticket commented on, for a late failure's words.
+  ticket: string;
   choices: QuoteGroup[];
   tell?: Tell;
   onPost(comment: NewComment): Promise<void>;
@@ -82,17 +101,33 @@ export function CommentBox({
     sessions.find((session) => session.run === target) ?? sessions[0];
   const sending = telling && chosen !== undefined;
   const empty = !text.trim();
-  useHeldDraft("comment-box", "comment", !empty, () => {
+  useHeldDraft("comment-box", "comment", !empty && !busy, () => {
     setText("");
     setQuoteKey("");
     setTelling(false);
     setError("");
   });
+  const holdLate = useLateDraft<Left>("comment-box", "comment", (left) => {
+    setText(left.text);
+    setQuoteKey(left.quoteKey);
+    setTelling(left.telling);
+    setTarget(left.target);
+    setError(left.error);
+  });
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const post = async () => {
     if (busy || empty) return;
     setBusy(true);
     setError("");
+    // Closing or reloading the tab while posting asks (state/leaveGuard).
+    const saving = guardUnloading();
     try {
       await onPost({
         body: text,
@@ -104,8 +139,17 @@ export function CommentBox({
       setQuoteKey("");
       setTelling(false);
     } catch (failure) {
-      setError(messageOf(failure, "Not posted"));
+      const error = messageOf(failure, "Not posted");
+      if (mounted.current) setError(error);
+      else
+        holdLate(
+          notSaved(`Your comment on ${ticket} was not posted`, ticket, {
+            error,
+          }),
+          { text, quoteKey, telling, target, error },
+        );
     } finally {
+      saving();
       setBusy(false);
     }
   };
