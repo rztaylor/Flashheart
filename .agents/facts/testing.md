@@ -26,7 +26,11 @@
   manual-URL path opens the page, against a copy of `testdata/boards/sample`.
   Specs share `open`, `card`, `column`, `expectConnected`,
   `expectNoAxeViolations` and `shot` from `frontend/e2e/support.mjs`
-  rather than redefining them.
+  rather than redefining them. After a save, a step waits for what the
+  page shows once the save's own answer is back (its toast, the editor
+  closing, Save disabled again) before going on: the file and the live
+  update show the change first, and a late answer lands in the next step
+  (FH-152).
 - Visual regression (D42): `scripts/e2e-visual.sh` compares the stable
   screenshot set (`frontend/e2e/visual.spec.mjs`: board, panel, table,
   workstreams, Overview and ticket page over the demo board, at a fixed
@@ -145,6 +149,18 @@
   slash menu, toolbar and remembered view, saves over a change elsewhere
   (heard of and not yet heard of), conflicts on the same section, works by
   keyboard and passes axe in both themes at 1440 and 390 px.
+- Workstreams made and filled on the board (FH-17): the create
+  endpoint (board-format template, unique slug, refusals in words that
+  write nothing, read-only) in `api` (`TestCreateWorkstreamWritesTheTemplate`),
+  its authentication in `app`; the membership write (both files, stale
+  hash writes nothing) in `api` (`TestPatchWorkstreamKeepsTheListsInStep`)
+  and `store`; the dialog in `NewWorkstreamDialog.dom.test.tsx`, the
+  panel opened ready to edit in `CardPanelEdit.dom.test.tsx`; in the
+  browser, `frontend/e2e/workstream-editing.spec.mjs` creates a
+  workstream (Enter, the toast, its page, a second of the same name), a
+  refusal, the dialog in both themes and at 390 px with axe, New ticket's
+  panel on its Edit tab with Title focused, and adds and removes a
+  ticket through the picker, reading both files.
 - Files from the board (FH-18, REV-7, SEC-7): sniffing is a table test in
   `board` (`TestSniffAttachmentJudgesTheContent`), the upload's name,
   index entry, streaming limit and refusals in `store`

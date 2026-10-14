@@ -282,7 +282,8 @@ Full format: `docs/dev/specs/board-format.md`.
   blocked state and progress. A finished workstream (every ticket Done,
   Rejected or Archived) shows collapsed to its head until the user expands
   it; any other workstream always shows in full. A workstream's name opens
-  its page (`EDIT-13`).
+  its page (`EDIT-13`). **New workstream** in its header makes one
+  (`EDIT-14`).
 - `VIEW-5` **Table**: sortable, filterable list of tickets with chosen fields.
 - `VIEW-6` Card density, one set of markers in three layouts (FH-147):
   *Compact* (the title led by its id, with only Needs you, blocked, change
@@ -406,10 +407,17 @@ Full format: `docs/dev/specs/board-format.md`.
   are placed by their dependencies.
 - `EDIT-5` **New ticket** creates a ticket folder from the template with the
   next id (`KEY-2`), a slug from the title, `created`, a chosen column
-  (default Backlog) and optional workstream.
+  (default Backlog) and optional workstream, then opens the new ticket in
+  the card panel ready to edit: on its Edit tab, focus in its title
+  (FH-17).
 - `EDIT-6` Frontmatter edits use typed controls for known fields (enums,
   dates, lists) and a raw editor for the whole file (the card panel's
-  Edit tab); the full page edits them in place (`EDIT-11`).
+  Edit tab); the full page edits them in place (`EDIT-11`). Choosing a
+  ticket's workstream (or None) adds it to that workstream and takes it
+  out of any other: the ticket's `workstream:` and every workstream's
+  `tickets:` list change together, in one write under the project lock
+  and the content-hash precondition, so a stale ticket changes no file
+  (board-format §Multi-file writes).
 - `EDIT-7` A save conflict (`STO-3`) shows both versions and lets the user
   reload or overwrite deliberately.
 - `EDIT-8` Deleting takes two deliberate steps. **Archive**, the normal
@@ -532,6 +540,15 @@ Full format: `docs/dev/specs/board-format.md`.
   file saves as on a ticket's page, and a change to the section on disk
   opens the conflict dialog (`EDIT-7`). The title, properties and tickets
   list are not edited there.
+- `EDIT-14` **New workstream** (FH-17), in the Workstreams view's header,
+  creates `workstreams/<slug>.md` from the board-format template: a title
+  (its slug made from it, unique in the project), a goal, a priority
+  (default medium) and, optionally, the project's workstreams it depends
+  on (`depends-on-workstreams`). It starts with no tickets; tickets join
+  it from their workstream field (`EDIT-6`). A refusal (an empty title, a
+  dependency that no longer exists) shows in words and writes nothing.
+  The new workstream's page (`EDIT-13`) then opens. Like other workstream
+  writes it records no event (`EDIT-10` is about tickets).
 
 ### 6.7 Runs (`RUN`)
 

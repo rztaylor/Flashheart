@@ -52,13 +52,16 @@ export function PageHeader({
 }
 
 // PageActions are the header's far end: the Archive link with the scope's
-// archived count, and New ticket, each absent where the view has none.
+// archived count, and New ticket (Board, Table) or New workstream
+// (Workstreams, FH-17), each absent where the view has none.
 export function PageActions({
   archive,
   onNewTicket,
+  onNewWorkstream,
 }: {
   archive?: { href: string; count: number; onOpen(): void };
   onNewTicket?: () => void;
+  onNewWorkstream?: () => void;
 }) {
   return (
     <>
@@ -80,6 +83,16 @@ export function PageActions({
         <Button variant="primary" className="h-9 py-0" onClick={onNewTicket}>
           <Icon name="plus" size={16} />
           New ticket
+        </Button>
+      ) : null}
+      {onNewWorkstream ? (
+        <Button
+          variant="primary"
+          className="h-9 py-0"
+          onClick={onNewWorkstream}
+        >
+          <Icon name="plus" size={16} />
+          New workstream
         </Button>
       ) : null}
     </>

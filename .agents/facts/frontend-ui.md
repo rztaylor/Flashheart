@@ -14,8 +14,9 @@
   `components/` (primitives and shared
   patterns: Button, Icon, LineBullet, Pill, StateNote, Tabs, SidePanel,
   SegmentedControl, fields and form fields, Dialog, Toast, Markdown,
-  Table, RouteBar, TailText, BranchLabel, EmptyState, RunState, NeedsYou,
-  TicketMarks (a card's type icon and three-bar priority marker),
+  Table, TailText, BranchLabel, EmptyState, RunState, NeedsYou,
+  TicketMarks (a ticket's type icon and three-bar priority marker, alone on
+  cards and before their words in tags elsewhere, FH-154),
   QuestionCard, Aside, Popover,
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
@@ -85,8 +86,10 @@
   goes through the one leave guard, `state/leaveGuard`, which the router
   (`app/route`) asks before every navigation and a link or Back that
   changed the hash; the browser's `beforeunload` prompt covers reloads.
-  Native `<dialog>` for decisions (blocked move, conflict, new ticket); a
-  polite toast with Undo for results. Only the latest move offers Undo:
+  Native `<dialog>` for decisions (blocked move, conflict, new ticket,
+  new workstream; `components/Dialog` opens with focus on the field
+  marked `data-autofocus`, which `TextInput` and `TextArea` set for
+  `autoFocus`); a polite toast with Undo for results. Only the latest move offers Undo:
   the toast clears as a move starts, and a save that returns after a later
   move started is announced without Undo (FH-115). Drag and drop uses
   `@dnd-kit` pointer sensors; the keyboard alternative is Shift with an

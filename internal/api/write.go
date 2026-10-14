@@ -30,6 +30,7 @@ type Writer interface {
 	ReadWorkstream(project, slug string) ([]byte, string, error)
 	UpdateWorkstream(project, slug string, pre store.Precondition, edit store.Edit) (string, error)
 	CreateTicket(project string, input store.NewTicket) (store.Created, error)
+	CreateWorkstream(project string, input store.NewWorkstream) (store.CreatedWorkstream, error)
 	SetProjectKey(project, key string) error
 	Archive(project, id string) error
 	Unarchive(project, id string) error
@@ -71,6 +72,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/tickets/{id}/unarchive", b.unarchive)
 	mux.HandleFunc("POST /api/tickets/{id}/files", b.upload)
 	mux.HandleFunc("POST /api/projects/{project}/tickets", b.createTicket)
+	mux.HandleFunc("POST /api/projects/{project}/workstreams", b.createWorkstream)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/order", b.reorderWorkstream)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/section", b.putWorkstreamSection)
 	mux.HandleFunc("PUT /api/projects/{project}/key", b.setKey)
@@ -589,6 +591,56 @@ func (b boardAPI) createTicket(w http.ResponseWriter, r *http.Request) {
 		revision = snapshot.Revision
 	}
 	writeJSON(w, http.StatusCreated, CreateResponse{ID: created.ID, Hash: created.Hash, Key: created.Key, Revision: revision})
+}
+
+// NewWorkstreamRequest is POST /api/projects/{project}/workstreams: a
+// workstream made on the board (FH-17), with no tickets yet; tickets join
+// it from their own workstream field.
+type NewWorkstreamRequest struct {
+	Title                string   `json:"title"`
+	Goal                 string   `json:"goal"`
+	Priority             string   `json:"priority"`
+	DependsOnWorkstreams []string `json:"dependsOnWorkstreams"`
+}
+
+// CreatedWorkstreamResponse reports a new workstream.
+type CreatedWorkstreamResponse struct {
+	Slug     string `json:"slug"`
+	Hash     string `json:"hash"`
+	Revision uint64 `json:"revision"`
+}
+
+// createWorkstream writes a workstream from the board-format template,
+// its slug made unique from the title (store.CreateWorkstream, which
+// checks the fields and the dependencies). It records no event: the log is
+// of tickets and runs, and a new workstream changes no ticket.
+func (b boardAPI) createWorkstream(w http.ResponseWriter, r *http.Request) {
+	writer := b.writer(w)
+	if writer == nil {
+		return
+	}
+	var request NewWorkstreamRequest
+	if !decode(w, r, &request) {
+		return
+	}
+	// The board and agents share one limit (FH-81).
+	if len(request.Goal) > board.MaxSectionText {
+		writeError(w, http.StatusRequestEntityTooLarge, "too_large", fmt.Sprintf("The goal is limited to %d KiB", board.MaxSectionText>>10))
+		return
+	}
+	created, err := writer.CreateWorkstream(r.PathValue("project"), store.NewWorkstream{
+		Title: board.OneLine(request.Title, board.MaxTitle), Goal: request.Goal,
+		Priority: request.Priority, DependsOnWorkstreams: request.DependsOnWorkstreams,
+	})
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	revision := uint64(0)
+	if snapshot, _ := b.board.Rebuild(); snapshot != nil {
+		revision = snapshot.Revision
+	}
+	writeJSON(w, http.StatusCreated, CreatedWorkstreamResponse{Slug: created.Slug, Hash: created.Hash, Revision: revision})
 }
 
 // OrderRequest is PUT /api/projects/{project}/workstreams/{slug}/order: the

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Dialog } from "./Dialog";
+import { TextInput } from "./Field";
 
 // Opener renders a button that opens the dialog, inside a panel whose own
 // Escape handler stands for the card panel underneath.
@@ -92,5 +93,43 @@ describe("Dialog", () => {
     expect(onClose).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.activeElement).toBe(opener);
+  });
+
+  it("opens with focus on a field marked to take it, not on Close", async () => {
+    const user = userEvent.setup();
+    // showModal focuses the first control, as a browser does; the field
+    // marked data-autofocus must win (FH-17).
+    const showModal = vi
+      .spyOn(HTMLDialogElement.prototype, "showModal")
+      .mockImplementation(function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+        this.querySelector<HTMLElement>("button")?.focus();
+      });
+    function WithField() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            New
+          </button>
+          {open ? (
+            <Dialog title="New thing" onClose={() => setOpen(false)}>
+              <TextInput
+                aria-label="Title"
+                value=""
+                onChange={() => undefined}
+                autoFocus
+              />
+            </Dialog>
+          ) : null}
+        </>
+      );
+    }
+    render(<WithField />);
+    await user.click(screen.getByRole("button", { name: "New" }));
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Title" }),
+    );
+    showModal.mockRestore();
   });
 });

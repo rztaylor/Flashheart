@@ -33,9 +33,9 @@ Workstreams view shows those dependencies as a railway graph.
 
 ## Exclusions
 
-The New workstream dialog, the membership picker and the follow-through after
-New ticket stay with FH-17. No migration adds depends-on to existing
-workstreams.
+The New workstream dialog (`EDIT-14`), the membership picker (`EDIT-6`)
+and the follow-through after New ticket (`EDIT-5`) are FH-17's, built on
+this item. No migration adds depends-on to existing workstreams.
 
 ## Dependencies
 

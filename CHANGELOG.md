@@ -21,6 +21,30 @@ All notable changes to this project are documented here. The project follows
   refused, naming the circle. `create_ticket` takes a project name or key,
   so a session in one repository can file a follow-up on another board.
   Agent protocol stays 2.
+- Make workstreams and fill them on the board (FH-17, `EDIT-14`). **New
+  workstream** in the Workstreams view asks for a title, a goal, a
+  priority and the workstreams it depends on, writes the workstream file
+  with a unique name and opens its page. A ticket's Workstream field on
+  the side panel's Edit tab adds it to a workstream or takes it out, and
+  the ticket and the workstream's list always change together. After
+  **New ticket**, the new ticket opens on its Edit tab with the cursor in
+  its title, ready for the details the dialog does not ask.
+
+- See how many agents are live in each project on the All projects
+  Overview (FH-162, `PRJ-6`). The Projects list has a Live count beside
+  Needs you: every agent still running in the project, subagents
+  included, with those that need you among them. A project with none
+  shows a faint zero; on a phone it reads *N live* after the tickets and
+  blocked counts.
+- Compare projects at a glance on the All projects Overview (FH-153,
+  `PRJ-6`). Under the pipeline, a Projects list shows every project, most
+  recently active first as in the sidebar, with its key and name, its
+  tickets, its count in each board column, and how many tickets are
+  blocked or need repair and how many agents need you; a repair count is
+  ringed in dashes and a Needs you count sits on the attention colour.
+  Choose a row to open that project's Overview. On a phone, or beside an
+  open ticket, each project's counts stack under its name. One project's
+  Overview has no list.
 
 - Edit a workstream's goal and notes on its own page (FH-139,
   `EDIT-13`). A workstream's name on the Workstreams view now opens its
@@ -287,6 +311,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Dialogs open with the cursor where you type first (FH-17): New
+  ticket's title, the reason for starting a blocked ticket and a new
+  change request lost focus to the dialog's close button as it opened.
 - Saving a section right after an edit keeps that edit (FH-142). Pressing
   Ctrl+Enter (Cmd+Enter on a Mac) a moment after pasting or typing in a
   section's editor could close it without saving the change, as the page
@@ -513,6 +540,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- A slim project sidebar gives the board room for another column
+  (FH-150). The sidebar is now a narrow column of project key badges at
+  every width, whether or not a ticket is open, so at 1440px the Done
+  column fits beside the others. A badge keeps what needs you: its Needs
+  you count on the corner and a dashed, hatched mark while a ticket in the
+  project needs repair. Hover a badge, or listen to it, for the project's
+  name and its tickets, in progress, blocked, needs-repair and needs-you
+  counts. On a phone the Project picker is unchanged.
 - Board cards are less cluttered, and each density shows clearly
   different detail (FH-147, `VIEW-6`). **Compact** is just the title, led
   by its id, with what needs attention (Needs you, blocked, change
@@ -530,12 +565,18 @@ All notable changes to this project are documented here. The project follows
   marker line drops attachments, then review, then age rather than
   wrapping; every marker's words are in its tooltip and in what a screen
   reader hears for the card.
+- Type and priority look the same wherever a ticket appears (FH-154). The
+  Table, the archive, the side panel's header and a ticket's full page
+  show the card's type icon and priority bars beside the words, and with
+  Colour by Priority the chips at the top of the board carry the bars
+  beside their colour, so the marks you learn on cards mean the same
+  everywhere.
 - Blocked tickets are marked with a no-entry sign (FH-148). The small
   hollow diamond that marked a blocked ticket read as decoration at card
   size; a filled no-entry sign now marks blocked everywhere: on cards,
   blocker pills and notes, the side panel and full page (Blocked by), the
-  blocked-move dialog, the Table, the Workstreams view, the project rail's
-  blocked count and the State filter's Blocked. It always sits beside the
+  blocked-move dialog, the Table, the Workstreams view and the State
+  filter's Blocked. It always sits beside the
   word or the reason.
 - Theme, board root and version are behind a gear in the title bar
   (FH-149, `CFG-2`). The Settings button sits between the connection dot

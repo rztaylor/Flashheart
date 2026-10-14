@@ -1,10 +1,16 @@
+import type { ReactNode } from "react";
+
 import { typeToken } from "../model/paint";
+import { priorityLabel } from "../model/status";
 import { Icon, type IconName } from "./Icon";
+import { Tag } from "./Pill";
 
 // A ticket's type and priority as small marks (FH-147, ui-layout.md §2),
-// drawn for the board's cards and its type chips. They are drawings: the
-// type's name and the priority's word go in the tooltip and the
-// accessible name of whatever holds them.
+// drawn for the board's cards and its Colour by chips, and beside their
+// words in the Table, the archive, the card panel and the ticket page
+// (FH-154). They are drawings: the type's name and the priority's word go
+// beside them, in the tooltip or in the accessible name of whatever holds
+// them.
 
 const typeIcons: Record<string, IconName> = {
   feature: "star",
@@ -91,5 +97,34 @@ export function PriorityMarker({
         );
       })}
     </svg>
+  );
+}
+
+// TypeTag and PriorityTag are a type and a priority in words, as a Tag with
+// the card's mark before the word (FH-154): the Table, the archive and the
+// card panel's header, where there is room for both. children replaces the
+// priority's own word (the panel's "High priority"); a priority without
+// bars keeps its word alone.
+export function TypeTag({ type }: { type: string }) {
+  return (
+    <Tag>
+      <TypeIcon type={type} size={12} />
+      {type}
+    </Tag>
+  );
+}
+
+export function PriorityTag({
+  priority,
+  children,
+}: {
+  priority: string;
+  children?: ReactNode;
+}) {
+  return (
+    <Tag strong={priority === "high"}>
+      <PriorityMarker priority={priority} size={11} />
+      {children ?? priorityLabel(priority)}
+    </Tag>
   );
 }

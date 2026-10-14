@@ -11,6 +11,7 @@ import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { EditorModeProvider } from "../features/editor/mode";
 import { ProjectRail } from "../features/projects/ProjectRail";
+import { NewWorkstreamDialog } from "../features/workstreams/NewWorkstreamDialog";
 import { WorkstreamPage } from "../features/workstreams/WorkstreamPage";
 import type { SingleserveLifecycle } from "../lifecycle/useSingleserve";
 import { shownColumns } from "../model/columns";
@@ -72,6 +73,8 @@ export function Shell({
   const [needsYouFrom, setNeedsYouFrom] = useState<Scope>();
   // newTicket is the project New ticket opens in, while its dialog is open.
   const [newTicket, setNewTicket] = useState<{ project: string }>();
+  // newWorkstream is the project New workstream opens in (FH-17).
+  const [newWorkstream, setNewWorkstream] = useState<{ project: string }>();
   const [narrowColumn, setNarrowColumn] = useState<string>("in-progress");
 
   const visible = useMemo(() => applyFilters(cards, filters), [cards, filters]);
@@ -300,12 +303,9 @@ export function Shell({
             </EditorModeProvider>
           </main>
         ) : (
-          // Below 1440px an open panel shrinks the rail to its key badges so
-          // the board keeps three whole columns.
-          <div
-            data-panel={route.ticket ? "open" : undefined}
-            className="group/work grid min-h-0 grid-cols-1 md:grid-cols-[15.5rem_minmax(0,1fr)_auto] md:max-[90rem]:data-[panel=open]:grid-cols-[4rem_minmax(0,1fr)_auto]"
-          >
+          // The rail is a slim column of key badges at every width from 48rem
+          // (FH-150), so the board keeps its width with the panel open too.
+          <div className="grid min-h-0 grid-cols-1 md:grid-cols-[4rem_minmax(0,1fr)_auto]">
             <div className="hidden min-h-0 border-r border-rail-rule bg-rail md:block">
               <ProjectRail
                 projects={summaries}
@@ -349,6 +349,11 @@ export function Shell({
                     onNewTicket={
                       boardOrTable && summaries.length > 0
                         ? () => setNewTicket({ project: data.scopeProject })
+                        : undefined
+                    }
+                    onNewWorkstream={
+                      route.view === "workstreams" && summaries.length > 0
+                        ? () => setNewWorkstream({ project: data.scopeProject })
                         : undefined
                     }
                   />
@@ -428,7 +433,30 @@ export function Shell({
               setNewTicket(undefined);
               data.reloadAll();
               editing.notify({ text: `Created ${created.id}.` });
-              openTicket({ id: created.id });
+              // The new ticket opens ready to edit: on its Edit tab, focus
+              // in its first field, for what the dialog does not ask
+              // (FH-17).
+              openTicket({ id: created.id }, "edit");
+            }}
+          />
+        ) : null}
+        {newWorkstream ? (
+          <NewWorkstreamDialog
+            fetcher={fetcher}
+            projects={summaries}
+            project={newWorkstream.project}
+            onClose={() => setNewWorkstream(undefined)}
+            onCreated={(created) => {
+              setNewWorkstream(undefined);
+              data.reloadAll();
+              editing.notify({ text: `Created workstream ${created.title}.` });
+              // Its page is where its scope and success criteria are
+              // written; tickets join it from their Edit tab (FH-17).
+              navigate({
+                scope: { kind: "all" },
+                view: "workstream",
+                workstream: { project: created.project, slug: created.slug },
+              });
             }}
           />
         ) : null}

@@ -185,8 +185,9 @@ atomically, one at a time, in this order:
   key when it is chosen), then its workstream's `tickets:` list;
 - a ticket joining or leaving a workstream: the workstreams' lists, then
   the ticket's `workstream:` field;
-- creating a workstream: its file, then the other lists giving up its
-  initial tickets, then those tickets' fields;
+- creating a workstream (an agent's `create_workstream` or the board's
+  New workstream, which starts with none): its file, then the other lists
+  giving up its initial tickets, then those tickets' fields;
 - editing a workstream (an agent's `update_workstream`, FH-46): its file
   (fields and its own list), then the other lists giving up the tickets
   that join it, then the tickets' fields;

@@ -19,13 +19,13 @@ One shell for Overview, Workstreams, Table and Board, in both themes.
 ```
 ┌ Band ─────────────────────────────────────────────────────────────────┐
 │ ⚡ Flashheart │ Overview  Workstreams  Table  Board │ [● N need you] [Search] status [⚙] [Quit] │
-├ Rail ────────┬ Main ──────────────────────────────────────┬ Panel ────┤
-│ All projects │ Page header: scope identity · view summary │ (ticket)  │
-│ ──────────── │ View toolbar (Board, Table)                │           │
-│ FH Project   │ View body                                  │           │
-│   route bar  │                                            │           │
-│ …            │                                            │           │
-└──────────────┴────────────────────────────────────────────┴───────────┘
+├ Rail ┬ Main ───────────────────────────────────────────────┬ Panel ────┤
+│ [▥]  │ Page header: scope identity · view summary          │ (ticket)  │
+│ ──── │ View toolbar (Board, Table)                         │           │
+│ [FH]²│ View body                                           │           │
+│ [AL] │                                                     │           │
+│ …    │                                                     │           │
+└──────┴─────────────────────────────────────────────────────┴───────────┘
 ```
 
 **Band** (3.5rem tall, left to right): the bolt and the *Flashheart*
@@ -55,14 +55,24 @@ click outside or tabbing away closes it, and Escape returns focus to the
 gear. Per-view settings (Show columns, Colour by, Density) stay in the
 Board's View options.
 
-**Rail** (15.5rem; 4rem of key badges while a ticket is open below
-1440px): *All projects*, a divider, then each project, most recently active
-first: key badge, name, ticket count, route bar, and a line with its Needs
-you plate (count), in-progress count, blocked count (no-entry sign) and repair
-count. The current scope is filled. The rail has no footer: the theme,
-board root and version are in the band's Settings menu. Below 48rem the
-rail hides and a control row with Project and Column pickers takes its
-place.
+**Rail** (4rem at every width from 48rem, ticket open or not, with no
+toggle; FH-150): a slim column of key badges, *All projects* (the board
+icon), a divider, then one badge per project, most recently active first.
+The current scope's tile is raised and its badge filled. A badge shows only
+what needs the user: its Needs you count on the badge's top-right corner in
+the attention colour while any of its runs need the user, and the repair
+mark (a dashed ink outline and a hatched top band, as a needs-repair card
+has) while a ticket needs repair. Keys of up to three letters fit at the
+badge's size; longer keys take a smaller cut. Its tooltip and accessible
+name are the project's name (with its folder name when that differs) and
+its counts: *Flashheart (flashheart): 50 tickets, 3 in progress, 22
+blocked, 1 needs repair, 2 agents need you*, the blocked, repair and Needs
+you counts only when not zero; All projects names its project count and
+sums them. Project names, route bars and the other counts are not shown as
+text; the All projects Overview's Projects list (§5) shows them side by
+side. The rail has no footer: the theme, board root and version are in the
+band's Settings menu. Below 48rem the rail hides and a control row with
+Project and Column pickers takes its place.
 
 **Page header** (top of Main, every view): the scope's identity, a key badge
 and the project's display name set as the page title (*All projects* with
@@ -76,7 +86,7 @@ the board icon in the all scope), then one quiet summary line for the view:
 | Table | as Board |
 
 The header's far end holds *Archive* and, on Board and Table, **New ticket**
-(primary) (FH-39).
+(primary) (FH-39), or on Workstreams **New workstream** (primary, FH-17).
 
 **View toolbar** (Board and Table), one row (wrapping only on a phone): one
 button per filter, named for what it filters with no separate label, Type,
@@ -102,7 +112,8 @@ tickets neither done nor in the backlog), finished workstreams left out
 unless chosen; right-aligned, one chip per Colour by value present (a round
 paint bullet and the value's word; with Colour by Type, the type's card
 icon in its colour instead of the bullet, so people learn the icons,
-FH-147). Both are filters with the menus' click
+FH-147; with Colour by Priority, the bullet then the card's priority bars,
+FH-154). Both are filters with the menus' click
 rules: a shown-only chip takes the selection ring, a hidden one is dashed and
 struck through. The row never wraps: chips that do not fit stay out of view,
 colour chips before workstreams; the menus list every value. Hidden when
@@ -159,7 +170,10 @@ One set of markers, three layouts (FH-147, decided with the user on
 and a marker shows only when it applies.
 
 **Markers.** Each is a drawing with its words in its tooltip and in the
-card's name:
+card's name. The type and priority marks are the same drawings wherever a
+ticket's type or priority shows, before the word where there is room for
+it: the Table and archive tags, the panel header's tags, the full page's
+Priority and Type rows and the Colour by Priority chips (FH-154).
 
 | Marker | Shown as |
 | --- | --- |
@@ -230,8 +244,8 @@ words:
 
 1. **Header**: id (a link to the full page, `CARD-7`) and project name; the
    title in the display cut; a pill row
-   (status pill for its column, the blocker pill when blocked, priority tag,
-   type tag); a meta row (workstream bullet and name, created date, branch in
+   (status pill for its column, the blocker pill when blocked, priority tag
+   with its bars, type tag with its icon, §2); a meta row (workstream bullet and name, created date, branch in
    monospace, the pull request as *PR #7* or its address, a link in a new
    tab only for an `http(s)` URL (FH-114), changed time); actions (Move to, Archive) when editable. Top
    right, *Open full page in a new tab* (expand icon) and close; Escape
@@ -270,7 +284,8 @@ words:
    comment too when one is being written): **Discard changes** drops them,
    **Keep editing** shows the Edit tab again with focus on its control
    last used (or its first field), unless the prompt was opened from a
-   field, where focus stays. A save that meets a conflict after another
+   field, where focus stays. The ticket New ticket created opens on this
+   tab with focus in its Title, ready to edit (FH-17). A save that meets a conflict after another
    tab was chosen shows the Edit tab again with the conflict dialog.
 6. **Runs tab**: runs newest first, each a card with its state (and its
    Needs you reason, in the card's words, `RUN-3`), agent,
@@ -442,7 +457,8 @@ at most 94rem.
   as a select in the status's own fill, icon and word (the status pill
   when read-only), on a ticket in review where the page can save a full
   width secondary **Request changes** (speech balloon; `REV-6`) under it,
-  *Blocked* when blocked, then rows of Priority, Type,
+  *Blocked* when blocked, then rows of Priority (bars and word), Type
+  (icon and word),
   Workstream (bullet and name), Branch, Pull request (when set), Depends on
   (ids linked), Tags, Agent (the run speaking for the ticket, its state
   mark and word), Created and Changed, *None* where empty; then
@@ -572,7 +588,20 @@ id a separate link.
   step where tracks share a stretch.
 - Tickets with no links on the line follow below the graph, set off by a
   faint rule when there is a graph, wrapping onto rows.
-  Shift with Left/Right or drag reorders them (`EDIT-4`).
+  Shift with Left/Right or drag reorders them (`EDIT-4`). A line with no
+  tickets says *No tickets on this line yet.*
+- **New workstream** (`EDIT-14`, FH-17) opens a dialog like New ticket's:
+  *Project* (only in the all scope), **Title** (focused), *Goal* (a text
+  area, *The shared outcome its tickets deliver.*), *Priority* (default
+  medium) and, when the project has workstreams, *Depends on workstreams*:
+  a bordered, scrolling list of checkboxes named by title, wrapping long
+  names, with the hint *Its tickets wait until every ticket in these is in
+  review or done.* **Create workstream** (primary, off until there is a
+  title; Enter in the title submits) and Cancel; Escape closes and focus
+  returns to the button. A refusal shows as an alert in words under the
+  form, which keeps what was typed. Created, a toast *Created workstream
+  <name>.* and the workstream's page opens. The empty view's sentence
+  names New workstream and the Edit tab's Workstream field.
 
 ### Workstream page
 
@@ -617,8 +646,34 @@ order (Backlog, Up next, In progress, Ready to review, Done, the last
 without Rejected tickets), each a large
 tabular count over the column's word with its status icon, in the State
 role (§7). Each card leads to the Board for the scope. The row stays one row
-at every width; below 40rem the icons go and the words wrap. Then the
-rounded section cards in fixed order:
+at every width; below 40rem the icons go and the words wrap.
+
+In the All projects scope only, the **Projects** list follows the pipeline
+(FH-153, `PRJ-6`): a section card (the board icon on a card disc, the
+title, the project count) listing every project in the rail's order, most
+recently active first. Each row is one link to that project's Overview,
+named with the project and every count (*Alpha (alpha): 7 tickets (3 in
+backlog, 1 up next, 1 in progress, 1 ready to review, 1 done), 3 blocked,
+1 needs repair, 3 agents live, 1 agent needs you*). Once the card is at
+least 50rem wide (its own width, so a ticket panel beside the Overview
+narrows it too) the rows are a table under one line of column words:
+Project (key badge and name), Tickets, the five board columns (each word
+after its status icon in its state ink), Blocked (after the no-entry sign
+in the blocked ink), Needs repair, Live (after the Working run-state mark,
+still) and Needs you, the counts centred in tabular numerals, zeros faint.
+Live (FH-162) counts the project's agents still running, subagents
+included: working, quiet, waiting and those that need you, so Needs you is
+the part of it that needs you. Tickets counts every ticket; the columns
+count as the pipeline does, so Done leaves out rejected tickets and the
+columns of every row add up to the pipeline. A needs-repair count other
+than zero is ringed in dashed ink; a Needs you count other than zero sits
+on the attention colour. Narrower, a row stacks: the key badge and name,
+with the needs-repair and Needs you marks beside it in words when not zero,
+over *N tickets · N blocked · N live* (no live agents faint), then the
+five columns' counts over their words. A single project's Overview has no
+list.
+
+Then the rounded section cards in fixed order:
 
 1. **Needs your decision**: questions, each a question card answerable in
    place (`CARD-6`), and permission prompts, which say *Answer in the
@@ -655,7 +710,8 @@ No coloured edge strips; the attention colour stays with Needs you.
 
 Page header and view toolbar (no View options or chip row); then the table
 on a rounded surface with a sticky head: Ticket (title over id), Project (all
-scope), Status (status pill), Type (tag), Priority (tag), Workstream (bullet
+scope), Status (status pill), Type (tag with its icon), Priority (tag with
+its bars; §2), Workstream (bullet
 and name), State (blocker pill, repair mark, live mark), Criteria, Changed.
 Head buttons sort (`VIEW-5`); the selected row takes the selection tint.
 
@@ -668,10 +724,10 @@ for another role's job, and none is ever the only carrier of meaning.
 | --- | --- | --- | --- |
 | Frame | Brand surface and the current scope | Band and its current view tab (raspberry light, black dark), rail and its current tile | The tab's or project's name |
 | Action | The primary action | Primary button | Its label |
-| Attention | A run or question that needs the user | Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark | Disc mark and words |
+| Attention | A run or question that needs the user | Needs you plate (band, card, panel, question card), a rail badge's Needs you count, the Overview's Needs your decision mark and a project's Needs you count in its Projects list | Disc mark and words (on a rail badge or in the Projects list, the count, with the words in its name and its column's word) |
 | Line | A workstream | Bullet, card stripe, track, station, route card wash | Bullet initials and name (a card's stripe: the name in the card's name and on a Detailed card) |
 | Paint | The Colour by value | Whole-card tint, colour chip bullet, the type icon's colour | The value's word (chip, tooltip, card name) |
-| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages | Icon and column word |
+| State | Ticket workflow state | Status pills: Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross (also on its card in Done); the Overview's pipeline stages; the icon in state ink before a column's word over the Projects list | Icon and column word |
 | Blocked | A real blocker | Blocker pill, the no-entry sign wherever blocked is marked | No-entry sign and the reason or the word *Blocked* |
 | Danger | Application errors, and actions that cannot be undone | Alert strips, failed loads; the red Delete permanently button and its red confirmation (`EDIT-8`, `PRJ-5`) | Words |
 | Focus | Keyboard focus | 2px outline | — |
@@ -687,12 +743,11 @@ ticket or workstream is marked blocked: a card's blocked mark (§2), the
 blocker pill and note (Detailed cards, the Table, the blocked-move dialog, a route card's blocker notes), the
 short *Blocked* pill and any blocked-tone pill (the panel and page
 headers, a station's *Needs FH-n*), the Blocked by heading on the panel
-and full page, a route card's derived status, the rail's blocked count and
+and full page, a route card's derived status and
 the State filter's *Blocked* choice (in its menu and on its button). It is
 always beside the word *Blocked* or a reason, or inside a name that says
 blocked, and it meets the 3:1 non-text contrast in both themes (the
-blocked ink on its pill, the ground, card, panel and popover surfaces;
-the rail's muted ink on the rail). Transit-line station marks keep their
+blocked ink on its pill, the ground, card, panel and popover surfaces). Transit-line station marks keep their
 own shapes: they show service (served, next stop, ahead, held, missing),
 not blocking, and a dependency outside the line is the blocked pill above
 the station.
@@ -774,11 +829,11 @@ other than the above, the above wins:
   (dark workstreams) is solid at 35%, since dashes mean suspended service.
 - **Placement**: view tabs sit in the band (the light workstreams image puts
   them under it); the backend status stays in the band rather than the rail
-  footer, so it shows at every width and with the rail collapsed; the
+  footer, so it shows at every width beside the slim rail; the
   theme, board root and version, which the references put in the rail's
   footer, are in the band's Settings menu (FH-149).
 - **Omissions the references do not show but the product keeps**: project
-  route bars and counts in the rail, the filter buttons, the
+  counts in the rail badges' names and tooltips, the filter buttons, the
   ticket count, the Needs you filter, the Backlog toggle, the colour chips,
   repair, wait notes, the project name on All-projects cards,
   attachments and review markers, Archive, the Edit and Runs tabs' content,

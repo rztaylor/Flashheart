@@ -175,6 +175,9 @@ export function CardPanel({
                     workstreams={workstreams.get(detail.project) ?? []}
                     onSaved={ticket.saved}
                     onShow={() => setTab("edit")}
+                    // Opened on the Edit tab (after New ticket), the panel
+                    // is ready to edit (FH-17).
+                    autoFocus={initialTab === "edit"}
                   />
                 </div>
               ) : null}

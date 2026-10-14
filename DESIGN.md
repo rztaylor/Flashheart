@@ -333,8 +333,7 @@ spacing:
   page-narrow: "16px"
   panel-gutter: "24px"
   band-height: "56px"
-  rail-width: "248px"
-  rail-collapsed: "64px"
+  rail-width: "64px"
   panel-width: "clamp(26rem, 32vw, 35rem)"
 components:
   button-primary:
@@ -456,7 +455,7 @@ Flashheart is a friendly metro system for work. Each workstream is a route with 
 Structure and content are fixed in [the UI layout contract](docs/dev/specs/ui-layout.md); this file records how that structure looks. A theme changes tokens, never layout. Metro Pop replaced the Transit Line Map of D14 (D18, 2026-10-06), chosen from the generated references in `.impeccable/mocks/metro-theme-rollout/`.
 
 **Key Characteristics:**
-- A 56px band (bolt, wordmark, view tabs, Needs you, search, status, Settings, Quit) over a 248px rail, with every view opening on a page header naming its scope.
+- A 56px band (bolt, wordmark, view tabs, Needs you, search, status, Settings, Quit) over a 64px rail of key badges, with every view opening on a page header naming its scope.
 - Rounded throughout: 8px controls, 10px cards, 14px wells and route cards, full pills and bullets.
 - Route colours mean workstreams; paint means the Colour by value; status pills always carry an icon and a word.
 - Archivo Variable across its width axis: a heavy condensed display cut for titles, a condensed bold for heads, tabular numerals everywhere.
@@ -475,13 +474,13 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 - **Action** (`action` #be185d raspberry; `night-action` #c6f432 lime): the primary button only (New ticket, Send answer). Hover darkens or lifts it.
 - **Selection and Focus** (`select`/`focus` #be185d raspberry with `select-surface` #fdf0f6; `night-select`/`night-focus` lime): the selected card ring, the current panel tab's underline, an applied filter's ring, the chosen density segment's edge and the focus outline.
 - **Lines** (`line-0`…`line-8`: red, blue, yellow, green, purple, orange, lime, brown, teal; lifted in dark): workstreams only. Each workstream takes one line stably, by a hash of its slug in creation order, so a newer workstream never recolours an older one. A bullet carries its paired initials ink (`line-ink-*`, AA on its fill). No line is grey: grey would read as an inactive state.
-- **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the whole card (FH-147); the strong shade draws the type's icon on cards and type chips and the colour key's swatch. Paint is softer than the lines on purpose, so a tinted card never reads as a workstream.
-- **Priority** (`priority-high` orange-red, `priority-medium` neutral grey, `priority-low` sky blue, `priority-off` the empty bar; lifted in dark): the card's three-bar priority marker only. Each is 3:1 on the card and every paint tint and against an empty bar. Low's sky blue sits apart from the refactor paint and the review state; the bars' shape carries the meaning.
+- **Paint** (`paint-<type|priority|age>-*`): the Colour by value. The tint washes the whole card (FH-147); the strong shade draws the type's icon on cards, type chips and type tags and rows (FH-154) and the colour key's swatch; a priority chip keeps its swatch and adds the priority bars. Paint is softer than the lines on purpose, so a tinted card never reads as a workstream.
+- **Priority** (`priority-high` orange-red, `priority-medium` neutral grey, `priority-low` sky blue, `priority-off` the empty bar; lifted in dark): the three-bar priority marker only, on cards and beside the priority's word (the Table, archive, panel, full page and Colour by Priority chips, FH-154). Each is 3:1 on the card and every paint tint, on the well, selected-row, panel, column and ground surfaces, and against an empty bar. Low's sky blue sits apart from the refactor paint and the review state; the bars' shape carries the meaning.
 - **State** (`state-neutral|progress|review|done|blocked`, each with `-ink`): status pills. Backlog and Up next neutral, In progress amber, Ready to review blue, Done green, Rejected neutral with a cross, Blocked red with the no-entry sign and its reason.
 - **Callout edges** (`callout-handoff-edge` orange; `callout-question-edge` raspberry in light, coral in dark): the Handoff and questions-for-you callouts' icon and their thin full border at 30%. No side stripes: a thick one-sided accent reads as generic AI UI.
 
 ### Tertiary
-- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, rail, card, panel, question card) and the Overview's Needs your decision mark. Only Needs you uses it.
+- **Attention** (`attention` #ff9447; `night-attention` #ff7a5c) with **On Attention** #111111: every Needs you plate (band, card, panel, question card), a rail badge's Needs you count, the Overview's Needs your decision mark and a project's Needs you count in the Overview's Projects list. Only Needs you uses it.
 - **Flash** (`flash` #ffd23f): the bolt before the wordmark.
 - **Danger** (`danger`, `on-danger`, `danger-surface`): application errors, and actions that cannot be undone (a permanent delete): red, in both themes. Never a ticket state.
 
@@ -528,7 +527,7 @@ Two palettes on the same roles (contract §7). Light values first; dark values a
 
 ## Layout
 
-See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 248px rail, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem); below 1440px an open panel collapses the rail to 64px of key badges. Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; the Overview stacks section cards 16px apart in one column filling Main; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
+See [the contract](docs/dev/specs/ui-layout.md) for structure. Spatially: a fixed grid of the 56px band, an optional alert strip and the work area. From 48rem the work area is the 64px rail of key badges, the main view and, when a ticket is open, the panel at clamp(26rem, 32vw, 35rem). Main opens with the page header (24px gutters, 16px under 48rem), then the toolbar, the workstream strip with the colour key, and the view. Board columns are wells at least 15rem wide, 12px apart, scroll-snapped; cards stack 10px apart. Workstreams stack route cards 16px apart; the Overview stacks section cards 16px apart in one column filling Main; Table sits on one rounded surface with a sticky head. Spacing runs on a 4px unit.
 
 ## Elevation & Depth
 
@@ -558,8 +557,8 @@ Cards, chips, buttons, count badges, route cards and the table cast soft, short 
 
 ### Pills and Tags
 - **Status pill:** state fill, state ink, an icon (ring, half, review page, check; a cross for Rejected) and the column's word, or *Rejected*. A rejected card in Done carries its Rejected pill with its tags.
-- **Blocker pill:** blocked fill and ink, the no-entry sign, the reason (one line on a card, full in its tooltip and the panel). The no-entry sign (a filled disc in the ink with its bar cut out to the surface behind) is the one symbol for blocked, also on its own beside Blocked by and the State filter's Blocked (in the blocked ink) and the rail's blocked count (in the rail's muted ink); it replaced a hollow diamond that read as decoration at card size (FH-148).
-- **Tag:** type, priority and tags in the panel, the table and the archive: neutral outlined chips; High priority is semibold. Cards draw type and priority as marks instead.
+- **Blocker pill:** blocked fill and ink, the no-entry sign, the reason (one line on a card, full in its tooltip and the panel). The no-entry sign (a filled disc in the ink with its bar cut out to the surface behind) is the one symbol for blocked, also on its own beside Blocked by and the State filter's Blocked (in the blocked ink); it replaced a hollow diamond that read as decoration at card size (FH-148).
+- **Tag:** type, priority and tags in the panel, the table and the archive: neutral outlined chips; High priority is semibold. Type and priority tags lead with the card's mark (FH-154): the 12px type icon in its paint shade, the 11px priority bars; a priority word without bars stands alone. The full page's Priority and Type rows show the same marks before their words. Cards draw type and priority as marks alone.
 
 ### Ticket Card
 White (or washed whole in the Colour by tint), 10px corners, rule border, card shadow, a 4px workstream stripe down the left; no bullet, initials or criteria count. One set of markers in three layouts (contract §2, FH-147). Markers are 12px drawings in meta size with their words in tooltips: the type icon in its paint shade, the id in the id cut, the no-entry sign in the blocked ink, a speech balloon with the change-request count in amber (open) or blue (addressed), the run-state mark with `done/total` in ink, the age, the review page and the paper clip with a count in muted ink, and the priority's three ascending bars at the line's end. **Compact:** the card title (two lines) led by its id, with only the Needs you plate (disc only), blocked, change requests and priority beside it. **Normal:** the card title (three lines), then one 16px meta line that never wraps (attachments, review and age drop in that order when it is short), then the Needs you plate and its reason in semibold ink. **Detailed:** Normal, then the blocker pill, the run's state, agent, time and plan step, the next step (arrow), a two-line excerpt in muted extra-small text and the workstream name in muted meta. Selected: select border and ring. Dimmed: 35%.
@@ -570,13 +569,16 @@ Column well surface, rule border, 14px corners, 10px padding; head with a round 
 ### Overview Section Card
 Card surface, rule border, 14px corners, card shadow; the head on the column surface with a 28px round mark (Needs your decision in the attention disc while anything needs you; review and in progress in their status fills; the rest an ink icon on a card disc), the title in the display head cut and a round count badge; the collapsible ones end in a chevron. Rows divided by rules, roomy (12px by 16px): the id, the title over one muted line of words, a small outlined agent chip, a muted time or count, and the action (Review results in the action fill, Create ticket secondary). An empty section is its head with one muted sentence. No coloured edge strips.
 
+### Overview Projects List
+All projects only, between the pipeline and the section cards (FH-153): a section card with the board icon on a card disc, *Projects* and a count badge. Rows are links divided by rules that hover to the well. From 50rem of the card's own width (a container query, so the panel narrows it) they are a table: a line of column words in muted semibold label size on the heading cut (each board column's word after its status icon in that state's ink, Blocked after the no-entry sign in the blocked ink, Live after the still Working run-state mark, FH-162), then per row the accent key badge and the name in semibold small text, and ten centred tabular counts at body size, a zero in faint ink. A needs-repair count other than zero sits in a round dashed ink ring (1.5px); a Needs you count other than zero on a round attention fill. The name column takes 1.6 parts to each count's one, so the counts spread across the card. Narrower, a row stacks: badge and name with the repair and Needs you marks as small word pills beside it, a muted line of tickets, blocked and live (no live agents in faint ink), then the five column counts over their words in meta size.
+
 ### Overview Pipeline
 Above the section cards: five equal chevron cards in one row, Backlog to Done, each notched on the left and pointed on the right so they interlock with a 5px ground-coloured gap (the first flat on the left with 10px corners). Each takes its status pill's fill and ink: a display-cut tabular count (1.5rem, 2.25rem from 40rem, 3rem from 64rem) over the column's word, semibold, with its status icon from 40rem. The point is 12px, 22px from 40rem. Clipped shapes take no box shadow or outline, so the row casts `--fh-shadow-chevron` (a drop-shadow filter) and a focused card draws its focus ring as four 2px drop-shadows that follow the shape. Hover lifts a card 2px.
 
 ### Navigation
 - **Band:** bolt and wordmark; view tabs as 36px rounded tabs with icon and label (current: the inverted band-tab-active pill); right: Needs you plate (a toggle: pressed, an inset on-attention ring and a close mark, filtering the Board to tickets that need you), search, quiet status dot, the Settings gear (a 36px icon button, quiet like the status, the band field behind it while hovered or open) and Quit. Under 640px tabs collapse to icons; the plate keeps its words.
 - **Settings menu:** a 288px popover (never wider than the screen less 32px) under the gear, right-aligned to it: Theme as a label over the System, Light, Dark segmented control, then under a rule the board root in semibold label and muted mono (cut from the start, the whole path in its tooltip) and the muted version line. App-wide settings only; the Board's View options keep the per-view ones.
-- **Rail:** All projects, a divider, projects with key badge (8px, tinted; filled in the accent when current), name and count, a route bar in the text colour, and a line with the Needs you plate and in-progress, blocked and repair counts. The current tile is raised: rail active surface, hairline border, card shadow. No footer: theme, board root and version are in the band's Settings menu.
+- **Rail:** a 64px column of 48px tiles at every width from 48rem (FH-150): All projects (the board icon), a divider, then each project's key badge (32px tall, at least 36px wide, 8px corners, tinted; filled in the accent when current; display cut, a size smaller for keys over three letters). The current tile is raised: rail active surface, hairline border, card shadow. A 16px attention-coloured count on the badge's top-right corner, ringed in the rail colour, is its Needs you count; a 1.5px dashed ink outline 2px out and a hatched top band mark a project with a ticket that needs repair. Name and counts are in the tooltip. No footer: theme, board root and version are in the band's Settings menu.
 - **Page header:** key badge (or board icon) and the scope's name in the display page cut, with one muted summary line.
 - **Panel tabs:** heading-small labels over a rule, the current one underlined 3px in select.
 

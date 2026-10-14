@@ -558,6 +558,12 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
   await shot(page, "conflict-1440-light", { keepFocus: true });
   await conflict.getByRole("button", { name: "Overwrite with mine" }).click();
   await expect(conflict).toHaveCount(0);
+  // The overwrite's answer has come back and the form holds the saved
+  // version: the file and the live update can show it first, and an
+  // answer still on its way would land in the next test's form.
+  await expect(
+    panel.getByRole("button", { name: "Save changes" }),
+  ).toBeDisabled();
   await expect
     .poll(() => readTicket("FH-36-split-api"))
     .toContain("branch: feature/split-api");
@@ -732,6 +738,13 @@ test("the archive restores tickets and deletes them for good", async () => {
     .getByRole("complementary", { name: "Ticket AL-4" })
     .getByRole("button", { name: "Archive" })
     .click();
+  // The archive's own answer has come back (its toast) before the archive
+  // is opened: the live update can list AL-4 there first, and a delete
+  // preview read while the archive is still in flight is refused as out
+  // of date.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Archived AL-4." }),
+  ).toBeVisible();
   await open(page, "#/p/alpha/archive");
   await page.getByRole("button", { name: "Delete permanently AL-4" }).click();
   const dialog = page.getByRole("dialog", {
