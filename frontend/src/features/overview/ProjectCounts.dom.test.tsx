@@ -111,9 +111,9 @@ describe("ProjectCounts (FH-153)", () => {
     expect(quill.querySelector("[data-mark]")).toBeNull();
   });
 
-  // The live count (FH-162) sits before Needs you, a zero faint like the
-  // other counts; stacked, it follows tickets and blocked in words.
-  it("shows each project's live agents, a zero faint", () => {
+  // The live count (FH-162) sits before Needs you, a zero a faint dash like
+  // the other counts; stacked, it follows tickets and blocked in words.
+  it("shows each project's live agents, a zero as a faint dash", () => {
     const { list, rows } = setup();
     const [quill, flashheart] = rows as [HTMLElement, HTMLElement];
     const live = (row: HTMLElement) =>
@@ -121,7 +121,7 @@ describe("ProjectCounts (FH-153)", () => {
     expect(live(flashheart)?.textContent).toBe("3");
     expect(live(flashheart)?.className).toContain("text-ink");
     expect(live(flashheart)?.className).not.toContain("text-ink-faint");
-    expect(live(quill)?.textContent).toBe("0");
+    expect(live(quill)?.textContent).toBe("–");
     expect(live(quill)?.className).toContain("text-ink-faint");
     // The column word carries the run-state mark, as the board columns
     // carry their status icons.
@@ -131,6 +131,24 @@ describe("ProjectCounts (FH-153)", () => {
     ).not.toBeNull();
     expect(flashheart.textContent).toContain("22 blocked · 3 live");
     expect(quill.textContent).toContain("0 blocked · 0 live");
+  });
+
+  // A zero count is a faint dash in every cell (the user's review of
+  // FH-153), so the counts that matter stand out; the row's name still
+  // says the number.
+  it("shows every zero count as a faint dash", () => {
+    const { rows } = setup();
+    const quill = rows[0] as HTMLElement;
+    const dashes = Array.from(
+      quill.querySelectorAll<HTMLElement>("span"),
+    ).filter((cell) => cell.textContent === "–");
+    // Quill: review 0, blocked 0, needs repair 0, live 0, needs you 0.
+    expect(dashes).toHaveLength(5);
+    for (const cell of dashes)
+      expect(cell.className).toContain("text-ink-faint");
+    // The stacked line stays in words, and the name says the number.
+    expect(quill.textContent).toContain("7 tickets · 0 blocked · 0 live");
+    expect(quill.getAttribute("aria-label")).toContain("0 ready to review");
   });
 
   it("shows nothing with no projects", () => {

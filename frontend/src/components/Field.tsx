@@ -226,26 +226,39 @@ export function TextArea({
   );
 }
 
+// Select is a native select in the form control style. leading is a mark
+// drawn before the chosen word on the select's face (a priority's bars,
+// FH-166); the options themselves are the browser's own list.
 export function Select({
   value,
   onChange,
   children,
+  leading,
   ...props
 }: {
   value: string;
   onChange(value: string): void;
   children: ReactNode;
+  leading?: ReactNode;
   id?: string;
   "aria-describedby"?: string;
   "aria-label"?: string;
 }) {
   return (
     <span className="relative flex items-center">
+      {leading ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-2.5 flex items-center"
+        >
+          {leading}
+        </span>
+      ) : null}
       <select
         {...props}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`h-8 appearance-none pr-8 ${formControl}`}
+        className={`h-8 appearance-none pr-8 ${formControl} ${leading ? "pl-8" : ""}`}
       >
         {children}
       </select>

@@ -177,8 +177,8 @@ const marks = {
   repair: "border-[1.5px] border-dashed border-ink font-semibold text-ink",
 } as const;
 
-// Count is one count in a table cell. A zero is faint, so the counts that
-// matter stand out.
+// Count is one count in a table cell. A zero is a faint dash, so the counts
+// that matter stand out (the row's name still says the number).
 function Count({
   value,
   mark,
@@ -200,7 +200,7 @@ function Count({
         marked ? marks[mark] : value > 0 ? "text-ink" : "text-ink-faint"
       }`}
     >
-      {value}
+      {value > 0 ? value : "–"}
     </span>
   );
 }

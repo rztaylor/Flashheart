@@ -437,6 +437,22 @@ describe("typed property controls (EDIT-6)", () => {
     ]);
   });
 
+  // The priority select carries the card's bars before the chosen word
+  // (FH-166), following the choice.
+  it("shows the chosen priority's bars before its select", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(pencil("priority"));
+    const select = screen.getByRole("combobox", { name: "Priority" });
+    const bars = () =>
+      select.parentElement
+        ?.querySelector("[data-priority]")
+        ?.getAttribute("data-priority");
+    expect(bars()).toBe("medium");
+    await user.selectOptions(select, "low");
+    expect(bars()).toBe("low");
+  });
+
   it("edits tags as chips", async () => {
     const user = userEvent.setup();
     renderPage();

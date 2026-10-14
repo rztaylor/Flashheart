@@ -30,7 +30,10 @@
   page shows once the save's own answer is back (its toast, the editor
   closing, Save disabled again) before going on: the file and the live
   update show the change first, and a late answer lands in the next step
-  (FH-152).
+  (FH-152). A step that needs the page not to have heard of an outside
+  write writes the file in a `page.route` handler for the save request
+  itself, before continuing it; holding back `/api/changes` cannot promise
+  that, since a long poll already waiting still answers (FH-164).
 - Visual regression (D42): `scripts/e2e-visual.sh` compares the stable
   screenshot set (`frontend/e2e/visual.spec.mjs`: board, panel, table,
   workstreams, Overview and ticket page over the demo board, at a fixed
