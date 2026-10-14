@@ -72,7 +72,10 @@ func (Adapter) Parse(event string, data []byte) (hooks.Input, error) {
 		input.Recovery = true
 	case "UserPromptSubmit":
 		add(session, events.TurnStart, events.TurnStartData{Origin: events.OriginUser})
-		input.Inbox = session
+		// Codex is known to show the model a prompt's additionalContext,
+		// not a tool result's (MANIFEST.md), so a due claim reminder waits
+		// for the prompt (D50).
+		input.Inbox, input.Notes = session, true
 	case "PostToolUse":
 		// Codex has no failure event: a failed command is an ordinary result.
 		add(actor, events.ToolUsed, toolResult(p.ToolName, p.ToolInput, p.Cwd))

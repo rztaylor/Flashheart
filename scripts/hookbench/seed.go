@@ -51,10 +51,12 @@ func setUp(root, repo string, o options, session string, now time.Time) (int, er
 	if o.seedEvents > 0 {
 		list = seedEvents(o.agent, project, repo, tickets, o.seedEvents, now)
 	}
-	if session != "" {
+	if session != "" || o.scenario == scenarioClaim {
 		if err := s.UpdateConfig(func([]byte) ([]byte, error) { return []byte("enforce_handoff: true\n"), nil }); err != nil {
 			return 0, err
 		}
+	}
+	if session != "" {
 		list = append(list, enforced(o.agent+":"+session, project, repo, tickets[2], now)...)
 	}
 	slices.SortStableFunc(list, func(a, b events.Event) int { return a.Time.Compare(b.Time) })
