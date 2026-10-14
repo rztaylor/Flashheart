@@ -678,7 +678,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   `update_workstream` changes a workstream's title (its slug stays), goal,
   priority, tags, workstream dependencies and members in one write, and
   refuses a dependency cycle between workstreams; `create_ticket` files a
-  ticket in another project when given its name or key (FH-46). The
+  ticket in another project when given its name or key (FH-46).
+  `update_ticket` rewrites named sections and edits acceptance criteria
+  by operation, keeping ticks, but never Handoff or Notes; the replaced
+  text is kept in the ticket's files and noted (FH-69, D71). The
   ticket tools ask agents to write titles and descriptions for a person,
   with implementation detail under Context, and warn about a title that
   reads like code (agent-protocol §7.2). `get_ticket` and `claim` end

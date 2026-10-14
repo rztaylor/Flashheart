@@ -1837,3 +1837,67 @@ opens again themselves also takes back its held text.
 - **A held draft that is still mounted** (the panel's Edit tab while
   another tab shows) is not a late save. A failure there shows the Edit
   tab again with the reason, as a conflict already did.
+
+## 2026-10-14 — D71: Agents rewrite a ticket's sections and criteria; the replaced text is kept in its files
+
+Decision (FH-69): `update_ticket` gains two optional inputs. `sections`
+replaces whole sections by heading (`board.NewAgentSectionChange`, built
+on D57's `SectionChange`, so headings match only at the start of a line
+outside code fences and every other byte stays as it was). `criteria`
+edits the acceptance criteria by operation (`board.NewCriteriaEdit`).
+The rewrite is written by `store.ApplyTicketEdit` in the same write as
+the call's fields, ticks, notes and addressed requests, under the
+project lock and the ticket's content hash (a ticket changed since the
+read is a `conflict`; one another live session holds is `claimed`).
+
+- **An unknown section is refused.** Options: refuse it naming the
+  sections there are; create it, as the board's in-place editor adds a
+  missing one. A misspelt name ("Descripton") would quietly add a stray
+  section that the next session reads beside the real one, the very
+  contradiction FH-69 removes. So a section that is not in the template
+  must already be in the ticket; a template section the ticket lacks
+  (Description, Test Plan, Reproduction, Context) is added in its place.
+  The refusal is `invalid_input` naming every section that may be
+  rewritten, with "put the text in Context" as the fix.
+- **Never whole: Handoff, Notes and Acceptance Criteria.** `checkpoint`
+  writes Handoff and `append_notes` adds to Notes (D57), as before. The
+  criteria are refused too, so a rewrite can never drop a tick.
+- **Criteria by operation, not as a full list.** Options: operations
+  (add, reword, remove, move); a full replacement list matched by index.
+  A full list makes the agent restate every criterion and its tick, and a
+  tick a person made between the read and the write is lost or lands on
+  the wrong item when items are matched by index. Operations name only
+  what changes: a reworded or moved criterion keeps its box, an added one
+  starts unticked. Items are numbered as the ticket had them before the
+  call (by number or text, as `check` takes them), so an earlier
+  operation never renumbers a later one; `position` counts the list as
+  the operations before it left it. `check` in the same call ticks by the
+  same numbers, before the operations.
+- **Where the replaced text is kept: a file in the ticket's `files/`.**
+  Options: in the history entry (D58 keeps ticket text out of history,
+  and the Activity feed would carry whole sections); inline in a note
+  (notes are one-line bullets every session reads in `get_ticket`, so
+  old sections would bloat every later read); git (the board root need
+  not be a repository, D12); a file beside the ticket. The write keeps
+  the old text of every section whose text changed, under its own
+  heading, in `files/<time>-<id>-earlier-text.md` (`board.EarlierText`),
+  listed in `files/index.yaml` (kind `other`, the caller's run, a caption
+  naming the sections) and staged before the ticket, so a crash leaves a
+  listed file rather than a note pointing at nothing. A section that was
+  only added keeps nothing. A person restores a section by copying its
+  text back on the ticket's page. Which sections changed is worked out
+  from the ticket before and after the rewrite (`board.Rewritten`), as
+  history is (D58).
+- **Who changed what.** The ticket's Activity shows the history entry
+  D58 already writes (`edited: description, acceptance-criteria` by the
+  run), and the write appends a note under the caller's run:
+  *Rewrote Description and Context; criteria: 2 reworded, 3 removed, one
+  added as 1. The replaced text is in [files/…](files/…).* The result
+  ends with `kept=files/…`. A rewrite to the text the ticket already has
+  writes nothing, keeps nothing and notes nothing.
+
+Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): two new
+optional inputs on an existing tool (D52), no event changes shape
+(`ticket.updated` names the sections as D57's section edits do), and an
+agent that sends neither writes what it wrote before. Board format stays
+2: the kept file is an ordinary attachment.

@@ -414,6 +414,10 @@ func openFence(content string) string {
 	return fence
 }
 
+// IsPlaceholder reports text that only stands for an empty section, such
+// as "None." or "TBD", which the first real content replaces.
+func IsPlaceholder(text string) bool { return placeholder(strings.TrimSpace(text)) }
+
 func placeholder(text string) bool {
 	switch strings.ToLower(strings.Trim(text, "_* .")) {
 	case "none", "n/a", "tbd":
