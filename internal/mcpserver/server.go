@@ -115,9 +115,12 @@ func asToolError(err error) *toolError {
 	var conflict *store.ConflictError
 	var taken *store.KeyTakenError
 	var workstream *store.WorkstreamNotFoundError
+	var titleTaken *store.WorkstreamTitleTakenError
 	switch {
 	case errors.As(err, &te):
 		return te
+	case errors.As(err, &titleTaken):
+		return fail("invalid_input", "choose another title, or work in that workstream: update_workstream workstream="+titleTaken.Slug+" with add_tickets", "%v", err)
 	case errors.As(err, &workstream):
 		fix := "create it with create_workstream"
 		if len(workstream.Available) > 0 {

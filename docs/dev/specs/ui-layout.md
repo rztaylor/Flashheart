@@ -610,7 +610,14 @@ id a separate link.
   names, with the hint *Its tickets wait until every ticket in these is in
   review or done.* **Create workstream** (primary, off until there is a
   title; Enter in the title submits) and Cancel; Escape closes and focus
-  returns to the button. A refusal shows as an alert in words under the
+  returns to the button. A title one of the project's workstreams has,
+  ignoring case and spacing (D76), is named under the Title field as an
+  alert, *<Project> already has a workstream called <title>. Choose
+  another title.*, the field marked invalid (danger border,
+  `aria-invalid`, the message linked by `aria-errormessage` and
+  `aria-describedby`) and Create workstream off until the title changes;
+  the server's `title_taken` refusal of a title made elsewhere meanwhile
+  shows there too. Any other refusal shows as an alert in words under the
   form, which keeps what was typed. Created, a toast *Created workstream
   <name>.* and the workstream's page opens. The empty view's sentence
   names New workstream and the Edit tab's Workstream field.
@@ -643,9 +650,11 @@ it) and scrolls as a whole in a frame of at most 80rem.
   it on a phone), then Save, Cancel and the shortcuts; an empty name says
   *A workstream needs a name.* A saved name that makes a new slug moves
   the page to its address in place of the old one (Back leaves the page)
-  with the toast *Renamed <old> to <new>.*; a name that is taken shows
-  the server's reason under the field, which stays open with what was
-  typed.
+  with the toast *Renamed <old> to <new>.*; a name another of the
+  project's workstreams has (FH-163) says *<project> already has a
+  workstream called <name>. Choose another name.* under the field before
+  anything is sent, and one whose slug is taken shows the server's
+  reason there; the field stays open with what was typed.
 - **Stations**: the route card's body on its line-coloured surface (repair,
   blocker and warning notes, the railway graph and independent stations);
   a station opens the ticket's full page.

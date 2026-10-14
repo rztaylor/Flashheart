@@ -1,7 +1,8 @@
 # Model boundary
 
 Owns pure view-model logic shared across features: workstream line
-assignment and the one workstream title lookup (`lines`), filters and
+assignment, the one workstream title lookup and the server's rule for a
+taken workstream title (`lines`, D76), filters and
 search with include and exclude choices, chip toggling, workstream chip order and one-line fitting (`filters`,
 VIEW-7, FH-39), running times and time order (`time`), markdown
 link resolution, ticket-id linking (KEY-3), section trimming and splitting (CARD-2),
