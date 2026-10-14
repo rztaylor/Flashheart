@@ -322,6 +322,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Two workstreams in a project can no longer have the same name (FH-163,
+  D76). A second *Workstream editing* used to be made with a different
+  file name, and the two then looked identical in every workstream
+  picker. New workstream now says at the Title field that the project
+  already has a workstream by that name, ignoring capitals and extra
+  spaces, and does not create it; agents creating or renaming a
+  workstream are refused the same way and told which workstream to join
+  instead. Workstreams that already share a name still load and can be
+  edited; giving one a new name parts them.
 - Pressing *Needs you* no longer leads to an empty board with the wrong
   advice when an agent's question is not about a ticket (FH-157, D74,
   `VIEW-2`). The Board and Table now say that an agent asked about the
