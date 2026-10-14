@@ -8,6 +8,19 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Agents can change a workstream after creating it, and file tickets on
+  another project's board (FH-46, D69, `MCP-2`). The new
+  `update_workstream` tool sets a workstream's title, goal, priority,
+  tags and the workstreams it waits for, and adds and removes its tickets,
+  in one write: each ticket's workstream and the workstreams' ticket lists
+  stay in step, and a refused call changes nothing. Its short name (slug)
+  stays when the title changes. A dependency set on a workstream holds
+  back every ticket in it, including ones added later, so a whole line of
+  work waits for another with one call instead of a dependency on each
+  ticket; workstreams that would wait for each other in a circle are
+  refused, naming the circle. `create_ticket` takes a project name or key,
+  so a session in one repository can file a follow-up on another board.
+  Agent protocol stays 2.
 - Make workstreams and fill them on the board (FH-17, `EDIT-14`). **New
   workstream** in the Workstreams view asks for a title, a goal, a
   priority and the workstreams it depends on, writes the workstream file

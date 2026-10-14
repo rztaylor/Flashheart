@@ -3,7 +3,8 @@
 // each call to a run (§7.1), the run it starts for a connection that has no
 // hook run (its activity, its end on disconnect and its inbox in tool
 // results, D34, D54), claims and leases (§6), checkpoints into
-// ## Handoff, questions, workstream creation and membership (§7.4), and
+// ## Handoff, questions, workstream creation, editing and membership
+// (§7.4), tickets filed on another project (create_ticket's project), and
 // {code, message, fix} errors. Every call reads the board fresh, so it sees
 // other writers: every project's identity (store.ReadHeads), then in full
 // only the projects it touches and those their tickets depend on, and the

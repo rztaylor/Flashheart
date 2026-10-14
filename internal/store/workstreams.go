@@ -213,10 +213,14 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 	if err != nil {
 		return CreatedWorkstream{}, err
 	}
+	t := s.begin()
+	// A workstream edited by hand may already wait for this slug.
+	if err := board.WorkstreamCycle(slug, input.DependsOnWorkstreams, s.dependencies(t, project)); err != nil {
+		return CreatedWorkstream{}, fmt.Errorf("%w: %w", ErrInvalidInput, err)
+	}
 	// The new file, then the other lists, which give up the initial tickets
 	// (the new file already lists them), then the tickets' fields
 	// (board-format.md, Multi-file writes).
-	t := s.begin()
 	t.put(path.Join(project, "workstreams", slug+".md"), data)
 	if err := s.membership(t, project, input.Tickets, ""); err != nil {
 		return CreatedWorkstream{}, err
@@ -230,4 +234,141 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 		return CreatedWorkstream{}, err
 	}
 	return CreatedWorkstream{Slug: slug, Hash: Hash(data)}, nil
+}
+
+// dependencies gives each workstream's depends-on-workstreams as the
+// transaction has them; a missing or broken file has none. Callers hold
+// the project lock.
+func (s *Store) dependencies(t *tx, project string) func(string) []string {
+	return func(slug string) []string {
+		if !board.ValidSlug(slug) {
+			return nil
+		}
+		data, err := t.read(path.Join(project, "workstreams", slug+".md"))
+		if err != nil {
+			return nil
+		}
+		return mdfile.Parse(data).List("depends-on-workstreams")
+	}
+}
+
+// WorkstreamEdit is one edit of a workstream (FH-46): its fields
+// (board.NewWorkstreamChanges), the project's tickets that join it (Add,
+// appended to its list in order, each leaving any other workstream) and
+// its tickets that leave it (Remove, then in no workstream).
+type WorkstreamEdit struct {
+	Changes     board.WorkstreamChanges
+	Add, Remove []string
+}
+
+// EditWorkstream applies edit to workstreams/<slug>.md and the tickets
+// joining and leaving it in one write under the project lock, once pre
+// holds for the workstream file: its fields, then the lists, then the
+// tickets' workstream fields (board-format.md, Multi-file writes), so the
+// field and the lists agree after. Every file is prepared before any is
+// written: a workstream, ticket or dependency the project does not have
+// (ErrNotFound; a *WorkstreamNotFoundError for a workstream), a removed
+// ticket that is not a member, a ticket added and removed, or a
+// dependency that leads back to the workstream (a *board.CycleError; both
+// ErrInvalidInput) writes nothing. The slug never changes. It returns
+// the workstream file's hash after the call.
+func (s *Store) EditWorkstream(project, slug string, pre Precondition, edit WorkstreamEdit) (string, error) {
+	if err := s.checkProject(project); err != nil {
+		return "", err
+	}
+	if !board.ValidSlug(slug) {
+		return "", fmt.Errorf("workstream %q: %w", slug, ErrInvalidName)
+	}
+	moved := slices.Concat(edit.Add, edit.Remove)
+	for index, id := range moved {
+		if _, _, ok := board.ParseID(id); !ok {
+			return "", fmt.Errorf("%w: %q is not a ticket id", ErrInvalidInput, id)
+		}
+		if slices.Contains(moved[:index], id) {
+			return "", fmt.Errorf("%w: %s is listed twice", ErrInvalidInput, id)
+		}
+	}
+	release, err := s.lock(project)
+	if err != nil {
+		return "", err
+	}
+	defer release()
+
+	slugs, err := s.workstreamSlugs(project)
+	if err != nil {
+		return "", err
+	}
+	if !slices.Contains(slugs, slug) {
+		return "", &WorkstreamNotFoundError{Project: project, Slug: slug, Available: slugs}
+	}
+	name := path.Join(project, "workstreams", slug+".md")
+	t := s.begin()
+	if dependencies, ok := edit.Changes.List("depends-on-workstreams"); ok {
+		for _, dependency := range dependencies {
+			if !slices.Contains(slugs, dependency) {
+				return "", &WorkstreamNotFoundError{Project: project, Slug: dependency, Available: slugs}
+			}
+		}
+		if err := board.WorkstreamCycle(slug, dependencies, s.dependencies(t, project)); err != nil {
+			return "", fmt.Errorf("%w: %w", ErrInvalidInput, err)
+		}
+	}
+	if _, err := t.edit(name, pre, edit.Changes.Apply, false); err != nil {
+		return "", err
+	}
+	if err := s.checkMembers(t, project, slug, edit.Remove); err != nil {
+		return "", err
+	}
+	if err := s.membership(t, project, edit.Add, slug); err != nil {
+		return "", err
+	}
+	if err := s.membership(t, project, edit.Remove, ""); err != nil {
+		return "", err
+	}
+	for _, id := range edit.Add {
+		if _, err := s.joinTicket(t, project, id, Merge, slug, nil); err != nil {
+			return "", err
+		}
+	}
+	for _, id := range edit.Remove {
+		if _, err := s.joinTicket(t, project, id, Merge, "", nil); err != nil {
+			return "", err
+		}
+	}
+	data, err := t.read(name)
+	if err != nil {
+		return "", err
+	}
+	return Hash(data), t.commit()
+}
+
+// checkMembers refuses ids that are not members of slug: neither in its
+// list nor naming it in their workstream field. Callers hold the project
+// lock.
+func (s *Store) checkMembers(t *tx, project, slug string, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	data, err := t.read(path.Join(project, "workstreams", slug+".md"))
+	if err != nil {
+		return err
+	}
+	listed := mdfile.Parse(data).List("tickets")
+	for _, id := range ids {
+		if slices.Contains(listed, id) {
+			continue
+		}
+		name, err := s.TicketFile(project, id)
+		if err != nil {
+			return err
+		}
+		ticket, err := t.read(name)
+		if err != nil {
+			return err
+		}
+		if field, _ := mdfile.Parse(ticket).String("workstream"); field != slug {
+			return fmt.Errorf("%w: %s is not in workstream %s", ErrInvalidInput, id, slug)
+		}
+	}
+	return nil
 }

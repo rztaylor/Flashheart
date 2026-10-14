@@ -1,8 +1,10 @@
 package mcpserver
 
 import (
+	"maps"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
@@ -147,6 +149,193 @@ func TestBoardContextListsActiveWorkstreams(t *testing.T) {
 	if contains2(out, "shipped") {
 		t.Fatalf("completed workstream listed:\n%s", out)
 	}
+}
+
+// TestUpdateWorkstream: one call sets a workstream's fields and moves
+// tickets in and out, keeping each ticket's field and every list in step;
+// the slug stays when the title changes (FH-46).
+func TestUpdateWorkstream(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	a := e.ticket(store.NewTicket{Title: "A"})
+	b := e.ticket(store.NewTicket{Title: "B"})
+	c := e.ticket(store.NewTicket{Title: "C"})
+	e.workstream("panel", a, b)
+	e.workstream("sync", c)
+	e.workstream("storage")
+	e.startSession(session)
+
+	out := e.ok("update_workstream", map[string]any{"workstream": "panel",
+		"set": map[string]any{"title": "Card panel", "goal": "Open tickets beside the board.", "priority": "high",
+			"tags": []any{"ui"}, "depends-on-workstreams": []any{"storage"}},
+		"add_tickets": []string{c}, "remove_tickets": []string{a}})
+	contains(t, out, `Updated workstream panel "Card panel"`, "added DM-3", "removed DM-1", "ok workstream=panel changed=depends-on-workstreams,goal,priority,tags,title,tickets")
+	file := e.readFile("demo/workstreams/panel.md")
+	contains(t, file, "slug: panel", "priority: high", "depends-on-workstreams: [storage]", "tags: [ui]", "# Card panel", "## Goal\n\nOpen tickets beside the board.")
+	if e.exists("demo/workstreams/card-panel.md") {
+		t.Fatal("the title change renamed the file")
+	}
+	if got := e.members("panel"); !slices.Equal(got, []string{b, c}) {
+		t.Fatalf("panel tickets = %v", got)
+	}
+	if got := e.members("sync"); len(got) != 0 {
+		t.Fatalf("sync still lists %v", got)
+	}
+	for id, want := range map[string]string{a: "", c: "panel"} {
+		if got := e.field(id, "workstream"); got != want {
+			t.Errorf("%s workstream = %q, want %q", id, got, want)
+		}
+	}
+	updated := 0
+	for _, ev := range e.log() {
+		var data events.TicketData
+		if ev.Kind == events.TicketUpdated && ev.Run == session && ev.Decode(&data) == nil && slices.Equal(data.Fields, []string{"workstream"}) {
+			updated++
+		}
+	}
+	if updated != 2 {
+		t.Errorf("%d ticket.updated events for the moved tickets, want 2", updated)
+	}
+	// A project named by key is the same project.
+	contains(t, e.ok("update_workstream", map[string]any{"workstream": "panel", "project": "DM", "set": map[string]any{"priority": "low"}}), "changed=priority")
+}
+
+// TestUpdateWorkstreamRefusesAndWritesNothing: an unknown field,
+// workstream, ticket or dependency, a ticket of another project or held by
+// another session, a cycle and an empty call each refuse with a clear
+// error and change no file.
+func TestUpdateWorkstreamRefusesAndWritesNothing(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	a := e.ticket(store.NewTicket{Title: "A"})
+	held := e.ticket(store.NewTicket{Title: "Held"})
+	e.workstream("panel", a)
+	e.workstream("storage")
+	write(t, e.root+"/demo/workstreams/sync.md", "---\nslug: sync\nstatus: active\npriority: medium\ntickets: []\ndepends-on-workstreams: [panel]\ntags: []\n---\n\n# sync\n")
+	write(t, e.root+"/other/project.yaml", "key: OT\nname: other\n")
+	other, err := e.store.CreateTicket("other", store.NewTicket{Title: "Elsewhere"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.rivalHolds(held)
+	e.startSession(session)
+	files := map[string]string{}
+	for _, name := range []string{"demo/workstreams/panel.md", "demo/workstreams/sync.md", "demo/workstreams/storage.md", "demo/project.yaml"} {
+		files[name] = e.readFile(name)
+	}
+	ticketFiles := map[string]string{a: e.file(a), held: e.file(held)}
+
+	for _, tc := range []struct {
+		args map[string]any
+		code string
+		says []string
+	}{
+		{map[string]any{"workstream": "panel", "set": map[string]any{"ordered": true}}, "invalid_input", []string{`"ordered"`, "title, goal, priority, tags, depends-on-workstreams"}},
+		{map[string]any{"workstream": "panel", "set": map[string]any{"slug": "renamed"}}, "invalid_input", []string{`"slug"`, "the slug stays"}},
+		{map[string]any{"workstream": "panel", "set": map[string]any{"priority": "urgent"}}, "invalid_input", []string{"priority must be one of"}},
+		{map[string]any{"workstream": "panel", "set": map[string]any{"tags": 3}}, "invalid_input", []string{"list of strings"}},
+		{map[string]any{"workstream": "nope", "set": map[string]any{"priority": "low"}}, "not_found", []string{`workstream "nope"`, "panel, storage, sync", "create_workstream"}},
+		{map[string]any{"workstream": "panel", "add_tickets": []string{"DM-99"}}, "not_found", []string{"DM-99"}},
+		{map[string]any{"workstream": "panel", "add_tickets": []string{other.ID}}, "invalid_input", []string{other.ID, "project other"}},
+		{map[string]any{"workstream": "panel", "add_tickets": []string{held}}, "claimed", []string{held}},
+		{map[string]any{"workstream": "panel", "remove_tickets": []string{held}}, "claimed", []string{held}},
+		{map[string]any{"workstream": "storage", "remove_tickets": []string{a}}, "invalid_input", []string{a + " is not in workstream storage"}},
+		{map[string]any{"workstream": "panel", "set": map[string]any{"depends-on-workstreams": []any{"nope"}}}, "not_found", []string{`workstream "nope"`}},
+		{map[string]any{"workstream": "panel", "set": map[string]any{"depends-on-workstreams": []any{"sync"}}, "add_tickets": []string{a}}, "invalid_input", []string{"cycle", "panel → sync → panel"}},
+		{map[string]any{"workstream": "panel"}, "invalid_input", []string{"nothing to change"}},
+	} {
+		contains(t, e.fails("update_workstream", tc.args, tc.code), tc.says...)
+	}
+	for name, data := range files {
+		if e.readFile(name) != data {
+			t.Errorf("a refused call changed %s", name)
+		}
+	}
+	for id, data := range ticketFiles {
+		if e.file(id) != data {
+			t.Errorf("a refused call changed %s", id)
+		}
+	}
+	if len(e.history()) != 0 {
+		t.Errorf("refused calls wrote history %+v", e.history())
+	}
+}
+
+// TestWorkstreamDependencyBlocksTicketsAddedLater: a dependency set on a
+// workstream holds back the tickets that join it afterwards, by
+// create_ticket or update_workstream, and list_tickets, get_ticket and
+// board_context say why (FH-46).
+func TestWorkstreamDependencyBlocksTicketsAddedLater(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	first := e.ticket(store.NewTicket{Title: "Schema"})
+	e.workstream("storage", first)
+	e.workstream("panel")
+	e.startSession(session)
+
+	e.ok("update_workstream", map[string]any{"workstream": "panel", "set": map[string]any{"depends-on-workstreams": []any{"storage"}}})
+	contains(t, e.ok("create_ticket", map[string]any{"type": "feature", "title": "Later", "description": "", "criteria": []string{}, "priority": "low", "workstream": "panel"}), "ok ticket=DM-2")
+	joined := e.ticket(store.NewTicket{Title: "Joined"})
+	e.ok("update_workstream", map[string]any{"workstream": "panel", "add_tickets": []string{joined}})
+
+	reason := "Its workstream panel depends on workstream storage, which has 1 ticket not yet in review or done"
+	blocked := e.ok("list_tickets", map[string]any{"blocked": true})
+	contains(t, blocked, "DM-2 feature", joined+" ", reason)
+	contains(t, e.ok("get_ticket", map[string]any{"ticket": joined}), reason)
+	e.ok("claim", map[string]any{"ticket": joined, "force": true, "reason": "testing the reason"})
+	contains(t, e.ok("board_context", nil), "Blocked: "+reason, `panel "panel" (0 of 2 done`)
+}
+
+// TestCreateTicketInAnotherProject: create_ticket files a ticket in the
+// project its project input names, by name or key, with that project's
+// next id and workstreams (FH-46).
+func TestCreateTicketInAnotherProject(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	e.ticket(store.NewTicket{Title: "Here"})
+	write(t, e.root+"/other/project.yaml", "key: OT\nname: other\n")
+	write(t, e.root+"/other/workstreams/sync.md", "---\nslug: sync\nstatus: active\npriority: medium\ntickets: []\ndepends-on-workstreams: []\ntags: []\n---\n\n# sync\n")
+	e.startSession(session)
+
+	with := func(extra map[string]any) map[string]any {
+		args := map[string]any{"type": "bug", "title": "Sync drops edits", "description": "Edits made offline are lost.", "criteria": []string{"No edit is lost"}, "priority": "high"}
+		maps.Copy(args, extra)
+		return args
+	}
+	contains(t, e.ok("create_ticket", with(map[string]any{"project": "OT", "workstream": "sync"})), "Created OT-1", "ok ticket=OT-1")
+	contains(t, e.ok("create_ticket", with(map[string]any{"project": "other"})), "ok ticket=OT-2")
+	data, _, err := e.store.ReadTicket("other", "OT-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if workstream, _ := mdfile.Parse(data).String("workstream"); workstream != "sync" {
+		t.Fatalf("OT-1 workstream = %q", workstream)
+	}
+	if got := mdfileList(t, e.readFile("other/workstreams/sync.md"), "tickets"); !slices.Equal(got, []string{"OT-1"}) {
+		t.Fatalf("sync tickets = %v", got)
+	}
+	if e.exists("demo/tickets/DM-2-sync-drops-edits") {
+		t.Fatal("the ticket was also filed in the caller's project")
+	}
+	// The other project's log records the caller's ticket.created.
+	var created []string
+	if err := events.New(e.store).Read("other", time.Time{}, func(ev events.Event) {
+		var data events.TicketData
+		if ev.Kind == events.TicketCreated && ev.Run == session && ev.Decode(&data) == nil {
+			created = append(created, data.Ticket)
+		}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(created, []string{"OT-1", "OT-2"}) {
+		t.Fatalf("ticket.created in other = %v", created)
+	}
+	contains(t, e.fails("create_ticket", with(map[string]any{"project": "nope"}), "not_found"), `no project "nope"`, "demo", "other")
+	contains(t, e.fails("create_ticket", with(map[string]any{"project": "OT", "workstream": "panel"}), "not_found"), `workstream "panel"`, "sync")
 }
 
 func TestWorkstreamOrderDoesNotBlock(t *testing.T) {

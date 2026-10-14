@@ -23,11 +23,14 @@ Intended layout (packages are created when they get real content):
   (editable fields and their checked change-set, title and section limits,
   key rules, the blocked-start gate, `NoteLine`; FH-85; which sections
   are rewritten whole and where a missing one goes, `SectionChange`,
-  FH-66), and a ticket's `activity.md` format with the history changes a
+  FH-66; a workstream's editable fields, their change-set and the
+  dependency cycle rule, `NewWorkstreamChanges`, `WorkstreamCycle`,
+  FH-46), and a ticket's `activity.md` format with the history changes a
   write made, worked out from the files before and after (D58). No I/O.
 - `internal/store`: the only package that touches the board root: discovery,
   reads, locked atomic writes with hash preconditions, typed ticket edits
-  from the board and agents alike (`EditTicket`), moves, archive, each
+  from the board and agents alike (`EditTicket`), an agent's workstream
+  edit with its members in one write (`EditWorkstream`), moves, archive, each
   ticket's activity file (a store writing as someone, `As`, appends the
   history of every ticket write in the same transaction; people's
   comments are added, edited and deleted there, never in the ticket
