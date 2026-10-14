@@ -25,7 +25,12 @@ shows the route card's head and stations, and edits each section in place
 through `editing/`'s `InPlaceEditing` and `InPlaceEditor` with `editor/`'s
 `MarkdownField`, saving one section on the hash it opened on, and its
 name in place (`WorkstreamName`, FH-167): saved with the slug the server
-makes from it, telling the shell the new slug so the page can follow. Which
+makes from it, telling the shell the new slug so the page can follow. A
+workstream gone from its slug while the page is open (renamed or removed
+elsewhere, FH-174, D80) is followed the same way when `successor.ts` finds
+what it became among the project's workstreams (its name, or all its
+tickets), else the page says it is no longer there with a link to the
+project's workstreams. Which
 sections show, and where a missing template one goes, is
 `model/workstreamSections`. The route card's name links to the page.
 

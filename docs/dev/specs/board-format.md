@@ -671,7 +671,11 @@ scope and other projects' choices are left, as their bare slugs may name
 other projects' workstreams.
 
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
-other settings, unknown keys and comments.
+other settings, unknown keys and comments. A change from the board is saved
+as the preferences it changed, applied to the file as it is when written
+(FH-173, D80): one project's scope or expanded list is replaced without
+touching the others, so a board tab that loaded before a rename does not
+put the old slug back.
 
 `config.yaml` is read through the root like every board file (SEC-2): a
 symlink to a file inside the root is followed, but one that points outside

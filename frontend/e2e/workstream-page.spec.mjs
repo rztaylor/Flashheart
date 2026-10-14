@@ -1,15 +1,20 @@
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
+import { callTool } from "./agent-runs.mjs";
 import { writeDemoBoard } from "./demo-board.mjs";
 import {
   expectNoAxeViolations,
+  filterButton,
+  filterMenu,
   launch,
   makeSandbox,
   open,
+  settingsMenu,
   shot,
   stopIfRunning,
+  viewOption,
   waitForManualURL,
 } from "./support.mjs";
 
@@ -487,6 +492,138 @@ test("renames the workstream from its name: references follow and the page moves
       await page.keyboard.press("Escape");
     }
   await open(page, "#/workstream/flashheart/board-editing-in-place");
+});
+
+// renameByAgent renames a workstream of the demo's flashheart project
+// through the real `flashheart mcp`, as an agent's update_workstream does.
+const renameByAgent = (workstream, to) =>
+  callTool(sandbox.root, sandbox.root, "update_workstream", {
+    project: "flashheart",
+    workstream,
+    rename_to: to,
+  });
+
+test("an agent's rename while the board is open keeps the saved filter on the new slug (FH-173)", async () => {
+  const config = join(sandbox.root, ".flashheart", "config.yaml");
+  const read = () => readFile(config, "utf8");
+  // A saved Board filter that hides Foundation, loaded by the open board.
+  await writeFile(
+    config,
+    [
+      "version: 2",
+      "ui:",
+      "  theme: system",
+      "  density: normal",
+      "  colour_by: type",
+      "  hidden_columns: []",
+      "  editor: formatted",
+      "  scopes:",
+      "    flashheart:",
+      "      view: board",
+      "      workstream: {include: [], exclude: [foundation]}",
+      "",
+    ].join("\n"),
+  );
+  await page.reload();
+  await open(page, "#/p/flashheart/board");
+  await expect(filterButton(page, "Workstream")).toHaveAccessibleName(
+    /^Workstream: 1/,
+  );
+
+  // A change in the tab just before the rename, then the agent's rename.
+  await viewOption(page, "Colour by", "Priority");
+  await renameByAgent("foundation", "groundwork");
+  const hidesNew = /exclude: \[groundwork\]/;
+  await expect.poll(read).toMatch(hidesNew);
+  await expect.poll(read).toContain("colour_by: priority");
+
+  // The tab's next saves keep the new slug: a theme, then a filter of
+  // this project, whose open filters followed the rename.
+  const theme = (await settingsMenu(page)).getByRole("group", {
+    name: "Theme",
+  });
+  await theme.getByText("Dark", { exact: true }).click();
+  await expect.poll(read).toContain("theme: dark");
+  let saved = await read();
+  expect(saved).toMatch(hidesNew);
+  expect(saved).toContain("colour_by: priority");
+  await theme.getByText("System", { exact: true }).click();
+  await expect.poll(read).toContain("theme: system");
+  await page.keyboard.press("Escape");
+  const types = await filterMenu(page, "Type");
+  await types.getByRole("button", { name: "bug", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect.poll(read).toMatch(/type:\n\s+include: \[bug\]/);
+  saved = await read();
+  expect(saved).toMatch(hidesNew);
+  expect(saved).not.toMatch(/\bfoundation\b/);
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await viewOption(page, "Colour by", "Type");
+  await expect.poll(read).toContain("colour_by: type");
+});
+
+test("a workstream page follows a rename made elsewhere, and says when its workstream is gone (FH-174)", async () => {
+  await open(page, "#/workstream/flashheart/groundwork");
+  const before = page.getByRole("main", { name: "Workstream groundwork" });
+  await expect(
+    before.getByRole("heading", { level: 1, name: "Foundation" }),
+  ).toBeVisible();
+
+  // An agent renames it: the page follows to the new address.
+  await renameByAgent("groundwork", "bedrock");
+  await expect(page).toHaveURL(/#\/workstream\/flashheart\/bedrock$/);
+  const after = page.getByRole("main", { name: "Workstream bedrock" });
+  await expect(
+    after.getByRole("heading", { level: 1, name: "Foundation" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Foundation was renamed elsewhere: its short name is now bedrock.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/could not be loaded/)).toHaveCount(0);
+  await shot(page, "workstream-followed-1440-light");
+  await page.getByRole("button", { name: "Dismiss" }).click();
+
+  // Removed while open: the page says so in words, with the way back.
+  await rm(join(sandbox.root, "flashheart", "workstreams", "bedrock.md"));
+  await expect(
+    after.getByRole("heading", {
+      level: 1,
+      name: "Foundation is no longer here",
+    }),
+  ).toBeVisible();
+  await expect(
+    after.getByText(
+      "Flashheart has no workstream bedrock now: it was renamed or removed.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(/could not be loaded/)).toHaveCount(0);
+  for (const [width, height] of [
+    [1440, 900],
+    [390, 844],
+  ])
+    for (const theme of ["light", "dark"]) {
+      await open(page, "#/workstream/flashheart/bedrock", {
+        width,
+        height,
+        theme,
+      });
+      await expect(
+        after.getByRole("heading", { name: "Foundation is no longer here" }),
+      ).toBeVisible();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflow).toBe(false);
+      await expectNoAxeViolations(page, `workstream gone ${width} ${theme}`);
+      await shot(page, `workstream-gone-${width}-${theme}`);
+    }
+  await open(page, "#/workstream/flashheart/bedrock");
+  await after
+    .getByRole("link", { name: "Show the Flashheart workstreams" })
+    .click();
+  await expect(page).toHaveURL(/#\/p\/flashheart\/workstreams$/);
 });
 
 test("made no request beyond the board", async () => {

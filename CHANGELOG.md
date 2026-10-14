@@ -361,6 +361,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A board left open while an agent renames a workstream no longer brings
+  the old name back into your saved filters (FH-173, D80). The board now
+  saves only the preferences you changed, so changing the theme leaves
+  the renamed filter alone, and it picks up the server's copy of your
+  preferences as the board changes, so the open filters follow the
+  rename too. A change you make at the same moment is kept.
+- A workstream page open while the workstream is renamed elsewhere (by
+  an agent or in another tab) follows it to its new address with a
+  short notice, instead of saying it could not be loaded (FH-174, D80).
+  If the workstream was removed, or the page cannot tell what it
+  became, the page says it is no longer there, renamed or removed, with
+  a link to the project's workstreams.
 - Saved filters and expanded workstreams keep a workstream after it is
   renamed (FH-170, D78). A rename by an agent or on the board now
   rewrites the old short name in the project's saved Board filter and

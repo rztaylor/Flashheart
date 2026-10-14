@@ -157,6 +157,20 @@
   renames a line from its route card's page (the taken name, every
   reference, the saved filter through a later preference save, Back and
   Forward, both themes, 390 px, axe).
+  Renames made outside the tab (FH-173, FH-174, D80): the preference
+  patch in `api` (`TestPreferencesPatchChangesOnlyWhatItNames`, and a
+  stale tab's theme after a rename in
+  `TestPatchWorkstreamRenameKeepsSavedPreferences`); the saver's patches
+  in `state/usePreferences.test.ts` and the refresh that never loses a
+  change in `usePreferences.dom.test.ts`; the open filters restored in
+  `app/useScopeMemory.dom.test.ts`; the successor rule in
+  `workstreams/successor.test.ts` and the page that follows or says it is
+  gone, through the real `useResource`, in
+  `WorkstreamPage.gone.dom.test.tsx`; in the browser,
+  `workstream-page.spec.mjs` renames through the real `flashheart mcp`
+  while the board is open (the saved filter through a theme and a filter
+  change, a change made just before kept) and while the page is open
+  (followed, then removed: both themes, 390 px, axe).
 - In-place edits (FH-66) leave the rest of a real ticket byte for byte:
   `board` replays field and section edits over `testdata/tickets/`
   (read-only copies of FH tickets, also with CRLF line endings) and

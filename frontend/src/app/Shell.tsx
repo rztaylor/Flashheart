@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { restoreProject } from "../api/archive";
 import type { Card, Column } from "../api/board";
 import type { Created } from "../api/edit";
@@ -44,6 +44,10 @@ interface ShellProps {
   preferences: Preferences;
   preferencesLoaded: boolean;
   updatePreferences(change: (current: Preferences) => Preferences): void;
+  // refreshPreferences reads the saved preferences again (FH-173);
+  // preferencesRefreshed counts the reads that changed them.
+  refreshPreferences(): void;
+  preferencesRefreshed: number;
 }
 
 // Shell composes the signage band, the project rail, the page header, the
@@ -56,6 +60,8 @@ export function Shell({
   preferences,
   preferencesLoaded,
   updatePreferences,
+  refreshPreferences,
+  preferencesRefreshed,
 }: ShellProps) {
   const { state, fetch: fetcher, ready } = lifecycle;
   const [route, navigate] = useRoute();
@@ -66,10 +72,16 @@ export function Shell({
     view: route.view,
   });
   const { projects, board, editing, cards, summaries, current } = data;
+  // The saved preferences are read again as the board changes, so an
+  // agent's workstream rename that rewrote them reaches this tab (FH-173).
+  useEffect(() => {
+    if (data.revision > 0) refreshPreferences();
+  }, [data.revision, refreshPreferences]);
   const memory = useScopeMemory({
     route,
     preferences,
     preferencesLoaded,
+    refreshed: preferencesRefreshed,
     updatePreferences,
   });
   const { filters, setFilters } = memory;
