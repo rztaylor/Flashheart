@@ -1,23 +1,25 @@
-import { type ReactNode, useCallback, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect, useRef } from "react";
 
 import {
   fetchWorkstream,
+  fetchWorkstreams,
   type TicketRef,
   type WorkstreamDetail,
 } from "../../api/board";
-import type { AuthenticatedFetch } from "../../api/client";
+import { ApiError, type AuthenticatedFetch } from "../../api/client";
 import {
   nameWorkstream,
   type Saved,
   saveWorkstreamSection,
 } from "../../api/edit";
+import { EmptyState } from "../../components/EmptyState";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
 import { LoadError } from "../../components/LoadError";
 import { Markdown } from "../../components/Markdown";
 import { StaleNote } from "../../components/StaleNote";
 import { TicketLinksInPlace } from "../../components/TicketLink";
-import type { Line } from "../../model/lines";
+import { type Line, workstreamTitleKey } from "../../model/lines";
 import type { LinkContext } from "../../model/markdown";
 import {
   type WorkstreamSection,
@@ -34,6 +36,7 @@ import {
 import { InPlaceSection } from "../editing/InPlaceSection";
 import type { EditPlace } from "../editing/lateSaves";
 import type { Editing } from "../editing/useEditing";
+import { successorOf } from "./successor";
 import { TransitLine } from "./TransitLine";
 import {
   type Editable,
@@ -56,12 +59,21 @@ interface WorkstreamPageProps {
   editing?: Editing;
   onOpen(ticket: TicketRef): void;
   // onRenamed hears the workstream's new slug after its name was saved
-  // with one (FH-167), for the route to follow it.
+  // with one (FH-167), or after it was renamed elsewhere (FH-174), for
+  // the route to follow it.
   onRenamed?(slug: string): void;
   // siblings are the project's workstreams, for the name's check.
   siblings?: Siblings;
   // backLink is the project's Workstreams view and the project's name.
   backLink: { href: string; label: string };
+}
+
+// Gone is a page whose workstream the server no longer has at its slug
+// (FH-174): renamed or removed elsewhere, with what it became when the
+// page can tell (successorOf).
+interface Gone {
+  gone: true;
+  successor?: { slug: string; title: string };
 }
 
 // WorkstreamPage is a workstream's page (FH-139, ui-layout.md §4): its
@@ -81,14 +93,59 @@ export function WorkstreamPage({
   siblings,
   backLink,
 }: WorkstreamPageProps) {
+  // last is the workstream as last loaded, to find what it became if its
+  // slug goes (FH-174).
+  const last = useRef<WorkstreamDetail | undefined>(undefined);
   const load = useCallback(
-    (signal: AbortSignal) =>
-      fetchWorkstream(fetcher, ref.project, ref.slug, signal),
+    async (signal: AbortSignal): Promise<WorkstreamDetail | Gone> => {
+      try {
+        const loaded = await fetchWorkstream(
+          fetcher,
+          ref.project,
+          ref.slug,
+          signal,
+        );
+        last.current = loaded;
+        return loaded;
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        const seen = last.current;
+        if (!seen) return { gone: true };
+        const workstreams = await fetchWorkstreams(
+          fetcher,
+          ref.project,
+          signal,
+        ).catch(() => []);
+        const next = successorOf(seen, workstreams);
+        return {
+          gone: true,
+          successor: next && { slug: next.slug, title: next.title },
+        };
+      }
+    },
     [fetcher, ref.project, ref.slug],
   );
   const resource = useResource(load, `${ref.project}/${ref.slug}`, revision);
-  const detail = resource.status === "ready" ? resource.data : undefined;
-  const title = detail?.title ?? ref.slug;
+  const loaded = resource.status === "ready" ? resource.data : undefined;
+  const gone = loaded && "gone" in loaded ? loaded : undefined;
+  const detail = loaded && !("gone" in loaded) ? loaded : undefined;
+  const title = detail?.title ?? last.current?.title ?? ref.slug;
+  // A workstream renamed elsewhere (an agent's rename_to, another tab) is
+  // followed to its new slug as the page's own rename is, once.
+  const followed = useRef(false);
+  const successor = gone?.successor;
+  useEffect(() => {
+    if (!successor || !onRenamed || followed.current) return;
+    followed.current = true;
+    const from = last.current?.title ?? ref.slug;
+    editing?.notify({
+      text:
+        workstreamTitleKey(successor.title) === workstreamTitleKey(from)
+          ? `${from} was renamed elsewhere: its short name is now ${successor.slug}.`
+          : `${from} was renamed elsewhere to ${successor.title}.`,
+    });
+    onRenamed(successor.slug);
+  }, [successor, onRenamed, editing, ref.slug]);
   useEffect(() => {
     const before = document.title;
     document.title = `${title} · Flashheart`;
@@ -138,7 +195,26 @@ export function WorkstreamPage({
             Show in the {backLink.label} workstreams
           </a>
         </nav>
-        {resource.status === "loading" ? <WorkstreamPageSkeleton /> : null}
+        {resource.status === "loading" || (successor && onRenamed) ? (
+          <WorkstreamPageSkeleton />
+        ) : null}
+        {gone && !(successor && onRenamed) ? (
+          <EmptyState heading title={`${title} is no longer here`}>
+            <p>
+              {backLink.label} has no workstream {ref.slug} now: it was renamed
+              or removed.
+            </p>
+            <p className="mt-3">
+              <a
+                href={backLink.href}
+                className="inline-flex items-center gap-1.5 rounded-control font-medium text-ink hover:underline"
+              >
+                <Icon name="lines" size={14} />
+                Show the {backLink.label} workstreams
+              </a>
+            </p>
+          </EmptyState>
+        ) : null}
         {resource.status === "error" ? (
           <>
             <h1 className="sr-only">{ref.slug}</h1>

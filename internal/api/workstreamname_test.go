@@ -104,7 +104,7 @@ func TestPatchWorkstreamRenameKeepsSavedPreferences(t *testing.T) {
 		"alpha": {View: "board", Workstream: config.Choice{Include: []string{}, Exclude: []string{"board-ui"}}},
 	}
 	preferences.ExpandedWorkstreams = map[string][]string{"alpha": {"board-ui"}}
-	send(t, handler, http.MethodPut, "/api/preferences", preferences, http.StatusNoContent, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", preferences, http.StatusNoContent, nil)
 
 	base := workstreamDetail(t, handler, "alpha", "board-ui").Hash
 	send(t, handler, http.MethodPatch, "/api/projects/alpha/workstreams/board-ui", WorkstreamPatchRequest{Base: base, Slug: "board"}, http.StatusOK, nil)
@@ -115,6 +115,14 @@ func TestPatchWorkstreamRenameKeepsSavedPreferences(t *testing.T) {
 	}
 	if got := preferences.ExpandedWorkstreams["alpha"]; !slices.Equal(got, []string{"board"}) {
 		t.Errorf("alpha expanded = %v, want [board]", got)
+	}
+
+	// A tab that loaded before the rename saves only what it changed, so
+	// its theme does not bring the old slug back (FH-173).
+	send(t, handler, http.MethodPatch, "/api/preferences", `{"theme":"dark"}`, http.StatusNoContent, nil)
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &preferences)
+	if got := preferences.Scopes["alpha"].Workstream.Exclude; preferences.Theme != "dark" || !slices.Equal(got, []string{"board"}) {
+		t.Errorf("after a stale tab's theme: theme %q, alpha excludes %v", preferences.Theme, got)
 	}
 }
 

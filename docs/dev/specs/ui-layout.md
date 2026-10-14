@@ -665,6 +665,16 @@ it) and scrolls as a whole in a frame of at most 80rem.
   while you were editing* and says another saved *this workstream*.
 - Loading shows the head, a track and two section shapes; an error keeps
   an h1 of the slug with the shared error and Try again.
+- **Renamed or removed elsewhere** (FH-174, D80): a workstream renamed by
+  an agent or another tab while its page is open is followed to its new
+  address in place of the old one, with the toast *<name> was renamed
+  elsewhere: its short name is now <slug>.* (or *… renamed elsewhere to
+  <new name>.*), when the page can tell what it became (its name, or all
+  its tickets now in one workstream). Otherwise, or at an address already
+  gone, the empty state (§8) with the h1 *<name> is no longer here*, the
+  sentence *<project> has no workstream <slug> now: it was renamed or
+  removed.* and the link *Show the <project> workstreams* (lines icon);
+  not an error.
 
 ## 5. Overview
 
