@@ -9,6 +9,8 @@ import { executable } from "./support.mjs";
 
 // IDLE_SESSION waits for a prompt in the gamma repository.
 export const IDLE_SESSION = "e2d8f6a4-9b1c-4c3e-b5a7-1f0e9d8c7b6a";
+// ASKING_SESSION waits on a permission in the alpha repository (AL-3).
+export const ASKING_SESSION = "3f2a9c1e-7b44-4d0e-9a51-6c8e2f1d0b7a";
 
 async function repo(home, name, branch, parent = "src") {
   const dir = join(home, parent, name);
@@ -94,7 +96,7 @@ export async function seedRuns(home, root) {
   ended.send("Stop");
   ended.send("SessionEnd", { reason: "prompt_input_exit" });
 
-  const asking = session(root, "3f2a9c1e-7b44-4d0e-9a51-6c8e2f1d0b7a", alpha);
+  const asking = session(root, ASKING_SESSION, alpha);
   asking.send("SessionStart", { source: "resume" });
   asking.send("UserPromptSubmit", { prompt: "synthetic" });
   asking.tool("TodoWrite", {
@@ -164,7 +166,7 @@ export async function seedRuns(home, root) {
   idle.send("UserPromptSubmit", { prompt: "synthetic" });
   idle.tool("Read", {});
   idle.send("Stop");
-  return { beta, gamma };
+  return { alpha, beta, gamma };
 }
 
 // seedClaimedRun records a session in the demo board's flashheart project
@@ -240,6 +242,20 @@ export function promptHook(root, sessionID, cwd, prompt = "synthetic") {
       env: { ...process.env, PATH: "/nonexistent" },
     },
   ).toString();
+}
+
+// grantPermission records a session's waiting tool running once the user
+// allowed it in the session: it no longer needs the user.
+export function grantPermission(root, sessionID, cwd, tool = "Bash") {
+  session(root, sessionID, cwd).tool(tool, { command: "synthetic" });
+}
+
+// askPermission records a session asking permission for a tool again.
+export function askPermission(root, sessionID, cwd, tool = "Bash") {
+  session(root, sessionID, cwd).send("PermissionRequest", {
+    tool_name: tool,
+    tool_input: { command: "synthetic" },
+  });
 }
 
 // endSession records a session ending, as Claude Code's SessionEnd hook

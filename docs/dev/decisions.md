@@ -1837,3 +1837,33 @@ opens again themselves also takes back its held text.
 - **A held draft that is still mounted** (the panel's Edit tab while
   another tab shows) is not a late save. A failure there shows the Edit
   tab again with the reason, as a conflict already did.
+
+## 2026-10-14 — D71: The Needs you filter says why an agent has no card, and sends the user to answer it
+
+Decision (FH-157): while the Needs you filter is on, agents that need the
+user with no ticket on the board (they asked about a project or a
+workstream, not a ticket) are explained where the user looks, not in a
+quiet strip beside misleading advice. With cards to show, the strip above
+them says why no card can show the rest. With no card left, the
+explanation replaces the empty state, and *Clear a filter or the search*
+is never shown when the Needs you filter is the reason. Both carry one
+primary button whose label says what it gets on its own, **Answer it in
+the Overview** (*them* for several), as the user asked: *Open Overview*
+named a view, not a result.
+
+- **Where the button goes.** The Overview of the same scope (a project's
+  count is that project's agents), with keyboard focus on the *Needs your
+  decision* heading, so a keyboard or screen reader user lands on the list
+  that holds the question. The focus is a one-time arrival held by the
+  app shell and dropped on any other view, not a route parameter: a
+  reload or a shared link opens the Overview as usual, and no new URL
+  form needs supporting. *Needs your decision* is already the Overview's
+  first section, so no scroll position needs keeping.
+- **Wording.** "Asked" covers questions and permission prompts alike; a
+  ticket that was archived or deleted is rare enough that "not about a
+  ticket" stays accurate in spirit.
+- **Other filters.** When other filters are on too, the explanation
+  stays and adds that clearing them may show tickets that need the user;
+  with nobody waiting and other filters on, the generic empty state
+  stays, as those filters may be the reason. With nobody waiting and no
+  other filter, the empty state is *Nothing needs you right now*.

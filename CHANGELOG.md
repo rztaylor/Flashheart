@@ -313,6 +313,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Pressing *Needs you* no longer leads to an empty board with the wrong
+  advice when an agent's question is not about a ticket (FH-157, D71,
+  `VIEW-2`). The Board and Table now say that an agent asked about the
+  project or a workstream, so no card can show it, and offer **Answer it
+  in the Overview**, which opens the Overview with the keyboard on *Needs
+  your decision*. When no card is left, this replaces *No tickets match
+  these filters* and its *Clear a filter* advice; when some cards show,
+  it sits above them.
 - Dialogs open with the cursor where you type first (FH-17): New
   ticket's title, the reason for starting a blocked ticket and a new
   change request lost focus to the dialog's close button as it opened.

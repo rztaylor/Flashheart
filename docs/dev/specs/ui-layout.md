@@ -122,10 +122,21 @@ colour chips before workstreams; the menus list every value. Hidden when
 there are neither workstream chips nor colour chips.
 
 **Needs you notice** (Board and Table, while the Needs you filter is on and
-runs need the user with no ticket on the board): a well-coloured strip under
-the chip row, the Needs you mark on its attention disc, *N agent(s) need(s)
-you with no ticket on the board.* and a quiet **Open Overview** button
-(FH-44), whose Needs your decision lists them (D32).
+runs in the scope need the user with no ticket on the board; FH-44,
+FH-157, D71): with cards to show, a well-coloured strip under the chip
+row: the Needs you mark on its attention disc, *N more agent(s) need(s)
+you, not about a ticket.* in semibold, then muted *It asked about the
+project or a workstream, so no card can show it.*, and a primary
+**Answer it in the Overview** (*them* for several). With no card left, the
+same words take the empty state's place (region *Agents without a
+ticket*): the large attention disc, the title *N agent(s) need(s) you,
+not about a ticket*, why, *It is waiting in the Overview, under Needs your
+decision.*, the same primary button and, when other filters are on too,
+*Other filters are on too: clear them to see any tickets that need you.*
+With nothing waiting and no other filter, the empty state is *Nothing
+needs you right now*. Never *Clear a filter or the search* when the Needs
+you filter is the reason. The button opens the scope's Overview with
+focus on the *Needs your decision* heading, which lists them (D32).
 
 **Panel** beside the main view at clamp(26rem, 32vw, 35rem), narrowing it
 (`CARD-1`); it covers the view below the band under 48rem.
