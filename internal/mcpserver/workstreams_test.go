@@ -122,7 +122,11 @@ func TestCreateWorkstream(t *testing.T) {
 		t.Errorf("no ticket.updated event for the joined tickets: %v", kinds)
 	}
 
-	contains(t, e.ok("create_workstream", map[string]any{"title": "Card panel", "goal": "Again."}), "ok workstream=card-panel-2")
+	// A project's workstream titles are unique, ignoring case and spacing
+	// (FH-163, D76); another title with the same slug takes the next one.
+	contains(t, e.fails("create_workstream", map[string]any{"title": "card  PANEL", "goal": "Again."}, "invalid_input"),
+		`a workstream called "Card panel" is already in demo (card-panel)`, "choose another title", "update_workstream workstream=card-panel")
+	contains(t, e.ok("create_workstream", map[string]any{"title": "Card panel!", "goal": "Again."}), "ok workstream=card-panel-2")
 	e.fails("create_workstream", map[string]any{"title": "X", "goal": "g", "tickets": []string{"DM-99"}}, "not_found")
 	e.fails("create_workstream", map[string]any{"title": "X", "goal": "g", "priority": "urgent"}, "invalid_input")
 	e.fails("create_workstream", map[string]any{"title": "", "goal": "g"}, "invalid_input")
@@ -295,6 +299,7 @@ func TestUpdateWorkstreamRefusesAndWritesNothing(t *testing.T) {
 		{map[string]any{"workstream": "panel", "set": map[string]any{"depends-on-workstreams": []any{"nope"}}}, "not_found", []string{`workstream "nope"`}},
 		{map[string]any{"workstream": "panel", "set": map[string]any{"depends-on-workstreams": []any{"sync"}}, "add_tickets": []string{a}}, "invalid_input", []string{"cycle", "panel → sync → panel"}},
 		{map[string]any{"workstream": "panel"}, "invalid_input", []string{"nothing to change"}},
+		{map[string]any{"workstream": "panel", "set": map[string]any{"title": "Storage"}, "add_tickets": []string{a}}, "invalid_input", []string{`a workstream called "storage" is already in demo (storage)`, "choose another title"}},
 	} {
 		contains(t, e.fails("update_workstream", tc.args, tc.code), tc.says...)
 	}
