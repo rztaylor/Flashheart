@@ -546,10 +546,13 @@ Full format: `docs/dev/specs/board-format.md`.
   list are not edited there.
 - `EDIT-14` **New workstream** (FH-17), in the Workstreams view's header,
   creates `workstreams/<slug>.md` from the board-format template: a title
-  (its slug made from it, unique in the project), a goal, a priority
+  (unique in the project, ignoring case and spacing, D76; its slug made
+  from it, unique in the project), a goal, a priority
   (default medium) and, optionally, the project's workstreams it depends
   on (`depends-on-workstreams`). It starts with no tickets; tickets join
-  it from their workstream field (`EDIT-6`). A refusal (an empty title, a
+  it from their workstream field (`EDIT-6`). A title another of the
+  project's workstreams has is named at the Title field and not sent. A
+  refusal (an empty or taken title, a
   dependency that no longer exists) shows in words and writes nothing.
   The new workstream's page (`EDIT-13`) then opens. Like other workstream
   writes it records no event (`EDIT-10` is about tickets).
@@ -674,7 +677,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   priority, tags, workstream dependencies and members in one write, and
   refuses a dependency cycle between workstreams; its `rename_to` renames
   the slug in that write, moving the file and rewriting every ticket and
-  workstream that names it (FH-158); `create_ticket` files a
+  workstream that names it (FH-158); `create_workstream` and
+  `update_workstream` refuse a title another of the project's workstreams
+  has (D76); `create_ticket` files a
   ticket in another project when given its name or key (FH-46). The
   ticket tools ask agents to write titles and descriptions for a person,
   with implementation detail under Context, and warn about a title that

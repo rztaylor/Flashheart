@@ -11,7 +11,9 @@
 // their column's manual order (EDIT-9), keeps a ticket's
 // workstream field and the workstreams' tickets lists in step, creates
 // workstreams and edits them with their members in one write
-// (EditWorkstream, FH-46), refusing a dependency cycle, renames a
+// (EditWorkstream, FH-46), refusing a dependency cycle and, in one check
+// every workstream write makes, a title another of the project's
+// workstreams has (checkWorkstreamTitle, D76), renames a
 // workstream's slug in that write, moving its file and rewriting every
 // ticket's and workstream's reference to it (FH-158), creates tickets with the next id (KEY-2) and keys under a root lock (KEY-5), from board's templates, archives tickets,
 // lists them and deletes archived ones permanently with their references
