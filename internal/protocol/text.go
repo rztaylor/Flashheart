@@ -170,11 +170,11 @@ who has not read the code.
   or its workstream depends on. Give each ticket the dependencies it really
   needs, naming several tickets in ` + "`depends_on`" + ` when it needs them all;
   a workstream waiting for another takes the dependency itself. A blocked ticket needs ` + "`force`" + ` and a reason to claim.
-- Work that spans several tickets with a shared goal belongs in a
-  workstream. Join one ` + "`board_context`" + ` lists by passing ` + "`workstream`" + ` to
+- Work spanning several tickets belongs in a workstream. Join one
+  ` + "`board_context`" + ` lists by passing ` + "`workstream`" + ` to
   ` + "`create_ticket`" + ` or ` + "`update_ticket`" + `, or make one with
-  ` + "`create_workstream`" + ` and change it with ` + "`update_workstream`" + ` (its slug
-  stays). Leave single tickets out of workstreams.
+  ` + "`create_workstream`" + ` and change it with ` + "`update_workstream`" + `
+  (` + "`rename_to`" + ` renames its slug). Leave single tickets out of workstreams.
 
 ## Review template
 
