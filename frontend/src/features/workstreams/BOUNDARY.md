@@ -2,32 +2,17 @@
 
 Owns the Workstreams view (VIEW-4, `docs/dev/specs/ui-layout.md` §4): each
 workstream as a route card with its stations on a railway graph of their
-depends-on links (`graph.ts` lays it out; a check only for finished tickets,
-next stops as interchange rings, a status pill under each) and its
-independent stations below; derived status, progress, and blocked, repair
-and warning notes. A finished workstream collapses to its head, a
-disclosure button, unless the user expanded it (`collapse.ts` decides
-finished and drops stale expanded choices; the choices themselves are a
-preference owned by the shell). Loads each project's workstreams;
-stations open the card panel (CARD-7), and independent stations reorder
-by drag or Shift and an arrow (EDIT-4), keeping focus through
-`components/useKeepFocus`. Its load states (ui-layout.md §8):
-`WorkstreamsSkeleton` (route cards; the shell shows it while the projects
-load) and a route card skeleton per loading project, the shared error with
-Try again and the last-good-copy note per project.
+depends-on links (`graph.ts`), independent stations below, derived status,
+progress and notes; collapsing a finished workstream (`collapse.ts`; the
+expanded choices are the shell's preference); opening stations in the
+card panel and reordering independent ones (EDIT-4); and its load states.
 
-Owns the New workstream dialog (EDIT-14, FH-17); the shell opens it and
-the page it creates.
+Owns the New workstream dialog (EDIT-14) and the workstream page
+(EDIT-13): one workstream's head, stations and sections, each edited in
+place through `editing/` on the hash it opened on; which sections show is
+`model/workstreamSections`.
 
-Owns the workstream page too (EDIT-13, FH-139, ui-layout.md §4
-"Workstream page"): it loads one workstream (its line, body and hash),
-shows the route card's head and stations, and edits each section in place
-through `editing/`'s `InPlaceEditing` and `InPlaceEditor` with `editor/`'s
-`MarkdownField`, saving one section on the hash it opened on. Which
-sections show, and where a missing template one goes, is
-`model/workstreamSections`. The route card's name links to the page.
-
-Does not own line colour assignment (`model/lines`), blocking rules
-(backend), routing, the card panel, the in-place editing, conflict dialog
-and toast (`editing/`), the editor (`editor/`), or which sections may be
-rewritten, slugs or the template (backend), or ticket membership (`card/`).
+Does not own line colours (`model/lines`), blocking rules, slugs, the
+template or which sections may be rewritten (backend), routing, the card
+panel and ticket membership (`card/`), in-place editing, the conflict
+dialog and toast (`editing/`) or the editor (`editor/`).

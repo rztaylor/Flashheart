@@ -179,9 +179,15 @@ Singleserve.
   writes go through `store`/`events` under the per-project lock
   (`<project>/.flashheart/lock`) with atomic rename; UI and MCP edits carry a
   content hash precondition.
-- Boundary documents: every hand-written Go package has a concise `doc.go`;
-  each `frontend/src/features/<feature>/` and shared frontend layer has a
-  `BOUNDARY.md` (≤150 words, ≤2 KiB). Generated assets are exempt.
+- Boundary documents: every hand-written Go package has a concise `doc.go`
+  (≤250 words, ≤2 KiB); each `frontend/src/features/<feature>/` and shared
+  frontend layer has a `BOUNDARY.md` (≤150 words, ≤2 KiB). A word has a
+  letter or digit (bullets, `//` and doc.go's `package` line do not
+  count); bytes are the whole file. `scripts/check-boundaries.sh`, run
+  first by `scripts/check.sh`, fails on a note over its limit (D81). A
+  note states ownership, not inventories or history: symbol-level detail
+  goes in the code's comments, cross-package rules in these facts.
+  Generated assets are exempt.
 - Generated frontend output: `internal/webui/assets/generated/` (untracked).
 - Shared fixtures: `testdata/boards/` (sample roots),
   `testdata/hooks/<agent>/<event>/` (recorded, scrubbed hook payloads) and

@@ -1,48 +1,26 @@
 // Package api owns Flashheart's HTTP JSON endpoints under /api/: routing,
-// request validation, response shapes (cards with live run badges and
-// session summaries, project summaries with run counts, ticket detail with
-// its runs, workstreams and one workstream with its file and hash, runs;
-// runs, badges and questions carry the run's
-// short id and runs and badges its typed Needs you reason, which the
-// frontend words),
-// long-polling for changes (LIFE-3), JSON errors and attachment response
-// headers (SEC-4).
+// request validation, response shapes (cards, project summaries, ticket
+// detail with its runs, comments and history, workstreams and runs, with
+// each run's short id and typed Needs you reason for the frontend to
+// word), long-polling for changes (LIFE-3), JSON errors and attachment
+// response headers (SEC-4).
 //
 // Reads come from index snapshots and, for review and attachment files,
-// store's checks. Writes (moves, field edits decoded into board's
-// change-set and written by store.EditTicket, as agents' are, one section
-// rewritten in place (board.SectionChange through store.EditTicket), raw edits,
-// criteria, new tickets, new workstreams (store.CreateWorkstream, FH-17),
-// archive and restore, permanent delete of archived tickets with its preview
-// token (EDIT-8), project archive, restore and delete (PRJ-5), placement
-// in manual order (EDIT-9), workstream order, one workstream section
-// rewritten in place (board.NewWorkstreamSectionChange through
-// store.UpdateWorkstream, FH-139), a workstream's fields and slug
-// (decoded into board's workstream change-set and written with a rename
-// by store.EditWorkstream, as update_workstream's are, FH-158),
-// project keys, preferences, answers to agents'
-// questions, comments on a ticket, D47, files uploaded into a ticket,
-// REV-7, whose limit it reads from the config) validate input, apply
-// mdfile edits through store's locked, hash-checked writes, and answer a
-// stale hash with 409 and the current file (STO-3, EDIT-7). A preference
-// read waits for any preference save in flight (CFG-2). Each write that
-// changes or comments on a ticket appends one event recording that the
-// human did (EDIT-10), best effort once the ticket is saved; the Writer
-// writes as the person, so the store appends the ticket's history. Ticket
-// detail carries the ticket's comments and history. A request for changes
-// on a ticket in review, and a reopened request, are queued in the inbox
-// of the live session holding the ticket (index.Snapshot.Holder), if any
-// (requests.go, REV-6); cards and detail count the change requests.
-// Detail offers the runs a comment may be sent to now, and a comment
-// posted with one is checked against them again, posted naming the run
-// and queued for it; comments carry where their delivery stands
-// (tell.go, FH-127). A comment deleted (FH-140) is withdrawn from the
-// inboxes of the session it was sent to and the ticket's live claimants.
-// An answer is
-// appended to the event log, queued in the asking session's inbox and noted
-// in the ticket (RUN-8, HOOK-5, STO-6). It owns no
-// filesystem rules, parsing or blocking rules (board), run derivation (runs)
-// or Singleserve
-// lifecycle (app); authentication is applied by Singleserve before requests
-// arrive here.
+// store's checks. Writes (moves, field and section edits, criteria, new
+// tickets and workstreams, workstream fields, sections, order and slug,
+// archive, restore and permanent delete of tickets and projects,
+// placement, keys, preferences, answers, comments and their delivery,
+// change requests, uploads) decode input into board's change-sets, write
+// through store's locked, hash-checked writes as the person, so the store
+// appends the ticket's history, and answer a stale hash with 409 and the
+// current file (STO-3, EDIT-7). Each ticket write appends one event that
+// the human did it (EDIT-10), best effort. An answer is queued in the
+// asking session's inbox (RUN-8); a change request goes to the ticket's
+// holder and a comment to a run the person chose among its live claimants
+// (index.Snapshot; REV-6, FH-127); a deleted comment is withdrawn from
+// those inboxes (FH-140).
+//
+// It owns no filesystem rules, parsing or blocking rules (board), run
+// derivation (runs) or Singleserve lifecycle (app); authentication is
+// applied by Singleserve before requests arrive here.
 package api
