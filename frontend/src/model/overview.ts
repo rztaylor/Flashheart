@@ -348,8 +348,8 @@ export interface ProjectRow {
   stages: PipelineStage[];
   blocked: number;
   repair: number;
-  // live counts the project's agents still running (FH-162): working,
-  // quiet, waiting and those that need you, subagents too.
+  // live counts the project's agents that do not need you (FH-162):
+  // working, waiting and quiet, subagents too; needsYou counts the rest.
   live: number;
   needsYou: number;
   // label is the row's accessible name: the project and every count.
@@ -379,7 +379,12 @@ export function projectRows(
     | "rejected"
     | "blocked"
     | "needsRepair"
-  > & { runs: Pick<ProjectSummary["runs"], "needsYou" | "live"> })[],
+  > & {
+    runs: Pick<
+      ProjectSummary["runs"],
+      "needsYou" | "working" | "waiting" | "quiet"
+    >;
+  })[],
 ): ProjectRow[] {
   return projects.map((project) => {
     const stages = pipelineStages([project], project.name);
@@ -396,7 +401,8 @@ export function projectRows(
       .map((stage) => `${stage.count} ${stageWords[stage.column]}`)
       .join(", ");
     const repair = project.needsRepair;
-    const live = project.runs.live;
+    const live =
+      project.runs.working + project.runs.waiting + project.runs.quiet;
     const label = `${title}: ${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${live} ${plural(live, "agent", "agents")} live, ${needsYou} ${needsYouPhrase(needsYou, true)}`;
     return {
       name: project.name,

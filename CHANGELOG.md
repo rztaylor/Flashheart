@@ -32,8 +32,9 @@ All notable changes to this project are documented here. The project follows
 
 - See how many agents are live in each project on the All projects
   Overview (FH-162, `PRJ-6`). The Projects list has a Live count beside
-  Needs you: every agent still running in the project, subagents
-  included, with those that need you among them. A project with none
+  Needs you: the project's running agents that do not need you (working,
+  waiting or quiet), subagents included; those that need you count under
+  Needs you instead. A project with none
   shows a faint zero; on a phone it reads *N live* after the tickets and
   blocked counts.
 - Compare projects at a glance on the All projects Overview (FH-153,

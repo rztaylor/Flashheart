@@ -113,9 +113,12 @@ test("each row shows its project's live agents, a zero faint", async () => {
   const [, live] = (await alpha.getAttribute("aria-label")).match(
     /, (\d+) agents? live,/,
   );
-  // The session waiting on you and its working subagents are all live;
-  // the ended session is not.
-  expect(Number(live)).toBeGreaterThanOrEqual(3);
+  // Its working subagents are live; the session waiting on you counts
+  // under Needs you instead, and the ended session in neither.
+  expect(Number(live)).toBeGreaterThanOrEqual(2);
+  expect(await alpha.getAttribute("aria-label")).toMatch(
+    /, 1 agent needs you$/,
+  );
   const cell = alpha.locator("[data-count=live]");
   await expect(cell).toHaveText(live);
   await expect(cell).not.toHaveClass(/text-ink-faint/);
