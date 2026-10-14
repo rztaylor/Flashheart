@@ -130,6 +130,10 @@ updated: 2026-10-05T14:12:09Z    # last write by Flashheart
 The title is the first `#` heading. Unknown keys are preserved in place
 (`STO-2`).
 
+A ticket's plan is its Acceptance Criteria, ticked as they pass, and its
+Handoff's next steps; there is no separate plan section, and agents' own
+task lists are not recorded (D51).
+
 ### Columns
 
 | `status` | Column | Meaning |
@@ -197,6 +201,8 @@ atomically, one at a time, in this order:
   tickets that name it, and last the removal of the old file, so a crash
   part-way leaves both files and never neither;
 - placing a ticket: the neighbours it ranks, then the ticket;
+- an agent rewriting a ticket's text (FH-69): the file keeping the
+  replaced text and `files/index.yaml`, then the files above;
 - any ticket write from the board or an agent: the files above, then the
   history entry in each changed ticket's `activity.md` (§Activity).
 
@@ -247,10 +253,10 @@ hand-written section without the `_Updated …_` line is read for its lists
 alone.
 
 Text Flashheart writes into any section (a handoff, a note, a ticket's
-description or plan, a workstream's goal) stays inside it: a level-1 or -2
+description or test plan, a workstream's goal) stays inside it: a level-1 or -2
 heading outside code fences becomes level 3, and a code fence left open is
 closed, so it cannot start or hide a section (FH-4). A ticket's
-description, plan (or reproduction) and context, and a workstream's goal,
+description, test plan (or reproduction) and context, and a workstream's goal,
 are each limited to 16 KiB, written from the board or by an agent
 (`board.MaxSectionText`, FH-81); longer text belongs in a linked document.
 
@@ -293,6 +299,25 @@ template section is added in the template's place, above the template
 sections that follow it (a ticket's own section above `## Notes` and
 `## Handoff`). `## Handoff` and `## Notes` are never rewritten whole:
 checkpoints write the one, and notes are appended.
+
+An agent rewrites sections the same way through `update_ticket`'s
+`sections` (FH-69, D75, `board.NewAgentSectionChange`), with two more
+rules: `## Acceptance Criteria` is never rewritten whole, and a section
+outside the template must already be in the ticket. Its `criteria`
+operations (`board.NewCriteriaEdit`) change only the criteria section:
+each top-level task item there owns its line and the lines up to the
+next item (after the last, only its indented continuation), so a
+reworded item keeps its bullet and box, a moved one all its lines, and
+an added one is `- [ ] <text>` in the list's bullet; text before and
+after the list is kept, and a placeholder such as `None.` gives way to
+the first item. The old text of every section the rewrite changed is
+kept in the ticket's `files/` as `<time>-<id>-earlier-text.md`
+(`board.EarlierText`: a `# <id>: text replaced by <run> at <time>`
+title, a line on restoring, then each section under its own `## `
+heading as it was), listed in `files/index.yaml` with kind `other`, the
+run, and a caption naming the sections, and staged before the ticket in
+the same write. A dated note under the run says what changed and links
+the file. A section only added keeps nothing.
 
 A workstream's section edited on its page (FH-139,
 `board.NewWorkstreamSectionChange`) is replaced the same way; a
@@ -570,7 +595,10 @@ list of files is reported and never replaced. A file added from its bytes
 the extension of what its content is (`SEC-7`): a PNG sent as `notes.txt`
 is stored as `<time>-notes.png`; a pasted screenshot is
 `<time>-screenshot.png`. Adding a file does not change the ticket file
-and records no history (the event log records it, `EDIT-10`).
+and records no history (the event log records it, `EDIT-10`). The one
+exception is the text an agent's rewrite replaced (§Section edits),
+added in the same write as the ticket it was replaced in, with no
+`source`.
 
 ## project.yaml
 

@@ -122,10 +122,21 @@ colour chips before workstreams; the menus list every value. Hidden when
 there are neither workstream chips nor colour chips.
 
 **Needs you notice** (Board and Table, while the Needs you filter is on and
-runs need the user with no ticket on the board): a well-coloured strip under
-the chip row, the Needs you mark on its attention disc, *N agent(s) need(s)
-you with no ticket on the board.* and a quiet **Open Overview** button
-(FH-44), whose Needs your decision lists them (D32).
+runs in the scope need the user with no ticket on the board; FH-44,
+FH-157, D74): with cards to show, a well-coloured strip under the chip
+row: the Needs you mark on its attention disc, *N more agent(s) need(s)
+you, not about a ticket.* in semibold, then muted *It asked about the
+project or a workstream, so no card can show it.*, and a primary
+**Answer it in the Overview** (*them* for several). With no card left, the
+same words take the empty state's place (region *Agents without a
+ticket*): the large attention disc, the title *N agent(s) need(s) you,
+not about a ticket*, why, *It is waiting in the Overview, under Needs your
+decision.*, the same primary button and, when other filters are on too,
+*Other filters are on too: clear them to see any tickets that need you.*
+With nothing waiting and no other filter, the empty state is *Nothing
+needs you right now*. Never *Clear a filter or the search* when the Needs
+you filter is the reason. The button opens the scope's Overview with
+focus on the *Needs your decision* heading, which lists them (D32).
 
 **Panel** beside the main view at clamp(26rem, 32vw, 35rem), narrowing it
 (`CARD-1`); it covers the view below the band under 48rem.
@@ -183,7 +194,7 @@ Priority and Type rows and the Colour by Priority chips (FH-154).
 | Id | The id in the id cut, a link to the full page (`CARD-7`); never truncated |
 | Blocked | The no-entry sign in the blocked ink (§7); the reason in its tooltip |
 | Change requests | The speech balloon and the count still waiting (`REV-6`): open in progress's amber, addressed only in review's blue; *2 open · 1 addressed* in its tooltip |
-| Live run | The run-state mark (§7) and, with a plan, `done/total` (`VIEW-8`); the agent, state and step in its tooltip |
+| Live run | The run-state mark (§7) (`VIEW-8`); the agent and state in its tooltip. No plan count (D51) |
 | Attachments | The paper clip and the count |
 | Review | The review page, when a review is written |
 | Age | The running time since the ticket last changed |
@@ -216,8 +227,7 @@ last (FH-168), so the title leads into the words and every card ends on the
 same row of markers:
 
 5. The blocker pill with the first reason and `+n more`.
-6. The run: state, agent and last activity; the plan step
-   `done/total · step` below.
+6. The run: state, agent and last activity.
 7. The handoff's next step (arrow), two lines at most.
 8. The description excerpt, two lines at most.
 9. The workstream name, after the project name in All projects.
@@ -232,7 +242,7 @@ same row of markers:
 - The card's name (its covering button's) says the title, the id and every
   marker and state the card can show at any density, including those a
   narrow meta line drops: rejected, blocked with its reason, needs repair,
-  the live run with its plan step, questions waiting, change requests,
+  the live run and its state, questions waiting, change requests,
   type, priority, attachments, review, age, workstream and, in All
   projects, the project.
 - Markers lie under the card's covering button, so a click or a drag
@@ -299,13 +309,13 @@ same row of markers:
    Needs you reason, in the card's words, `RUN-3`), agent,
    short id, link, branch and time, then its detail and its subagents as a
    tree on a spur: each row its state, type, the ticket it claimed when that
-   is another, and its plan step (or tool and edit counts), opening to its
-   own plan, files and activity (agent-protocol §10). Activity names each
+   is another, and its tool and edit counts, opening to its own files and
+   activity (agent-protocol §10). Activity names each
    event in plain words, never by its event kind: "Claimed FH-1", "Moved
    FH-1 to In progress", "Wrote the review of FH-1"; a hookless run's
    branch switch reads "Switched to branch feature/next", not as a second
-   connection. A run's plan shows only when it has one; a run with no
-   plan shows no plan section. A subagent listed on its own ticket names
+   connection. No run shows a plan: a ticket's plan is its criteria and
+   handoff (D51). A subagent listed on its own ticket names
    the session it belongs to.
 7. **Attachments tab** (shown when the ticket has files or can be
    edited): a two-column grid of thumbnails (screenshots) and file tiles,
@@ -817,14 +827,13 @@ priority first when several are on screen:
 | --- | --- | --- |
 | Move toast (not announced) | A move to Done that finishes its workstream: completion. Any other move to Done: progress, at most every ten minutes | 61–70; 51–53, 55, 57, 58 |
 | Card panel | A current handoff (not stale) with a next step; an in-progress ticket with no handoff | 75, 77, 79, 80; 73 |
-| Open run (Runs tab) | A plan | 32, 34–36, 39, 40 |
 | Empty views | No tickets; nothing matches the filters or search (also the archive's search); no workstreams; the Overview's In progress is empty and no session in scope is live | 21–30 (reviewed ones); 82–88; 31; 41–50 |
 | Columns and sections | Ready to review is empty; the Overview's Needs your decision is empty and nothing anywhere needs you | 71, 72; 11–19 |
 | Stopped screen | After a successful Quit only (never on a lost or failed connection) | 92–100 |
 | Wordmark tooltip | Always; an Easter egg, never visible text | 1–7 |
 
-Deferred: 33 (a run with no plan shows no plan section), 54 (claims a
-plan's first task) and 60 (claims a reader for a handoff).
+Deferred: 32–36, 39, 40 and 54 (about a run's plan, which the board no
+longer shows, D51) and 60 (claims a reader for a handoff).
 
 Focus is always visible; reduced motion removes transitions, the panel
 reveal and the Working beat; every control has an accessible name; contrast

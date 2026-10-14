@@ -13,7 +13,9 @@
 // Tools write tickets through the store writing as the caller (call.files,
 // store.As), so each ticket write appends the ticket's history; they never
 // write comments, and change only a change request's state, to addressed
-// (update_ticket's addressed, FH-126). get_ticket and claim show people's
+// (update_ticket's addressed, FH-126). update_ticket's sections and
+// criteria are decoded here and checked and written by board and store
+// (rewrite.go, FH-69). get_ticket and claim show people's
 // comments as the user's words, framed apart from ticket text, within
 // their budgets, a request with its id (comments.go); board_context and a
 // move to review name the open change requests on the ticket.

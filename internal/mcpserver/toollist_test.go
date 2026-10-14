@@ -2,9 +2,11 @@ package mcpserver
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -208,5 +210,87 @@ func TestUpdateTicketTakesAddressedChangeRequests(t *testing.T) {
 	}
 	if !strings.Contains(protocol.Skill(), "`addressed`") {
 		t.Error("the skill does not say how to mark a change request addressed")
+	}
+}
+
+// toolListBudget is, in bytes, the most every agent session may receive
+// before it does any work: the tools/list result (each tool's name,
+// description and input schema, as JSON) and the server's instructions,
+// which initialize sends to every session. Agent-protocol §7.2 records the
+// same number (D52, FH-134). Raise both on purpose, saying why in the pull
+// request, after checking the ability could not extend an existing tool.
+const toolListBudget = 16500
+
+// toolSize is one tool's share of the tool list.
+type toolSize struct {
+	name  string
+	bytes int
+}
+
+// tokens estimates a size in tokens: about four bytes a token, no tokenizer.
+func tokens(bytes int) int { return (bytes + 3) / 4 }
+
+// Every tool's name, description and schema is in every agent's context
+// before it does any work (D52), so the list's size is measured, reported
+// (go test -v -run TestToolListStaysWithinItsBudget ./internal/mcpserver)
+// and held to a budget.
+func TestToolListStaysWithinItsBudget(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	e.connect()
+	tools, err := e.client.ListTools(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tools.NextCursor != "" {
+		t.Fatal("tools/list is paginated; measure every page")
+	}
+	listed, err := json.Marshal(&mcp.ListToolsResult{Tools: tools.Tools})
+	if err != nil {
+		t.Fatal(err)
+	}
+	instructions := len(e.client.InitializeResult().Instructions)
+	total := len(listed) + instructions
+
+	var sizes []toolSize
+	for _, tool := range tools.Tools {
+		data, err := json.Marshal(tool)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sizes = append(sizes, toolSize{tool.Name, len(data)})
+	}
+	slices.SortFunc(sizes, func(a, b toolSize) int { return b.bytes - a.bytes })
+	var report strings.Builder
+	for _, size := range sizes {
+		fmt.Fprintf(&report, "  %-18s %6d bytes  ~%5d tokens\n", size.name, size.bytes, tokens(size.bytes))
+	}
+	t.Logf("%d tools: tools/list %d bytes (~%d tokens), instructions %d bytes, %d bytes (~%d tokens) in all; budget %d bytes\n%s",
+		len(sizes), len(listed), tokens(len(listed)), instructions, total, tokens(total), toolListBudget, report.String())
+
+	if total > toolListBudget {
+		var largest []string
+		for _, size := range sizes[:min(5, len(sizes))] {
+			largest = append(largest, fmt.Sprintf("%s %d bytes", size.name, size.bytes))
+		}
+		t.Errorf("the tool list and instructions are %d bytes (~%d tokens), over the budget of %d bytes (D52, agent-protocol §7.2).\n"+
+			"Largest tools: %s.\n"+
+			"Every agent reads all of it before any work: first try an optional input on an existing tool, or shorter descriptions. "+
+			"To raise the budget on purpose, set toolListBudget in internal/mcpserver/toollist_test.go and the budget in agent-protocol §7.2 "+
+			"to the new size plus about 5%%, and say why in the pull request.",
+			total, tokens(total), toolListBudget, strings.Join(largest, ", "))
+	}
+
+	data, err := os.ReadFile("../../docs/dev/specs/agent-protocol.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorded := regexp.MustCompile(`tool list's budget is ([\d,]+) bytes`).FindStringSubmatch(string(data))
+	if recorded == nil {
+		t.Fatal("agent-protocol §7.2 does not record the tool list's budget")
+	}
+	if got := strings.ReplaceAll(recorded[1], ",", ""); got != strconv.Itoa(toolListBudget) {
+		t.Errorf("agent-protocol §7.2 records a budget of %s bytes; toolListBudget is %d", recorded[1], toolListBudget)
 	}
 }

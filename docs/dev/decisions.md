@@ -1201,11 +1201,19 @@ board, no session called a plan tool (`TodoWrite`, the task tools or
 `update_plan`), and the Claude desktop app's Code session used for this
 review offered none, so the plan display was always empty. Older logs that hold plans
 still fold. Built by FH-133, which also settles the protocol version
-under agent-protocol §14.
+under agent-protocol §14 (D77: it stays 2).
 
 Options: criteria and handoff as the plan (chosen); hide the display but
 keep the parsing dormant; agents report a plan through `checkpoint` (more
 tokens per call, and it repeats the criteria); keep plans as they are.
+
+Built (FH-133): `plan.updated` is no longer an event kind, so readers
+skip it in older logs as any unknown kind; runs, the API, cards and the
+Runs tab carry no plan or plan count; the Claude Code adapter no longer
+reads `TodoWrite` or the task tools and `setup claude` stops registering
+`TaskCreated` and `TaskCompleted` (and removes them; `doctor` warns while
+they remain); Codex's `update_plan` is an ordinary tool use; `RUN-4` is
+retired; and the marginal remarks about plans (32–40, 54) are deferred.
 
 ## 2026-10-13 — D52: New abilities extend existing MCP tools first
 
@@ -1216,6 +1224,9 @@ in its decision. Every tool's name, description and schema is in every
 agent's context before it does any work (principle 3), so the list's size
 is measured: a test fails when it grows past a recorded budget, and a
 change that raises the budget says why (FH-134). "No delete" stands.
+The measure covers the `tools/list` result and the server's instructions,
+both sent to every session; the budget and the rule for raising it are in
+agent-protocol §7.2.
 
 Options: extend existing tools first, with a measured size (chosen); a
 hard token budget alone; add tools freely.
@@ -1938,6 +1949,100 @@ which FH-167 will give a control on the workstream page.
 Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): a new optional
 input, no event changes shape. Board format stays 2: no field is added.
 
+## 2026-10-14 — D74: The Needs you filter says why an agent has no card, and sends the user to answer it
+
+Decision (FH-157): while the Needs you filter is on, agents that need the
+user with no ticket on the board (they asked about a project or a
+workstream, not a ticket) are explained where the user looks, not in a
+quiet strip beside misleading advice. With cards to show, the strip above
+them says why no card can show the rest. With no card left, the
+explanation replaces the empty state, and *Clear a filter or the search*
+is never shown when the Needs you filter is the reason. Both carry one
+primary button whose label says what it gets on its own, **Answer it in
+the Overview** (*them* for several), as the user asked: *Open Overview*
+named a view, not a result.
+
+- **Where the button goes.** The Overview of the same scope (a project's
+  count is that project's agents), with keyboard focus on the *Needs your
+  decision* heading, so a keyboard or screen reader user lands on the list
+  that holds the question. The focus is a one-time arrival held by the
+  app shell and dropped on any other view, not a route parameter: a
+  reload or a shared link opens the Overview as usual, and no new URL
+  form needs supporting. *Needs your decision* is already the Overview's
+  first section, so no scroll position needs keeping.
+- **Wording.** "Asked" covers questions and permission prompts alike; a
+  ticket that was archived or deleted is rare enough that "not about a
+  ticket" stays accurate in spirit.
+- **Other filters.** When other filters are on too, the explanation
+  stays and adds that clearing them may show tickets that need the user;
+  with nobody waiting and other filters on, the generic empty state
+  stays, as those filters may be the reason. With nobody waiting and no
+  other filter, the empty state is *Nothing needs you right now*.
+
+## 2026-10-14 — D75: Agents rewrite a ticket's sections and criteria; the replaced text is kept in its files
+
+Decision (FH-69): `update_ticket` gains two optional inputs. `sections`
+replaces whole sections by heading (`board.NewAgentSectionChange`, built
+on D57's `SectionChange`, so headings match only at the start of a line
+outside code fences and every other byte stays as it was). `criteria`
+edits the acceptance criteria by operation (`board.NewCriteriaEdit`).
+The rewrite is written by `store.ApplyTicketEdit` in the same write as
+the call's fields, ticks, notes and addressed requests, under the
+project lock and the ticket's content hash (a ticket changed since the
+read is a `conflict`; one another live session holds is `claimed`).
+
+- **An unknown section is refused.** Options: refuse it naming the
+  sections there are; create it, as the board's in-place editor adds a
+  missing one. A misspelt name ("Descripton") would quietly add a stray
+  section that the next session reads beside the real one, the very
+  contradiction FH-69 removes. So a section that is not in the template
+  must already be in the ticket; a template section the ticket lacks
+  (Description, Test Plan, Reproduction, Context) is added in its place.
+  The refusal is `invalid_input` naming every section that may be
+  rewritten, with "put the text in Context" as the fix.
+- **Never whole: Handoff, Notes and Acceptance Criteria.** `checkpoint`
+  writes Handoff and `append_notes` adds to Notes (D57), as before. The
+  criteria are refused too, so a rewrite can never drop a tick.
+- **Criteria by operation, not as a full list.** Options: operations
+  (add, reword, remove, move); a full replacement list matched by index.
+  A full list makes the agent restate every criterion and its tick, and a
+  tick a person made between the read and the write is lost or lands on
+  the wrong item when items are matched by index. Operations name only
+  what changes: a reworded or moved criterion keeps its box, an added one
+  starts unticked. Items are numbered as the ticket had them before the
+  call (by number or text, as `check` takes them), so an earlier
+  operation never renumbers a later one; `position` counts the list as
+  the operations before it left it. `check` in the same call ticks by the
+  same numbers, before the operations.
+- **Where the replaced text is kept: a file in the ticket's `files/`.**
+  Options: in the history entry (D58 keeps ticket text out of history,
+  and the Activity feed would carry whole sections); inline in a note
+  (notes are one-line bullets every session reads in `get_ticket`, so
+  old sections would bloat every later read); git (the board root need
+  not be a repository, D12); a file beside the ticket. The write keeps
+  the old text of every section whose text changed, under its own
+  heading, in `files/<time>-<id>-earlier-text.md` (`board.EarlierText`),
+  listed in `files/index.yaml` (kind `other`, the caller's run, a caption
+  naming the sections) and staged before the ticket, so a crash leaves a
+  listed file rather than a note pointing at nothing. A section that was
+  only added keeps nothing. A person restores a section by copying its
+  text back on the ticket's page. Which sections changed is worked out
+  from the ticket before and after the rewrite (`board.Rewritten`), as
+  history is (D58).
+- **Who changed what.** The ticket's Activity shows the history entry
+  D58 already writes (`edited: description, acceptance-criteria` by the
+  run), and the write appends a note under the caller's run:
+  *Rewrote Description and Context; criteria: 2 reworded, 3 removed, one
+  added as 1. The replaced text is in [files/…](files/…).* The result
+  ends with `kept=files/…`. A rewrite to the text the ticket already has
+  writes nothing, keeps nothing and notes nothing.
+
+Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): two new
+optional inputs on an existing tool (D52), no event changes shape
+(`ticket.updated` names the sections as D57's section edits do), and an
+agent that sends neither writes what it wrote before. Board format stays
+2: the kept file is an ordinary attachment.
+
 ## 2026-10-14 — D76: A project's workstream titles are unique
 
 Decision (FH-163, the user's proposed change on the ticket): a project
@@ -1986,6 +2091,26 @@ Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): no tool,
 input or event changes shape; the one call newly refused made a board
 the user could not read reliably. Board format stays 2: the files do not
 change, and a board with duplicates still loads.
+
+## 2026-10-14 — D77: Retiring plans keeps protocol version 2
+
+Decision (FH-133, settling the question D51 left): removing plans
+(`plan.updated`, the task-list tools' reading and the `TaskCreated` and
+`TaskCompleted` registrations) keeps `PROTOCOL_VERSION` 2. Agent-protocol
+§14 says a removal bumps the version; the rule exists so that a reader or
+writer on one side of an upgrade does not misread the other, and here
+none can. A version 2 binary without the change, reading a newer log,
+finds no plans, which it already showed as none for every session
+without a task list; a newer reader skips old plans as an unknown kind;
+agents call the same tools with the same inputs and get the same
+outputs and refusals; and the skill changes one line, which the
+session-start hook refreshes. An older Claude Code registration of the
+task events still runs the hook, which records nothing for them, until
+`setup claude` removes it; `doctor` warns while it remains. §14 now
+records this as a removal within version 2.
+
+Options: keep 2 (chosen); bump to 3, which would ask every user to
+re-run setup for a change no agent or reader can observe.
 
 ## 2026-10-14 — D78: A workstream's name is edited on its page, and its slug and saved preferences follow
 

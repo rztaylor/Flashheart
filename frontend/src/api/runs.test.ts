@@ -18,9 +18,6 @@ const live = {
   short: "claude:s",
   agent: "claude",
   state: "needs-you",
-  done: 1,
-  total: 3,
-  step: "Fix header",
   reason: {
     kind: "permission",
     permission: "Bash",
@@ -66,8 +63,6 @@ const run = {
   tools: 3,
   edits: 1,
   files: ["src/a.ts"],
-  plan: [{ text: "Fix header", status: "in_progress" }],
-  progress: { done: 0, total: 1, current: "Fix header" },
   questions: [
     {
       id: "q-1",

@@ -101,7 +101,6 @@ type Run struct {
 	EndedAt      time.Time
 	EndReason    string
 
-	Plan []events.PlanItem
 	// Tools counts tool uses; Edits counts successful edits since the last
 	// checkpoint (dirty), where a turn end or end that found the worktree
 	// changed by other means, such as shell commands, counts as one;
@@ -212,38 +211,6 @@ func (q Question) Open() bool { return !q.Delivered }
 // counts a session's subagents too.
 func (r *Run) Dirty() bool { return r.Edits > 0 }
 
-// Progress summarises a plan: done and total items, and the current step
-// (the first in progress, else the first pending).
-type Progress struct {
-	Done    int    `json:"done"`
-	Total   int    `json:"total"`
-	Current string `json:"current,omitempty"`
-}
-
-// Progress returns the plan's progress.
-func (r *Run) Progress() Progress {
-	p := Progress{Total: len(r.Plan)}
-	pending := ""
-	for _, item := range r.Plan {
-		switch item.Status {
-		case events.PlanCompleted:
-			p.Done++
-		case events.PlanInProgress:
-			if p.Current == "" {
-				p.Current = item.Text
-			}
-		default:
-			if pending == "" {
-				pending = item.Text
-			}
-		}
-	}
-	if p.Current == "" {
-		p.Current = pending
-	}
-	return p
-}
-
 // Set is the fold of one or more projects' events into runs.
 type Set struct {
 	runs  map[string]*Run
@@ -305,7 +272,7 @@ var recordedElsewhere = map[events.Kind]bool{
 // (agent-protocol §3): one of them in a run the server started means its
 // session's hooks report it too (MCPOnly).
 var fromHooksOnly = map[events.Kind]bool{
-	events.TurnStart: true, events.TurnEnd: true, events.ToolUsed: true, events.PlanUpdated: true,
+	events.TurnStart: true, events.TurnEnd: true, events.ToolUsed: true,
 	events.PermissionRequested: true, events.PermissionResolved: true, events.Notification: true, events.Compact: true,
 }
 
@@ -450,11 +417,6 @@ func (s *Set) Apply(e events.Event) {
 			}
 		}
 		entry.Tools, entry.Failures = data.Tools, max(data.Failed, 0)
-	case events.PlanUpdated:
-		var data events.PlanData
-		_ = e.Decode(&data)
-		r.Plan = applyPlan(r.Plan, data)
-		entry.Detail = r.Progress().Current
 	case events.PermissionRequested:
 		var data events.PermissionData
 		_ = e.Decode(&data)
@@ -608,34 +570,6 @@ func first(values ...string) string {
 		}
 	}
 	return ""
-}
-
-func applyPlan(plan []events.PlanItem, data events.PlanData) []events.PlanItem {
-	if !data.Merge {
-		plan = slices.Clone(data.Items)
-	} else {
-		plan = slices.Clone(plan)
-		for _, item := range data.Items {
-			index := slices.IndexFunc(plan, func(p events.PlanItem) bool { return item.ID != "" && p.ID == item.ID })
-			switch {
-			case item.Status == events.PlanDeleted:
-				if index >= 0 {
-					plan = slices.Delete(plan, index, index+1)
-				}
-			case index >= 0:
-				if item.Text != "" {
-					plan[index].Text = item.Text
-				}
-				plan[index].Status = item.Status
-			default:
-				plan = append(plan, item)
-			}
-		}
-	}
-	if len(plan) > events.MaxPlanItems {
-		plan = plan[:events.MaxPlanItems]
-	}
-	return plan
 }
 
 // lastActivity is the latest event of the run or any of its subagents.
@@ -869,8 +803,6 @@ type View struct {
 
 	Tools, Edits int
 	Files        []string
-	Plan         []events.PlanItem
-	Progress     Progress
 	Questions    []Question
 	Timeline     []Entry
 }
@@ -901,8 +833,6 @@ func (s *Set) Views(now time.Time, settings Settings, byBranch InProgress) []Vie
 			Started:    r.Started, LastActivity: s.lastActivity(r), EndedAt: r.EndedAt,
 			Tools: r.Tools, Edits: s.Edits(id),
 			Files:     slices.Clone(r.Files),
-			Plan:      slices.Clone(r.Plan),
-			Progress:  r.Progress(),
 			Questions: cloneQuestions(r.Questions, s.sessionEnded(r, state, now, settings), r.MCPOnly()),
 			Timeline:  slices.Clone(r.Timeline),
 		})
