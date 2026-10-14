@@ -3,7 +3,7 @@
   "request": "GET /api/tickets/AL-3",
   "status": 200,
   "body": {
-    "revision": 25,
+    "revision": 1,
     "ticket": {
       "project": "alpha",
       "id": "AL-3",
@@ -107,7 +107,7 @@
           "url": "/api/projects/alpha/tickets/AL-3/files/20261004T1330-panel.png"
         }
       ],
-      "hash": "hash-22",
+      "hash": "hash-01",
       "raw": "---\nid: AL-3\nstatus: in-progress\ntype: feature\nproject: alpha\ncreated: 2026-10-02\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: feature/card-panel\nworkstream: board-ui\ndepends-on: []\ndepends-on-workstreams: []\ntags: [ui, markdown]\nupdated: 2026-10-04T13:30:00Z\n---\n\n# Card panel\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [x] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\n- 2026-10-04 · Question from claude:3f2a9c1e — \"Keep the old panel?\" Answer (Robert): \"Yes\".\n\n## Handoff\n\n_Updated 2026-10-04 13:20 UTC by claude:3f2a9c1e (run) on feature/card-panel._\n\n**Done**\n- Ticket tab renders markdown\n**Next**\n- Review tab\n**Files**\n- frontend/src/features/card/CardPanel.tsx\n**Open questions**\n- None\n",
       "runs": [
         {
@@ -292,7 +292,7 @@
       ],
       "comments": [
         {
-          "id": "entry-04",
+          "id": "entry-02",
           "time": "2026-10-04T13:30:00Z",
           "by": "Robert",
           "byShort": "Robert",
@@ -310,7 +310,7 @@
       ],
       "history": [
         {
-          "id": "entry-23",
+          "id": "entry-03",
           "time": "2026-10-04T13:30:00Z",
           "by": "Robert",
           "byShort": "Robert",
@@ -324,13 +324,13 @@
               "criteria": [],
               "steps": [],
               "comments": [
-                "entry-10"
+                "entry-04"
               ]
             }
           ]
         },
         {
-          "id": "entry-24",
+          "id": "entry-05",
           "time": "2026-10-04T13:30:00Z",
           "by": "Robert",
           "byShort": "Robert",
@@ -350,7 +350,7 @@
           ]
         }
       ],
-      "activityHash": "hash-25",
+      "activityHash": "hash-06",
       "tellSessions": [
         {
           "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",

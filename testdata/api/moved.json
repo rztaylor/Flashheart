@@ -3,8 +3,8 @@
   "request": "POST /api/tickets/AL-4/move",
   "status": 200,
   "body": {
-    "hash": "hash-12",
-    "revision": 11,
+    "hash": "hash-01",
+    "revision": 1,
     "warnings": []
   }
 }

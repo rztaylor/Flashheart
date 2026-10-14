@@ -99,7 +99,7 @@ var ErrorCodes = []string{
 	"already_answered", "answered_in_session", "board_unavailable", "board_unreadable", "busy",
 	"config_unreadable", "confirm_blocked", "conflict", "delivered", "exists", "invalid_input",
 	"key_fixed", "key_taken", "method_not_allowed", "needs_repair", "not_found", "not_in_review",
-	"not_live", "open_request", "read_only", "too_large", "type_not_allowed", "unreadable", "write_failed",
+	"not_live", "open_request", "read_only", "title_taken", "too_large", "type_not_allowed", "unreadable", "write_failed",
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {

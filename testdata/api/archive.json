@@ -3,7 +3,7 @@
   "request": "GET /api/projects/alpha/archive",
   "status": 200,
   "body": {
-    "revision": 25,
+    "revision": 1,
     "tickets": [
       {
         "id": "AL-8",

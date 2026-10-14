@@ -3,8 +3,8 @@
   "request": "PUT /api/tickets/AL-6/raw",
   "status": 200,
   "body": {
-    "hash": "hash-15",
-    "revision": 14,
+    "hash": "hash-01",
+    "revision": 1,
     "warnings": []
   }
 }

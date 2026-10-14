@@ -135,6 +135,9 @@ const contract: Record<string, { guard: Guard; optional?: string[] }> = {
   uploaded: { guard: isUploaded },
   "ticket-created": { guard: isCreated },
   "workstream-created": { guard: isCreatedWorkstream },
+  // An edit answers as a create does: the slug (renamed or not), hash and
+  // revision.
+  "workstream-edited": { guard: isCreatedWorkstream },
   "workstream-ordered": { guard: isSaved },
   "workstream-section-saved": { guard: isSaved },
   "key-set": { guard: isSaved },
@@ -167,6 +170,7 @@ const contract: Record<string, { guard: Guard; optional?: string[] }> = {
   "error-conflict": { guard: isConflictBody },
   "error-confirm-blocked": { guard: isBlockedBody },
   "error-key-taken": { guard: isKeyTakenBody },
+  "error-title-taken": { guard: isErrorBody },
 };
 
 type Path = (string | number)[];

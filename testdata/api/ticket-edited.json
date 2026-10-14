@@ -3,7 +3,7 @@
   "request": "GET /api/tickets/AL-4",
   "status": 200,
   "body": {
-    "revision": 25,
+    "revision": 1,
     "ticket": {
       "project": "alpha",
       "id": "AL-4",
@@ -74,14 +74,14 @@
       "handoff": null,
       "review": null,
       "attachmentFiles": [],
-      "hash": "hash-14",
+      "hash": "hash-01",
       "raw": "---\nid: AL-4\nstatus: backlog\ntype: feature\nproject: alpha\ncreated: 2026-10-02\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: \nworkstream: board-ui\ndepends-on: [AL-3]\ndepends-on-workstreams: []\ntags: [ui]\nupdated: 2026-10-04T13:30:00Z\n---\n\n# Drag and drop\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nUse the pointer events API.\n\n## Notes\n\nNone.\n",
       "runs": [],
       "questions": [],
       "comments": [],
       "history": [
         {
-          "id": "entry-30",
+          "id": "entry-02",
           "time": "2026-10-04T13:30:00Z",
           "by": "Robert",
           "byShort": "Robert",
@@ -99,7 +99,7 @@
           ]
         },
         {
-          "id": "entry-31",
+          "id": "entry-03",
           "time": "2026-10-04T13:30:00Z",
           "by": "Robert",
           "byShort": "Robert",
@@ -119,7 +119,7 @@
           ]
         },
         {
-          "id": "entry-32",
+          "id": "entry-04",
           "time": "2026-10-04T13:30:00Z",
           "by": "Robert",
           "byShort": "Robert",
@@ -139,7 +139,7 @@
           ]
         }
       ],
-      "activityHash": "hash-33",
+      "activityHash": "hash-05",
       "tellSessions": []
     }
   }

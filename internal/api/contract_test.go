@@ -77,7 +77,8 @@ type contract struct {
 	routes   map[string]bool
 	shapes   []any
 	// placeholders stand in for values that differ from run to run:
-	// content hashes over activity entries with random ids, and those ids.
+	// content hashes over activity entries with random ids, and those ids;
+	// numbered within each fixture, so a new step leaves the others be.
 	placeholders map[string]string
 }
 
@@ -90,6 +91,8 @@ var (
 	entryInPath = regexp.MustCompile(`/[0-9a-f]{8}$`)
 	// fileTime matches the fields read from file modification times.
 	fileTime = regexp.MustCompile(`"(modified|lastModified|archived)":"\d{4}-[^"]*"`)
+	// revision matches the board revision, which counts the steps before.
+	revision = regexp.MustCompile(`"revision":\d+`)
 )
 
 func (c *contract) normalise(raw []byte) []byte {
@@ -100,6 +103,7 @@ func (c *contract) normalise(raw []byte) []byte {
 	text = randomValue.ReplaceAllStringFunc(text, func(match string) string {
 		return `"` + c.placeholder(strings.Trim(match, `"`)) + `"`
 	})
+	text = revision.ReplaceAllString(text, `"revision":1`)
 	return []byte(fileTime.ReplaceAllString(text, `"$1":"2026-10-04T12:00:00Z"`))
 }
 
@@ -151,6 +155,7 @@ func (c *contract) do(x exchange) []byte {
 	if _, taken := c.fixtures[x.name]; taken {
 		c.t.Fatalf("two fixtures named %s", x.name)
 	}
+	c.placeholders = map[string]string{}
 	body := json.RawMessage("null")
 	if len(bytes.TrimSpace(raw)) > 0 {
 		body = c.normalise(raw)
@@ -298,9 +303,15 @@ func runContract(t *testing.T) *contract {
 	c.do(exchange{name: "ticket-created", route: "POST /api/projects/{project}/tickets", method: http.MethodPost, path: "/api/projects/alpha/tickets",
 		body: CreateRequest{Title: "Column headers", Type: "feature", Priority: "medium", Status: "backlog", Workstream: "board-ui", Description: "Name each column.",
 			Criteria: []string{"Headers show counts"}, DependsOn: []string{"AL-2"}, Tags: []string{"ui"}}, status: http.StatusCreated, shape: CreateResponse{}})
-	c.do(exchange{name: "workstream-created", route: "POST /api/projects/{project}/workstreams", method: http.MethodPost, path: "/api/projects/alpha/workstreams",
-		body:   NewWorkstreamRequest{Title: "Sync", Goal: "Share the board.", Priority: "low", DependsOnWorkstreams: []string{"board-ui"}},
-		status: http.StatusCreated, shape: CreatedWorkstreamResponse{}})
+	createWorkstream := "POST /api/projects/{project}/workstreams"
+	createdWorkstream := decodeAs[CreatedWorkstreamResponse](t, c.do(exchange{name: "workstream-created", route: createWorkstream, method: http.MethodPost,
+		path: "/api/projects/alpha/workstreams", body: NewWorkstreamRequest{Title: "Sync", Goal: "Share the board.", Priority: "low", DependsOnWorkstreams: []string{"board-ui"}},
+		status: http.StatusCreated, shape: CreatedWorkstreamResponse{}}))
+	c.do(exchange{name: "workstream-edited", route: "PATCH /api/projects/{project}/workstreams/{slug}", method: http.MethodPatch, path: "/api/projects/alpha/workstreams/sync",
+		body:   map[string]any{"base": createdWorkstream.Hash, "fields": map[string]any{"title": "Sync everywhere", "tags": []string{"sync"}}, "slug": "sync-everywhere"},
+		status: http.StatusOK, shape: EditedWorkstreamResponse{}})
+	c.do(exchange{name: "error-title-taken", route: createWorkstream, method: http.MethodPost, path: "/api/projects/alpha/workstreams",
+		body: NewWorkstreamRequest{Title: "Board UI", Goal: "Again.", Priority: "low"}, status: http.StatusConflict})
 	saved("workstream-ordered", "PUT /api/projects/{project}/workstreams/{slug}/order", http.MethodPut, "/api/projects/alpha/workstreams/board-ui/order",
 		OrderRequest{Tickets: []string{"AL-3", "AL-2", "AL-4", "AL-8", "AL-9"}})
 	saved("workstream-section-saved", "PUT /api/projects/{project}/workstreams/{slug}/section", http.MethodPut, "/api/projects/alpha/workstreams/board-ui/section",

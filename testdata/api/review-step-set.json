@@ -3,8 +3,8 @@
   "request": "POST /api/tickets/AL-2/review/steps",
   "status": 200,
   "body": {
-    "hash": "hash-17",
-    "revision": 16,
+    "hash": "hash-01",
+    "revision": 1,
     "warnings": []
   }
 }

@@ -67,7 +67,10 @@
   one scripted session on a copy of `testdata/boards/sample` (every route
   but the two in `routesWithoutFixture`, in order) and keeps each
   response in `testdata/api/<name>.json`, with random activity ids and
-  hashes, the root and file times replaced by stable placeholders. It
+  hashes (numbered within each file), the root, file times and board
+  revisions replaced by stable placeholders, so a new step changes only
+  its own fixture; a merge conflict there is settled by rerunning the
+  update after the merge. It
   fails when a fixture is stale, when a registered route has none, or when
   a response type carries a `runs` or `events` type. `TestVocabulary`
   keeps `testdata/vocabulary.json`; `TestErrorCodes` holds handlers to

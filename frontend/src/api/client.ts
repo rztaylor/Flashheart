@@ -12,6 +12,7 @@ export const ERROR_CODES = [
   "conflict",
   "confirm_blocked",
   "key_taken",
+  "title_taken",
   "too_large",
   "type_not_allowed",
 ] as const;

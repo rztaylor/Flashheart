@@ -116,6 +116,7 @@
     "not_live",
     "open_request",
     "read_only",
+    "title_taken",
     "too_large",
     "type_not_allowed",
     "unreadable",
