@@ -1,44 +1,26 @@
 // Package hooks handles one agent hook invocation without knowing any
-// agent's payload schema or tool names (HOOK-1–HOOK-4): it reads the
-// payload, has the agent's Adapter turn it into events (classifying each
-// tool result as a shell command or an edit of its paths, and naming runs
-// of its own agent; others are logged and dropped), resolves the project, branch and
-// worktree from the working directory, fills in where the run works and
-// makes edit paths repository-relative (events bounds and scrubs what is
-// stored), throttles tool results into activity records (at most one per
-// run per activity_seconds, with each newly edited path and permission
-// resolution at once and pending activity before a turn end or end, or
-// before a run's start again after a crash),
-// keeping a session's pending activity in its state file under the
-// project lock and forgetting runs the stale rule has ended
-// (agent-protocol §3), appends the events, renders the
-// recovery note at session start
-// (after calling the caller's protocol-text refresh and opening the note
-// with the line it returns when it rewrote the text),
-// delivers what waits in the session's inbox with a prompt (checking one
-// file) and in the recovery note (HOOK-5, D54, through events.Deliver:
-// shown even when recording their delivery fails, which is logged), marks a session's turn
-// end or end when a file in its worktree changed during one of its shell
-// commands since its last checkpoint (asking gitchange, under a deadline
-// counted from the hook's start, only when it ran one; agent-protocol §4),
-// blocks a stop once for a checkpoint when the project
-// enforces handoffs (HOOK-6), asks a session that changed files holding
-// no ticket once to claim one (HOOK-8, D50: the stop's reason where
-// handoffs are enforced, else context with its next event whose output
-// the adapter says reaches the model; remembered in its state file), and prints
-// adapter-only replies such as run stamping without opening the board.
-// To stay within HOOK-1's budget on a busy log, the recovery note and a
-// session's end fold only the sessions they ask about over the run window
-// (runs.Keep, runs.Latest), reading the other lines' envelopes alone
-// (events.Log.ReadSelected).
-// Every failure is logged to hook-errors.log and swallowed. In a repository
-// whose project is archived (PRJ-5) a hook records nothing and stays quiet;
-// outside any git repository (PRJ-4) it also writes nothing at all, not
-// even the root, the skill or AGENTS.md.
+// agent's payload schema or tool names (HOOK-1–HOOK-4). It reads the
+// payload, has the agent's Adapter turn it into events, resolves the
+// project, branch and worktree from the working directory, throttles tool
+// results into activity records kept in the session's state file under the
+// project lock (agent-protocol §3), and appends the events.
 //
-// Payload schemas and output formats belong to the adapters
-// (hooks/claude, hooks/codex); the board root, its settings (store.ReadConfig) and its
-// creation (store.EnsureRoot), and event files to events and store; run
-// derivation to runs;
-// git commands to gitchange; note wording to protocol. Hooks never use index, api, app or webui.
+// At session start it refreshes the protocol text through the caller and
+// renders the recovery note; with a prompt or that note it delivers the
+// session's inbox (HOOK-5, D54, through events.Deliver). At a turn end or
+// end it marks a file changed since the last checkpoint (asking gitchange
+// under a deadline; agent-protocol §4), blocks a stop once for a checkpoint
+// where the project enforces handoffs (HOOK-6), and asks a session that
+// changed files holding no ticket once to claim one (HOOK-8, D50). It
+// folds only the sessions it asks about (runs.Keep, runs.Latest) to stay
+// within HOOK-1's budget.
+//
+// Every failure is logged to hook-errors.log and swallowed. In an archived
+// project's repository a hook records nothing; outside git it writes
+// nothing at all, not even the root.
+//
+// Payload schemas and output formats belong to the adapters (hooks/claude,
+// hooks/codex); the root, settings and files to store and events; run
+// derivation to runs; git commands to gitchange; note wording to protocol.
+// Hooks never use index, api, app or webui.
 package hooks

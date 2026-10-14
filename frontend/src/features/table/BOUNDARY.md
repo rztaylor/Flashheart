@@ -5,7 +5,7 @@ list of the filtered tickets with status pill, type and priority tags
 (each with the card's mark, `components/TicketMarks`),
 workstream, state (blocked pill, repair, wait, live run), criteria and age,
 where a row's title opens the card panel and its id the ticket's full page
-(CARD-7), and `TableSkeleton`, the table's shape while tickets load.
+(CARD-7), and `TableSkeleton`, the table's shape while tickets load. Its
+columns are fixed.
 
-Does not own filtering (`model/filters`), data loading or routing. Choosing
-visible fields arrives with saved preferences (CFG-2).
+Does not own filtering (`model/filters`), data loading or routing.

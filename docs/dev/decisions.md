@@ -2254,3 +2254,22 @@ Decision (FH-173, FH-174): two follow-ups to renames made outside the tab
 Versions: `PROTOCOL_VERSION` stays 2 (no tool changes; the preference
 endpoint is the board's, not agents'); board format stays 2 (no field is
 added).
+
+## 2026-10-14 — D81: Go boundary notes are held to 250 words and 2 KiB
+
+Decision (FH-107): each package's `doc.go` holds at most 250 words and
+2 KiB, and `scripts/check-boundaries.sh`, run first by `scripts/check.sh`,
+fails on any `doc.go` or frontend `BOUNDARY.md` (150 words, 2 KiB) over
+its limit. A word is a token with a letter or digit, so markdown bullets,
+`//` and the `package` line do not count; bytes are the whole file. A
+note says what its unit owns and does not own; inventories, symbol detail
+and history go in the code's comments, and cross-package rules in
+`.agents/facts/architecture.md`.
+
+Options: 250 words and 2 KiB (chosen); 150 words like `BOUNDARY.md`,
+the skill's default, which would cut the largest packages (`store`,
+`mcpserver`, `api`, `hooks`) below a list of what they own; no limit,
+which let `store`'s note reach 4.7 KiB and `api`'s, `hooks`' and
+`mcpserver`'s 3 KiB as each change added a clause. A Go package has no
+separate boundary file, so its note carries more than a frontend
+feature's, but the same 2 KiB ceiling keeps it a first read.
