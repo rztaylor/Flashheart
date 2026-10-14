@@ -6,6 +6,7 @@ import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
 import { ProjectField } from "../../components/ProjectField";
+import { priorityMark } from "../../components/TicketMarks";
 import { messageOf } from "../../model/errors";
 import { PRIORITIES } from "../../model/tickets";
 
@@ -118,7 +119,11 @@ export function NewWorkstreamDialog({
         </FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Priority">
-            <Select value={priority} onChange={setPriority}>
+            <Select
+              value={priority}
+              onChange={setPriority}
+              leading={priorityMark(priority)}
+            >
               {PRIORITIES.map((item) => (
                 <option key={item}>{item}</option>
               ))}

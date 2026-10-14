@@ -143,17 +143,24 @@ export const textProperty = (key: keyof TicketDetail, label: string) => ({
 });
 
 // choiceProperty reads and saves a field chosen from a list (priority,
-// type, workstream); a value not in the list stays offered.
+// type, workstream); a value not in the list stays offered. leading draws
+// a mark for the chosen value on the select's face (a priority's bars).
 export const choiceProperty = (
   key: keyof TicketDetail,
   label: string,
   choices: { value: string; label: string }[],
+  leading?: (value: string) => ReactNode,
 ) => ({
   read: (detail: TicketDetail) => String(detail[key] ?? ""),
   isDirty: (draft: string, base: string) => draft !== base,
   value: (draft: string) => draft,
   control: (value: string, set: (value: string) => void) => (
-    <Select aria-label={label} value={value} onChange={set}>
+    <Select
+      aria-label={label}
+      value={value}
+      onChange={set}
+      leading={leading?.(value)}
+    >
       {choices.some((choice) => choice.value === value)
         ? null
         : [
