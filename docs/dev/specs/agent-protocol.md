@@ -897,6 +897,20 @@ and any local file referenced in its text, into `files/` (`REV-5`).
 
 There is deliberately no delete, archive or bulk tool for agents.
 
+**The tool list's cost (D52, FH-134).** Every session receives the tool
+list (`tools/list`: each tool's name, description and input schema) and
+the server's instructions (`initialize`) before it does any work. A test
+measures both as the JSON a client receives, in bytes and estimated
+tokens (bytes / 4), reports each tool's share
+(`go test -v -run TestToolListStaysWithinItsBudget ./internal/mcpserver`),
+and fails when the total passes the budget, naming the largest tools.
+The tool list's budget is 16,500 bytes (about 4,100 tokens): 14,224 bytes
+were measured when it was set, 15,711 with the inputs FH-69 and FH-158
+add, and the budget is that plus about 5%. A new ability first becomes an
+optional input on an existing tool, in few words (D52); a change that
+still passes the budget raises it here and in the test together, to the
+new size plus about 5%, and says why in its pull request.
+
 ### 7.4 Workstream membership
 
 A workstream's `tickets:` list defines membership and display order; order
@@ -1126,7 +1140,8 @@ checks (§5.4). It covers, briefly:
   window with that many events a day. Session start and enforcing stop
   stay under 50 ms at 50,000 events a day.
 - **State table tests** for §4, including clock-driven transitions.
-- **MCP contract tests** through the Go SDK's in-memory transport.
+- **MCP contract tests** through the Go SDK's in-memory transport,
+  including the tool list's size against its budget (§7.2).
 - **End-to-end smoke**: a scripted sequence (start → claim → edits → stop
   blocked → checkpoint → end → new session recovery note) against a temp root.
   A cross-agent leg runs it from Claude Code to Codex and from Codex to

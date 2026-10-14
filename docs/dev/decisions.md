@@ -1216,6 +1216,9 @@ in its decision. Every tool's name, description and schema is in every
 agent's context before it does any work (principle 3), so the list's size
 is measured: a test fails when it grows past a recorded budget, and a
 change that raises the budget says why (FH-134). "No delete" stands.
+The measure covers the `tools/list` result and the server's instructions,
+both sent to every session; the budget and the rule for raising it are in
+agent-protocol §7.2.
 
 Options: extend existing tools first, with a measured size (chosen); a
 hard token budget alone; add tools freely.

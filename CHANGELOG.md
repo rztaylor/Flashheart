@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- What the MCP tools cost every agent's context is measured (FH-134,
+  D52). A test sizes the tool list and the server's instructions as an
+  agent receives them, in bytes and estimated tokens, reports each tool's
+  share, and fails past a budget of 16,500 bytes (about 4,100 tokens;
+  14,224 bytes today), naming the largest tools. A change that grows the
+  list past it raises the budget on purpose and says why (agent-protocol
+  §7.2).
+
 - Agents can change a workstream after creating it, and file tickets on
   another project's board (FH-46, D69, `MCP-2`). The new
   `update_workstream` tool sets a workstream's title, goal, priority,
