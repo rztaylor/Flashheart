@@ -17,7 +17,9 @@
 // token (EDIT-8), project archive, restore and delete (PRJ-5), placement
 // in manual order (EDIT-9), workstream order, one workstream section
 // rewritten in place (board.NewWorkstreamSectionChange through
-// store.UpdateWorkstream, FH-139),
+// store.UpdateWorkstream, FH-139), a workstream's fields and slug
+// (decoded into board's workstream change-set and written with a rename
+// by store.EditWorkstream, as update_workstream's are, FH-158),
 // project keys, preferences, answers to agents'
 // questions, comments on a ticket, D47, files uploaded into a ticket,
 // REV-7, whose limit it reads from the config) validate input, apply

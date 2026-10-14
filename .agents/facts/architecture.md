@@ -30,7 +30,8 @@ Intended layout (packages are created when they get real content):
 - `internal/store`: the only package that touches the board root: discovery,
   reads, locked atomic writes with hash preconditions, typed ticket edits
   from the board and agents alike (`EditTicket`), an agent's workstream
-  edit with its members in one write (`EditWorkstream`), moves, archive, each
+  edit with its members and a slug rename in one write (`EditWorkstream`,
+  FH-158), moves, archive, each
   ticket's activity file (a store writing as someone, `As`, appends the
   history of every ticket write in the same transaction; people's
   comments are added, edited and deleted there, never in the ticket

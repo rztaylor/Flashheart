@@ -30,7 +30,7 @@ func TestSkillCoversTheProtocol(t *testing.T) {
 		"like an epic", "in sequence or in parallel", "several tickets in `depends_on`",
 		"scope changes", "`sections`", "`criteria`", "Handoff and Notes",
 		"Outside a git repository there is no project", "`no_project`", "Talk to the user in chat",
-		"open a pull request", "set its `pr`",
+		"open a pull request", "set its `pr`", "`rename_to`",
 		"## Writing tickets", "who has not read the code", "what a person would notice or gain", "why it matters", "`context`", "Instead of:"} {
 		if !strings.Contains(skill, rule) {
 			t.Errorf("skill is missing %q", rule)
