@@ -21,9 +21,6 @@ import (
 // MaxFileBytes bounds every markdown or YAML file read from the root.
 const MaxFileBytes = 1 << 20
 
-// V1Columns are the column folders of board format v1, read only to migrate.
-var V1Columns = []string{"todo", "in-progress", "ready-to-review", "done"}
-
 var (
 	// ErrInvalidName reports a project, ticket or file name that is unsafe or
 	// malformed; it is never resolved against the filesystem.
@@ -71,7 +68,7 @@ func New(path string) *Store {
 // ticket's activity file, in the same write (board-format §Activity), and
 // comments are added as by. It shares this store's root, clock and record
 // of writes. The store New returns writes as no one and records no
-// history: serve's copies of linked files and migrate.
+// history: serve's copies of linked files.
 func (s *Store) As(by string) *Store {
 	return &Store{shared: s.shared, author: board.Author(by)}
 }
@@ -174,30 +171,6 @@ func isFile(fsys fs.FS, name string) bool {
 
 func isProject(fsys fs.FS, name string) bool {
 	return isDir(fsys, name) && (isDir(fsys, path.Join(name, "tickets")) || isFile(fsys, path.Join(name, "project.yaml")))
-}
-
-// V1Projects lists directories that still use the v1 column-folder layout and
-// have no v2 tickets folder: the board needs `flashheart migrate` (MIG-1).
-func (s *Store) V1Projects() ([]string, error) {
-	_, fsys, err := s.handle()
-	if err != nil {
-		return nil, err
-	}
-	entries, err := fs.ReadDir(fsys, ".")
-	if err != nil {
-		return nil, fmt.Errorf("list board root: %w", err)
-	}
-	var names []string
-	for _, entry := range entries {
-		name := entry.Name()
-		if !ValidProject(name) || !isDir(fsys, name) || isDir(fsys, path.Join(name, "tickets")) {
-			continue
-		}
-		if slices.ContainsFunc(V1Columns, func(column string) bool { return isDir(fsys, path.Join(name, column)) }) {
-			names = append(names, name)
-		}
-	}
-	return names, nil
 }
 
 // ReadProject reads one project's tickets, workstreams, reviews, files
