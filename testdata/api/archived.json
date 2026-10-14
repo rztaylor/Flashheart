@@ -1,0 +1,10 @@
+{
+  "route": "POST /api/tickets/{id}/archive",
+  "request": "POST /api/tickets/AL-6/archive",
+  "status": 200,
+  "body": {
+    "hash": "",
+    "revision": 1,
+    "warnings": []
+  }
+}

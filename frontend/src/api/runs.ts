@@ -1,5 +1,15 @@
 // Agent runs (RUN-2, VIEW-3, VIEW-8): typed requests and response checks.
-import { type AuthenticatedFetch, getJSON, isRecord } from "./client";
+import {
+  type AuthenticatedFetch,
+  getJSON,
+  isArrayOf,
+  isBoolean,
+  isNumber,
+  isOptional,
+  isRecord,
+  isString,
+  isStringArray,
+} from "./client";
 
 export type RunState = "needs-you" | "working" | "quiet" | "waiting" | "ended";
 
@@ -182,8 +192,6 @@ export interface RunsResponse {
   hiddenEnded: number;
 }
 
-const isString = (value: unknown): value is string => typeof value === "string";
-const isNumber = (value: unknown): value is number => typeof value === "number";
 export const isRunState = (value: unknown): value is RunState =>
   RUN_STATES.includes(value as RunState);
 
@@ -208,9 +216,10 @@ function isReason(value: unknown): value is NeedsReason {
       value.kind === "question") &&
     isString(value.permission) &&
     (value.question === "" || isQuestionKind(value.question)) &&
-    typeof value.answered === "boolean" &&
+    isBoolean(value.answered) &&
     isString(value.waitingOn) &&
-    isString(value.agentType)
+    isString(value.agentType) &&
+    isBoolean(value.mcpOnly)
   );
 }
 
@@ -234,9 +243,9 @@ export function isTicketSessions(value: unknown): value is TicketSessions {
     isString(value.agent) &&
     (value.state === "" || isRunState(value.state)) &&
     isString(value.lastActivity) &&
-    typeof value.noLiveSession === "boolean" &&
-    typeof value.dirty === "boolean" &&
-    typeof value.noHandoff === "boolean" &&
+    isBoolean(value.noLiveSession) &&
+    isBoolean(value.dirty) &&
+    isBoolean(value.noHandoff) &&
     isRecord(value.subagents) &&
     isNumber(value.subagents.done) &&
     isNumber(value.subagents.running) &&
@@ -244,7 +253,7 @@ export function isTicketSessions(value: unknown): value is TicketSessions {
   );
 }
 
-const QUESTION_KINDS: QuestionKind[] = [
+export const QUESTION_KINDS: QuestionKind[] = [
   "question",
   "decision",
   "review",
@@ -253,23 +262,45 @@ const QUESTION_KINDS: QuestionKind[] = [
 const isQuestionKind = (value: unknown): value is QuestionKind =>
   QUESTION_KINDS.includes(value as QuestionKind);
 
+const optionalString = isOptional(isString);
+const optionalNumber = isOptional(isNumber);
+const optionalBoolean = isOptional(isBoolean);
+
 export function isQuestion(value: unknown): value is Question {
   return (
     isRecord(value) &&
     isString(value.id) &&
     isString(value.run) &&
     isString(value.runShort) &&
+    optionalString(value.ticket) &&
     isQuestionKind(value.kind) &&
     isString(value.text) &&
+    isOptional(isStringArray)(value.options) &&
     isString(value.asked) &&
-    (value.options === undefined ||
-      (Array.isArray(value.options) && value.options.every(isString))) &&
-    (value.answer === undefined || isString(value.answer))
+    optionalString(value.answer) &&
+    optionalString(value.answeredBy) &&
+    optionalString(value.answeredAt) &&
+    optionalBoolean(value.delivered) &&
+    optionalBoolean(value.answeredInSession) &&
+    optionalBoolean(value.sessionEnded) &&
+    optionalBoolean(value.mcpOnly)
   );
 }
 
 function isEntry(value: unknown): value is TimelineEntry {
-  return isRecord(value) && isString(value.time) && isString(value.kind);
+  return (
+    isRecord(value) &&
+    isString(value.time) &&
+    isString(value.kind) &&
+    optionalString(value.tool) &&
+    optionalString(value.path) &&
+    optionalBoolean(value.failed) &&
+    optionalNumber(value.tools) &&
+    optionalNumber(value.failures) &&
+    optionalString(value.detail) &&
+    optionalString(value.ticket) &&
+    optionalString(value.branch)
+  );
 }
 
 export function isRun(value: unknown): value is Run {
@@ -280,34 +311,51 @@ export function isRun(value: unknown): value is Run {
     isString(value.agent) &&
     (value.kind === "session" || value.kind === "subagent") &&
     isString(value.parent) &&
-    Array.isArray(value.children) &&
+    isStringArray(value.children) &&
     isString(value.project) &&
+    isString(value.cwd) &&
     isString(value.branch) &&
+    isString(value.worktree) &&
+    isString(value.source) &&
+    isString(value.agentType) &&
     isRunState(value.state) &&
+    isBoolean(value.mcpOnly) &&
     isString(value.ticket) &&
     isString(value.ticketTitle) &&
-    typeof value.dirty === "boolean" &&
-    typeof value.noHandoff === "boolean" &&
+    (value.linkedBy === "" ||
+      value.linkedBy === "claim" ||
+      value.linkedBy === "branch") &&
+    isBoolean(value.dirty) &&
+    isBoolean(value.noHandoff) &&
     isString(value.permission) &&
     isReason(value.reason) &&
+    isString(value.started) &&
     isString(value.lastActivity) &&
+    isString(value.ended) &&
+    isString(value.endReason) &&
     isNumber(value.tools) &&
     isNumber(value.edits) &&
-    Array.isArray(value.files) &&
-    Array.isArray(value.questions) &&
-    value.questions.every(isQuestion) &&
-    (value.timeline === undefined ||
-      (Array.isArray(value.timeline) && value.timeline.every(isEntry)))
+    isStringArray(value.files) &&
+    isArrayOf(isQuestion)(value.questions) &&
+    isOptional(isArrayOf(isEntry))(value.timeline)
   );
 }
 
-const isRuns = (value: unknown): value is RunsResponse =>
+export const isRuns = (value: unknown): value is RunsResponse =>
   isRecord(value) &&
   isNumber(value.revision) &&
-  Array.isArray(value.runs) &&
-  value.runs.every(isRun) &&
+  isArrayOf(isRun)(value.runs) &&
   isRunCounts(value.counts) &&
   isNumber(value.hiddenEnded);
+
+// RunResponse is GET /api/run: one run with its timeline.
+export interface RunResponse {
+  revision: number;
+  run: Run;
+}
+
+export const isRunResponse = (value: unknown): value is RunResponse =>
+  isRecord(value) && isNumber(value.revision) && isRun(value.run);
 
 // fetchRuns lists a project's runs, or every project's; Ended runs older
 // than a day are left out unless endedAll is set (VIEW-3).
@@ -338,8 +386,7 @@ export async function fetchRun(
   const response = await getJSON(
     fetcher,
     `/api/run?id=${encodeURIComponent(id)}`,
-    (value: unknown): value is { run: Run } =>
-      isRecord(value) && isRun(value.run),
+    isRunResponse,
     "Run response was invalid",
     signal,
   );

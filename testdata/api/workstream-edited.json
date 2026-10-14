@@ -1,0 +1,10 @@
+{
+  "route": "PATCH /api/projects/{project}/workstreams/{slug}",
+  "request": "PATCH /api/projects/alpha/workstreams/sync",
+  "status": 200,
+  "body": {
+    "slug": "sync-everywhere",
+    "hash": "hash-01",
+    "revision": 1
+  }
+}

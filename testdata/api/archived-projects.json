@@ -1,0 +1,20 @@
+{
+  "route": "GET /api/archived-projects",
+  "request": "GET /api/archived-projects",
+  "status": 200,
+  "body": {
+    "revision": 1,
+    "projects": [
+      {
+        "name": "beta",
+        "displayName": "beta",
+        "key": "BE",
+        "repos": [
+          "/Users/example/src/beta"
+        ],
+        "tickets": 1,
+        "archived": "2026-10-04T12:00:00Z"
+      }
+    ]
+  }
+}

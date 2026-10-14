@@ -1,0 +1,10 @@
+{
+  "route": "DELETE /api/tickets/{id}/comments/{comment}",
+  "request": "DELETE /api/tickets/AL-3/comments/entry-01",
+  "status": 200,
+  "body": {
+    "comment": "entry-01",
+    "activityHash": "hash-02",
+    "revision": 1
+  }
+}

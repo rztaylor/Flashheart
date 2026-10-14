@@ -1,0 +1,31 @@
+{
+  "route": "POST /api/tickets/{id}/request-changes",
+  "request": "POST /api/tickets/AL-2/request-changes",
+  "status": 200,
+  "body": {
+    "comments": [
+      {
+        "id": "entry-01",
+        "time": "2026-10-04T13:30:00Z",
+        "by": "Robert",
+        "byShort": "Robert",
+        "byPerson": true,
+        "state": "change-requested",
+        "edited": "2026-10-04T13:30:00Z",
+        "sentTo": "",
+        "sentToShort": "",
+        "delivery": "",
+        "delivered": "",
+        "quoteFrom": "Summary",
+        "quote": "Columns render",
+        "body": "The columns need a wider gap."
+      }
+    ],
+    "hash": "hash-02",
+    "activityHash": "hash-03",
+    "revision": 1,
+    "sentTo": "",
+    "sentToShort": "",
+    "warnings": []
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "route": "PATCH /api/projects/{project}/workstreams/{slug}",
+  "request": "PATCH /api/projects/alpha/workstreams/sync-everywhere",
+  "status": 409,
+  "body": {
+    "error": {
+      "code": "exists",
+      "message": "Another workstream in alpha already has the short name offline that \"Offline\" would take; choose another name."
+    }
+  }
+}

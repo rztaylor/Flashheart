@@ -47,6 +47,10 @@ function comment(overrides: Partial<Comment> = {}): Comment {
     quoteFrom: "",
     quote: "",
     body: "The header wraps.",
+    sentTo: "",
+    sentToShort: "",
+    delivery: "",
+    delivered: "",
     ...overrides,
   };
 }
@@ -197,7 +201,15 @@ describe("Request changes (REV-6)", () => {
     expect(server.requests).toEqual([]);
 
     server.replies.push(() =>
-      Response.json({ comments: [comment()], revision: 4, sentTo: "" }),
+      Response.json({
+        comments: [comment()],
+        hash: "h2",
+        activityHash: "a2",
+        revision: 4,
+        sentTo: "",
+        sentToShort: "",
+        warnings: [],
+      }),
     );
     await user.type(
       within(dialog()).getByRole("textbox", { name: "New change request" }),

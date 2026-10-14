@@ -1,12 +1,25 @@
 // Writes to the board (board-editing). Every ticket edit sends the hash the
 // client read; a stale hash fails with a conflict carrying the current file
 // (STO-3, EDIT-7).
-import { type Column, isComment, type Status, segment } from "./board";
+import {
+  type Column,
+  type Comment,
+  isComment,
+  type Status,
+  segment,
+} from "./board";
 import {
   ApiError,
   type AuthenticatedFetch,
+  type ErrorBody,
   getJSON,
+  isArrayOf,
+  isErrorBody,
+  isNumber,
+  isOptional,
   isRecord,
+  isString,
+  isStringArray,
   sendJSON,
 } from "./client";
 
@@ -16,14 +29,69 @@ export interface Saved {
   warnings: string[];
 }
 
-function isSaved(value: unknown): value is Saved {
+// isSaved checks a write's response (api.WriteResponse): the ticket's new
+// hash ("" for writes that change no ticket file) and the board revision.
+export function isSaved(value: unknown): value is Saved {
   return (
     isRecord(value) &&
-    typeof value.hash === "string" &&
-    typeof value.revision === "number" &&
-    Array.isArray(value.warnings)
+    isString(value.hash) &&
+    isNumber(value.revision) &&
+    isStringArray(value.warnings)
   );
 }
+
+// CommentResponse is a saved comment (api.CommentResponse): the comment,
+// the activity's new hash, the board revision and, for a comment sent to
+// a session or a reopened change request, the run it went to.
+export interface CommentResponse {
+  comment: Comment;
+  activityHash: string;
+  revision: number;
+  sentTo?: string;
+  sentToShort?: string;
+  warnings?: string[];
+}
+
+export const isCommentResponse = (value: unknown): value is CommentResponse =>
+  isRecord(value) &&
+  isComment(value.comment) &&
+  isString(value.activityHash) &&
+  isNumber(value.revision) &&
+  isOptional(isString)(value.sentTo) &&
+  isOptional(isString)(value.sentToShort) &&
+  isOptional(isStringArray)(value.warnings);
+
+export const isCommentDeleted = (
+  value: unknown,
+): value is { comment: string; activityHash: string; revision: number } =>
+  isRecord(value) &&
+  isString(value.comment) &&
+  isString(value.activityHash) &&
+  isNumber(value.revision);
+
+// ChangesRequested is a request for changes (api.RequestChangesResponse).
+export interface ChangesRequested {
+  comments: Comment[];
+  hash: string;
+  activityHash: string;
+  revision: number;
+  sentTo: string;
+  sentToShort: string;
+  warnings: string[];
+}
+
+export const isChangesRequested = (value: unknown): value is ChangesRequested =>
+  isRecord(value) &&
+  isArrayOf(isComment)(value.comments) &&
+  isString(value.hash) &&
+  isString(value.activityHash) &&
+  isNumber(value.revision) &&
+  isString(value.sentTo) &&
+  isString(value.sentToShort) &&
+  isStringArray(value.warnings);
+
+export const isChanges = (value: unknown): value is { revision: number } =>
+  isRecord(value) && isNumber(value.revision);
 
 async function save(
   fetcher: AuthenticatedFetch,
@@ -102,6 +170,17 @@ export function saveWorkstreamSection(
   );
 }
 
+// isEditedWorkstream checks a workstream edit's response
+// (api.EditedWorkstreamResponse): its slug, renamed or not, the file's
+// hash and the board revision.
+export const isEditedWorkstream = (
+  value: unknown,
+): value is { slug: string; hash: string; revision: number } =>
+  isRecord(value) &&
+  isString(value.slug) &&
+  isString(value.hash) &&
+  isNumber(value.revision);
+
 // Renamed is a workstream's name saved: its slug after the save, which the
 // name may have changed (FH-167).
 export type Renamed = Saved & { slug: string };
@@ -123,12 +202,7 @@ export async function nameWorkstream(
     `/api/projects/${segment(project)}/workstreams/${segment(slug)}`,
     { base, fields: { title }, slugFromTitle: true },
   );
-  if (
-    !isRecord(payload) ||
-    typeof payload.slug !== "string" ||
-    typeof payload.hash !== "string" ||
-    typeof payload.revision !== "number"
-  )
+  if (!isEditedWorkstream(payload))
     throw new Error("Save response was invalid");
   return {
     slug: payload.slug,
@@ -215,24 +289,14 @@ async function commentSave(
   body: unknown,
 ): Promise<Posted> {
   const payload = await sendJSON(fetcher, method, path, body);
-  if (
-    !isRecord(payload) ||
-    !isComment(payload.comment) ||
-    typeof payload.activityHash !== "string" ||
-    typeof payload.revision !== "number"
-  )
+  if (!isCommentResponse(payload))
     throw new Error("Comment response was invalid");
   return {
     hash: payload.activityHash,
     revision: payload.revision,
-    warnings: Array.isArray(payload.warnings)
-      ? payload.warnings.filter(
-          (item): item is string => typeof item === "string",
-        )
-      : [],
-    sentTo: typeof payload.sentTo === "string" ? payload.sentTo : "",
-    sentToShort:
-      typeof payload.sentToShort === "string" ? payload.sentToShort : "",
+    warnings: payload.warnings ?? [],
+    sentTo: payload.sentTo ?? "",
+    sentToShort: payload.sentToShort ?? "",
   };
 }
 
@@ -284,11 +348,7 @@ export async function deleteComment(
     `${ticketPath(id)}/comments/${segment(comment)}`,
     { base },
   );
-  if (
-    !isRecord(payload) ||
-    typeof payload.activityHash !== "string" ||
-    typeof payload.revision !== "number"
-  )
+  if (!isCommentDeleted(payload))
     throw new Error("Delete response was invalid");
   return {
     hash: payload.activityHash,
@@ -306,28 +366,6 @@ export interface Sent {
   count: number;
   sentToShort: string;
   warnings: string[];
-}
-
-function isSent(payload: unknown, count: number): Sent {
-  if (
-    !isRecord(payload) ||
-    typeof payload.revision !== "number" ||
-    (payload.sentToShort !== undefined &&
-      typeof payload.sentToShort !== "string")
-  )
-    throw new Error("Change request response was invalid");
-  const warnings = Array.isArray(payload.warnings)
-    ? payload.warnings.filter(
-        (item): item is string => typeof item === "string",
-      )
-    : [];
-  return {
-    revision: payload.revision,
-    count,
-    sentToShort:
-      typeof payload.sentToShort === "string" ? payload.sentToShort : "",
-    warnings,
-  };
 }
 
 // requestChanges asks for changes on a ticket in review (REV-6): the
@@ -356,11 +394,14 @@ export async function requestChanges(
         : {}),
     },
   );
-  const count =
-    isRecord(payload) && Array.isArray(payload.comments)
-      ? payload.comments.length
-      : 0;
-  return isSent(payload, count);
+  if (!isChangesRequested(payload))
+    throw new Error("Change request response was invalid");
+  return {
+    revision: payload.revision,
+    count: payload.comments.length,
+    sentToShort: payload.sentToShort,
+    warnings: payload.warnings,
+  };
 }
 
 // RequestState is a state the person moves a change request to: resolved,
@@ -381,7 +422,14 @@ export async function setRequestState(
     `${ticketPath(id)}/comments/${segment(comment)}`,
     { state },
   );
-  return isSent(payload, 1);
+  if (!isCommentResponse(payload))
+    throw new Error("Change request response was invalid");
+  return {
+    revision: payload.revision,
+    count: 1,
+    sentToShort: payload.sentToShort ?? "",
+    warnings: payload.warnings ?? [],
+  };
 }
 
 export function archiveTicket(fetcher: AuthenticatedFetch, id: string) {
@@ -412,6 +460,13 @@ export interface Created {
   revision: number;
 }
 
+export const isCreated = (value: unknown): value is Created =>
+  isRecord(value) &&
+  isString(value.id) &&
+  isString(value.hash) &&
+  isString(value.key) &&
+  isNumber(value.revision);
+
 export async function createTicket(
   fetcher: AuthenticatedFetch,
   project: string,
@@ -423,9 +478,8 @@ export async function createTicket(
     `/api/projects/${segment(project)}/tickets`,
     ticket,
   );
-  if (!isRecord(payload) || typeof payload.id !== "string")
-    throw new Error("Create response was invalid");
-  return payload as unknown as Created;
+  if (!isCreated(payload)) throw new Error("Create response was invalid");
+  return payload;
 }
 
 export interface NewWorkstream {
@@ -441,6 +495,14 @@ export interface CreatedWorkstream {
   revision: number;
 }
 
+export const isCreatedWorkstream = (
+  value: unknown,
+): value is CreatedWorkstream =>
+  isRecord(value) &&
+  isString(value.slug) &&
+  isString(value.hash) &&
+  isNumber(value.revision);
+
 // createWorkstream writes a workstream from the board-format template; the
 // server makes its slug from the title (FH-17).
 export async function createWorkstream(
@@ -454,9 +516,9 @@ export async function createWorkstream(
     `/api/projects/${segment(project)}/workstreams`,
     workstream,
   );
-  if (!isRecord(payload) || typeof payload.slug !== "string")
+  if (!isCreatedWorkstream(payload))
     throw new Error("Create response was invalid");
-  return payload as unknown as CreatedWorkstream;
+  return payload;
 }
 
 export function reorderWorkstream(
@@ -489,34 +551,50 @@ export interface Conflict {
   content: string;
 }
 
+// The error bodies that carry data (api.writeStoreError, move): a stale
+// hash's current file, a blocked start's reasons, the keys in use.
+const isConflict = (value: unknown): value is Conflict =>
+  isRecord(value) && isString(value.hash) && isString(value.content);
+
+export const isConflictBody = (
+  value: unknown,
+): value is ErrorBody & { current: Conflict } =>
+  isErrorBody(value) && isConflict(value.current);
+
+export const isBlockedBody = (
+  value: unknown,
+): value is { error: ErrorBody["error"] & { blockedBy: string[] } } =>
+  isErrorBody(value) && isStringArray(value.error.blockedBy);
+
+export const isKeyTakenBody = (
+  value: unknown,
+): value is { error: ErrorBody["error"] & { inUse: string[] } } =>
+  isErrorBody(value) && isStringArray(value.error.inUse);
+
 export function conflictOf(error: unknown): Conflict | undefined {
   if (!(error instanceof ApiError) || error.code !== "conflict") return;
   const current = error.payload.current;
-  if (
-    isRecord(current) &&
-    typeof current.hash === "string" &&
-    typeof current.content === "string"
-  )
-    return { hash: current.hash, content: current.content };
-  return { hash: "", content: "" };
+  return isConflict(current) ? current : { hash: "", content: "" };
+}
+
+// errorList reads a list an error carries beside its code, keeping its
+// strings.
+function errorList(error: ApiError, field: string): string[] {
+  const body = isRecord(error.payload.error) ? error.payload.error : {};
+  const list = body[field];
+  return Array.isArray(list) ? list.filter(isString) : [];
 }
 
 // blockedReasons returns the reasons a move into In progress needs
 // confirming (EDIT-2), or undefined for any other error.
 export function blockedReasons(error: unknown): string[] | undefined {
   if (!(error instanceof ApiError) || error.code !== "confirm_blocked") return;
-  const body = isRecord(error.payload.error) ? error.payload.error : {};
-  return Array.isArray(body.blockedBy)
-    ? body.blockedBy.filter((item): item is string => typeof item === "string")
-    : [];
+  return errorList(error, "blockedBy");
 }
 
 export function keysInUse(error: unknown): string[] | undefined {
   if (!(error instanceof ApiError) || error.code !== "key_taken") return;
-  const body = isRecord(error.payload.error) ? error.payload.error : {};
-  return Array.isArray(body.inUse)
-    ? body.inUse.filter((item): item is string => typeof item === "string")
-    : [];
+  return errorList(error, "inUse");
 }
 
 // Live updates (LIFE-3): resolves with the revision once it moves past
@@ -529,8 +607,7 @@ export async function waitForChanges(
   const response = await getJSON(
     fetcher,
     `/api/changes?since=${since}`,
-    (value): value is { revision: number } =>
-      isRecord(value) && typeof value.revision === "number",
+    isChanges,
     "Changes response was invalid",
     signal,
   );

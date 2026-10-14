@@ -1,0 +1,424 @@
+{
+  "route": "/api/projects/{project}/board",
+  "request": "GET /api/projects/alpha/board",
+  "status": 200,
+  "body": {
+    "revision": 1,
+    "project": {
+      "name": "alpha",
+      "displayName": "Alpha",
+      "key": "AL",
+      "keyDerived": false,
+      "repos": [
+        "/Users/example/src/alpha"
+      ],
+      "counts": {
+        "backlog": 3,
+        "done": 1,
+        "in-progress": 1,
+        "review": 1,
+        "up-next": 1
+      },
+      "needsRepair": 1,
+      "blocked": 3,
+      "warnings": [],
+      "lastModified": "2026-10-04T12:00:00Z",
+      "workstreams": [
+        {
+          "slug": "board-ui",
+          "title": "Board UI",
+          "created": "2026-10-01",
+          "status": "active",
+          "done": 2,
+          "total": 4
+        },
+        {
+          "slug": "offline",
+          "title": "Offline",
+          "created": "2026-10-02",
+          "status": "blocked",
+          "done": 0,
+          "total": 1
+        }
+      ],
+      "archived": 1,
+      "rejected": 0,
+      "runs": {
+        "working": 0,
+        "needsYou": 1,
+        "waiting": 0,
+        "quiet": 0,
+        "ended": 1,
+        "live": 1,
+        "needsYouUnticketed": 0
+      }
+    },
+    "cards": [
+      {
+        "project": "alpha",
+        "id": "AL-5",
+        "slug": "column-overflow",
+        "column": "backlog",
+        "rejected": false,
+        "title": "Long titles overflow the column",
+        "type": "bug",
+        "priority": "medium",
+        "workstream": "",
+        "tags": [
+          "ui"
+        ],
+        "created": "2026-10-03",
+        "updated": "",
+        "modified": "2026-10-04T12:00:00Z",
+        "branch": "",
+        "pr": "",
+        "dependsOn": [
+          "AL-4"
+        ],
+        "criteria": {
+          "done": 1,
+          "total": 2
+        },
+        "excerpt": "Fixture ticket.",
+        "handoffNext": "",
+        "attachments": 0,
+        "hasReview": false,
+        "blocked": true,
+        "blockedBy": [
+          {
+            "kind": "ticket",
+            "text": "Depends on AL-4, which is Up next",
+            "ticket": {
+              "project": "alpha",
+              "id": "AL-4"
+            },
+            "column": "up-next",
+            "missing": false
+          }
+        ],
+        "needsRepair": [],
+        "warnings": [],
+        "searchText": "\n# Long titles overflow the column\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n\n## Reproduction\n\nA 200-character title widens the column.\n",
+        "needsYou": false,
+        "agentWorking": false,
+        "openQuestions": 0,
+        "changeRequests": {
+          "open": 0,
+          "addressed": 0
+        }
+      },
+      {
+        "project": "alpha",
+        "id": "AL-6",
+        "slug": "offline-mode",
+        "column": "backlog",
+        "rejected": false,
+        "title": "Offline mode",
+        "type": "spike",
+        "priority": "low",
+        "workstream": "",
+        "tags": [
+          "later-possibility"
+        ],
+        "created": "2026-10-03",
+        "updated": "",
+        "modified": "2026-10-04T12:00:00Z",
+        "branch": "",
+        "pr": "",
+        "dependsOn": [
+          "feat--does-not-exist"
+        ],
+        "criteria": {
+          "done": 1,
+          "total": 2
+        },
+        "excerpt": "Fixture ticket.",
+        "handoffNext": "",
+        "attachments": 0,
+        "hasReview": false,
+        "blocked": true,
+        "blockedBy": [
+          {
+            "kind": "ticket",
+            "text": "Depends on feat--does-not-exist, which does not exist",
+            "ticket": {
+              "project": "",
+              "id": "feat--does-not-exist"
+            },
+            "missing": true
+          },
+          {
+            "kind": "workstream",
+            "text": "Its workstream offline depends on workstream board-ui, which has 2 tickets not yet in review or done",
+            "workstream": "board-ui",
+            "pending": 2,
+            "missing": false,
+            "via": "offline"
+          }
+        ],
+        "needsRepair": [],
+        "warnings": [
+          "workstream offline lists this ticket but its workstream field is empty"
+        ],
+        "searchText": "\n# Offline mode\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
+        "needsYou": false,
+        "agentWorking": false,
+        "openQuestions": 0,
+        "changeRequests": {
+          "open": 0,
+          "addressed": 0
+        }
+      },
+      {
+        "project": "alpha",
+        "id": "AL-7",
+        "slug": "broken-frontmatter",
+        "column": "backlog",
+        "rejected": false,
+        "title": "Broken frontmatter",
+        "type": "",
+        "priority": "",
+        "workstream": "",
+        "tags": [],
+        "created": "",
+        "updated": "",
+        "modified": "2026-10-04T12:00:00Z",
+        "branch": "",
+        "pr": "",
+        "dependsOn": [],
+        "criteria": {
+          "done": 0,
+          "total": 0
+        },
+        "excerpt": "This ticket's YAML does not parse; it must show as needs repair.",
+        "handoffNext": "",
+        "attachments": 0,
+        "hasReview": false,
+        "blocked": false,
+        "blockedBy": [],
+        "needsRepair": [
+          "frontmatter does not parse: line 2: did not find expected ',' or ']'"
+        ],
+        "warnings": [],
+        "searchText": "\n# Broken frontmatter\n\nThis ticket's YAML does not parse; it must show as needs repair.\n",
+        "needsYou": false,
+        "agentWorking": false,
+        "openQuestions": 0,
+        "changeRequests": {
+          "open": 0,
+          "addressed": 0
+        }
+      },
+      {
+        "project": "alpha",
+        "id": "AL-4",
+        "slug": "drag-and-drop",
+        "column": "up-next",
+        "rejected": false,
+        "title": "Drag and drop",
+        "type": "feature",
+        "priority": "medium",
+        "workstream": "board-ui",
+        "tags": [
+          "ui"
+        ],
+        "created": "2026-10-02",
+        "updated": "",
+        "modified": "2026-10-04T12:00:00Z",
+        "branch": "",
+        "pr": "",
+        "dependsOn": [
+          "AL-3"
+        ],
+        "criteria": {
+          "done": 1,
+          "total": 2
+        },
+        "excerpt": "Fixture ticket.",
+        "handoffNext": "",
+        "attachments": 0,
+        "hasReview": false,
+        "blocked": true,
+        "blockedBy": [
+          {
+            "kind": "ticket",
+            "text": "Depends on AL-3, which is In progress",
+            "ticket": {
+              "project": "alpha",
+              "id": "AL-3"
+            },
+            "column": "in-progress",
+            "missing": false
+          }
+        ],
+        "needsRepair": [],
+        "warnings": [],
+        "searchText": "\n# Drag and drop\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
+        "needsYou": false,
+        "agentWorking": false,
+        "openQuestions": 0,
+        "changeRequests": {
+          "open": 0,
+          "addressed": 0
+        }
+      },
+      {
+        "project": "alpha",
+        "id": "AL-3",
+        "slug": "card-panel",
+        "column": "in-progress",
+        "rejected": false,
+        "title": "Card panel",
+        "type": "feature",
+        "priority": "high",
+        "workstream": "board-ui",
+        "tags": [
+          "ui",
+          "markdown"
+        ],
+        "created": "2026-10-02",
+        "updated": "",
+        "modified": "2026-10-04T12:00:00Z",
+        "branch": "feature/card-panel",
+        "pr": "",
+        "dependsOn": [],
+        "criteria": {
+          "done": 1,
+          "total": 2
+        },
+        "excerpt": "Fixture ticket.",
+        "handoffNext": "Review tab",
+        "attachments": 0,
+        "hasReview": false,
+        "blocked": false,
+        "blockedBy": [],
+        "needsRepair": [],
+        "warnings": [],
+        "searchText": "\n# Card panel\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n\n## Handoff\n\n_Updated 2026-10-04 13:20 UTC by claude:3f2a9c1e (run) on feature/card-panel._\n\n**Done**\n- Ticket tab renders markdown\n**Next**\n- Review tab\n**Files**\n- frontend/src/features/card/CardPanel.tsx\n**Open questions**\n- None\n",
+        "live": {
+          "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "short": "claude:3f2a9c1e",
+          "agent": "claude",
+          "state": "needs-you",
+          "reason": {
+            "kind": "permission",
+            "permission": "Bash",
+            "question": "",
+            "answered": false,
+            "waitingOn": "",
+            "agentType": "",
+            "mcpOnly": false
+          },
+          "lastActivity": "2026-10-04T13:28:00Z"
+        },
+        "needsYou": true,
+        "agentWorking": false,
+        "openQuestions": 1,
+        "changeRequests": {
+          "open": 0,
+          "addressed": 0
+        },
+        "sessions": {
+          "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "short": "claude:3f2a9c1e",
+          "agent": "claude",
+          "state": "needs-you",
+          "lastActivity": "2026-10-04T13:28:00Z",
+          "noLiveSession": false,
+          "dirty": true,
+          "noHandoff": false,
+          "subagents": {
+            "done": 1,
+            "running": 0,
+            "needsYou": 0
+          }
+        }
+      },
+      {
+        "project": "alpha",
+        "id": "AL-2",
+        "slug": "board-columns",
+        "column": "review",
+        "rejected": false,
+        "title": "Board columns",
+        "type": "feature",
+        "priority": "high",
+        "workstream": "board-ui",
+        "tags": [
+          "ui"
+        ],
+        "created": "2026-10-01",
+        "updated": "",
+        "modified": "2026-10-04T12:00:00Z",
+        "branch": "feature/board-columns",
+        "pr": "",
+        "dependsOn": [
+          "AL-6"
+        ],
+        "criteria": {
+          "done": 1,
+          "total": 2
+        },
+        "excerpt": "Fixture ticket.",
+        "handoffNext": "",
+        "attachments": 1,
+        "hasReview": true,
+        "blocked": false,
+        "blockedBy": [],
+        "needsRepair": [],
+        "warnings": [],
+        "searchText": "\n# Board columns\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
+        "needsYou": false,
+        "agentWorking": false,
+        "openQuestions": 0,
+        "changeRequests": {
+          "open": 0,
+          "addressed": 0
+        }
+      },
+      {
+        "project": "alpha",
+        "id": "AL-1",
+        "slug": "project-skeleton",
+        "column": "done",
+        "rejected": false,
+        "title": "Project skeleton",
+        "type": "infra",
+        "priority": "high",
+        "workstream": "",
+        "tags": [],
+        "created": "2026-09-30",
+        "updated": "",
+        "modified": "2026-10-04T12:00:00Z",
+        "branch": "",
+        "pr": "",
+        "dependsOn": [
+          "BE-1",
+          "AL-8"
+        ],
+        "criteria": {
+          "done": 1,
+          "total": 2
+        },
+        "excerpt": "Fixture ticket.",
+        "handoffNext": "",
+        "attachments": 0,
+        "hasReview": false,
+        "blocked": false,
+        "blockedBy": [],
+        "needsRepair": [],
+        "warnings": [],
+        "searchText": "\n# Project skeleton\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
+        "needsYou": false,
+        "agentWorking": false,
+        "openQuestions": 0,
+        "changeRequests": {
+          "open": 0,
+          "addressed": 0
+        }
+      }
+    ],
+    "doneTotal": 1,
+    "doneShown": 1
+  }
+}

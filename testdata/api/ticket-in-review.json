@@ -1,0 +1,215 @@
+{
+  "route": "/api/tickets/{id}",
+  "request": "GET /api/tickets/AL-2",
+  "status": 200,
+  "body": {
+    "revision": 1,
+    "ticket": {
+      "project": "alpha",
+      "id": "AL-2",
+      "slug": "board-columns",
+      "column": "in-progress",
+      "rejected": false,
+      "title": "Board columns",
+      "type": "feature",
+      "priority": "high",
+      "workstream": "board-ui",
+      "tags": [
+        "ui"
+      ],
+      "created": "2026-10-01",
+      "updated": "2026-10-04T13:30:00Z",
+      "modified": "2026-10-04T12:00:00Z",
+      "branch": "feature/board-columns",
+      "pr": "",
+      "dependsOn": [
+        "AL-6"
+      ],
+      "criteria": {
+        "done": 1,
+        "total": 2
+      },
+      "excerpt": "Fixture ticket.",
+      "handoffNext": "",
+      "attachments": 1,
+      "hasReview": true,
+      "blocked": true,
+      "blockedBy": [
+        {
+          "kind": "ticket",
+          "text": "Depends on AL-6, which is in Backlog",
+          "ticket": {
+            "project": "alpha",
+            "id": "AL-6"
+          },
+          "column": "backlog",
+          "missing": false
+        }
+      ],
+      "needsRepair": [],
+      "warnings": [],
+      "searchText": "\n# Board columns\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
+      "needsYou": false,
+      "agentWorking": false,
+      "openQuestions": 0,
+      "changeRequests": {
+        "open": 0,
+        "addressed": 0
+      },
+      "sessions": {
+        "run": "",
+        "short": "",
+        "agent": "",
+        "state": "",
+        "lastActivity": "",
+        "noLiveSession": true,
+        "dirty": false,
+        "noHandoff": false,
+        "subagents": {
+          "done": 0,
+          "running": 0,
+          "needsYou": 0
+        }
+      },
+      "body": "\n# Board columns\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
+      "frontmatter": "id: AL-2\nstatus: in-progress\ntype: feature\nproject: alpha\ncreated: 2026-10-01\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: feature/board-columns\nworkstream: board-ui\ndepends-on: [AL-6]\ndepends-on-workstreams: []\ntags: [ui]\nupdated: 2026-10-04T13:30:00Z\n",
+      "session": "fixture",
+      "gitRef": "0000000",
+      "dependsOnWorkstreams": [],
+      "criteriaItems": [
+        {
+          "text": "First criterion",
+          "done": true
+        },
+        {
+          "text": "Second criterion",
+          "done": false
+        }
+      ],
+      "handoff": null,
+      "review": {
+        "markdown": "# Review: Board columns\n\n**Work Item:** [AL-2](AL-2-board-columns.md)\n**Branch:** feature/board-columns\n**Date:** 2026-10-03\n\n## Summary\n\nColumns render from directories.\n\n## How to Verify\n\n1. [x] Open the board.\n2. See four columns.\n\n![Board at desktop](files/20261003T1000-board-desktop.png)\n\n## Risks / Things to Watch\n\n- None.\n",
+        "hash": "hash-01",
+        "before": "# Review: Board columns\n\n**Work Item:** [AL-2](AL-2-board-columns.md)\n**Branch:** feature/board-columns\n**Date:** 2026-10-03\n\n## Summary\n\nColumns render from directories.\n\n",
+        "intro": "\n",
+        "steps": [
+          {
+            "text": "Open the board.",
+            "done": true
+          },
+          {
+            "text": "See four columns.",
+            "done": false
+          }
+        ],
+        "outro": "\n![Board at desktop](files/20261003T1000-board-desktop.png)\n\n",
+        "after": "## Risks / Things to Watch\n\n- None.\n"
+      },
+      "attachmentFiles": [
+        {
+          "file": "20261003T1000-board-desktop.png",
+          "caption": "Board at 1440x900",
+          "kind": "screenshot",
+          "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "added": "2026-10-03T10:00:00Z",
+          "url": "/api/projects/alpha/tickets/AL-2/files/20261003T1000-board-desktop.png"
+        }
+      ],
+      "hash": "hash-02",
+      "raw": "---\nid: AL-2\nstatus: in-progress\ntype: feature\nproject: alpha\ncreated: 2026-10-01\npriority: high\nsession: fixture\ngit-ref: 0000000\nbranch: feature/board-columns\nworkstream: board-ui\ndepends-on: [AL-6]\ndepends-on-workstreams: []\ntags: [ui]\nupdated: 2026-10-04T13:30:00Z\n---\n\n# Board columns\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
+      "runs": [],
+      "questions": [],
+      "comments": [
+        {
+          "id": "entry-03",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "state": "resolved",
+          "edited": "2026-10-04T13:30:00Z",
+          "sentTo": "",
+          "sentToShort": "",
+          "delivery": "",
+          "delivered": "",
+          "quoteFrom": "Summary",
+          "quote": "Columns render",
+          "body": "The columns need a wider gap."
+        }
+      ],
+      "history": [
+        {
+          "id": "entry-04",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "moved",
+              "from": "review",
+              "to": "in-progress",
+              "fields": [],
+              "criteria": [],
+              "steps": [],
+              "comments": []
+            },
+            {
+              "what": "change-requested",
+              "from": "",
+              "to": "",
+              "fields": [],
+              "criteria": [],
+              "steps": [],
+              "comments": [
+                "entry-03"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "entry-05",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "resolved",
+              "from": "",
+              "to": "",
+              "fields": [],
+              "criteria": [],
+              "steps": [],
+              "comments": [
+                "entry-03"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "entry-06",
+          "time": "2026-10-04T13:30:00Z",
+          "by": "Robert",
+          "byShort": "Robert",
+          "byPerson": true,
+          "changes": [
+            {
+              "what": "ticked",
+              "from": "",
+              "to": "",
+              "fields": [],
+              "criteria": [],
+              "steps": [
+                1
+              ],
+              "comments": []
+            }
+          ]
+        }
+      ],
+      "activityHash": "hash-07",
+      "tellSessions": []
+    }
+  }
+}

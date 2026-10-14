@@ -5,6 +5,18 @@ export type AuthenticatedFetch = (
   init?: RequestInit,
 ) => Promise<Response>;
 
+// ERROR_CODES are the error codes the browser branches on (error.code),
+// each one the server writes (api.ErrorCodes; api/vocabulary.test.ts
+// checks both, and that the source compares codes only from this list).
+export const ERROR_CODES = [
+  "conflict",
+  "confirm_blocked",
+  "key_taken",
+  "title_taken",
+  "too_large",
+  "type_not_allowed",
+] as const;
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -82,3 +94,37 @@ export async function sendJSON(
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+export const isString = (value: unknown): value is string =>
+  typeof value === "string";
+export const isNumber = (value: unknown): value is number =>
+  typeof value === "number";
+export const isBoolean = (value: unknown): value is boolean =>
+  typeof value === "boolean";
+export const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(isString);
+
+// isArrayOf checks an array whose every item passes guard.
+export const isArrayOf =
+  <T>(guard: (item: unknown) => item is T) =>
+  (value: unknown): value is T[] =>
+    Array.isArray(value) && value.every(guard);
+
+// isOptional checks a field the server leaves out when it is empty.
+export const isOptional =
+  <T>(guard: (item: unknown) => item is T) =>
+  (value: unknown): value is T | undefined =>
+    value === undefined || guard(value);
+
+// ErrorBody is every error response (api.writeError); some errors add
+// fields to error or beside it (edit.ts reads those).
+export interface ErrorBody {
+  error: { code: string; message: string; [field: string]: unknown };
+  [field: string]: unknown;
+}
+
+export const isErrorBody = (value: unknown): value is ErrorBody =>
+  isRecord(value) &&
+  isRecord(value.error) &&
+  isString(value.error.code) &&
+  isString(value.error.message);

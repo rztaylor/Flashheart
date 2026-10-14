@@ -10,5 +10,10 @@ saved UI preferences (`preferences`), the server's identity and settings
 (`archive`). Callers pass the authenticated fetch from `lifecycle/`; this
 layer never issues raw `fetch`, acquires credentials or stores anything.
 
+Each response has an exported guard checking every field the server
+sends, tested over `testdata/api/`; the lists copied from the server
+(`ERROR_CODES` among them) are tested against `testdata/vocabulary.json`
+(FH-97).
+
 Does not own React state, error presentation, backend behaviour or caching.
 Features and the app shell consume these contracts.

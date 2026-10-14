@@ -64,6 +64,26 @@
   pull request and push to `main`.
 - Tests never touch the real board root or real agent configuration: use
   temporary directories, `testdata/boards/` copies, and fixture config files.
+- The API contract (FH-97, D79): `internal/api`'s `TestAPIContract` plays
+  one scripted session on a copy of `testdata/boards/sample` (every route
+  but the two in `routesWithoutFixture`, in order) and keeps each
+  response in `testdata/api/<name>.json`, with random activity ids and
+  hashes (numbered within each file), the root, file times and board
+  revisions replaced by stable placeholders, so a new step changes only
+  its own fixture; a merge conflict there is settled by rerunning the
+  update after the merge. It
+  fails when a fixture is stale, when a registered route has none, or when
+  a response type carries a `runs` or `events` type. `TestVocabulary`
+  keeps `testdata/vocabulary.json`; `TestErrorCodes` holds handlers to
+  `api.ErrorCodes`. After a deliberate change, rewrite them with
+  `go test ./internal/api -run 'TestAPIContract|TestVocabulary' -update`
+  and commit the diff. `frontend/src/api/contract.test.ts` then runs each
+  fixture through its guard: it must pass, and fail with any field
+  removed (unless listed as optional, the server's `omitempty`) or given
+  another JSON type; a new fixture needs an entry there.
+  `frontend/src/api/vocabulary.test.ts` matches the frontend's lists to
+  the vocabulary file. A new endpoint adds a step to `runContract`, a
+  guard, and an entry in the frontend's contract table.
 - Hook adapters are tested against recorded, scrubbed payloads in
   `testdata/hooks/<agent>/<event>/` with expected events beside each; the
   agent's `MANIFEST.md` says which are recorded. Re-record with
