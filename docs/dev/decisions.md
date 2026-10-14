@@ -2166,6 +2166,41 @@ saved UI preferences that name the slug follow too, for any rename.
 Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format
 stays 2 (no field is added; the preferences keep their shape).
 
+## 2026-10-14 — D79: The browser's API contract is checked by golden fixtures; vocabularies by test
+
+The Go response types and the browser's guards were kept in step by hand
+(FH-97): guards skipped fields (a ticket's hash, raw text and handoff),
+lists such as ticket types were copied in several places, and runs and
+events types were the wire format.
+
+- **Fixtures, not generated types.** `internal/api`'s `TestAPIContract`
+  plays one scripted session over every route and keeps each response in
+  `testdata/api/`; the frontend's `contract.test.ts` runs each through
+  its guard, which must accept it and refuse it with any field removed
+  (unless optional: the server's `omitempty`, listed in the test) or
+  retyped. A Go-to-TypeScript generator would add a tool and still not
+  check the guards at run time; fixtures need nothing new and record what
+  the handlers actually write, errors included. The cost is rewriting
+  fixtures (`-update`) with a deliberate change, which shows in review.
+- **Vocabularies checked by test, not served.** Ticket types, priorities,
+  columns, run states, question kinds, preference values, the ticket id
+  rule and error codes go to `testdata/vocabulary.json`, and
+  `vocabulary.test.ts` matches the frontend's single copy of each.
+  Serving them from `/api/info` was the other option; the frontend needs
+  them as types and before its first request, and it is embedded in the
+  same binary, so a served list would add a runtime dependency without
+  catching anything the test does not. Ticket types are listed once
+  (`model/tickets.ts`), so the Colour by Type key follows the board
+  format's order.
+- **Error codes listed once per side.** `api.ErrorCodes` lists every code
+  a handler writes (`TestErrorCodes` reads the handlers' literals), and
+  the browser's `ERROR_CODES` the ones it branches on, each checked to be
+  the server's.
+- **API types for runs.** Questions, timeline entries and Needs you
+  reasons are mapped to `api` types; the JSON is unchanged (the fixtures
+  did not move). A test fails when a response type reaches a `runs` or
+  `events` type again.
+
 ## 2026-10-14 — D80: Preferences are saved as patches and read again as the board changes; a workstream page follows a rename it did not make
 
 Decision (FH-173, FH-174): two follow-ups to renames made outside the tab

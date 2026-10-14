@@ -1,0 +1,8 @@
+{
+  "route": "/api/changes",
+  "request": "GET /api/changes?since=0",
+  "status": 200,
+  "body": {
+    "revision": 1
+  }
+}

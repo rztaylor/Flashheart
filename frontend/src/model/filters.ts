@@ -1,5 +1,6 @@
 import type { Card, WorkstreamBrief } from "../api/board";
 import { ageOf } from "./paint";
+import { PRIORITIES } from "./tickets";
 
 // working shows only tickets with an agent at work (FH-42); rejected only
 // tickets in Done whose status is rejected (FH-59).
@@ -147,7 +148,7 @@ export function applyFilters(
   });
 }
 
-const priorityOrder = ["high", "medium", "low"];
+const priorityOrder: readonly string[] = PRIORITIES;
 
 export function filterOptions(cards: Card[]) {
   const types = new Set<string>();

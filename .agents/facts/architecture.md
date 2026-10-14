@@ -146,7 +146,17 @@ Intended layout (packages are created when they get real content):
   confinement rule, the one default root, the lean packages' import
   graph); no code outside its tests.
 - `internal/api`: HTTP JSON handlers and request validation; no filesystem
-  rules.
+  rules. Responses are the package's own types (no `runs` or `events`
+  type is sent as it is) and error codes are `api.ErrorCodes`. The
+  HTTP contract with the browser is checked from both sides (FH-97,
+  D79): `TestAPIContract` writes every route's response to
+  `testdata/api/<name>.json` and the frontend's guards
+  (`frontend/src/api/contract.test.ts`) must accept each and reject it
+  with any field removed or retyped; the vocabularies the browser copies
+  (ticket types, priorities, columns, run states, question kinds,
+  preference values, the ticket id rule, error codes) are written to
+  `testdata/vocabulary.json` and matched by
+  `frontend/src/api/vocabulary.test.ts`.
 - `internal/app`: Singleserve composition and lifecycle, shutdown guard.
 - `internal/webui`: embedded compiled frontend assets.
 - `frontend/`: React UI; ownership in `.agents/facts/frontend-ui.md`.
@@ -185,8 +195,11 @@ Singleserve.
   `BOUNDARY.md` (≤150 words, ≤2 KiB). Generated assets are exempt.
 - Generated frontend output: `internal/webui/assets/generated/` (untracked).
 - Shared fixtures: `testdata/boards/` (sample roots),
-  `testdata/hooks/<agent>/<event>/` (recorded, scrubbed hook payloads) and
-  `testdata/tickets/` (read-only copies of real FH tickets).
+  `testdata/hooks/<agent>/<event>/` (recorded, scrubbed hook payloads),
+  `testdata/tickets/` (read-only copies of real FH tickets),
+  `testdata/api/` (golden API responses) and `testdata/vocabulary.json`
+  (the server's vocabularies), the last two written by `internal/api`'s
+  tests and read by the frontend's.
 - External integrations: `github.com/rztaylor/singleserve` v0.2.x (v0.2.2);
   `github.com/modelcontextprotocol/go-sdk` v1.7+; Claude Code and Codex hook
   and MCP configuration (`docs/dev/specs/agent-protocol.md`).

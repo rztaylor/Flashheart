@@ -3,7 +3,17 @@
 // preview's token, so it is refused when anything listed has changed, and
 // the id as the user typed it.
 import { COLUMNS, type Column, segment } from "./board";
-import { type AuthenticatedFetch, getJSON, isRecord, sendJSON } from "./client";
+import {
+  type AuthenticatedFetch,
+  getJSON,
+  isArrayOf,
+  isBoolean,
+  isNumber,
+  isRecord,
+  isString,
+  isStringArray,
+  sendJSON,
+} from "./client";
 
 export interface Archived {
   id: string;
@@ -34,8 +44,6 @@ export interface DeletePlan {
   token: string;
 }
 
-const isString = (value: unknown): value is string => typeof value === "string";
-
 const isArchived = (value: unknown): value is Archived =>
   isRecord(value) &&
   isString(value.id) &&
@@ -44,23 +52,22 @@ const isArchived = (value: unknown): value is Archived =>
   isString(value.priority) &&
   isString(value.workstream) &&
   COLUMNS.some((column) => column.id === value.column) &&
+  isBoolean(value.rejected) &&
   isString(value.archived) &&
-  typeof value.attachments === "number" &&
-  typeof value.hasReview === "boolean";
+  isNumber(value.attachments) &&
+  isBoolean(value.hasReview);
 
-const isArchiveList = (value: unknown): value is ArchiveList =>
+export const isArchiveList = (value: unknown): value is ArchiveList =>
   isRecord(value) &&
-  typeof value.revision === "number" &&
-  Array.isArray(value.tickets) &&
-  value.tickets.every(isArchived);
+  isNumber(value.revision) &&
+  isArrayOf(isArchived)(value.tickets);
 
-const isDeletePlan = (value: unknown): value is DeletePlan =>
+export const isDeletePlan = (value: unknown): value is DeletePlan =>
   isRecord(value) &&
   isString(value.id) &&
   isString(value.title) &&
   isString(value.token) &&
-  Array.isArray(value.files) &&
-  value.files.every(isString) &&
+  isStringArray(value.files) &&
   Array.isArray(value.tickets) &&
   value.tickets.every(
     (item) =>
@@ -157,39 +164,41 @@ export interface ProjectDeletePlan {
   token: string;
 }
 
-const isArchiveCheck = (value: unknown): value is ArchiveCheck =>
+export const isArchiveCheck = (value: unknown): value is ArchiveCheck =>
   isRecord(value) &&
   isString(value.name) &&
   isString(value.displayName) &&
-  typeof value.tickets === "number" &&
+  isNumber(value.tickets) &&
   isRecord(value.counts) &&
-  typeof value.liveRuns === "number" &&
-  typeof value.claimed === "number" &&
-  typeof value.openQuestions === "number";
+  Object.values(value.counts).every(isNumber) &&
+  isNumber(value.liveRuns) &&
+  isNumber(value.claimed) &&
+  isNumber(value.openQuestions);
 
 const isArchivedProject = (value: unknown): value is ArchivedProject =>
   isRecord(value) &&
   isString(value.name) &&
   isString(value.displayName) &&
   isString(value.key) &&
-  Array.isArray(value.repos) &&
-  typeof value.tickets === "number" &&
+  isStringArray(value.repos) &&
+  isNumber(value.tickets) &&
   isString(value.archived);
 
-const isArchivedProjects = (
+export const isArchivedProjects = (
   value: unknown,
 ): value is { revision: number; projects: ArchivedProject[] } =>
   isRecord(value) &&
-  typeof value.revision === "number" &&
-  Array.isArray(value.projects) &&
-  value.projects.every(isArchivedProject);
+  isNumber(value.revision) &&
+  isArrayOf(isArchivedProject)(value.projects);
 
-const isProjectDeletePlan = (value: unknown): value is ProjectDeletePlan =>
+export const isProjectDeletePlan = (
+  value: unknown,
+): value is ProjectDeletePlan =>
   isRecord(value) &&
   isString(value.name) &&
   isString(value.displayName) &&
   isString(value.key) &&
-  typeof value.tickets === "number" &&
+  isNumber(value.tickets) &&
   isString(value.token) &&
   Array.isArray(value.references) &&
   value.references.every(
@@ -198,7 +207,7 @@ const isProjectDeletePlan = (value: unknown): value is ProjectDeletePlan =>
       isString(item.id) &&
       isString(item.project) &&
       isString(item.title) &&
-      Array.isArray(item.dependsOn),
+      isStringArray(item.dependsOn),
   );
 
 const archivedProjectPath = (project: string) =>

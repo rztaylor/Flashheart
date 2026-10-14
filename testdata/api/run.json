@@ -1,0 +1,110 @@
+{
+  "route": "/api/run",
+  "request": "GET /api/run?id=claude:3f2a9c1e-0000-0000-0000-000000000000",
+  "status": 200,
+  "body": {
+    "revision": 1,
+    "run": {
+      "id": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+      "short": "claude:3f2a9c1e",
+      "agent": "claude",
+      "kind": "session",
+      "parent": "",
+      "children": [
+        "claude:3f2a9c1e-0000-0000-0000-000000000000/a1"
+      ],
+      "project": "alpha",
+      "cwd": "/Users/example/src/alpha",
+      "branch": "feature/card-panel",
+      "worktree": "/Users/example/src/alpha",
+      "source": "startup",
+      "agentType": "",
+      "state": "needs-you",
+      "ticket": "AL-3",
+      "ticketTitle": "Card panel",
+      "linkedBy": "claim",
+      "dirty": true,
+      "noHandoff": false,
+      "permission": "Bash",
+      "reason": {
+        "kind": "permission",
+        "permission": "Bash",
+        "question": "",
+        "answered": false,
+        "waitingOn": "",
+        "agentType": "",
+        "mcpOnly": false
+      },
+      "started": "2026-10-04T13:00:00Z",
+      "lastActivity": "2026-10-04T13:28:00Z",
+      "ended": "",
+      "endReason": "",
+      "tools": 2,
+      "edits": 1,
+      "files": [
+        "frontend/src/features/card/ReviewTab.tsx",
+        "frontend/src/features/card/CardPanel.tsx"
+      ],
+      "questions": [
+        {
+          "id": "q-1",
+          "run": "claude:3f2a9c1e-0000-0000-0000-000000000000",
+          "ticket": "AL-3",
+          "kind": "decision",
+          "text": "Keep the old panel?",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "asked": "2026-10-04T13:28:00Z",
+          "runShort": "claude:3f2a9c1e"
+        }
+      ],
+      "timeline": [
+        {
+          "time": "2026-10-04T13:00:00Z",
+          "kind": "run.start",
+          "detail": "startup"
+        },
+        {
+          "time": "2026-10-04T13:00:05Z",
+          "kind": "turn.start"
+        },
+        {
+          "time": "2026-10-04T13:00:20Z",
+          "kind": "claim",
+          "ticket": "AL-3"
+        },
+        {
+          "time": "2026-10-04T13:05:00Z",
+          "kind": "tool.used",
+          "tool": "Edit",
+          "path": "frontend/src/features/card/CardPanel.tsx"
+        },
+        {
+          "time": "2026-10-04T13:20:00Z",
+          "kind": "checkpoint",
+          "ticket": "AL-3"
+        },
+        {
+          "time": "2026-10-04T13:25:00Z",
+          "kind": "tool.used",
+          "tool": "Write",
+          "path": "frontend/src/features/card/ReviewTab.tsx"
+        },
+        {
+          "time": "2026-10-04T13:26:00Z",
+          "kind": "permission.requested",
+          "tool": "Bash"
+        },
+        {
+          "time": "2026-10-04T13:28:00Z",
+          "kind": "question.asked",
+          "detail": "decision",
+          "ticket": "AL-3"
+        }
+      ],
+      "mcpOnly": false
+    }
+  }
+}

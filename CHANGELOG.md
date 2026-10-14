@@ -625,6 +625,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The Colour by Type key lists types in the board format's order
+  (feature, test, bug, refactor, infra, docs, spike), as the ticket forms
+  do (FH-97, D79). Behind it, the browser now checks every field of what
+  the server sends, against samples of each answer the server's tests
+  record, so a field renamed or dropped fails the build instead of the
+  board.
+
 - A Detailed card ends on its row of markers (type, id, blocked, change
   requests, live run, age, review, attachments, priority) instead of
   carrying it under the title (FH-168): the title leads straight into the

@@ -1,5 +1,6 @@
 import type { Card } from "../api/board";
 import { priorityLabel } from "./status";
+import { PRIORITIES, TICKET_TYPES } from "./tickets";
 
 // Paint is the board's "Colour by" option: a ticket attribute shown as a
 // tinted card header and a named tag (VIEW-6). Workstreams keep the line
@@ -22,21 +23,15 @@ export interface Paint {
   value: string;
 }
 
-const types = [
-  "feature",
-  "bug",
-  "infra",
-  "test",
-  "refactor",
-  "docs",
-  "spike",
-] as const;
-const priorities = ["high", "medium", "low"] as const;
-const ages = [
+const types = TICKET_TYPES;
+const priorities = PRIORITIES;
+// AGES are the age buckets, by id (a saved age filter's values) and label.
+export const AGES = [
   ["today", "Today"],
   ["week", "This week"],
   ["older", "Older"],
 ] as const;
+const ages = AGES;
 
 // typeToken is a type's paint token: its own for a known type, "other"
 // for the rest. The card's type icon and the Colour by tint share it.

@@ -74,6 +74,10 @@ function comment(overrides: Partial<Comment> = {}): Comment {
     quoteFrom: "",
     quote: "",
     body: "Keep the outline.",
+    sentTo: "",
+    sentToShort: "",
+    delivery: "",
+    delivered: "",
     ...overrides,
   };
 }

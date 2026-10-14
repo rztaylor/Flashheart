@@ -1,0 +1,133 @@
+{
+  "route": "/api/projects",
+  "request": "GET /api/projects",
+  "status": 200,
+  "body": {
+    "revision": 1,
+    "root": "/board",
+    "rootMissing": false,
+    "projects": [
+      {
+        "name": "beta",
+        "displayName": "beta",
+        "key": "BE",
+        "keyDerived": false,
+        "repos": [
+          "/Users/example/src/beta"
+        ],
+        "counts": {
+          "backlog": 1,
+          "done": 0,
+          "in-progress": 0,
+          "review": 0,
+          "up-next": 0
+        },
+        "needsRepair": 0,
+        "blocked": 1,
+        "warnings": [],
+        "lastModified": "2026-10-04T12:00:00Z",
+        "workstreams": [],
+        "archived": 0,
+        "rejected": 0,
+        "runs": {
+          "working": 0,
+          "needsYou": 0,
+          "waiting": 0,
+          "quiet": 0,
+          "ended": 0,
+          "live": 0,
+          "needsYouUnticketed": 0
+        }
+      },
+      {
+        "name": "alpha",
+        "displayName": "Alpha",
+        "key": "AL",
+        "keyDerived": false,
+        "repos": [
+          "/Users/example/src/alpha"
+        ],
+        "counts": {
+          "backlog": 3,
+          "done": 1,
+          "in-progress": 1,
+          "review": 1,
+          "up-next": 1
+        },
+        "needsRepair": 1,
+        "blocked": 3,
+        "warnings": [],
+        "lastModified": "2026-10-04T12:00:00Z",
+        "workstreams": [
+          {
+            "slug": "board-ui",
+            "title": "Board UI",
+            "created": "2026-10-01",
+            "status": "active",
+            "done": 2,
+            "total": 4
+          },
+          {
+            "slug": "offline",
+            "title": "Offline",
+            "created": "2026-10-02",
+            "status": "blocked",
+            "done": 0,
+            "total": 1
+          }
+        ],
+        "archived": 1,
+        "rejected": 0,
+        "runs": {
+          "working": 0,
+          "needsYou": 1,
+          "waiting": 0,
+          "quiet": 0,
+          "ended": 1,
+          "live": 1,
+          "needsYouUnticketed": 0
+        }
+      },
+      {
+        "name": "gamma",
+        "displayName": "Gamma",
+        "key": "GAM",
+        "keyDerived": true,
+        "repos": [],
+        "counts": {
+          "backlog": 0,
+          "done": 0,
+          "in-progress": 0,
+          "review": 0,
+          "up-next": 0
+        },
+        "needsRepair": 0,
+        "blocked": 0,
+        "warnings": [],
+        "lastModified": "2026-10-04T12:00:00Z",
+        "workstreams": [],
+        "archived": 0,
+        "rejected": 0,
+        "runs": {
+          "working": 0,
+          "needsYou": 0,
+          "waiting": 0,
+          "quiet": 0,
+          "ended": 0,
+          "live": 0,
+          "needsYouUnticketed": 0
+        }
+      }
+    ],
+    "runs": {
+      "working": 0,
+      "needsYou": 1,
+      "waiting": 0,
+      "quiet": 0,
+      "ended": 1,
+      "live": 1,
+      "needsYouUnticketed": 0
+    },
+    "archivedProjects": 0
+  }
+}

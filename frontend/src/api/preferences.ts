@@ -64,19 +64,26 @@ const oneOf =
   (value: unknown): value is T =>
     typeof value === "string" && (values as readonly string[]).includes(value);
 
-const isTheme = oneOf<ThemePreference>(["system", "light", "dark"]);
-const isDensity = oneOf<Density>(["compact", "normal", "detailed"]);
-const isColourBy = oneOf<ColourBy>(["type", "priority", "age", "none"]);
-const isView = oneOf<SavedView>([
+// The values each preference accepts: the frontend's copy of
+// config.Choices, matched to it by api/vocabulary.test.ts (FH-97).
+export const THEMES: readonly ThemePreference[] = ["system", "light", "dark"];
+export const DENSITIES: readonly Density[] = ["compact", "normal", "detailed"];
+export const COLOUR_BYS: readonly ColourBy[] = [
+  "type",
+  "priority",
+  "age",
+  "none",
+];
+export const SAVED_VIEWS: readonly SavedView[] = [
   "",
   "board",
   "overview",
   "workstreams",
   "table",
-]);
-const isHideableColumn = oneOf<HideableColumn>(["backlog"]);
-const isEditorMode = oneOf<EditorMode>(["formatted", "markdown"]);
-const isState = oneOf<SavedState>([
+];
+export const HIDEABLE_COLUMNS: readonly HideableColumn[] = ["backlog"];
+export const EDITOR_MODES: readonly EditorMode[] = ["formatted", "markdown"];
+export const SAVED_STATES: readonly SavedState[] = [
   "",
   "all",
   "blocked",
@@ -84,7 +91,15 @@ const isState = oneOf<SavedState>([
   "repair",
   "working",
   "rejected",
-]);
+];
+
+const isTheme = oneOf(THEMES);
+const isDensity = oneOf(DENSITIES);
+const isColourBy = oneOf(COLOUR_BYS);
+const isView = oneOf(SAVED_VIEWS);
+const isHideableColumn = oneOf(HIDEABLE_COLUMNS);
+const isEditorMode = oneOf(EDITOR_MODES);
+const isState = oneOf(SAVED_STATES);
 
 const isStrings = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");

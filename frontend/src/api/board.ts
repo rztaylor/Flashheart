@@ -1,9 +1,20 @@
-import { type AuthenticatedFetch, getJSON, isRecord } from "./client";
+import {
+  type AuthenticatedFetch,
+  getJSON,
+  isArrayOf,
+  isBoolean,
+  isNumber,
+  isOptional,
+  isRecord,
+  isString,
+  isStringArray,
+} from "./client";
 import {
   isLive,
   isQuestion,
   isRun,
   isRunCounts,
+  isRunState,
   isTicketSessions,
   type Live,
   type Question,
@@ -261,10 +272,10 @@ export interface Comment {
   quoteFrom: string;
   quote: string;
   body: string;
-  sentTo?: string;
-  sentToShort?: string;
-  delivery?: CommentDelivery | "";
-  delivered?: string;
+  sentTo: string;
+  sentToShort: string;
+  delivery: CommentDelivery | "";
+  delivered: string;
 }
 
 // HistoryChange is one thing a write changed: what is created, moved,
@@ -336,18 +347,26 @@ export interface WorkstreamDetail extends Workstream {
   raw: string;
 }
 
-const isString = (value: unknown): value is string => typeof value === "string";
-const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every(isString);
 const isColumn = (value: unknown): value is Column =>
   COLUMNS.some((column) => column.id === value);
+const optionalString = isOptional(isString);
+
+const isTicketRef = (
+  value: unknown,
+): value is { project: string; id: string } =>
+  isRecord(value) && isString(value.project) && isString(value.id);
 
 function isReason(value: unknown): value is Reason {
   return (
     isRecord(value) &&
     (value.kind === "ticket" || value.kind === "workstream") &&
     isString(value.text) &&
-    typeof value.missing === "boolean"
+    isOptional(isTicketRef)(value.ticket) &&
+    optionalString(value.workstream) &&
+    optionalString(value.column) &&
+    isOptional(isNumber)(value.pending) &&
+    isBoolean(value.missing) &&
+    optionalString(value.via)
   );
 }
 
@@ -358,31 +377,52 @@ export function isCard(value: unknown): value is Card {
     isString(value.id) &&
     isString(value.slug) &&
     isColumn(value.column) &&
+    isBoolean(value.rejected) &&
     isString(value.title) &&
     isString(value.type) &&
     isString(value.priority) &&
     isString(value.workstream) &&
     isStringArray(value.tags) &&
+    isString(value.created) &&
+    isString(value.updated) &&
     isString(value.modified) &&
+    isString(value.branch) &&
+    isString(value.pr) &&
+    isStringArray(value.dependsOn) &&
     isRecord(value.criteria) &&
-    typeof value.criteria.done === "number" &&
-    typeof value.criteria.total === "number" &&
+    isNumber(value.criteria.done) &&
+    isNumber(value.criteria.total) &&
     isString(value.excerpt) &&
     isString(value.handoffNext) &&
-    typeof value.blocked === "boolean" &&
-    Array.isArray(value.blockedBy) &&
-    value.blockedBy.every(isReason) &&
+    isNumber(value.attachments) &&
+    isBoolean(value.hasReview) &&
+    isBoolean(value.blocked) &&
+    isArrayOf(isReason)(value.blockedBy) &&
     isStringArray(value.needsRepair) &&
     isStringArray(value.warnings) &&
-    (value.live === undefined || isLive(value.live)) &&
-    typeof value.needsYou === "boolean" &&
-    typeof value.agentWorking === "boolean" &&
-    typeof value.openQuestions === "number" &&
-    (value.changeRequests === undefined ||
-      isChangeRequests(value.changeRequests)) &&
-    (value.sessions === undefined || isTicketSessions(value.sessions))
+    optionalString(value.searchText) &&
+    isOptional(isLive)(value.live) &&
+    isBoolean(value.needsYou) &&
+    isBoolean(value.agentWorking) &&
+    isNumber(value.openQuestions) &&
+    isChangeRequests(value.changeRequests) &&
+    isOptional(isTicketSessions)(value.sessions)
   );
 }
+
+const isWorkstreamStatus = (
+  value: unknown,
+): value is WorkstreamBrief["status"] =>
+  value === "active" || value === "blocked" || value === "completed";
+
+const isWorkstreamBrief = (value: unknown): value is WorkstreamBrief =>
+  isRecord(value) &&
+  isString(value.slug) &&
+  isString(value.title) &&
+  isString(value.created) &&
+  isWorkstreamStatus(value.status) &&
+  isNumber(value.done) &&
+  isNumber(value.total);
 
 function isSummary(value: unknown): value is ProjectSummary {
   return (
@@ -390,48 +430,54 @@ function isSummary(value: unknown): value is ProjectSummary {
     isString(value.name) &&
     isString(value.displayName) &&
     isString(value.key) &&
+    isBoolean(value.keyDerived) &&
+    isStringArray(value.repos) &&
     isRecord(value.counts) &&
     COLUMNS.every(
       (column) =>
         typeof (value.counts as Record<string, unknown>)[column.id] ===
         "number",
     ) &&
-    typeof value.needsRepair === "number" &&
-    typeof value.blocked === "number" &&
-    typeof value.archived === "number" &&
-    typeof value.rejected === "number" &&
+    isNumber(value.needsRepair) &&
+    isNumber(value.blocked) &&
+    isStringArray(value.warnings) &&
+    isNumber(value.archived) &&
+    isNumber(value.rejected) &&
     isString(value.lastModified) &&
-    Array.isArray(value.workstreams) &&
+    isArrayOf(isWorkstreamBrief)(value.workstreams) &&
     isRunCounts(value.runs)
   );
 }
 
-const isProjects = (value: unknown): value is ProjectsResponse =>
+export const isProjects = (value: unknown): value is ProjectsResponse =>
   isRecord(value) &&
-  typeof value.revision === "number" &&
+  isNumber(value.revision) &&
   isString(value.root) &&
-  typeof value.rootMissing === "boolean" &&
-  Array.isArray(value.projects) &&
-  value.projects.every(isSummary) &&
-  typeof value.archivedProjects === "number" &&
+  isBoolean(value.rootMissing) &&
+  isArrayOf(isSummary)(value.projects) &&
+  isNumber(value.archivedProjects) &&
   isRunCounts(value.runs);
 
-const isBoard = (value: unknown): value is BoardResponse =>
+export const isBoard = (value: unknown): value is BoardResponse =>
   isRecord(value) &&
-  typeof value.revision === "number" &&
+  isNumber(value.revision) &&
   isSummary(value.project) &&
-  Array.isArray(value.cards) &&
-  value.cards.every(isCard) &&
-  typeof value.doneTotal === "number";
+  isArrayOf(isCard)(value.cards) &&
+  isNumber(value.doneTotal) &&
+  isNumber(value.doneShown);
 
-const isAllBoard = (value: unknown): value is AllBoardResponse =>
+export const isAllBoard = (value: unknown): value is AllBoardResponse =>
   isRecord(value) &&
-  typeof value.revision === "number" &&
-  Array.isArray(value.projects) &&
-  value.projects.every(isSummary) &&
-  Array.isArray(value.cards) &&
-  value.cards.every(isCard) &&
-  typeof value.doneTotal === "number";
+  isNumber(value.revision) &&
+  isArrayOf(isSummary)(value.projects) &&
+  isArrayOf(isCard)(value.cards) &&
+  isNumber(value.doneTotal) &&
+  isNumber(value.doneShown);
+
+const isCheckItem = (
+  value: unknown,
+): value is { text: string; done: boolean } =>
+  isRecord(value) && isString(value.text) && isBoolean(value.done);
 
 const isReview = (value: unknown): value is Review =>
   isRecord(value) &&
@@ -441,14 +487,23 @@ const isReview = (value: unknown): value is Review =>
   isString(value.intro) &&
   isString(value.outro) &&
   isString(value.after) &&
-  Array.isArray(value.steps) &&
-  value.steps.every(
-    (step) =>
-      isRecord(step) && isString(step.text) && typeof step.done === "boolean",
-  );
+  isArrayOf(isCheckItem)(value.steps);
 
-const isNumberArray = (value: unknown): value is number[] =>
-  Array.isArray(value) && value.every((item) => typeof item === "number");
+const isHandoff = (
+  value: unknown,
+): value is NonNullable<TicketDetail["handoff"]> =>
+  isRecord(value) && isString(value.markdown) && isStringArray(value.next);
+
+const isAttachment = (value: unknown): value is Attachment =>
+  isRecord(value) &&
+  isString(value.file) &&
+  isString(value.caption) &&
+  isString(value.kind) &&
+  isString(value.run) &&
+  isString(value.added) &&
+  isString(value.url);
+
+const isNumberArray = isArrayOf(isNumber);
 
 export const isComment = (value: unknown): value is Comment =>
   isRecord(value) &&
@@ -456,15 +511,29 @@ export const isComment = (value: unknown): value is Comment =>
   isString(value.time) &&
   isString(value.by) &&
   isString(value.byShort) &&
-  typeof value.byPerson === "boolean" &&
+  isBoolean(value.byPerson) &&
   isString(value.state) &&
   isString(value.edited) &&
+  isString(value.sentTo) &&
+  isString(value.sentToShort) &&
+  (value.delivery === "" ||
+    value.delivery === "waiting" ||
+    value.delivery === "delivered" ||
+    value.delivery === "missed") &&
+  isString(value.delivered) &&
   isString(value.quoteFrom) &&
   isString(value.quote) &&
-  isString(value.body) &&
-  [value.sentTo, value.sentToShort, value.delivery, value.delivered].every(
-    (field) => field === undefined || isString(field),
-  );
+  isString(value.body);
+
+const isHistoryChange = (value: unknown): value is HistoryChange =>
+  isRecord(value) &&
+  isString(value.what) &&
+  isString(value.from) &&
+  isString(value.to) &&
+  isStringArray(value.fields) &&
+  isNumberArray(value.criteria) &&
+  isNumberArray(value.steps) &&
+  isStringArray(value.comments);
 
 const isHistory = (value: unknown): value is History =>
   isRecord(value) &&
@@ -472,57 +541,93 @@ const isHistory = (value: unknown): value is History =>
   isString(value.time) &&
   isString(value.by) &&
   isString(value.byShort) &&
-  typeof value.byPerson === "boolean" &&
-  Array.isArray(value.changes) &&
-  value.changes.every(
-    (change) =>
-      isRecord(change) &&
-      isString(change.what) &&
-      isString(change.from) &&
-      isString(change.to) &&
-      isStringArray(change.fields) &&
-      isNumberArray(change.criteria) &&
-      isNumberArray(change.steps) &&
-      (change.comments === undefined || isStringArray(change.comments)),
-  );
+  isBoolean(value.byPerson) &&
+  isArrayOf(isHistoryChange)(value.changes);
 
-const isTicket = (
-  value: unknown,
-): value is { revision: number; ticket: TicketDetail } =>
+const isTellSession = (value: unknown): value is TellSession =>
   isRecord(value) &&
-  isRecord(value.ticket) &&
-  isCard(value.ticket) &&
-  Array.isArray(value.ticket.comments) &&
-  value.ticket.comments.every(isComment) &&
-  Array.isArray(value.ticket.history) &&
-  value.ticket.history.every(isHistory) &&
-  isString(value.ticket.activityHash) &&
-  isString(value.ticket.body) &&
-  Array.isArray(value.ticket.criteriaItems) &&
-  Array.isArray(value.ticket.questions) &&
-  value.ticket.questions.every(isQuestion) &&
-  Array.isArray(value.ticket.attachmentFiles) &&
-  (value.ticket.review === null || isReview(value.ticket.review)) &&
-  Array.isArray(value.ticket.runs) &&
-  value.ticket.runs.every(isRun);
+  isString(value.run) &&
+  isString(value.short) &&
+  isString(value.agent) &&
+  isRunState(value.state) &&
+  isString(value.parent) &&
+  isString(value.agentType);
 
-const isWorkstreamLine = (item: unknown): item is Workstream =>
-  isRecord(item) &&
-  isString(item.slug) &&
-  isString(item.status) &&
-  Array.isArray(item.tickets);
+const isTicketDetail = (value: unknown): value is TicketDetail =>
+  isCard(value) &&
+  isRecord(value) &&
+  isString(value.body) &&
+  isString(value.frontmatter) &&
+  isString(value.session) &&
+  isString(value.gitRef) &&
+  isStringArray(value.dependsOnWorkstreams) &&
+  isArrayOf(isCheckItem)(value.criteriaItems) &&
+  (value.handoff === null || isHandoff(value.handoff)) &&
+  (value.review === null || isReview(value.review)) &&
+  isArrayOf(isAttachment)(value.attachmentFiles) &&
+  isString(value.hash) &&
+  isString(value.raw) &&
+  isArrayOf(isRun)(value.runs) &&
+  isArrayOf(isQuestion)(value.questions) &&
+  isArrayOf(isComment)(value.comments) &&
+  isArrayOf(isHistory)(value.history) &&
+  isString(value.activityHash) &&
+  isArrayOf(isTellSession)(value.tellSessions);
 
-const isWorkstreams = (
+// TicketResponse is GET /api/tickets/{id}.
+export interface TicketResponse {
+  revision: number;
+  ticket: TicketDetail;
+}
+
+export const isTicketResponse = (value: unknown): value is TicketResponse =>
+  isRecord(value) && isNumber(value.revision) && isTicketDetail(value.ticket);
+
+const isWorkstreamTicket = (value: unknown): value is WorkstreamTicket =>
+  isRecord(value) &&
+  isString(value.id) &&
+  isString(value.title) &&
+  (value.column === "" ||
+    value.column === "archived" ||
+    isColumn(value.column)) &&
+  isBoolean(value.rejected) &&
+  isBoolean(value.blocked) &&
+  isBoolean(value.held) &&
+  isBoolean(value.missing) &&
+  isStringArray(value.dependsOn) &&
+  isStringArray(value.outside);
+
+const isWorkstreamLine = (value: unknown): value is Workstream =>
+  isRecord(value) &&
+  isString(value.slug) &&
+  isString(value.title) &&
+  isWorkstreamStatus(value.status) &&
+  isBoolean(value.suspended) &&
+  isString(value.declaredStatus) &&
+  isString(value.priority) &&
+  isString(value.created) &&
+  isNumber(value.done) &&
+  isNumber(value.total) &&
+  isString(value.next) &&
+  isArrayOf(isReason)(value.blockedBy) &&
+  isStringArray(value.dependsOnWorkstreams) &&
+  isStringArray(value.tags) &&
+  isStringArray(value.needsRepair) &&
+  isStringArray(value.warnings) &&
+  isArrayOf(isWorkstreamTicket)(value.tickets);
+
+export const isWorkstreams = (
   value: unknown,
 ): value is { revision: number; workstreams: Workstream[] } =>
   isRecord(value) &&
-  Array.isArray(value.workstreams) &&
-  value.workstreams.every(isWorkstreamLine);
+  isNumber(value.revision) &&
+  isArrayOf(isWorkstreamLine)(value.workstreams);
 
-const isWorkstreamResponse = (
+export const isWorkstreamResponse = (
   value: unknown,
 ): value is { revision: number; workstream: WorkstreamDetail } =>
   isRecord(value) &&
+  isNumber(value.revision) &&
   isWorkstreamLine(value.workstream) &&
   isRecord(value.workstream) &&
   isString(value.workstream.body) &&
@@ -583,7 +688,7 @@ export async function fetchTicket(
   const response = await getJSON(
     fetcher,
     `/api/tickets/${segment(id)}`,
-    isTicket,
+    isTicketResponse,
     "Ticket response was invalid",
     signal,
   );

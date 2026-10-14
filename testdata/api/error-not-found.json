@@ -1,0 +1,11 @@
+{
+  "route": "/api/",
+  "request": "GET /api/nothing",
+  "status": 404,
+  "body": {
+    "error": {
+      "code": "not_found",
+      "message": "No such API endpoint"
+    }
+  }
+}

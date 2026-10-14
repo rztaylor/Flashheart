@@ -1,0 +1,10 @@
+{
+  "route": "POST /api/projects/{project}/archive-project",
+  "request": "POST /api/projects/beta/archive-project",
+  "status": 200,
+  "body": {
+    "hash": "",
+    "revision": 1,
+    "warnings": []
+  }
+}

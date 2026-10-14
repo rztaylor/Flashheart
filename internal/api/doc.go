@@ -6,7 +6,10 @@
 // short id and runs and badges its typed Needs you reason, which the
 // frontend words),
 // long-polling for changes (LIFE-3), JSON errors and attachment response
-// headers (SEC-4).
+// headers (SEC-4). Response shapes are this package's own types: runs and
+// events types are mapped, never sent as they are, and error codes are
+// ErrorCodes. Every endpoint's response is a golden fixture in
+// testdata/api, which the frontend's guards are tested against (FH-97).
 //
 // Reads come from index snapshots and, for review and attachment files,
 // store's checks. Writes (moves, field edits decoded into board's

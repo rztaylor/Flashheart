@@ -90,6 +90,18 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 
+// ErrorCodes are every code an error response carries (error.code): the
+// part of an error the browser may branch on, the message being for
+// people. A handler uses one of these, as a literal (TestErrorCodes
+// holds the handlers to the list); testdata/vocabulary.json carries it to
+// the frontend's tests (FH-97).
+var ErrorCodes = []string{
+	"already_answered", "answered_in_session", "board_unavailable", "board_unreadable", "busy",
+	"config_unreadable", "confirm_blocked", "conflict", "delivered", "exists", "invalid_input",
+	"key_fixed", "key_taken", "method_not_allowed", "needs_repair", "not_found", "not_in_review",
+	"not_live", "open_request", "read_only", "title_taken", "too_large", "type_not_allowed", "unreadable", "write_failed",
+}
+
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	type body struct {
 		Code    string `json:"code"`

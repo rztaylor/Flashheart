@@ -1,0 +1,25 @@
+{
+  "route": "POST /api/tickets/{id}/comments",
+  "request": "POST /api/tickets/AL-2/comments",
+  "status": 201,
+  "body": {
+    "comment": {
+      "id": "entry-01",
+      "time": "2026-10-04T13:30:00Z",
+      "by": "Robert",
+      "byShort": "Robert",
+      "byPerson": true,
+      "state": "open",
+      "edited": "",
+      "sentTo": "",
+      "sentToShort": "",
+      "delivery": "",
+      "delivered": "",
+      "quoteFrom": "Summary",
+      "quote": "Columns render",
+      "body": "The columns need a gap."
+    },
+    "activityHash": "hash-02",
+    "revision": 1
+  }
+}

@@ -4,6 +4,8 @@
 // full page: splitting a file into its sections and finding the images and
 // the ticket's own files it links.
 
+import { TICKET_ID } from "../api/board";
+
 export type LinkTarget =
   | { kind: "ticket"; id: string }
   | { kind: "external"; href: string }
@@ -17,7 +19,7 @@ export interface LinkContext {
   ticket: string;
 }
 
-const ticketID = /^[A-Z][A-Z0-9]{1,9}-[1-9][0-9]*$/;
+const ticketID = TICKET_ID;
 const ticketFolder = /^([A-Z][A-Z0-9]{1,9}-[1-9][0-9]*)(?:-.*)?$/;
 const safeSegment = /^[A-Za-z0-9][A-Za-z0-9._ -]*$/;
 

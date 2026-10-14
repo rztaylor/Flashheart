@@ -1,0 +1,12 @@
+{
+  "route": "POST /api/tickets/{id}/files",
+  "request": "POST /api/tickets/AL-3/files?name=panel.png&kind=screenshot",
+  "status": 201,
+  "body": {
+    "file": "20261004T1330-panel.png",
+    "kind": "screenshot",
+    "image": true,
+    "reused": false,
+    "revision": 1
+  }
+}

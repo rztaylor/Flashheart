@@ -1,0 +1,11 @@
+{
+  "route": "POST /api/projects/{project}/workstreams",
+  "request": "POST /api/projects/alpha/workstreams",
+  "status": 409,
+  "body": {
+    "error": {
+      "code": "title_taken",
+      "message": "a workstream called \"Board UI\" is already in alpha (board-ui); choose another title"
+    }
+  }
+}

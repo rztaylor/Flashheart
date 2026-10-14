@@ -1,0 +1,10 @@
+{
+  "route": "POST /api/archived-projects/{project}/delete",
+  "request": "POST /api/archived-projects/beta/delete",
+  "status": 200,
+  "body": {
+    "hash": "",
+    "revision": 1,
+    "warnings": []
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "route": "PATCH /api/tickets/{id}/comments/{comment}",
+  "request": "PATCH /api/tickets/AL-2/comments/entry-01",
+  "status": 200,
+  "body": {
+    "comment": {
+      "id": "entry-01",
+      "time": "2026-10-04T13:30:00Z",
+      "by": "Robert",
+      "byShort": "Robert",
+      "byPerson": true,
+      "state": "resolved",
+      "edited": "2026-10-04T13:30:00Z",
+      "sentTo": "",
+      "sentToShort": "",
+      "delivery": "",
+      "delivered": "",
+      "quoteFrom": "Summary",
+      "quote": "Columns render",
+      "body": "The columns need a wider gap."
+    },
+    "activityHash": "hash-02",
+    "revision": 1
+  }
+}

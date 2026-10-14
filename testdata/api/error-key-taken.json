@@ -1,0 +1,15 @@
+{
+  "route": "PUT /api/projects/{project}/key",
+  "request": "PUT /api/projects/gamma/key",
+  "status": 409,
+  "body": {
+    "error": {
+      "code": "key_taken",
+      "message": "project key AL is taken; keys in use: AL, BE",
+      "inUse": [
+        "AL",
+        "BE"
+      ]
+    }
+  }
+}
