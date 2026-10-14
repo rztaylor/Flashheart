@@ -211,8 +211,6 @@ func handle(options Options) error {
 	switch {
 	case errors.Is(err, store.ErrNotFound):
 		return nil // auto_create_projects is off and the project does not exist
-	case errors.Is(err, store.ErrNeedsMigration):
-		return nil // the board needs `flashheart migrate` first (MIG-1)
 	case errors.Is(err, store.ErrProjectArchived):
 		return nil // the project is archived; nothing is recorded until it is restored (PRJ-5)
 	case err != nil:

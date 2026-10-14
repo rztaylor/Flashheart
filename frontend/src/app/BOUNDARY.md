@@ -37,8 +37,8 @@ wiring lifecycle, API and features together.
   opener when it closes, each waiting on the leave guard while the panel
   holds an unsaved comment.
 - `ViewOutlet`: the routed view's body (read errors with Try again, each
-  view's own skeleton while the projects load, the v1 notice
-  (`V1Notice`), the missing-root state, archive, Overview, Workstreams, and
+  view's own skeleton while the projects load, the missing-root state,
+  archive, Overview, Workstreams, and
   the Board or Table with their toolbar, filter options and paints).
 - `PageHeader` with `PageActions`, `NarrowControls` (the phone control row)
   and `SettingsMenu` (the band's gear: theme, board root, version).

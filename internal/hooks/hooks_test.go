@@ -399,23 +399,6 @@ func TestSessionStartReturnsTheRecoveryNote(t *testing.T) {
 	}
 }
 
-func TestV1ProjectsAreLeftForMigrate(t *testing.T) {
-	t.Parallel()
-
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "demo", "todo"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	run(t, root, "UserPromptSubmit", "s1 "+repo(t), fake{})
-	entries, _ := os.ReadDir(filepath.Join(root, "demo"))
-	if len(entries) != 1 || entries[0].Name() != "todo" {
-		t.Fatalf("v1 project now holds %v", entries)
-	}
-	if log := errorLog(t, root); log != "" {
-		t.Fatalf("hook-errors.log = %q", log)
-	}
-}
-
 func TestArchivedProjectsRepositoryIsQuiet(t *testing.T) {
 	t.Parallel()
 
