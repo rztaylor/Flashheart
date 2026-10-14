@@ -242,7 +242,11 @@ Full format: `docs/dev/specs/board-format.md`.
   combines with the other filters, carries from project to project, and is
   not remembered. While it is on, runs in Needs you that no card on the
   board shows (no linked ticket, and no open question about a ticket on the
-  board) are named in a notice that opens the Overview. Tickets show only in their real
+  board) are named, with why no card can show them (they asked about a
+  project or workstream, not a ticket), and **Answer it in the Overview**
+  opens the Overview at *Needs your decision* (FH-157, D74): a notice above
+  the cards, or in place of the empty state when no card is left, which
+  never advises clearing a filter that cannot show them. Tickets show only in their real
   columns (D31, FH-44). Tickets linked to a Working or Quiet run are found
   with the State filter's *Agent working* option (D27, FH-42).
 - `VIEW-3` **Overview** (D32, FH-51): what a project manager asks of the
@@ -698,7 +702,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   workstream that names it (FH-158); `create_workstream` and
   `update_workstream` refuse a title another of the project's workstreams
   has (D76); `create_ticket` files a
-  ticket in another project when given its name or key (FH-46). The
+  ticket in another project when given its name or key (FH-46).
+  `update_ticket` rewrites named sections and edits acceptance criteria
+  by operation, keeping ticks, but never Handoff or Notes; the replaced
+  text is kept in the ticket's files and noted (FH-69, D75). The
   ticket tools ask agents to write titles and descriptions for a person,
   with implementation detail under Context, and warn about a title that
   reads like code (agent-protocol §7.2). `get_ticket` and `claim` end

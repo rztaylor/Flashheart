@@ -3,7 +3,9 @@
 Owns the application shell and composition (`docs/dev/specs/ui-layout.md`
 §1): the band with view tabs (Board, Overview, Workstreams, Table), the Needs
 you plate and its Board and Table filter with the notice for runs no card
-shows, which opens the Overview (VIEW-2), old Agents routes landing on the
+shows, above the cards or in place of the empty state (`NeedsYouNotice`,
+`NeedsYouEmpty`), whose button opens the scope's Overview focused on Needs
+your decision (VIEW-2, FH-157), old Agents routes landing on the
 Overview, New ticket in a chosen project (the Overview's Create ticket;
 the new ticket opens on the Edit tab), New workstream from the
 Workstreams header (its page opens), opening the panel on a tab (Review

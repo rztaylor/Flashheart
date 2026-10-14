@@ -35,6 +35,27 @@ All notable changes to this project are documented here. The project follows
   request holds that stop; otherwise it reaches the session with the next
   prompt (or, in Claude Code, its next tool result). It is never repeated
   in a session, and subagents are never asked. Agent protocol stays 2.
+- What the MCP tools cost every agent's context is measured (FH-134,
+  D52). A test sizes the tool list and the server's instructions as an
+  agent receives them, in bytes and estimated tokens, reports each tool's
+  share, and fails past a budget of 16,500 bytes (about 4,100 tokens;
+  14,224 bytes today), naming the largest tools. A change that grows the
+  list past it raises the budget on purpose and says why (agent-protocol
+  §7.2).
+
+- Agents can correct a ticket when its scope changes, instead of adding
+  a note that contradicts it (FH-69, D75, `MCP-2`). `update_ticket`
+  takes `sections`, which replaces a section such as the Description,
+  Test Plan or Context, and `criteria`, which adds, rewords, removes or
+  moves acceptance criteria while ticked ones stay ticked. Handoff and
+  Notes are never rewritten, and a misspelt section name is refused with
+  the list of sections there are. The text an agent replaces is kept in
+  the ticket's files, linked from a note that says who changed what, so
+  you can copy it back; the ticket's Activity shows the edit too. Nothing
+  else in the file changes, and an edit made on a ticket that changed
+  since the agent read it is refused. The flashheart skill says when to
+  rewrite (and no longer mentions plan mirroring, which D51 retired).
+  Agent protocol stays 2.
 - Agents can change a workstream after creating it, and file tickets on
   another project's board (FH-46, D69, `MCP-2`). The new
   `update_workstream` tool sets a workstream's title, goal, priority,
@@ -355,6 +376,14 @@ All notable changes to this project are documented here. The project follows
   workstream are refused the same way and told which workstream to join
   instead. Workstreams that already share a name still load and can be
   edited; giving one a new name parts them.
+- Pressing *Needs you* no longer leads to an empty board with the wrong
+  advice when an agent's question is not about a ticket (FH-157, D74,
+  `VIEW-2`). The Board and Table now say that an agent asked about the
+  project or a workstream, so no card can show it, and offer **Answer it
+  in the Overview**, which opens the Overview with the keyboard on *Needs
+  your decision*. When no card is left, this replaces *No tickets match
+  these filters* and its *Clear a filter* advice; when some cards show,
+  it sits above them.
 - Dialogs open with the cursor where you type first (FH-17): New
   ticket's title, the reason for starting a blocked ticket and a new
   change request lost focus to the dialog's close button as it opened.

@@ -6,7 +6,9 @@
 // Merge), in one transaction (tx.go: read, require, edit, stamp, stage,
 // commit, nothing written when a step fails) of atomic replaces (STO-3),
 // writes typed field edits from the board and agents alike (EditTicket,
-// FH-85),
+// FH-85; ApplyTicketEdit for the whole of an agent's update_ticket call,
+// keeping the text an agent's rewrite replaced in the ticket's files in
+// the same write, FH-69),
 // places tickets in
 // their column's manual order (EDIT-9), keeps a ticket's
 // workstream field and the workstreams' tickets lists in step, creates

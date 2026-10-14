@@ -48,6 +48,11 @@ type server struct {
 	// ending counts connections still open, each of which records its
 	// started run's end, if any, when it closes.
 	ending sync.WaitGroup
+
+	// betweenReadAndWrite, nil outside tests, runs in update_ticket after
+	// it reads the ticket and before it writes, so a test can change the
+	// ticket in between and see the conflict (STO-3).
+	betweenReadAndWrite func()
 }
 
 // New returns the MCP server with every protocol tool registered.
