@@ -31,6 +31,9 @@ const (
 // session's own and its subagents').
 type sessionState struct {
 	Runs map[string]*runState `json:"runs"`
+	// Claim is the session's reminder to claim a ticket (D50, claim.go):
+	// due with its next prompt or tool result, or asked.
+	Claim string `json:"claim,omitempty"`
 }
 
 // runState is one run's activity not yet recorded.
@@ -67,9 +70,11 @@ func decodeState(data []byte) *sessionState {
 	return state
 }
 
-// encode returns the state's file content, or nil when no run is left.
+// encode returns the state's file content, or nil when no run is left
+// and the session was never reminded to claim (a resumed session is not
+// asked again).
 func (s *sessionState) encode() []byte {
-	if len(s.Runs) == 0 {
+	if len(s.Runs) == 0 && s.Claim == "" {
 		return nil
 	}
 	data, err := json.Marshal(s)

@@ -73,7 +73,7 @@ func randomLog(rng *rand.Rand, n int) []events.Event {
 			}
 			kind, data = events.Activity, activity
 		case 8:
-			kind, data = events.PlanUpdated, events.PlanData{Merge: rng.IntN(2) == 0, Items: []events.PlanItem{{ID: "1", Text: "Step", Status: pick([]string{events.PlanPending, events.PlanInProgress, events.PlanCompleted})}}}
+			kind, data = events.Compact, events.CompactData{Phase: pick([]string{"pre", "post"})}
 		case 9:
 			kind, data = events.PermissionRequested, events.PermissionData{Tool: pick([]string{"Bash", ""})}
 		case 10:

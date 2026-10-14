@@ -227,38 +227,22 @@ func TestOnlyBashIsAShellCommand(t *testing.T) {
 	}
 }
 
-// update_plan replaces the run's plan (RUN-4). No recorded session offered
-// the tool (MANIFEST.md), so its input follows Codex's tool definition.
-func TestUpdatePlanIsThePlan(t *testing.T) {
+// update_plan is an ordinary tool use: plans are not recorded (D51), so
+// its steps are never read or stored.
+func TestUpdatePlanRecordsOnlyItsUse(t *testing.T) {
 	t.Parallel()
 
 	payload := `{"session_id":"s1","cwd":"/w","tool_name":"update_plan","tool_input":{"explanation":"Starting.","plan":[` +
-		`{"step":"Read the code","status":"completed"},{"step":"Write the test","status":"in_progress"},{"step":"Ship","status":"pending"},{"step":"Odd","status":"later"}]}}`
+		`{"step":"Read the code","status":"completed"},{"step":"Write the test","status":"in_progress"}]}}`
 	parsed, err := Adapter{}.Parse("PostToolUse", []byte(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(parsed.Events) != 2 || parsed.Events[1].Kind != events.PlanUpdated {
-		t.Fatalf("events = %+v, want a tool use and plan.updated", parsed.Events)
+	if len(parsed.Events) != 1 || parsed.Events[0].Kind != events.ToolUsed {
+		t.Fatalf("events = %+v, want the tool use alone", parsed.Events)
 	}
-	want := events.PlanData{Items: []events.PlanItem{
-		{Text: "Read the code", Status: events.PlanCompleted},
-		{Text: "Write the test", Status: events.PlanInProgress},
-		{Text: "Ship", Status: events.PlanPending},
-		{Text: "Odd", Status: events.PlanPending},
-	}}
-	if got := parsed.Events[1].Data; !reflect.DeepEqual(got, want) {
-		t.Fatalf("plan = %+v, want %+v", got, want)
-	}
-
-	// An empty plan clears it; input that is not a plan records none.
-	parsed, _ = Adapter{}.Parse("PostToolUse", []byte(`{"session_id":"s1","cwd":"/w","tool_name":"update_plan","tool_input":{"plan":[]}}`))
-	if len(parsed.Events) != 2 || len(parsed.Events[1].Data.(events.PlanData).Items) != 0 {
-		t.Fatalf("empty plan events = %+v", parsed.Events)
-	}
-	parsed, _ = Adapter{}.Parse("PostToolUse", []byte(`{"session_id":"s1","cwd":"/w","tool_name":"update_plan","tool_input":"plan"}`))
-	if len(parsed.Events) != 1 {
-		t.Fatalf("malformed plan events = %+v", parsed.Events)
+	if data := parsed.Events[0].Data.(events.ToolData); data.Tool != "update_plan" || data.Shell || len(data.Paths) != 0 {
+		t.Fatalf("tool use = %+v", data)
 	}
 }
 

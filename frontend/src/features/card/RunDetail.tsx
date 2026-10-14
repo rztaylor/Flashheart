@@ -1,5 +1,4 @@
-import type { PlanItem, Run, TimelineEntry } from "../../api/runs";
-import { Aside } from "../../components/Aside";
+import type { Run, TimelineEntry } from "../../api/runs";
 import { QuestionCard } from "../../components/QuestionCard";
 import { TailText } from "../../components/TailText";
 import { compactTimeline, describeEntry } from "../../model/runs";
@@ -8,10 +7,9 @@ import { absoluteTime, runningTime } from "../../model/time";
 // MAX_TIMELINE bounds the activity lines shown for one run.
 const MAX_TIMELINE = 40;
 
-// RunDetail is what a run did: its open questions, its plan as a list of
-// stops (only when it has one; most sessions never record a plan), the files
-// it edited and its recent activity, newest first. Agent text is shown as
-// data.
+// RunDetail is what a run did: its open questions, the files it edited and
+// its recent activity, newest first. A ticket's plan is its criteria and
+// handoff (D51), so a run shows none. Agent text is shown as data.
 export function RunDetail({
   run,
   timeline,
@@ -57,12 +55,6 @@ export function RunDetail({
       ) : null}
       <div className="grid gap-x-8 gap-y-5 text-xs @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <div className="flex min-w-0 flex-col gap-5">
-          {run.plan.length > 0 ? (
-            <DetailSection level={headingLevel} title="Plan">
-              <PlanList plan={run.plan} />
-              <Aside placement="plan" className="mt-2" />
-            </DetailSection>
-          ) : null}
           <DetailSection
             level={headingLevel}
             title={
@@ -179,53 +171,5 @@ function DetailSection({
       <Heading className="mb-2 text-sm heading-cut">{title}</Heading>
       {children}
     </section>
-  );
-}
-
-// PlanList shows the plan's steps as stops on a vertical route in ink.
-function PlanList({ plan }: { plan: PlanItem[] }) {
-  return (
-    <ol className="flex flex-col">
-      {plan.map((item, index) => {
-        const done = item.status === "completed";
-        const current = item.status === "in_progress";
-        return (
-          <li
-            // biome-ignore lint/suspicious/noArrayIndexKey: plan steps are positional.
-            key={`${item.id ?? ""}-${index}`}
-            className="relative flex items-start gap-2.5 py-[3px] pl-5 before:absolute before:top-0 before:bottom-0 before:left-[5px] before:w-px before:bg-ink/30 first:before:top-1/2 last:before:bottom-1/2"
-          >
-            <span
-              aria-hidden="true"
-              className="absolute top-[0.3em] left-0 grid size-[11px] place-items-center"
-            >
-              <span
-                className={`rounded-full ${
-                  current
-                    ? "size-[11px] border-2 border-ink bg-card"
-                    : done
-                      ? "size-2 bg-ink"
-                      : "size-2 border border-ink/60 bg-card"
-                }`}
-              />
-            </span>
-            <span
-              className={
-                done
-                  ? "text-ink-muted"
-                  : current
-                    ? "font-semibold text-ink"
-                    : "text-ink"
-              }
-            >
-              <span className="sr-only">
-                {done ? "Done: " : current ? "In progress: " : "To do: "}
-              </span>
-              {item.text || "Untitled step"}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
   );
 }

@@ -1,6 +1,8 @@
 // Drives the real `flashheart hook claude` command to put live agent runs on
 // a sandbox board: the same path Claude Code takes. All sessions, repositories
-// and plans are synthetic test data.
+// and task lists are synthetic test data. The task-list tools (TodoWrite,
+// TaskCreate, TaskUpdate) are ordinary tool uses: hooks record no plans
+// (D51).
 import { execFileSync, spawn } from "node:child_process";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -112,7 +114,7 @@ export async function seedRuns(home, root) {
   asking.tool("Read", { file_path: join(alpha, "src/panel/Tabs.tsx") });
   asking.tool("Edit", { file_path: join(alpha, "src/panel/RunsTab.tsx") });
   // It orchestrates three subagents: one finished, two still working, one
-  // of them with its own plan (agent-protocol §10).
+  // of them keeping its own task list (agent-protocol §10).
   const sub = (id, type) => ({ agent_id: id, agent_type: type });
   asking.send("SubagentStart", sub("c1a7e3b9", "Explore"));
   asking.tool("Grep", {}, sub("c1a7e3b9", "Explore"));

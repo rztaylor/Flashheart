@@ -253,14 +253,15 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
     .getByRole("button", { name: /^Card panel, AL-3, Claude needs you/ });
   await expect(real).toBeVisible();
   // The card says what the run needs on a line of its own and keeps its
-  // plan count on the meta line, the step in the mark's tooltip (FH-147);
-  // the card's button covers its drawing, which sits beside it.
+  // run's mark on the meta line, its state in the mark's tooltip (FH-147);
+  // the session kept a task list, which no card shows (D51). The card's
+  // button covers its drawing, which sits beside it.
   const face = real.locator("xpath=..");
   await expect(face.getByText("Permission for Bash")).toBeVisible();
   const run = face.locator('[data-mark="live"]');
-  await expect(run).toHaveText("2/5");
-  await expect(run).toHaveAttribute("title", /plan 2 of 5: Runs tab timeline/);
-  await expect(real).toHaveAccessibleName(/plan 2 of 5: Runs tab timeline/);
+  await expect(run).toHaveText("");
+  await expect(run).toHaveAttribute("title", "Claude: Needs you");
+  await expect(real).not.toHaveAccessibleName(/plan|Runs tab timeline/);
 
   // Needs you and Agent working are filters, never columns (FH-42, FH-44);
   // neither the View options menu nor the chip row offers them.
@@ -378,27 +379,26 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
   await expect(
     panel.getByText("Asked permission for Bash").first(),
   ).toBeVisible();
-  // Only the session with a plan shows one; the ended session recorded
-  // none, so it has no plan section (FH-54).
+  // No run shows a plan, though the session kept a task list (D51).
   await expect(
     panel.getByRole("heading", { name: "Plan", level: 4 }),
-  ).toHaveCount(1);
-  await expect(panel.getByText(/No plan/)).toHaveCount(0);
+  ).toHaveCount(0);
+  await expect(panel.getByText("Runs tab timeline")).toHaveCount(0);
   const scrolled = await page.evaluate(
     () => document.scrollingElement?.scrollTop ?? 0,
   );
   expect(scrolled).toBe(0);
-  // Its three subagents hang beneath it; one opens to its own plan.
+  // Its three subagents hang beneath it; one opens to its own files.
   const tree = panel.getByRole("list", { name: /^Subagents of/ });
   await expect(tree.getByRole("listitem")).toHaveCount(3);
   await expect(tree.getByRole("listitem").first()).toContainText("Ended");
-  await expect(tree).toContainText("1/2 · Write the timeline test");
+  await expect(tree).not.toContainText("Write the timeline test");
   const helper = tree.getByRole("button", { name: "general-purpose" });
   await helper.click();
   await expect(helper).toHaveAttribute("aria-expanded", "true");
   await expect(
     tree.getByRole("heading", { name: "Plan", level: 5 }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     tree.getByRole("heading", { name: /^Edited/, level: 5 }),
   ).toBeVisible();

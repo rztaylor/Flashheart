@@ -51,10 +51,12 @@ func setUp(root, repo string, o options, session string, now time.Time) (int, er
 	if o.seedEvents > 0 {
 		list = seedEvents(o.agent, project, repo, tickets, o.seedEvents, now)
 	}
-	if session != "" {
+	if session != "" || o.scenario == scenarioClaim {
 		if err := s.UpdateConfig(func([]byte) ([]byte, error) { return []byte("enforce_handoff: true\n"), nil }); err != nil {
 			return 0, err
 		}
+	}
+	if session != "" {
 		list = append(list, enforced(o.agent+":"+session, project, repo, tickets[2], now)...)
 	}
 	slices.SortStableFunc(list, func(a, b events.Event) int { return a.Time.Compare(b.Time) })
@@ -120,8 +122,6 @@ func seedEvents(agent, project, repo string, tickets []string, perDay int, now t
 			kind, data = events.TurnStart, events.TurnStartData{Cwd: worktree, Branch: branch, Worktree: worktree}
 		case k%25 == 24:
 			kind, data = events.TurnEnd, events.TurnEndData{}
-		case k%30 == 5:
-			kind, data = events.PlanUpdated, events.PlanData{Items: []events.PlanItem{{Text: "Read the code", Status: events.PlanCompleted}, {Text: "Write the test", Status: events.PlanInProgress}, {Text: "Make it pass", Status: events.PlanPending}}}
 		case k%60 == 7:
 			kind, data = events.PermissionRequested, events.PermissionData{Tool: "Bash"}
 		case k%60 == 8:

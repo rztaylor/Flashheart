@@ -67,7 +67,7 @@ func TestMCPStartedRuns(t *testing.T) {
 				t.Errorf("holder = %v, want holding %v", holder, tc.holding)
 			}
 			r := set.Get(mcpRun)
-			if r.Source != events.SourceMCP || r.Kind != events.KindSession || len(r.Plan) != 0 || r.Edits != 0 || r.Permission != "" {
+			if r.Source != events.SourceMCP || r.Kind != events.KindSession || r.Edits != 0 || r.Permission != "" {
 				t.Errorf("run = %+v", r)
 			}
 		})

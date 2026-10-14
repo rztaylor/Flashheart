@@ -22,7 +22,7 @@ type fake struct{ panicOn string }
 
 func (f fake) Agent() string { return "fake" }
 
-func (f fake) Parse(event string, payload []byte) (Input, error) {
+func (f fake) Parse(event string, payload []byte) (input Input, err error) {
 	if event == f.panicOn {
 		panic("adapter bug")
 	}
@@ -30,7 +30,12 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	if !ok {
 		return Input{}, errors.New("malformed payload")
 	}
-	input := Input{Cwd: cwd}
+	input = Input{Cwd: cwd}
+	// Like Claude Code, the fake shows the model what a prompt's or a tool
+	// result's output says (D50).
+	defer func() {
+		input.Notes = input.Inbox != "" || len(input.Events) > 0 && input.Events[0].Kind == events.ToolUsed
+	}()
 	run := "fake:" + session
 	// "Sub:<event>" is a tool event from inside the session's subagent a1.
 	actor := run
@@ -89,8 +94,8 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 		input.Events = shell(true)
 	case "End":
 		input.Events = []Pending{{Run: run, Kind: events.RunEnd, Data: events.RunEndData{Reason: "other"}}}
-	case "Plan":
-		input.Events = []Pending{{Run: run, Kind: events.PlanUpdated, Data: events.PlanData{Items: []events.PlanItem{{Text: "Rotate token=abcdef123456\nnow", Status: "pending"}}}}}
+	case "Ask":
+		input.Events = []Pending{{Run: run, Kind: events.PermissionRequested, Data: events.PermissionData{Tool: "Bash", Summary: "Rotate token=abcdef123456\nnow"}}}
 	case "Prompt":
 		input.Inbox = run
 		input.Events = []Pending{{Run: run, Kind: events.TurnStart, Data: events.TurnStartData{}}}
@@ -181,7 +186,7 @@ func TestRunAppendsEventsAndCreatesTheProject(t *testing.T) {
 		t.Fatalf("stdout = %q", out)
 	}
 	run(t, root, "Edit", "s1 "+cwd, fake{})
-	run(t, root, "Plan", "s1 "+cwd, fake{})
+	run(t, root, "Ask", "s1 "+cwd, fake{})
 
 	data, err := os.ReadFile(filepath.Join(root, "demo", "project.yaml"))
 	if err != nil || !strings.Contains(string(data), "repos:\n  - "+cwd) || strings.Contains(string(data), "key:") {
@@ -204,10 +209,10 @@ func TestRunAppendsEventsAndCreatesTheProject(t *testing.T) {
 	if list[1].Kind != events.Activity || edit.Tools != 1 || len(edit.Paths) != 1 || edit.Paths[0] != "src/a.ts" {
 		t.Fatalf("edit = %s %+v, want an activity record with the repository-relative path", list[1].Kind, edit)
 	}
-	var plan events.PlanData
-	_ = list[2].Decode(&plan)
-	if plan.Items[0].Text != "Rotate token=[redacted] now" {
-		t.Fatalf("plan text = %q, want scrubbed single line", plan.Items[0].Text)
+	var asked events.PermissionData
+	_ = list[2].Decode(&asked)
+	if asked.Summary != "Rotate token=[redacted] now" {
+		t.Fatalf("permission summary = %q, want scrubbed single line", asked.Summary)
 	}
 	if _, err := os.Stat(filepath.Join(root, ".flashheart", "cache", "cwd.json")); err != nil {
 		t.Fatalf("cwd cache not written: %v", err)
