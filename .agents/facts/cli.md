@@ -2,8 +2,8 @@
 
 - Binary: `flashheart`. Commands: `serve` (default), `mcp`, `hook <agent>
   <event>`, `await <question-id> --project NAME [--timeout DUR]`,
-  `setup <agent> [--uninstall] [--yes | --dry-run]`, `doctor`, `migrate`,
-  `version`.
+  `setup <agent> [--uninstall] [--yes | --dry-run]`, `doctor`,
+  `version`. `migrate` was retired with board format v1 (D55).
   Global `--root` (else `FLASHHEART_ROOT`, else `~/reports/Kanban`), `--debug`,
   `--help`.
 - `hook` and `mcp` print only protocol output to stdout; `hook` always exits 0
@@ -40,8 +40,9 @@
   surprise. `--uninstall` follows the same rules. `setup claude`: backups
   go to `~/.claude/flashheart-backup/<UTC time>/`; the MCP server is
   registered with `claude mcp add-json --scope user` (printed when no claude
-  CLI is found); the kanban-tracker skill is moved into the backup (user,
-  2026-10-06). `setup codex` works in `$CODEX_HOME` (default `~/.codex`),
+  CLI is found); it no longer moves the kanban-tracker skill, but
+  `--uninstall` still puts back one an earlier setup moved into a backup
+  (D55). `setup codex` works in `$CODEX_HOME` (default `~/.codex`),
   runs no Codex command, backs up into its `flashheart-backup/`, and ends by
   telling the user to trust the hooks with `/hooks` in codex.
 - Usage errors exit 2; runtime failures exit 1.

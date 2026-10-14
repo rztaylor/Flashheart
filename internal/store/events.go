@@ -121,10 +121,6 @@ func (s *Store) IsProject(name string) bool {
 
 var unsafeProjectRun = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 
-// ErrNeedsMigration reports a v1 project, which only `flashheart migrate`
-// may change (MIG-1).
-var ErrNeedsMigration = errors.New("the project uses board format v1; run flashheart migrate")
-
 // ErrNoProject reports activity outside any git repository, which belongs to
 // no project and is not recorded (PRJ-4).
 var ErrNoProject = errors.New("not in a project: the working directory is not inside a git repository")
@@ -156,11 +152,10 @@ func repoSuffix(repo string) string {
 // repositories adopts this one; a project that records others leaves this
 // repository to <name>-<6 hex of sha256(repo)> (PRJ-3). An empty repo means
 // activity outside git, which has no project: ErrNoProject, and nothing is
-// created (PRJ-4). A name with nothing usable becomes repo-<6 hex>. A v1
-// project is left for migrate (ErrNeedsMigration). A repository whose
-// project is archived gets that project's name with ErrProjectArchived, and
-// nothing is created. Neither a project that already records the
-// repository nor an archived one takes the root lock.
+// created (PRJ-4). A name with nothing usable becomes repo-<6 hex>. A
+// repository whose project is archived gets that project's name with
+// ErrProjectArchived, and nothing is created. Neither a project that
+// already records the repository nor an archived one takes the root lock.
 func (s *Store) ProjectFor(name, repo string, create bool) (string, error) {
 	if repo == "" {
 		return "", ErrNoProject
@@ -191,9 +186,6 @@ func (s *Store) FindProject(name, repo string) (string, error) {
 	}
 	candidates := projectCandidates(name, repo)
 	for _, candidate := range candidates {
-		if s.IsV1Project(candidate) {
-			return "", fmt.Errorf("project %q: %w", candidate, ErrNeedsMigration)
-		}
 		repos, exists := s.projectRepos(candidate)
 		switch {
 		case exists && (len(repos) == 0 || slices.Contains(repos, repo)):
@@ -229,9 +221,6 @@ func (s *Store) projectForLocked(candidates []string, repo string, create bool) 
 	}
 	defer release()
 	for _, candidate := range candidates {
-		if s.IsV1Project(candidate) {
-			return "", fmt.Errorf("project %q: %w", candidate, ErrNeedsMigration)
-		}
 		repos, exists := s.projectRepos(candidate)
 		switch {
 		case exists && slices.Contains(repos, repo):
@@ -312,14 +301,4 @@ func indent(block string) string {
 		}
 	}
 	return b.String()
-}
-
-// IsV1Project reports a project directory still in the v1 column-folder
-// layout, which only `flashheart migrate` may change (MIG-1).
-func (s *Store) IsV1Project(name string) bool {
-	_, fsys, err := s.handle()
-	if err != nil || !ValidProject(name) || isDir(fsys, path.Join(name, "tickets")) {
-		return false
-	}
-	return slices.ContainsFunc(V1Columns, func(column string) bool { return isDir(fsys, path.Join(name, column)) })
 }

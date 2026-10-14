@@ -10,7 +10,6 @@ import (
 	"os"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -75,14 +74,10 @@ type ProjectSummary struct {
 
 // ProjectsResponse is GET /api/projects.
 type ProjectsResponse struct {
-	Revision    uint64 `json:"revision"`
-	Root        string `json:"root"`
-	RootMissing bool   `json:"rootMissing"`
-	// V1Projects lists projects still in format v1; MigrateCommand converts
-	// them (MIG-1).
-	V1Projects     []string         `json:"v1Projects"`
-	MigrateCommand string           `json:"migrateCommand"`
-	Projects       []ProjectSummary `json:"projects"`
+	Revision    uint64           `json:"revision"`
+	Root        string           `json:"root"`
+	RootMissing bool             `json:"rootMissing"`
+	Projects    []ProjectSummary `json:"projects"`
 	// Runs counts every project's runs, for the band's Needs you badge.
 	Runs RunCountsJSON `json:"runs"`
 	// ArchivedProjects counts the projects under <root>/.archive/ (PRJ-5).
@@ -412,14 +407,10 @@ func (b boardAPI) projects(w http.ResponseWriter, _ *http.Request) {
 		Revision:    snapshot.Revision,
 		Root:        b.root,
 		RootMissing: snapshot.RootMissing,
-		V1Projects:  nonNil(snapshot.V1Projects),
 		Projects:    summaries(snapshot),
 		Runs:        countsJSON(snapshot.RunCounts("")),
 
 		ArchivedProjects: len(snapshot.Board.ArchivedProjects),
-	}
-	if len(snapshot.V1Projects) > 0 {
-		response.MigrateCommand = "flashheart migrate --root " + shellQuote(b.root)
 	}
 	writeJSON(w, http.StatusOK, response)
 }
@@ -841,15 +832,4 @@ func suspended(snapshot *index.Snapshot, project string, dependencies []string) 
 		}
 	}
 	return false
-}
-
-// shellQuote quotes a path for a copyable shell command when it needs it.
-func shellQuote(value string) string {
-	plain := strings.IndexFunc(value, func(r rune) bool {
-		return !(r == '/' || r == '.' || r == '-' || r == '_' || r == '~' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
-	}) < 0
-	if plain {
-		return value
-	}
-	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 }

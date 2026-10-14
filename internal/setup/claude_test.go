@@ -31,8 +31,8 @@ type machine struct {
 	scope string
 }
 
-// newMachine is a home with the fixture settings, a kanban-tracker skill
-// and a claude CLI that records what it is asked to do.
+// newMachine is a home with the fixture settings and a claude CLI that
+// records what it is asked to do.
 func newMachine(t *testing.T) *machine {
 	t.Helper()
 	home := t.TempDir()
@@ -42,7 +42,6 @@ func newMachine(t *testing.T) *machine {
 	}
 	m := &machine{t: t, home: home, original: original}
 	m.write(".claude/settings.json", string(original))
-	m.write(".claude/skills/kanban-tracker/SKILL.md", "---\nname: kanban-tracker\n---\n# Kanban\n")
 	clock := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
 	m.options = Options{
 		Home: home, Binary: "/opt/Flash Heart/bin/flashheart", CLI: "/usr/local/bin/claude",
@@ -150,14 +149,13 @@ func TestInstallShowsADiffAndWritesNothing(t *testing.T) {
 		`+        "matcher": "mcp__flashheart__.*",`,
 		"Create ~/.claude/skills/flashheart/SKILL.md:",
 		"+name: flashheart",
-		"Move ~/.claude/skills/kanban-tracker to ~/.claude/flashheart-backup/20261006T120001Z-",
 		`Run: claude mcp add-json --scope user flashheart '{"args":["mcp"],"command":"/opt/Flash Heart/bin/flashheart","type":"stdio"}'`,
 	} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("plan missing %q:\n%s", part, out)
 		}
 	}
-	if !bytes.Equal(m.read(".claude/settings.json"), m.original) || m.exists(".claude/skills/flashheart") || !m.exists(".claude/skills/kanban-tracker") || len(m.ran) > 0 {
+	if !bytes.Equal(m.read(".claude/settings.json"), m.original) || m.exists(".claude/skills/flashheart") || len(m.ran) > 0 {
 		t.Fatal("rendering the plan changed something")
 	}
 }
@@ -167,7 +165,7 @@ func TestInstallWritesKeepsTheUsersSettingsAndIsIdempotent(t *testing.T) {
 
 	m := newMachine(t)
 	out := m.apply(true)
-	for _, part := range []string{"Wrote ~/.claude/settings.json", "Wrote ~/.claude/skills/flashheart/SKILL.md", "Moved ~/.claude/skills/kanban-tracker", "Ran claude mcp add-json", "Backups are in ~/.claude/flashheart-backup/"} {
+	for _, part := range []string{"Wrote ~/.claude/settings.json", "Wrote ~/.claude/skills/flashheart/SKILL.md", "Ran claude mcp add-json", "Backups are in ~/.claude/flashheart-backup/"} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("output missing %q:\n%s", part, out)
 		}
@@ -200,8 +198,8 @@ func TestInstallWritesKeepsTheUsersSettingsAndIsIdempotent(t *testing.T) {
 	if !strings.Contains(string(data), `"command": "afplay /System/Library/Sounds/Glass.aiff"`) || !strings.Contains(string(data), `"timeout": 5`) {
 		t.Fatalf("settings:\n%s", data)
 	}
-	if string(m.read(".claude/skills/flashheart/SKILL.md")) != protocol.Skill() || m.exists(".claude/skills/kanban-tracker") {
-		t.Fatal("skills not swapped")
+	if string(m.read(".claude/skills/flashheart/SKILL.md")) != protocol.Skill() {
+		t.Fatal("skill not installed")
 	}
 	if again := m.plan(true); !again.Empty() {
 		t.Fatalf("second install is not empty:\n%s", render(again))
@@ -214,7 +212,7 @@ func TestUninstallRestoresTheOriginalByteForByte(t *testing.T) {
 	m := newMachine(t)
 	m.apply(true)
 	out := render(m.plan(false))
-	for _, part := range []string{"Change ~/.claude/settings.json:", "Delete ~/.claude/skills/flashheart/SKILL.md.", "Move ~/.claude/flashheart-backup/", "Run: claude mcp remove --scope user flashheart"} {
+	for _, part := range []string{"Change ~/.claude/settings.json:", "Delete ~/.claude/skills/flashheart/SKILL.md.", "Run: claude mcp remove --scope user flashheart"} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("uninstall plan missing %q:\n%s", part, out)
 		}
@@ -223,11 +221,55 @@ func TestUninstallRestoresTheOriginalByteForByte(t *testing.T) {
 	if got := m.read(".claude/settings.json"); !bytes.Equal(got, m.original) {
 		t.Fatalf("settings after uninstall:\n%s", unifiedDiff("settings.json", m.original, got))
 	}
-	if m.exists(".claude/skills/flashheart") || !m.exists(".claude/skills/kanban-tracker/SKILL.md") {
-		t.Fatal("skills not restored")
+	if m.exists(".claude/skills/flashheart") {
+		t.Fatal("skill not removed")
 	}
 	if last := m.ran[len(m.ran)-1]; !slices.Equal(last, []string{"mcp", "remove", "--scope", "user", "flashheart"}) {
 		t.Fatalf("commands = %v", m.ran)
+	}
+	if again := m.plan(false); !again.Empty() {
+		t.Fatalf("second uninstall is not empty:\n%s", render(again))
+	}
+}
+
+// Setup no longer moves the kanban-tracker skill aside (D55): install
+// leaves it where it is and doctor does not mention it.
+func TestInstallLeavesAKanbanTrackerSkillAlone(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.write(".claude/skills/kanban-tracker/SKILL.md", "---\nname: kanban-tracker\n---\n# Kanban\n")
+	if out := render(m.plan(true)); strings.Contains(out, "kanban-tracker") {
+		t.Fatalf("install plan mentions kanban-tracker:\n%s", out)
+	}
+	m.apply(true)
+	if !m.exists(".claude/skills/kanban-tracker/SKILL.md") {
+		t.Fatal("install moved the kanban-tracker skill")
+	}
+	if out := render(m.plan(false)); strings.Contains(out, "kanban-tracker") {
+		t.Fatalf("uninstall plan mentions kanban-tracker:\n%s", out)
+	}
+}
+
+// A kanban-tracker skill an earlier setup moved into its backup is still
+// put back by --uninstall, so nothing the user had is lost (D55).
+func TestUninstallRestoresAKanbanTrackerSkillFromAnEarlierBackup(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.apply(true)
+	saved := ".claude/flashheart-backup/20261001T090000Z-a203/skills/kanban-tracker/SKILL.md"
+	m.write(saved, "---\nname: kanban-tracker\n---\n# Kanban\n")
+	out := render(m.plan(false))
+	if !strings.Contains(out, "Move ~/"+filepath.Dir(saved)+" to ~/.claude/skills/kanban-tracker") {
+		t.Fatalf("uninstall plan does not restore kanban-tracker:\n%s", out)
+	}
+	m.apply(false)
+	if got := string(m.read(".claude/skills/kanban-tracker/SKILL.md")); got != "---\nname: kanban-tracker\n---\n# Kanban\n" {
+		t.Fatalf("restored skill = %q", got)
+	}
+	if m.exists(filepath.Dir(saved)) {
+		t.Fatal("the backup copy is still there after the move")
 	}
 	if again := m.plan(false); !again.Empty() {
 		t.Fatalf("second uninstall is not empty:\n%s", render(again))
@@ -411,9 +453,6 @@ func TestUninstallOnAMachineWithoutFlashheartSaysSo(t *testing.T) {
 	t.Parallel()
 
 	m := newMachine(t)
-	if err := os.RemoveAll(filepath.Join(m.home, ".claude", "skills", "kanban-tracker")); err != nil {
-		t.Fatal(err)
-	}
 	if out := render(m.plan(false)); !strings.Contains(out, "Flashheart is not set up for Claude Code; nothing to remove.") {
 		t.Fatalf("plan:\n%s", out)
 	}

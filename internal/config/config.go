@@ -14,8 +14,8 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// FormatVersion is the board format version this build writes; version 1
-// roots are read only to migrate them (MIG-1).
+// FormatVersion is the board format version this build reads and writes;
+// format 1 (column folders) is no longer read (D55).
 const FormatVersion = 2
 
 // ErrNewerVersion reports a root written by a newer Flashheart.
@@ -220,8 +220,8 @@ func (c Config) validate() error {
 	if c.Version > FormatVersion {
 		return fmt.Errorf("%w: board root uses format version %d; this flashheart understands version %d", ErrNewerVersion, c.Version, FormatVersion)
 	}
-	if c.Version < 1 {
-		problems = append(problems, fmt.Sprintf("version must be 1 or %d", FormatVersion))
+	if c.Version < FormatVersion {
+		problems = append(problems, fmt.Sprintf("version must be %d", FormatVersion))
 	}
 	atLeastOne := func(name string, value int64) {
 		if value < 1 {

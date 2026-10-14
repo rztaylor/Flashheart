@@ -36,7 +36,7 @@ var heavy = []string{
 // net/http through, and why. Their packages are not walked; everything
 // else, Flashheart's own code included, must not reach a heavy package.
 var throughModules = map[string]string{
-	"github.com/modelcontextprotocol/go-sdk/": "mcpserver's MCP SDK links net/http for its HTTP transports and OAuth; Flashheart serves MCP over stdio only (D71)",
+	"github.com/modelcontextprotocol/go-sdk/": "mcpserver's MCP SDK links net/http for its HTTP transports and OAuth; Flashheart serves MCP over stdio only (D72)",
 }
 
 // imports reads the import graph of patterns and their dependencies with

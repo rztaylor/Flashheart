@@ -127,10 +127,6 @@ Intended layout (packages are created when they get real content):
   tools. Copies only from the project's repository, not git-ignored
   (SEC-6); the one place serve runs a git subprocess (`check-ignore`).
   Hooks run git only through `gitchange`.
-- `internal/migrate`: one-time conversion of a v1 root to board format v2
-  (`flashheart migrate`, MIG-1): plan, number, rewrite references, move v1
-  files to `.flashheart/backup/`. Writes only through `store` primitives,
-  under `store.WithRootLock`; edits text only through `mdfile`.
 - `internal/index`: in-memory, revisioned index of the root for `serve`;
   fsnotify watching. Board and runs are fingerprinted apart: event appends
   refold runs over the board already read (no `ReadBoard`), and while
@@ -153,7 +149,7 @@ Intended layout (packages are created when they get real content):
 - `internal/webui`: embedded compiled frontend assets.
 - `frontend/`: React UI; ownership in `.agents/facts/frontend-ui.md`.
 
-Dependency direction: `cli` → (`app` | `background` | `migrate` | `mcpserver` | `hooks` | `setup` | `await`) →
+Dependency direction: `cli` → (`app` | `background` | `mcpserver` | `hooks` | `setup` | `await`) →
 (`index`, `runs`, `protocol`, `gitchange`) → (`store`, `events`) → (`board`, `mdfile`,
 `gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `scrub`)
 import no I/O packages; `runs` imports only `events`' types. Nothing below `app` imports HTTP or
@@ -165,7 +161,7 @@ Singleserve.
   `mcpserver`, `hooks` (and its adapters), `await`, `setup` and `doctor`
   must not reach `index`, `api`, `app`, `webui` or `net/http`. The one
   allowance: `mcpserver` links `net/http` through the MCP SDK, which
-  imports it for transports Flashheart does not use (D71); the import
+  imports it for transports Flashheart does not use (D72); the import
   chain is not followed into the SDK, and the test fails when the
   allowance is no longer needed. `cli` itself still imports `app` (for
   `app.Options` and `app.Launched`), so the binary links the web server
