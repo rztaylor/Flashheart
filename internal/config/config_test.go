@@ -149,7 +149,9 @@ func TestParseRejectsInvalidValues(t *testing.T) {
 		want string
 	}{
 		{"newer version", "version: 3", "board root uses format version 3; this flashheart understands version 2"},
-		{"zero version", "version: 0", "version must be 1 or 2"},
+		{"zero version", "version: 0", "version must be 2"},
+		// Format 1 was only read to migrate it, which is retired (D55).
+		{"retired version", "version: 1", "version must be 2"},
 		{"theme", "ui: {theme: sepia}", `ui.theme "sepia" must be one of system, light, dark`},
 		{"density", "ui: {density: roomy}", `ui.density "roomy" must be one of compact, normal, detailed`},
 		{"hidden column", "ui: {hidden_columns: [done]}", `ui.hidden_columns "done" must be one of backlog`},
@@ -169,15 +171,6 @@ func TestParseRejectsInvalidValues(t *testing.T) {
 				t.Errorf("Parse(%q) error = %v, want %q", test.data, err, test.want)
 			}
 		})
-	}
-}
-
-func TestVersionOneIsReadableForMigration(t *testing.T) {
-	t.Parallel()
-
-	config, err := Parse([]byte("version: 1\n"))
-	if err != nil || config.Version != 1 {
-		t.Errorf("Parse(version 1) = %+v, %v", config, err)
 	}
 }
 

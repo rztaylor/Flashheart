@@ -114,7 +114,7 @@ func TestDiagnoseAnUnconfiguredMachine(t *testing.T) {
 	if !strings.Contains(problems[0], "none installed") || !strings.Contains(problems[1], "not registered") || !strings.Contains(problems[2], "not installed") {
 		t.Fatalf("problems = %q", problems)
 	}
-	if len(warnings) != 1 || !strings.Contains(warnings[0], "kanban-tracker") {
+	if len(warnings) != 0 {
 		t.Fatalf("warnings = %q", warnings)
 	}
 }

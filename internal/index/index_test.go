@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -21,13 +20,6 @@ type fakeSource struct {
 	fingerprint string
 	err         error
 	reads       int
-	v1          []string
-}
-
-func (f *fakeSource) V1Projects() ([]string, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.v1, nil
 }
 
 func (f *fakeSource) ReadBoard() (board.Board, string, error) {
@@ -155,25 +147,6 @@ func TestSnapshotLookups(t *testing.T) {
 	}
 	if reasons := snapshot.Analysis.Blocked[board.Ref{Project: "alpha", ID: "AL-1"}]; len(reasons) != 1 {
 		t.Errorf("analysis not computed: %+v", reasons)
-	}
-}
-
-func TestV1ProjectsAreReported(t *testing.T) {
-	t.Parallel()
-
-	source := &fakeSource{fingerprint: "a", v1: []string{"legacy"}}
-	index, clock := newIndex(source)
-	snapshot, err := index.Current()
-	if err != nil || !slices.Equal(snapshot.V1Projects, []string{"legacy"}) {
-		t.Fatalf("snapshot = %+v, %v", snapshot.V1Projects, err)
-	}
-	source.mu.Lock()
-	source.v1 = nil
-	source.mu.Unlock()
-	clock.now = clock.now.Add(time.Minute)
-	after, _ := index.Current()
-	if len(after.V1Projects) != 0 || after.Revision != 2 {
-		t.Errorf("after migrating: v1=%q revision=%d", after.V1Projects, after.Revision)
 	}
 }
 

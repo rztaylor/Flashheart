@@ -172,9 +172,6 @@ func (o Options) diagnoseSkill() []health.Finding {
 	case !bytes.Equal(skill, []byte(protocol.Skill())):
 		findings = append(findings, health.Finding{Level: health.Warning, Text: "Skill: out of date; " + fix})
 	}
-	if info, err := os.Stat(o.replacedPath()); err == nil && info.IsDir() {
-		findings = append(findings, health.Finding{Level: health.Warning, Text: "Skill: kanban-tracker is still installed beside it; " + fix + " to move it aside"})
-	}
 	if len(findings) == 0 {
 		findings = append(findings, health.Finding{Level: health.OK, Text: "Skill: up to date"})
 	}

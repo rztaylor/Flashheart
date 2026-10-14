@@ -1250,7 +1250,7 @@ FH-127.
 Options: one typed inbox (chosen); add types but keep the `answers/` name;
 a second inbox for comments (a second `stat` on every prompt).
 
-## 2026-10-13 — D55: The one-off upgrades are retired
+## 2026-10-13 — D55: The one-off upgrades are retired (extended by D71)
 
 Decision (user, FH-130 review): revises D15 and D19. `flashheart migrate`
 (v1 column-folder boards to format 2) and setup's handling of the old
@@ -1837,6 +1837,58 @@ opens again themselves also takes back its held text.
 - **A held draft that is still mounted** (the panel's Edit tab while
   another tab shows) is not a late save. A failure there shows the Edit
   tab again with the reason, as a conflict already did.
+
+## 2026-10-14 — D71: Retiring migrate retires reading format 1 too
+
+Decision (FH-136, following D55): with `flashheart migrate` gone,
+Flashheart stops recognising board format 1 at all. The store no longer
+looks for v1 column folders, `serve` no longer shows a notice with the
+migrate command (the projects API drops `v1Projects` and
+`migrateCommand`), hooks and MCP no longer refuse a v1 project folder,
+and a `config.yaml` saying `version: 1` is invalid settings. A folder of
+column folders in the root is simply not a project. Setup's only
+remaining link to kanban-tracker is `--uninstall` putting back a copy an
+earlier setup moved into its backup.
+
+Options: keep detecting v1 projects and show a notice without a command;
+keep accepting `version: 1`; retire all of it (chosen). A notice that
+names no way forward helps no one, the one board that was v1 was
+converted weeks ago, and Flashheart makes no compatibility promise before
+1.0.0, so the detection would be code no one runs, which is what D55
+retires.
+
+## 2026-10-14 — D72: Layering is checked by tests; the MCP SDK may link net/http
+
+The layering rules in `.agents/facts/architecture.md` and
+`frontend-ui.md` were kept by review alone (FH-106). They are now tests
+that `scripts/check.sh` runs: `internal/archtest`'s
+`TestLeanPackagesDoNotLinkTheWebServer` over `go list -deps`, and the
+frontend's `src/layering.test.ts` over every source's relative imports.
+
+- **Go: how strict.** The rule is that `mcpserver`, `hooks`, `await`,
+  `setup` and `doctor` depend on none of `index`, `api`, `app`, `webui`
+  and `net/http`. Measured when the test was written, all are clean
+  except `mcpserver`, which reaches `net/http` only through
+  `github.com/modelcontextprotocol/go-sdk/mcp` (its streamable HTTP and
+  SSE transports, and OAuth through `golang.org/x/oauth2`). Flashheart
+  serves MCP over stdio and never uses them. Options: drop `net/http`
+  from the rule (it would then not notice our own code importing it);
+  fork or wrap the SDK (far more than the rule is worth); or walk the
+  import graph without following edges inside the SDK. Chosen: the last,
+  as a named allowance with its reason in the test, which fails when the
+  allowance is no longer needed. Flashheart's own packages on the hook
+  and MCP paths still may not import `net/http`.
+- **Frontend: test, not lint.** Biome's `noRestrictedImports` matches
+  specifier text, so a relative import (`../../app/route`) would need
+  path patterns that depend on the importing file's depth. A Vitest test
+  reads the sources through `import.meta.glob` (no Node types in the
+  app's TypeScript), resolves each relative import and compares layers.
+  It covers every shared layer (`styles`, `model`, `components`, `api`,
+  `state`, `lifecycle`, `test`), `model` not importing components, and
+  features not importing the shell.
+- **Not covered.** `cli` imports `app` for two small types, so the binary
+  links the web server in every mode; the Go check covers the mode
+  packages, and moving those types is separate work.
 
 ## 2026-10-14 — D73: A project's workstream titles are unique
 

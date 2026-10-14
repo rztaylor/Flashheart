@@ -23,7 +23,6 @@ import (
 	"github.com/rztaylor/flashheart/internal/hooks"
 	"github.com/rztaylor/flashheart/internal/logfile"
 	"github.com/rztaylor/flashheart/internal/mcpserver"
-	"github.com/rztaylor/flashheart/internal/migrate"
 	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/setup"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -94,7 +93,6 @@ type environment struct {
 	stdout, stderr io.Writer
 	deps           Dependencies
 	serve          *serveFlags
-	migrate        *migrateFlags
 	setup          *setupFlags
 	await          *awaitFlags
 }
@@ -112,25 +110,6 @@ type awaitFlags struct {
 type setupFlags struct {
 	// yes is --yes, or its older name --write.
 	yes, dryRun, uninstall bool
-}
-
-type migrateFlags struct {
-	write bool
-	keys  keyFlags
-}
-
-// keyFlags collects repeated --key project=KEY arguments.
-type keyFlags map[string]string
-
-func (k keyFlags) String() string { return "" }
-
-func (k keyFlags) Set(value string) error {
-	project, key, found := strings.Cut(value, "=")
-	if !found || project == "" || key == "" {
-		return fmt.Errorf("--key expects project=KEY, got %q", value)
-	}
-	k[project] = key
-	return nil
 }
 
 func commands() []command {
@@ -181,13 +160,14 @@ func commands() []command {
 			usage:   "setup claude|codex [--uninstall] [--yes | --dry-run] [--root DIR]",
 			detail: "Show the changes that connect an agent to Flashheart. claude: its hooks\n" +
 				"in ~/.claude/settings.json, the flashheart MCP server and the Flashheart\n" +
-				"skill (which replaces kanban-tracker); backups go to\n" +
-				"~/.claude/flashheart-backup/. codex: the MCP server in config.toml, its\n" +
-				"hooks in hooks.json and the protocol text in AGENTS.md, all in\n" +
-				"$CODEX_HOME (default ~/.codex), with backups in its flashheart-backup/;\n" +
-				"then trust the hooks with /hooks in codex. Setup shows the changes as a\n" +
-				"diff, then asks before it writes; without a terminal to ask in it only\n" +
-				"shows them unless you pass --yes. --uninstall does the same for the reverse.",
+				"skill; backups go to ~/.claude/flashheart-backup/. codex: the MCP\n" +
+				"server in config.toml, its hooks in hooks.json and the protocol text in\n" +
+				"AGENTS.md, all in $CODEX_HOME (default ~/.codex), with backups in its\n" +
+				"flashheart-backup/; then trust the hooks with /hooks in codex. Setup\n" +
+				"shows the changes as a diff, then asks before it writes; without a\n" +
+				"terminal to ask in it only shows them unless you pass --yes. --uninstall\n" +
+				"does the same for the reverse, and puts back a kanban-tracker skill an\n" +
+				"earlier setup moved into its backup.",
 			run: runSetup,
 		},
 		{
@@ -199,15 +179,6 @@ func commands() []command {
 				"setup writes, and the hook errors of the last day. Changes nothing; exits\n" +
 				"1 when it finds a problem.",
 			run: runDoctor,
-		},
-		{
-			name:    "migrate",
-			summary: "convert a board from format v1 to v2",
-			usage:   "migrate [--root DIR] [--key PROJECT=KEY]... [--write]",
-			detail: "Show how a v1 board (column folders) becomes format v2: ticket ids in\n" +
-				"creation order, a folder per ticket, references rewritten. Nothing is\n" +
-				"written without --write; replaced files move into .flashheart/backup/.",
-			run: runMigrate,
 		},
 		{name: "version", summary: "print version information", usage: "version", detail: "Print the Flashheart version, commit and agent protocol version.", run: runVersion},
 	}
@@ -224,7 +195,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	if stderr == nil {
 		stderr = io.Discard
 	}
-	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}, migrate: &migrateFlags{keys: keyFlags{}}, setup: &setupFlags{}, await: &awaitFlags{}}
+	env := &environment{stdout: stdout, stderr: stderr, deps: deps, serve: &serveFlags{}, setup: &setupFlags{}, await: &awaitFlags{}}
 
 	name, flagArgs := splitCommand(args)
 	if name == "" && wantsHelp(flagArgs) {
@@ -251,9 +222,6 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer, deps Depe
 	case "serve":
 		flags.BoolVar(&env.serve.foreground, "foreground", false, "")
 		flags.BoolVar(&env.serve.backgroundChild, "background-child", false, "")
-	case "migrate":
-		flags.BoolVar(&env.migrate.write, "write", false, "")
-		flags.Var(env.migrate.keys, "key", "")
 	case "await":
 		flags.StringVar(&env.await.project, "project", "", "")
 		flags.DurationVar(&env.await.timeout, "timeout", await.DefaultTimeout, "")
@@ -756,41 +724,6 @@ func reportHookProblem(env *environment, globals *globalFlags, problem string, a
 	_ = log.Close()
 }
 
-func runMigrate(_ context.Context, env *environment, flags *flag.FlagSet, globals *globalFlags) error {
-	if flags.NArg() > 0 {
-		return usageError{"migrate takes no arguments"}
-	}
-	root, err := resolveRoot(globals, env.deps)
-	if err != nil {
-		return err
-	}
-	s, err := store.Open(root)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("board root %s does not exist", root)
-		}
-		return err
-	}
-	defer s.Close()
-	plan, err := migrate.Prepare(s, migrate.Options{Keys: env.migrate.keys})
-	if err != nil {
-		return err
-	}
-	if !env.migrate.write || len(plan.Projects) == 0 {
-		plan.Write(env.stdout)
-		return nil
-	}
-	if err := migrate.Apply(s, plan); err != nil {
-		return fmt.Errorf("migration stopped part way: %w (files already converted are in place; the v1 files moved so far are in %s)", err, plan.Backup)
-	}
-	tickets := 0
-	for _, project := range plan.Projects {
-		tickets += len(project.Tickets)
-	}
-	fmt.Fprintf(env.stdout, "Migrated %s to board format v2: %d projects, %d tickets.\nThe v1 files are in %s.\n", root, len(plan.Projects), tickets, plan.Backup)
-	return nil
-}
-
 func writeManualURL(output io.Writer, browserError, manualURL string) {
 	if manualURL == "" {
 		return
@@ -874,12 +807,6 @@ func writeCommandUsage(output io.Writer, command command) {
 		fmt.Fprintln(output, "Options:")
 		fmt.Fprintln(output, "  --project P   the project the question was asked in (required)")
 		fmt.Fprintln(output, "  --timeout T   give up after duration T (default 12h)")
-		writeGlobalOptionLines(output)
-		return
-	case "migrate":
-		fmt.Fprintln(output, "Options:")
-		fmt.Fprintln(output, "  --write       apply the plan (otherwise only show it)")
-		fmt.Fprintln(output, "  --key P=KEY   use KEY as project P's ticket key (repeatable)")
 		writeGlobalOptionLines(output)
 		return
 	}
