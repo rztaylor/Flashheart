@@ -53,7 +53,8 @@ a small MCP tool set, and setup installs everything for Claude Code safely.
   `--uninstall`; installs `~/.claude/skills/flashheart/SKILL.md`
   (`SET-1`–`SET-3`).
 - Replace the user's kanban-tracker skill: the protocol skill carries the
-  ticket conventions and routes all ticket work through the tools.
+  ticket conventions and routes all ticket work through the tools. (Setup's
+  moving kanban-tracker aside was retired by D55.)
 - Ticket ids everywhere (`KEY-3`); `list_tickets` and plain-words requests
   such as "tackle the three top-priority bugs" (`KEY-4`, `MCP-7`,
   agent-protocol §7.3); `create_ticket` assigns the next id (`KEY-2`).

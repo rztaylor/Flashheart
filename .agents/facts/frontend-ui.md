@@ -112,8 +112,7 @@
   markdown and in plain text (`LinkedText`) link there too
   (`model/markdown.ts`, KEY-3, D30). A link never sits inside a button:
   cards and stations draw under one covering button with the id link above
-  it (ui-layout.md "Ticket ids"). A board with v1 projects shows the
-  migrate command instead of guessing.
+  it (ui-layout.md "Ticket ids").
 - Prohibited: raw `fetch` to the backend, credentials in JavaScript, Web
   Storage for anything, permissive CORS, routes under `/_singleserve/`, raw
   HTML in markdown.

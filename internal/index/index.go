@@ -3,7 +3,6 @@ package index
 import (
 	"errors"
 	"io/fs"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,11 +16,9 @@ import (
 // rebuilds it, when Watch is not keeping it fresh.
 const DefaultMaxAge = 2 * time.Second
 
-// Source reads the whole board with a fingerprint of the files read, and
-// lists projects still in format v1.
+// Source reads the whole board with a fingerprint of the files read.
 type Source interface {
 	ReadBoard() (board.Board, string, error)
-	V1Projects() ([]string, error)
 }
 
 // Options configures an Index.
@@ -38,11 +35,8 @@ type Snapshot struct {
 	Revision    uint64
 	BuiltAt     time.Time
 	RootMissing bool
-	// V1Projects lists projects that need `flashheart migrate` (MIG-1); while
-	// any exist the board is not shown.
-	V1Projects []string
-	Board      board.Board
-	Analysis   board.Analysis
+	Board       board.Board
+	Analysis    board.Analysis
 	// Runs are the agent runs of the last two days' event logs at BuiltAt.
 	Runs []runs.View
 
@@ -215,21 +209,12 @@ func (i *Index) rebuildLocked() (*Snapshot, error) {
 	if err != nil && !missing {
 		return i.current, err
 	}
-	var v1 []string
 	if missing {
 		b, fingerprint = board.Board{}, missingFingerprint
-	} else {
-		if v1, err = i.source.V1Projects(); err != nil {
-			return i.current, err
-		}
-		if len(v1) > 0 {
-			fingerprint += "\x00v1:" + strings.Join(v1, ",")
-		}
 	}
 	now := i.now()
 	snapshot := &Snapshot{
 		RootMissing: missing,
-		V1Projects:  v1,
 		Board:       b,
 		Analysis:    board.Analyze(b),
 		projects:    make(map[string]int, len(b.Projects)),
