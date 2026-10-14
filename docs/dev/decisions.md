@@ -1258,7 +1258,7 @@ FH-127.
 Options: one typed inbox (chosen); add types but keep the `answers/` name;
 a second inbox for comments (a second `stat` on every prompt).
 
-## 2026-10-13 — D55: The one-off upgrades are retired
+## 2026-10-13 — D55: The one-off upgrades are retired (extended by D71)
 
 Decision (user, FH-130 review): revises D15 and D19. `flashheart migrate`
 (v1 column-folder boards to format 2) and setup's handling of the old
@@ -1845,6 +1845,25 @@ opens again themselves also takes back its held text.
 - **A held draft that is still mounted** (the panel's Edit tab while
   another tab shows) is not a late save. A failure there shows the Edit
   tab again with the reason, as a conflict already did.
+
+## 2026-10-14 — D71: Retiring migrate retires reading format 1 too
+
+Decision (FH-136, following D55): with `flashheart migrate` gone,
+Flashheart stops recognising board format 1 at all. The store no longer
+looks for v1 column folders, `serve` no longer shows a notice with the
+migrate command (the projects API drops `v1Projects` and
+`migrateCommand`), hooks and MCP no longer refuse a v1 project folder,
+and a `config.yaml` saying `version: 1` is invalid settings. A folder of
+column folders in the root is simply not a project. Setup's only
+remaining link to kanban-tracker is `--uninstall` putting back a copy an
+earlier setup moved into its backup.
+
+Options: keep detecting v1 projects and show a notice without a command;
+keep accepting `version: 1`; retire all of it (chosen). A notice that
+names no way forward helps no one, the one board that was v1 was
+converted weeks ago, and Flashheart makes no compatibility promise before
+1.0.0, so the detection would be code no one runs, which is what D55
+retires.
 
 ## 2026-10-14 — D72: Retiring plans keeps protocol version 2
 

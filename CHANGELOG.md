@@ -804,6 +804,14 @@ All notable changes to this project are documented here. The project follows
   nothing). Older event logs with plans still read. The protocol skill's
   line about keeping your todo list current now says a ticket's criteria
   and handoff are its plan. Agent protocol stays 2.
+- The one-off upgrades from before Flashheart's own board format (FH-136,
+  D55, D71). `flashheart migrate`, which converted boards in the old
+  column-folder format, is gone, and so is the notice the board showed
+  for such projects; a `config.yaml` that still says `version: 1` is now
+  refused as invalid settings. `flashheart setup claude` no longer moves
+  the kanban-tracker skill aside, and `doctor` no longer warns about it;
+  `setup claude --uninstall` still puts back a kanban-tracker skill an
+  earlier setup moved into its backup, so nothing you had is lost.
 - The `_scratch` project (FH-62, D33). Agent activity outside a git
   repository is no longer recorded: hooks there write and print nothing,
   `board_context` and `list_tickets` say there is no current project, and

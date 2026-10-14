@@ -539,12 +539,12 @@ server is registered by running
 `claude mcp add-json --scope user flashheart '{"type":"stdio","command":"/usr/local/bin/flashheart","args":["mcp"]}'`,
 because Claude Code owns `~/.claude.json`; without a `claude` command setup
 prints it for the user. The protocol skill goes to
-`~/.claude/skills/flashheart/SKILL.md`, and the kanban-tracker skill, which
-it replaces, moves into the backup (user, 2026-10-06). Setup shows the
-diff and asks before applying it (`--yes` skips the question; SET-1). It
-backs up what it changes in `~/.claude/flashheart-backup/<UTC time>/`;
-`--uninstall` restores the backed-up `settings.json` byte for byte
-when nothing changed since, else removes only setup's own hooks.
+`~/.claude/skills/flashheart/SKILL.md`. Setup shows the diff and asks
+before applying it (`--yes` skips the question; SET-1). It backs up what
+it changes in `~/.claude/flashheart-backup/<UTC time>/`; `--uninstall`
+restores the backed-up `settings.json` byte for byte when nothing changed
+since, else removes only setup's own hooks, and puts back a kanban-tracker
+skill an earlier setup moved into a backup (D55).
 
 The protocol skill is Flashheart's own code, not user configuration, so it
 is kept current without setup: at every `SessionStart` (startup, resume,

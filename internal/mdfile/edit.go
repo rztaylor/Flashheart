@@ -71,17 +71,6 @@ func SetScalar(data []byte, key, value string) ([]byte, error) {
 	return setScalar(data, Parse(data), key, value)
 }
 
-// SetScalarFirst is SetScalar, except that a missing field is added as the
-// first field of the frontmatter instead of the last (migration puts id and
-// status at the top, MIG-1). A field that exists is set in place.
-func SetScalarFirst(data []byte, key, value string) ([]byte, error) {
-	doc := Parse(data)
-	if _, ok := doc.field(key); !ok && doc.HasFrontmatter {
-		doc.insert = 1 // the line after the opening ---
-	}
-	return setScalar(data, doc, key, value)
-}
-
 // SetList sets a top-level frontmatter field to a list: a flow list ([a, b])
 // unless the field is already a block list, whose style is kept.
 func SetList(data []byte, key string, items []string) ([]byte, error) {

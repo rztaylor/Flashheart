@@ -42,10 +42,7 @@ you pass `--yes`. It shows, as a diff:
   After that Flashheart keeps it current itself: when you upgrade the
   binary, the next session start rewrites the skill to match. It is
   Flashheart's own file, so edits to it are overwritten; put your own agent
-  rules in your own skill or `CLAUDE.md`;
-- moving the `kanban-tracker` skill, if you have it, into the backup: the
-  Flashheart skill replaces it, and agents should not have two sets of
-  ticket rules.
+  rules in your own skill or `CLAUDE.md`.
 
 Before writing, setup copies everything it changes into
 `~/.claude/flashheart-backup/<time>/`. Commands use the absolute path of the
@@ -64,8 +61,9 @@ flashheart setup claude --uninstall   # shows what would change, then asks
 
 If `settings.json` has not changed since setup wrote it, uninstalling puts
 back the file exactly as it was; otherwise it removes only Flashheart's
-hooks. It also removes the skill, puts `kanban-tracker` back and unregisters
-the MCP server.
+hooks. It also removes the skill and unregisters the MCP server. If an
+earlier version of setup moved a `kanban-tracker` skill into its backup,
+uninstalling puts that back too.
 
 ## Working with tickets
 

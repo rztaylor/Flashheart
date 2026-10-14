@@ -29,9 +29,10 @@ const (
 	toolMatcher = "mcp__flashheart__.*"
 	hookTimeout = 5
 	serverName  = "flashheart"
-	// replacedSkill is the skill the protocol skill replaces (SET-2).
-	replacedSkill = "kanban-tracker"
-	backupDir     = "flashheart-backup"
+	// retiredSkill is the kanban-tracker skill earlier setups moved into
+	// the backup; uninstall still puts it back (D55).
+	retiredSkill = "kanban-tracker"
+	backupDir    = "flashheart-backup"
 )
 
 // ownBinary names a flashheart build: flashheart, flashheart-dev, …
@@ -110,7 +111,7 @@ func (o Options) settingsPath() string { return filepath.Join(o.claudeDir(), "se
 func (o Options) skillPath() string {
 	return filepath.Join(o.claudeDir(), "skills", protocol.SkillName, "SKILL.md")
 }
-func (o Options) replacedPath() string   { return filepath.Join(o.claudeDir(), "skills", replacedSkill) }
+func (o Options) retiredPath() string    { return filepath.Join(o.claudeDir(), "skills", retiredSkill) }
 func (o Options) backupsPath() string    { return filepath.Join(o.claudeDir(), backupDir) }
 func (o Options) claudeJSONPath() string { return filepath.Join(o.Home, ".claude.json") }
 
@@ -391,8 +392,7 @@ func (o Options) registeredInFile() registration {
 }
 
 // Install plans Claude Code's configuration for Flashheart (SET-1, SET-2):
-// every hook of §5.2, the MCP server, the protocol skill, and moving the
-// kanban-tracker skill aside.
+// every hook of §5.2, the MCP server and the protocol skill.
 func (Claude) Install(o Options) (*Plan, error) {
 	p := newPlan(o.claudeTarget(), false)
 	settings, data, tree, err := o.readUserSettings()
@@ -408,10 +408,6 @@ func (Claude) Install(o Options) (*Plan, error) {
 	}
 	if want := []byte(protocol.Skill()); !bytes.Equal(skill, want) {
 		p.files = append(p.files, change{path: o.skillPath(), backup: skillBackup, before: skill, after: want})
-	}
-	if info, err := os.Stat(o.replacedPath()); err == nil && info.IsDir() {
-		p.moves = append(p.moves, move{from: o.replacedPath(), to: filepath.Join(p.backup, "skills", replacedSkill)})
-		p.notes = append(p.notes, "The Flashheart skill replaces kanban-tracker; --uninstall puts it back.")
 	}
 	config, _ := json.Marshal(map[string]any{"type": "stdio", "command": o.Binary, "args": o.serverArgs()})
 	server := o.registered()
@@ -454,9 +450,10 @@ func (Claude) Uninstall(o Options) (*Plan, error) {
 		}
 		p.files = append(p.files, change{path: o.skillPath(), backup: skillBackup, before: skill, after: theirs, removeDir: true})
 	}
-	if _, err := os.Stat(o.replacedPath()); errors.Is(err, fs.ErrNotExist) {
-		if saved := latestBackup(o.backupsPath(), filepath.Join("skills", replacedSkill)); saved != "" {
-			p.moves = append(p.moves, move{from: saved, to: o.replacedPath()})
+	// A kanban-tracker skill an earlier setup moved aside goes back (D55).
+	if _, err := os.Stat(o.retiredPath()); errors.Is(err, fs.ErrNotExist) {
+		if saved := latestBackup(o.backupsPath(), filepath.Join("skills", retiredSkill)); saved != "" {
+			p.moves = append(p.moves, move{from: saved, to: o.retiredPath()})
 		}
 	}
 	server := o.registered()

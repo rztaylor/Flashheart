@@ -149,8 +149,8 @@ Full format: `docs/dev/specs/board-format.md`.
 
 - `STO-1` Boards use format v2 (`board-format.md`, D15): one folder per
   ticket with the column in frontmatter. Flashheart owns the format; it stays
-  plain markdown readable in any editor. Format v1 (kanban-tracker column
-  folders) is read only to migrate it (`MIG-1`).
+  plain markdown readable in any editor. Format v1 (column folders) is
+  not read; its one-off conversion is retired (D55).
 - `STO-2` Ticket and workstream frontmatter edits, and edits to
   `project.yaml`, preserve key order, comments, unknown keys, line endings
   and a byte-order mark, and produce minimal diffs.
@@ -195,11 +195,6 @@ Full format: `docs/dev/specs/board-format.md`.
   states, a deleted comment) appends one history entry in the same
   locked write: who, what changed and when, never the ticket's text. A
   ticket without the file has no activity.
-- `MIG-1` `flashheart migrate` converts a v1 root to v2: it shows the plan
-  and writes only with `--write`, numbers tickets once in creation order,
-  rewrites references to ids, and moves (never deletes) the v1 tree into
-  `.flashheart/backup/`. `serve` on a v1 root shows the command and writes
-  nothing.
 
 ### 6.3 Ticket ids (`KEY`)
 
@@ -715,10 +710,10 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   with timestamped backups, only on `y` or `yes` (D59). `--yes` (or its
   older name `--write`) applies without asking; `--dry-run`, or no
   terminal to ask in without `--yes`, only shows them. `--uninstall` does
-  the same for the reverse.
+  the same for the reverse, and for Claude also puts back a kanban-tracker
+  skill an earlier setup moved into its backup (D55).
 - `SET-2` For Claude, setup installs the **Flashheart protocol skill**
-  (`~/.claude/skills/flashheart/SKILL.md`), which replaces the kanban-tracker
-  skill: tickets are created, read and moved through Flashheart, never by
+  (`~/.claude/skills/flashheart/SKILL.md`): tickets are created, read and moved through Flashheart, never by
   writing board files directly. For Codex it
   adds the same protocol text to the user's global `AGENTS.md` between
   Flashheart markers. The installed Claude skill and the marked Codex
@@ -831,7 +826,7 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
 ### 6.14 CLI (`CLI`)
 
 - `CLI-1` Commands: `serve` (default), `mcp`, `hook`, `await`, `setup`,
-  `doctor`, `migrate`, `version`. Global `--root`. `--help` on every command.
+  `doctor`, `version`. Global `--root`. `--help` on every command.
 - `CLI-2` Normal startup prints nothing but errors; `--debug` adds the
   listener address and (with `--foreground`) lifecycle summaries, never
   credentials.

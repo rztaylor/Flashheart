@@ -1,7 +1,7 @@
 // Package store is the only package that touches the board root. It reads
 // v2 projects (PRJ-1) with their tickets, workstreams, reviews (and when
-// each last changed), files indexes, keys and archived ids, detects v1 roots and fingerprints what it
-// read. It writes tickets and workstreams under a per-project lock, each
+// each last changed), files indexes, keys and archived ids, and fingerprints
+// what it read. It writes tickets and workstreams under a per-project lock, each
 // write naming its Precondition (Unchanged with the content hash read, or
 // Merge), in one transaction (tx.go: read, require, edit, stamp, stage,
 // commit, nothing written when a step fails) of atomic replaces (STO-3),
@@ -51,9 +51,7 @@
 //
 // It also creates the root folder itself (EnsureRoot), reads and validates
 // config.yaml (ReadConfig, defaults when it or the root is missing) and
-// rewrites it under the root lock (UpdateConfig), offers confined file
-// primitives with the root and project locks (WithRootLock) for whole-board
-// conversion by migrate, and tells its own writes
+// rewrites it under the root lock (UpdateConfig), and tells its own writes
 // of a ticket or review from others' (WroteLast, by project, id and Doc).
 //
 // Callers that need a few projects at scale read every project's identity
@@ -66,6 +64,5 @@
 // diagnostic logs, fsnotify watches and doctor's probe are the accepted
 // exceptions, architecture.md).
 // Parsing and blocking belong to board, text edits to mdfile, the event
-// and inbox formats to events, revisions to index, and v1 conversion to
-// migrate.
+// and inbox formats to events, and revisions to index.
 package store

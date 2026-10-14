@@ -772,7 +772,6 @@ the station.
 | Empty | Centred display-cut title and one plain sentence of what fills it |
 | Error | Danger strip with the error in words and *Try again*; the last good copy stays visible with a note |
 | Board root missing | Empty state naming the path |
-| Older board format | Notice with the migrate command |
 | Repair | Dashed, hatched, never painted, never hidden |
 | Blocked | Blocker pill with the reason; on stations a pill above the next stop |
 | Long content | Titles wrap (card three lines, then clamped); ids never cut; paths, branches and run ids cut from the start |
