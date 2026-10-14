@@ -211,6 +211,7 @@ async function routeBusyCard(page, busy = { needsYou: false }) {
             answered: false,
             waitingOn: "",
             agentType: "",
+            mcpOnly: false,
           },
           lastActivity: new Date().toISOString(),
         };
