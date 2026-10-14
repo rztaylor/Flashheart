@@ -10,5 +10,10 @@ tickets and projects with their delete previews (`archive`). Callers pass the au
 this layer never issues raw `fetch`, acquires credentials or stores
 anything.
 
+Every response has an exported guard that checks every field the server
+sends; `contract.test.ts` runs them over `testdata/api/`, and
+`vocabulary.test.ts` matches the lists copied from the server
+(`ERROR_CODES` among them) to `testdata/vocabulary.json` (FH-97).
+
 Does not own React state, error presentation, backend behaviour or caching.
 Features and the app shell consume these contracts.
