@@ -100,7 +100,7 @@ describe("workstreamTitle", () => {
 });
 
 // A project's workstream titles are unique, compared ignoring case and
-// runs of spaces, as the server compares them (FH-163, D73).
+// runs of spaces, as the server compares them (FH-163, D76).
 describe("takenWorkstream", () => {
   const brief = (slug: string, title: string) => ({
     slug,

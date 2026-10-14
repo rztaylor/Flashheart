@@ -277,7 +277,7 @@ func (s *Store) ReadWorkstream(project, slug string) ([]byte, string, error) {
 // UpdateWorkstream applies edit to workstreams/<slug>.md under the project
 // lock, once pre holds, as UpdateTicket does (EDIT-4). An edit that gives
 // it a title another workstream has is a *WorkstreamTitleTakenError and
-// writes nothing (D73).
+// writes nothing (D76).
 func (s *Store) UpdateWorkstream(project, slug string, pre Precondition, edit Edit) (string, error) {
 	if err := s.checkProject(project); err != nil {
 		return "", err

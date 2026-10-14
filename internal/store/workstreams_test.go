@@ -215,7 +215,7 @@ func TestCreateWorkstreamWritesTheTemplate(t *testing.T) {
 		t.Fatalf("parsed = %+v", parsed)
 	}
 
-	// Slugs stay unique (titles do too, D73); defaults fill priority.
+	// Slugs stay unique (titles do too, D76); defaults fill priority.
 	again, err := s.CreateWorkstream("alpha", NewWorkstream{Title: "Offline mode?"})
 	if err != nil || again.Slug != "offline-mode-2" {
 		t.Fatalf("second create = %+v, %v", again, err)
@@ -318,7 +318,7 @@ func TestEditWorkstreamSetsItsFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	data := mustRead(t, filepath.Join(root, "alpha", "workstreams", "board-ui.md"))
-	if Hash(data) != next {
+	if Hash(data) != next.Hash {
 		t.Error("returned hash does not match the file")
 	}
 	want := "---\nslug: board-ui\nstatus: active\npriority: low\ncreated: 2026-10-01\ntickets:\n  - AL-2\n  - AL-3\n  - AL-4\n" +
@@ -329,9 +329,9 @@ func TestEditWorkstreamSetsItsFields(t *testing.T) {
 	}
 
 	// The current values write nothing.
-	again, err := s.EditWorkstream("alpha", "board-ui", Unchanged(next), WorkstreamEdit{Changes: workstreamChanges(t, board.FieldChange{Key: "priority", Value: "low"})})
-	if err != nil || again != next {
-		t.Fatalf("same value = %q, %v", again, err)
+	again, err := s.EditWorkstream("alpha", "board-ui", Unchanged(next.Hash), WorkstreamEdit{Changes: workstreamChanges(t, board.FieldChange{Key: "priority", Value: "low"})})
+	if err != nil || again.Hash != next.Hash || again.Slug != "board-ui" {
+		t.Fatalf("same value = %+v, %v", again, err)
 	}
 	if after := mustRead(t, filepath.Join(root, "alpha", "workstreams", "board-ui.md")); string(after) != want {
 		t.Fatal("an edit to the current value rewrote the file")

@@ -187,7 +187,7 @@ describe("NewWorkstreamDialog", () => {
     ).toHaveProperty("disabled", false);
   });
 
-  // A project's workstream titles are unique (FH-163, D73): a title one of
+  // A project's workstream titles are unique (FH-163, D76): a title one of
   // its workstreams has, in any case or spacing, is named at the field and
   // cannot be sent; the server's refusal of one the page has not heard of
   // yet shows there too.

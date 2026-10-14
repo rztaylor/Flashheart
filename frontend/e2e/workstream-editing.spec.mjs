@@ -133,7 +133,7 @@ test("New workstream writes the template and opens its page", async () => {
   await expect(routeCard()).toContainText("No tickets on this line yet.");
 });
 
-// A project's workstream titles are unique (FH-163, D73): a taken title,
+// A project's workstream titles are unique (FH-163, D76): a taken title,
 // in any case or spacing, is named at the field and cannot be created.
 test("a taken title is named at the field and not created", async () => {
   await newWorkstream().click();

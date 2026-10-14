@@ -546,7 +546,7 @@ Full format: `docs/dev/specs/board-format.md`.
   list are not edited there.
 - `EDIT-14` **New workstream** (FH-17), in the Workstreams view's header,
   creates `workstreams/<slug>.md` from the board-format template: a title
-  (unique in the project, ignoring case and spacing, D73; its slug made
+  (unique in the project, ignoring case and spacing, D76; its slug made
   from it, unique in the project), a goal, a priority
   (default medium) and, optionally, the project's workstreams it depends
   on (`depends-on-workstreams`). It starts with no tickets; tickets join
@@ -675,9 +675,11 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   ticket's field and the workstreams' `tickets:` lists in step.
   `update_workstream` changes a workstream's title (its slug stays), goal,
   priority, tags, workstream dependencies and members in one write, and
-  refuses a dependency cycle between workstreams; `create_workstream` and
+  refuses a dependency cycle between workstreams; its `rename_to` renames
+  the slug in that write, moving the file and rewriting every ticket and
+  workstream that names it (FH-158); `create_workstream` and
   `update_workstream` refuse a title another of the project's workstreams
-  has (D73); `create_ticket` files a
+  has (D76); `create_ticket` files a
   ticket in another project when given its name or key (FH-46). The
   ticket tools ask agents to write titles and descriptions for a person,
   with implementation detail under Context, and warn about a title that

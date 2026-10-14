@@ -123,7 +123,7 @@ func TestCreateWorkstream(t *testing.T) {
 	}
 
 	// A project's workstream titles are unique, ignoring case and spacing
-	// (FH-163, D73); another title with the same slug takes the next one.
+	// (FH-163, D76); another title with the same slug takes the next one.
 	contains(t, e.fails("create_workstream", map[string]any{"title": "card  PANEL", "goal": "Again."}, "invalid_input"),
 		`a workstream called "Card panel" is already in demo (card-panel)`, "choose another title", "update_workstream workstream=card-panel")
 	contains(t, e.ok("create_workstream", map[string]any{"title": "Card panel!", "goal": "Again."}), "ok workstream=card-panel-2")
@@ -205,6 +205,53 @@ func TestUpdateWorkstream(t *testing.T) {
 	contains(t, e.ok("update_workstream", map[string]any{"workstream": "panel", "project": "DM", "set": map[string]any{"priority": "low"}}), "changed=priority")
 }
 
+// TestUpdateWorkstreamRenamesItsSlug: rename_to moves the workstream to a
+// new slug and rewrites every reference to it, members' workstream fields
+// and every depends-on-workstreams, in the same call as its other edits;
+// each rewritten ticket gets a ticket.updated naming the fields (FH-158).
+func TestUpdateWorkstreamRenamesItsSlug(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	a := e.ticket(store.NewTicket{Title: "A"})
+	b := e.ticket(store.NewTicket{Title: "B"})
+	c := e.ticket(store.NewTicket{Title: "C"})
+	e.startSession(session)
+	e.ok("create_workstream", map[string]any{"title": "panel", "goal": "Open tickets.", "tickets": []string{a, b}})
+	e.ok("create_workstream", map[string]any{"title": "sync", "goal": "Sync.", "depends_on_workstreams": []string{"panel"}})
+	e.ok("update_ticket", map[string]any{"ticket": c, "set": map[string]any{"depends-on-workstreams": []string{"panel"}}})
+
+	out := e.ok("update_workstream", map[string]any{"workstream": "panel", "rename_to": "card-panel", "set": map[string]any{"title": "Card panel"}})
+	contains(t, out, `Updated workstream card-panel "Card panel"`, "renamed from panel", "rewrote DM-1, DM-2, DM-3", "ok workstream=card-panel changed=slug,title")
+	if e.exists("demo/workstreams/panel.md") {
+		t.Fatal("the old file is still there")
+	}
+	contains(t, e.readFile("demo/workstreams/card-panel.md"), "slug: card-panel", "# Card panel", "  - "+a, "  - "+b)
+	contains(t, e.readFile("demo/workstreams/sync.md"), "depends-on-workstreams: [card-panel]")
+	for _, id := range []string{a, b} {
+		if got := e.field(id, "workstream"); got != "card-panel" {
+			t.Errorf("%s workstream = %q", id, got)
+		}
+	}
+	if got := mdfileList(t, e.file(c), "depends-on-workstreams"); !slices.Equal(got, []string{"card-panel"}) {
+		t.Errorf("%s depends-on-workstreams = %v", c, got)
+	}
+	// The rename's events are the last for each ticket.
+	updated := map[string][]string{}
+	for _, ev := range e.log() {
+		var data events.TicketData
+		if ev.Kind == events.TicketUpdated && ev.Run == session && ev.Decode(&data) == nil {
+			updated[data.Ticket] = data.Fields
+		}
+	}
+	if !slices.Equal(updated[a], []string{"workstream"}) || !slices.Equal(updated[c], []string{"depends-on-workstreams"}) {
+		t.Errorf("ticket.updated fields = %v", updated)
+	}
+	// The new slug is the workstream's from now on.
+	contains(t, e.ok("update_workstream", map[string]any{"workstream": "card-panel", "set": map[string]any{"priority": "low"}}), "ok workstream=card-panel changed=priority")
+	contains(t, e.fails("update_workstream", map[string]any{"workstream": "panel", "set": map[string]any{"priority": "low"}}, "not_found"), "card-panel, sync")
+}
+
 // TestUpdateWorkstreamRefusesAndWritesNothing: an unknown field,
 // workstream, ticket or dependency, a ticket of another project or held by
 // another session, a cycle and an empty call each refuse with a clear
@@ -237,7 +284,10 @@ func TestUpdateWorkstreamRefusesAndWritesNothing(t *testing.T) {
 		says []string
 	}{
 		{map[string]any{"workstream": "panel", "set": map[string]any{"ordered": true}}, "invalid_input", []string{`"ordered"`, "title, goal, priority, tags, depends-on-workstreams"}},
-		{map[string]any{"workstream": "panel", "set": map[string]any{"slug": "renamed"}}, "invalid_input", []string{`"slug"`, "the slug stays"}},
+		{map[string]any{"workstream": "panel", "set": map[string]any{"slug": "renamed"}}, "invalid_input", []string{`"slug"`, "rename_to"}},
+		{map[string]any{"workstream": "panel", "rename_to": "storage", "add_tickets": []string{a}}, "invalid_input", []string{"storage already exists", "choose another slug"}},
+		{map[string]any{"workstream": "panel", "rename_to": "Card Panel"}, "invalid_input", []string{`"Card Panel"`, "lower-case letters"}},
+		{map[string]any{"workstream": "panel", "rename_to": "panel"}, "invalid_input", []string{"nothing to change"}},
 		{map[string]any{"workstream": "panel", "set": map[string]any{"priority": "urgent"}}, "invalid_input", []string{"priority must be one of"}},
 		{map[string]any{"workstream": "panel", "set": map[string]any{"tags": 3}}, "invalid_input", []string{"list of strings"}},
 		{map[string]any{"workstream": "nope", "set": map[string]any{"priority": "low"}}, "not_found", []string{`workstream "nope"`, "panel, storage, sync", "create_workstream"}},

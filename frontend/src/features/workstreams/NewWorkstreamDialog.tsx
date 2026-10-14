@@ -25,7 +25,7 @@ export interface CreatedWorkstreamRef {
 // workstream field. Its keys and focus are New ticket's. A title one of
 // the project's workstreams has is named at the field and not sent; the
 // server's refusal of one the page has not heard of yet shows there too
-// (FH-163, D73).
+// (FH-163, D76).
 export function NewWorkstreamDialog({
   fetcher,
   projects,

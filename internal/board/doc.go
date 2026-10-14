@@ -10,7 +10,7 @@
 // missing one goes (SectionChange, FH-66; a workstream's, FH-139), a
 // workstream's editable fields, their checked change-set and the
 // dependency cycle rule (workstreamedit.go, FH-46) and when two of its
-// titles are the same (WorkstreamTitleKey, D73), review warnings and the project
+// titles are the same (WorkstreamTitleKey, D76), review warnings and the project
 // key rules, the
 // shorter one agents choose included (EDIT-2, EDIT-3, EDIT-6, KEY-1,
 // KEY-5), a review's How to Verify

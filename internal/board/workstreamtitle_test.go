@@ -4,7 +4,7 @@ import "testing"
 
 // TestSameWorkstreamTitle: two workstream titles are the same when they
 // match ignoring letter case and runs of spaces, which is how a person
-// reads them in a picker (FH-163, D73).
+// reads them in a picker (FH-163, D76).
 func TestSameWorkstreamTitle(t *testing.T) {
 	t.Parallel()
 

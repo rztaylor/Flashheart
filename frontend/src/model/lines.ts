@@ -89,7 +89,7 @@ export function workstreamTitle(
 // workstreamTitleKey is what a workstream's title is compared by: its
 // words in lower case, every run of spaces as one. It is the server's rule
 // (board.WorkstreamTitleKey): a project's workstreams have distinct keys,
-// so no two read the same in a picker (FH-163, D73).
+// so no two read the same in a picker (FH-163, D76).
 export function workstreamTitleKey(title: string): string {
   return title.trim().split(/\s+/).join(" ").toLowerCase();
 }

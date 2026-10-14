@@ -35,7 +35,7 @@ func titleTaken(t *testing.T, err error, other, title string) {
 // TestCreateWorkstreamRefusesATakenTitle: a project's workstream titles
 // are unique, compared ignoring case and spacing; a refused create writes
 // nothing, another project may use the title, and a different title whose
-// slug is taken still gets a fresh slug (FH-163, D73).
+// slug is taken still gets a fresh slug (FH-163, D76).
 func TestCreateWorkstreamRefusesATakenTitle(t *testing.T) {
 	t.Parallel()
 
@@ -67,7 +67,7 @@ func TestCreateWorkstreamRefusesATakenTitle(t *testing.T) {
 // TestEditWorkstreamRefusesATakenTitle: a new title another workstream
 // has is refused and writes nothing, through the field edit and through a
 // raw edit of the file; the workstream's own title in other case or
-// spacing is not taken (FH-163, D73).
+// spacing is not taken (FH-163, D76).
 func TestEditWorkstreamRefusesATakenTitle(t *testing.T) {
 	t.Parallel()
 
@@ -103,7 +103,7 @@ func TestEditWorkstreamRefusesATakenTitle(t *testing.T) {
 // TestDuplicateTitlesMadeEarlierStillLoadAndEdit: workstreams that already
 // share a title (made before titles were unique, or by hand) load as they
 // are, take every edit that keeps their title, and can be retitled apart;
-// only a change to a taken title is refused (D73).
+// only a change to a taken title is refused (D76).
 func TestDuplicateTitlesMadeEarlierStillLoadAndEdit(t *testing.T) {
 	t.Parallel()
 

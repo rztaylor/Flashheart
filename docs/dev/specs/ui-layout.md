@@ -611,7 +611,7 @@ id a separate link.
   review or done.* **Create workstream** (primary, off until there is a
   title; Enter in the title submits) and Cancel; Escape closes and focus
   returns to the button. A title one of the project's workstreams has,
-  ignoring case and spacing (D73), is named under the Title field as an
+  ignoring case and spacing (D76), is named under the Title field as an
   alert, *<Project> already has a workstream called <title>. Choose
   another title.*, the field marked invalid (danger border,
   `aria-invalid`, the message linked by `aria-errormessage` and
