@@ -44,6 +44,14 @@ import { absoluteTime, durationWords } from "../../model/time";
 import { useNow } from "../../state/useNow";
 import { useResource } from "../../state/useResource";
 import { PipelineHeadline } from "./PipelineHeadline";
+import { ProjectCounts } from "./ProjectCounts";
+import {
+  CountBadge,
+  quietDisc,
+  SectionDisc,
+  sectionCardClass,
+  sectionHeadClass,
+} from "./sectionParts";
 
 // column fills Main with the gutter Board, Workstreams and Table share.
 const column = "flex flex-col gap-4 px-4 pt-1 md:px-6";
@@ -58,6 +66,9 @@ interface OverviewViewProps {
   revision: number;
   // boardHref is the Board for the same scope, where the pipeline leads.
   boardHref: string;
+  // projectHref is a project's own Overview, where its row on All
+  // projects' list leads.
+  projectHref(project: string): string;
   onOpen(ticket: TicketRef): void;
   // onReview opens a ticket on its Review tab.
   onReview(ticket: TicketRef): void;
@@ -78,6 +89,7 @@ export function OverviewView({
   projects,
   revision,
   boardHref,
+  projectHref,
   onOpen,
   onReview,
   onAnswer,
@@ -131,6 +143,10 @@ export function OverviewView({
           boardHref={boardHref}
         />
         {resource.error ? <StaleNote error={resource.error} /> : null}
+        {/* Comparing projects is for All projects only (FH-153). */}
+        {project ? null : (
+          <ProjectCounts projects={projects} hrefFor={projectHref} />
+        )}
         <OverviewSections
           data={data}
           now={now}
@@ -263,9 +279,9 @@ export function OverviewSections({
 const marks: Record<SectionId, { icon?: IconName; disc: string }> = {
   decision: { disc: attentionClass },
   review: { icon: stateToneIcon.review, disc: stateToneClass.review },
-  risk: { icon: "warning", disc: "bg-card text-ink shadow-card" },
+  risk: { icon: "warning", disc: quietDisc },
   progress: { icon: stateToneIcon.progress, disc: stateToneClass.progress },
-  unticketed: { icon: "branch", disc: "bg-card text-ink shadow-card" },
+  unticketed: { icon: "branch", disc: quietDisc },
   upNext: { icon: stateToneIcon.neutral, disc: stateToneClass.neutral },
 };
 
@@ -273,21 +289,15 @@ function SectionMark({ id, count }: { id: SectionId; count: number }) {
   const mark = marks[id];
   // Attention is for something that needs you: an empty decision section
   // takes the plain disc.
-  const disc =
-    id === "decision" && count === 0
-      ? "bg-card text-ink shadow-card"
-      : mark.disc;
+  const disc = id === "decision" && count === 0 ? quietDisc : mark.disc;
   return (
-    <span
-      aria-hidden="true"
-      className={`grid size-7 shrink-0 place-items-center rounded-full ${disc}`}
-    >
+    <SectionDisc disc={disc}>
       {mark.icon ? (
         <Icon name={mark.icon} size={15} />
       ) : (
         <RunStateMark state="needs-you" size={11} still />
       )}
-    </span>
+    </SectionDisc>
   );
 }
 
@@ -315,21 +325,16 @@ function OverviewSection({
     <>
       <SectionMark id={section.id} count={count} />
       <span id={titleId}>{section.title}</span>
-      {count > 0 ? (
-        <span className="grid h-7 min-w-7 shrink-0 place-items-center rounded-full bg-card px-2 text-sm font-semibold tabular-nums text-ink shadow-card">
-          {count}
-        </span>
-      ) : null}
+      {count > 0 ? <CountBadge count={count} /> : null}
     </>
   );
-  const headClass =
-    "flex w-full items-center gap-3 px-4 py-3 text-left text-xl leading-tight display-cut";
+  const headClass = sectionHeadClass;
   return (
     <section
       aria-labelledby={titleId}
       data-section={section.id}
       {...focusList(section.id)}
-      className="overflow-hidden rounded-panel border border-rule bg-card shadow-card"
+      className={sectionCardClass}
     >
       <div className="flex flex-wrap items-center gap-x-3 bg-column">
         <h2

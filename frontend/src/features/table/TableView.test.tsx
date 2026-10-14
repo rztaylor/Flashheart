@@ -100,8 +100,22 @@ describe("TableView", () => {
     expect(markup).toContain(">High</span>");
   });
 
+  it("marks the type and priority words with the card's icon and bars (FH-154)", () => {
+    const cells = markup.split("<td");
+    const type = cells.find((cell) => cell.includes("bug</span>")) ?? "";
+    expect(type).toContain('data-type="bug"');
+    expect(type).toContain('data-icon="bug"');
+    expect(type.indexOf("data-type")).toBeLessThan(type.indexOf("bug</span>"));
+    const priority = cells.find((cell) => cell.includes("High</span>")) ?? "";
+    expect(priority).toContain('data-priority="high"');
+    expect(priority.indexOf("data-priority")).toBeLessThan(
+      priority.indexOf("High</span>"),
+    );
+  });
+
   it("shows a blocker as the blocked pill and a live run by its mark", () => {
     expect(markup).toContain('data-tone="blocked"');
+    expect(markup).toContain('data-icon="blocked"');
     expect(markup).toContain('data-run-state="working"');
   });
 });

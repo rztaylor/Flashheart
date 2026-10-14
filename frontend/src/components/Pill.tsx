@@ -1,6 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { type Paint, paintVars } from "../model/paint";
 import { type StateTone, statusOf } from "../model/status";
 import { Icon, type IconName } from "./Icon";
 
@@ -14,12 +13,22 @@ export const stateToneClass: Record<StateTone, string> = {
   blocked: "bg-(--fh-state-blocked) text-(--fh-state-blocked-ink)",
 };
 
+// stateToneInk is a state's ink alone, for its icon beside its word on a
+// card surface (the Overview's projects list heads, FH-153).
+export const stateToneInk: Record<StateTone, string> = {
+  neutral: "text-(--fh-state-neutral-ink)",
+  progress: "text-(--fh-state-progress-ink)",
+  review: "text-(--fh-state-review-ink)",
+  done: "text-(--fh-state-done-ink)",
+  blocked: "text-(--fh-state-blocked-ink)",
+};
+
 export const stateToneIcon: Record<StateTone, IconName> = {
   neutral: "ring",
   progress: "half",
   review: "review",
   done: "check",
-  blocked: "diamond",
+  blocked: "blocked",
 };
 
 const pillBase =
@@ -74,8 +83,8 @@ export function StatusPill({
   );
 }
 
-// BlockerPill is a real blocker: the diamond and the reason in words. Long
-// reasons wrap within the pill rather than running off the card.
+// BlockerPill is a real blocker: the no-entry sign and the reason in words.
+// Long reasons wrap within the pill rather than running off the card.
 export function BlockerPill({
   children,
   title,
@@ -97,7 +106,7 @@ export function BlockerPill({
       title={title ?? (typeof children === "string" ? children : undefined)}
       className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${stateToneClass.blocked} ${className ?? ""}`}
     >
-      <Icon name="diamond" size={12} className="mt-[0.15em]" />
+      <Icon name="blocked" size={12} className="mt-[0.15em]" />
       <span className={clamp[lines]}>
         <span className="sr-only">Blocked: </span>
         {children}
@@ -106,33 +115,21 @@ export function BlockerPill({
   );
 }
 
-// Tag is a ticket attribute (type, priority, age). The one chosen in
-// "Colour by" takes its paint (tint fill, strong word); the rest are neutral
-// outlined chips.
+// Tag is a ticket attribute (type, priority, a tag) as a neutral outlined
+// chip, in the panel, the table and the archive. Type and priority carry
+// the card's mark before their word there (TicketMarks' TypeTag and
+// PriorityTag, FH-154).
 export function Tag({
-  paint,
   strong,
   children,
 }: {
-  paint?: Paint;
   // strong sets the word in semibold (High priority).
   strong?: boolean;
   children: ReactNode;
 }) {
-  if (paint) {
-    return (
-      <span
-        data-paint={paint.token}
-        style={paintVars(paint) as CSSProperties}
-        className="inline-flex items-center rounded-full bg-(--paint-tint) px-2 text-2xs leading-5 font-semibold text-(--paint) shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--paint)_35%,transparent)]"
-      >
-        {children}
-      </span>
-    );
-  }
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-rule px-2 text-2xs leading-[1.125rem] ${strong ? "font-semibold text-ink" : "text-ink-muted"}`}
+      className={`inline-flex items-center gap-1 rounded-full border border-rule px-2 text-2xs leading-[1.125rem] ${strong ? "font-semibold text-ink" : "text-ink-muted"}`}
     >
       {children}
     </span>

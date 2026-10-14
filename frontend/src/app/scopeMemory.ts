@@ -12,10 +12,12 @@ import type { Scope, View } from "./route";
 export const scopeName = (scope: Scope): string =>
   scope.kind === "all" ? "all" : scope.project;
 
-// savedView is the view to remember, or undefined for the archive and a
-// ticket's full page, which are side trips.
+// savedView is the view to remember, or undefined for the archive, a
+// ticket's full page and a workstream's page, which are side trips.
 export function savedView(view: View): SavedView | undefined {
-  return view === "archive" || view === "ticket" ? undefined : view;
+  return view === "archive" || view === "ticket" || view === "workstream"
+    ? undefined
+    : view;
 }
 
 // rememberIn records a scope's filters and view, returning the preferences

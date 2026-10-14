@@ -10,13 +10,13 @@ import { EmptyState } from "../../components/EmptyState";
 import { SearchField } from "../../components/Field";
 import { Icon } from "../../components/Icon";
 import { LoadError } from "../../components/LoadError";
-import { StatusPill, Tag } from "../../components/Pill";
+import { StatusPill } from "../../components/Pill";
 import { StaleNote } from "../../components/StaleNote";
 import { HeadCell, Row, SkeletonTable, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
+import { PriorityTag, TypeTag } from "../../components/TicketMarks";
 import { filterArchived } from "../../model/archive";
 import { messageOf } from "../../model/errors";
-import { priorityLabel } from "../../model/status";
 import { absoluteTime, runningTime } from "../../model/time";
 import { useResource } from "../../state/useResource";
 import type { Editing } from "../editing/useEditing";
@@ -185,13 +185,11 @@ export function ArchiveView({
                   <StatusPill column={item.column} rejected={item.rejected} />
                 </td>
                 <td className="px-3 py-2">
-                  {item.type ? <Tag>{item.type}</Tag> : null}
+                  {item.type ? <TypeTag type={item.type} /> : null}
                 </td>
                 <td className="px-3 py-2">
                   {item.priority ? (
-                    <Tag strong={item.priority === "high"}>
-                      {priorityLabel(item.priority)}
-                    </Tag>
+                    <PriorityTag priority={item.priority} />
                   ) : null}
                 </td>
                 <td

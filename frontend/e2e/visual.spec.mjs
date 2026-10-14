@@ -8,6 +8,7 @@ import {
   makeSandbox,
   open,
   stopIfRunning,
+  viewOption,
   waitForManualURL,
 } from "./support.mjs";
 
@@ -83,6 +84,9 @@ async function compare(
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
   });
+  // No hover: a test that clicked (View options) leaves the pointer over
+  // whatever the next view draws there.
+  await page.mouse.move(0, 0);
   await expect(page).toHaveScreenshot(`${name}-${width}-${theme}.png`, {
     // The board root is a new temporary folder each run.
     mask: [page.getByText(sandbox.root, { exact: true })],
@@ -98,6 +102,36 @@ for (const theme of ["light", "dark"]) {
       await compare("board", "#/p/flashheart/board", column, { width, theme });
     });
   }
+  // The other two card layouts (FH-147); Normal is the board above.
+  for (const density of ["Compact", "Detailed"]) {
+    test(`the board, ${density.toLowerCase()} ${theme}`, async () => {
+      await open(page, "#/p/flashheart/board", { width: 1280, theme });
+      await viewOption(page, "Density", density);
+      try {
+        await compare(
+          `board-${density.toLowerCase()}`,
+          "#/p/flashheart/board",
+          column,
+          { theme },
+        );
+      } finally {
+        await viewOption(page, "Density", "Normal");
+      }
+    });
+  }
+  // Colour by Priority: the tint and the chips' paint with the card's
+  // priority bars (FH-154).
+  test(`the board coloured by priority, ${theme}`, async () => {
+    await open(page, "#/p/flashheart/board", { width: 1280, theme });
+    await viewOption(page, "Colour by", "Priority");
+    try {
+      await compare("board-priority", "#/p/flashheart/board", column, {
+        theme,
+      });
+    } finally {
+      await viewOption(page, "Colour by", "Type");
+    }
+  });
   test(`a ticket in the side panel, ${theme}`, async () => {
     await compare(
       "panel",
@@ -106,22 +140,31 @@ for (const theme of ["light", "dark"]) {
       { theme },
     );
   });
+  // The table and the workstreams carry blocked marks (FH-148) in both
+  // themes.
+  test(`the table, ${theme}`, async () => {
+    await compare(
+      "table",
+      "#/p/flashheart/table",
+      (page) => page.getByRole("table"),
+      { theme },
+    );
+  });
+  test(`workstreams, ${theme}`, async () => {
+    await compare("workstreams", "#/p/flashheart/workstreams", heading, {
+      theme,
+    });
+  });
 }
-
-test("the table", async () => {
-  await compare("table", "#/p/flashheart/table", (page) =>
-    page.getByRole("table"),
-  );
-});
-
-test("workstreams", async () => {
-  await compare("workstreams", "#/p/flashheart/workstreams", heading);
-});
 
 test("the Overview of every project", async () => {
   await compare("overview", "#/all/overview", heading);
 });
 
-test("a ticket's own page", async () => {
-  await compare("ticket", "#/ticket/FH-5", heading);
-});
+// The page's properties carry the type icon and priority bars (FH-154) in
+// both themes.
+for (const theme of ["light", "dark"]) {
+  test(`a ticket's own page, ${theme}`, async () => {
+    await compare("ticket", "#/ticket/FH-5", heading, { theme });
+  });
+}

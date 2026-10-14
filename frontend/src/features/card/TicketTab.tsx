@@ -44,7 +44,7 @@ export function ReasonList({
         className="mb-2 flex items-center gap-1.5 text-md heading-cut text-ink"
       >
         <Icon
-          name="diamond"
+          name="blocked"
           size={15}
           className="text-(--fh-state-blocked-ink)"
         />

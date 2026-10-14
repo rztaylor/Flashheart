@@ -22,6 +22,7 @@ import {
   launch,
   makeSandbox,
   open,
+  settingsMenu,
   shot,
   stopIfRunning,
   viewOption,
@@ -1104,7 +1105,9 @@ test("a preference changed just before a reload is saved (FH-48)", async () => {
 
 test("the theme choice is saved", async () => {
   await open(page, "#/p/flashheart/board");
-  const theme = page.getByRole("group", { name: "Theme" });
+  const theme = (await settingsMenu(page)).getByRole("group", {
+    name: "Theme",
+  });
   await theme.getByText("Dark", { exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect
@@ -1118,6 +1121,7 @@ test("the theme choice is saved", async () => {
       readFile(join(sandbox.root, ".flashheart", "config.yaml"), "utf8"),
     )
     .toContain("theme: system");
+  await page.keyboard.press("Escape");
 });
 
 test("the Backlog column can be hidden from View options (FH-41)", async () => {
@@ -1207,7 +1211,9 @@ test("switching theme keeps the view, filters, open ticket and scroll", async ()
       .getByRole("heading")
       .evaluateAll((nodes) => nodes.map((node) => node.textContent));
   const lightOutline = await outline();
-  const theme = page.getByRole("group", { name: "Theme" });
+  const theme = (await settingsMenu(page)).getByRole("group", {
+    name: "Theme",
+  });
   await theme.getByText("Dark", { exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   expect(page.url()).toBe(url);

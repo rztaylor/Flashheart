@@ -178,6 +178,12 @@ describe("PanelHeader", () => {
     expect(markup).toContain(">In progress<");
     expect(markup).toContain('data-tone="blocked"');
     expect(markup).toContain(">High priority<");
+    expect(markup).toContain('data-icon="blocked"');
+  });
+
+  it("marks the priority and type tags with the card's bars and icon (FH-154)", () => {
+    expect(markup).toMatch(/data-priority="high"[\s\S]*?<\/svg>High priority</);
+    expect(markup).toMatch(/data-type="feature"[\s\S]*?<\/span>feature</);
   });
 });
 
@@ -231,6 +237,12 @@ describe("TicketTab", () => {
     expect(question).toBeLessThan(handoff);
     expect(handoff).toBeLessThan(blocked);
     expect(blocked).toBeLessThan(criteria);
+  });
+
+  it("heads Blocked by with the no-entry sign", () => {
+    expect(markup).toMatch(
+      /data-icon="blocked"(?:(?!<\/svg>)[\s\S])*<\/svg>Blocked by</,
+    );
   });
 
   it("sets the handoff and the question as callouts", () => {

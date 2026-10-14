@@ -153,6 +153,12 @@ function ViewBody(props: ViewOutletProps) {
           projects={summaries}
           revision={revision}
           boardHref={formatRoute({ scope: route.scope, view: "board" })}
+          projectHref={(project) =>
+            formatRoute({
+              scope: { kind: "project", project },
+              view: "overview",
+            })
+          }
           onOpen={onOpen}
           onReview={(ticket) => onOpen(ticket, "review")}
           onAnswer={props.answers ? editing.answer : undefined}

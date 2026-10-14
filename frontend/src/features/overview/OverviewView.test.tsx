@@ -2,8 +2,8 @@ import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Card } from "../../api/board";
-import { noReason, type Run } from "../../api/runs";
+import type { Card, ProjectSummary } from "../../api/board";
+import { noReason, noRuns, type Run } from "../../api/runs";
 import { QuestionCard } from "../../components/QuestionCard";
 import { overview } from "../../model/overview";
 import {
@@ -168,6 +168,7 @@ const renderView = () =>
       projects={[]}
       revision={0}
       boardHref="#/all/board"
+      projectHref={() => ""}
       onOpen={() => {}}
       onReview={() => {}}
     />,
@@ -210,12 +211,72 @@ describe("OverviewView", () => {
         projects={[]}
         revision={0}
         boardHref="#/all/board"
+        projectHref={() => ""}
         onOpen={() => {}}
         onReview={() => {}}
       />,
     );
     expect(html).toContain("px-4");
     expect(html).not.toMatch(/max-w-|mx-auto/);
+  });
+
+  // The per-project list (FH-153) compares projects, so only All projects
+  // has it, between the pipeline and the sections.
+  describe("lists the projects in the All projects scope only", () => {
+    const alpha: ProjectSummary = {
+      name: "alpha",
+      displayName: "Alpha",
+      key: "AL",
+      keyDerived: false,
+      repos: [],
+      counts: {
+        backlog: 1,
+        "up-next": 0,
+        "in-progress": 1,
+        review: 0,
+        done: 0,
+      },
+      needsRepair: 0,
+      blocked: 0,
+      warnings: [],
+      lastModified: "",
+      workstreams: [],
+      archived: 0,
+      rejected: 0,
+      runs: noRuns,
+    };
+    const scoped = (project: string) =>
+      renderToStaticMarkup(
+        <OverviewView
+          fetcher={() => new Promise<Response>(() => {})}
+          project={project}
+          projects={[alpha]}
+          revision={0}
+          boardHref="#/all/board"
+          projectHref={(name) => `#/p/${name}/overview`}
+          onOpen={() => {}}
+          onReview={() => {}}
+        />,
+      );
+    afterEach(() => {
+      resource.state = { status: "loading" };
+    });
+
+    it("shows the list after the pipeline in All projects", () => {
+      resource.state = { status: "ready", data: { cards: [], runs: [] } };
+      const html = scoped("");
+      expect(html).toContain('href="#/p/alpha/overview"');
+      const at = html.indexOf("data-projects");
+      expect(at).toBeGreaterThan(html.indexOf("data-pipeline"));
+      expect(at).toBeLessThan(html.indexOf("Needs your decision"));
+    });
+
+    it("leaves it out of one project's Overview", () => {
+      resource.state = { status: "ready", data: { cards: [], runs: [] } };
+      const html = scoped("alpha");
+      expect(html).toContain("data-pipeline");
+      expect(html).not.toContain("data-projects");
+    });
   });
 });
 

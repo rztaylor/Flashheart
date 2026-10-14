@@ -8,12 +8,12 @@ import {
 } from "../../api/board";
 import { Icon } from "../../components/Icon";
 import { LineBullet } from "../../components/LineBullet";
-import { Pill, StatusPill, Tag } from "../../components/Pill";
+import { Pill, StatusPill } from "../../components/Pill";
 import { RunStateLabel } from "../../components/RunState";
 import { HeadCell, Row, SkeletonTable, Table } from "../../components/Table";
 import { TicketLink } from "../../components/TicketLink";
+import { PriorityTag, TypeTag } from "../../components/TicketMarks";
 import { type Line, workstreamTitle } from "../../model/lines";
-import { priorityLabel } from "../../model/status";
 import { compareTimes, runningTime } from "../../model/time";
 
 type SortKey =
@@ -180,13 +180,11 @@ export function TableView({
                 <StatusPill column={card.column} rejected={card.rejected} />
               </td>
               <td className="px-3 py-2">
-                {card.type ? <Tag>{card.type}</Tag> : null}
+                {card.type ? <TypeTag type={card.type} /> : null}
               </td>
               <td className="px-3 py-2">
                 {card.priority ? (
-                  <Tag strong={card.priority === "high"}>
-                    {priorityLabel(card.priority)}
-                  </Tag>
+                  <PriorityTag priority={card.priority} />
                 ) : null}
               </td>
               <td className="px-3 py-2">
