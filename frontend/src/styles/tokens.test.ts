@@ -286,7 +286,10 @@ describe.each(Object.entries(themes))("%s marks beside words", (_, tokens) => {
 describe.each(Object.entries(themes))("%s priority paint", (_, tokens) => {
   it.each(["high", "low"])("%s paint and tint share the bar's hue", (level) => {
     const bar = hue(tokens.get(`priority-${level}`) ?? "");
-    for (const name of [`paint-priority-${level}`, `paint-priority-${level}-tint`]) {
+    for (const name of [
+      `paint-priority-${level}`,
+      `paint-priority-${level}-tint`,
+    ]) {
       const shade = tokens.get(name);
       expect(shade, `--fh-${name}`).toBeDefined();
       const apart = Math.abs(hue(shade ?? "") - bar);
@@ -295,7 +298,10 @@ describe.each(Object.entries(themes))("%s priority paint", (_, tokens) => {
   });
 
   it("medium paint and tint are neutral grey", () => {
-    for (const name of ["paint-priority-medium", "paint-priority-medium-tint"]) {
+    for (const name of [
+      "paint-priority-medium",
+      "paint-priority-medium-tint",
+    ]) {
       expect(chroma(tokens.get(name) ?? ""), name).toBeLessThan(0.02);
     }
   });
