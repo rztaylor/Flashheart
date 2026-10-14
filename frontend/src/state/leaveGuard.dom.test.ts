@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { guarded, guardLeaving, leave } from "./leaveGuard";
+import { guarded, guardLeaving, guardUnloading, leave } from "./leaveGuard";
 
 let release: (() => void) | undefined;
 afterEach(() => release?.());
@@ -44,5 +44,30 @@ describe("the leave guard (FH-66)", () => {
     release = guardLeaving(() => undefined);
     first();
     expect(guarded()).toBe(true);
+  });
+});
+
+describe("a save in flight (FH-156)", () => {
+  it("keeps the browser's prompt on reload without asking on leaving the page", () => {
+    const saving = guardUnloading();
+    const go = vi.fn();
+    leave(go);
+    expect(go).toHaveBeenCalledOnce();
+    expect(guarded()).toBe(false);
+    expect(unload()).toBe(true);
+    saving();
+    expect(unload()).toBe(false);
+  });
+
+  it("keeps the prompt while a guard or another save still holds it", () => {
+    const first = guardUnloading();
+    const second = guardUnloading();
+    const guard = guardLeaving(() => undefined);
+    first();
+    first();
+    guard();
+    expect(unload()).toBe(true);
+    second();
+    expect(unload()).toBe(false);
   });
 });

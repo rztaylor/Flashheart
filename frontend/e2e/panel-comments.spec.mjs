@@ -91,6 +91,8 @@ test("a comment posted from the panel shows on the ticket's full page", async ()
 
   await box().fill("Second thought: keep the old wording.");
   await post().click();
+  // The box empties once the post's answer is back (FH-156).
+  await expect(box()).toHaveValue("");
   await expect(entries().last()).toContainText("Second thought");
 
   await open(page, "#/ticket/FH-20");

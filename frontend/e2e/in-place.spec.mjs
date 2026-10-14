@@ -163,6 +163,8 @@ test("tags, depends on, Add a section and the criteria edit in place", async () 
   await shot(page, "in-place-depends-on-1440-light", { keepFocus: true });
   await add.fill("");
   await save().click();
+  // The editor closes once the save's answer is back (FH-156).
+  await expect(pencil("depends on")).toBeFocused();
   await expect.poll(readTicket).toMatch(/^depends-on: \[FH-19, FH-18\]$/m);
 
   // An empty template section offers Add in its place.
@@ -177,7 +179,9 @@ test("tags, depends on, Add a section and the criteria edit in place", async () 
   await expect
     .poll(readTicket)
     .toContain("## Context\n\nFolded by internal/runs.\n\n## Notes\n");
-  await expect(pencil("context")).toBeVisible();
+  // Add context becomes Edit context, and focus follows, once the save's
+  // answer is back.
+  await expect(pencil("context")).toBeFocused();
 
   await pencil("acceptance criteria").click();
   const criteria = main().getByRole("group", { name: "Acceptance criteria" });
@@ -204,6 +208,7 @@ test("tags, depends on, Add a section and the criteria edit in place", async () 
         "## Context",
       ].join("\n"),
     );
+  await expect(pencil("acceptance criteria")).toBeFocused();
   // Ticking stays one click.
   await main().getByRole("checkbox", { name: "Behaviour implemented" }).click();
   await expect.poll(readTicket).toContain("- [x] Behaviour implemented");
@@ -301,6 +306,72 @@ test("in-place editing fits a phone and passes axe in both themes", async () => 
     await shot(page, `in-place-390-${theme}`, { keepFocus: true });
     await page.keyboard.press("Escape");
   }
+});
+
+test("a save that fails after the page was left says so, with a way back (FH-156)", async () => {
+  await open(page, "#/ticket/FH-20");
+  const before = await readTicket();
+  // The save's reply is held, as on a busy machine, until the page has
+  // been left; then it fails.
+  let fail;
+  const failing = new Promise((resolve) => {
+    fail = resolve;
+  });
+  await page.route("**/api/tickets/FH-20/section", async (route) => {
+    await failing;
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: { code: "busy", message: "The project is busy; try again." },
+      }),
+    });
+  });
+  await pencil("description").click();
+  const editor = main().getByRole("textbox", { name: "Description" });
+  await editor.fill("Kept while the save was on its way.");
+  await save().click();
+  await expect(main().getByRole("button", { name: "Saving…" })).toBeVisible();
+
+  // A save on its way is not unsaved: leaving asks nothing.
+  await main()
+    .getByRole("link", { name: /Show on the .* board/ })
+    .click();
+  await expect(page).toHaveURL(/#\/p\/flashheart\/board/);
+  await expect(
+    page.getByRole("dialog", { name: /^Unsaved changes/ }),
+  ).toHaveCount(0);
+
+  fail();
+  const toast = page.getByRole("status").filter({
+    hasText:
+      "Your edit to the description of FH-20 was not saved: The project is busy; try again.",
+  });
+  await expect(toast).toBeVisible();
+  await expectNoAxeViolations(page, "late save toast light");
+  await shot(page, "late-save-toast-1440-light");
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await expectNoAxeViolations(page, "late save toast dark");
+  await shot(page, "late-save-toast-1440-dark");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await shot(page, "late-save-toast-390-dark");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.unroute("**/api/tickets/FH-20/section");
+
+  // Back to the edit reopens Description with the text and the reason.
+  await toast.getByRole("button", { name: "Back to the edit" }).click();
+  await expect(page).toHaveURL(/#\/ticket\/FH-20$/);
+  await expect(editor).toHaveText("Kept while the save was on its way.");
+  await expect(main().getByRole("alert")).toContainText(
+    "The project is busy; try again.",
+  );
+  expect(await readTicket()).toBe(before);
+  await save().click();
+  await expect(pencil("description")).toBeFocused();
+  expect(await readTicket()).toContain(
+    "## Description\n\nKept while the save was on its way.\n",
+  );
 });
 
 // Wherever a priority is chosen from a dropdown, the card's bars lead the

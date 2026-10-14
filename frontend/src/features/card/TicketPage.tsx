@@ -227,7 +227,7 @@ function LoadedPage({
       (!section.empty || (ticket.edit && section.heading !== undefined)),
   );
   return (
-    <InPlaceEditing>
+    <InPlaceEditing place={{ kind: "ticket", id: detail.id }}>
       <div className="grid grid-cols-1 gap-x-10 pb-[30vh] lg:grid-cols-[minmax(0,1fr)_19rem] xl:grid-cols-[13rem_minmax(0,1fr)_20rem]">
         <header className="pt-1 pb-6 lg:col-span-2 xl:col-span-2 xl:col-start-2">
           <PageTitle detail={detail} ticket={ticket} />

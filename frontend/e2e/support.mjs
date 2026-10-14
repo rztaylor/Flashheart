@@ -220,6 +220,13 @@ export function column(page, name) {
   return page.getByRole("region", { name });
 }
 
+// saveChanges is the card panel's Save changes, on its Edit tab. It reads
+// "Saving…" while a save waits for its answer, so expecting it disabled
+// waits for that answer (FH-156).
+export function saveChanges(panel) {
+  return panel.getByRole("button", { name: "Save changes" });
+}
+
 // card is a card's covering button, whose name starts with its title.
 export function card(page, title) {
   return page.getByRole("button", { name: new RegExp(`^${title},`) });

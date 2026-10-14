@@ -1796,3 +1796,44 @@ Versions: `PROTOCOL_VERSION` stays 2 (agent-protocol §14): a new tool
 and a new optional input are additive, no event changes shape, and the
 only new refusal, a dependency cycle, is a state no board could use.
 Board format stays 2: no field is added.
+
+## 2026-10-14 — D70: A save on its way is not unsaved work; a late failure says so, with a way back
+
+Decision (FH-156, the user's choice in session claude:a14ca6f6): a save
+still waiting for the server's answer no longer counts as unsaved work.
+Leaving the page, closing the card panel, opening another ticket in it
+or opening another in-place item does not ask *Unsaved changes* about
+it. This covers in-place items (`EDIT-11`, on a ticket's page, a
+workstream's page and the panel's comments), the panel's Edit tab
+(`EDIT-6`) and the comment box. While the item is still open, nothing
+changes: a failure shows beside it and a conflict opens the conflict
+dialog (`EDIT-7`). When the save fails or meets a conflict after the
+person has moved on (its item closed or no longer on screen), a toast
+says, in words, what was not saved and why (*Your edit to the
+description of FH-42 was not saved: FH-42 changed on disk*). Its action,
+**Back to the edit**, goes back to where the edit was made: the ticket's
+page, the workstream's page, or the card panel on its Edit or Comments
+tab. It asks first, as any navigation does, if that page holds unsaved
+work. It then reopens the item with the person's text and the reason,
+or the conflict dialog for a conflict. An in-place item the person
+opens again themselves also takes back its held text.
+
+- **Options.** Keep asking while a save is in flight, as before; stop
+  asking and say nothing if it fails; or this middle ground. Asking
+  about work the person has already saved, and whose answer usually
+  arrives in milliseconds, reads as a false alarm and was the cause of
+  flaky browser tests (FH-152, FH-156). Saying nothing would lose text
+  silently on the rare failure.
+- **Where the text is held.** In the tab's memory only, by `editing/`
+  (`lateSaves`, under the app shell), never in browser storage or on
+  disk. A reload loses it, which is why the next point holds.
+- **Closing or reloading the tab** while a save is in flight keeps the
+  browser's own prompt (`state/leaveGuard`'s `guardUnloading`): after a
+  reload no toast could say the save failed, and the text would be gone.
+  The prompt goes as soon as the answer arrives.
+- **One held edit per item and place.** A later failure of the same item
+  replaces the earlier one. Nothing else expires it: it goes when its
+  item takes it back.
+- **A held draft that is still mounted** (the panel's Edit tab while
+  another tab shows) is not a late save. A failure there shows the Edit
+  tab again with the reason, as a conflict already did.

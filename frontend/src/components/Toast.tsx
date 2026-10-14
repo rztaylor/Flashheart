@@ -3,14 +3,16 @@ import { useEffect } from "react";
 import type { Placement } from "../model/remarks";
 import { Aside } from "./Aside";
 import { Button } from "./Button";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 
 export interface ToastMessage {
   id: number;
   text: string;
   // detail lines, such as review warnings, shown under the text.
   details?: string[];
-  action?: { label: string; run(): void };
+  // action's icon is Undo's unless it names another (Back to the edit's
+  // pencil, FH-156).
+  action?: { label: string; icon?: IconName; run(): void };
   // aside is a marginal remark earned by the result (FH-22); it is not
   // announced.
   aside?: { placement: Placement; text: string };
@@ -73,7 +75,7 @@ export function Toast({
                 onDismiss();
               }}
             >
-              <Icon name="undo" size={12} />
+              <Icon name={message.action.icon ?? "undo"} size={12} />
               {message.action.label}
             </Button>
           ) : null}

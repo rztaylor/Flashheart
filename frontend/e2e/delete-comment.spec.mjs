@@ -82,6 +82,9 @@ const post = async (text, { send = false } = {}) => {
   await box().fill(text);
   if (send) await tell().check();
   await box().press("Control+Enter");
+  // The box empties once the post's answer, and its toast, are back
+  // (FH-156).
+  await expect(box()).toHaveValue("");
   await expect(comment(text)).toBeVisible();
   await dismiss();
 };

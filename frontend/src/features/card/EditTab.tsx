@@ -18,8 +18,9 @@ import {
 } from "../../model/ticketForm";
 import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 import { ConflictDialog } from "../editing/ConflictDialog";
-import { useHeldDraft } from "../editing/InPlace";
-import { useTicketDraft } from "../editing/useTicketDraft";
+import { useHeldDraft, useLateDraft } from "../editing/InPlace";
+import { notSaved } from "../editing/lateSaves";
+import { type DraftLeft, useTicketDraft } from "../editing/useTicketDraft";
 
 // Draft is both editors' text: the typed fields and the raw file. They share
 // one base, so a save from either adopts the saved version in both.
@@ -50,7 +51,9 @@ const firstField = (frame: HTMLElement | null) =>
 // the draft started from (useTicketDraft); a stale hash opens the conflict
 // dialog (EDIT-7). Unsaved changes are a held draft of the panel's in-place
 // editing (FH-138): leaving the panel asks about them, Discard drops them,
-// and Keep editing shows the tab (onShow) with focus back in it.
+// and Keep editing shows the tab (onShow) with focus back in it. A save on
+// its way is not unsaved; one that fails after the panel closed is a late
+// save, which Back to the edit brings back to this tab (FH-156).
 export function EditTab({
   detail,
   fetcher,
@@ -68,7 +71,23 @@ export function EditTab({
   // opened ready to edit, after New ticket (FH-17).
   autoFocus?: boolean;
 }) {
-  const draft = useTicketDraft({ detail, read: draftOf, isDirty, onSaved });
+  const draft = useTicketDraft({
+    detail,
+    read: draftOf,
+    isDirty,
+    onSaved,
+    // A save that fails after the panel closed is held, and the toast
+    // offers the way back (FH-156).
+    left: (left) =>
+      holdLate(
+        notSaved(
+          `Your changes to ${detail.id} were not saved`,
+          detail.id,
+          left.conflict ? { conflict: true } : { error: left.error },
+        ),
+        left,
+      ),
+  });
   const [mode, setMode] = useState<"fields" | "raw">("fields");
   const frame = useRef<HTMLDivElement>(null);
   // lastFocus is the control last focused in the tab, where Keep editing
@@ -76,24 +95,36 @@ export function EditTab({
   // the tab shows.
   const lastFocus = useRef<HTMLElement | null>(null);
   const [returning, setReturning] = useState(0);
+  const showTab = () => {
+    onShow();
+    setReturning((count) => count + 1);
+  };
+  // A save waiting for its answer is not unsaved (FH-156): closing the
+  // panel then asks nothing.
   useHeldDraft(
     "edit-tab",
     "ticket",
-    draft.dirty,
+    draft.dirty && !draft.busy,
     () => draft.set(draft.base.value),
-    () => {
-      onShow();
-      setReturning((count) => count + 1);
-    },
+    showTab,
   );
-  // A conflict needs a decision in its dialog, which a hidden tab would
-  // hide: a save that meets one after another tab was chosen shows the
-  // Edit tab again.
-  const conflicted = draft.conflict !== null;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: shows the tab when a conflict arrives.
+  const holdLate = useLateDraft<DraftLeft<Draft>>(
+    "edit-tab",
+    "ticket",
+    (left) => {
+      draft.restore(left);
+      showTab();
+    },
+    "edit",
+  );
+  // A conflict needs a decision in its dialog, and a failure its reason,
+  // which a hidden tab would hide: a save that meets one after another tab
+  // was chosen shows the Edit tab again.
+  const needsLook = draft.conflict !== null || draft.error !== "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: shows the tab when a conflict or failure arrives.
   useEffect(() => {
-    if (conflicted) onShow();
-  }, [conflicted]);
+    if (needsLook) onShow();
+  }, [needsLook]);
   useEffect(() => {
     const element = frame.current;
     const remember = (event: FocusEvent) => {

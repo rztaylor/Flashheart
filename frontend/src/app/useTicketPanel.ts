@@ -11,7 +11,9 @@ import type { Route } from "./route";
 export function useTicketPanel(route: Route, navigate: (route: Route) => void) {
   const [panelTab, setPanelTab] = useState<{ id: string; tab: PanelTab }>();
   const opener = useRef<HTMLElement | null>(null);
-  const openTicket = (ticket: TicketRef, tab?: PanelTab) => {
+  // from is the route the panel opens over, the one shown unless given
+  // (the board, when going back to an edit in the panel from a full page).
+  const openTicket = (ticket: TicketRef, tab?: PanelTab, from = route) => {
     // Remember what opened the panel (a card, row or station) so Escape can
     // return focus there; links inside the panel keep the original opener.
     // While unsaved work in the panel asks first (FH-128), nothing changes
@@ -22,7 +24,7 @@ export function useTicketPanel(route: Route, navigate: (route: Route) => void) {
       if (active instanceof HTMLElement && !active.closest("aside, dialog")) {
         opener.current = active;
       }
-      navigate({ ...route, ticket });
+      navigate({ ...from, ticket });
     });
   };
   // closeTicket waits while unsaved work in the panel asks first (a comment

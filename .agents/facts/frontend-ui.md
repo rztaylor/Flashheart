@@ -86,6 +86,16 @@
   goes through the one leave guard, `state/leaveGuard`, which the router
   (`app/route`) asks before every navigation and a link or Back that
   changed the hash; the browser's `beforeunload` prompt covers reloads.
+  A save waiting for its answer is not unsaved (D70, FH-156): an open
+  item, the Edit tab and the comment box stop holding the guard while
+  busy, and `useTicketDraft` and the box hold only the reload prompt
+  (`guardUnloading`) until the answer. A failure or conflict that
+  arrives after the draft unmounted goes to `features/editing/lateSaves`
+  (`LateSavesProvider` in the shell, the tab's memory only): its toast's
+  **Back to the edit** asks the shell to go back to the `EditPlace`
+  (ticket page, panel tab, workstream page), whose `InPlaceEditing`
+  (`place`) reopens the item, which takes the held draft as it opens;
+  held drafts take theirs with `useLateDraft`.
   Native `<dialog>` for decisions (blocked move, conflict, new ticket,
   new workstream; `components/Dialog` opens with focus on the field
   marked `data-autofocus`, which `TextInput` and `TextArea` set for

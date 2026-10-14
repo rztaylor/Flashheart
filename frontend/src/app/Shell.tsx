@@ -8,6 +8,10 @@ import { Toast } from "../components/Toast";
 import { CardPanel } from "../features/card/CardPanel";
 import { TicketPage } from "../features/card/TicketPage";
 import { BlockedMoveDialog } from "../features/editing/BlockedMoveDialog";
+import {
+  type EditPlace,
+  LateSavesProvider,
+} from "../features/editing/lateSaves";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { EditorModeProvider } from "../features/editor/mode";
 import { ProjectRail } from "../features/projects/ProjectRail";
@@ -19,6 +23,7 @@ import { messageOf } from "../model/errors";
 import { applyFilters, isFiltered } from "../model/filters";
 import { afterForStep, predecessor, type Step } from "../model/order";
 import { viewSummary } from "../model/summary";
+import { leave } from "../state/leaveGuard";
 import { Band, BandNotices, type BandView } from "./Band";
 import { NarrowControls } from "./NarrowControls";
 import { pressNeedsYou } from "./needsYou";
@@ -164,6 +169,35 @@ export function Shell({
     });
   };
 
+  // backToEdit is a late save's Back to the edit (FH-156): it goes back to
+  // where the edit was made, asking first while this page has unsaved
+  // work, and has the edit reopened there (ready).
+  const backToEdit = (place: EditPlace, ready: () => void) =>
+    leave(() => {
+      ready();
+      if (place.kind === "panel") {
+        const onPage = route.view === "ticket" || route.view === "workstream";
+        openTicket(
+          { id: place.id },
+          place.tab,
+          onPage ? { scope: { kind: "all" }, view: "board" } : route,
+        );
+      } else
+        navigate(
+          place.kind === "ticket"
+            ? {
+                scope: { kind: "all" },
+                view: "ticket",
+                ticket: { id: place.id },
+              }
+            : {
+                scope: { kind: "all" },
+                view: "workstream",
+                workstream: { project: place.project, slug: place.slug },
+              },
+        );
+    });
+
   const scopeName =
     route.scope.kind === "all"
       ? "All projects"
@@ -205,263 +239,268 @@ export function Shell({
 
   return (
     <AsideProvider>
-      <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3.5rem_auto_1fr]">
-        <Band
-          lifecycle={lifecycle}
-          view={route.view}
-          onView={chooseView}
-          // Needs you is visible from every view and project (SPEC §7).
-          needsYou={
-            projects.status === "ready" ? projects.data.runs.needsYou : 0
-          }
-          needsYouOn={filters.needsYou}
-          onNeedsYou={toggleNeedsYou}
-          search={boardOrTable ? search : undefined}
-          settings={
-            <SettingsMenu
-              root={root}
-              info={info}
-              theme={preferences.theme}
-              onTheme={(theme) =>
-                updatePreferences((current) => ({ ...current, theme }))
-              }
-            />
-          }
-        />
-        <BandNotices
-          shutdownDenied={state.shutdownDenied}
-          onDismiss={lifecycle.dismissDenial}
-          stale={data.stale}
-        />
-
-        {route.view === "ticket" && route.ticket ? (
-          <main
-            className="min-h-0 overflow-y-auto"
-            aria-label={`Ticket ${route.ticket.id}`}
-          >
-            <EditorModeProvider value={editorMode}>
-              <TicketPage
-                key={route.ticket.id}
-                ticket={route.ticket}
-                fetcher={fetcher}
-                lines={data.lines}
-                workstreams={data.workstreams}
-                keys={data.keys}
-                onOpen={(ticket) =>
-                  navigate({ scope: { kind: "all" }, view: "ticket", ticket })
-                }
-                onClose={() =>
-                  navigate({ scope: { kind: "all" }, view: "board" })
-                }
-                revision={data.revision}
-                editing={editing}
-                answers={answers}
-                boardLink={(project) => ({
-                  href: formatRoute({
-                    scope: { kind: "project", project },
-                    view: "board",
-                    ticket: route.ticket,
-                  }),
-                  label:
-                    summaries.find((item) => item.name === project)
-                      ?.displayName ?? project,
-                })}
-              />
-            </EditorModeProvider>
-          </main>
-        ) : route.view === "workstream" && route.workstream ? (
-          <main
-            className="min-h-0 overflow-y-auto"
-            aria-label={`Workstream ${route.workstream.slug}`}
-          >
-            <EditorModeProvider value={editorMode}>
-              <WorkstreamPage
-                key={`${route.workstream.project}/${route.workstream.slug}`}
-                workstream={route.workstream}
-                fetcher={fetcher}
-                lines={data.lines}
-                keys={data.keys}
-                revision={data.revision}
-                editing={editing}
-                onOpen={(ticket) =>
-                  navigate({ scope: { kind: "all" }, view: "ticket", ticket })
-                }
-                backLink={{
-                  href: formatRoute({
-                    scope: {
-                      kind: "project",
-                      project: route.workstream.project,
-                    },
-                    view: "workstreams",
-                  }),
-                  label:
-                    summaries.find(
-                      (item) => item.name === route.workstream?.project,
-                    )?.displayName ?? route.workstream.project,
-                }}
-              />
-            </EditorModeProvider>
-          </main>
-        ) : (
-          // The rail is a slim column of key badges at every width from 48rem
-          // (FH-150), so the board keeps its width with the panel open too.
-          <div className="grid min-h-0 grid-cols-1 md:grid-cols-[4rem_minmax(0,1fr)_auto]">
-            <div className="hidden min-h-0 border-r border-rail-rule bg-rail md:block">
-              <ProjectRail
-                projects={summaries}
-                runs={
-                  projects.status === "ready" ? projects.data.runs : undefined
-                }
-                scope={route.scope}
-                onSelect={selectScope}
-              />
-            </div>
-
-            <main
-              className="flex min-h-0 min-w-0 flex-col"
-              aria-label={`${scopeName} ${route.view}`}
-            >
-              <PageHeader
-                projectKey={current?.key}
-                title={scopeName}
-                summary={summary}
-                live={boardOrTable}
-                aside={
-                  <PageActions
-                    archive={
-                      route.view !== "archive" &&
-                      projects.status === "ready" &&
-                      (current || route.scope.kind === "all")
-                        ? {
-                            href: formatRoute({
-                              ...route,
-                              view: "archive",
-                              ticket: undefined,
-                            }),
-                            count: current
-                              ? current.archived
-                              : projects.data.archivedProjects,
-                            onOpen: () =>
-                              go({ view: "archive", ticket: undefined }),
-                          }
-                        : undefined
-                    }
-                    onNewTicket={
-                      boardOrTable && summaries.length > 0
-                        ? () => setNewTicket({ project: data.scopeProject })
-                        : undefined
-                    }
-                    onNewWorkstream={
-                      route.view === "workstreams" && summaries.length > 0
-                        ? () => setNewWorkstream({ project: data.scopeProject })
-                        : undefined
-                    }
-                  />
-                }
-              />
-              <NarrowControls
-                search={boardOrTable ? search : undefined}
-                project={data.scopeProject}
-                projects={summaries}
-                onScope={selectScope}
-                column={
-                  route.view === "board"
-                    ? {
-                        value: narrowShown,
-                        columns: pickerColumns,
-                        onChange: setNarrowColumn,
-                      }
-                    : undefined
-                }
-              />
-
-              <ViewOutlet
-                route={route}
-                data={data}
-                fetcher={fetcher}
-                answers={answers}
+      <LateSavesProvider notify={editing.notify} back={backToEdit}>
+        <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[3.5rem_auto_1fr]">
+          <Band
+            lifecycle={lifecycle}
+            view={route.view}
+            onView={chooseView}
+            // Needs you is visible from every view and project (SPEC §7).
+            needsYou={
+              projects.status === "ready" ? projects.data.runs.needsYou : 0
+            }
+            needsYouOn={filters.needsYou}
+            onNeedsYou={toggleNeedsYou}
+            search={boardOrTable ? search : undefined}
+            settings={
+              <SettingsMenu
                 root={root}
-                preferences={preferences}
-                updatePreferences={updatePreferences}
-                filters={filters}
-                onFilters={setFilters}
-                visible={visible}
-                narrowColumn={narrowShown}
-                go={go}
-                navigate={navigate}
-                onOpen={openTicket}
-                onMove={place}
-                onNewTicket={(project) => setNewTicket({ project })}
-                onProjectArchived={projectArchived}
+                info={info}
+                theme={preferences.theme}
+                onTheme={(theme) =>
+                  updatePreferences((current) => ({ ...current, theme }))
+                }
               />
-            </main>
+            }
+          />
+          <BandNotices
+            shutdownDenied={state.shutdownDenied}
+            onDismiss={lifecycle.dismissDenial}
+            stale={data.stale}
+          />
 
-            {route.ticket ? (
-              <CardPanel
-                // A Review results press reopens the panel on Review.
-                key={`${route.ticket.id}:${panel.initialTab ?? ""}`}
-                initialTab={panel.initialTab}
-                ticket={route.ticket}
-                fetcher={fetcher}
-                lines={data.lines}
-                workstreams={data.workstreams}
-                keys={data.keys}
-                onOpen={openTicket}
-                onClose={panel.closeTicket}
-                revision={data.revision}
-                editing={editing}
-                onStep={stepTicket}
-                answers={answers}
-              />
-            ) : null}
-          </div>
-        )}
-        {editing.blocked ? (
-          <BlockedMoveDialog
-            move={editing.blocked}
-            onConfirm={editing.confirmBlocked}
-            onCancel={editing.cancelBlocked}
-          />
-        ) : null}
-        {newTicket ? (
-          <NewTicketDialog
-            fetcher={fetcher}
-            projects={summaries}
-            project={newTicket.project}
-            onClose={() => setNewTicket(undefined)}
-            onCreated={(created: Created) => {
-              setNewTicket(undefined);
-              data.reloadAll();
-              editing.notify({ text: `Created ${created.id}.` });
-              // The new ticket opens ready to edit: on its Edit tab, focus
-              // in its first field, for what the dialog does not ask
-              // (FH-17).
-              openTicket({ id: created.id }, "edit");
-            }}
-          />
-        ) : null}
-        {newWorkstream ? (
-          <NewWorkstreamDialog
-            fetcher={fetcher}
-            projects={summaries}
-            project={newWorkstream.project}
-            onClose={() => setNewWorkstream(undefined)}
-            onCreated={(created) => {
-              setNewWorkstream(undefined);
-              data.reloadAll();
-              editing.notify({ text: `Created workstream ${created.title}.` });
-              // Its page is where its scope and success criteria are
-              // written; tickets join it from their Edit tab (FH-17).
-              navigate({
-                scope: { kind: "all" },
-                view: "workstream",
-                workstream: { project: created.project, slug: created.slug },
-              });
-            }}
-          />
-        ) : null}
-        <Toast message={editing.toast} onDismiss={editing.dismiss} />
-      </div>
+          {route.view === "ticket" && route.ticket ? (
+            <main
+              className="min-h-0 overflow-y-auto"
+              aria-label={`Ticket ${route.ticket.id}`}
+            >
+              <EditorModeProvider value={editorMode}>
+                <TicketPage
+                  key={route.ticket.id}
+                  ticket={route.ticket}
+                  fetcher={fetcher}
+                  lines={data.lines}
+                  workstreams={data.workstreams}
+                  keys={data.keys}
+                  onOpen={(ticket) =>
+                    navigate({ scope: { kind: "all" }, view: "ticket", ticket })
+                  }
+                  onClose={() =>
+                    navigate({ scope: { kind: "all" }, view: "board" })
+                  }
+                  revision={data.revision}
+                  editing={editing}
+                  answers={answers}
+                  boardLink={(project) => ({
+                    href: formatRoute({
+                      scope: { kind: "project", project },
+                      view: "board",
+                      ticket: route.ticket,
+                    }),
+                    label:
+                      summaries.find((item) => item.name === project)
+                        ?.displayName ?? project,
+                  })}
+                />
+              </EditorModeProvider>
+            </main>
+          ) : route.view === "workstream" && route.workstream ? (
+            <main
+              className="min-h-0 overflow-y-auto"
+              aria-label={`Workstream ${route.workstream.slug}`}
+            >
+              <EditorModeProvider value={editorMode}>
+                <WorkstreamPage
+                  key={`${route.workstream.project}/${route.workstream.slug}`}
+                  workstream={route.workstream}
+                  fetcher={fetcher}
+                  lines={data.lines}
+                  keys={data.keys}
+                  revision={data.revision}
+                  editing={editing}
+                  onOpen={(ticket) =>
+                    navigate({ scope: { kind: "all" }, view: "ticket", ticket })
+                  }
+                  backLink={{
+                    href: formatRoute({
+                      scope: {
+                        kind: "project",
+                        project: route.workstream.project,
+                      },
+                      view: "workstreams",
+                    }),
+                    label:
+                      summaries.find(
+                        (item) => item.name === route.workstream?.project,
+                      )?.displayName ?? route.workstream.project,
+                  }}
+                />
+              </EditorModeProvider>
+            </main>
+          ) : (
+            // The rail is a slim column of key badges at every width from 48rem
+            // (FH-150), so the board keeps its width with the panel open too.
+            <div className="grid min-h-0 grid-cols-1 md:grid-cols-[4rem_minmax(0,1fr)_auto]">
+              <div className="hidden min-h-0 border-r border-rail-rule bg-rail md:block">
+                <ProjectRail
+                  projects={summaries}
+                  runs={
+                    projects.status === "ready" ? projects.data.runs : undefined
+                  }
+                  scope={route.scope}
+                  onSelect={selectScope}
+                />
+              </div>
+
+              <main
+                className="flex min-h-0 min-w-0 flex-col"
+                aria-label={`${scopeName} ${route.view}`}
+              >
+                <PageHeader
+                  projectKey={current?.key}
+                  title={scopeName}
+                  summary={summary}
+                  live={boardOrTable}
+                  aside={
+                    <PageActions
+                      archive={
+                        route.view !== "archive" &&
+                        projects.status === "ready" &&
+                        (current || route.scope.kind === "all")
+                          ? {
+                              href: formatRoute({
+                                ...route,
+                                view: "archive",
+                                ticket: undefined,
+                              }),
+                              count: current
+                                ? current.archived
+                                : projects.data.archivedProjects,
+                              onOpen: () =>
+                                go({ view: "archive", ticket: undefined }),
+                            }
+                          : undefined
+                      }
+                      onNewTicket={
+                        boardOrTable && summaries.length > 0
+                          ? () => setNewTicket({ project: data.scopeProject })
+                          : undefined
+                      }
+                      onNewWorkstream={
+                        route.view === "workstreams" && summaries.length > 0
+                          ? () =>
+                              setNewWorkstream({ project: data.scopeProject })
+                          : undefined
+                      }
+                    />
+                  }
+                />
+                <NarrowControls
+                  search={boardOrTable ? search : undefined}
+                  project={data.scopeProject}
+                  projects={summaries}
+                  onScope={selectScope}
+                  column={
+                    route.view === "board"
+                      ? {
+                          value: narrowShown,
+                          columns: pickerColumns,
+                          onChange: setNarrowColumn,
+                        }
+                      : undefined
+                  }
+                />
+
+                <ViewOutlet
+                  route={route}
+                  data={data}
+                  fetcher={fetcher}
+                  answers={answers}
+                  root={root}
+                  preferences={preferences}
+                  updatePreferences={updatePreferences}
+                  filters={filters}
+                  onFilters={setFilters}
+                  visible={visible}
+                  narrowColumn={narrowShown}
+                  go={go}
+                  navigate={navigate}
+                  onOpen={openTicket}
+                  onMove={place}
+                  onNewTicket={(project) => setNewTicket({ project })}
+                  onProjectArchived={projectArchived}
+                />
+              </main>
+
+              {route.ticket ? (
+                <CardPanel
+                  // A Review results press reopens the panel on Review.
+                  key={`${route.ticket.id}:${panel.initialTab ?? ""}`}
+                  initialTab={panel.initialTab}
+                  ticket={route.ticket}
+                  fetcher={fetcher}
+                  lines={data.lines}
+                  workstreams={data.workstreams}
+                  keys={data.keys}
+                  onOpen={openTicket}
+                  onClose={panel.closeTicket}
+                  revision={data.revision}
+                  editing={editing}
+                  onStep={stepTicket}
+                  answers={answers}
+                />
+              ) : null}
+            </div>
+          )}
+          {editing.blocked ? (
+            <BlockedMoveDialog
+              move={editing.blocked}
+              onConfirm={editing.confirmBlocked}
+              onCancel={editing.cancelBlocked}
+            />
+          ) : null}
+          {newTicket ? (
+            <NewTicketDialog
+              fetcher={fetcher}
+              projects={summaries}
+              project={newTicket.project}
+              onClose={() => setNewTicket(undefined)}
+              onCreated={(created: Created) => {
+                setNewTicket(undefined);
+                data.reloadAll();
+                editing.notify({ text: `Created ${created.id}.` });
+                // The new ticket opens ready to edit: on its Edit tab, focus
+                // in its first field, for what the dialog does not ask
+                // (FH-17).
+                openTicket({ id: created.id }, "edit");
+              }}
+            />
+          ) : null}
+          {newWorkstream ? (
+            <NewWorkstreamDialog
+              fetcher={fetcher}
+              projects={summaries}
+              project={newWorkstream.project}
+              onClose={() => setNewWorkstream(undefined)}
+              onCreated={(created) => {
+                setNewWorkstream(undefined);
+                data.reloadAll();
+                editing.notify({
+                  text: `Created workstream ${created.title}.`,
+                });
+                // Its page is where its scope and success criteria are
+                // written; tickets join it from their Edit tab (FH-17).
+                navigate({
+                  scope: { kind: "all" },
+                  view: "workstream",
+                  workstream: { project: created.project, slug: created.slug },
+                });
+              }}
+            />
+          ) : null}
+          <Toast message={editing.toast} onDismiss={editing.dismiss} />
+        </div>
+      </LateSavesProvider>
     </AsideProvider>
   );
 }

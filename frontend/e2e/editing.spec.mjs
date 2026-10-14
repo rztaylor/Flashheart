@@ -22,6 +22,7 @@ import {
   launch,
   makeSandbox,
   open,
+  saveChanges,
   settingsMenu,
   shot,
   stopIfRunning,
@@ -516,13 +517,16 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
   await panel.getByRole("combobox", { name: "Priority" }).selectOption("high");
   await expectNoAxeViolations(page, "edit tab");
   await shot(page, "edit-tab-1440-light", { keepFocus: true });
-  await panel.getByRole("button", { name: "Save changes" }).click();
+  await saveChanges(panel).click();
   await expect(
     panel.getByRole("heading", {
       level: 2,
       name: "Split API handlers by resource and verb",
     }),
   ).toBeVisible();
+  // The save's own answer is back once Save changes (not Saving…) is
+  // disabled again: the draft adopts the saved version then (FH-156).
+  await expect(saveChanges(panel)).toBeDisabled();
   const saved = await readTicket("FH-36-split-api");
   expect(saved).toContain("# Split API handlers by resource and verb");
   expect(saved).toContain("priority: high");
@@ -543,7 +547,7 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
     saved.replace("priority: high", "priority: low"),
   );
   await expect(panel.getByText("low priority")).toBeVisible();
-  await panel.getByRole("button", { name: "Save changes" }).click();
+  await saveChanges(panel).click();
   const conflict = page.getByRole("dialog", {
     name: "FH-36 changed while you were editing",
   });
@@ -561,9 +565,7 @@ test("the Edit tab saves fields and shows conflicts side by side", async () => {
   // The overwrite's answer has come back and the form holds the saved
   // version: the file and the live update can show it first, and an
   // answer still on its way would land in the next test's form.
-  await expect(
-    panel.getByRole("button", { name: "Save changes" }),
-  ).toBeDisabled();
+  await expect(saveChanges(panel)).toBeDisabled();
   await expect
     .poll(() => readTicket("FH-36-split-api"))
     .toContain("branch: feature/split-api");
@@ -576,7 +578,8 @@ test("the Edit tab records a pull request, linked from the panel and page (FH-11
   const panel = page.getByRole("complementary", { name: "Ticket FH-36" });
   await panel.getByRole("tab", { name: "Edit" }).click();
   await panel.getByRole("textbox", { name: "Pull request" }).fill(url);
-  await panel.getByRole("button", { name: "Save changes" }).click();
+  await saveChanges(panel).click();
+  await expect(saveChanges(panel)).toBeDisabled();
   const link = panel.getByRole("link", { name: "Pull request PR #7" });
   await expect(link).toHaveAttribute("href", url);
   await expect(link).toHaveAttribute("target", "_blank");
@@ -602,13 +605,15 @@ test("the Edit tab records a pull request, linked from the panel and page (FH-11
   await panel
     .getByRole("textbox", { name: "Pull request" })
     .fill("javascript:alert(1)");
-  await panel.getByRole("button", { name: "Save changes" }).click();
+  await saveChanges(panel).click();
+  await expect(saveChanges(panel)).toBeDisabled();
   await expect(panel.getByText("javascript:alert(1)")).toBeVisible();
   await expect(panel.getByRole("link", { name: /Pull request/ })).toHaveCount(
     0,
   );
   await panel.getByRole("textbox", { name: "Pull request" }).fill("");
-  await panel.getByRole("button", { name: "Save changes" }).click();
+  await saveChanges(panel).click();
+  await expect(saveChanges(panel)).toBeDisabled();
   await expect.poll(() => readTicket("FH-36-split-api")).toMatch(/^pr:$/m);
 });
 
@@ -706,6 +711,11 @@ test("the archive restores tickets and deletes them for good", async () => {
     .getByRole("button", { name: "Archive" })
     .click();
   await expect(card(page, "Drag and drop")).toHaveCount(0);
+  // The archive's own answer, its toast, is back before Restore: a late
+  // one would replace Restore's (FH-156).
+  await expect(
+    page.getByRole("status").filter({ hasText: "Archived AL-4." }),
+  ).toBeVisible();
   await page.getByRole("link", { name: /^Archive/ }).click();
   await expect(page).toHaveURL(/#\/p\/alpha\/archive/);
   await page
