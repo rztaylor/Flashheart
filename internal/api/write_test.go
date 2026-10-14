@@ -483,7 +483,7 @@ func TestPreferencesRoundTrip(t *testing.T) {
 	prefs.Theme, prefs.Density, prefs.ColourBy = "dark", "compact", "priority"
 	prefs.Scopes["alpha"] = config.Scope{View: "table", Type: config.Choice{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked"}
 	prefs.Scopes["beta"] = config.Scope{View: "overview"}
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
 	if again.Theme != "dark" || again.ColourBy != "priority" || again.Scopes["alpha"].View != "table" || !slices.Equal(again.Scopes["alpha"].Type.Include, []string{"bug"}) || again.Scopes["beta"].View != "overview" {
@@ -494,7 +494,7 @@ func TestPreferencesRoundTrip(t *testing.T) {
 		t.Errorf("other settings lost:\n%s", data)
 	}
 	prefs.ColourBy = "rainbow"
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 
 // The Backlog can be hidden from the Board (FH-41); a config without the
@@ -509,7 +509,7 @@ func TestPreferencesHideTheBacklog(t *testing.T) {
 		t.Fatalf("default hidden columns = %#v", prefs.HiddenColumns)
 	}
 	prefs.HiddenColumns = []string{"backlog"}
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
 	if !slices.Equal(again.HiddenColumns, []string{"backlog"}) {
@@ -520,7 +520,7 @@ func TestPreferencesHideTheBacklog(t *testing.T) {
 		t.Errorf("config.yaml lacks hidden_columns:\n%s", data)
 	}
 	prefs.HiddenColumns = []string{"done"}
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 
 // Finished workstreams the user expanded are remembered per project (FH-68);
@@ -535,7 +535,7 @@ func TestPreferencesRememberExpandedWorkstreams(t *testing.T) {
 		t.Fatalf("default expanded workstreams = %#v", prefs.ExpandedWorkstreams)
 	}
 	prefs.ExpandedWorkstreams = map[string][]string{"alpha": {"lines"}}
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
 	if !slices.Equal(again.ExpandedWorkstreams["alpha"], []string{"lines"}) {
@@ -546,14 +546,13 @@ func TestPreferencesRememberExpandedWorkstreams(t *testing.T) {
 		t.Errorf("config.yaml lacks expanded_workstreams:\n%s", data)
 	}
 	// Collapsing the last one leaves no setting behind.
-	prefs.ExpandedWorkstreams = map[string][]string{}
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", `{"expandedWorkstreams":{"alpha":null}}`, http.StatusNoContent, nil)
 	data, _ = os.ReadFile(filepath.Join(root, ".flashheart", "config.yaml"))
 	if strings.Contains(string(data), "expanded_workstreams") {
 		t.Errorf("config.yaml kept expanded_workstreams:\n%s", data)
 	}
 	prefs.ExpandedWorkstreams = map[string][]string{"alpha": {"Not a slug"}}
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 
 // The section editor's view, formatted or markdown, is remembered (FH-16);
@@ -568,7 +567,7 @@ func TestPreferencesRememberTheEditorMode(t *testing.T) {
 		t.Fatalf("default editor = %q", prefs.Editor)
 	}
 	prefs.Editor = "markdown"
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusNoContent, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
 	if again.Editor != "markdown" {
@@ -579,7 +578,7 @@ func TestPreferencesRememberTheEditorMode(t *testing.T) {
 		t.Errorf("config.yaml lacks the editor:\n%s", data)
 	}
 	prefs.Editor = "rich"
-	send(t, handler, http.MethodPut, "/api/preferences", prefs, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusBadRequest, nil)
 }
 
 func TestReadOnlyServerRefusesWrites(t *testing.T) {

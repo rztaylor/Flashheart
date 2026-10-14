@@ -2,11 +2,13 @@
 
 Owns the application shell (`docs/dev/specs/ui-layout.md` §1): the band
 (view tabs, Needs you plate and filter, search, status, settings, Quit),
-the page header, hash routing (views, archives, the ticket page), opening
-the card panel, loading the projects and the scope's board with live
-reloads, the view and filters remembered per scope, the theme, the one
-aside, stray file drops, the stopped screen, and wiring lifecycle, API,
-state and features together. Every navigation waits on the leave guard.
+the notice for runs no card shows (VIEW-2), the page header, hash routing
+(views, archives, the ticket page, a renamed workstream's new slug),
+opening the card panel, loading the projects and the scope's board with
+live reloads, the view and filters remembered per scope, the theme, the
+one aside, stray file drops, the stopped screen, and wiring lifecycle,
+API, state and features together. Every navigation waits on the leave
+guard.
 
 `Shell` is composition only; each concern has one owner beside it:
 `Band`, `useBoardData`, `useScopeMemory` over pure `scopeMemory`,

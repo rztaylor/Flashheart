@@ -10,7 +10,7 @@ export function App() {
   const lifecycle = useSingleserve();
   useNoFileNavigation();
   const info = useServerInfo(lifecycle.fetch, lifecycle.ready);
-  const { preferences, loaded, update } = usePreferences(
+  const { preferences, loaded, update, refresh, refreshed } = usePreferences(
     lifecycle.fetch,
     lifecycle.ready,
   );
@@ -33,6 +33,8 @@ export function App() {
       preferences={preferences}
       preferencesLoaded={loaded}
       updatePreferences={update}
+      refreshPreferences={refresh}
+      preferencesRefreshed={refreshed}
     />
   );
 }

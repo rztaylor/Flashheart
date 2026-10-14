@@ -1,4 +1,12 @@
-import { type ReactNode, useCallback, useId, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   type Card,
@@ -76,6 +84,10 @@ interface OverviewViewProps {
   onAnswer?: Answer;
   // onCreateTicket opens New ticket for a project; absent when read-only.
   onCreateTicket?(project: string): void;
+  // focusSection is a section to take focus once it shows, for a button
+  // that sent the user to it (FH-157); onFocused says it has.
+  focusSection?: SectionId;
+  onFocused?(): void;
 }
 
 // OverviewView is the project manager's view (VIEW-3, D32): what needs a
@@ -94,6 +106,8 @@ export function OverviewView({
   onReview,
   onAnswer,
   onCreateTicket,
+  focusSection,
+  onFocused,
 }: OverviewViewProps) {
   const now = useNow();
   const load = useCallback(
@@ -123,6 +137,20 @@ export function OverviewView({
   // A focused row keeps focus when a reload moves it to another section,
   // and hands it on when it goes (FH-84).
   const keepFocus = useKeepFocus();
+  const sections = useRef<HTMLDivElement>(null);
+  const ready = data !== undefined;
+  useEffect(() => {
+    if (!focusSection || !ready) return;
+    const heading = sections.current?.querySelector<HTMLElement>(
+      `[data-section="${focusSection}"] h2`,
+    );
+    // A heading that toggles its section holds the button to focus.
+    const target = heading?.matches("[tabindex]")
+      ? heading
+      : heading?.querySelector<HTMLElement>("button");
+    target?.focus();
+    onFocused?.();
+  }, [focusSection, ready, onFocused]);
 
   if (resource.status === "loading") return <OverviewSkeleton />;
   if (resource.status === "error" || !data) {
@@ -136,7 +164,7 @@ export function OverviewView({
     );
   }
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
+    <div ref={sections} className="min-h-0 flex-1 overflow-y-auto">
       <div ref={keepFocus} className={`${column} pb-12`}>
         <PipelineHeadline
           stages={pipelineStages(projects, project)}

@@ -14,7 +14,8 @@
 // whether it guards the ticket against another session's claim. Tools
 // write through the store as the caller (store.As), so each write appends
 // the ticket's history; they never write comments and change a change
-// request's state only to addressed. Archived projects answer
+// request's state only to addressed. update_ticket's section and criteria
+// rewrites are decoded here (rewrite.go, FH-69). Archived projects answer
 // project_archived (PRJ-5); outside git, tools that need a project answer
 // no_project (PRJ-4). There is no archive, restore or delete tool.
 //

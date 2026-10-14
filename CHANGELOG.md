@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Rename a workstream from its page (FH-167, D78, `EDIT-13`). The
+  workstream's name has a pencil like a ticket's title: change it and
+  save, and its short name (slug) follows the new name as New
+  workstream would make it, so its tickets, the workstreams that wait
+  for it, its file and your saved filters all follow, and the page moves
+  to its new address (Back leaves the page rather than finding the old
+  one gone). A name another workstream already has is refused beside
+  the field, which stays open.
+
 - A workstream's short name (slug) can be renamed without editing files
   by hand (FH-158, D73, `MCP-2`). `update_workstream` takes an optional
   `rename_to`: in the same write it renames the workstream's file and
@@ -26,6 +35,27 @@ All notable changes to this project are documented here. The project follows
   request holds that stop; otherwise it reaches the session with the next
   prompt (or, in Claude Code, its next tool result). It is never repeated
   in a session, and subagents are never asked. Agent protocol stays 2.
+- What the MCP tools cost every agent's context is measured (FH-134,
+  D52). A test sizes the tool list and the server's instructions as an
+  agent receives them, in bytes and estimated tokens, reports each tool's
+  share, and fails past a budget of 16,500 bytes (about 4,100 tokens;
+  14,224 bytes today), naming the largest tools. A change that grows the
+  list past it raises the budget on purpose and says why (agent-protocol
+  §7.2).
+
+- Agents can correct a ticket when its scope changes, instead of adding
+  a note that contradicts it (FH-69, D75, `MCP-2`). `update_ticket`
+  takes `sections`, which replaces a section such as the Description,
+  Test Plan or Context, and `criteria`, which adds, rewords, removes or
+  moves acceptance criteria while ticked ones stay ticked. Handoff and
+  Notes are never rewritten, and a misspelt section name is refused with
+  the list of sections there are. The text an agent replaces is kept in
+  the ticket's files, linked from a note that says who changed what, so
+  you can copy it back; the ticket's Activity shows the edit too. Nothing
+  else in the file changes, and an edit made on a ticket that changed
+  since the agent read it is refused. The flashheart skill says when to
+  rewrite (and no longer mentions plan mirroring, which D51 retired).
+  Agent protocol stays 2.
 - Agents can change a workstream after creating it, and file tickets on
   another project's board (FH-46, D69, `MCP-2`). The new
   `update_workstream` tool sets a workstream's title, goal, priority,
@@ -331,6 +361,24 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A board left open while an agent renames a workstream no longer brings
+  the old name back into your saved filters (FH-173, D80). The board now
+  saves only the preferences you changed, so changing the theme leaves
+  the renamed filter alone, and it picks up the server's copy of your
+  preferences as the board changes, so the open filters follow the
+  rename too. A change you make at the same moment is kept.
+- A workstream page open while the workstream is renamed elsewhere (by
+  an agent or in another tab) follows it to its new address with a
+  short notice, instead of saying it could not be loaded (FH-174, D80).
+  If the workstream was removed, or the page cannot tell what it
+  became, the page says it is no longer there, renamed or removed, with
+  a link to the project's workstreams.
+- Saved filters and expanded workstreams keep a workstream after it is
+  renamed (FH-170, D78). A rename by an agent or on the board now
+  rewrites the old short name in the project's saved Board filter and
+  its expanded finished workstreams, which otherwise stopped matching
+  without saying why. The rename stands even if the settings file cannot
+  be updated.
 - Two workstreams in a project can no longer have the same name (FH-163,
   D76). A second *Workstream editing* used to be made with a different
   file name, and the two then looked identical in every workstream
@@ -340,6 +388,14 @@ All notable changes to this project are documented here. The project follows
   workstream are refused the same way and told which workstream to join
   instead. Workstreams that already share a name still load and can be
   edited; giving one a new name parts them.
+- Pressing *Needs you* no longer leads to an empty board with the wrong
+  advice when an agent's question is not about a ticket (FH-157, D74,
+  `VIEW-2`). The Board and Table now say that an agent asked about the
+  project or a workstream, so no card can show it, and offer **Answer it
+  in the Overview**, which opens the Overview with the keyboard on *Needs
+  your decision*. When no card is left, this replaces *No tickets match
+  these filters* and its *Clear a filter* advice; when some cards show,
+  it sits above them.
 - Dialogs open with the cursor where you type first (FH-17): New
   ticket's title, the reason for starting a blocked ticket and a new
   change request lost focus to the dialog's close button as it opened.

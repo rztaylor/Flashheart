@@ -3,8 +3,11 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import {
+  ASKING_SESSION,
+  askPermission,
   callTool,
   connectMCP,
+  grantPermission,
   IDLE_SESSION,
   promptHook,
   seedBranchRun,
@@ -578,20 +581,39 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
   await pill.click();
   await expect(page).toHaveURL(/#\/all\/board/);
   const notice = page.getByRole("region", { name: "Agents without a ticket" });
+  // AL-3's card still shows; the gamma agent cannot, and the notice says
+  // why and where to answer it (FH-157).
   await expect(notice).toContainText(
-    "1 agent needs you with no ticket on the board.",
+    "1 more agent needs you, not about a ticket.",
   );
-  // AL-3's card still shows; the gamma agent cannot.
+  await expect(notice).toContainText(
+    "It asked about the project or a workstream, so no card can show it.",
+  );
   await expect(page.locator("[data-ticket]")).toHaveCount(1);
+  await expect(page.getByText("Clear a filter", { exact: false })).toHaveCount(
+    0,
+  );
   await expectNoAxeViolations(page, "needs you notice");
   for (const theme of ["light", "dark"]) {
     await open(page, "#/all/board", { theme });
     await shot(page, `board-needs-you-unticketed-1440-${theme}`);
+    await expectNoAxeViolations(page, `needs you notice ${theme}`);
+    await open(page, "#/all/table", { theme });
+    await expect(notice).toBeVisible();
+    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await shot(page, `table-needs-you-unticketed-1440-${theme}`);
   }
-  await open(page, "#/all/board", { width: 390, height: 844 });
-  await shot(page, "board-needs-you-unticketed-390-light");
+  for (const theme of ["light", "dark"]) {
+    await open(page, "#/all/board", { width: 390, height: 844, theme });
+    await expect(
+      notice.getByRole("button", { name: "Answer it in the Overview" }),
+    ).toBeInViewport();
+    await shot(page, `board-needs-you-unticketed-390-${theme}`);
+  }
   await open(page, "#/all/board");
-  await notice.getByRole("button", { name: "Open Overview" }).click();
+  await notice
+    .getByRole("button", { name: "Answer it in the Overview" })
+    .click();
   await expect(page).toHaveURL(/#\/all\/overview/);
   await expect(
     section("Needs your decision").getByText(
@@ -608,6 +630,92 @@ test("the Needs you filter points to agents with no ticket (FH-44)", async () =>
   await expect(notice).toHaveCount(0);
   await page.getByRole("button", { name: "1 needs you", exact: true }).click();
   await expect(page).toHaveURL(/#\/p\/alpha\/board/);
+});
+
+test("the Needs you filter explains a question about no ticket instead of an empty board (FH-157)", async () => {
+  // The alpha session's permission was granted in its chat, so no ticket
+  // needs you; a coordinator asks about no ticket.
+  grantPermission(sandbox.root, ASKING_SESSION, seeded.alpha);
+  await callTool(sandbox.root, seeded.gamma, "ask_human", {
+    run: `claude:${IDLE_SESSION}`,
+    kind: "decision",
+    text: "Should I merge these four PRs myself?",
+  });
+  await open(page, "#/p/alpha/board");
+  const pill = page.getByRole("button", { name: "1 needs you", exact: true });
+  await pill.click();
+  await expect(page).toHaveURL(/#\/all\/board/);
+  await expect(pill).toHaveAttribute("aria-pressed", "true");
+
+  // No card can show it: the board says what waits, why and where.
+  const empty = page.getByRole("region", { name: "Agents without a ticket" });
+  await expect(page.locator("[data-ticket]")).toHaveCount(0);
+  await expect(empty).toContainText("1 agent needs you, not about a ticket");
+  await expect(empty).toContainText(
+    "It asked about the project or a workstream, so no card can show it.",
+  );
+  await expect(empty).toContainText(
+    "It is waiting in the Overview, under Needs your decision.",
+  );
+  await expect(page.getByText("No tickets match these filters")).toHaveCount(0);
+  await expect(page.getByText("Clear a filter", { exact: false })).toHaveCount(
+    0,
+  );
+  const answer = empty.getByRole("button", {
+    name: "Answer it in the Overview",
+  });
+  await expect(answer).toBeVisible();
+
+  for (const view of ["board", "table"]) {
+    for (const theme of ["light", "dark"]) {
+      await open(page, `#/all/${view}`, { theme });
+      await expect(answer).toBeVisible();
+      await expect(
+        page.getByText("Clear a filter", { exact: false }),
+      ).toHaveCount(0);
+      await expectNoAxeViolations(page, `needs you empty ${view} ${theme}`);
+      await shot(page, `${view}-needs-you-ticketless-1440-${theme}`);
+      await open(page, `#/all/${view}`, { width: 390, height: 844, theme });
+      await expect(answer).toBeInViewport();
+      await expectNoAxeViolations(page, `needs you empty ${view} 390 ${theme}`);
+      await shot(page, `${view}-needs-you-ticketless-390-${theme}`);
+    }
+  }
+
+  // The button is reached with Tab and pressed with Enter; the Overview
+  // opens with focus on Needs your decision, which holds the question.
+  await open(page, "#/all/board");
+  await page.locator("body").focus();
+  let reached = false;
+  for (let step = 0; step < 60 && !reached; step++) {
+    await page.keyboard.press("Tab");
+    reached = await answer.evaluate(
+      (button) => button === document.activeElement,
+    );
+  }
+  expect(reached).toBe(true);
+  await shot(page, "board-needs-you-ticketless-focus-1440-light", {
+    keepFocus: true,
+  });
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#\/all\/overview/);
+  const decision = section("Needs your decision");
+  await expect(
+    decision.getByText("Should I merge these four PRs myself?"),
+  ).toBeVisible();
+  await expect(decision.getByRole("heading", { level: 2 })).toBeFocused();
+  await shot(page, "overview-needs-you-arrival-1440-light", {
+    keepFocus: true,
+  });
+
+  // Answered in its chat, and the alpha session asking again, the board
+  // is as the next tests expect.
+  promptHook(sandbox.root, IDLE_SESSION, seeded.gamma);
+  askPermission(sandbox.root, ASKING_SESSION, seeded.alpha);
+  await open(page, "#/all/board");
+  await expect(page.locator("[data-ticket]")).toHaveCount(1);
+  await expect(empty).toHaveCount(0);
+  await pill.click();
 });
 
 test("the Overview's pipeline counts every column of the scope (FH-63)", async () => {

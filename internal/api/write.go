@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"path"
 	"slices"
@@ -80,7 +81,7 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/projects/{project}/key", b.setKey)
 	mux.HandleFunc("POST /api/questions/{id}/answer", b.answer)
 	mux.HandleFunc("GET /api/preferences", b.preferences)
-	mux.HandleFunc("PUT /api/preferences", b.savePreferences)
+	mux.HandleFunc("PATCH /api/preferences", b.savePreferences)
 	b.registerComments(mux)
 }
 
@@ -653,11 +654,14 @@ func (b boardAPI) createWorkstream(w http.ResponseWriter, r *http.Request) {
 // WorkstreamPatchRequest is PATCH /api/projects/{project}/workstreams/{slug}:
 // the workstream's fields (board.WorkstreamFields; values are strings or
 // lists of strings) and a new slug ("" keeps it; FH-158), over the file
-// as the client read it (Base).
+// as the client read it (Base). SlugFromTitle, with a title among the
+// fields and no Slug, renames the slug to the one the title makes
+// (store.WorkstreamSlugFor): the workstream page's name edit (FH-167).
 type WorkstreamPatchRequest struct {
-	Base   string                     `json:"base"`
-	Fields map[string]json.RawMessage `json:"fields,omitempty"`
-	Slug   string                     `json:"slug,omitempty"`
+	Base          string                     `json:"base"`
+	Fields        map[string]json.RawMessage `json:"fields,omitempty"`
+	Slug          string                     `json:"slug,omitempty"`
+	SlugFromTitle bool                       `json:"slugFromTitle,omitempty"`
 }
 
 // EditedWorkstreamResponse reports an edited workstream: its slug, the new
@@ -712,10 +716,25 @@ func (b boardAPI) patchWorkstream(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
 		return
 	}
-	project := r.PathValue("project")
-	edited, err := writer.EditWorkstream(project, r.PathValue("slug"), store.Unchanged(request.Base), store.WorkstreamEdit{
-		Changes: changes, Rename: strings.TrimSpace(request.Slug),
+	project, slug := r.PathValue("project"), r.PathValue("slug")
+	rename, name := strings.TrimSpace(request.Slug), ""
+	if request.SlugFromTitle {
+		at := slices.IndexFunc(requested, func(change board.FieldChange) bool { return change.Key == "title" })
+		if at < 0 || rename != "" {
+			writeError(w, http.StatusBadRequest, "invalid_input", "slugFromTitle needs a title and no slug")
+			return
+		}
+		name = strings.TrimSpace(requested[at].Value)
+		rename = store.WorkstreamSlugFor(slug, name)
+	}
+	edited, err := writer.EditWorkstream(project, slug, store.Unchanged(request.Base), store.WorkstreamEdit{
+		Changes: changes, Rename: rename,
 	})
+	if err != nil && request.SlugFromTitle && errors.Is(err, store.ErrExists) {
+		// The person chose a name, not a slug: say so in names.
+		writeError(w, http.StatusConflict, "exists", fmt.Sprintf("Another workstream in %s already has the short name %s that %q would take; choose another name.", project, rename, name))
+		return
+	}
 	if err != nil {
 		writeStoreError(w, err)
 		return
@@ -833,28 +852,76 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Editor: ui.Editor, Scopes: scopes, ExpandedWorkstreams: expanded})
 }
 
-// savePreferences holds back preference reads until it answers: the save
-// a page flushes as it unloads reaches the server before the reloaded page
-// asks for preferences, but may take longer to write than that page takes to
-// ask (FH-109).
+// PreferencesPatch is PATCH /api/preferences: the preferences a page
+// changed, the rest left as saved (FH-173, D80), so a tab whose copy is
+// older than the file, such as one open while an agent renamed a workstream
+// (FH-170), does not put back what it did not change. Scopes and
+// ExpandedWorkstreams change one project at a time; a null project removes
+// its entry.
+type PreferencesPatch struct {
+	Theme               *string                  `json:"theme"`
+	Density             *string                  `json:"density"`
+	ColourBy            *string                  `json:"colourBy"`
+	HiddenColumns       *[]string                `json:"hiddenColumns"`
+	Editor              *string                  `json:"editor"`
+	Scopes              map[string]*config.Scope `json:"scopes"`
+	ExpandedWorkstreams map[string]*[]string     `json:"expandedWorkstreams"`
+}
+
+// apply is ui with the patch's changes.
+func (p PreferencesPatch) apply(ui config.UI) config.UI {
+	for field, value := range map[*string]*string{&ui.Theme: p.Theme, &ui.Density: p.Density, &ui.ColourBy: p.ColourBy, &ui.Editor: p.Editor} {
+		if value != nil {
+			*field = *value
+		}
+	}
+	if p.HiddenColumns != nil {
+		ui.HiddenColumns = nonNil(*p.HiddenColumns)
+	}
+	ui.Scopes = patchEntries(ui.Scopes, p.Scopes)
+	ui.ExpandedWorkstreams = patchEntries(ui.ExpandedWorkstreams, p.ExpandedWorkstreams)
+	return ui
+}
+
+// patchEntries is saved with each project of patch set, or removed when
+// it is nil; saved itself is not changed.
+func patchEntries[T any](saved map[string]T, patch map[string]*T) map[string]T {
+	if len(patch) == 0 {
+		return saved
+	}
+	next := maps.Clone(saved)
+	if next == nil {
+		next = map[string]T{}
+	}
+	for project, value := range patch {
+		if value == nil {
+			delete(next, project)
+		} else {
+			next[project] = *value
+		}
+	}
+	return next
+}
+
+// savePreferences applies a patch to the saved preferences. It holds back
+// preference reads until it answers: the save a page flushes as it unloads
+// reaches the server before the reloaded page asks for preferences, but may
+// take longer to write than that page takes to ask (FH-109).
 func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 	if b.writer(w) == nil {
 		return
 	}
 	b.preferring.Lock()
 	defer b.preferring.Unlock()
-	var request Preferences
+	var request PreferencesPatch
 	if !decode(w, r, &request) {
 		return
 	}
-	ui, ok := b.currentUI(w)
+	current, ok := b.currentUI(w)
 	if !ok {
 		return
 	}
-	ui.Theme, ui.Density, ui.ColourBy, ui.Scopes = request.Theme, request.Density, request.ColourBy, request.Scopes
-	ui.HiddenColumns = nonNil(request.HiddenColumns)
-	ui.Editor = request.Editor
-	ui.ExpandedWorkstreams = request.ExpandedWorkstreams
+	ui := request.apply(current)
 	if len(ui.Scopes) > 500 || len(ui.ExpandedWorkstreams) > 500 {
 		writeError(w, http.StatusBadRequest, "invalid_input", "Too many remembered views or workstreams")
 		return
@@ -864,7 +931,15 @@ func (b boardAPI) savePreferences(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
 		return
 	}
-	err := b.write.UpdateConfig(func(data []byte) ([]byte, error) { return config.SetUI(data, ui) })
+	// The patch is applied again to the file as it is under the root lock,
+	// so a change made since it was read here (an agent's rename) stays.
+	err := b.write.UpdateConfig(func(data []byte) ([]byte, error) {
+		settings, err := config.Parse(data)
+		if err != nil {
+			return nil, err
+		}
+		return config.SetUI(data, request.apply(settings.UI))
+	})
 	if err != nil {
 		writeStoreError(w, err)
 		return

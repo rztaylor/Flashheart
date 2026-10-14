@@ -36,7 +36,11 @@
   `src/api/` owns typed requests via `session.fetch` only. `src/state/` owns
   loading and freshness: `useRevision` long-polls `/api/changes` and
   `useResource` keeps the last good value and reloads when the revision
-  moves; `usePreferences` saves UI preferences through the backend;
+  moves; `usePreferences` saves UI preferences through the backend as a
+  patch of what changed (`PATCH /api/preferences`) and reads them again
+  as the revision moves when nothing of its own is waiting (FH-173, D80;
+  a refreshed copy restores the open scope's filters in
+  `app/useScopeMemory`);
   `leaveGuard` is the one guard on leaving the page with unsaved work.
 - Load states (ui-layout.md §8, FH-103) are one contract: a view whose
   load fails shows `components/LoadError` (the error in words, an alert,
@@ -70,7 +74,16 @@
   `features/workstreams/WorkstreamPage`, its sections the same
   `InPlaceEditing` items and `InPlaceSection` (with `kind="workstream"`
   for the conflict dialog's words) over `model/workstreamSections`, saved
-  by `saveWorkstreamSection`. A control
+  by `saveWorkstreamSection`. Its name is `workstreams/WorkstreamName`,
+  an `InPlaceEditor` saved by `nameWorkstream` (`slugFromTitle`: the
+  server makes the slug, FH-167, D78); a new slug moves the page with
+  `useRoute`'s `replace` and rewrites the loaded preferences
+  (`app/scopeMemory`'s `renameWorkstreamIn`, as the server did, FH-170).
+  A 404 after the page loaded looks for what the workstream became
+  (`workstreams/successor`: same name, or all its tickets) and follows it
+  the same way; else the page's `EmptyState` (as its h1) says it was
+  renamed or removed (FH-174, D80).
+  A control
   marked `data-autofocus` takes an open item's focus, and a key a
   control has handled (`defaultPrevented`) is not the item's. A person's comment in Activity is an
   item too, saved on the activity file's hash (`ActivityTimeline`); a

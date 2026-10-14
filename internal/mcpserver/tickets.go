@@ -19,11 +19,21 @@ import (
 // UpdateTicketInput is update_ticket's input.
 type UpdateTicketInput struct {
 	Attribution
-	Ticket      string         `json:"ticket" jsonschema:"the ticket id"`
-	Set         map[string]any `json:"set,omitempty" jsonschema:"fields to set: title, type, priority, created, branch, pr (the pull request URL; empty clears it), workstream (strings); tags, depends-on, depends-on-workstreams (lists of strings)"`
-	Check       []string       `json:"check,omitempty" jsonschema:"acceptance criteria to tick, by number (1 is the first) or by their text"`
-	AppendNotes string         `json:"append_notes,omitempty" jsonschema:"a paragraph appended to the ticket's notes"`
-	Addressed   []string       `json:"addressed,omitempty" jsonschema:"ids of the user's change requests on the ticket that you have made, to mark them addressed for the user's review"`
+	Ticket      string            `json:"ticket" jsonschema:"the ticket id"`
+	Set         map[string]any    `json:"set,omitempty" jsonschema:"fields to set: title, type, priority, created, branch, pr (the pull request URL; empty clears it), workstream (strings); tags, depends-on, depends-on-workstreams (lists of strings)"`
+	Check       []string          `json:"check,omitempty" jsonschema:"acceptance criteria to tick, by number (1 is the first) or by their text"`
+	AppendNotes string            `json:"append_notes,omitempty" jsonschema:"a paragraph appended to the ticket's notes"`
+	Addressed   []string          `json:"addressed,omitempty" jsonschema:"ids of the user's change requests on the ticket that you have made, to mark them addressed for the user's review"`
+	Sections    map[string]string `json:"sections,omitempty" jsonschema:"sections to rewrite whole when the scope changes, heading to new markdown text: Description, Test Plan, Reproduction or Context (added if missing) or another section the ticket has; never Acceptance Criteria (use criteria), Notes (append_notes) or Handoff (checkpoint)"`
+	Criteria    []CriterionInput  `json:"criteria,omitempty" jsonschema:"acceptance criteria edits, made in order: add, reword, remove or move; items are numbered as before this call and keep their ticks"`
+}
+
+// CriterionInput is one of update_ticket's criteria operations (FH-69).
+type CriterionInput struct {
+	Op       string `json:"op" jsonschema:"add, reword, remove or move"`
+	Item     string `json:"item,omitempty" jsonschema:"for reword, remove and move: the criterion's number before this call (1 is the first) or its text"`
+	Text     string `json:"text,omitempty" jsonschema:"for add and reword: the criterion's new text, one line"`
+	Position int    `json:"position,omitempty" jsonschema:"for add and move: its place in the list once the operations before it are made (1 is the first); add without one goes last"`
 }
 
 func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error) {
@@ -88,8 +98,12 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 			addressed = append(addressed, id)
 		}
 	}
-	if changes.Len() == 0 && len(checks) == 0 && note == "" && len(addressed) == 0 {
-		return "", fail("invalid_input", "pass set, check, append_notes or addressed", "nothing to change")
+	rewrite, err := c.rewrite(project.Name, ticket.ID, data, current, input.Sections, input.Criteria)
+	if err != nil {
+		return "", err
+	}
+	if changes.Len() == 0 && len(checks) == 0 && note == "" && len(addressed) == 0 && rewrite == nil {
+		return "", fail("invalid_input", "pass set, check, append_notes, addressed, sections or criteria", "nothing to change")
 	}
 	// Ticks and the note follow the fields in the same write; a workstream
 	// change also rewrites the workstreams' tickets lists.
@@ -106,8 +120,16 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 		return data, nil
 	}
 	// Change requests the agent addressed are marked in the ticket's
-	// activity file in the same write (FH-126).
-	if _, err := c.files().EditTicketAddressing(project.Name, ticket.ID, store.Unchanged(base), changes, edit, addressed); err != nil {
+	// activity file in the same write (FH-126), and a rewrite keeps the
+	// text it replaced in the ticket's files (FH-69).
+	write := store.TicketEdit{Changes: changes, Edit: edit, Addressed: addressed}
+	if rewrite != nil {
+		write.Rewrite, write.Note = rewrite.edit, rewrite.note
+	}
+	if srv.betweenReadAndWrite != nil {
+		srv.betweenReadAndWrite()
+	}
+	if _, err := c.files().ApplyTicketEdit(project.Name, ticket.ID, store.Unchanged(base), write); err != nil {
 		if errors.Is(err, store.ErrNotFound) && len(addressed) > 0 {
 			return "", fail("not_found", "pass the ids of change requests on "+ticket.ID+"; get_ticket shows them with its comments", "%v", err)
 		}
@@ -117,14 +139,18 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 		return "", err
 	}
 	fields := changes.Keys()
-	if len(checks) > 0 {
+	if len(checks) > 0 || rewrite.changedCriteria() {
 		fields = append(fields, "criteria")
 	}
-	if note != "" {
+	fields = append(fields, rewrite.changedSections()...)
+	if note != "" || rewrite.noted() {
 		fields = append(fields, "notes")
 	}
 	if len(addressed) > 0 {
 		fields = append(fields, "addressed")
+	}
+	if len(fields) == 0 {
+		return fmt.Sprintf("ok ticket=%s changed=nothing (the ticket already said so)\n", ticket.ID), nil
 	}
 	if err := c.record(project.Name, events.Event{Kind: events.TicketUpdated, Data: events.TicketData{Ticket: ticket.ID, Fields: fields}}); err != nil {
 		return "", err
@@ -135,7 +161,11 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 			text = "warning: " + advice + "\n"
 		}
 	}
-	return text + fmt.Sprintf("ok ticket=%s changed=%s\n", ticket.ID, strings.Join(fields, ",")), nil
+	text += fmt.Sprintf("ok ticket=%s changed=%s", ticket.ID, strings.Join(fields, ","))
+	if kept := rewrite.keptFile(); kept != "" {
+		text += " kept=" + kept
+	}
+	return text + "\n", nil
 }
 
 // settable lists the fields update_ticket sets (status changes with move).

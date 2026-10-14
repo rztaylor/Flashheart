@@ -122,10 +122,21 @@ colour chips before workstreams; the menus list every value. Hidden when
 there are neither workstream chips nor colour chips.
 
 **Needs you notice** (Board and Table, while the Needs you filter is on and
-runs need the user with no ticket on the board): a well-coloured strip under
-the chip row, the Needs you mark on its attention disc, *N agent(s) need(s)
-you with no ticket on the board.* and a quiet **Open Overview** button
-(FH-44), whose Needs your decision lists them (D32).
+runs in the scope need the user with no ticket on the board; FH-44,
+FH-157, D74): with cards to show, a well-coloured strip under the chip
+row: the Needs you mark on its attention disc, *N more agent(s) need(s)
+you, not about a ticket.* in semibold, then muted *It asked about the
+project or a workstream, so no card can show it.*, and a primary
+**Answer it in the Overview** (*them* for several). With no card left, the
+same words take the empty state's place (region *Agents without a
+ticket*): the large attention disc, the title *N agent(s) need(s) you,
+not about a ticket*, why, *It is waiting in the Overview, under Needs your
+decision.*, the same primary button and, when other filters are on too,
+*Other filters are on too: clear them to see any tickets that need you.*
+With nothing waiting and no other filter, the empty state is *Nothing
+needs you right now*. Never *Clear a filter or the search* when the Needs
+you filter is the reason. The button opens the scope's Overview with
+focus on the *Needs your decision* heading, which lists them (D32).
 
 **Panel** beside the main view at clamp(26rem, 32vw, 35rem), narrowing it
 (`CARD-1`); it covers the view below the band under 48rem.
@@ -630,7 +641,7 @@ it) and scrolls as a whole in a frame of at most 80rem.
 ```
 ┌ Band ────────────────────────────────────────────────────────────────┐
 │ Show in the <project> workstreams                                    │
-│ ● Name (h1)                                         d of t served    │
+│ ● Name (h1) ✎                                       d of t served    │
 │   Running                                                            │
 │ ┌ Stations (route card surface) ───────────────────────────────────┐ │
 │ │ notes · railway graph · independent stations                     │ │
@@ -643,6 +654,17 @@ it) and scrolls as a whole in a frame of at most 80rem.
 - **Header**: a quiet *Show in the <project> workstreams* link (lines
   icon) to the project's Workstreams view; the route card's head with the
   name as the page's h1 in the display cut, its status and progress.
+  The name has its pencil (*Edit name*) beside it and edits in place as a
+  ticket's title does (FH-167): open, one line in the display cut at the
+  title field's size filling the head's width (the progress wraps below
+  it on a phone), then Save, Cancel and the shortcuts; an empty name says
+  *A workstream needs a name.* A saved name that makes a new slug moves
+  the page to its address in place of the old one (Back leaves the page)
+  with the toast *Renamed <old> to <new>.*; a name another of the
+  project's workstreams has (FH-163) says *<project> already has a
+  workstream called <name>. Choose another name.* under the field before
+  anything is sent, and one whose slug is taken shows the server's
+  reason there; the field stays open with what was typed.
 - **Stations**: the route card's body on its line-coloured surface (repair,
   blocker and warning notes, the railway graph and independent stations);
   a station opens the ticket's full page.
@@ -653,6 +675,16 @@ it) and scrolls as a whole in a frame of at most 80rem.
   while you were editing* and says another saved *this workstream*.
 - Loading shows the head, a track and two section shapes; an error keeps
   an h1 of the slug with the shared error and Try again.
+- **Renamed or removed elsewhere** (FH-174, D80): a workstream renamed by
+  an agent or another tab while its page is open is followed to its new
+  address in place of the old one, with the toast *<name> was renamed
+  elsewhere: its short name is now <slug>.* (or *… renamed elsewhere to
+  <new name>.*), when the page can tell what it became (its name, or all
+  its tickets now in one workstream). Otherwise, or at an address already
+  gone, the empty state (§8) with the h1 *<name> is no longer here*, the
+  sentence *<project> has no workstream <slug> now: it was renamed or
+  removed.* and the link *Show the <project> workstreams* (lines icon);
+  not an error.
 
 ## 5. Overview
 

@@ -201,6 +201,8 @@ atomically, one at a time, in this order:
   tickets that name it, and last the removal of the old file, so a crash
   part-way leaves both files and never neither;
 - placing a ticket: the neighbours it ranks, then the ticket;
+- an agent rewriting a ticket's text (FH-69): the file keeping the
+  replaced text and `files/index.yaml`, then the files above;
 - any ticket write from the board or an agent: the files above, then the
   history entry in each changed ticket's `activity.md` (§Activity).
 
@@ -298,6 +300,25 @@ sections that follow it (a ticket's own section above `## Notes` and
 `## Handoff`). `## Handoff` and `## Notes` are never rewritten whole:
 checkpoints write the one, and notes are appended.
 
+An agent rewrites sections the same way through `update_ticket`'s
+`sections` (FH-69, D75, `board.NewAgentSectionChange`), with two more
+rules: `## Acceptance Criteria` is never rewritten whole, and a section
+outside the template must already be in the ticket. Its `criteria`
+operations (`board.NewCriteriaEdit`) change only the criteria section:
+each top-level task item there owns its line and the lines up to the
+next item (after the last, only its indented continuation), so a
+reworded item keeps its bullet and box, a moved one all its lines, and
+an added one is `- [ ] <text>` in the list's bullet; text before and
+after the list is kept, and a placeholder such as `None.` gives way to
+the first item. The old text of every section the rewrite changed is
+kept in the ticket's `files/` as `<time>-<id>-earlier-text.md`
+(`board.EarlierText`: a `# <id>: text replaced by <run> at <time>`
+title, a line on restoring, then each section under its own `## `
+heading as it was), listed in `files/index.yaml` with kind `other`, the
+run, and a caption naming the sections, and staged before the ticket in
+the same write. A dated note under the run says what changed and links
+the file. A section only added keeps nothing.
+
 A workstream's section edited on its page (FH-139,
 `board.NewWorkstreamSectionChange`) is replaced the same way; a
 workstream has no `updated:` stamp, so nothing else changes. Every one of
@@ -380,8 +401,10 @@ keeps a workstream's title is not checked, and retitling one parts them.
 A title change (its H1) keeps the slug: the file name and every reference
 to the workstream stay as they are (D69). A slug changes only by an
 explicit rename (an agent's `update_workstream` with `rename_to`, or the
-board's `PATCH /api/projects/<project>/workstreams/<slug>` with `slug`;
-FH-158, D73): one write under the project lock and the workstream file's
+board's `PATCH /api/projects/<project>/workstreams/<slug>` with `slug`,
+or with `slugFromTitle` from the workstream page's name edit, which takes
+the slug New workstream makes from the new name; FH-158, D73, FH-167,
+D78): one write under the project lock and the workstream file's
 hash that moves the file to `workstreams/<new>.md`, sets its `slug:`, and
 rewrites every reference to the old slug in the project: each ticket's
 `workstream:` and every `depends-on-workstreams`, in its workstreams and
@@ -389,7 +412,9 @@ its live and archived tickets (§Multi-file writes). A new slug that is not
 valid, or that a file in `workstreams/` already has, is refused and
 nothing is written. A file whose frontmatter does not parse is left as it
 is (the renamed workstream's own is refused); links and prose that
-mention the old slug are text and are not rewritten.
+mention the old slug are text and are not rewritten. After the write,
+the rename is made in `config.yaml`'s UI preferences too, best effort
+(§config.yaml, FH-170).
 
 The UI derives status (`completed` when every ticket is in review or done,
 `blocked` when its own `depends-on-workstreams` are incomplete or every
@@ -570,7 +595,10 @@ list of files is reported and never replaced. A file added from its bytes
 the extension of what its content is (`SEC-7`): a PNG sent as `notes.txt`
 is stored as `<time>-notes.png`; a pasted screenshot is
 `<time>-screenshot.png`. Adding a file does not change the ticket file
-and records no history (the event log records it, `EDIT-10`).
+and records no history (the event log records it, `EDIT-10`). The one
+exception is the text an agent's rewrite replaced (§Section edits),
+added in the same write as the ticket it was replaced in, with no
+`source`.
 
 ## project.yaml
 
@@ -634,8 +662,20 @@ is ignored, and dropped when preferences are next saved.
 Workstreams view drops a slug once its workstream is no longer finished or
 no longer exists, so the choice lasts only while the workstream stays finished.
 
+A workstream's rename (FH-170, D78) rewrites its old slug to the new one
+in its project's scope (`workstream` include and exclude) and
+`expanded_workstreams` list, under the root lock once the rename has
+been written. It is best effort: a `config.yaml` that cannot be read as
+settings or written is left as it is and the rename stands. The `all`
+scope and other projects' choices are left, as their bare slugs may name
+other projects' workstreams.
+
 Flashheart rewrites only the `ui` keys when preferences change, keeping the
-other settings, unknown keys and comments.
+other settings, unknown keys and comments. A change from the board is saved
+as the preferences it changed, applied to the file as it is when written
+(FH-173, D80): one project's scope or expanded list is replaced without
+touching the others, so a board tab that loaded before a rename does not
+put the old slug back.
 
 `config.yaml` is read through the root like every board file (SEC-2): a
 symlink to a file inside the root is followed, but one that points outside

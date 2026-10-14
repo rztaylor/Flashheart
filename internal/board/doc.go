@@ -6,8 +6,9 @@
 // It defines once the editing rules the UI and the MCP tools share (FH-85):
 // editable fields and their checked change-sets for tickets and
 // workstreams, title and section limits, the blocked-start gate, dated
-// notes, which sections are rewritten whole (SectionChange), the
-// workstream cycle and title rules, review warnings, key rules, a review's
+// notes, which sections are rewritten whole (SectionChange), an agent's
+// rewrite of sections and criteria that keeps ticks (rewrite.go, FH-69),
+// the workstream cycle and title rules, review warnings, key rules, a review's
 // How to Verify steps, local links and the attachment allow-list, and what
 // a browser file is by its bytes (SniffAttachment, SEC-7).
 //

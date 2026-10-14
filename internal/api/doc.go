@@ -8,7 +8,7 @@
 // Reads come from index snapshots and, for review and attachment files,
 // store's checks. Writes (moves, field and section edits, criteria, new
 // tickets and workstreams, workstream fields, sections, order and slug,
-// archive, restore and permanent delete of tickets and projects,
+// given or made from a new title (FH-158, FH-167), archive, restore and permanent delete of tickets and projects,
 // placement, keys, preferences, answers, comments and their delivery,
 // change requests, uploads) decode input into board's change-sets, write
 // through store's locked, hash-checked writes as the person, so the store

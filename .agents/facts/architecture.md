@@ -31,7 +31,8 @@ Intended layout (packages are created when they get real content):
   reads, locked atomic writes with hash preconditions, typed ticket edits
   from the board and agents alike (`EditTicket`), an agent's workstream
   edit with its members and a slug rename in one write (`EditWorkstream`,
-  FH-158), moves, archive, each
+  FH-158; then the saved preferences that name the slug, best effort,
+  FH-170), moves, archive, each
   ticket's activity file (a store writing as someone, `As`, appends the
   history of every ticket write in the same transaction; people's
   comments are added, edited and deleted there, never in the ticket
