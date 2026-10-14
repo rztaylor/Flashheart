@@ -107,7 +107,7 @@ test("Needs you and needs repair stand out on their project's row", async () => 
   await expect(row("Flashheart").locator("[data-mark]")).toHaveCount(0);
 });
 
-test("each row shows its project's live agents, a zero faint", async () => {
+test("each row shows its project's live agents, a zero as a faint dash", async () => {
   await open(page, "#/all/overview");
   const alpha = row("Alpha");
   const [, live] = (await alpha.getAttribute("aria-label")).match(
@@ -123,7 +123,7 @@ test("each row shows its project's live agents, a zero faint", async () => {
   await expect(cell).toHaveText(live);
   await expect(cell).not.toHaveClass(/text-ink-faint/);
   const none = row("Flashheart").locator("[data-count=live]");
-  await expect(none).toHaveText("0");
+  await expect(none).toHaveText("–");
   await expect(none).toHaveClass(/text-ink-faint/);
   // The column word carries the run-state mark.
   await expect(

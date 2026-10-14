@@ -661,7 +661,8 @@ narrows it too) the rows are a table under one line of column words:
 Project (key badge and name), Tickets, the five board columns (each word
 after its status icon in its state ink), Blocked (after the no-entry sign
 in the blocked ink), Needs repair, Live (after the Working run-state mark,
-still) and Needs you, the counts centred in tabular numerals, zeros faint.
+still) and Needs you, the counts centred in tabular numerals, a zero a
+faint en dash (the row's name says the number).
 Live (FH-162) counts the project's running agents that do not need you,
 subagents included: working, waiting and quiet; an agent that needs you
 counts under Needs you instead, never in both. Tickets counts every ticket; the columns
