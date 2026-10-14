@@ -832,7 +832,7 @@ still works, attributed to `unknown`.
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `context?` (implementation detail, written under `## Context`), `project_key?` (only for a project with no key yet), `project?` (a name or key; default the caller's, §7.1) | new ticket folder with the next id (`KEY-2`) in that project; a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` (of that project) is joined (§7.4) | id; a title advice warning (below) |
 | `create_workstream` | `title`, `goal`, `priority?` (default medium), `tickets?` (ids of the caller's project, in display order), `depends_on_workstreams?` (slugs), `tags?` | `workstreams/<slug>.md` in the board-format template, slug made from the title and made unique with `-2`, `-3`…; the listed tickets join it (§7.4) | slug |
-| `update_workstream` | `workstream` (slug), `project?` (a name or key; default the caller's), `set?` (`title`, `goal`, `priority`, `tags`, `depends-on-workstreams`), `add_tickets?` (ids of that project's tickets, appended in order), `remove_tickets?` (ids of its tickets) | one write under the project lock and the workstream file's hash precondition: the fields (the title as its H1, the goal as `## Goal`; the slug and file name never change), then membership (§7.4): added tickets leave any other workstream, removed ones belong to none; any other field (the slug, `status`, `tickets`), an unknown workstream, ticket or dependency, a removed ticket that is not a member, or a dependency that leads back to the workstream (`invalid_input` naming the cycle, `a → b → a`) refuses the whole call and writes nothing | the fields changed, tickets added and removed; `ok workstream=<slug> changed=…` |
+| `update_workstream` | `workstream` (slug), `project?` (a name or key; default the caller's), `set?` (`title`, `goal`, `priority`, `tags`, `depends-on-workstreams`), `add_tickets?` (ids of that project's tickets, appended in order), `remove_tickets?` (ids of its tickets), `rename_to?` (a new slug, FH-158) | one write under the project lock and the workstream file's hash precondition: the fields (the title as its H1, the goal as `## Goal`; a title change keeps the slug and file name), then membership (§7.4): added tickets leave any other workstream, removed ones belong to none; then the rename (§7.4): the file moves to `workstreams/<rename_to>.md` and every ticket and workstream naming the old slug names the new one; any other field (the slug, `status`, `tickets`), an unknown workstream, ticket or dependency, a removed ticket that is not a member, a dependency that leads back to the workstream (`invalid_input` naming the cycle, `a → b → a`), or a `rename_to` that is not a valid slug or that a file in `workstreams/` already has (`invalid_input`) refuses the whole call and writes nothing | the slug (the new one after a rename), the fields changed, tickets added and removed, and after a rename the old slug and the tickets rewritten; `ok workstream=<slug> changed=…` (`slug` first when renamed) |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
 | `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call", and that a reply in the chat does not reach the board, so the user answers there too); the `flashheart await` command for it (§7.5), with how Claude Code runs it only when the run is Claude's |
@@ -923,8 +923,15 @@ Dependencies between workstreams never form a cycle: `update_workstream`
 and `create_workstream` refuse one that would lead back to the workstream
 (`invalid_input`, naming it), and check only cycles through the
 workstream they write. A title change renames a workstream as people see
-it; its slug, which tickets, other workstreams and links name, never
-changes (renaming a slug is FH-158).
+it; its slug, which tickets and other workstreams name, stays. Only
+`update_workstream`'s `rename_to` changes a slug (FH-158, D71): in the
+same write it moves the file and rewrites every reference to the old slug
+in the project, each ticket's `workstream:` and every
+`depends-on-workstreams` of its workstreams and its live and archived
+tickets, each rewritten ticket recording `ticket.updated` with the fields
+it named. Links and prose that mention the old slug are text and stay as
+they are. Tickets other sessions hold are rewritten too: the rename
+changes only which slug they name, so it is not refused as `claimed`.
 
 ### 7.5 Waiting for an answer (`flashheart await`)
 
@@ -1105,7 +1112,7 @@ checks (§5.4). It covers, briefly:
 - workstreams are encouraged, not required: work spanning several
   tickets with a shared goal joins a workstream `board_context` lists or a
   new one from `create_workstream`, changed later with `update_workstream`
-  (its slug stays); a workstream that waits for another takes the
+  (`rename_to` renames its slug); a workstream that waits for another takes the
   dependency itself rather than each of its tickets (§7.4); single tickets
   stay out of workstreams.
 
@@ -1295,6 +1302,15 @@ would block their tickets for good: a new tool and a new optional input,
 no event changes shape (membership changes record `ticket.updated` with
 `fields: [workstream]` as before), and an older agent that never calls
 the tool works as before, so the version stays 2.
+
+Additive change within version 2 (D71, FH-158, 2026-10-14):
+`update_workstream` takes an optional `rename_to` (§7.2, §7.4) that renames
+the workstream's slug and rewrites every reference to it, and the skill's
+workstream line says so. A new optional input: every call that was
+accepted is accepted and does the same, no event changes shape (each
+rewritten ticket records `ticket.updated` with its fields, as membership
+changes do), and an older agent that never passes it works as before, so
+the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

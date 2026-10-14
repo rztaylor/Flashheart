@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- A workstream's short name (slug) can be renamed without editing files
+  by hand (FH-158, D71, `MCP-2`). `update_workstream` takes an optional
+  `rename_to`: in the same write it renames the workstream's file and
+  rewrites every ticket and workstream that names the old slug (members'
+  workstream, and every workstream dependency, archived tickets
+  included). A name already taken or not a valid slug is refused and
+  nothing changes. The board's API gains the same rename, with the title,
+  for the workstream page to use (FH-167). A title change alone still
+  keeps the slug. Agent protocol stays 2.
 - Agents can change a workstream after creating it, and file tickets on
   another project's board (FH-46, D69, `MCP-2`). The new
   `update_workstream` tool sets a workstream's title, goal, priority,
