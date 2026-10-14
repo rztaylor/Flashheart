@@ -37,7 +37,6 @@ import { type PaintMode, paintKey } from "../model/paint";
 import { NeedsYouEmpty, NeedsYouNotice } from "./NeedsYouNotice";
 import { formatRoute, type Route } from "./route";
 import type { BoardDataState } from "./useBoardData";
-import { V1Notice } from "./V1Notice";
 
 export interface ViewOutletProps {
   route: Route;
@@ -88,12 +87,6 @@ export function ViewOutlet(props: ViewOutletProps) {
           error={projects.error}
           onRetry={projects.reload}
           className="m-4"
-        />
-      ) : null}
-      {projects.status === "ready" && projects.data.v1Projects.length > 0 ? (
-        <V1Notice
-          projects={projects.data.v1Projects}
-          command={projects.data.migrateCommand}
         />
       ) : null}
       {projects.status === "ready" && projects.data.rootMissing ? (

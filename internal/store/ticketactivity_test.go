@@ -183,7 +183,7 @@ func TestAHistoryThatCannotBeWrittenFailsTheWrite(t *testing.T) {
 
 // Every ticket write a person or an agent makes through the store appends
 // exactly one history entry naming them, what changed and when, never the
-// ticket's text; the plain store (serve's own link copies, migrate) and
+// ticket's text; the plain store (serve's own link copies) and
 // writes that change only notes or the handoff record none.
 func TestEveryTicketWriteAppendsOneHistoryEntry(t *testing.T) {
 	t.Parallel()

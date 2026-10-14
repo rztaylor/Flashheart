@@ -15,8 +15,6 @@ const projectsResponse: ProjectsResponse = {
   revision: 1,
   root: "/board",
   rootMissing: false,
-  v1Projects: [],
-  migrateCommand: "",
   projects: [],
   archivedProjects: 0,
   runs: noRuns,

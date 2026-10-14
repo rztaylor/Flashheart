@@ -12,11 +12,12 @@
 // Claude (claude.go, claude_diagnose.go, skill.go) is Claude Code: the
 // hooks of agent-protocol §5.2 in ~/.claude/settings.json, the flashheart
 // MCP server (registered through the claude CLI, which owns
-// ~/.claude.json), the protocol skill, and moving the kanban-tracker skill
-// aside; backups go under ~/.claude/flashheart-backup/. Uninstalling
-// restores them when nothing changed since, else removes only its own
-// entries. Settings keep their key order, value bytes, indent and line
-// endings (layout is otherwise normalised); a symlinked settings.json is
+// ~/.claude.json) and the protocol skill; backups go under
+// ~/.claude/flashheart-backup/. Uninstalling restores them when nothing
+// changed since, else removes only its own entries, and puts back a
+// kanban-tracker skill an earlier setup moved into a backup (D55).
+// Settings keep their key order, value bytes, indent and line endings
+// (layout is otherwise normalised); a symlinked settings.json is
 // edited through to its target; settings in a shape it does not
 // understand are refused. It owns only hooks whose program is a flashheart
 // binary run with hook. RefreshSkill keeps an installed protocol skill
