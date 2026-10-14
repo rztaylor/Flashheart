@@ -152,7 +152,8 @@ recorded since the last checkpoint live in
 under the project lock together with the log, so tool results arriving
 together all count. It is a disposable cache: an unreadable one starts
 afresh, a run's entry goes with its end, and the session's file with the
-session's end. A session that never reports its end (a crash; a Codex
+session's end, unless it records the session's claim reminder (§9),
+which stays until retention removes the file. A session that never reports its end (a crash; a Codex
 session without `SessionEnd`, §5.3) leaves nothing behind for long, and
 nothing it had pending is kept silently (FH-82): a run that starts again (a resumed session) first
 records what its last life left pending, as before an end; a run whose
@@ -443,7 +444,7 @@ their tickets' `activity.md`.
 | Hook event | Flashheart action | Output |
 |---|---|---|
 | `SessionStart` (`source`: startup, resume, clear, compact) | `run.start` | Recovery note as `hookSpecificOutput.additionalContext` (§8) |
-| `UserPromptSubmit` | `turn.start` with its `origin` (resolves a pending permission and, from the user, answers open questions in the session, §4): `task` for a prompt starting `<task-notification>` (a background command or agent finished) or `<ci-monitor-event>` (the desktop app's pull request monitor), `agent` for one starting `<agent-message`, alone or after the desktop app's line `Another Claude session sent a message:` (a subagent's hand-back or another agent's message), otherwise `user` (also when the app put a `<system-reminder>` first); `question.delivered` or `comment.delivered` for each entry handed over | What waits in the session's inbox (answers, comments, change requests), each framed by its type (§4), as `additionalContext` (`HOOK-5`) |
+| `UserPromptSubmit` | `turn.start` with its `origin` (resolves a pending permission and, from the user, answers open questions in the session, §4): `task` for a prompt starting `<task-notification>` (a background command or agent finished) or `<ci-monitor-event>` (the desktop app's pull request monitor), `agent` for one starting `<agent-message`, alone or after the desktop app's line `Another Claude session sent a message:` (a subagent's hand-back or another agent's message), otherwise `user` (also when the app put a `<system-reminder>` first); `question.delivered` or `comment.delivered` for each entry handed over | What waits in the session's inbox (answers, comments, change requests), each framed by its type (§4), as `additionalContext` (`HOOK-5`), then a due claim reminder (§9, `HOOK-8`) |
 | `PreToolUse` matching `mcp__flashheart__.*` | — | Run stamping: `hookSpecificOutput.updatedInput` is the tool input with `run` set to the calling run (the subagent's when `agent_id` is present), and no permission decision (§7.1) |
 | `PostToolUse` | a tool use counted into `activity` (throttled, §3); `plan.updated` for `TodoWrite` (whole plan) and the task tools (`TaskCreate`, `TaskUpdate`, merged by task id); edit paths for `Edit`, `Write`, `MultiEdit` (`file_path`) and `NotebookEdit` (`notebook_path`); `mcp__flashheart__checkpoint` lets the session record its edited paths again. A payload with `agent_id` comes from inside a subagent and is recorded on the subagent's run | — |
 | `PostToolUseFailure` | a failed tool use counted into `activity` | — |
@@ -453,8 +454,12 @@ their tickets' `activity.md`.
 | `TaskCreated`, `TaskCompleted` | `plan.updated` (merge) | — |
 | `SubagentStart` / `SubagentStop` | child `run.start` (with `parent`, `agent_type`) / `run.end` (`reason: completed`), keyed by `agent_id` | — |
 | `PreCompact` / `PostCompact` | `compact` | — |
-| `Stop` | `turn.end`, with `worktree_changed` from the worktree check (§4); handoff enforcement (§9) | `{"decision":"block","reason":…}` only when enforcing |
+| `Stop` | `turn.end`, with `worktree_changed` from the worktree check (§4); handoff enforcement and the claim reminder (§9) | `{"decision":"block","reason":…}` only when enforcing |
 | `SessionEnd` | `run.end`, with `worktree_changed` from the worktree check (§4) | — |
+
+A `PostToolUse` or `PostToolUseFailure` of the session itself (no
+`agent_id`) also carries a due claim reminder as `additionalContext`
+(§9, `HOOK-8`); otherwise those events print nothing.
 
 Not registered by default: per-tool `PreToolUse` other than Flashheart's own
 tools (noise and latency).
@@ -480,14 +485,14 @@ has no use for (FH-123).
 | Hook event | Flashheart action |
 |---|---|
 | `SessionStart` | `run.start`; refreshes an out-of-date Flashheart section of the global `AGENTS.md` (§5.4); recovery note as `additionalContext` (a developer message), opened by a line when the section was refreshed |
-| `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; what waits in the session's inbox (§4) as `additionalContext` |
+| `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; what waits in the session's inbox (§4) as `additionalContext`, then a due claim reminder (§9, `HOOK-8`) |
 | `PreToolUse` (not registered) | nothing: Flashheart's tool calls are attributed by the session each call names in `_meta` (below, §7.1), so `run` is not stamped (stamping needs `permissionDecision: "allow"`, which would skip the user's approval of Flashheart's tools) |
 | `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `plan.updated` (the whole plan) for `update_plan` where Codex offers it, read from its `plan` steps (`step`, `status`) |
 | `PermissionRequest` | `permission.requested` |
 | `SubagentStart` / `SubagentStop` | child runs (`agent_id`; the parent's `session_id`) |
 | `PreCompact` / `PostCompact` | `compact` |
-| `Stop` | `turn.end`; handoff enforcement by `{"decision":"block","reason":…}` |
-| `Interrupt` | `turn.end` (no output can stop the interrupt) |
+| `Stop` | `turn.end`; handoff enforcement and the claim reminder (§9) by `{"decision":"block","reason":…}` |
+| `Interrupt` | `turn.end` (no output can stop the interrupt; a claim reminder it owes waits for the next prompt, §9) |
 | `SessionEnd` | `run.end` |
 
 Every payload carries `session_id`, `cwd`, `hook_event_name` and
@@ -692,6 +697,8 @@ servers or text.
   such a session is held to a checkpoint only on the home ticket its
   branch links it to, if any.
 - `release` ends the lease; it does not move the ticket.
+- A session that changes files while linked to no ticket is asked once to
+  claim one or create one (§9, D50).
 
 ## 7. MCP server
 
@@ -1022,10 +1029,41 @@ When `enforce_handoff` is on for the project, at `Stop`:
   already active, and the run was not blocked for handoff in this turn →
   output `{"decision":"block","reason":"Flashheart: record a checkpoint on <ticket> (done, next, files) before stopping."}`
   and record `turn.end` with `blocked_for_handoff: true`;
+- if the run is not linked, it is the claim reminder's turn below;
 - otherwise allow.
 
 The hook reads only the project's own log: a claim the session made on
 another project's ticket is not seen, so it links by branch only (§6).
+
+### Claim reminder (`HOOK-8`, D50)
+
+At a session's turn end (`Stop`, or Codex's `Interrupt`), when the
+session is dirty as above (its subagents' edits and the worktree check
+included), is linked to no ticket, by claim or by branch (§6), and has
+not been reminded before, it owes this reminder:
+
+> [Flashheart] This session changed files but holds no ticket. Claim the
+> ticket this work belongs to (find it with list_tickets, then claim), or
+> create one with create_ticket and claim it, so the board links the work
+> and its handoff. Asked once.
+
+- Where `enforce_handoff` is on and the stop can be held (a `Stop` whose
+  payload does not say a stop hook is already active), the reminder is
+  the stop's reason: `{"decision":"block","reason":…}`. The `turn.end`
+  is not marked `blocked_for_handoff`.
+- Otherwise it is due, and goes as `additionalContext` with the
+  session's next prompt (`UserPromptSubmit`) or, in Claude Code, the
+  session's next `PostToolUse` or `PostToolUseFailure`, whichever comes
+  first; Codex shows a tool result's context to its model nowhere
+  recorded, so its reminder waits for the prompt. A subagent's tool
+  result never carries it.
+
+The session's activity state file (§3) records that the reminder is due
+or was given, so no event records it, it is never given twice, and a
+resumed session is not asked again; retention removes the file with the
+session's other state. A session that changed nothing, holds a claim or
+matches a ticket by branch is never reminded, and subagents are never
+reminded themselves (their edits count toward their session's).
 
 ## 10. Orchestrators and subagents
 
@@ -1084,7 +1122,9 @@ checks (§5.4). It covers, briefly:
   three top-priority bugs"), use `list_tickets`, then `claim` each ticket;
 - before work on a ticket: `claim`; create tickets for new work rather than
   starting untracked work; follow-up work for another repository goes on
-  that project's board (`create_ticket`'s `project`, §7.1);
+  that project's board (`create_ticket`'s `project`, §7.1); a session that
+  edits holding no ticket is asked once by the hooks to claim or create
+  one (§9);
 - keep your own plan/todo list current (where Flashheart's hooks are
   installed it is mirrored for you; no tool call needed);
 - `checkpoint` at meaningful milestones, before long operations, before
@@ -1330,6 +1370,15 @@ before, deliberately: the duplicate it made looked identical to the
 other in every picker. No tool, input, output or event changes shape,
 an agent already handles `invalid_input`, and the skill is unchanged,
 so the version stays 2.
+
+Additive change within version 2 (D50, FH-132, 2026-10-14): the claim
+reminder (§9, `HOOK-8`). A session that edits holding no ticket is asked
+once to claim or create one: as a `Stop` block's reason where handoffs
+are enforced, otherwise as `additionalContext` with its next prompt (and,
+in Claude Code, tool result; Claude Code reads `additionalContext` from
+`PostToolUse`, which printed nothing before). The skill gains a sentence saying so, and the session's activity
+state file a field. No event, tool or hook registration changes shape,
+and an older binary simply never asks, so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

@@ -24,6 +24,7 @@ const (
 	scenarioTools        = "tools"
 	scenarioSessionStart = "session-start"
 	scenarioStop         = "stop"
+	scenarioClaim        = "claim-reminder"
 )
 
 type options struct {
@@ -36,7 +37,7 @@ func main() {
 	var o options
 	flag.StringVar(&o.binary, "binary", "build/flashheart", "flashheart binary to measure")
 	flag.StringVar(&o.agent, "agent", "claude", "agent whose recorded payloads (testdata/hooks/<agent>) are replayed")
-	flag.StringVar(&o.scenario, "scenario", scenarioMix, "what to measure: mix (a session's hooks), tools (tool results alone, the throttled path), session-start (the recovery note) or stop (a turn end that handoff enforcement blocks)")
+	flag.StringVar(&o.scenario, "scenario", scenarioMix, "what to measure: mix (a session's hooks), tools (tool results alone, the throttled path), session-start (the recovery note), stop (a turn end that handoff enforcement blocks) or claim-reminder (an unclaimed session's turn end held by the claim reminder)")
 	tools := flag.Bool("tools", false, "same as -scenario tools")
 	flag.IntVar(&o.n, "n", 1000, "measured invocations")
 	flag.IntVar(&o.seedEvents, "seed-events", 0, "events a day to seed the project's log with across the run window before measuring")
@@ -152,6 +153,9 @@ var mixes = map[string]map[string][]string{
 	},
 }
 
+// editPayloads are each agent's recorded edit of a file in the checkout.
+var editPayloads = map[string]string{"claude": "PostToolUse/edit", "codex": "PostToolUse/apply-patch"}
+
 // scenario returns the invocations of round i and the session the
 // scenario's stops are enforced on ("" for none).
 func scenario(name, agent string, payloads payloadSource) (func(i int) []step, string, error) {
@@ -203,8 +207,33 @@ func scenario(name, agent string, payloads payloadSource) (func(i int) []step, s
 		}
 		steps := []step{{event: "UserPromptSubmit", payload: prompt}, {event: "Stop", payload: stop, timed: true, output: true}}
 		return func(int) []step { return steps }, session, nil
+	case scenarioClaim:
+		// A new session each time that edits without a ticket: its first
+		// stop is held by the claim reminder (D50), which reads its link
+		// and the project's tickets. setUp turns enforcement on.
+		var steps []step
+		for _, name := range []string{"UserPromptSubmit/prompt", editPayloads[agent], "Stop/stop"} {
+			data, err := payloads.read(name)
+			if err != nil {
+				return nil, "", err
+			}
+			event := strings.Split(name, "/")[0]
+			steps = append(steps, step{event: event, payload: data, timed: event == "Stop", output: event == "Stop"})
+		}
+		return func(i int) []step {
+			round := make([]step, len(steps))
+			for j, s := range steps {
+				data, err := withSession(s.payload, fmt.Sprintf("bench-claim-%d", i))
+				if err != nil {
+					panic(err)
+				}
+				s.payload = data
+				round[j] = s
+			}
+			return round
+		}, "", nil
 	}
-	return nil, "", fmt.Errorf("unknown scenario %q (mix, tools, session-start or stop)", name)
+	return nil, "", fmt.Errorf("unknown scenario %q (mix, tools, session-start, stop or claim-reminder)", name)
 }
 
 // payloadSource reads an agent's recorded payloads, pointed at the bench's
@@ -295,7 +324,9 @@ func (b bench) invoke1(s step) (time.Duration, error) {
 		return 0, fmt.Errorf("%s: %v %s", s.event, err, out)
 	case s.output && len(out) == 0:
 		return 0, fmt.Errorf("%s printed nothing: enforcement did not block", s.event)
-	case !s.output && s.event != "SessionStart" && len(out) > 0:
+	// Other hooks may add context (the recovery note, the claim reminder a
+	// mix's unclaimed session gets once, D50), but no other stop blocks.
+	case !s.output && s.event == "Stop" && len(out) > 0:
 		return 0, fmt.Errorf("%s printed %s", s.event, out)
 	}
 	return elapsed, nil

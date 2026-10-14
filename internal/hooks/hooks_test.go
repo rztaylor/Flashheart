@@ -22,7 +22,7 @@ type fake struct{ panicOn string }
 
 func (f fake) Agent() string { return "fake" }
 
-func (f fake) Parse(event string, payload []byte) (Input, error) {
+func (f fake) Parse(event string, payload []byte) (input Input, err error) {
 	if event == f.panicOn {
 		panic("adapter bug")
 	}
@@ -30,7 +30,12 @@ func (f fake) Parse(event string, payload []byte) (Input, error) {
 	if !ok {
 		return Input{}, errors.New("malformed payload")
 	}
-	input := Input{Cwd: cwd}
+	input = Input{Cwd: cwd}
+	// Like Claude Code, the fake shows the model what a prompt's or a tool
+	// result's output says (D50).
+	defer func() {
+		input.Notes = input.Inbox != "" || len(input.Events) > 0 && input.Events[0].Kind == events.ToolUsed
+	}()
 	run := "fake:" + session
 	// "Sub:<event>" is a tool event from inside the session's subagent a1.
 	actor := run

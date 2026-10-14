@@ -134,6 +134,15 @@ or for every project with `enforce_handoff: true` in
 stop with edits since its last checkpoint, Flashheart asks it once to
 checkpoint first. It never asks twice in a row.
 
+## Sessions without a ticket
+
+A session that changes files (with the edit tools or shell commands)
+without a ticket, by claim or by a branch match, is asked once to claim
+the ticket its work belongs to or create one, so its work shows on the
+board and leaves a handoff. With handoff enforcement on, the request holds
+that stop; otherwise the session sees it with your next prompt or its next
+tool result. It is never asked twice, and subagents are never asked.
+
 ## What gets recorded
 
 Into `<root>/<project>/.flashheart/events/<date>.jsonl`, where the project is

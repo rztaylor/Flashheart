@@ -59,6 +59,10 @@ type Input struct {
 	// Settled is the adapter seeing a run's checkpoint tool return: the
 	// session's runs may record the paths they edited again (FH-55).
 	Settled bool
+	// Notes is the agent showing the model the context this event's
+	// output carries, so a reminder owed to the session goes with it
+	// (D50).
+	Notes bool
 }
 
 // Output is what hooks wants said back to the agent.
@@ -227,21 +231,30 @@ func handle(options Options) error {
 	// A stop or end that cannot be checked is allowed and still recorded
 	// (HOOK-1).
 	var problem error
+	var decided verdict
 	if index := sessionEnd(list); index >= 0 {
 		// The session's pending activity is recorded first, so the worktree
 		// check and enforcement see every shell command and edit.
 		end := list[index]
-		_, problem = record(log, project, list, func(state *sessionState) []events.Event { return flushRuns(state, end, at) })
+		claim := ""
+		_, problem = record(log, project, list, func(state *sessionState) []events.Event {
+			claim = state.Claim
+			return flushRuns(state, end, at)
+		})
 		timeout := options.ChangeTimeout
 		if timeout <= 0 {
 			timeout = DefaultChangeTimeout
 		}
 		var err error
-		out.Block, err = settle(s, log, project, info, &list[index], input.Stop && !input.StopActive, at, settings, began.Add(timeout))
+		decided, err = settle(s, log, project, info, &list[index], input.Stop && !input.StopActive, at, settings, began.Add(timeout), claim == "")
+		out.Block = decided.block
 		problem = errors.Join(problem, err)
 	}
+	remind := false
 	appended, err := record(log, project, list, func(state *sessionState) []events.Event {
-		return throttle(state, list, at, interval, input.Settled)
+		recorded := throttle(state, list, at, interval, input.Settled)
+		remind = remindToClaim(state, decided, input.Notes, list[0].Run)
+		return recorded
 	})
 	if err != nil {
 		return errors.Join(problem, err)
@@ -260,6 +273,9 @@ func handle(options Options) error {
 		// session depends on the prompt's origin (D41).
 		out.Context, err = prompted(inboxOf(log), project, input.Inbox, at)
 		problem = errors.Join(problem, err)
+	}
+	if remind {
+		out.Context = joinNotes(out.Context, protocol.ClaimReminder)
 	}
 	return errors.Join(problem, write(options, out))
 }
@@ -321,49 +337,70 @@ func sessionEnd(list []events.Event) int {
 // marks the event when the worktree changed since the run's last checkpoint
 // other than through the edit tools (agent-protocol §4, FH-53), and at a
 // stop the agent may be blocked at, decides whether to block it for a
-// checkpoint (HOOK-6, §9), marking the turn end when it does. The log is
-// read only when there is a worktree to check or the project enforces
-// handoffs. A failed worktree check is reported, and enforcement still runs.
-func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, end *events.Event, stop bool, now time.Time, settings config.Config, deadline time.Time) (string, error) {
+// checkpoint (HOOK-6, §9), marking the turn end when it does. At a turn
+// end of a session not yet reminded (remind), it decides whether the
+// session owes the claim reminder (D50, claim.go), held as the stop's
+// reason where it would be blocked for a checkpoint were it linked. The
+// log is read only when there is a worktree to check, the project
+// enforces handoffs or a reminder may be owed, and the project's tickets
+// only when a dirty run's link turns on a branch match. A failed worktree
+// check is reported, and enforcement still runs.
+func settle(s *store.Store, log *events.Log, project string, info gitinfo.Info, end *events.Event, stop bool, now time.Time, settings config.Config, deadline time.Time, remind bool) (verdict, error) {
 	enforcing := false
 	if stop && end.Kind == events.TurnEnd {
 		enforcing = settings.EnforceHandoff
 		override, err := s.EnforceHandoff(project)
 		if err != nil {
-			return "", err
+			return verdict{}, err
 		}
 		if override != nil {
 			enforcing = *override
 		}
 	}
-	if info.Worktree == "" && !enforcing {
-		return "", nil
+	remind = remind && end.Kind == events.TurnEnd
+	if info.Worktree == "" && !enforcing && !remind {
+		return verdict{}, nil
 	}
 	// Only the session's own events and the claims decide its edits,
 	// windows and link.
 	set := runs.NewSet()
 	if err := readRuns(log, project, now, runs.Keep(end.Run), set.Apply); err != nil {
-		return "", err
+		return verdict{}, err
 	}
 	changed, problem := worktreeChanged(set, end.Run, info, deadline)
 	markEnd(end, changed, false)
-	if !enforcing {
-		return "", problem
-	}
 	r := set.Get(end.Run)
-	if r == nil || !(changed || set.Dirty(end.Run)) || r.BlockedForHandoff {
-		return "", problem
+	if r == nil || !(changed || set.Dirty(end.Run)) {
+		return verdict{}, problem
 	}
-	details, err := s.ReadProject(project)
-	if err != nil {
-		return "", errors.Join(problem, err)
+	handoff := enforcing && !r.BlockedForHandoff
+	if !handoff && !remind {
+		return verdict{}, problem
 	}
-	link := set.Link(end.Run, func(_, branch string) []string { return details.InProgressOnBranch(branch) })
-	if link.Ticket == "" {
-		return "", problem
+	var details board.Project
+	var unread error
+	read := false
+	link := set.Link(end.Run, func(_, branch string) []string {
+		if !read {
+			details, unread = s.ReadProject(project)
+			read = true
+		}
+		return details.InProgressOnBranch(branch)
+	})
+	switch {
+	case unread != nil:
+		return verdict{}, errors.Join(problem, unread)
+	case link.Ticket == "" && remind:
+		decided := verdict{remind: true}
+		if enforcing {
+			decided.block = protocol.ClaimReminder
+		}
+		return decided, problem
+	case link.Ticket == "" || !handoff:
+		return verdict{}, problem
 	}
 	markEnd(end, false, true)
-	return fmt.Sprintf("Flashheart: record a checkpoint on %s (done, next, files) before stopping.", link.Ticket), problem
+	return verdict{block: fmt.Sprintf("Flashheart: record a checkpoint on %s (done, next, files) before stopping.", link.Ticket)}, problem
 }
 
 // worktreeChanged asks git whether a file in the run's worktree changed

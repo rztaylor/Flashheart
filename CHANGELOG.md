@@ -17,6 +17,15 @@ All notable changes to this project are documented here. The project follows
   nothing changes. The board's API gains the same rename, with the title,
   for the workstream page to use (FH-167). A title change alone still
   keeps the slug. Agent protocol stays 2.
+- Sessions that change files without a ticket are asked to claim one
+  (FH-132, D50, `HOOK-8`). A Claude Code or Codex session that edits
+  files, with the edit tools or shell commands, while it holds no ticket
+  by claim or branch match is asked once to claim the ticket its work
+  belongs to or create one, naming the tools, so its work shows on the
+  board and leaves a handoff. Where handoff enforcement is on, the
+  request holds that stop; otherwise it reaches the session with the next
+  prompt (or, in Claude Code, its next tool result). It is never repeated
+  in a session, and subagents are never asked. Agent protocol stays 2.
 - Agents can change a workstream after creating it, and file tickets on
   another project's board (FH-46, D69, `MCP-2`). The new
   `update_workstream` tool sets a workstream's title, goal, priority,

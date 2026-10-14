@@ -10,6 +10,11 @@ protocol text in its global `AGENTS.md`.
 Works in the Codex CLI, the IDE extension and the ChatGPT app, which share
 `~/.codex`. Checked against Codex 0.160.0 (2026-10-12).
 
+One difference: a Codex session that changes files without a ticket is
+asked to claim one with your next prompt (or, with handoff enforcement
+on, when it tries to stop), not with a tool result, since Codex is not
+known to show the model what a tool result's hook says.
+
 ## Set it up
 
 ```sh
