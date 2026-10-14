@@ -7,6 +7,9 @@ import {
   noChoice,
 } from "./filters";
 
+// Scope is what the board shows: every project or one.
+export type Scope = { kind: "all" } | { kind: "project"; project: string };
+
 // Remembered view and filters per project or All projects (VIEW-7, CFG-2).
 // The search box and the band's Needs you toggle (FH-44) are never
 // remembered; they carry over from scope to scope.

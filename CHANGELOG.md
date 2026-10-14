@@ -793,7 +793,7 @@ All notable changes to this project are documented here. The project follows
 
 ### Removed
 
-- Agents' plans (FH-133, D51, D72, `RUN-4` retired). No session on this
+- Agents' plans (FH-133, D51, D76, `RUN-4` retired). No session on this
   board ever recorded one, so the plan section on the Runs tab, the plan
   count on cards and the plan step in their tooltips were always empty. A
   ticket's plan is its ticked acceptance criteria and its handoff's next

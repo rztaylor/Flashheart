@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 
 import { COLUMNS, type ProjectSummary } from "../../api/board";
 import { noRuns, type RunCounts } from "../../api/runs";
-import type { Scope } from "../../app/route";
 import { Icon } from "../../components/Icon";
 import { NeedsYouCount } from "../../components/NeedsYou";
 import { needsYouPhrase } from "../../model/runs";
+import type { Scope } from "../../model/scopes";
 
 interface ProjectRailProps {
   projects: ProjectSummary[];

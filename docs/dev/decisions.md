@@ -1201,7 +1201,7 @@ board, no session called a plan tool (`TodoWrite`, the task tools or
 `update_plan`), and the Claude desktop app's Code session used for this
 review offered none, so the plan display was always empty. Older logs that hold plans
 still fold. Built by FH-133, which also settles the protocol version
-under agent-protocol §14 (D72: it stays 2).
+under agent-protocol §14 (D76: it stays 2).
 
 Options: criteria and handoff as the plan (chosen); hide the display but
 keep the parsing dormant; agents report a plan through `checkpoint` (more
@@ -1865,7 +1865,40 @@ converted weeks ago, and Flashheart makes no compatibility promise before
 1.0.0, so the detection would be code no one runs, which is what D55
 retires.
 
-## 2026-10-14 — D72: Retiring plans keeps protocol version 2
+## 2026-10-14 — D72: Layering is checked by tests; the MCP SDK may link net/http
+
+The layering rules in `.agents/facts/architecture.md` and
+`frontend-ui.md` were kept by review alone (FH-106). They are now tests
+that `scripts/check.sh` runs: `internal/archtest`'s
+`TestLeanPackagesDoNotLinkTheWebServer` over `go list -deps`, and the
+frontend's `src/layering.test.ts` over every source's relative imports.
+
+- **Go: how strict.** The rule is that `mcpserver`, `hooks`, `await`,
+  `setup` and `doctor` depend on none of `index`, `api`, `app`, `webui`
+  and `net/http`. Measured when the test was written, all are clean
+  except `mcpserver`, which reaches `net/http` only through
+  `github.com/modelcontextprotocol/go-sdk/mcp` (its streamable HTTP and
+  SSE transports, and OAuth through `golang.org/x/oauth2`). Flashheart
+  serves MCP over stdio and never uses them. Options: drop `net/http`
+  from the rule (it would then not notice our own code importing it);
+  fork or wrap the SDK (far more than the rule is worth); or walk the
+  import graph without following edges inside the SDK. Chosen: the last,
+  as a named allowance with its reason in the test, which fails when the
+  allowance is no longer needed. Flashheart's own packages on the hook
+  and MCP paths still may not import `net/http`.
+- **Frontend: test, not lint.** Biome's `noRestrictedImports` matches
+  specifier text, so a relative import (`../../app/route`) would need
+  path patterns that depend on the importing file's depth. A Vitest test
+  reads the sources through `import.meta.glob` (no Node types in the
+  app's TypeScript), resolves each relative import and compares layers.
+  It covers every shared layer (`styles`, `model`, `components`, `api`,
+  `state`, `lifecycle`, `test`), `model` not importing components, and
+  features not importing the shell.
+- **Not covered.** `cli` imports `app` for two small types, so the binary
+  links the web server in every mode; the Go check covers the mode
+  packages, and moving those types is separate work.
+
+## 2026-10-14 — D76: Retiring plans keeps protocol version 2
 
 Decision (FH-133, settling the question D51 left): removing plans
 (`plan.updated`, the task-list tools' reading and the `TaskCreated` and

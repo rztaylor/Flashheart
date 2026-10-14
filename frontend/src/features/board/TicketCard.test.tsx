@@ -2,8 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { Card } from "../../api/board";
+import type { Density } from "../../api/preferences";
 import { type Live, noReason } from "../../api/runs";
-import type { Density } from "../filters/FilterBar";
 import { TicketCard } from "./TicketCard";
 
 // The card of docs/dev/specs/ui-layout.md §2 (FH-147): one set of markers,

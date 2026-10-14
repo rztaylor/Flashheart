@@ -1299,14 +1299,14 @@ no event changes shape (membership changes record `ticket.updated` with
 `fields: [workstream]` as before), and an older agent that never calls
 the tool works as before, so the version stays 2.
 
-Removal within version 2 (D51, D72, FH-133, 2026-10-14): plans are no
+Removal within version 2 (D51, D76, FH-133, 2026-10-14): plans are no
 longer recorded. Hooks stop writing `plan.updated` and stop reading the
 agents' task-list tools (`TodoWrite`, `TaskCreate`, `TaskUpdate`,
 Codex's `update_plan`); `setup claude` no longer registers `TaskCreated`
 and `TaskCompleted`; readers skip `plan.updated` as an unknown kind; runs
 and cards carry no plan; and the skill's line asking agents to keep their
 todo list current becomes one saying a ticket's criteria and handoff are
-its plan. A removal, but the version stays 2 (D72): nothing anyone reads
+its plan. A removal, but the version stays 2 (D76): nothing anyone reads
 changes meaning. A version 2 binary without this change reading a newer
 log sees no plans, which it already showed as none for every session
 that kept no list (all of them on this board); a newer reader skips old
