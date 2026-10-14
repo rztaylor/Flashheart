@@ -2161,7 +2161,7 @@ saved UI preferences that name the slug follow too, for any rename.
   (`renameWorkstreamIn`), as it saves preferences whole and would
   otherwise put the old slug back. A rename by an agent while a board
   tab is open is not heard by that tab's copy; its next preference save
-  can still restore the old slug there (FH-173).
+  can still restore the old slug there (FH-173; closed by D80).
 
 Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format
 stays 2 (no field is added; the preferences keep their shape).
@@ -2200,3 +2200,57 @@ events types were the wire format.
   reasons are mapped to `api` types; the JSON is unchanged (the fixtures
   did not move). A test fails when a response type reaches a `runs` or
   `events` type again.
+
+## 2026-10-14 — D80: Preferences are saved as patches and read again as the board changes; a workstream page follows a rename it did not make
+
+Decision (FH-173, FH-174): two follow-ups to renames made outside the tab
+(D73's `rename_to`, D78's page rename in another tab).
+
+- **Preferences are saved as what changed (FH-173).** The board's
+  preference save is `PATCH /api/preferences` (it replaces `PUT`, which
+  only the board used): the top-level preferences that changed, and each
+  project's scope or expanded list that changed, `null` for one removed.
+  The server applies it to `config.yaml` as it is under the root lock, so
+  a rename's rewrite (D78) made since the tab loaded stays unless the tab
+  changed that very project's entry. The page works the patch out against
+  the server's copy as it last knew it; after a failed save it sends its
+  whole copy, as before.
+- **And read again as the board changes.** Each move of the board's
+  revision (LIFE-3) reads the saved preferences again, and the page takes
+  the server's copy only when nothing of its own is waiting to be saved
+  or being sent and nothing changed since the read began; otherwise it
+  reads again once its saves end. So a just-made change is never
+  overwritten, and the tab's copy catches up with the rename. When the
+  copy taken changes the open scope's saved filters, the open filters are
+  restored from it (the search and Needs you stay), so the next filter
+  change saves the new slug too. `config.yaml` itself does not move the
+  revision; the rename's ticket and workstream files do, and the
+  preferences are rewritten in the same call, just after.
+- **Both, not one.** A patch alone leaves the tab showing and later
+  saving the old slug for the project it renamed; a refresh alone loses
+  to a save already waiting when the rename lands. Together, only a
+  change to the renamed project's own filter in the instant before the
+  tab hears the revision can still name the old slug.
+- **A workstream page follows a rename it did not make (FH-174).** When
+  its workstream answers 404 after it loaded, the page looks among the
+  project's workstreams for what it became: the one with its name
+  (`workstreamTitleKey`; names are unique in a project, D76, and a rename
+  by slug alone keeps the name), or else the one every one of its
+  tickets is now in (a rename keeps its members whatever it does to the
+  name). If the two disagree, or neither finds one, it does not guess.
+  Found, the page moves to the new address in place of the old one, as
+  its own rename does (D78), with the toast *<name> was renamed
+  elsewhere: its short name is now <slug>.* (or *… renamed elsewhere to
+  <new name>.*). Not found, or for an address gone before the page
+  opened, it says *<name> is no longer here* and *<project> has no
+  workstream <slug> now: it was renamed or removed.* with a link to the
+  project's workstreams, not a load error with Try again.
+- **No former slug is recorded.** The server could name the successor in
+  its 404 if a renamed workstream kept its old slug in its file, but that
+  is a board-format field for one browser case, and the page already
+  holds what it needs: the name and members it last showed. A bookmark
+  to an old address gets the plain message.
+
+Versions: `PROTOCOL_VERSION` stays 2 (no tool changes; the preference
+endpoint is the board's, not agents'); board format stays 2 (no field is
+added).

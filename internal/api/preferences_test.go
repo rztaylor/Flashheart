@@ -50,7 +50,7 @@ func TestPreferencesReadWaitsForASaveInFlight(t *testing.T) {
 	saved := make(chan int)
 	go func() {
 		recorder := httptest.NewRecorder()
-		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/api/preferences", bytes.NewReader(body)))
+		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPatch, "/api/preferences", bytes.NewReader(body)))
 		saved <- recorder.Code
 	}()
 	<-writer.saving
@@ -78,5 +78,56 @@ func TestPreferencesReadWaitsForASaveInFlight(t *testing.T) {
 	}
 	if after.ColourBy != "age" {
 		t.Errorf("read colour by = %q, want the saved age", after.ColourBy)
+	}
+}
+
+// A preference save names only what changed (FH-173): a tab whose copy is
+// older than the file, such as one open while an agent renamed a workstream
+// its filter names, changes the theme without putting its old filter back.
+// A project's view and filters, and its expanded workstreams, are replaced
+// one project at a time; null removes them.
+func TestPreferencesPatchChangesOnlyWhatItNames(t *testing.T) {
+	t.Parallel()
+
+	handler, _ := writableAPI(t)
+	send(t, handler, http.MethodPatch, "/api/preferences", map[string]any{
+		"scopes": map[string]any{
+			"alpha": map[string]any{"view": "board", "type": map[string]any{"include": []string{}, "exclude": []string{}}, "priority": map[string]any{"include": []string{}, "exclude": []string{}}, "workstream": map[string]any{"include": []string{}, "exclude": []string{"board"}}, "age": map[string]any{"include": []string{}, "exclude": []string{}}, "state": ""},
+			"beta":  map[string]any{"view": "table", "type": map[string]any{"include": []string{}, "exclude": []string{}}, "priority": map[string]any{"include": []string{}, "exclude": []string{}}, "workstream": map[string]any{"include": []string{}, "exclude": []string{}}, "age": map[string]any{"include": []string{}, "exclude": []string{}}, "state": ""},
+		},
+		"expandedWorkstreams": map[string]any{"alpha": []string{"lines"}, "beta": []string{"offline"}},
+	}, http.StatusNoContent, nil)
+
+	send(t, handler, http.MethodPatch, "/api/preferences", `{"theme":"dark"}`, http.StatusNoContent, nil)
+	var prefs Preferences
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
+	if prefs.Theme != "dark" || prefs.ColourBy != "type" || prefs.Editor != "formatted" {
+		t.Errorf("after the theme = %+v", prefs)
+	}
+	if got := prefs.Scopes["alpha"].Workstream.Exclude; len(got) != 1 || got[0] != "board" {
+		t.Errorf("alpha's filter = %v, want it kept", got)
+	}
+
+	send(t, handler, http.MethodPatch, "/api/preferences", `{"scopes":{"beta":null,"gamma":{"view":"overview","type":{"include":[],"exclude":[]},"priority":{"include":[],"exclude":[]},"workstream":{"include":[],"exclude":[]},"age":{"include":[],"exclude":[]},"state":""}},"expandedWorkstreams":{"beta":null}}`, http.StatusNoContent, nil)
+	prefs = Preferences{}
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
+	if _, ok := prefs.Scopes["beta"]; ok {
+		t.Errorf("beta's scope kept: %+v", prefs.Scopes)
+	}
+	if prefs.Scopes["gamma"].View != "overview" || prefs.Scopes["alpha"].View != "board" {
+		t.Errorf("scopes = %+v", prefs.Scopes)
+	}
+	if _, ok := prefs.ExpandedWorkstreams["beta"]; ok || len(prefs.ExpandedWorkstreams["alpha"]) != 1 {
+		t.Errorf("expanded = %+v", prefs.ExpandedWorkstreams)
+	}
+
+	// An empty patch saves nothing and is not an error; a bad value in one
+	// is refused whole.
+	send(t, handler, http.MethodPatch, "/api/preferences", `{}`, http.StatusNoContent, nil)
+	send(t, handler, http.MethodPatch, "/api/preferences", `{"theme":"light","colourBy":"rainbow"}`, http.StatusBadRequest, nil)
+	prefs = Preferences{}
+	getJSON(t, handler, "/api/preferences", http.StatusOK, &prefs)
+	if prefs.Theme != "dark" {
+		t.Errorf("a refused patch saved the theme %q", prefs.Theme)
 	}
 }

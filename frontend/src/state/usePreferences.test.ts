@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthenticatedFetch } from "../api/client";
-import { defaultPreferences, type Preferences } from "../api/preferences";
+import {
+  defaultPreferences,
+  type Preferences,
+  type PreferencesPatch,
+  type ScopePreferences,
+} from "../api/preferences";
 import {
   type PageVisibility,
   preferenceSaver,
@@ -17,13 +22,15 @@ function harness() {
   const visibility = Object.assign(new EventTarget(), {
     visibilityState: "visible" as DocumentVisibilityState,
   }) satisfies PageVisibility;
-  const saver = preferenceSaver(fetcher);
+  const idle = vi.fn();
+  const saver = preferenceSaver(fetcher, idle);
+  saver.known(defaultPreferences);
   const stop = saver.watch(page, visibility);
   const hide = () => {
     visibility.visibilityState = "hidden";
     visibility.dispatchEvent(new Event("visibilitychange"));
   };
-  return { fetcher, page, visibility, saver, stop, hide };
+  return { fetcher, page, visibility, saver, stop, hide, idle };
 }
 
 const withColour = (colourBy: Preferences["colourBy"]): Preferences => ({
@@ -31,12 +38,22 @@ const withColour = (colourBy: Preferences["colourBy"]): Preferences => ({
   colourBy,
 });
 
+const none = { include: [], exclude: [] };
+const hiding = (slug: string): ScopePreferences => ({
+  view: "board",
+  type: none,
+  priority: none,
+  workstream: { include: [], exclude: [slug] },
+  age: none,
+  state: "",
+});
+
 function sent(fetcher: ReturnType<typeof harness>["fetcher"]) {
   return fetcher.mock.calls.map(([path, init]) => ({
     path,
     method: init?.method,
     keepalive: init?.keepalive ?? false,
-    body: JSON.parse(String(init?.body)) as Preferences,
+    body: JSON.parse(String(init?.body)) as PreferencesPatch,
   }));
 }
 
@@ -58,9 +75,9 @@ describe("preferenceSaver", () => {
     expect(sent(fetcher)).toEqual([
       {
         path: "/api/preferences",
-        method: "PUT",
+        method: "PATCH",
         keepalive: true,
-        body: withColour("priority"),
+        body: { colourBy: "priority" },
       },
     ]);
 
@@ -75,7 +92,7 @@ describe("preferenceSaver", () => {
     saver.schedule(withColour("age"));
     hide();
     expect(sent(fetcher)).toEqual([
-      expect.objectContaining({ keepalive: true, body: withColour("age") }),
+      expect.objectContaining({ keepalive: true, body: { colourBy: "age" } }),
     ]);
 
     // Hidden and then unloaded: nothing is left to send.
@@ -92,7 +109,7 @@ describe("preferenceSaver", () => {
     expect(fetcher).not.toHaveBeenCalled();
     vi.advanceTimersByTime(SAVE_DELAY_MS);
     expect(sent(fetcher)).toEqual([
-      expect.objectContaining({ keepalive: false, body: withColour("age") }),
+      expect.objectContaining({ keepalive: false, body: { colourBy: "age" } }),
     ]);
     stop();
   });
@@ -126,9 +143,9 @@ describe("preferenceSaver", () => {
     expect(sent(fetcher)).toEqual([
       {
         path: "/api/preferences",
-        method: "PUT",
+        method: "PATCH",
         keepalive: false,
-        body: withColour("none"),
+        body: { colourBy: "none" },
       },
     ]);
     stop();
@@ -146,9 +163,73 @@ describe("preferenceSaver", () => {
     hide();
     await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
     expect(sent(fetcher)).toEqual([
-      expect.objectContaining({ keepalive: true, body: withColour("age") }),
-      expect.objectContaining({ keepalive: false, body: withColour("age") }),
+      expect.objectContaining({ keepalive: true, body: { colourBy: "age" } }),
+      expect.objectContaining({ keepalive: false, body: { colourBy: "age" } }),
     ]);
+    stop();
+  });
+
+  // FH-173: a save names only what changed from the server's copy, so a
+  // copy older than the file (an agent renamed a workstream a filter
+  // names) does not put the old slug back when the theme changes.
+  it("sends only what changed from the server's copy", () => {
+    const { fetcher, saver, stop } = harness();
+    const server: Preferences = {
+      ...defaultPreferences,
+      scopes: { alpha: hiding("board"), beta: hiding("offline") },
+      expandedWorkstreams: { alpha: ["lines"] },
+    };
+    saver.known(server);
+    saver.schedule({ ...server, theme: "dark" });
+    vi.advanceTimersByTime(SAVE_DELAY_MS);
+    // One project's scope changed, another's went, and an expanded list
+    // went: each is named by project.
+    saver.schedule({
+      ...server,
+      theme: "dark",
+      scopes: { alpha: hiding("lines") },
+      expandedWorkstreams: {},
+    });
+    vi.advanceTimersByTime(SAVE_DELAY_MS);
+    // Nothing changed since the last save: nothing is sent.
+    saver.schedule({
+      ...server,
+      theme: "dark",
+      scopes: { alpha: hiding("lines") },
+      expandedWorkstreams: {},
+    });
+    vi.advanceTimersByTime(SAVE_DELAY_MS);
+    expect(sent(fetcher).map((save) => save.body)).toEqual([
+      { theme: "dark" },
+      {
+        scopes: { alpha: hiding("lines"), beta: null },
+        expandedWorkstreams: { alpha: null },
+      },
+    ]);
+    stop();
+  });
+
+  it("sends everything after a save fails, and is busy until a save ends", async () => {
+    const { fetcher, saver, stop, idle } = harness();
+    fetcher.mockImplementationOnce(
+      async () => new Response("{}", { status: 500 }),
+    );
+    saver.schedule(withColour("age"));
+    expect(saver.busy()).toBe(true);
+    vi.advanceTimersByTime(SAVE_DELAY_MS);
+    expect(saver.busy()).toBe(true);
+    await vi.waitFor(() => expect(idle).toHaveBeenCalledTimes(1));
+    expect(saver.busy()).toBe(false);
+
+    // The server may not have the failed change: the next save carries
+    // the whole copy.
+    saver.schedule({ ...withColour("age"), density: "compact" });
+    vi.advanceTimersByTime(SAVE_DELAY_MS);
+    await vi.waitFor(() => expect(idle).toHaveBeenCalledTimes(2));
+    expect(sent(fetcher)[1]?.body).toEqual({
+      ...withColour("age"),
+      density: "compact",
+    });
     stop();
   });
 

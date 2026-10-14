@@ -835,7 +835,11 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   A change is saved shortly after it is made, and at once when the page is
   hidden or closed, so a reload does not lose it. The server answers a
   preference read only after any save it is writing, so a page reloaded
-  straight after a change shows it.
+  straight after a change shows it. A save names only the preferences
+  changed, and an open page reads the saved ones again as the board
+  changes, taking them when nothing of its own is waiting, so a change
+  made elsewhere (an agent's workstream rename) is neither undone nor
+  missed (FH-173, D80).
 
 ### 6.13 Lifecycle (`LIFE`)
 

@@ -151,12 +151,64 @@ export function fetchPreferences(
   );
 }
 
-// savePreferences replaces the saved preferences. keepalive sends a save the
-// page is unloading on (FH-48).
+// PreferencesPatch is a save of what changed (FH-173): the top-level
+// preferences changed, and the scopes and expanded workstreams of each
+// project changed, null for a project's entry removed. What it leaves out
+// stays as saved, so a copy older than the file (an agent renamed a
+// workstream since it loaded) does not put back what it did not change.
+export type PreferencesPatch = Partial<
+  Omit<Preferences, "scopes" | "expandedWorkstreams">
+> & {
+  scopes?: Record<string, ScopePreferences | null>;
+  expandedWorkstreams?: Record<string, string[] | null>;
+};
+
+const same = (a: unknown, b: unknown) =>
+  JSON.stringify(a) === JSON.stringify(b);
+
+// changedEntries is each project of next whose entry differs from saved,
+// and null for each project next no longer has; undefined when none.
+function changedEntries<T>(
+  saved: Record<string, T>,
+  next: Record<string, T>,
+): Record<string, T | null> | undefined {
+  const out: Record<string, T | null> = {};
+  for (const [project, value] of Object.entries(next))
+    if (!same(saved[project], value)) out[project] = value;
+  for (const project of Object.keys(saved))
+    if (!(project in next)) out[project] = null;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+// preferencesPatch is what changed from saved, the server's copy, to next:
+// all of next when the server's copy is unknown, and undefined when
+// nothing changed.
+export function preferencesPatch(
+  saved: Preferences | undefined,
+  next: Preferences,
+): PreferencesPatch | undefined {
+  if (!saved) return next;
+  const patch: PreferencesPatch = {};
+  const { scopes, expandedWorkstreams, ...rest } = next;
+  for (const key of Object.keys(rest) as (keyof typeof rest)[])
+    if (!same(saved[key], rest[key]))
+      Object.assign(patch, { [key]: rest[key] });
+  const changedScopes = changedEntries(saved.scopes, scopes);
+  if (changedScopes) patch.scopes = changedScopes;
+  const changedExpanded = changedEntries(
+    saved.expandedWorkstreams,
+    expandedWorkstreams,
+  );
+  if (changedExpanded) patch.expandedWorkstreams = changedExpanded;
+  return Object.keys(patch).length > 0 ? patch : undefined;
+}
+
+// savePreferences saves a patch of the preferences. keepalive sends a save
+// the page is unloading on (FH-48).
 export async function savePreferences(
   fetcher: AuthenticatedFetch,
-  preferences: Preferences,
+  patch: PreferencesPatch,
   options: { keepalive?: boolean } = {},
 ) {
-  await sendJSON(fetcher, "PUT", "/api/preferences", preferences, options);
+  await sendJSON(fetcher, "PATCH", "/api/preferences", patch, options);
 }
