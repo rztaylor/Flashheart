@@ -537,12 +537,12 @@ server is registered by running
 `claude mcp add-json --scope user flashheart '{"type":"stdio","command":"/usr/local/bin/flashheart","args":["mcp"]}'`,
 because Claude Code owns `~/.claude.json`; without a `claude` command setup
 prints it for the user. The protocol skill goes to
-`~/.claude/skills/flashheart/SKILL.md`, and the kanban-tracker skill, which
-it replaces, moves into the backup (user, 2026-10-06). Setup shows the
-diff and asks before applying it (`--yes` skips the question; SET-1). It
-backs up what it changes in `~/.claude/flashheart-backup/<UTC time>/`;
-`--uninstall` restores the backed-up `settings.json` byte for byte
-when nothing changed since, else removes only setup's own hooks.
+`~/.claude/skills/flashheart/SKILL.md`. Setup shows the diff and asks
+before applying it (`--yes` skips the question; SET-1). It backs up what
+it changes in `~/.claude/flashheart-backup/<UTC time>/`; `--uninstall`
+restores the backed-up `settings.json` byte for byte when nothing changed
+since, else removes only setup's own hooks, and puts back a kanban-tracker
+skill an earlier setup moved into a backup (D55).
 
 The protocol skill is Flashheart's own code, not user configuration, so it
 is kept current without setup: at every `SessionStart` (startup, resume,
@@ -924,7 +924,7 @@ and `create_workstream` refuse one that would lead back to the workstream
 (`invalid_input`, naming it), and check only cycles through the
 workstream they write. A title change renames a workstream as people see
 it; its slug, which tickets and other workstreams name, stays. Only
-`update_workstream`'s `rename_to` changes a slug (FH-158, D71): in the
+`update_workstream`'s `rename_to` changes a slug (FH-158, D73): in the
 same write it moves the file and rewrites every reference to the old slug
 in the project, each ticket's `workstream:` and every
 `depends-on-workstreams` of its workstreams and its live and archived
@@ -1303,7 +1303,7 @@ no event changes shape (membership changes record `ticket.updated` with
 `fields: [workstream]` as before), and an older agent that never calls
 the tool works as before, so the version stays 2.
 
-Additive change within version 2 (D71, FH-158, 2026-10-14):
+Additive change within version 2 (D73, FH-158, 2026-10-14):
 `update_workstream` takes an optional `rename_to` (§7.2, §7.4) that renames
 the workstream's slug and rewrites every reference to it, and the skill's
 workstream line says so. A new optional input: every call that was

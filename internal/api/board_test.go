@@ -92,7 +92,7 @@ func TestProjectsListsKeysCountsAndActivity(t *testing.T) {
 	}
 	var body ProjectsResponse
 	getJSON(t, handler, "/api/projects", http.StatusOK, &body)
-	if body.Revision != 1 || body.RootMissing || body.Root != root || len(body.V1Projects) != 0 || body.MigrateCommand != "" {
+	if body.Revision != 1 || body.RootMissing || body.Root != root {
 		t.Errorf("response = %+v", body)
 	}
 	if len(body.Projects) != 2 || body.Projects[0].Name != "beta" || body.Projects[1].Name != "alpha" {
@@ -354,7 +354,7 @@ func TestFilesAreServedSafely(t *testing.T) {
 	getJSON(t, handler, "/api/projects/alpha/tickets/AL-99/files/x.png", http.StatusNotFound, nil)
 }
 
-func TestMissingRootV1RootAndUnknownProject(t *testing.T) {
+func TestMissingRootAndUnknownProject(t *testing.T) {
 	t.Parallel()
 
 	missing := filepath.Join(t.TempDir(), "absent")
@@ -365,29 +365,11 @@ func TestMissingRootV1RootAndUnknownProject(t *testing.T) {
 	}
 	getJSON(t, handlerFor(t, missing), "/api/projects/alpha/board", http.StatusNotFound, nil)
 
-	v1 := copyBoard(t, "sample-v1")
-	var legacy ProjectsResponse
-	getJSON(t, handlerFor(t, v1), "/api/projects", http.StatusOK, &legacy)
-	if !slices.Equal(legacy.V1Projects, []string{"alpha", "beta"}) || legacy.MigrateCommand != "flashheart migrate --root "+v1 {
-		t.Errorf("v1 root = %+v", legacy)
-	}
-
 	sample, _ := sampleAPI(t, nil)
 	recorder := httptest.NewRecorder()
 	sample.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/projects", nil))
 	if recorder.Code != http.StatusMethodNotAllowed || !strings.Contains(recorder.Body.String(), "method_not_allowed") {
 		t.Errorf("POST /api/projects = %d %s", recorder.Code, recorder.Body.String())
-	}
-}
-
-func TestShellQuote(t *testing.T) {
-	t.Parallel()
-
-	if got := shellQuote("/Users/me/reports/Kanban"); got != "/Users/me/reports/Kanban" {
-		t.Errorf("plain = %q", got)
-	}
-	if got := shellQuote("/Users/me/My Board's"); got != `'/Users/me/My Board'\''s'` {
-		t.Errorf("quoted = %q", got)
 	}
 }
 

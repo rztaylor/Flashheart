@@ -119,7 +119,7 @@ func TestHelpListsEveryCommand(t *testing.T) {
 func TestEveryCommandHasHelp(t *testing.T) {
 	t.Parallel()
 
-	for _, command := range []string{"serve", "mcp", "hook", "await", "setup", "doctor", "migrate", "version"} {
+	for _, command := range []string{"serve", "mcp", "hook", "await", "setup", "doctor", "version"} {
 		h := newHarness(t)
 		code, stdout, stderr := h.run(command, "--help")
 		if code != 0 || stderr != "" {
@@ -497,67 +497,17 @@ func TestOnlyTheBackgroundChildOpensServeLog(t *testing.T) {
 	}
 }
 
-func v1Root(t *testing.T) string {
-	t.Helper()
-	root := filepath.Join(t.TempDir(), "board")
-	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "boards", "sample-v1"))); err != nil {
-		t.Fatal(err)
-	}
-	return root
-}
-
-func TestMigrateDryRunShowsThePlanAndWritesNothing(t *testing.T) {
-	t.Parallel()
-
-	root := v1Root(t)
-	h := newHarness(t)
-	code, stdout, stderr := h.run("migrate", "--root", root, "--key", "alpha=AL", "--key", "beta=BE")
-	if code != 0 || stderr != "" {
-		t.Fatalf("code=%d stderr=%q", code, stderr)
-	}
-	for _, want := range []string{"alpha → key AL (--key)", "AL-3  in-progress/feat--card-panel.md", "Run again with --write"} {
-		if !strings.Contains(stdout, want) {
-			t.Errorf("stdout lacks %q:\n%s", want, stdout)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(root, "alpha", "tickets")); !os.IsNotExist(err) {
-		t.Error("dry run created tickets/")
-	}
-}
-
-func TestMigrateWriteConvertsTheRoot(t *testing.T) {
-	t.Parallel()
-
-	root := v1Root(t)
-	h := newHarness(t)
-	code, stdout, stderr := h.run("migrate", "--write", "--root", root, "--key", "alpha=AL", "--key", "beta=BE")
-	if code != 0 || stderr != "" {
-		t.Fatalf("code=%d stderr=%q", code, stderr)
-	}
-	if !strings.Contains(stdout, "Migrated "+root+" to board format v2: 2 projects, 8 tickets.") {
-		t.Errorf("stdout = %q", stdout)
-	}
-	if _, err := os.Stat(filepath.Join(root, "alpha", "tickets", "AL-3-card-panel", "AL-3-card-panel.md")); err != nil {
-		t.Errorf("migrated ticket missing: %v", err)
-	}
-	code, stdout, _ = h.run("migrate", "--write", "--root", root)
-	if code != 0 || !strings.Contains(stdout, "Nothing to migrate") {
-		t.Errorf("second run: code=%d stdout=%q", code, stdout)
-	}
-}
-
-func TestMigrateUsageAndFailures(t *testing.T) {
+// The one-off v1 board conversion is retired (D55): migrate is an unknown
+// command, and help no longer lists it.
+func TestMigrateIsRetired(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
-	if code, _, stderr := h.run("migrate", "--key", "alpha"); code != 2 || !strings.Contains(stderr, "--key expects project=KEY") {
-		t.Errorf("bad --key: code=%d stderr=%q", code, stderr)
+	if code, _, stderr := h.run("migrate", "--write"); code != 2 || !strings.Contains(stderr, `unknown command "migrate"`) {
+		t.Errorf("migrate: code=%d stderr=%q", code, stderr)
 	}
-	if code, _, stderr := h.run("migrate", "--root", filepath.Join(t.TempDir(), "absent")); code != 1 || !strings.Contains(stderr, "does not exist") {
-		t.Errorf("missing root: code=%d stderr=%q", code, stderr)
-	}
-	if code, _, stderr := h.run("migrate", "--root", v1Root(t), "--key", "alpha=al"); code != 1 || !strings.Contains(stderr, "uppercase") {
-		t.Errorf("invalid key: code=%d stderr=%q", code, stderr)
+	if _, stdout, _ := h.run("--help"); strings.Contains(stdout, "migrate") {
+		t.Errorf("help still lists migrate:\n%s", stdout)
 	}
 }
 
