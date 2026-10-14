@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -115,6 +117,94 @@ func TestPutWorkstreamSectionLeavesTheRestOfARealWorkstream(t *testing.T) {
 	after, _ := os.ReadFile(file)
 	if want := strings.Replace(string(real), "## Scope\n\n## Success Criteria", "## Scope\n\nOnly the page.\n\n## Success Criteria", 1); string(after) != want {
 		t.Errorf("after save:\n%s", after)
+	}
+}
+
+// A workstream's title and slug change in one PATCH (FH-158): the file
+// moves to the new slug and every ticket that named the old one names the
+// new one, with the person's history; refusals write nothing.
+func TestPatchWorkstreamRenamesIt(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	dir := filepath.Join(root, "alpha", "workstreams")
+	base := workstreamDetail(t, handler, "alpha", "board-ui").Hash
+
+	var edited EditedWorkstreamResponse
+	send(t, handler, http.MethodPatch, "/api/projects/alpha/workstreams/board-ui", WorkstreamPatchRequest{
+		Base: base, Fields: map[string]json.RawMessage{"title": json.RawMessage(`"Board"`)}, Slug: " board ",
+	}, http.StatusOK, &edited)
+	data, err := os.ReadFile(filepath.Join(dir, "board.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if edited.Slug != "board" || edited.Hash != store.Hash(data) || edited.Revision == 0 {
+		t.Errorf("edited = %+v", edited)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "board-ui.md")); !os.IsNotExist(err) {
+		t.Errorf("the old file is still there: %v", err)
+	}
+	if detail := workstreamDetail(t, handler, "alpha", "board"); detail.Title != "Board" || detail.Total != 3 {
+		t.Errorf("renamed line = %+v", detail.WorkstreamJSON)
+	}
+	getJSON(t, handler, "/api/projects/alpha/workstreams/board-ui", http.StatusNotFound, nil)
+	for _, id := range []string{"AL-2", "AL-3", "AL-4"} {
+		detail := ticketDetail(t, handler, id)
+		if detail.Workstream != "board" {
+			t.Errorf("%s workstream = %q", id, detail.Workstream)
+		}
+	}
+	activity, err := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-2-board-columns", board.ActivityFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if history := board.ParseActivity(activity).History; len(history) == 0 || history[len(history)-1].By != "Robert" {
+		t.Errorf("AL-2 history = %+v", history)
+	}
+
+	// Refusals are in words, and none of them changes a file.
+	send(t, handler, http.MethodPost, "/api/projects/alpha/workstreams", NewWorkstreamRequest{Title: "Offline"}, http.StatusCreated, nil)
+	before := map[string]string{}
+	entries, _ := os.ReadDir(dir)
+	for _, entry := range entries {
+		content, _ := os.ReadFile(filepath.Join(dir, entry.Name()))
+		before[entry.Name()] = string(content)
+	}
+	url := "/api/projects/alpha/workstreams/board"
+	var refused struct {
+		Error struct{ Code, Message string }
+	}
+	send(t, handler, http.MethodPatch, url, WorkstreamPatchRequest{Base: edited.Hash, Slug: "offline"}, http.StatusConflict, &refused)
+	if refused.Error.Code != "exists" || !strings.Contains(refused.Error.Message, "offline") || !strings.Contains(refused.Error.Message, "choose another slug") {
+		t.Errorf("taken slug refusal = %+v", refused.Error)
+	}
+	send(t, handler, http.MethodPatch, url, WorkstreamPatchRequest{Base: edited.Hash, Slug: "Not A Slug"}, http.StatusBadRequest, &refused)
+	if !strings.Contains(refused.Error.Message, "lower-case letters") {
+		t.Errorf("invalid slug refusal = %+v", refused.Error)
+	}
+	send(t, handler, http.MethodPatch, url, WorkstreamPatchRequest{Base: base, Slug: "ui"}, http.StatusConflict, &refused)
+	if refused.Error.Code != "conflict" {
+		t.Errorf("stale base refusal = %+v", refused.Error)
+	}
+	send(t, handler, http.MethodPatch, url, WorkstreamPatchRequest{Slug: "ui"}, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, url, WorkstreamPatchRequest{Base: edited.Hash, Fields: map[string]json.RawMessage{"status": json.RawMessage(`"done"`)}}, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, url, WorkstreamPatchRequest{Base: edited.Hash, Fields: map[string]json.RawMessage{"tags": json.RawMessage(`"ui"`)}}, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, url, `{"base":"x","tickets":["AL-5"]}`, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPatch, "/api/projects/alpha/workstreams/nowhere", WorkstreamPatchRequest{Base: "x", Slug: "ui"}, http.StatusNotFound, nil)
+	entries, _ = os.ReadDir(dir)
+	after := map[string]string{}
+	for _, entry := range entries {
+		content, _ := os.ReadFile(filepath.Join(dir, entry.Name()))
+		after[entry.Name()] = string(content)
+	}
+	if !maps.Equal(before, after) {
+		t.Errorf("refused patches changed the workstreams")
+	}
+
+	// Fields alone keep the slug.
+	send(t, handler, http.MethodPatch, url, WorkstreamPatchRequest{Base: edited.Hash, Fields: map[string]json.RawMessage{"priority": json.RawMessage(`"low"`), "tags": json.RawMessage(`["ui"]`)}}, http.StatusOK, &edited)
+	if content, _ := os.ReadFile(filepath.Join(dir, "board.md")); edited.Slug != "board" || !strings.Contains(string(content), "priority: low\n") {
+		t.Errorf("field patch = %+v:\n%s", edited, content)
 	}
 }
 
