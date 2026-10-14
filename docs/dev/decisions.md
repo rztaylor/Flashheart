@@ -1751,7 +1751,7 @@ for copies with no structure. A Sanitizer API pass was not used: it is
 not in every browser the board supports, and the converter reads only
 what it allows anyway.
 
-## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73 and D77)
+## 2026-10-13 — D69: Agents edit workstreams in one call; the slug stays; tickets may be filed on another project (revised by D73 and D78)
 
 Decision (FH-46): a new MCP tool, `update_workstream`, sets a
 workstream's title, goal, priority, tags and `depends-on-workstreams`
@@ -1921,7 +1921,7 @@ which FH-167 will give a control on the workstream page.
   the renamed workstream's own is refused. UI preferences in
   `config.yaml` that name the slug (saved filters, expanded finished
   workstreams) are outside the project and its lock and are left as they
-  are by this write; D77 (FH-170) keeps them in step after it.
+  are by this write; D78 (FH-170) keeps them in step after it.
 - **Refusals.** A new slug that is not valid (board-format §Workstream)
   is `invalid_input` / 400; one that a file in `workstreams/` already
   has, workstream or not, is `invalid_input` for agents and 409 `exists`
@@ -1987,7 +1987,7 @@ input or event changes shape; the one call newly refused made a board
 the user could not read reliably. Board format stays 2: the files do not
 change, and a board with duplicates still loads.
 
-## 2026-10-14 — D77: A workstream's name is edited on its page, and its slug and saved preferences follow
+## 2026-10-14 — D78: A workstream's name is edited on its page, and its slug and saved preferences follow
 
 Decision (FH-167, FH-170): the workstream page's h1, its name (the
 file's H1, `title`), edits in place like a ticket's title (EDIT-11: its

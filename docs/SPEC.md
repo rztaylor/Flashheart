@@ -543,7 +543,7 @@ Full format: `docs/dev/specs/board-format.md`.
   edits), an untouched save writes nothing, a change elsewhere in the
   file saves as on a ticket's page, and a change to the section on disk
   opens the conflict dialog (`EDIT-7`). Its name, the h1, edits in place
-  the same way (FH-167, D77): saving a new name renames its slug to the
+  the same way (FH-167, D78): saving a new name renames its slug to the
   one the name makes, as **New workstream** makes it, so members,
   workstream dependencies, the file name and saved filters follow, and
   the page moves to the new address in place of the old one; a name that

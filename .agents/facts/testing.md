@@ -135,7 +135,7 @@
   write nothing, in `store` (`workstreamrename_test.go`); `rename_to` and
   its events in `mcpserver` (`workstreams_test.go`); the board's PATCH in
   `api` (`TestPatchWorkstreamRenamesIt`) and its authentication in `app`.
-  Renaming from the page's name (FH-167, D77): the slug made from the
+  Renaming from the page's name (FH-167, D78): the slug made from the
   name, kept when it is the same or made unique, and a taken name in
   words of names in `api` (`TestPatchWorkstreamNamesItsSlugFromTheTitle`)
   and `store` (`TestWorkstreamSlugFor`); the saved preferences a rename

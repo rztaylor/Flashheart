@@ -72,7 +72,7 @@
   for the conflict dialog's words) over `model/workstreamSections`, saved
   by `saveWorkstreamSection`. Its name is `workstreams/WorkstreamName`,
   an `InPlaceEditor` saved by `nameWorkstream` (`slugFromTitle`: the
-  server makes the slug, FH-167, D77); a new slug moves the page with
+  server makes the slug, FH-167, D78); a new slug moves the page with
   `useRoute`'s `replace` and rewrites the loaded preferences
   (`app/scopeMemory`'s `renameWorkstreamIn`, as the server did, FH-170).
   A control
