@@ -5,6 +5,7 @@ import { type Created, createTicket, keysInUse } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { FormField, Select, TextArea, TextInput } from "../../components/Field";
+import { ProjectField } from "../../components/ProjectField";
 import { messageOf } from "../../model/errors";
 import { PRIORITIES, TICKET_TYPES } from "../../model/tickets";
 
@@ -98,25 +99,17 @@ export function NewTicketDialog({
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-3">
-        {projects.length > 1 && !initialProject ? (
-          <FormField label="Project">
-            <Select
-              value={projectName}
-              onChange={(name) => {
-                setProjectName(name);
-                // Key and workstream belong to the chosen project.
-                setKey(projects.find((item) => item.name === name)?.key ?? "");
-                setWorkstream("");
-              }}
-            >
-              {projects.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.displayName}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        ) : null}
+        <ProjectField
+          projects={projects}
+          scope={initialProject}
+          value={projectName}
+          onChange={(name) => {
+            setProjectName(name);
+            // Key and workstream belong to the chosen project.
+            setKey(projects.find((item) => item.name === name)?.key ?? "");
+            setWorkstream("");
+          }}
+        />
         {choosingKey ? (
           <FormField
             label="Ticket key for this project"

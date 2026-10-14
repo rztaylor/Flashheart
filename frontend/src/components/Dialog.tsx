@@ -14,8 +14,10 @@ interface DialogProps {
   fill?: boolean;
 }
 
-// Dialog is a modal native <dialog>: it traps focus, closes on Escape, and
-// returns focus to whatever opened it when it unmounts. Used only for steps
+// Dialog is a modal native <dialog>: it traps focus, opens with focus on the
+// control marked data-autofocus (a field with autoFocus) or else its first
+// control, closes on Escape, and returns focus to whatever opened it when it
+// unmounts. Used only for steps
 // that need a decision before continuing (a blocked move, a save conflict, a
 // new ticket), and for the lightbox.
 export function Dialog({
@@ -32,6 +34,10 @@ export function Dialog({
     const dialog = ref.current;
     const opener = document.activeElement;
     dialog?.showModal();
+    // A field asked to take focus could not while the dialog was closed
+    // (React focuses autoFocus before this effect), and showModal moves
+    // focus to the first control, the Close button: give it to the field.
+    dialog?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
     return () => {
       dialog?.close();
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();

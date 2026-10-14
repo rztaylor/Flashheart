@@ -139,7 +139,13 @@ test("the editor's slash menu, selection toolbar and Markdown view work here", a
   const menu = main().getByRole("listbox", { name: "Blocks" });
   await expect(menu).toBeVisible();
   await page.keyboard.type("task");
+  // Enter right as the list updates is not the menu's (CodeMirror's
+  // interaction delay), so wait for the filtered choice, as editor.spec does.
+  await expect(menu.getByRole("option", { selected: true })).toContainText(
+    "Task list",
+  );
   await page.keyboard.press("Enter");
+  await expect(menu).toBeHidden();
   await page.keyboard.type("Drag and drop");
   await expect(editor.locator(".cm-line").last()).toHaveText(
     "- [ ] Drag and drop",

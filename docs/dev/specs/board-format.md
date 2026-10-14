@@ -185,8 +185,9 @@ atomically, one at a time, in this order:
   key when it is chosen), then its workstream's `tickets:` list;
 - a ticket joining or leaving a workstream: the workstreams' lists, then
   the ticket's `workstream:` field;
-- creating a workstream: its file, then the other lists giving up its
-  initial tickets, then those tickets' fields;
+- creating a workstream (an agent's `create_workstream` or the board's
+  New workstream, which starts with none): its file, then the other lists
+  giving up its initial tickets, then those tickets' fields;
 - placing a ticket: the neighbours it ranks, then the ticket;
 - any ticket write from the board or an agent: the files above, then the
   history entry in each changed ticket's `activity.md` (§Activity).

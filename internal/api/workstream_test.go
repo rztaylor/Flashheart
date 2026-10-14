@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/rztaylor/flashheart/internal/board"
+	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
 )
 
@@ -113,5 +115,76 @@ func TestPutWorkstreamSectionLeavesTheRestOfARealWorkstream(t *testing.T) {
 	after, _ := os.ReadFile(file)
 	if want := strings.Replace(string(real), "## Scope\n\n## Success Criteria", "## Scope\n\nOnly the page.\n\n## Success Criteria", 1); string(after) != want {
 		t.Errorf("after save:\n%s", after)
+	}
+}
+
+// A workstream created on the board (FH-17) is board-format's template
+// with a slug made unique from its title; a refused one writes nothing.
+func TestCreateWorkstreamWritesTheTemplate(t *testing.T) {
+	t.Parallel()
+
+	handler, root := writableAPI(t)
+	dir := filepath.Join(root, "alpha", "workstreams")
+	url := "/api/projects/alpha/workstreams"
+
+	var created CreatedWorkstreamResponse
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{
+		Title: "  Offline   mode ", Goal: "Work without a network.\n", Priority: "high", DependsOnWorkstreams: []string{"board-ui"},
+	}, http.StatusCreated, &created)
+	data, err := os.ReadFile(filepath.Join(dir, "offline-mode.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	day, _ := mdfile.Parse(data).String("created")
+	want := "---\nslug: offline-mode\nstatus: active\npriority: high\ncreated: " + day +
+		"\ntickets: []\ndepends-on-workstreams: [board-ui]\ntags: []\n---\n\n# Offline mode\n\n## Goal\n\nWork without a network.\n\n" +
+		"## Scope\n\n## Success Criteria\n\n- [ ] Every ticket in the line reviewed\n\n## Notes\n\nNone.\n"
+	if string(data) != want {
+		t.Errorf("created file:\n%s\nwant:\n%s", data, want)
+	}
+	if created.Slug != "offline-mode" || created.Hash != store.Hash(data) || created.Revision == 0 {
+		t.Errorf("created = %+v", created)
+	}
+	if detail := workstreamDetail(t, handler, "alpha", "offline-mode"); detail.Title != "Offline mode" || detail.Total != 0 {
+		t.Errorf("new line = %+v", detail.WorkstreamJSON)
+	}
+
+	// The same title again takes the next free slug; priority defaults.
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "Offline mode"}, http.StatusCreated, &created)
+	if again, err := os.ReadFile(filepath.Join(dir, "offline-mode-2.md")); err != nil || created.Slug != "offline-mode-2" || !strings.Contains(string(again), "priority: medium\n") {
+		t.Errorf("second create = %+v, %v:\n%s", created, err, again)
+	}
+
+	// Refusals are in words, and none of them writes a file.
+	listing := func() []string {
+		t.Helper()
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var names []string
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		return names
+	}
+	before := listing()
+	var refused struct {
+		Error struct{ Code, Message string }
+	}
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "Lost", DependsOnWorkstreams: []string{"nowhere"}}, http.StatusNotFound, &refused)
+	if !strings.Contains(refused.Error.Message, `"nowhere"`) || !strings.Contains(refused.Error.Message, "board-ui") {
+		t.Errorf("unknown dependency refusal = %+v", refused.Error)
+	}
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "  "}, http.StatusBadRequest, &refused)
+	if !strings.Contains(refused.Error.Message, "title") {
+		t.Errorf("empty title refusal = %+v", refused.Error)
+	}
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "Lost", Priority: "urgent"}, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "Lost", Goal: strings.Repeat("x", board.MaxSectionText+1)}, http.StatusRequestEntityTooLarge, nil)
+	send(t, handler, http.MethodPost, url, `{"title":"Lost","ordered":true}`, http.StatusBadRequest, nil)
+	send(t, handler, http.MethodPost, "/api/projects/nobody/workstreams", NewWorkstreamRequest{Title: "Lost"}, http.StatusNotFound, nil)
+	if after := listing(); !slices.Equal(after, before) {
+		t.Errorf("refused creates changed the workstreams: %v -> %v", before, after)
 	}
 }

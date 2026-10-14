@@ -86,8 +86,10 @@
   goes through the one leave guard, `state/leaveGuard`, which the router
   (`app/route`) asks before every navigation and a link or Back that
   changed the hash; the browser's `beforeunload` prompt covers reloads.
-  Native `<dialog>` for decisions (blocked move, conflict, new ticket); a
-  polite toast with Undo for results. Only the latest move offers Undo:
+  Native `<dialog>` for decisions (blocked move, conflict, new ticket,
+  new workstream; `components/Dialog` opens with focus on the field
+  marked `data-autofocus`, which `TextInput` and `TextArea` set for
+  `autoFocus`); a polite toast with Undo for results. Only the latest move offers Undo:
   the toast clears as a move starts, and a save that returns after a later
   move started is announced without Undo (FH-115). Drag and drop uses
   `@dnd-kit` pointer sensors; the keyboard alternative is Shift with an

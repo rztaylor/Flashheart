@@ -224,3 +224,33 @@ describe("the card panel's Edit tab with unsaved changes (FH-138)", () => {
     expect(tab("Edit").getAttribute("aria-selected")).toBe("true");
   });
 });
+
+// A ticket opened on its Edit tab, as New ticket opens the one it created,
+// is ready to edit: focus is in its first field, not on the panel (FH-17).
+describe("the card panel opened on its Edit tab", () => {
+  it("puts focus in the Title field", () => {
+    renderPanel();
+    expect(tab("Edit").getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(title());
+  });
+
+  it("leaves focus on the panel when it opens on another tab", () => {
+    resource.state = { status: "ready", data: detail({ raw }) };
+    render(
+      <CardPanel
+        ticket={{ id: "FH-65" }}
+        fetcher={vi.fn() as unknown as AuthenticatedFetch}
+        lines={new Map()}
+        workstreams={new Map()}
+        keys={new Set(["FH"])}
+        onOpen={() => undefined}
+        onClose={() => undefined}
+        revision={0}
+        editing={editing}
+      />,
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole("complementary", { name: "Ticket FH-65" }),
+    );
+  });
+});
