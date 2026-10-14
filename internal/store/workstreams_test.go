@@ -215,8 +215,8 @@ func TestCreateWorkstreamWritesTheTemplate(t *testing.T) {
 		t.Fatalf("parsed = %+v", parsed)
 	}
 
-	// Slugs stay unique; defaults fill priority.
-	again, err := s.CreateWorkstream("alpha", NewWorkstream{Title: "Offline mode"})
+	// Slugs stay unique (titles do too, D73); defaults fill priority.
+	again, err := s.CreateWorkstream("alpha", NewWorkstream{Title: "Offline mode?"})
 	if err != nil || again.Slug != "offline-mode-2" {
 		t.Fatalf("second create = %+v, %v", again, err)
 	}

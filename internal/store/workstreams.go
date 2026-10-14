@@ -37,6 +37,60 @@ func (e *WorkstreamNotFoundError) Error() string {
 // Unwrap lets errors.Is match ErrNotFound.
 func (e *WorkstreamNotFoundError) Unwrap() error { return ErrNotFound }
 
+// WorkstreamTitleTakenError refuses a workstream title that another of the
+// project's workstreams already has, compared by board.SameWorkstreamTitle
+// (FH-163, D73). Slug and Title name that workstream as it is.
+type WorkstreamTitleTakenError struct {
+	Project, Slug, Title string
+}
+
+func (e *WorkstreamTitleTakenError) Error() string {
+	return fmt.Sprintf("a workstream called %q is already in %s (%s); choose another title", e.Title, e.Project, e.Slug)
+}
+
+// Unwrap lets errors.Is match ErrInvalidInput.
+func (e *WorkstreamTitleTakenError) Unwrap() error { return ErrInvalidInput }
+
+// checkWorkstreamTitle refuses the title workstream slug has in t with a
+// *WorkstreamTitleTakenError when another of the project's workstreams
+// has the same one (board.SameWorkstreamTitle). A title is the file's H1,
+// or its slug without one (board.ParseWorkstream). Every write that makes
+// a workstream or may change its title calls it once the file is staged,
+// before the transaction commits. A title the workstream already had
+// before t, in any case or spacing, is not checked: workstreams that share
+// one from before titles were unique, or from a hand edit, still take
+// every other edit, and either can be retitled apart (D73). Callers hold
+// the project lock.
+func (s *Store) checkWorkstreamTitle(t *tx, project, slug string) error {
+	dir := path.Join(project, "workstreams")
+	name := path.Join(dir, slug+".md")
+	data, err := t.read(name)
+	if err != nil {
+		return err
+	}
+	title := board.ParseWorkstream(slug, data).Title
+	if before, err := s.ReadFile(name); err == nil && board.SameWorkstreamTitle(board.ParseWorkstream(slug, before).Title, title) {
+		return nil
+	}
+	slugs, err := s.workstreamSlugs(project)
+	if err != nil {
+		return err
+	}
+	for _, other := range slugs {
+		if other == slug {
+			continue
+		}
+		data, err := t.read(path.Join(dir, other+".md"))
+		if err != nil {
+			return err
+		}
+		if taken := board.ParseWorkstream(other, data).Title; board.SameWorkstreamTitle(taken, title) {
+			return &WorkstreamTitleTakenError{Project: project, Slug: other, Title: taken}
+		}
+	}
+	return nil
+}
+
 // workstreamSlugs lists the project's workstream slugs in sorted order.
 // Callers hold the project lock.
 func (s *Store) workstreamSlugs(project string) ([]string, error) {
@@ -180,8 +234,9 @@ type CreatedWorkstream struct {
 
 // CreateWorkstream writes workstreams/<slug>.md from the board-format
 // template with a slug made unique from the title, and moves its initial
-// tickets into it, all under the project lock. Nothing is written when any
-// input is refused.
+// tickets into it, all under the project lock. A title another of the
+// project's workstreams has is a *WorkstreamTitleTakenError (D73).
+// Nothing is written when any input is refused.
 func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWorkstream, error) {
 	if err := s.checkProject(project); err != nil {
 		return CreatedWorkstream{}, err
@@ -222,6 +277,9 @@ func (s *Store) CreateWorkstream(project string, input NewWorkstream) (CreatedWo
 	// (the new file already lists them), then the tickets' fields
 	// (board-format.md, Multi-file writes).
 	t.put(path.Join(project, "workstreams", slug+".md"), data)
+	if err := s.checkWorkstreamTitle(t, project, slug); err != nil {
+		return CreatedWorkstream{}, err
+	}
 	if err := s.membership(t, project, input.Tickets, ""); err != nil {
 		return CreatedWorkstream{}, err
 	}
@@ -270,7 +328,8 @@ type WorkstreamEdit struct {
 // (ErrNotFound; a *WorkstreamNotFoundError for a workstream), a removed
 // ticket that is not a member, a ticket added and removed, or a
 // dependency that leads back to the workstream (a *board.CycleError; both
-// ErrInvalidInput) writes nothing. The slug never changes. It returns
+// ErrInvalidInput), or a new title another workstream has (a
+// *WorkstreamTitleTakenError, D73) writes nothing. The slug never changes. It returns
 // the workstream file's hash after the call.
 func (s *Store) EditWorkstream(project, slug string, pre Precondition, edit WorkstreamEdit) (string, error) {
 	if err := s.checkProject(project); err != nil {
@@ -314,6 +373,9 @@ func (s *Store) EditWorkstream(project, slug string, pre Precondition, edit Work
 		}
 	}
 	if _, err := t.edit(name, pre, edit.Changes.Apply, false); err != nil {
+		return "", err
+	}
+	if err := s.checkWorkstreamTitle(t, project, slug); err != nil {
 		return "", err
 	}
 	if err := s.checkMembers(t, project, slug, edit.Remove); err != nil {

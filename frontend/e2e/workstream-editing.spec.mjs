@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
@@ -73,8 +73,8 @@ function members(text) {
 const newWorkstream = () =>
   page.getByRole("button", { name: "New workstream", exact: true });
 const dialog = () => page.getByRole("dialog", { name: "New workstream" });
-// routeCard is workstream-editing's route card; a second of the same name
-// comes later.
+// routeCard is workstream-editing's route card; a second whose title makes
+// the same slug comes later.
 const routeCard = () =>
   page.locator('article[aria-labelledby="ws-flashheart-workstream-editing"]');
 
@@ -133,18 +133,79 @@ test("New workstream writes the template and opens its page", async () => {
   await expect(routeCard()).toContainText("No tickets on this line yet.");
 });
 
-test("the same title takes a fresh slug", async () => {
+// A project's workstream titles are unique (FH-163, D73): a taken title,
+// in any case or spacing, is named at the field and cannot be created.
+test("a taken title is named at the field and not created", async () => {
   await newWorkstream().click();
-  await dialog()
-    .getByRole("textbox", { name: "Title" })
-    .fill("Workstream editing");
+  const title = dialog().getByRole("textbox", { name: "Title" });
+  await title.fill("workstream  EDITING");
+  const message = dialog().getByRole("alert");
+  await expect(message).toHaveText(
+    "Flashheart already has a workstream called Workstream editing. Choose another title.",
+  );
+  await expect(title).toHaveAttribute("aria-invalid", "true");
+  await expect(
+    dialog().getByRole("button", { name: "Create workstream" }),
+  ).toBeDisabled();
+  // Enter does not send it either.
+  await title.press("Enter");
+  await expect(dialog()).toBeVisible();
+  await expectNoAxeViolations(page, "taken title");
+  await shot(page, "new-workstream-taken-1440-light", { keepFocus: true });
+  for (const theme of ["light", "dark"]) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expect(message).toBeVisible();
+    await expectNoAxeViolations(page, `taken title 390 ${theme}`);
+    await shot(page, `new-workstream-taken-390-${theme}`, { keepFocus: true });
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+
+  // Another title that makes the same slug takes a fresh one.
+  await title.fill("Workstream editing, part two");
+  await expect(title).not.toHaveAttribute("aria-invalid");
+  await title.fill("Workstream editing!");
   await dialog().getByRole("button", { name: "Create workstream" }).click();
   await expect(page).toHaveURL(
     /#\/workstream\/flashheart\/workstream-editing-2$/,
   );
   expect(await readWorkstream("workstream-editing-2")).toContain(
-    "priority: medium\n",
+    "# Workstream editing!\n",
   );
+  expect(
+    await readdir(join(sandbox.root, "flashheart", "workstreams")),
+  ).not.toContain("workstream-editing-3.md");
+});
+
+// The server holds the rule too: a title made elsewhere after the page
+// last heard is refused, at the field, and nothing is written.
+test("a title taken elsewhere meanwhile is refused at the field", async () => {
+  await open(page, "#/p/flashheart/workstreams");
+  await page.route("**/api/projects/flashheart/workstreams", async (route) => {
+    if (route.request().method() === "POST") {
+      await writeFile(
+        workstreamFile("written-elsewhere"),
+        "---\nslug: written-elsewhere\nstatus: active\npriority: low\ncreated: 2026-10-14\ntickets: []\ndepends-on-workstreams: []\ntags: []\n---\n\n# Written elsewhere\n",
+      );
+    }
+    await route.fallback();
+  });
+  await newWorkstream().click();
+  const title = dialog().getByRole("textbox", { name: "Title" });
+  await title.fill("written ELSEWHERE");
+  await dialog().getByRole("button", { name: "Create workstream" }).click();
+  await expect(dialog().getByRole("alert")).toContainText("Written elsewhere");
+  await expect(title).toHaveAttribute("aria-invalid", "true");
+  await expect(title).toHaveValue("written ELSEWHERE");
+  await page.unroute("**/api/projects/flashheart/workstreams");
+  expect(
+    (await readdir(join(sandbox.root, "flashheart", "workstreams"))).filter(
+      (name) => name.startsWith("written-elsewhere"),
+    ),
+  ).toEqual(["written-elsewhere.md"]);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("a refusal shows in words and keeps the dialog", async () => {
@@ -228,7 +289,7 @@ test("the panel's workstream picker adds the ticket and takes it out", async () 
   const panel = page.getByRole("complementary", { name: `Ticket ${created}` });
   await panel.getByRole("tab", { name: "Edit" }).click();
   const picker = panel.getByRole("combobox", { name: "Workstream" });
-  // By slug: the second workstream of the same name is listed too.
+  // By slug: workstream-editing-2 is listed too, under its own title.
   await picker.selectOption("workstream-editing");
   await shot(page, "workstream-picker-1440-light", { keepFocus: true });
   await saveChanges(panel).click();

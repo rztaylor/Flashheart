@@ -149,8 +149,9 @@ func TestCreateWorkstreamWritesTheTemplate(t *testing.T) {
 		t.Errorf("new line = %+v", detail.WorkstreamJSON)
 	}
 
-	// The same title again takes the next free slug; priority defaults.
-	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "Offline mode"}, http.StatusCreated, &created)
+	// Another title that makes the same slug takes the next free one;
+	// priority defaults.
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "Offline mode?"}, http.StatusCreated, &created)
 	if again, err := os.ReadFile(filepath.Join(dir, "offline-mode-2.md")); err != nil || created.Slug != "offline-mode-2" || !strings.Contains(string(again), "priority: medium\n") {
 		t.Errorf("second create = %+v, %v:\n%s", created, err, again)
 	}
@@ -175,6 +176,12 @@ func TestCreateWorkstreamWritesTheTemplate(t *testing.T) {
 	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "Lost", DependsOnWorkstreams: []string{"nowhere"}}, http.StatusNotFound, &refused)
 	if !strings.Contains(refused.Error.Message, `"nowhere"`) || !strings.Contains(refused.Error.Message, "board-ui") {
 		t.Errorf("unknown dependency refusal = %+v", refused.Error)
+	}
+	// A title the project's workstreams already have, in any case or
+	// spacing, is a conflict naming it (FH-163, D73).
+	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "offline  MODE"}, http.StatusConflict, &refused)
+	if refused.Error.Code != "title_taken" || !strings.Contains(refused.Error.Message, `"Offline mode"`) || !strings.Contains(refused.Error.Message, "choose another title") {
+		t.Errorf("taken title refusal = %+v", refused.Error)
 	}
 	send(t, handler, http.MethodPost, url, NewWorkstreamRequest{Title: "  "}, http.StatusBadRequest, &refused)
 	if !strings.Contains(refused.Error.Message, "title") {

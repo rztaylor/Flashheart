@@ -1,6 +1,7 @@
 import { type FormEvent, useId, useState } from "react";
 import type { ProjectSummary } from "../../api/board";
 import type { AuthenticatedFetch } from "../../api/client";
+import { ApiError } from "../../api/client";
 import { createWorkstream } from "../../api/edit";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
@@ -8,6 +9,7 @@ import { FormField, Select, TextArea, TextInput } from "../../components/Field";
 import { ProjectField } from "../../components/ProjectField";
 import { priorityMark } from "../../components/TicketMarks";
 import { messageOf } from "../../model/errors";
+import { takenWorkstream } from "../../model/lines";
 import { PRIORITIES } from "../../model/tickets";
 
 // CreatedWorkstreamRef names the workstream the dialog created.
@@ -20,7 +22,10 @@ export interface CreatedWorkstreamRef {
 // NewWorkstreamDialog creates a workstream from board-format's template
 // (FH-17): a title (its slug is the server's), a goal, a priority and the
 // project's workstreams it depends on. Tickets join it from their own
-// workstream field. Its keys and focus are New ticket's.
+// workstream field. Its keys and focus are New ticket's. A title one of
+// the project's workstreams has is named at the field and not sent; the
+// server's refusal of one the page has not heard of yet shows there too
+// (FH-163, D73).
 export function NewWorkstreamDialog({
   fetcher,
   projects,
@@ -45,12 +50,22 @@ export function NewWorkstreamDialog({
   const [priority, setPriority] = useState("medium");
   const [dependsOn, setDependsOn] = useState<string[]>([]);
   const [error, setError] = useState("");
+  // refused is the server's refusal of a title, kept while it is unchanged.
+  const [refused, setRefused] = useState({ title: "", message: "" });
   const [saving, setSaving] = useState(false);
   const named = title.trim() !== "";
+  const taken = project
+    ? takenWorkstream(project.workstreams, title)
+    : undefined;
+  const titleError = taken
+    ? `${project?.displayName} already has a workstream called ${taken.title}. Choose another title.`
+    : named && refused.title === title
+      ? refused.message
+      : "";
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!project || !named) return;
+    if (!project || !named || titleError) return;
     setSaving(true);
     setError("");
     try {
@@ -66,7 +81,12 @@ export function NewWorkstreamDialog({
         title: title.trim(),
       });
     } catch (caught) {
-      setError(messageOf(caught, "The workstream could not be created."));
+      const message = messageOf(caught, "The workstream could not be created.");
+      if (caught instanceof ApiError && caught.code === "title_taken") {
+        setRefused({ title, message });
+      } else {
+        setError(message);
+      }
       setSaving(false);
     }
   };
@@ -87,7 +107,7 @@ export function NewWorkstreamDialog({
             variant="primary"
             type="submit"
             form={formId}
-            disabled={saving || !project || !named}
+            disabled={saving || !project || !named || titleError !== ""}
           >
             {saving ? "Creating…" : "Create workstream"}
           </Button>
@@ -105,7 +125,7 @@ export function NewWorkstreamDialog({
             setDependsOn([]);
           }}
         />
-        <FormField label="Title">
+        <FormField label="Title" error={titleError}>
           <TextInput
             value={title}
             onChange={setTitle}

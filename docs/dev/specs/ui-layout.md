@@ -610,7 +610,14 @@ id a separate link.
   names, with the hint *Its tickets wait until every ticket in these is in
   review or done.* **Create workstream** (primary, off until there is a
   title; Enter in the title submits) and Cancel; Escape closes and focus
-  returns to the button. A refusal shows as an alert in words under the
+  returns to the button. A title one of the project's workstreams has,
+  ignoring case and spacing (D73), is named under the Title field as an
+  alert, *<Project> already has a workstream called <title>. Choose
+  another title.*, the field marked invalid (danger border,
+  `aria-invalid`, the message linked by `aria-errormessage` and
+  `aria-describedby`) and Create workstream off until the title changes;
+  the server's `title_taken` refusal of a title made elsewhere meanwhile
+  shows there too. Any other refusal shows as an alert in words under the
   form, which keeps what was typed. Created, a toast *Created workstream
   <name>.* and the workstream's page opens. The empty view's sentence
   names New workstream and the Edit tab's Workstream field.

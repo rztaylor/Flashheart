@@ -4,7 +4,9 @@ import {
   assignLines,
   LINE_COUNT,
   lineInitials,
+  takenWorkstream,
   workstreamTitle,
+  workstreamTitleKey,
 } from "./lines";
 
 describe("assignLines", () => {
@@ -94,5 +96,42 @@ describe("workstreamTitle", () => {
     expect(workstreamTitle(workstreams, "flashheart", "gone")).toBe("gone");
     expect(workstreamTitle(workstreams, "missing", "sync")).toBe("sync");
     expect(workstreamTitle(workstreams, "flashheart", "")).toBe("");
+  });
+});
+
+// A project's workstream titles are unique, compared ignoring case and
+// runs of spaces, as the server compares them (FH-163, D73).
+describe("takenWorkstream", () => {
+  const brief = (slug: string, title: string) => ({
+    slug,
+    title,
+    created: "2026-10-01",
+    status: "active" as const,
+    done: 0,
+    total: 1,
+  });
+  const workstreams = [
+    brief("board-ui", "Board UI"),
+    brief("workstream-editing", "Workstream editing"),
+  ];
+
+  it("finds the workstream that already has a title, in any case or spacing", () => {
+    expect(takenWorkstream(workstreams, "Board UI")?.slug).toBe("board-ui");
+    expect(takenWorkstream(workstreams, "  workstream \t EDITING ")?.slug).toBe(
+      "workstream-editing",
+    );
+  });
+
+  it("finds none for a new title, an empty one, or the workstream's own", () => {
+    expect(takenWorkstream(workstreams, "Board UI!")).toBeUndefined();
+    expect(takenWorkstream(workstreams, "Workstream-editing")).toBeUndefined();
+    expect(takenWorkstream(workstreams, "   ")).toBeUndefined();
+    expect(
+      takenWorkstream(workstreams, "board ui", "board-ui"),
+    ).toBeUndefined();
+  });
+
+  it("compares titles as the server does", () => {
+    expect(workstreamTitleKey("  Équipe   Board ")).toBe("équipe board");
   });
 });

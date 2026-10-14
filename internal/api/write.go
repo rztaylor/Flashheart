@@ -101,7 +101,12 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 func writeStoreError(w http.ResponseWriter, err error) {
 	var conflict *store.ConflictError
 	var taken *store.KeyTakenError
+	var titleTaken *store.WorkstreamTitleTakenError
 	switch {
+	case errors.As(err, &titleTaken):
+		// Before invalid_input, which it also is: the form shows it at the
+		// title (FH-163, D73).
+		writeError(w, http.StatusConflict, "title_taken", err.Error())
 	case errors.As(err, &conflict):
 		type body struct {
 			Code    string `json:"code"`

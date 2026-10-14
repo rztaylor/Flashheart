@@ -130,6 +130,18 @@ func (c WorkstreamChanges) Apply(data []byte) ([]byte, error) {
 	return data, nil
 }
 
+// WorkstreamTitleKey is what a workstream's title is compared by: its
+// words in lower case, with every run of spaces as one (FH-163, D73). A
+// project's workstreams have distinct keys, so no two read the same in a
+// picker.
+func WorkstreamTitleKey(title string) string {
+	return strings.ToLower(strings.Join(strings.Fields(title), " "))
+}
+
+// SameWorkstreamTitle reports whether two workstream titles read the same
+// (WorkstreamTitleKey).
+func SameWorkstreamTitle(a, b string) bool { return WorkstreamTitleKey(a) == WorkstreamTitleKey(b) }
+
 // CycleError is a workstream dependency that would lead back to the
 // workstream: Path runs from it through its dependencies to itself.
 type CycleError struct{ Path []string }
