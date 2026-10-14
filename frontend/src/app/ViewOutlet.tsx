@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Card, Column, TicketRef } from "../api/board";
 import type { AuthenticatedFetch } from "../api/client";
@@ -32,8 +32,9 @@ import {
   noChoice,
 } from "../model/filters";
 import type { Line } from "../model/lines";
+import type { SectionId } from "../model/overview";
 import { type PaintMode, paintKey } from "../model/paint";
-import { NeedsYouNotice } from "./NeedsYouNotice";
+import { NeedsYouEmpty, NeedsYouNotice } from "./NeedsYouNotice";
 import { formatRoute, type Route } from "./route";
 import type { BoardDataState } from "./useBoardData";
 
@@ -60,11 +61,24 @@ export interface ViewOutletProps {
   onProjectArchived(name: string, displayName: string): void;
 }
 
+// BodyProps add the Overview section a button sent the user to, which the
+// Overview focuses as it opens (FH-157).
+interface BodyProps extends ViewOutletProps {
+  arrival?: SectionId;
+  arrive(section?: SectionId): void;
+}
+
 // ViewOutlet is the routed view's body under the page header: the board's
 // read errors and notices, then the archive, Overview, Workstreams, or the
 // Board or Table with their toolbar.
 export function ViewOutlet(props: ViewOutletProps) {
   const { projects } = props.data;
+  const [arrival, arrive] = useState<SectionId>();
+  // An arrival is for the next Overview only.
+  const view = props.route.view;
+  useEffect(() => {
+    if (view !== "overview") arrive(undefined);
+  }, [view]);
   return (
     <>
       {projects.status === "error" ? (
@@ -84,13 +98,13 @@ export function ViewOutlet(props: ViewOutletProps) {
           <code className="font-mono">tickets/</code> directory inside.
         </EmptyState>
       ) : (
-        <ViewBody {...props} />
+        <ViewBody {...props} arrival={arrival} arrive={arrive} />
       )}
     </>
   );
 }
 
-function ViewBody(props: ViewOutletProps) {
+function ViewBody(props: BodyProps) {
   const { route, data, fetcher, go, onOpen } = props;
   const { projects, summaries, current, editing, revision } = data;
   const ready = projects.status === "ready";
@@ -156,6 +170,8 @@ function ViewBody(props: ViewOutletProps) {
           onReview={(ticket) => onOpen(ticket, "review")}
           onAnswer={props.answers ? editing.answer : undefined}
           onCreateTicket={summaries.length > 0 ? props.onNewTicket : undefined}
+          focusSection={props.arrival}
+          onFocused={() => props.arrive(undefined)}
         />
       );
     case "workstreams":
@@ -199,7 +215,8 @@ function BoardOutlet({
   go,
   onOpen,
   onMove,
-}: ViewOutletProps) {
+  arrive,
+}: BodyProps) {
   const { board, cards, summaries, current, lines } = data;
   const { density, colourBy: paint, hiddenColumns } = preferences;
   const projectNames = useMemo(
@@ -239,6 +256,20 @@ function BoardOutlet({
       onFilters({ ...filters, age: noChoice });
   };
   const shown = board.status === "ready" && visible.length > 0;
+  // unticketed are the agents in scope that need the user with no ticket
+  // on the board, which no card can show (FH-44, FH-157).
+  const unticketed =
+    data.projects.status !== "ready"
+      ? 0
+      : route.scope.kind === "project"
+        ? (current?.runs.needsYouUnticketed ?? 0)
+        : data.projects.data.runs.needsYouUnticketed;
+  const otherFilters = isFiltered({ ...filters, needsYou: false });
+  // answer opens the Overview of the same scope at Needs your decision.
+  const answer = () => {
+    arrive("decision");
+    go({ view: "overview", ticket: undefined });
+  };
   return (
     <>
       <FilterBar
@@ -279,15 +310,8 @@ function BoardOutlet({
           onChange={onFilters}
         />
       ) : null}
-      {filters.needsYou ? (
-        <NeedsYouNotice
-          count={
-            data.projects.status === "ready"
-              ? data.projects.data.runs.needsYouUnticketed
-              : 0
-          }
-          onOpenOverview={() => go({ view: "overview", ticket: undefined })}
-        />
+      {filters.needsYou && shown ? (
+        <NeedsYouNotice count={unticketed} onAnswer={answer} />
       ) : null}
       {board.status === "loading" ? (
         route.view === "table" ? (
@@ -305,7 +329,17 @@ function BoardOutlet({
         />
       ) : null}
       {board.status === "ready" && visible.length === 0 ? (
-        <NoTickets filtered={isFiltered(filters)} />
+        // The Needs you filter is the reason nothing is listed when agents
+        // need the user with no ticket, or no other filter is on (FH-157).
+        filters.needsYou && (unticketed > 0 || !otherFilters) ? (
+          <NeedsYouEmpty
+            count={unticketed}
+            otherFilters={otherFilters}
+            onAnswer={answer}
+          />
+        ) : (
+          <NoTickets filtered={isFiltered(filters)} />
+        )
       ) : null}
       {shown && route.view === "board" ? (
         <div className="min-h-0 flex-1" data-narrow-column={narrowColumn}>
