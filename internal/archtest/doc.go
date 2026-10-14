@@ -13,4 +13,9 @@
 // edits only through board's change-set and store.EditTicket; mcpserver
 // edits a workstream only through board.NewWorkstreamChanges and
 // store.EditWorkstream (FH-46).
+//
+// TestLeanPackagesDoNotLinkTheWebServer (FH-106) reads the import graph
+// with go list -deps: mcpserver, hooks, await, setup and doctor must not
+// depend on index, api, app, webui or net/http, except net/http through
+// the MCP SDK (D71).
 package archtest
