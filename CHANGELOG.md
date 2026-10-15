@@ -366,6 +366,12 @@ All notable changes to this project are documented here. The project follows
   column strip's scroll target as it widened, so Backlog was cut off at
   the left until you scrolled back by hand; picking a column on a phone
   still shows that column.
+- The Ubuntu check of CI failed on main and on every pull request since
+  the API contract fixtures were recorded (FH-176): the contract test's
+  edits to the sample board landed in one Linux clock tick, so the
+  projects, listed newest first, fell back to name order. The test now
+  pins the sample's file times, so the order is the same on every
+  platform; the fixtures are unchanged.
 - A board left open while an agent renames a workstream no longer brings
   the old name back into your saved filters (FH-173, D80). The board now
   saves only the preferences you changed, so changing the theme leaves
