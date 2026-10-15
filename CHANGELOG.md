@@ -636,6 +636,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Internal: the command line no longer imports the web server's
+  composition package (FH-169, D85). `serve` asks for the server through
+  `cli.Dependencies.RunApp` with cli's own `ServeOptions` and `Launched`,
+  and `cmd/flashheart` alone adapts them to `app`. The layering test now
+  checks `internal/cli` too, so server code cannot creep onto the hook or
+  MCP command path unnoticed. No behaviour change; hook latency and
+  binary size are unchanged (one binary still links every package).
 - Internal: the server's answers no longer send any board or settings
   type as it is (FH-175). A blocked reason's ticket reference, review
   steps, acceptance criteria and the saved filters of each project now
