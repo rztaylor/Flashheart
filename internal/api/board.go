@@ -90,16 +90,22 @@ type Progress struct {
 	Total int `json:"total"`
 }
 
+// RefJSON names a ticket of a project, as a blocked-by reason's ticket.
+type RefJSON struct {
+	Project string `json:"project"`
+	ID      string `json:"id"`
+}
+
 // ReasonJSON is one blocked-by explanation (CARD-4).
 type ReasonJSON struct {
-	Kind       string     `json:"kind"`
-	Text       string     `json:"text"`
-	Ticket     *board.Ref `json:"ticket,omitempty"`
-	Workstream string     `json:"workstream,omitempty"`
-	Column     string     `json:"column,omitempty"`
-	Pending    int        `json:"pending,omitempty"`
-	Missing    bool       `json:"missing"`
-	Via        string     `json:"via,omitempty"`
+	Kind       string   `json:"kind"`
+	Text       string   `json:"text"`
+	Ticket     *RefJSON `json:"ticket,omitempty"`
+	Workstream string   `json:"workstream,omitempty"`
+	Column     string   `json:"column,omitempty"`
+	Pending    int      `json:"pending,omitempty"`
+	Missing    bool     `json:"missing"`
+	Via        string   `json:"via,omitempty"`
 }
 
 // Card is a ticket as shown on a board (VIEW-6).
@@ -175,13 +181,41 @@ type HandoffJSON struct {
 // steps so they show as a checklist (REV-3); Hash guards ticking them and
 // is empty when read-only.
 type ReviewJSON struct {
-	Markdown string             `json:"markdown"`
-	Hash     string             `json:"hash"`
-	Before   string             `json:"before"`
-	Intro    string             `json:"intro"`
-	Steps    []board.ReviewStep `json:"steps"`
-	Outro    string             `json:"outro"`
-	After    string             `json:"after"`
+	Markdown string           `json:"markdown"`
+	Hash     string           `json:"hash"`
+	Before   string           `json:"before"`
+	Intro    string           `json:"intro"`
+	Steps    []ReviewStepJSON `json:"steps"`
+	Outro    string           `json:"outro"`
+	After    string           `json:"after"`
+}
+
+// ReviewStepJSON is one How to Verify step and whether it is ticked.
+type ReviewStepJSON struct {
+	Text string `json:"text"`
+	Done bool   `json:"done"`
+}
+
+// CriterionJSON is one acceptance criterion and whether it is ticked.
+type CriterionJSON struct {
+	Text string `json:"text"`
+	Done bool   `json:"done"`
+}
+
+func reviewStepsJSON(steps []board.ReviewStep) []ReviewStepJSON {
+	out := make([]ReviewStepJSON, 0, len(steps))
+	for _, step := range steps {
+		out = append(out, ReviewStepJSON{Text: step.Text, Done: step.Done})
+	}
+	return out
+}
+
+func criteriaJSON(criteria []board.Criterion) []CriterionJSON {
+	out := make([]CriterionJSON, 0, len(criteria))
+	for _, criterion := range criteria {
+		out = append(out, CriterionJSON{Text: criterion.Text, Done: criterion.Done})
+	}
+	return out
 }
 
 // AttachmentJSON is one attachment with the URL that serves it.
@@ -197,15 +231,15 @@ type AttachmentJSON struct {
 // TicketDetail is a card plus everything the card panel shows (CARD-1).
 type TicketDetail struct {
 	Card
-	Body                 string            `json:"body"`
-	Frontmatter          string            `json:"frontmatter"`
-	Session              string            `json:"session"`
-	GitRef               string            `json:"gitRef"`
-	DependsOnWorkstreams []string          `json:"dependsOnWorkstreams"`
-	CriteriaItems        []board.Criterion `json:"criteriaItems"`
-	Handoff              *HandoffJSON      `json:"handoff"`
-	Review               *ReviewJSON       `json:"review"`
-	AttachmentFiles      []AttachmentJSON  `json:"attachmentFiles"`
+	Body                 string           `json:"body"`
+	Frontmatter          string           `json:"frontmatter"`
+	Session              string           `json:"session"`
+	GitRef               string           `json:"gitRef"`
+	DependsOnWorkstreams []string         `json:"dependsOnWorkstreams"`
+	CriteriaItems        []CriterionJSON  `json:"criteriaItems"`
+	Handoff              *HandoffJSON     `json:"handoff"`
+	Review               *ReviewJSON      `json:"review"`
+	AttachmentFiles      []AttachmentJSON `json:"attachmentFiles"`
 	// Hash is the file's content hash, sent back with every edit; Raw is the
 	// whole file for the raw editor (EDIT-6). Both are empty when read-only.
 	Hash string `json:"hash"`
@@ -492,7 +526,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 		Session:              ticket.Session,
 		GitRef:               ticket.GitRef,
 		DependsOnWorkstreams: nonNil(ticket.DependsOnWorkstreams),
-		CriteriaItems:        nonNil(ticket.Criteria),
+		CriteriaItems:        criteriaJSON(ticket.Criteria),
 		AttachmentFiles:      []AttachmentJSON{},
 		Runs:                 ticketRuns(snapshot, ticket.ID),
 		Questions:            questionsJSON(snapshot.Questions(ticket.ID)),
@@ -520,7 +554,7 @@ func (b boardAPI) ticket(w http.ResponseWriter, r *http.Request) {
 			parts := board.ParseReview(review)
 			detail.Review = &ReviewJSON{
 				Markdown: review, Before: parts.Before, Intro: parts.Intro,
-				Steps: nonNil(parts.Steps), Outro: parts.Outro, After: parts.After,
+				Steps: reviewStepsJSON(parts.Steps), Outro: parts.Outro, After: parts.After,
 			}
 			if b.write != nil {
 				detail.Review.Hash = store.Hash([]byte(review))
@@ -730,8 +764,7 @@ func reasons(viewing string, list []board.Reason) []ReasonJSON {
 			Column: string(reason.Column), Pending: reason.Pending, Missing: reason.Missing, Via: reason.Via,
 		}
 		if reason.Ticket.ID != "" {
-			ticket := reason.Ticket
-			item.Ticket = &ticket
+			item.Ticket = &RefJSON{Project: reason.Ticket.Project, ID: reason.Ticket.ID}
 		}
 		out = append(out, item)
 	}

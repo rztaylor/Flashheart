@@ -73,7 +73,9 @@
   its own fixture; a merge conflict there is settled by rerunning the
   update after the merge. It
   fails when a fixture is stale, when a registered route has none, or when
-  a response type carries a `runs` or `events` type. `TestVocabulary`
+  a response type carries a `board`, `config`, `runs` or `events` type
+  (`domainPackages`; FH-175 gave the last board and config pieces their
+  own answer shapes, with the JSON unchanged). `TestVocabulary`
   keeps `testdata/vocabulary.json`; `TestErrorCodes` holds handlers to
   `api.ErrorCodes`. After a deliberate change, rewrite them with
   `go test ./internal/api -run 'TestAPIContract|TestVocabulary' -update`
