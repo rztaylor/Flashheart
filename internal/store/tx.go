@@ -136,6 +136,15 @@ func (t *tx) rename(from, to string) error {
 	return nil
 }
 
+// remove stages name's removal after every write (a project image given
+// up, FH-151); a file staged under name is dropped.
+func (t *tx) remove(name string) {
+	t.files = slices.DeleteFunc(t.files, func(file staged) bool { return file.name == name })
+	if !slices.Contains(t.removed, name) {
+		t.removed = append(t.removed, name)
+	}
+}
+
 // edit applies edit (nil for none) to name under pre and stages the
 // result when it changed, stamping a ticket (stamp). It returns the
 // file's hash after the transaction.

@@ -46,6 +46,7 @@ var contractTime = time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC)
 var routesWithoutFixture = map[string]string{
 	"/api/projects/{project}/tickets/{id}":              "the same handler and response as /api/tickets/{id}",
 	"/api/projects/{project}/tickets/{id}/files/{file}": "serves a file's bytes, not JSON",
+	"GET /api/projects/{project}/image":                 "serves the project image's bytes, not JSON",
 }
 
 // exchange is one request of the scripted session. route is the pattern as
@@ -326,6 +327,12 @@ func runContract(t *testing.T) *contract {
 			Section: "Scope", Content: "Columns and the card panel."})
 	c.do(exchange{name: "error-key-taken", route: "PUT /api/projects/{project}/key", method: http.MethodPut, path: "/api/projects/gamma/key", body: KeyRequest{Key: "AL"}, status: http.StatusConflict})
 	saved("key-set", "PUT /api/projects/{project}/key", http.MethodPut, "/api/projects/gamma/key", KeyRequest{Key: "GA"})
+	const projectImage = "PUT /api/projects/{project}/image"
+	saved("project-image-set", projectImage, http.MethodPut, "/api/projects/alpha/image", testPicture(t, "png", 6, 4))
+	get("projects-with-image", "/api/projects", "/api/projects", ProjectsResponse{})
+	c.do(exchange{name: "error-not-an-image", route: projectImage, method: http.MethodPut, path: "/api/projects/alpha/image",
+		body: []byte("words, not a picture"), status: http.StatusUnsupportedMediaType})
+	saved("project-image-cleared", "DELETE /api/projects/{project}/image", http.MethodDelete, "/api/projects/alpha/image", nil)
 	saved("answered", "POST /api/questions/{id}/answer", http.MethodPost, "/api/questions/q-1/answer", AnswerRequest{Answer: "Yes"})
 
 	// What the writes left.

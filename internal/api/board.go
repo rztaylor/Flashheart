@@ -37,6 +37,7 @@ type FileSource interface {
 	ReadReview(project, folder string) (string, bool, error)
 	ReadTicketActivity(project, folder string) (board.Activity, string, error)
 	OpenAttachment(project, folder, file string) (*os.File, string, error)
+	OpenProjectImage(project, file string) (*os.File, string, error)
 }
 
 // WorkstreamBrief is a workstream as listed with its project: enough to draw
@@ -70,6 +71,10 @@ type ProjectSummary struct {
 	Rejected int `json:"rejected"`
 	// Runs counts the project's agent runs by state (PRJ-6).
 	Runs RunCountsJSON `json:"runs"`
+	// Image is the URL of the project's badge image (FH-151), with a
+	// version that changes with its bytes; absent when the project shows
+	// its key.
+	Image string `json:"image,omitempty"`
 }
 
 // ProjectsResponse is GET /api/projects.
@@ -321,6 +326,7 @@ func (b boardAPI) register(mux *http.ServeMux) {
 	mux.Handle("/api/projects/{project}/workstreams", getOnly(b.workstreams))
 	mux.Handle("/api/projects/{project}/workstreams/{slug}", getOnly(b.workstream))
 	mux.Handle("/api/projects/{project}/tickets/{id}/files/{file}", getOnly(b.attachment))
+	mux.HandleFunc("GET /api/projects/{project}/image", b.projectImage)
 	mux.Handle("/api/all/board", getOnly(b.allBoard))
 	mux.Handle("/api/changes", getOnly(b.changes))
 	b.registerRuns(mux)
@@ -765,6 +771,7 @@ func summary(snapshot *index.Snapshot, project *board.Project) ProjectSummary {
 		Workstreams: []WorkstreamBrief{},
 		Archived:    len(project.Archived),
 		Runs:        countsJSON(snapshot.RunCounts(project.Name)),
+		Image:       projectImageURL(project),
 	}
 	for _, workstream := range project.Workstreams {
 		state := snapshot.Analysis.Workstreams[board.Ref{Project: project.Name, ID: workstream.Slug}]

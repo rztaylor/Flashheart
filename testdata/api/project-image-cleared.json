@@ -1,0 +1,10 @@
+{
+  "route": "DELETE /api/projects/{project}/image",
+  "request": "DELETE /api/projects/alpha/image",
+  "status": 200,
+  "body": {
+    "hash": "",
+    "revision": 1,
+    "warnings": []
+  }
+}

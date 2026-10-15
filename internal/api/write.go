@@ -43,6 +43,8 @@ type Writer interface {
 	SetCommentState(project, id, comment string, to board.CommentState) (board.Comment, string, error)
 	DeleteComment(project, id, comment string, pre store.Precondition) (board.Comment, string, error)
 	UploadAttachment(project, id string, input store.Upload) (store.StoredFile, error)
+	SetProjectImage(project string, data []byte) error
+	ClearProjectImage(project string) error
 	ReadConfig() (config.Config, error)
 	UpdateConfig(edit store.Edit) error
 }
@@ -79,6 +81,8 @@ func (b boardAPI) registerWrites(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/order", b.reorderWorkstream)
 	mux.HandleFunc("PUT /api/projects/{project}/workstreams/{slug}/section", b.putWorkstreamSection)
 	mux.HandleFunc("PUT /api/projects/{project}/key", b.setKey)
+	mux.HandleFunc("PUT /api/projects/{project}/image", b.putProjectImage)
+	mux.HandleFunc("DELETE /api/projects/{project}/image", b.deleteProjectImage)
 	mux.HandleFunc("POST /api/questions/{id}/answer", b.answer)
 	mux.HandleFunc("GET /api/preferences", b.preferences)
 	mux.HandleFunc("PATCH /api/preferences", b.savePreferences)
