@@ -992,6 +992,48 @@ test("board columns scroll together on one vertical surface", async () => {
   await expect(backlog.getByRole("button").last()).toBeInViewport();
 });
 
+test("widening the window from a phone's width shows the board from its first column (FH-155)", async () => {
+  const page = shared;
+  const board = page.locator(".board-grid");
+  const scrolled = () => board.evaluate((element) => element.scrollLeft);
+  const backlogHead = column(page, "Backlog").getByRole("heading", {
+    name: /Backlog/,
+  });
+  const panel = page.getByRole("complementary");
+  for (const theme of ["light", "dark"]) {
+    // A Backlog ticket's panel beside the board gives the strip somewhere
+    // to scroll to at 1440px; with the whole width every column fits.
+    await open(page, "#/p/flashheart/board", { theme });
+    await card(page, "Drag cards between columns").click();
+    await expect(panel).toBeVisible();
+    const withPanel = new URL(page.url()).hash;
+    await expect(backlogHead).toBeInViewport({ ratio: 1 });
+    expect(await scrolled(), theme).toBe(0);
+    // The window narrows to a phone's width in place: the panel covers the
+    // view, and behind it one column shows, a later one picked in the
+    // Column picker.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveCount(0);
+    await page.getByRole("combobox", { name: "Column" }).selectOption("done");
+    await expect(
+      column(page, "Done").getByRole("heading", { name: /Done/ }),
+    ).toBeInViewport({ ratio: 1 });
+    await expect(backlogHead).toHaveCount(0);
+    await page.evaluate((hash) => {
+      window.location.hash = hash;
+    }, withPanel);
+    await expect(panel).toBeVisible();
+    // Widened again, the strip starts at Backlog instead of staying where
+    // the phone left it, with Done clipping Backlog off the left.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect.poll(scrolled, { message: theme }).toBe(0);
+    await expect(backlogHead).toBeInViewport({ ratio: 1 });
+    await shot(page, `board-widened-1440-${theme}`);
+  }
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+});
+
 test("cards are coloured by type, priority, age or not at all", async () => {
   const page = shared;
   await open(page, "#/p/flashheart/board");

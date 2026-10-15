@@ -24,7 +24,7 @@ func main() {
 		Getenv:          os.Getenv,
 		HomeDir:         os.UserHomeDir,
 		Executable:      os.Executable,
-		RunApp:          app.Run,
+		RunApp:          runApp,
 		StartBackground: background.Start,
 		OpenServeLog:    func(root string) io.Writer { return logfile.ServeLog(root) },
 		Stdin:           os.Stdin,
@@ -36,4 +36,21 @@ func main() {
 		},
 	})
 	os.Exit(exitCode)
+}
+
+// runApp serves the board with cli's options. The adaptation lives here so
+// that cli, and with it the hook and mcp modes, never links app (FH-169).
+func runApp(ctx context.Context, options cli.ServeOptions) error {
+	return app.Run(ctx, app.Options{
+		Build:  options.Build,
+		Root:   options.Root,
+		Debug:  options.Debug,
+		Stdout: options.Stdout,
+		Stderr: options.Stderr,
+		Launched: func(launched app.Launched) {
+			if options.Launched != nil {
+				options.Launched(cli.Launched(launched))
+			}
+		},
+	})
 }

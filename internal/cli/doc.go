@@ -4,7 +4,10 @@
 // declaration) and exit codes.
 //
 // It chooses between a detached, foreground or background-child serve,
-// presents the launch outcome, keeps the one registry of agents (each
+// asks for the server through Dependencies.RunApp with its own
+// ServeOptions (never importing app, so the hook and mcp modes stay free
+// of the web server; FH-169), presents the launch outcome, keeps the one
+// registry of agents (each
 // agent's hook adapter and, unless it has hooks only, its setup.Agent)
 // that hook, setup and doctor read,
 // passes an agent's protocol-text refresh (Claude Code's skill, Codex's

@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rztaylor/flashheart/internal/app"
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
 	"github.com/rztaylor/flashheart/internal/protocol"
@@ -24,9 +23,9 @@ import (
 type harness struct {
 	env         map[string]string
 	home        string
-	appCalls    []app.Options
+	appCalls    []ServeOptions
 	appErr      error
-	appLaunched *app.Launched
+	appLaunched *Launched
 	bgCalls     []background.Options
 	bgReport    background.Report
 	bgErr       error
@@ -48,7 +47,7 @@ func (h *harness) deps() Dependencies {
 		Build:   buildinfo.Info{Version: "v0.0.1", Commit: "abc1234", BuildDate: "2026-10-04"},
 		Getenv:  func(key string) string { return h.env[key] },
 		HomeDir: func() (string, error) { return h.home, nil },
-		RunApp: func(_ context.Context, options app.Options) error {
+		RunApp: func(_ context.Context, options ServeOptions) error {
 			h.appCalls = append(h.appCalls, options)
 			if h.appLaunched != nil && options.Launched != nil {
 				options.Launched(*h.appLaunched)
@@ -361,7 +360,7 @@ func TestForegroundServeRunsAppAndPrintsManualURL(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
-	h.appLaunched = &app.Launched{Address: "127.0.0.1:9", ManualURL: "http://ss-2.localhost:9/#secret", BrowserError: "exec: open: not found"}
+	h.appLaunched = &Launched{Address: "127.0.0.1:9", ManualURL: "http://ss-2.localhost:9/#secret", BrowserError: "exec: open: not found"}
 	code, stdout, stderr := h.run("serve", "--foreground", "--debug", "--root", "/srv/board")
 	if code != 0 || stdout != "" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
@@ -395,7 +394,7 @@ func TestBackgroundChildReportsLaunchThroughHandshake(t *testing.T) {
 
 	h := newHarness(t)
 	h.handshake = &fakeHandshake{}
-	h.appLaunched = &app.Launched{Address: "127.0.0.1:9", ManualURL: "http://ss-3.localhost:9/#secret", BrowserError: "no opener"}
+	h.appLaunched = &Launched{Address: "127.0.0.1:9", ManualURL: "http://ss-3.localhost:9/#secret", BrowserError: "no opener"}
 	code, stdout, stderr := h.run("serve", "--background-child", "--root", "/srv/board")
 	if code != 0 || stdout != "" || stderr != "" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
@@ -455,7 +454,7 @@ func TestBackgroundChildLogsLaterFailuresToServeLog(t *testing.T) {
 
 	h := newHarness(t)
 	h.handshake = &fakeHandshake{}
-	h.appLaunched = &app.Launched{Address: "127.0.0.1:9"}
+	h.appLaunched = &Launched{Address: "127.0.0.1:9"}
 	h.appErr = errors.New("local server shutdown: boom")
 	code, _, _ := h.run("serve", "--background-child", "--root", "/srv/board")
 	if code != 1 {

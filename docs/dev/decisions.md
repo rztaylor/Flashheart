@@ -1900,7 +1900,7 @@ frontend's `src/layering.test.ts` over every source's relative imports.
   features not importing the shell.
 - **Not covered.** `cli` imports `app` for two small types, so the binary
   links the web server in every mode; the Go check covers the mode
-  packages, and moving those types is separate work.
+  packages, and moving those types is separate work (done: FH-169, D85).
 
 ## 2026-10-14 — D73: A workstream's slug is renamed on purpose, in one write that rewrites every reference
 
@@ -2320,3 +2320,33 @@ through Singleserve's session, SEC-7).
 
 Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format stays
 2 (one optional field added, which older readers ignore and preserve).
+
+## 2026-10-15 — D85: cli asks for the server through an injected runner; only cmd/flashheart links app
+
+Decision (FH-169; closes D72's "not covered"): `internal/cli` no longer
+imports `internal/app`. `serve` builds `cli.ServeOptions` (build info,
+root, debug, the standard streams and a `Launched` callback) and hands it
+to `cli.Dependencies.RunApp`; `cmd/flashheart` is the one place that
+adapts those options to `app.Options` and calls `app.Run`. `internal/cli`
+joins the lean packages in `internal/archtest`'s
+`TestLeanPackagesDoNotLinkTheWebServer`, so the hook and MCP command
+paths fail the build the moment they reach `index`, `api`, `app`, `webui`
+or `net/http` outside the MCP SDK allowance.
+
+Options: a small shared package for the two types (the ticket's
+proposal), which `app.Options` would embed or alias — but `app.Options`
+also carries a Singleserve `BrowserOpener` for `app`'s tests, so the
+shared package would either link Singleserve (and `net/http`) into `cli`
+or force `app` and its tests onto an embedded struct; or cli's own two
+types with the adaptation in `cmd/flashheart` (chosen): no new package,
+`app` untouched, and `cli.Launched(launched)` converts by value, so the
+two shapes cannot drift apart without a compile error.
+
+What it does not buy: the binary is one program, so Go still links and
+initialises every package in every mode; `scripts/hook-bench.sh` and a
+`GODEBUG=inittrace=1` sum are unchanged within noise (session-start p95
+15.5 ms before, 15.2 and 15.1 ms after, back to back on an M4 Max,
+2026-10-15; 108 package inits, 1.3 to 3.7 ms either way; binary
+17.74 MB both). The gain is the guarantee, not the milliseconds; a
+smaller hook binary would need a second `main`, which NFR-4 does not ask
+for.

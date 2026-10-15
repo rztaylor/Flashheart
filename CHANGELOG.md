@@ -373,6 +373,11 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- The board starts at its first column again after the window widens
+  from a phone's width (FH-155). The one column a phone showed stayed the
+  column strip's scroll target as it widened, so Backlog was cut off at
+  the left until you scrolled back by hand; picking a column on a phone
+  still shows that column.
 - The Ubuntu check of CI failed on main and on every pull request since
   the API contract fixtures were recorded (FH-176): the contract test's
   edits to the sample board landed in one Linux clock tick, so the
@@ -643,6 +648,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Internal: the command line no longer imports the web server's
+  composition package (FH-169, D85). `serve` asks for the server through
+  `cli.Dependencies.RunApp` with cli's own `ServeOptions` and `Launched`,
+  and `cmd/flashheart` alone adapts them to `app`. The layering test now
+  checks `internal/cli` too, so server code cannot creep onto the hook or
+  MCP command path unnoticed. No behaviour change; hook latency and
+  binary size are unchanged (one binary still links every package).
 - Internal: the server's answers no longer send any board or settings
   type as it is (FH-175). A blocked reason's ticket reference, review
   steps, acceptance criteria and the saved filters of each project now
