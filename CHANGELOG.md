@@ -625,6 +625,13 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Internal: the command line no longer imports the web server's
+  composition package (FH-169, D85). `serve` asks for the server through
+  `cli.Dependencies.RunApp` with cli's own `ServeOptions` and `Launched`,
+  and `cmd/flashheart` alone adapts them to `app`. The layering test now
+  checks `internal/cli` too, so server code cannot creep onto the hook or
+  MCP command path unnoticed. No behaviour change; hook latency and
+  binary size are unchanged (one binary still links every package).
 - The Colour by Type key lists types in the board format's order
   (feature, test, bug, refactor, infra, docs, spike), as the ticket forms
   do (FH-97, D79). Behind it, the browser now checks every field of what

@@ -11,9 +11,12 @@ import (
 
 const module = "github.com/rztaylor/flashheart"
 
-// lean are the packages the hook and mcp modes run (NFR-4) and the
-// commands beside them: none may link the web server or the index.
+// lean are the packages the hook and mcp modes run (NFR-4), the commands
+// beside them, and cli, which starts every mode: none may link the web
+// server or the index. Serve's composition (app) is wired into cli by
+// cmd/flashheart alone (FH-169).
 var lean = []string{
+	"internal/cli",
 	"internal/mcpserver",
 	"internal/hooks",
 	"internal/hooks/claude",

@@ -137,7 +137,9 @@
   the ticket between `update_ticket`'s read and its write.
 - Layering (FH-106) is tested, not reviewed: `internal/archtest`'s
   `TestLeanPackagesDoNotLinkTheWebServer` walks `go list -deps` of the
-  hook, MCP, await, setup and doctor packages, and the frontend's
+  hook, MCP, await, setup and doctor packages and of `cli` (FH-169: it
+  fails when any of them reaches `index`, `api`, `app`, `webui` or
+  `net/http` outside the MCP SDK allowance), and the frontend's
   `src/layering.test.ts` (Vitest, over `import.meta.glob` raw sources)
   checks every relative import against the layer rules in
   `frontend-ui.md`. Both run in `scripts/check.sh` through `go test` and
