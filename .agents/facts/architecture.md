@@ -161,8 +161,9 @@ Intended layout (packages are created when they get real content):
 - `internal/webui`: embedded compiled frontend assets.
 - `frontend/`: React UI; ownership in `.agents/facts/frontend-ui.md`.
 
-Dependency direction: `cli` → (`app` | `background` | `mcpserver` | `hooks` | `setup` | `await`) →
-(`index`, `runs`, `protocol`, `gitchange`) → (`store`, `events`) → (`board`, `mdfile`,
+Dependency direction: `cmd/flashheart` → (`cli` | `app`); `cli` → (`background` |
+`mcpserver` | `hooks` | `setup` | `await`); `app` and the mode packages →
+(`index` (`app` only), `runs`, `protocol`, `gitchange`) → (`store`, `events`) → (`board`, `mdfile`,
 `gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `scrub`)
 import no I/O packages; `runs` imports only `events`' types. Nothing below `app` imports HTTP or
 Singleserve.
@@ -175,10 +176,15 @@ Singleserve.
   allowance: `mcpserver` links `net/http` through the MCP SDK, which
   imports it for transports Flashheart does not use (D72); the import
   chain is not followed into the SDK, and the test fails when the
-  allowance is no longer needed. `cli` itself still imports `app` (for
-  `app.Options` and `app.Launched`), so the binary links the web server
-  in every mode; the check covers the mode packages, not `cli`. `hooks` is agent-neutral and takes an
-  `Adapter`; `cli` picks the adapter by agent name.
+  allowance is no longer needed. `cli` is checked too (FH-169, D85): it
+  never imports `app`; serve asks for the server through
+  `cli.Dependencies.RunApp` with its own `cli.ServeOptions` and
+  `cli.Launched`, and `cmd/flashheart` alone adapts them to `app.Options`
+  and `app.Run`. The one binary still links every package (Go runs each
+  package's init in every mode), so the check keeps server code off the
+  hook and mcp paths; it does not make the binary smaller. `hooks` is
+  agent-neutral and takes an `Adapter`; `cli` picks the adapter by agent
+  name.
 - Developer tools: `scripts/hookbench` (Go command behind
   `scripts/hook-bench.sh`), not part of the binary.
 - One run window (`runs.Lookback`, 48 h of daily event files) for every

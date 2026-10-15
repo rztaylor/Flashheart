@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rztaylor/flashheart/internal/app"
 	"github.com/rztaylor/flashheart/internal/await"
 	"github.com/rztaylor/flashheart/internal/background"
 	"github.com/rztaylor/flashheart/internal/buildinfo"
@@ -45,13 +44,36 @@ type Handshake interface {
 	Fail(error) error
 }
 
+// ServeOptions is what serve asks of the server it is given through
+// Dependencies.RunApp. cmd/flashheart adapts them to app's own options, so
+// cli never links the web server into the hook and mcp modes (FH-169).
+type ServeOptions struct {
+	Build  buildinfo.Info
+	Root   string
+	Debug  bool
+	Stdout io.Writer
+	Stderr io.Writer
+	// Launched is called once, after the browser open attempt.
+	Launched func(Launched)
+}
+
+// Launched reports how the browser was reached. ManualURL is set only when
+// opening failed; it is a short-lived secret for the owner's terminal.
+type Launched struct {
+	Address      string
+	ManualURL    string
+	BrowserError string
+}
+
 // Dependencies are process-owned collaborators used by Run.
 type Dependencies struct {
-	Build           buildinfo.Info
-	Getenv          func(string) string
-	HomeDir         func() (string, error)
-	Executable      func() (string, error)
-	RunApp          func(context.Context, app.Options) error
+	Build      buildinfo.Info
+	Getenv     func(string) string
+	HomeDir    func() (string, error)
+	Executable func() (string, error)
+	// RunApp serves the board with the options and blocks until it has
+	// drained; nil means serving is unavailable.
+	RunApp          func(context.Context, ServeOptions) error
 	StartBackground func(context.Context, background.Options) (background.Report, error)
 	OpenHandshake   func() (Handshake, error)
 	// OpenServeLog returns the background child's diagnostic log for a root.
@@ -340,7 +362,7 @@ func runServe(ctx context.Context, env *environment, flags *flag.FlagSet, global
 	if err != nil {
 		return err
 	}
-	options := app.Options{Build: env.deps.Build, Root: root, Debug: globals.debug}
+	options := ServeOptions{Build: env.deps.Build, Root: root, Debug: globals.debug}
 
 	switch {
 	case env.serve.backgroundChild:
@@ -352,12 +374,12 @@ func runServe(ctx context.Context, env *environment, flags *flag.FlagSet, global
 	}
 }
 
-func serveForeground(ctx context.Context, env *environment, options app.Options) error {
+func serveForeground(ctx context.Context, env *environment, options ServeOptions) error {
 	if env.deps.RunApp == nil {
 		return errors.New("application runner is unavailable")
 	}
 	options.Stdout, options.Stderr = env.stdout, env.stderr
-	options.Launched = func(launched app.Launched) {
+	options.Launched = func(launched Launched) {
 		if options.Debug {
 			fmt.Fprintf(env.stderr, "flashheart listening on loopback %s\n", launched.Address)
 		}
@@ -366,7 +388,7 @@ func serveForeground(ctx context.Context, env *environment, options app.Options)
 	return env.deps.RunApp(ctx, options)
 }
 
-func serveBackground(ctx context.Context, env *environment, options app.Options) error {
+func serveBackground(ctx context.Context, env *environment, options ServeOptions) error {
 	if env.deps.StartBackground == nil || env.deps.Executable == nil {
 		return errors.New("background start is unavailable")
 	}
@@ -393,7 +415,7 @@ func serveBackground(ctx context.Context, env *environment, options app.Options)
 	return nil
 }
 
-func serveBackgroundChild(ctx context.Context, env *environment, options app.Options) error {
+func serveBackgroundChild(ctx context.Context, env *environment, options ServeOptions) error {
 	if env.deps.OpenHandshake == nil || env.deps.RunApp == nil {
 		return errors.New("background child support is unavailable")
 	}
@@ -410,7 +432,7 @@ func serveBackgroundChild(ctx context.Context, env *environment, options app.Opt
 	}
 	reported := false
 	options.Stdout, options.Stderr = diagnostics, diagnostics
-	options.Launched = func(launched app.Launched) {
+	options.Launched = func(launched Launched) {
 		reported = true
 		_ = handshake.Ready(background.Report{
 			Address:      launched.Address,
