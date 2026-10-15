@@ -2,7 +2,10 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/rztaylor/flashheart/internal/board"
@@ -55,9 +58,15 @@ func (a Attribution) runArg() string { return a.Run }
 // policy's run rule, so a handler starts from a call it may act for.
 // Errors become tool errors with a fix. A call of a run the server started
 // is that run's activity, and its result carries the run's waiting
-// answers.
+// answers. The input schema is the SDK's reading of In, with the schemas
+// of inputSchemas for the types it does not know; the SDK refuses a call
+// that does not fit it before the handler runs.
 func tool[In attributed](srv *server, server *mcp.Server, name, description string, p policy, handle func(*call, In) (string, error)) {
-	mcp.AddTool(server, &mcp.Tool{Name: name, Description: description}, func(_ context.Context, req *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
+	schema, err := jsonschema.For[In](&jsonschema.ForOptions{TypeSchemas: inputSchemas})
+	if err != nil {
+		panic(fmt.Sprintf("%s: %v", name, err))
+	}
+	mcp.AddTool(server, &mcp.Tool{Name: name, Description: description, InputSchema: schema}, func(_ context.Context, req *mcp.CallToolRequest, input In) (*mcp.CallToolResult, any, error) {
 		inv := &invocation{conn: srv.connection(req.Session)}
 		if req.Params != nil {
 			inv.session, inv.thread = codexSession(req.Params.Meta, inv.conn)
@@ -69,6 +78,12 @@ func tool[In attributed](srv *server, server *mcp.Server, name, description stri
 		text += srv.called(inv, err == nil)
 		return &mcp.CallToolResult{IsError: err != nil, Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil, nil
 	})
+}
+
+// inputSchemas is the schema of each input type the SDK cannot derive:
+// a fieldList is a list of strings or one comma-separated string (D83).
+var inputSchemas = map[reflect.Type]*jsonschema.Schema{
+	reflect.TypeFor[fieldList](): {Types: []string{"null", "array", "string"}, Items: &jsonschema.Schema{Type: "string"}},
 }
 
 // enter begins a call under a policy and hands it to the handler.

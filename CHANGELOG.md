@@ -625,6 +625,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Agents see which ticket fields take a list and which take text
+  (FH-171, D83). `update_ticket`'s `set` is a typed object in the tool's
+  schema: title, type, priority, created, branch, pr and workstream are
+  strings, and tags, depends-on and depends-on-workstreams are lists of
+  strings, which also take one comma-separated string, as they always
+  did and the protocol now says. A field the tool does not set (status,
+  which `move` changes) is refused by the schema instead of by the tool.
+  Agent protocol stays 2.
+
 - The Colour by Type key lists types in the board format's order
   (feature, test, bug, refactor, infra, docs, spike), as the ticket forms
   do (FH-97, D79). Behind it, the browser now checks every field of what
