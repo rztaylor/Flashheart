@@ -224,9 +224,7 @@ test("every Overview section has a calm empty state (FH-51)", async () => {
       await expect(page.getByText(sentence)).toBeVisible();
     // Empty sections have nothing to open (the page header's Project
     // image badge is a disclosure of its own, FH-151).
-    await expect(page.locator("main section [aria-expanded]")).toHaveCount(
-      0,
-    );
+    await expect(page.locator("main section [aria-expanded]")).toHaveCount(0);
     await expectNoAxeViolations(page, `empty overview ${theme}`);
     await shot(page, `overview-empty-1440-${theme}`);
     await open(page, "#/p/quiet/overview", { width: 390, height: 1100, theme });
