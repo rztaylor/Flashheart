@@ -361,6 +361,11 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- The board starts at its first column again after the window widens
+  from a phone's width (FH-155). The one column a phone showed stayed the
+  column strip's scroll target as it widened, so Backlog was cut off at
+  the left until you scrolled back by hand; picking a column on a phone
+  still shows that column.
 - A board left open while an agent renames a workstream no longer brings
   the old name back into your saved filters (FH-173, D80). The board now
   saves only the preferences you changed, so changing the theme leaves
