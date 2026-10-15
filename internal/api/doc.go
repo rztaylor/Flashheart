@@ -2,9 +2,11 @@
 // request validation, response shapes (a run's short id and typed Needs
 // you reason, which the frontend words), long-polling for changes
 // (LIFE-3), JSON errors (ErrorCodes) and attachment headers (SEC-4).
-// Responses are this package's own types (runs' and events' are mapped,
-// never sent as they are), each with a golden fixture in testdata/api that
-// the frontend's guards are tested against (FH-97).
+// Responses and request bodies are this package's own types (board's,
+// config's, runs' and events' are mapped at the boundary, never sent or
+// decoded as they are), each response with a golden fixture in
+// testdata/api that the frontend's guards are tested against (FH-97,
+// FH-175).
 //
 // Reads come from index snapshots and, for review and attachment files,
 // store's checks. Writes (ticket moves, fields, sections, criteria,
