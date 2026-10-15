@@ -85,8 +85,8 @@ export function Popover({
                 open ? "bg-band-field" : ""
               }`
             : variant === "badge"
-              ? `flex shrink-0 rounded-control transition-shadow hover:ring-2 hover:ring-rail-active-mark/40 ${
-                  open ? "ring-2 ring-rail-active-mark/40" : ""
+              ? `flex shrink-0 rounded-control transition-shadow hover:ring-2 hover:ring-ink-muted/40 ${
+                  open ? "ring-2 ring-ink-muted/40" : ""
                 }`
               : `flex h-8 items-center gap-1.5 rounded-control border px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
                   active

@@ -373,6 +373,10 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Project images fill square header and sidebar badges without coloured side
+  strips, distortion, or accent backgrounds behind transparent pixels
+  (FH-151). The header image menu uses a neutral hover and open outline.
+
 - The board starts at its first column again after the window widens
   from a phone's width (FH-155). The one column a phone showed stayed the
   column strip's scroll target as it widened, so Backlog was cut off at

@@ -66,7 +66,9 @@ has) while a ticket needs repair. Keys of up to three letters fit at the
 badge's size; longer keys take a smaller cut. A project with an image of
 its own (FH-151) shows it on the badge instead of the key, clipped to the
 badge's shape, with the repair band and Needs you count still on top; the
-image is decorative (an empty alt), since the name carries the key. Its
+image fills a 32px square with no badge background, including when selected,
+so transparent pixels show the tile beneath. The image is decorative (an
+empty alt), since the name carries the key. Its
 tooltip and accessible name are the project's name, its key (with its
 folder name when that differs) and its counts: *Flashheart (FH,
 flashheart): 50 tickets, 3 in progress, 22 blocked, 1 needs repair, 2
@@ -90,8 +92,9 @@ system picker) or, once there is one, **Replace image…** and **Remove
 image**. A saved change closes the menu and says *Project image updated.* or
 *Project image removed.* in the toast; a refusal (not an image, too large)
 stays in the menu as an alert in the server's words and the badge keeps
-what it showed. With an image, the badge shows it, clipped to the badge's
-shape, and the key moves beside the name as a muted small label, so the
+what it showed. The button's hover and open outline is neutral. With an
+image, the badge shows it in a 40px square with no coloured backing, clipped
+to the badge's shape, and the key moves beside the name as a muted small label, so the
 header still shows the key; without one, the badge is the key as before.
 The all scope's board icon is not a control. The summary lines:
 
