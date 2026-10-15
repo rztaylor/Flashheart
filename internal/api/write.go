@@ -815,11 +815,54 @@ type Preferences struct {
 	// HiddenColumns lists the real columns hidden from the Board (FH-41).
 	HiddenColumns []string `json:"hiddenColumns"`
 	// Editor is how the section editor opens: formatted or markdown (FH-16).
-	Editor string                  `json:"editor"`
-	Scopes map[string]config.Scope `json:"scopes"`
+	Editor string               `json:"editor"`
+	Scopes map[string]ScopeJSON `json:"scopes"`
 	// ExpandedWorkstreams lists per project the finished workstreams shown
 	// expanded (FH-68).
 	ExpandedWorkstreams map[string][]string `json:"expandedWorkstreams"`
+}
+
+// ScopeJSON is a project's remembered view and filters (config.Scope).
+type ScopeJSON struct {
+	View       string     `json:"view"`
+	Type       ChoiceJSON `json:"type"`
+	Priority   ChoiceJSON `json:"priority"`
+	Workstream ChoiceJSON `json:"workstream"`
+	Age        ChoiceJSON `json:"age"`
+	State      string     `json:"state"`
+}
+
+// ChoiceJSON is one filter dimension: the values shown only (Include) and
+// the values hidden (Exclude); both are lists, never null.
+type ChoiceJSON struct {
+	Include []string `json:"include"`
+	Exclude []string `json:"exclude"`
+}
+
+func scopesJSON(scopes map[string]config.Scope) map[string]ScopeJSON {
+	out := make(map[string]ScopeJSON, len(scopes))
+	for project, scope := range scopes {
+		out[project] = scopeJSON(scope)
+	}
+	return out
+}
+
+func scopeJSON(scope config.Scope) ScopeJSON {
+	return ScopeJSON{View: scope.View, Type: choiceJSON(scope.Type), Priority: choiceJSON(scope.Priority),
+		Workstream: choiceJSON(scope.Workstream), Age: choiceJSON(scope.Age), State: scope.State}
+}
+
+func choiceJSON(choice config.Choice) ChoiceJSON {
+	return ChoiceJSON{Include: nonNil(choice.Include), Exclude: nonNil(choice.Exclude)}
+}
+
+func (s ScopeJSON) scope() config.Scope {
+	return config.Scope{View: s.View, Type: s.Type.choice(), Priority: s.Priority.choice(),
+		Workstream: s.Workstream.choice(), Age: s.Age.choice(), State: s.State}
+}
+
+func (c ChoiceJSON) choice() config.Choice {
+	return config.Choice{Include: c.Include, Exclude: c.Exclude}
 }
 
 func (b boardAPI) currentUI(w http.ResponseWriter) (config.UI, bool) {
@@ -841,15 +884,11 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 	if !ok {
 		return
 	}
-	scopes := ui.Scopes
-	if scopes == nil {
-		scopes = map[string]config.Scope{}
-	}
 	expanded := ui.ExpandedWorkstreams
 	if expanded == nil {
 		expanded = map[string][]string{}
 	}
-	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Editor: ui.Editor, Scopes: scopes, ExpandedWorkstreams: expanded})
+	writeJSON(w, http.StatusOK, Preferences{Theme: ui.Theme, Density: ui.Density, ColourBy: ui.ColourBy, HiddenColumns: nonNil(ui.HiddenColumns), Editor: ui.Editor, Scopes: scopesJSON(ui.Scopes), ExpandedWorkstreams: expanded})
 }
 
 // PreferencesPatch is PATCH /api/preferences: the preferences a page
@@ -859,13 +898,13 @@ func (b boardAPI) preferences(w http.ResponseWriter, _ *http.Request) {
 // ExpandedWorkstreams change one project at a time; a null project removes
 // its entry.
 type PreferencesPatch struct {
-	Theme               *string                  `json:"theme"`
-	Density             *string                  `json:"density"`
-	ColourBy            *string                  `json:"colourBy"`
-	HiddenColumns       *[]string                `json:"hiddenColumns"`
-	Editor              *string                  `json:"editor"`
-	Scopes              map[string]*config.Scope `json:"scopes"`
-	ExpandedWorkstreams map[string]*[]string     `json:"expandedWorkstreams"`
+	Theme               *string               `json:"theme"`
+	Density             *string               `json:"density"`
+	ColourBy            *string               `json:"colourBy"`
+	HiddenColumns       *[]string             `json:"hiddenColumns"`
+	Editor              *string               `json:"editor"`
+	Scopes              map[string]*ScopeJSON `json:"scopes"`
+	ExpandedWorkstreams map[string]*[]string  `json:"expandedWorkstreams"`
 }
 
 // apply is ui with the patch's changes.
@@ -878,7 +917,16 @@ func (p PreferencesPatch) apply(ui config.UI) config.UI {
 	if p.HiddenColumns != nil {
 		ui.HiddenColumns = nonNil(*p.HiddenColumns)
 	}
-	ui.Scopes = patchEntries(ui.Scopes, p.Scopes)
+	scopes := make(map[string]*config.Scope, len(p.Scopes))
+	for project, scope := range p.Scopes {
+		if scope != nil {
+			converted := scope.scope()
+			scopes[project] = &converted
+		} else {
+			scopes[project] = nil
+		}
+	}
+	ui.Scopes = patchEntries(ui.Scopes, scopes)
 	ui.ExpandedWorkstreams = patchEntries(ui.ExpandedWorkstreams, p.ExpandedWorkstreams)
 	return ui
 }

@@ -399,14 +399,17 @@ func registeredRoutes(t *testing.T) []string {
 	return routes
 }
 
-// domainType reports the first runs or events type a response type
-// carries, which would make that package's internals the wire format.
+// domainPackages are the packages whose types a response never carries,
+// since that would make their internals the wire format (FH-97, FH-175).
+var domainPackages = []string{"/internal/board", "/internal/config", "/internal/events", "/internal/runs"}
+
+// domainType reports the first domain type a response type carries.
 func domainType(kind reflect.Type, seen map[reflect.Type]bool) string {
 	if seen[kind] {
 		return ""
 	}
 	seen[kind] = true
-	if path := kind.PkgPath(); strings.HasSuffix(path, "/internal/runs") || strings.HasSuffix(path, "/internal/events") {
+	if path := kind.PkgPath(); slices.ContainsFunc(domainPackages, func(pkg string) bool { return strings.HasSuffix(path, pkg) }) {
 		return kind.String()
 	}
 	switch kind.Kind() {
@@ -486,7 +489,7 @@ func TestAPIContract(t *testing.T) {
 		}
 	})
 
-	t.Run("responses carry no runs or events types", func(t *testing.T) {
+	t.Run("responses carry no board, config, runs or events types", func(t *testing.T) {
 		for _, shape := range c.shapes {
 			if found := domainType(reflect.TypeOf(shape), map[reflect.Type]bool{}); found != "" {
 				t.Errorf("%T sends %s as it is; map it to an API type", shape, found)

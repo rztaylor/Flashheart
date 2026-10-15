@@ -639,6 +639,14 @@ All notable changes to this project are documented here. The project follows
   did and the protocol now says. A field the tool does not set (status,
   which `move` changes) is refused by the schema instead of by the tool.
   Agent protocol stays 2.
+- Internal: the server's answers no longer send any board or settings
+  type as it is (FH-175). A blocked reason's ticket reference, review
+  steps, acceptance criteria and the saved filters of each project now
+  have answer shapes of their own, and the saved filters a page sends are
+  read as such and converted at the boundary; what the browser receives
+  is byte for byte the same (the recorded samples did not change). The
+  check that answers carry no internal run or event type now covers the
+  board and settings types too.
 
 - The Colour by Type key lists types in the board format's order
   (feature, test, bug, refactor, infra, docs, spike), as the ticket forms
