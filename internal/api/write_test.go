@@ -15,7 +15,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/rztaylor/flashheart/internal/board"
-	"github.com/rztaylor/flashheart/internal/config"
 	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/mdfile"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -481,8 +480,8 @@ func TestPreferencesRoundTrip(t *testing.T) {
 		t.Errorf("defaults = %+v", prefs)
 	}
 	prefs.Theme, prefs.Density, prefs.ColourBy = "dark", "compact", "priority"
-	prefs.Scopes["alpha"] = config.Scope{View: "table", Type: config.Choice{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked"}
-	prefs.Scopes["beta"] = config.Scope{View: "overview"}
+	prefs.Scopes["alpha"] = ScopeJSON{View: "table", Type: ChoiceJSON{Include: []string{"bug"}, Exclude: []string{}}, State: "blocked"}
+	prefs.Scopes["beta"] = ScopeJSON{View: "overview"}
 	send(t, handler, http.MethodPatch, "/api/preferences", prefs, http.StatusNoContent, nil)
 	var again Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &again)
