@@ -62,6 +62,19 @@ const toast = (text) => page.getByRole("status").filter({ hasText: text });
 const projectFile = () =>
   readFile(join(sandbox.root, "flashheart", "project.yaml"), "utf8");
 
+// The stored square must fill the header badge without text padding.
+async function expectImageFillsBadge(badge) {
+  const image = badgeImage(badge);
+  await expect(image).toBeVisible();
+  const frame = await image.locator("..").boundingBox();
+  const bounds = await image.boundingBox();
+  expect(bounds.width).toBe(frame.width);
+  expect(bounds.height).toBe(frame.height);
+  expect(bounds.x).toBe(frame.x);
+  expect(bounds.y).toBe(frame.y);
+  expect(bounds.width).toBe(bounds.height);
+}
+
 // picture draws a width×height picture in the page's own canvas, a
 // coloured ground with a white disc off centre, so a crop is visible, and
 // returns it as the browser would encode it (PNG or JPEG).
@@ -141,6 +154,7 @@ test("the header badge is a button named with the key; a PNG becomes the badge",
     "src",
     /^\/api\/projects\/flashheart\/image\?v=[0-9a-f]{8}$/,
   );
+  await expectImageFillsBadge(badge);
   await expect(badge).toHaveText("");
   await expect(main().locator("[data-project-key]")).toHaveText("FH");
   await expect(main().getByRole("heading", { level: 1 })).toHaveText(
@@ -248,7 +262,7 @@ test("a second project takes an image too; the rail mixes images and keys in bot
 
   for (const theme of ["light", "dark"]) {
     await open(page, "#/p/flashheart/board", { width: 1440, theme });
-    await expect(badgeImage(headerBadge("FH"))).toBeVisible();
+    await expectImageFillsBadge(headerBadge("FH"));
     await shot(page, `project-image-rail-1440-${theme}`);
     await expectNoAxeViolations(page, `rail with images ${theme}`);
     await open(page, "#/p/flashheart/board", {
@@ -256,7 +270,7 @@ test("a second project takes an image too; the rail mixes images and keys in bot
       height: 844,
       theme,
     });
-    await expect(badgeImage(headerBadge("FH"))).toBeVisible();
+    await expectImageFillsBadge(headerBadge("FH"));
     await expect(main().locator("[data-project-key]")).toHaveText("FH");
     await shot(page, `project-image-header-390-${theme}`);
     await expectNoAxeViolations(page, `header with image at 390 ${theme}`);

@@ -373,6 +373,9 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Project images fill the page header badge without coloured side strips or
+  distortion from the text badge padding (FH-151).
+
 - The board starts at its first column again after the window widens
   from a phone's width (FH-155). The one column a phone showed stayed the
   column strip's scroll target as it widened, so Backlog was cut off at

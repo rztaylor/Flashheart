@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 const sizes = {
-  md: "h-7 min-w-8 px-1.5 text-sm",
-  lg: "h-10 min-w-10 px-2 text-lg",
+  md: { text: "h-7 min-w-8 px-1.5 text-sm", image: "size-8" },
+  lg: { text: "h-10 min-w-10 px-2 text-lg", image: "size-10" },
 };
 
 // KeyBadge is a project's key (FH) as a badge filled in the accent: the page
@@ -22,8 +22,8 @@ export function KeyBadge({
   return (
     <span
       aria-hidden="true"
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-control bg-rail-active-mark text-on-rail-active-mark ${sizes[size]} ${
-        image ? "aspect-square p-0" : ""
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-control bg-rail-active-mark text-on-rail-active-mark ${
+        image ? sizes[size].image : sizes[size].text
       }`}
     >
       {image ? (
