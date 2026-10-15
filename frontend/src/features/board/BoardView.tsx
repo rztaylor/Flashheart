@@ -57,6 +57,7 @@ import {
 import { type PaintMode, paintFor } from "../../model/paint";
 import { useNow } from "../../state/useNow";
 import { TicketCard } from "./TicketCard";
+import { useStartOnWiden } from "./useStartOnWiden";
 
 interface BoardViewProps {
   cards: Card[];
@@ -115,7 +116,8 @@ type DropAt = { column: Column; index: number };
 // column, as dragging does (EDIT-1), and Shift with Up or Down moves it
 // within its column; a drag drops it where a line shows. Enter opens it.
 // When a card opens and the panel narrows the board, its column scrolls back
-// into view.
+// into view; widened past the phone layout, the board starts at its first
+// column again.
 export function BoardView(props: BoardViewProps) {
   const {
     cards,
@@ -158,6 +160,9 @@ export function BoardView(props: BoardViewProps) {
   }, [dragging]);
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const grid = useRef<HTMLDivElement>(null);
+  // Widened past the phone layout, the strip starts at its first column
+  // again (FH-155).
+  useStartOnWiden(grid);
   // A focused card keeps focus when it moves, by the keyboard, a live
   // reload or a filter, and hands it on when it goes (FH-84).
   const keepFocus = useKeepFocus();

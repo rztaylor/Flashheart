@@ -156,7 +156,9 @@
   `components/FileDrop` and `model/uploads`, and `app/fileDrops` keeps a
   file dropped elsewhere from opening in the tab.
 - Desktop first (1280 px and up); narrow widths show one column with a column
-  picker. Healthy connection state is visually quiet.
+  picker, and widening past 48rem puts the board's column strip back at its
+  first column (`features/board/useStartOnWiden`, FH-155). Healthy
+  connection state is visually quiet.
 - Visual direction (D18, D22, 2026-10-06): **Metro Pop** in light (a
   strong raspberry band and accent on a clean white ground, cool light-grey
   column wells, white cards; never blue, never cream) and **Night Service**

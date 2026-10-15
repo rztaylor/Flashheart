@@ -361,6 +361,11 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- The board starts at its first column again after the window widens
+  from a phone's width (FH-155). The one column a phone showed stayed the
+  column strip's scroll target as it widened, so Backlog was cut off at
+  the left until you scrolled back by hand; picking a column on a phone
+  still shows that column.
 - The Ubuntu check of CI failed on main and on every pull request since
   the API contract fixtures were recorded (FH-176): the contract test's
   edits to the sample board landed in one Linux clock tick, so the

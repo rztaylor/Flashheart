@@ -288,6 +288,13 @@
   `frontend/e2e/lightbox.spec.mjs` opens it from the page's Evidence and
   the panel's Attachments, reaches 800% and 25%, pans, checks focus
   return, axe in both themes and 390 px.
+- The board's column strip after the window widens from a phone's width
+  (FH-155): the reset on leaving the narrow layout, nothing while narrow
+  and the listener's removal in `features/board/useStartOnWiden.dom.test.ts`
+  over a stubbed `matchMedia`; in the browser, `board.spec.mjs` opens a
+  Backlog ticket's panel at 1440 px (so the strip overflows), narrows the
+  window to 390 px in place, picks Done, and widens it again, in both
+  themes.
 - Serve's freshness cost is tested by counting board reads through a
   wrapping `index.Source` (`countingSource` in `internal/index` and
   `internal/api`, FH-96): event appends refold with no read, `Current`
