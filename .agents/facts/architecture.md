@@ -81,6 +81,13 @@ Intended layout (packages are created when they get real content):
   the fold's undelivered answers. The prompt hook checks one file; the
   other paths also take the old location.
 - `internal/scrub`: secret scrubbing and length limits for agent strings.
+- `internal/imagefit`: a project's badge image from an upload (FH-151,
+  D82): JPEG or PNG by its bytes, a pixel cap checked from the header
+  before decoding, centre crop, 128×128, plain PNG, EXIF orientation
+  honoured by its own segment scan. Pure (no I/O); `store` calls it
+  (`SetProjectImage`, `ClearProjectImage`, `OpenProjectImage`) and owns
+  the file and the `image` field of `project.yaml`. The only user of
+  `golang.org/x/image`.
 - `internal/gitinfo`: project, branch and worktree from a cwd without git
   subprocesses; cached.
 - `internal/gitchange`: whether a worktree's work changed after a moment
@@ -163,7 +170,7 @@ Intended layout (packages are created when they get real content):
 
 Dependency direction: `cli` → (`app` | `background` | `mcpserver` | `hooks` | `setup` | `await`) →
 (`index`, `runs`, `protocol`, `gitchange`) → (`store`, `events`) → (`board`, `mdfile`,
-`gitinfo`, `scrub`, `config`). Pure packages (`board`, `mdfile`, `scrub`)
+`gitinfo`, `scrub`, `config`, `imagefit`). Pure packages (`board`, `mdfile`, `scrub`, `imagefit`)
 import no I/O packages; `runs` imports only `events`' types. Nothing below `app` imports HTTP or
 Singleserve.
 

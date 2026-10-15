@@ -19,7 +19,8 @@ one-off conversion is retired (D55). Requirement ids refer to
 │   └── serve.log                         background serve diagnostics (LIFE-4), rotated at 1 MB
 ├── .archive/<project>/                   archived projects (PRJ-5), as they were
 └── <project>/                            e.g. flashheart
-    ├── project.yaml                      key, display name, repos, next id (PRJ-3, KEY-1)
+    ├── project.yaml                      key, display name, repos, next id, image (PRJ-3, KEY-1)
+    ├── image.png                         the project's badge image, 128×128 (FH-151), optional
     ├── workstreams/<slug>.md
     ├── tickets/
     │   └── FH-42-card-panel/             one folder per ticket: <id>-<slug>
@@ -612,16 +613,38 @@ repos:                    # main-checkout paths seen by hooks (PRJ-3)
 settings:                 # per-project overrides of global config
   enforce_handoff: false
   quiet_minutes: 10
+image: image.png          # the project's badge image, a file in this folder (FH-151); absent until one is set
 ```
 
 Flashheart edits only the fields it writes (`key`, `next_id`, `retired`,
-`repos`), adding a missing one at the end, and keeps every other line, the
-file's line endings and a byte-order mark (`STO-2`). Every reader treats
-problems alike: a file that does not parse contributes nothing, and a field
-of the wrong type or an invalid key is ignored; the board shows each as a
-project warning. A list may be written as a single value. A list that
-cannot be read is never replaced: adopting a repository or retiring an id
-is refused until it is repaired.
+`repos`, `image`), adding a missing one at the end, and keeps every other
+line, the file's line endings and a byte-order mark (`STO-2`). Every
+reader treats problems alike: a file that does not parse contributes
+nothing, and a field of the wrong type or an invalid key is ignored; the
+board shows each as a project warning. A list may be written as a single
+value. A list that cannot be read is never replaced: adopting a repository
+or retiring an id is refused until it is repaired.
+
+### The project image
+
+`image` names the picture the board shows on the project's badge instead
+of its key (FH-151, D82): a plain file name in the project folder (no
+path), a PNG or JPEG. Set from the board, it is always `image.png`: the
+upload is judged by its bytes (SEC-7; only JPEG and PNG are taken, at most
+20 MB and 50 megapixels, checked from the header before any pixel is
+decoded), cropped to its centre square, scaled to 128×128, turned upright
+by its EXIF orientation, and written as a plain PNG (so nothing the source
+carried besides pixels, EXIF location included, is kept). The file and the
+field are written in one transaction under the project lock, the file
+first; an earlier image under another name is removed after. Clearing
+removes the field and the file it named. The original upload is never
+stored.
+
+A reader that finds the field but no such file, a value that is not a file
+name, or a file that is not a PNG or JPEG by its bytes shows the key and a
+project warning; nothing else breaks. The image is served only through the
+authenticated API (`GET /api/projects/<project>/image`), as a ticket's
+files are, with a version in the URL that changes with the file's bytes.
 
 ## config.yaml
 

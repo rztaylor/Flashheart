@@ -114,7 +114,8 @@ Later additions: `@fontsource-variable/archivo` and an authored icon set
 (D14), and the interaction-test libraries (D42). A rich text editor needs
 its own decision before it is added (D56): CodeMirror 6 with a live
 preview (D61), its packages in D62. Pasted web HTML is converted by our
-own code over the browser's `DOMParser`, not a library (D68).
+own code over the browser's `DOMParser`, not a library (D68). Go:
+`golang.org/x/image` for scaling a project's image (D82).
 
 ## 2026-10-04 — D11: Safety model
 
@@ -2273,3 +2274,49 @@ which let `store`'s note reach 4.7 KiB and `api`'s, `hooks`' and
 `mcpserver`'s 3 KiB as each change added a clause. A Go package has no
 separate boundary file, so its note carries more than a frontend
 feature's, but the same 2 KiB ceiling keeps it a first read.
+
+## 2026-10-15 — D82: A project's image is fitted on the server and lives in its folder
+
+Decision (FH-151): a project may have an image of its own, shown on its
+rail badge and in the page header in place of its key. The person chooses
+a JPEG or PNG from the page header's badge, which in a project scope is the
+**Project image** button and menu (choose, replace, remove), the one place
+the image is managed; the Settings menu stays app-wide (FH-149). The
+server judges the upload by its bytes (`board.SniffAttachment`, SEC-7),
+refuses a picture whose header claims more than 50 megapixels before any
+pixel is decoded (`image.DecodeConfig`), crops the centre square, scales
+it to 128×128 and writes a plain PNG as `<project>/image.png`, named by
+`image: image.png` in `project.yaml`, in one transaction under the project
+lock (the file first, then the field; an earlier image under another name
+removed after). The original is never kept, and nothing the source
+carried besides its pixels (EXIF, location) survives. A JPEG's EXIF
+orientation is honoured by a small scan of the file's own segments in
+`internal/imagefit`, so a phone photo comes out upright; no EXIF library
+is added. Clearing removes the field and the file. A missing or
+unreadable image, or a value that is not a file name, is a project warning
+and the key shows. The image is served only through the authenticated API
+(`GET /api/projects/{project}/image`), with a version in its URL that
+changes with the bytes, so a browser's copy is never stale; the badge's
+name and tooltip and the page header keep the key.
+
+Dependency (D10): `golang.org/x/image` (v0.47.0) for its scaler
+(`draw.CatmullRom`), the standard library having decoders but no scaler.
+It is maintained by the Go team, pure Go, and used only by `imagefit`,
+which `store` calls; it links into every mode but runs nothing at start.
+No event is recorded for the write: like a key or workstream order, it
+changes no ticket (agent-protocol §3).
+
+Options: a bundled icon set (the ticket's first scope, dropped at the
+user's request on 2026-10-14: an image of one's own recognises a project
+better than a chosen glyph, and a set would need curating); resizing in
+the browser (rejected: the browser is an untrusted boundary, and the
+server would still have to decode what it was sent); keeping the original
+upload (rejected: the badge needs 128 pixels, a photo is megabytes, and
+the original's metadata is the user's to keep out of the board);
+managing the image from the Settings menu (rejected: that menu is for
+app-wide settings, and the badge is where the image is seen); a public
+static path for the image (rejected: every byte the board serves goes
+through Singleserve's session, SEC-7).
+
+Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format stays
+2 (one optional field added, which older readers ignore and preserve).

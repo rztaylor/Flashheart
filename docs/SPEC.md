@@ -117,7 +117,13 @@ watches the root and keeps an in-memory index; the UI is optional.
   to the same project:
   `basename(dirname(git rev-parse --path-format=absolute --git-common-dir))`.
 - `PRJ-3` `project.yaml` (optional) records a display name, the repository
-  paths seen, and per-project settings. When a second, different repository
+  paths seen, per-project settings and, once the user sets one from the
+  board, the project's image: a JPEG or PNG the user uploads, judged by
+  its bytes (`SEC-7`), cropped to a centred square, resized to 128×128 and
+  stored as a PNG in the project folder, shown on the project's rail badge
+  and in the page header in place of its key (the key stays in the badge's
+  name and beside the page title). A missing or unreadable image is a
+  project warning and the key shows. When a second, different repository
   path would map to an existing name, the new one becomes
   `<name>-<first 6 hex of sha256(path)>` and both are shown with their paths.
 - `PRJ-4` Agent activity outside any git repository belongs to no project

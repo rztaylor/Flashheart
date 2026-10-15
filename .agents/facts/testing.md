@@ -262,6 +262,25 @@
   `workstream-editing.spec.mjs` shows a taken title at the field (axe,
   390 px in both themes) and a title written to disk in the POST's
   `page.route` handler refused by the server.
+- A project's image (FH-151, D82): the crop, scale, PNG output, EXIF
+  orientation and refusals (not an image, a header claiming too many
+  pixels, a truncated picture) are table tests in `imagefit`; the
+  `image` field, its warnings (missing, not a picture, not a file name),
+  the one-transaction write, replacement under another name, refusals
+  that write nothing and clearing in `store` (`projectimage_test.go`);
+  the endpoints, the SEC-4 headers, the versioned URL, refusals in words,
+  warnings instead of errors and that no event is recorded in `api`
+  (`projectimage_test.go`, with contract steps `project-image-set`,
+  `projects-with-image`, `error-not-an-image`, `project-image-cleared`);
+  authentication for PUT, GET and DELETE in `app`. The badge with an
+  image and the key in its name are `ProjectRail.dom.test.tsx` and
+  `PageHeader.dom.test.tsx`; the menu, its refusal and focus return
+  `ProjectImageMenu.dom.test.tsx`; in the browser,
+  `frontend/e2e/project-image.spec.mjs` uploads a PNG from the header
+  badge, replaces it with a JPEG, reloads, is refused a text file and an
+  SVG, gives a second project an image, and removes it, reading
+  `project.yaml` and the stored 128×128 file, with axe and screenshots in
+  both themes at 1440 and 390 px.
 - Files from the board (FH-18, REV-7, SEC-7): sniffing is a table test in
   `board` (`TestSniffAttachmentJudgesTheContent`), the upload's name,
   index entry, streaming limit and refusals in `store`
