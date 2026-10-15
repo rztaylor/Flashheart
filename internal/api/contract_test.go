@@ -212,6 +212,24 @@ func runContract(t *testing.T) *contract {
 	edit("alpha/tickets/AL-1-project-skeleton/AL-1-project-skeleton.md", "depends-on: []", "depends-on: [BE-1, AL-8]")
 	edit("alpha/workstreams/board-ui.md", "  - AL-4\n", "  - AL-4\n  - AL-8\n")
 	edit("beta/project.yaml", "key: BE\n", "key: BE\nrepos:\n  - /Users/example/src/beta\n")
+	// Projects are listed newest file first (summaries). The edits above are
+	// only as far apart as the filesystem's clock, which ties them on Linux
+	// (FH-176), so pin every file, then one per project: beta newest, then
+	// alpha, then gamma, on every platform.
+	if err := filepath.WalkDir(root, func(path string, _ os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chtimes(path, contractTime, contractTime)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for i, name := range []string{"gamma/project.yaml", "alpha/project.yaml", "beta/project.yaml"} {
+		when := contractTime.Add(time.Duration(i+1) * time.Hour)
+		if err := os.Chtimes(filepath.Join(root, name), when, when); err != nil {
+			t.Fatal(err)
+		}
+	}
 	files := store.New(root)
 	t.Cleanup(func() { files.Close() })
 	files.SetClock(func() time.Time { return contractTime })
@@ -388,14 +406,17 @@ func registeredRoutes(t *testing.T) []string {
 	return routes
 }
 
-// domainType reports the first runs or events type a response type
-// carries, which would make that package's internals the wire format.
+// domainPackages are the packages whose types a response never carries,
+// since that would make their internals the wire format (FH-97, FH-175).
+var domainPackages = []string{"/internal/board", "/internal/config", "/internal/events", "/internal/runs"}
+
+// domainType reports the first domain type a response type carries.
 func domainType(kind reflect.Type, seen map[reflect.Type]bool) string {
 	if seen[kind] {
 		return ""
 	}
 	seen[kind] = true
-	if path := kind.PkgPath(); strings.HasSuffix(path, "/internal/runs") || strings.HasSuffix(path, "/internal/events") {
+	if path := kind.PkgPath(); slices.ContainsFunc(domainPackages, func(pkg string) bool { return strings.HasSuffix(path, pkg) }) {
 		return kind.String()
 	}
 	switch kind.Kind() {
@@ -475,7 +496,7 @@ func TestAPIContract(t *testing.T) {
 		}
 	})
 
-	t.Run("responses carry no runs or events types", func(t *testing.T) {
+	t.Run("responses carry no board, config, runs or events types", func(t *testing.T) {
 		for _, shape := range c.shapes {
 			if found := domainType(reflect.TypeOf(shape), map[reflect.Type]bool{}); found != "" {
 				t.Errorf("%T sends %s as it is; map it to an API type", shape, found)

@@ -9,8 +9,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/rztaylor/flashheart/internal/config"
 )
 
 // titleField is a workstream patch's title field.
@@ -100,8 +98,8 @@ func TestPatchWorkstreamRenameKeepsSavedPreferences(t *testing.T) {
 	handler, _ := writableAPI(t)
 	var preferences Preferences
 	getJSON(t, handler, "/api/preferences", http.StatusOK, &preferences)
-	preferences.Scopes = map[string]config.Scope{
-		"alpha": {View: "board", Workstream: config.Choice{Include: []string{}, Exclude: []string{"board-ui"}}},
+	preferences.Scopes = map[string]ScopeJSON{
+		"alpha": {View: "board", Workstream: ChoiceJSON{Include: []string{}, Exclude: []string{"board-ui"}}},
 	}
 	preferences.ExpandedWorkstreams = map[string][]string{"alpha": {"board-ui"}}
 	send(t, handler, http.MethodPatch, "/api/preferences", preferences, http.StatusNoContent, nil)

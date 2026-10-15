@@ -69,11 +69,15 @@
   but the two in `routesWithoutFixture`, in order) and keeps each
   response in `testdata/api/<name>.json`, with random activity ids and
   hashes (numbered within each file), the root, file times and board
-  revisions replaced by stable placeholders, so a new step changes only
+  revisions replaced by stable placeholders (the sample's file times
+  are pinned first, since projects list newest first and a Linux clock
+  tick can tie them, FH-176), so a new step changes only
   its own fixture; a merge conflict there is settled by rerunning the
   update after the merge. It
   fails when a fixture is stale, when a registered route has none, or when
-  a response type carries a `runs` or `events` type. `TestVocabulary`
+  a response type carries a `board`, `config`, `runs` or `events` type
+  (`domainPackages`; FH-175 gave the last board and config pieces their
+  own answer shapes, with the JSON unchanged). `TestVocabulary`
   keeps `testdata/vocabulary.json`; `TestErrorCodes` holds handlers to
   `api.ErrorCodes`. After a deliberate change, rewrite them with
   `go test ./internal/api -run 'TestAPIContract|TestVocabulary' -update`

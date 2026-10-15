@@ -373,6 +373,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- The Ubuntu check of CI failed on main and on every pull request since
+  the API contract fixtures were recorded (FH-176): the contract test's
+  edits to the sample board landed in one Linux clock tick, so the
+  projects, listed newest first, fell back to name order. The test now
+  pins the sample's file times, so the order is the same on every
+  platform; the fixtures are unchanged.
 - A board left open while an agent renames a workstream no longer brings
   the old name back into your saved filters (FH-173, D80). The board now
   saves only the preferences you changed, so changing the theme leaves
@@ -636,6 +642,15 @@ All notable changes to this project are documented here. The project follows
   questions their sessions already settled in chat.
 
 ### Changed
+
+- Internal: the server's answers no longer send any board or settings
+  type as it is (FH-175). A blocked reason's ticket reference, review
+  steps, acceptance criteria and the saved filters of each project now
+  have answer shapes of their own, and the saved filters a page sends are
+  read as such and converted at the boundary; what the browser receives
+  is byte for byte the same (the recorded samples did not change). The
+  check that answers carry no internal run or event type now covers the
+  board and settings types too.
 
 - The Colour by Type key lists types in the board format's order
   (feature, test, bug, refactor, infra, docs, spike), as the ticket forms
