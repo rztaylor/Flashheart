@@ -106,7 +106,11 @@ const commentOptional = ["sentTo", "sentToShort", "warnings"];
 
 const contract: Record<string, { guard: Guard; optional?: string[] }> = {
   info: { guard: isServerInfo },
-  projects: { guard: isProjects },
+  projects: { guard: isProjects, optional: ["projects[].image"] },
+  "projects-with-image": {
+    guard: isProjects,
+    optional: ["projects[].image"],
+  },
   board: { guard: isBoard, optional: cardOptional },
   "all-board": { guard: isAllBoard, optional: cardOptional },
   runs: { guard: isRuns, optional: runOptional },
@@ -141,6 +145,9 @@ const contract: Record<string, { guard: Guard; optional?: string[] }> = {
   "workstream-ordered": { guard: isSaved },
   "workstream-section-saved": { guard: isSaved },
   "key-set": { guard: isSaved },
+  "project-image-set": { guard: isSaved },
+  "project-image-cleared": { guard: isSaved },
+  "error-not-an-image": { guard: isErrorBody },
   answered: { guard: isSaved },
   ticket: {
     guard: isTicketResponse,

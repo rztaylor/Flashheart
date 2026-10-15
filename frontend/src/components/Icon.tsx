@@ -32,6 +32,7 @@ const paths = {
   minus: "M5 12h14",
   fit: "M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5M9 9h6v6H9z",
   archive: "M3.5 5h17v4h-17zM5 9v10h14V9M10 13h4",
+  image: "M4 5.5h16v13H4zM4 15.5l5-5 4 4 2.5-2.5 4.5 4.5M15.5 9.5h.01",
   undo: "M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2",
   edit: "M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4",
   // comment: a speech balloon, a person's comment on a ticket.

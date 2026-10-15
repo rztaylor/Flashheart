@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "./client";
-import { uploadFile } from "./files";
+import { clearProjectImage, setProjectImage, uploadFile } from "./files";
 
 function respond(status: number, body: unknown) {
   const calls: { url: string; init?: RequestInit }[] = [];
@@ -58,5 +58,45 @@ describe("uploadFile", () => {
     expect(refused).toBeInstanceOf(ApiError);
     expect((refused as ApiError).code).toBe("type_not_allowed");
     expect((refused as ApiError).message).toContain("SVG");
+  });
+});
+
+// A project's image (FH-151) goes up as the body of a PUT and comes off
+// with a DELETE; a refusal carries the server's words.
+describe("setProjectImage and clearProjectImage", () => {
+  const saved = { hash: "", revision: 4, warnings: [] };
+
+  it("puts the file's bytes as the project's image", async () => {
+    const { fetcher, calls } = respond(200, saved);
+    const blob = new Blob(["png"]);
+    await setProjectImage(fetcher, "my project", blob);
+    expect(calls[0]?.url).toBe("/api/projects/my%20project/image");
+    expect(calls[0]?.init?.method).toBe("PUT");
+    expect(calls[0]?.init?.body).toBe(blob);
+  });
+
+  it("deletes the project's image", async () => {
+    const { fetcher, calls } = respond(200, saved);
+    await clearProjectImage(fetcher, "alpha");
+    expect(calls[0]?.url).toBe("/api/projects/alpha/image");
+    expect(calls[0]?.init?.method).toBe("DELETE");
+  });
+
+  it("throws the server's words for a refusal", async () => {
+    const { fetcher } = respond(415, {
+      error: {
+        code: "type_not_allowed",
+        message:
+          "The image was not saved because it is not a JPEG or PNG image. Choose a JPEG or PNG image.",
+      },
+    });
+    const refused = await setProjectImage(
+      fetcher,
+      "alpha",
+      new Blob(["words"]),
+    ).catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(ApiError);
+    expect((refused as ApiError).code).toBe("type_not_allowed");
+    expect((refused as ApiError).message).toContain("not a JPEG or PNG");
   });
 });

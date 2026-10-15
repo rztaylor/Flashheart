@@ -89,14 +89,14 @@ describe("ProjectRail", () => {
     expect(within(rail).queryByRole("img")).toBeNull();
   });
 
-  it("names each badge, in its name and tooltip, with the project and its counts", () => {
+  it("names each badge, in its name and tooltip, with the project, its key and its counts", () => {
     const { badges } = setup();
     const flashheart =
-      "Flashheart (flashheart): 50 tickets, 3 in progress, 22 blocked, 2 agents need you";
+      "Flashheart (FH, flashheart): 50 tickets, 3 in progress, 22 blocked, 2 agents need you";
     expect(badges[1].getAttribute("aria-label")).toBe(flashheart);
     expect(badges[1].getAttribute("title")).toBe(flashheart);
     expect(badges[2].getAttribute("aria-label")).toBe(
-      "Gamma (gamma): 7 tickets, 1 in progress, 1 needs repair",
+      "Gamma (GAM, gamma): 7 tickets, 1 in progress, 1 needs repair",
     );
     expect(badges[0].getAttribute("aria-label")).toBe(
       "All projects (3 projects): 64 tickets, 5 in progress, 22 blocked, 1 needs repair, 2 agents need you",
@@ -137,5 +137,53 @@ describe("ProjectRail", () => {
     });
     await user.click(badges[0]);
     expect(onSelect).toHaveBeenCalledWith({ kind: "all" });
+  });
+
+  // A project's own image (FH-151) covers its badge, clipped to the
+  // badge's shape; the key stays in the name and tooltip, and the marks
+  // stay on top.
+  it("shows a project's image on its badge and keeps the key in its name", () => {
+    render(
+      <ProjectRail
+        projects={[
+          project("flashheart", "FH", {
+            image: "/api/projects/flashheart/image?v=abcd1234",
+          }),
+          project("gamma", "GAM", {
+            needsRepair: 1,
+            image: "/api/projects/gamma/image?v=0f0f0f0f",
+            runs: { ...noRuns, needsYou: 1 },
+          }),
+          project("quill", "QUI"),
+        ]}
+        runs={noRuns}
+        scope={{ kind: "all" }}
+        onSelect={vi.fn()}
+      />,
+    );
+    const rail = screen.getByRole("navigation", { name: "Projects" });
+    const [, flashheart, gamma, quill] = within(rail).getAllByRole("button");
+    const image = (badge: HTMLElement) =>
+      badge.querySelector<HTMLImageElement>("img[data-badge-image]");
+    expect(image(flashheart as HTMLElement)?.getAttribute("src")).toBe(
+      "/api/projects/flashheart/image?v=abcd1234",
+    );
+    expect(image(flashheart as HTMLElement)?.getAttribute("alt")).toBe("");
+    expect(flashheart?.textContent?.replace(/\d/g, "")).toBe("");
+    expect(flashheart?.getAttribute("aria-label")).toMatch(
+      /^Flashheart \(FH, flashheart\): /,
+    );
+    expect(flashheart?.getAttribute("title")).toMatch(/\(FH, flashheart\)/);
+    // The repair hatch and Needs you count sit over the image.
+    expect(gamma?.querySelector("[data-mark=repair]")).not.toBeNull();
+    expect(gamma?.querySelector("[data-mark=needs-you]")?.textContent).toBe(
+      "1",
+    );
+    expect(image(gamma as HTMLElement)).not.toBeNull();
+    // A project without one shows its key as before.
+    expect(image(quill as HTMLElement)).toBeNull();
+    expect(quill?.textContent).toBe("QUI");
+    // Decorative images are not announced.
+    expect(within(rail).queryByRole("img")).toBeNull();
   });
 });

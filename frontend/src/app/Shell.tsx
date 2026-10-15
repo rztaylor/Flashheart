@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { restoreProject } from "../api/archive";
 import type { Card, Column } from "../api/board";
 import type { Created } from "../api/edit";
+import { clearProjectImage, setProjectImage } from "../api/files";
 import type { EditorMode, Preferences } from "../api/preferences";
 import { AsideProvider } from "../components/Aside";
 import { Toast } from "../components/Toast";
@@ -14,6 +15,7 @@ import {
 } from "../features/editing/lateSaves";
 import { NewTicketDialog } from "../features/editing/NewTicketDialog";
 import { EditorModeProvider } from "../features/editor/mode";
+import { ProjectImageMenu } from "../features/projects/ProjectImageMenu";
 import { ProjectRail } from "../features/projects/ProjectRail";
 import { NewWorkstreamDialog } from "../features/workstreams/NewWorkstreamDialog";
 import { WorkstreamPage } from "../features/workstreams/WorkstreamPage";
@@ -392,6 +394,26 @@ export function Shell({
               >
                 <PageHeader
                   projectKey={current?.key}
+                  projectImage={current?.image}
+                  badge={
+                    // The project's badge opens its image menu (FH-151);
+                    // a change shows as soon as the projects list is read
+                    // again.
+                    current ? (
+                      <ProjectImageMenu
+                        project={current}
+                        onSet={async (file) => {
+                          await setProjectImage(fetcher, current.name, file);
+                          projects.reload();
+                        }}
+                        onClear={async () => {
+                          await clearProjectImage(fetcher, current.name);
+                          projects.reload();
+                        }}
+                        onDone={(text) => editing.notify({ text })}
+                      />
+                    ) : undefined
+                  }
                   title={scopeName}
                   summary={summary}
                   live={boardOrTable}

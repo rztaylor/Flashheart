@@ -801,7 +801,7 @@ test("the panel sits beside the board and keeps the card's column in view", asyn
   const rail = page.getByRole("navigation", { name: "Projects" });
   expect((await rail.boundingBox()).width).toBeLessThan(80);
   await expect(
-    rail.getByRole("button", { name: /^Flashheart \(flashheart\):/ }),
+    rail.getByRole("button", { name: /^Flashheart \(FH, flashheart\):/ }),
   ).toBeVisible();
   await expect(async () => {
     const boardBox = await board.boundingBox();

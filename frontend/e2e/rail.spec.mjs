@@ -94,7 +94,7 @@ test("badges: All projects, then each project; the current one is filled", async
   const name = await badge("Flashheart").getAttribute("aria-label");
   await expect(badge("Flashheart")).toHaveAttribute("title", name);
   expect(name).toMatch(
-    /^Flashheart \(flashheart\): \d+ tickets, \d+ in progress, \d+ blocked/,
+    /^Flashheart \(FH, flashheart\): \d+ tickets, \d+ in progress, \d+ blocked/,
   );
 
   await badge("Alpha").click();

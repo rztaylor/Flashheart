@@ -4,7 +4,8 @@ Owns typed requests to Flashheart's local `/api/` endpoints and runtime
 validation of their responses, including mapping JSON errors to `ApiError`
 with their payload: board reads (`board`), writes that carry the content
 hash, people's comments, and the long-poll for changes (`edit`), agent runs
-and a run's timeline (`runs`), files uploaded into a ticket (`files`),
+and a run's timeline (`runs`), files uploaded into a ticket and a
+project's badge image (`files`),
 saved UI preferences (`preferences`), the server's identity and settings
 (`info`), and archived tickets and projects with their delete previews
 (`archive`). Callers pass the authenticated fetch from `lifecycle/`; this
