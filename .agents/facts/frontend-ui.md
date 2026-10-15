@@ -20,8 +20,12 @@
   QuestionCard, Aside, Popover,
   FilterChip, ChipInput, TicketLink, LoadError, StaleNote, and `useKeepFocus`, the
   one owner of keeping keyboard focus on a moved or removed list item,
-  ui-layout.md §8) → `features/<feature>/` (board,
-  card, editing, editor, overview, workstreams, table, projects, filters, archive; later
+  ui-layout.md §8; KeyBadge draws a project's image in place of its key
+  when it has one, FH-151) → `features/<feature>/` (board,
+  card, editing, editor, overview, workstreams, table, projects (the
+  rail, and `ProjectImageMenu`, the page header's badge as the control
+  that chooses, replaces or removes the project's image through
+  `api/files`), filters, archive; later
   settings) → `app/`
   (shell, hash routing, composition). Shared layers (`styles/`, `model/`,
   `components/`, `api/`, `state/`, `lifecycle/`, `test/`) never import

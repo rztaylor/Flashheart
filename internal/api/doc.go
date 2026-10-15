@@ -12,7 +12,8 @@
 // store's checks. Writes (ticket moves, fields, sections, criteria,
 // placement and new tickets; workstreams, their fields, sections, order
 // and slug, given or made from a new title; archive, restore and delete;
-// keys, preferences, answers, comments, change requests and uploads)
+// keys, a project's image, preferences, answers, comments, change
+// requests and uploads)
 // decode input into board's change-sets, write through store's locked,
 // hash-checked writes as the person, so the store appends the ticket's
 // history, and answer a stale hash with 409 and the current file (STO-3,

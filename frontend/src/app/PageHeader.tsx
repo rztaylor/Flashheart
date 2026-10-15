@@ -7,9 +7,13 @@ import { KeyBadge } from "../components/KeyBadge";
 // PageHeader opens every view with its scope's identity, the project's key
 // badge and name as the page title (All projects in the all scope), one
 // quiet summary line for the view (ui-layout.md §1) and, at the far end, a
-// quiet way into the archive and New ticket (FH-39).
+// quiet way into the archive and New ticket (FH-39). A project's badge may
+// be a control of its own (the Project image menu, FH-151), given as
+// badge; when it shows the project's image, the key stays beside the name.
 export function PageHeader({
   projectKey,
+  projectImage,
+  badge,
   title,
   summary,
   live,
@@ -17,6 +21,10 @@ export function PageHeader({
 }: {
   // projectKey is absent in the all scope, which shows the board icon.
   projectKey?: string;
+  // projectImage is the project's image URL, when it has one to show.
+  projectImage?: string;
+  // badge stands in for the plain key badge (it draws the badge itself).
+  badge?: ReactNode;
   title: string;
   summary?: ReactNode;
   // live announces changes (a filtered ticket count); off where the line
@@ -26,14 +34,21 @@ export function PageHeader({
 }) {
   return (
     <header className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-5 pb-3 md:px-6">
-      <h1 className="flex min-w-0 items-center gap-3 text-3xl display-cut">
-        <KeyBadge size="lg">
-          {projectKey ?? <Icon name="board" size={20} />}
-        </KeyBadge>
-        <span className="truncate" title={title}>
+      <div className="flex min-w-0 items-center gap-3 text-3xl display-cut">
+        {badge ?? (
+          <KeyBadge size="lg" image={projectImage}>
+            {projectKey ?? <Icon name="board" size={20} />}
+          </KeyBadge>
+        )}
+        <h1 className="min-w-0 truncate" title={title}>
           {title}
-        </span>
-      </h1>
+        </h1>
+        {projectImage && projectKey ? (
+          <span className="shrink-0 text-sm text-ink-muted" data-project-key>
+            {projectKey}
+          </span>
+        ) : null}
+      </div>
       {summary ? (
         <p
           className="text-sm text-ink-muted md:mt-2 md:self-start"

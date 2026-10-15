@@ -94,7 +94,7 @@ const views = [
     loaded: (page) =>
       page
         .getByRole("navigation", { name: "Projects" })
-        .getByRole("button", { name: /^Flashheart \(flashheart\):/ }),
+        .getByRole("button", { name: /^Flashheart \(FH, flashheart\):/ }),
     shots: true,
   },
   {

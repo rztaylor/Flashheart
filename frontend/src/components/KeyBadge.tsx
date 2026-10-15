@@ -6,21 +6,31 @@ const sizes = {
 };
 
 // KeyBadge is a project's key (FH) as a badge filled in the accent: the page
-// header's identity and a project section's heading in Workstreams.
-// Decorative; the project's name is beside it.
+// header's identity and a project section's heading in Workstreams. With an
+// image (the project's own, FH-151) it shows that instead, clipped to the
+// badge's shape. Decorative; the project's name is beside it.
 export function KeyBadge({
   children,
   size = "md",
+  image,
 }: {
   children: ReactNode;
   size?: keyof typeof sizes;
+  // image is the URL of the project's image; the key is then not drawn.
+  image?: string;
 }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid shrink-0 place-items-center rounded-control bg-rail-active-mark text-on-rail-active-mark ${sizes[size]}`}
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-control bg-rail-active-mark text-on-rail-active-mark ${sizes[size]} ${
+        image ? "aspect-square p-0" : ""
+      }`}
     >
-      {children}
+      {image ? (
+        <img src={image} alt="" className="size-full object-cover" />
+      ) : (
+        children
+      )}
     </span>
   );
 }

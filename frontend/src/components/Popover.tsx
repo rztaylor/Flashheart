@@ -8,8 +8,10 @@ interface PopoverProps {
   button: ReactNode;
   // active highlights the button, as an applied filter.
   active?: boolean;
-  // band draws the button as the band's quiet controls (Settings).
-  variant?: "field" | "band";
+  // band draws the button as the band's quiet controls (Settings); badge
+  // draws nothing of its own, for a button that is a badge (the page
+  // header's Project image menu, FH-151).
+  variant?: "field" | "band" | "badge";
   align?: "start" | "end";
   // children receives close, for choices that finish with one pick.
   children(close: () => void): ReactNode;
@@ -82,13 +84,17 @@ export function Popover({
             ? `flex h-9 items-center rounded-control px-2 text-on-band transition-colors hover:bg-band-field focus-visible:outline-on-band ${
                 open ? "bg-band-field" : ""
               }`
-            : `flex h-8 items-center gap-1.5 rounded-control border px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
-                active
-                  ? "border-select bg-select-surface text-ink ring-1 ring-select"
-                  : open
-                    ? "border-ink-muted bg-card text-ink"
-                    : "border-rule bg-card text-ink hover:border-ink-muted"
-              }`
+            : variant === "badge"
+              ? `flex shrink-0 rounded-control transition-shadow hover:ring-2 hover:ring-rail-active-mark/40 ${
+                  open ? "ring-2 ring-rail-active-mark/40" : ""
+                }`
+              : `flex h-8 items-center gap-1.5 rounded-control border px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
+                  active
+                    ? "border-select bg-select-surface text-ink ring-1 ring-select"
+                    : open
+                      ? "border-ink-muted bg-card text-ink"
+                      : "border-rule bg-card text-ink hover:border-ink-muted"
+                }`
         }
       >
         {button}

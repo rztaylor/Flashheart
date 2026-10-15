@@ -90,6 +90,21 @@ func SetYAMLList(data []byte, key string, items []string) ([]byte, error) {
 	return setList(data, ParseYAML(data), key, items)
 }
 
+// RemoveYAMLField removes a top-level field of a plain YAML file, with the
+// lines it owns; comments and blank lines before the next key stay. A
+// field that is not there changes nothing. A file that does not parse is
+// refused with ErrBrokenFrontmatter.
+func RemoveYAMLField(data []byte, key string) ([]byte, error) {
+	doc := ParseYAML(data)
+	if doc.FrontmatterError != nil {
+		return nil, brokenYAML{doc.FrontmatterError}
+	}
+	if _, ok := doc.field(key); !ok {
+		return data, nil
+	}
+	return setField(data, doc, key, "")
+}
+
 func setScalar(data []byte, doc Document, key, value string) ([]byte, error) {
 	if node, ok := doc.field(key); ok && node.Kind == yaml.ScalarNode {
 		if current, _ := doc.String(key); current == value {

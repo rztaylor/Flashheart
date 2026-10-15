@@ -529,6 +529,7 @@ func (r *reader) readProjectFile(project *board.Project) {
 	project.Repos = parsed.Repos
 	project.Retired = parsed.Retired
 	project.EnforceHandoff = parsed.Settings.EnforceHandoff
+	r.readProjectImage(project, parsed.Image)
 	if parsed.Key != "" {
 		project.Key, project.KeyDerived = parsed.Key, false
 	}

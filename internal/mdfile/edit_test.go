@@ -397,6 +397,15 @@ func TestYAMLEditsKeepTheFileAndItsEncoding(t *testing.T) {
 			func(data []byte) ([]byte, error) { return SetYAMLList(data, "keys", []string{"AB"}) }},
 		{"block list", "repos:\n  - /a\nname: App\n", "repos:\n  - /a\n  - /b\nname: App\n",
 			func(data []byte) ([]byte, error) { return SetYAMLList(data, "repos", []string{"/a", "/b"}) }},
+		// Removing a field (FH-151) takes its lines and leaves the comments
+		// and blank lines before the next key; a field not there changes
+		// nothing.
+		{"remove", "name: App\nimage: image.png # the badge\n# next\nnext_id: 3\n", "name: App\n# next\nnext_id: 3\n",
+			func(data []byte) ([]byte, error) { return RemoveYAMLField(data, "image") }},
+		{"remove the last field", "name: App\nrepos:\n  - /a\n", "name: App\n",
+			func(data []byte) ([]byte, error) { return RemoveYAMLField(data, "repos") }},
+		{"remove a missing field", "name: App\nkey: NEW\n", "name: App\nkey: NEW\n",
+			func(data []byte) ([]byte, error) { return RemoveYAMLField(data, "image") }},
 	}
 	encodings := map[string]func(string) string{
 		"lf":       func(text string) string { return text },
@@ -417,7 +426,7 @@ func TestYAMLEditsKeepTheFileAndItsEncoding(t *testing.T) {
 			if want := encode(test.want); string(got) != want {
 				t.Errorf("%s %s = %q, want %q", test.name, encoding, got, want)
 			}
-			if test.name == "unchanged" && &got[0] != &input[0] {
+			if (test.name == "unchanged" || test.name == "remove a missing field") && &got[0] != &input[0] {
 				t.Errorf("%s %s: an edit that changes nothing returned new bytes", test.name, encoding)
 			}
 		}
@@ -454,6 +463,9 @@ func TestParseYAMLReadsAPlainMapping(t *testing.T) {
 		}
 		if _, err := SetYAMLScalar([]byte(broken), "key", "AB"); !errors.Is(err, ErrBrokenFrontmatter) || strings.Contains(err.Error(), "frontmatter") {
 			t.Errorf("SetYAMLScalar(%q) = %v, want ErrBrokenFrontmatter about YAML", broken, err)
+		}
+		if _, err := RemoveYAMLField([]byte(broken), "key"); !errors.Is(err, ErrBrokenFrontmatter) {
+			t.Errorf("RemoveYAMLField(%q) = %v, want ErrBrokenFrontmatter", broken, err)
 		}
 	}
 }

@@ -63,20 +63,37 @@ what needs the user: its Needs you count on the badge's top-right corner in
 the attention colour while any of its runs need the user, and the repair
 mark (a dashed ink outline and a hatched top band, as a needs-repair card
 has) while a ticket needs repair. Keys of up to three letters fit at the
-badge's size; longer keys take a smaller cut. Its tooltip and accessible
-name are the project's name (with its folder name when that differs) and
-its counts: *Flashheart (flashheart): 50 tickets, 3 in progress, 22
-blocked, 1 needs repair, 2 agents need you*, the blocked, repair and Needs
-you counts only when not zero; All projects names its project count and
-sums them. Project names, route bars and the other counts are not shown as
-text; the All projects Overview's Projects list (§5) shows them side by
-side. The rail has no footer: the theme, board root and version are in the
-band's Settings menu. Below 48rem the rail hides and a control row with
-Project and Column pickers takes its place.
+badge's size; longer keys take a smaller cut. A project with an image of
+its own (FH-151) shows it on the badge instead of the key, clipped to the
+badge's shape, with the repair band and Needs you count still on top; the
+image is decorative (an empty alt), since the name carries the key. Its
+tooltip and accessible name are the project's name, its key (with its
+folder name when that differs) and its counts: *Flashheart (FH,
+flashheart): 50 tickets, 3 in progress, 22 blocked, 1 needs repair, 2
+agents need you*, the blocked, repair and Needs you counts only when not
+zero; All projects names its project count and sums them. Project names,
+route bars and the other counts are not shown as text; the All projects
+Overview's Projects list (§5) shows them side by side. The rail has no
+footer: the theme, board root and version are in the band's Settings menu.
+Below 48rem the rail hides and a control row with Project and Column
+pickers takes its place.
 
 **Page header** (top of Main, every view): the scope's identity, a key badge
 and the project's display name set as the page title (*All projects* with
-the board icon in the all scope), then one quiet summary line for the view:
+the board icon in the all scope), then one quiet summary line for the view.
+In a project scope the badge is a button, **Project image: FH** (its name
+also its tooltip), the one place the project's image is managed (FH-151):
+it opens a menu below it, a disclosure like the Settings gear (Enter or
+Space, Escape back to the badge, a click outside or tabbing away), with a
+line saying what the badge shows, **Choose image…** (a JPEG or PNG from the
+system picker) or, once there is one, **Replace image…** and **Remove
+image**. A saved change closes the menu and says *Project image updated.* or
+*Project image removed.* in the toast; a refusal (not an image, too large)
+stays in the menu as an alert in the server's words and the badge keeps
+what it showed. With an image, the badge shows it, clipped to the badge's
+shape, and the key moves beside the name as a muted small label, so the
+header still shows the key; without one, the badge is the key as before.
+The all scope's board icon is not a control. The summary lines:
 
 | View | Summary line |
 | --- | --- |

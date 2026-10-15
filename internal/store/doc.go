@@ -13,7 +13,8 @@
 // check and slug renames, carried into saved preferences (EditWorkstream,
 // FH-170), new tickets and keys (KEY-2, KEY-5), archive, restore and
 // permanent delete of tickets and projects (EDIT-8, PRJ-5), attachments
-// and files/index.yaml (REV-1, REV-5, REV-7), reviews (REV-3, REV-4),
+// and files/index.yaml (REV-1, REV-5, REV-7), a project's image fitted by
+// imagefit (FH-151), reviews (REV-3, REV-4),
 // comments and change requests in the activity file, project.yaml,
 // config.yaml (ReadConfig, UpdateConfig) and the root (EnsureRoot). It
 // finds or creates a repository's project, resolves working directories

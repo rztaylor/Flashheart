@@ -157,6 +157,9 @@ export interface ProjectSummary {
   // rejected counts the tickets in Done whose status is rejected (FH-58).
   rejected: number;
   runs: RunCounts;
+  // image is the URL of the project's badge image (FH-151), with a version
+  // that changes with its bytes; absent when the project shows its key.
+  image?: string;
 }
 
 export interface ProjectsResponse {
@@ -445,7 +448,8 @@ function isSummary(value: unknown): value is ProjectSummary {
     isNumber(value.rejected) &&
     isString(value.lastModified) &&
     isArrayOf(isWorkstreamBrief)(value.workstreams) &&
-    isRunCounts(value.runs)
+    isRunCounts(value.runs) &&
+    isOptional(isString)(value.image)
   );
 }
 

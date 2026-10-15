@@ -454,6 +454,11 @@ type Project struct {
 	// EnforceHandoff is project.yaml's settings.enforce_handoff; nil means
 	// the global setting applies (HOOK-6).
 	EnforceHandoff *bool
+	// Image is the project's badge image (FH-151): the file in the
+	// project folder that project.yaml's `image` names, "" when there is
+	// none or it cannot be shown (a warning says why). ImageVersion is a
+	// short hash of its bytes, so a browser's copy changes when it does.
+	Image, ImageVersion string
 	// Warnings are problems with project-level files (project.yaml, keys).
 	Warnings []string
 	// LastModified is the newest modification time among the project's files.

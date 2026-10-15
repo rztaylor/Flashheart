@@ -1,0 +1,11 @@
+{
+  "route": "PUT /api/projects/{project}/image",
+  "request": "PUT /api/projects/alpha/image",
+  "status": 415,
+  "body": {
+    "error": {
+      "code": "type_not_allowed",
+      "message": "The image was not saved because it is not a JPEG or PNG image. Choose a JPEG or PNG image."
+    }
+  }
+}

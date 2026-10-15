@@ -8,6 +8,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Show your own image for each project instead of its key (FH-151, D82,
+  `PRJ-3`). The page header's key badge opens a Project image menu:
+  choose a JPEG or PNG, and the project's rail badge and page header show
+  it, clipped to the badge's shape, with the key kept in the badge's name
+  and tooltip and beside the page title. The server judges the file by
+  its bytes, crops it to a centred square, resizes it to 128×128 and
+  stores it as `image.png` in the project folder, named by `image:` in
+  `project.yaml`; the original is not kept, and a phone photo comes out
+  upright. Anything that is not a JPEG or PNG, or is too large, is refused
+  in words and the badge stays as it was. Replace or remove it from the
+  same menu; a missing or unreadable image is a project warning and the
+  key shows. New Go dependency `golang.org/x/image` for the scaler.
 - Rename a workstream from its page (FH-167, D78, `EDIT-13`). The
   workstream's name has a pencil like a ticket's title: change it and
   save, and its short name (slug) follows the new name as New

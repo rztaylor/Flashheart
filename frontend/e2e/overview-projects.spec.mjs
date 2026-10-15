@@ -66,8 +66,13 @@ test("lists every project in the rail's order, with its counts", async () => {
   await expect(rows().first()).toBeVisible();
   const rail = page.getByRole("navigation", { name: "Projects" });
   const badges = await names(rail.getByRole("button"));
-  // The rail starts with All projects.
-  expect(await names(rows())).toEqual(badges.slice(1));
+  // The rail starts with All projects, and names each project's key
+  // (FH-151), which the list shows as the badge's text instead.
+  const withoutKey = (name) =>
+    name
+      .replace(/ \([A-Z][A-Z0-9]{1,9}, /, " (")
+      .replace(/ \([A-Z][A-Z0-9]{1,9}\)$/, "");
+  expect(await names(rows())).toEqual(badges.slice(1).map(withoutKey));
   expect(await rows().count()).toBeGreaterThanOrEqual(4);
 
   const flashheart = row("Flashheart");

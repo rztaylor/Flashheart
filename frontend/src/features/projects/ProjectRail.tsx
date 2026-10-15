@@ -27,6 +27,8 @@ function plural(count: number, one: string, many: string) {
 // projects, then every project's key badge, most recently active first
 // (PRJ-6, ui-layout.md §1). A badge shows only what needs the user, its
 // Needs you count and a repair mark; its name and tooltip carry the rest.
+// A project with an image of its own shows it on the badge (FH-151); the
+// key stays in the name.
 export function ProjectRail({
   projects,
   runs,
@@ -75,10 +77,12 @@ export function ProjectRail({
                 scope.kind === "project" && scope.project === project.name
               }
               title={project.displayName}
+              projectKey={project.key}
               subtitle={
                 project.displayName !== project.name ? project.name : undefined
               }
               code={project.key}
+              image={project.image}
               counts={project.counts}
               blocked={project.blocked}
               repair={project.needsRepair}
@@ -97,9 +101,14 @@ export function ProjectRail({
 interface RailBadgeProps {
   active: boolean;
   title: string;
+  // projectKey is the project's ticket key, named with the project so it
+  // is known when an image covers the badge (FH-151).
+  projectKey?: string;
   subtitle?: string;
   // code is the project's station code: its ticket key.
   code: ReactNode;
+  // image is the project's own image, shown in place of the code.
+  image?: string;
   counts: ProjectSummary["counts"];
   blocked: number;
   repair: number;
@@ -107,16 +116,18 @@ interface RailBadgeProps {
   onClick(): void;
 }
 
-// badgeName is a badge's accessible name and tooltip: the project and the
-// counts the wide rail showed.
+// badgeName is a badge's accessible name and tooltip: the project, with
+// its key and its folder name when that differs, and the counts the wide
+// rail showed.
 function badgeName({
   title,
+  projectKey,
   subtitle,
   counts,
   blocked,
   repair,
   runs,
-}: Omit<RailBadgeProps, "active" | "code" | "onClick">) {
+}: Omit<RailBadgeProps, "active" | "code" | "image" | "onClick">) {
   const parts = [
     plural(total(counts), "ticket", "tickets"),
     `${counts["in-progress"]} in progress`,
@@ -125,10 +136,11 @@ function badgeName({
   if (repair > 0) parts.push(plural(repair, "needs repair", "need repair"));
   if (runs.needsYou > 0)
     parts.push(`${runs.needsYou} ${needsYouPhrase(runs.needsYou, true)}`);
-  return `${subtitle ? `${title} (${subtitle})` : title}: ${parts.join(", ")}`;
+  const detail = [projectKey, subtitle].filter(Boolean).join(", ");
+  return `${detail ? `${title} (${detail})` : title}: ${parts.join(", ")}`;
 }
 
-function RailBadge({ active, code, onClick, ...shown }: RailBadgeProps) {
+function RailBadge({ active, code, image, onClick, ...shown }: RailBadgeProps) {
   const name = badgeName(shown);
   const long = typeof code === "string" && code.length > 3;
   return (
@@ -159,6 +171,16 @@ function RailBadge({ active, code, onClick, ...shown }: RailBadgeProps) {
               : ""
           }`}
         >
+          {image ? (
+            <img
+              src={image}
+              alt=""
+              data-badge-image
+              className="absolute inset-0 size-full object-cover"
+            />
+          ) : (
+            code
+          )}
           {shown.repair > 0 ? (
             <span
               aria-hidden="true"
@@ -166,7 +188,6 @@ function RailBadge({ active, code, onClick, ...shown }: RailBadgeProps) {
               className="hatched-strong absolute inset-x-0 top-0 h-1.5"
             />
           ) : null}
-          {code}
         </span>
         {shown.runs.needsYou > 0 ? (
           <NeedsYouCount count={shown.runs.needsYou} />

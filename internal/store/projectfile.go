@@ -24,6 +24,9 @@ type projectFile struct {
 	Retired []string
 	// Settings are per-project overrides of config.yaml (CFG-1).
 	Settings projectSettings
+	// Image is the project's badge image, a file name in the project
+	// folder (FH-151); "" when there is none or the value is not a name.
+	Image string
 	// Warnings are the problems found, worded for the board. A field with
 	// a problem keeps its zero value; a file that does not parse has none.
 	Warnings []string
@@ -87,6 +90,16 @@ func parseProjectFile(project string, data []byte) projectFile {
 	f.Retired = list("retired")
 	if decode("settings", &settings) {
 		f.Settings = settings
+	}
+	var image string
+	if decode("image", &image) {
+		switch image = strings.TrimSpace(image); {
+		case image == "":
+		case ValidName(image):
+			f.Image = image
+		default:
+			f.Warnings = append(f.Warnings, fmt.Sprintf("image %q in project.yaml is not a file name in the project folder; the key is shown", image))
+		}
 	}
 	if decode("key", &key) {
 		switch key = strings.TrimSpace(key); {
