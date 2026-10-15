@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -20,12 +21,74 @@ import (
 type UpdateTicketInput struct {
 	Attribution
 	Ticket      string            `json:"ticket" jsonschema:"the ticket id"`
-	Set         map[string]any    `json:"set,omitempty" jsonschema:"fields to set: title, type, priority, created, branch, pr (the pull request URL; empty clears it), workstream (strings); tags, depends-on, depends-on-workstreams (lists of strings)"`
+	Set         *TicketFields     `json:"set,omitempty" jsonschema:"fields to set; an empty value clears a field, and a list may be one comma-separated string"`
 	Check       []string          `json:"check,omitempty" jsonschema:"acceptance criteria to tick, by number (1 is the first) or by their text"`
 	AppendNotes string            `json:"append_notes,omitempty" jsonschema:"a paragraph appended to the ticket's notes"`
 	Addressed   []string          `json:"addressed,omitempty" jsonschema:"ids of the user's change requests on the ticket that you have made, to mark them addressed for the user's review"`
 	Sections    map[string]string `json:"sections,omitempty" jsonschema:"sections to rewrite whole when the scope changes, heading to new markdown text: Description, Test Plan, Reproduction or Context (added if missing) or another section the ticket has; never Acceptance Criteria (use criteria), Notes (append_notes) or Handoff (checkpoint)"`
 	Criteria    []CriterionInput  `json:"criteria,omitempty" jsonschema:"acceptance criteria edits, made in order: add, reword, remove or move; items are numbered as before this call and keep their ticks"`
+}
+
+// TicketFields is update_ticket's set, typed so the schema says which
+// fields take text and which a list (FH-171): every field board.EditableField
+// allows but status, which move changes. A field left out is unchanged.
+type TicketFields struct {
+	Title                *string   `json:"title,omitempty"`
+	Type                 *string   `json:"type,omitempty"`
+	Priority             *string   `json:"priority,omitempty"`
+	Created              *string   `json:"created,omitempty" jsonschema:"a date, 2026-10-05"`
+	Branch               *string   `json:"branch,omitempty"`
+	PR                   *string   `json:"pr,omitempty" jsonschema:"the pull request URL"`
+	Workstream           *string   `json:"workstream,omitempty" jsonschema:"a workstream's slug"`
+	Tags                 fieldList `json:"tags,omitempty"`
+	DependsOn            fieldList `json:"depends-on,omitempty" jsonschema:"ticket ids"`
+	DependsOnWorkstreams fieldList `json:"depends-on-workstreams,omitempty" jsonschema:"workstream slugs"`
+}
+
+// changes is the field edits a set asks for, scrubbed; the board checks
+// them (board.NewFieldChanges).
+func (f *TicketFields) changes() []board.FieldChange {
+	if f == nil {
+		return nil
+	}
+	var out []board.FieldChange
+	for key, value := range map[string]*string{"title": f.Title, "type": f.Type, "priority": f.Priority, "created": f.Created, "branch": f.Branch, "pr": f.PR, "workstream": f.Workstream} {
+		if value != nil {
+			// No scalar field is longer than a title.
+			out = append(out, board.FieldChange{Key: key, Value: scrub.Text(*value, board.MaxTitle)})
+		}
+	}
+	for key, list := range map[string]fieldList{"tags": f.Tags, "depends-on": f.DependsOn, "depends-on-workstreams": f.DependsOnWorkstreams} {
+		if list != nil {
+			out = append(out, board.FieldChange{Key: key, List: items(list)})
+		}
+	}
+	return out
+}
+
+// fieldList is a list field's input: a list of strings, or one
+// comma-separated string, which update_ticket always accepted (D83). An
+// empty list or string clears the field; null leaves it.
+type fieldList []string
+
+func (l *fieldList) UnmarshalJSON(data []byte) error {
+	var raw any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if raw == nil {
+		*l = nil
+		return nil
+	}
+	list, ok := stringList(raw)
+	if !ok {
+		return errors.New("a list field takes a list of strings, or one comma-separated string")
+	}
+	if list == nil {
+		list = []string{}
+	}
+	*l = list
+	return nil
 }
 
 // CriterionInput is one of update_ticket's criteria operations (FH-69).
@@ -41,35 +104,11 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 	if err != nil {
 		return "", err
 	}
-	// Decoding and scrubbing agent text is the tool's; which fields change
-	// and how they are checked and written is the one rule the board shares
-	// (board.NewFieldChanges, store.EditTicket; FH-85).
-	var requested []board.FieldChange
-	for key, raw := range input.Set {
-		list, editable := board.EditableField(key)
-		change := board.FieldChange{Key: key}
-		switch {
-		case key == "status":
-			return "", fail("invalid_input", "use move to change a ticket's column", "status is changed with move")
-		case !editable:
-			return "", fail("invalid_input", "settable fields: "+strings.Join(settable, ", "), "%q cannot be set", key)
-		case list:
-			values, ok := stringList(raw)
-			if !ok {
-				return "", fail("invalid_input", "pass a list of strings", "%s must be a list of strings", key)
-			}
-			change.List = items(values)
-		default:
-			value, ok := raw.(string)
-			if !ok {
-				return "", fail("invalid_input", "pass a string", "%s must be a string", key)
-			}
-			// No scalar field is longer than a title.
-			change.Value = scrub.Text(value, board.MaxTitle)
-		}
-		requested = append(requested, change)
-	}
-	changes, err := board.NewFieldChanges(requested)
+	// Decoding and scrubbing agent text is the tool's (TicketFields; the
+	// schema refuses a field it does not name, status among them); which
+	// fields change and how they are checked and written is the one rule
+	// the board shares (board.NewFieldChanges, store.EditTicket; FH-85).
+	changes, err := board.NewFieldChanges(input.Set.changes())
 	if err != nil {
 		return "", fail("invalid_input", "correct the value", "%v", err)
 	}
@@ -168,7 +207,8 @@ func (srv *server) updateTicket(c *call, input UpdateTicketInput) (string, error
 	return text + "\n", nil
 }
 
-// settable lists the fields update_ticket sets (status changes with move).
+// settable lists the fields update_ticket sets (status changes with move):
+// what tests hold TicketFields' schema and the tool's description to.
 var settable = slices.DeleteFunc(append(slices.Clone(board.ScalarFields), board.ListFields...), func(field string) bool { return field == "status" })
 
 func stringList(raw any) ([]string, bool) {

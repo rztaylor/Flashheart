@@ -2321,6 +2321,40 @@ through Singleserve's session, SEC-7).
 Versions: `PROTOCOL_VERSION` stays 2 (no tool changes); board format stays
 2 (one optional field added, which older readers ignore and preserve).
 
+## 2026-10-15 — D83: update_ticket's set is typed, and a list field still takes a comma-separated string
+
+Decision (FH-171): `update_ticket`'s `set` becomes a typed object in the
+tool's schema: `title`, `type`, `priority`, `created`, `branch`, `pr` and
+`workstream` are strings, `tags`, `depends-on` and `depends-on-workstreams`
+are arrays of strings, no other key is allowed, and a list field also
+accepts one comma-separated string, split on commas and trimmed. The comma
+form was accepted from the first version of the tool and documented
+nowhere; it stays, now written into agent-protocol §7.2, and the version
+stays 2. The schema's own words say what to send: the array type comes
+first, and the `set` description says a list may be one comma-separated
+string. The list of settable fields keeps one source: `board.EditableField`
+(`ScalarFields` and `ListFields` less `status`), which a test holds the
+schema's properties and their types to, beside the test that holds the
+description's list to it.
+
+Options: keep the comma form and document it (chosen); remove it, which
+refuses an input the tool accepted for every agent so far, so under §14
+it would bump the protocol version and ask every user to re-run setup,
+for a leniency that costs a few schema bytes and that a typed schema
+makes agents stop using on their own; keep the free map and only improve
+the description, which leaves every agent to learn the types from prose
+or from an error.
+
+The typed object moves one refusal: a key the schema does not name
+(`status`, which `move` changes, or a misspelt field) and a value of the
+wrong type now fail the SDK's schema validation before the tool runs,
+as every other tool's malformed input does, rather than answering a
+coded `invalid_input` with a fix. The schema, which every agent holds,
+already says which fields exist and that status is not among them; the
+board's own refusals (an unknown priority, a missing dependency) keep
+their code and fix. The tool list grows by about 580 bytes, to 16,294 of
+its 16,500-byte budget (D52), which this change does not raise.
+
 ## 2026-10-15 — D85: cli asks for the server through an injected runner; only cmd/flashheart links app
 
 Decision (FH-169; closes D72's "not covered"): `internal/cli` no longer

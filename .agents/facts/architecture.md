@@ -220,5 +220,8 @@ Singleserve.
   (the server's vocabularies), the last two written by `internal/api`'s
   tests and read by the frontend's.
 - External integrations: `github.com/rztaylor/singleserve` v0.2.x (v0.2.2);
-  `github.com/modelcontextprotocol/go-sdk` v1.7+; Claude Code and Codex hook
+  `github.com/modelcontextprotocol/go-sdk` v1.7+ and its
+  `github.com/google/jsonschema-go`, which `mcpserver` uses directly to
+  build each tool's input schema with the schemas of its own input types
+  (FH-171); Claude Code and Codex hook
   and MCP configuration (`docs/dev/specs/agent-protocol.md`).

@@ -836,7 +836,7 @@ still works, attributed to `unknown`.
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff, unticked criteria, then the ticket's comments (below), within 3 KiB |
 | `release` | `ticket`, `reason?` | §6 | ok |
 | `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
-| `update_ticket` | `ticket`, `set?` (frontmatter fields, including `pr`, the pull request URL; an empty value clears it), `check?` (criteria text or index), `append_notes?`, `addressed?` (ids of the user's change requests on the ticket that the agent has made, FH-126), `sections?` (heading → new text, FH-69), `criteria?` (operations `{op, item?, text?, position?}`, FH-69) | frontmatter/body edit with hash precondition; `addressed` marks each change request addressed in the ticket's `activity.md` in the same write (one history entry), refusing a plain comment or a resolved request (`invalid_input`; one already addressed is no change) or an unknown id (`not_found`); setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4); `sections` and `criteria` rewrite the ticket's text (below) | changed fields, and `kept=files/…` when a rewrite kept replaced text; a title advice warning (below) when it sets the title |
+| `update_ticket` | `ticket`, `set?` (a typed object, FH-171: `title`, `type`, `priority`, `created`, `branch`, `pr` (the pull request URL) and `workstream` take a string, an empty one clearing the field; `tags`, `depends-on` and `depends-on-workstreams` take a list of strings, or one comma-separated string, which is split and trimmed (D83), an empty list or string clearing the field; `status` and any other key are refused by the schema, before the tool), `check?` (criteria text or index), `append_notes?`, `addressed?` (ids of the user's change requests on the ticket that the agent has made, FH-126), `sections?` (heading → new text, FH-69), `criteria?` (operations `{op, item?, text?, position?}`, FH-69) | frontmatter/body edit with hash precondition; `addressed` marks each change request addressed in the ticket's `activity.md` in the same write (one history entry), refusing a plain comment or a resolved request (`invalid_input`; one already addressed is no change) or an unknown id (`not_found`); setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4); `sections` and `criteria` rewrite the ticket's text (below) | changed fields, and `kept=files/…` when a rewrite kept replaced text; a title advice warning (below) when it sets the title |
 | `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file, the criteria and the ticket's open change requests, naming each with its id and the start of its text, and returns warnings (never refuses, `EDIT-3`, `REV-6`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
 | `create_ticket` | `type`, `title`, `description`, `criteria[]`, `priority`, `status?` (backlog or up-next; default backlog), `workstream?`, `depends_on?` (ids), `tags?`, `plan_or_repro?`, `context?` (implementation detail, written under `## Context`), `project_key?` (only for a project with no key yet), `project?` (a name or key; default the caller's, §7.1) | new ticket folder with the next id (`KEY-2`) in that project; a project with no key first records `project_key`, or the derived key with a digit added if taken (`KEY-5`); a `workstream` (of that project) is joined (§7.4) | id; a title advice warning (below) |
@@ -945,7 +945,8 @@ tokens (bytes / 4), reports each tool's share
 and fails when the total passes the budget, naming the largest tools.
 The tool list's budget is 16,500 bytes (about 4,100 tokens): 14,224 bytes
 were measured when it was set, 15,711 with the inputs FH-69 and FH-158
-add, and the budget is that plus about 5%. A new ability first becomes an
+add (16,294 with FH-171's typed `set`), and the budget is that plus about
+5%. A new ability first becomes an
 optional input on an existing tool, in few words (D52); a change that
 still passes the budget raises it here and in the test together, to the
 new size plus about 5%, and says why in its pull request.
@@ -1458,6 +1459,20 @@ plans; and agents see the same tools, inputs, outputs and refusals. An
 older registration of the task events runs the hook, which records
 nothing, until `setup claude` removes it; `doctor` says so meanwhile, so
 re-running setup is advised, not required.
+
+Additive change within version 2 (D83, FH-171, 2026-10-15):
+`update_ticket`'s `set` is a typed object (§7.2) rather than a free map:
+the schema names each settable field, text fields as strings and list
+fields as arrays of strings that also take one comma-separated string,
+which the tool always accepted and now documents. Every call that was
+accepted is accepted and writes the same; what changes is where a wrong
+call is refused: a key the schema does not name (`status`, a misspelt
+field) or a value of the wrong type now fails the SDK's schema check
+before the tool, as any other tool's malformed input does, instead of
+answering `invalid_input`. Values the board refuses (an unknown priority,
+a ticket that does not exist) still answer `invalid_input` with a fix.
+The skill does not describe the input's shape, so it is unchanged, and
+the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

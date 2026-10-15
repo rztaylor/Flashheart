@@ -388,7 +388,14 @@
   when either copy misses a tool or names one not registered; a word the
   skill puts in backticks must be a tool, a tool input, a ticket value or
   in its short list. `update_ticket`'s description lists every field it
-  sets (`TestUpdateTicketDescribesEverySettableField`).
+  sets (`TestUpdateTicketDescribesEverySettableField`) and its `set`
+  schema types each of them and no other, lists as arrays of strings
+  that also take one comma-separated string
+  (`TestUpdateTicketSetTypesEverySettableField`, FH-171, D83); both
+  derive the list from `board.EditableField`'s fields less `status`.
+  Setting every field in one call, the comma form, clearing, and values
+  of the wrong type refused by the schema are
+  `TestUpdateTicketSetTakesListsAndStrings`.
 - MCP tools are tested through the Go SDK's in-memory transport; the
   protocol end-to-end smoke (agent-protocol §13) is `TestProtocolSmoke` in
   `internal/cli`, which drives the real `hook` and `mcp` commands and runs
