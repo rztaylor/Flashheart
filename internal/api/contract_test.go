@@ -211,6 +211,24 @@ func runContract(t *testing.T) *contract {
 	edit("alpha/tickets/AL-1-project-skeleton/AL-1-project-skeleton.md", "depends-on: []", "depends-on: [BE-1, AL-8]")
 	edit("alpha/workstreams/board-ui.md", "  - AL-4\n", "  - AL-4\n  - AL-8\n")
 	edit("beta/project.yaml", "key: BE\n", "key: BE\nrepos:\n  - /Users/example/src/beta\n")
+	// Projects are listed newest file first (summaries). The edits above are
+	// only as far apart as the filesystem's clock, which ties them on Linux
+	// (FH-176), so pin every file, then one per project: beta newest, then
+	// alpha, then gamma, on every platform.
+	if err := filepath.WalkDir(root, func(path string, _ os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		return os.Chtimes(path, contractTime, contractTime)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for i, name := range []string{"gamma/project.yaml", "alpha/project.yaml", "beta/project.yaml"} {
+		when := contractTime.Add(time.Duration(i+1) * time.Hour)
+		if err := os.Chtimes(filepath.Join(root, name), when, when); err != nil {
+			t.Fatal(err)
+		}
+	}
 	files := store.New(root)
 	t.Cleanup(func() { files.Close() })
 	files.SetClock(func() time.Time { return contractTime })
