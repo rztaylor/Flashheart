@@ -165,12 +165,62 @@ func TestUpdateTicket(t *testing.T) {
 	if e.field(id, "pr") != "" {
 		t.Fatalf("pr = %q after clear", e.field(id, "pr"))
 	}
-	e.fails("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"status": "done"}}, "invalid_input")
-	e.fails("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"id": "DM-9"}}, "invalid_input")
+	// A field the schema does not name (status is moved) is refused before
+	// the handler, by the typed set's schema (FH-171).
+	for _, set := range []map[string]any{{"status": "done"}, {"id": "DM-9"}} {
+		if out, failed := e.call("update_ticket", map[string]any{"ticket": id, "set": set}); !failed || !strings.Contains(out, "additional properties") {
+			t.Fatalf("update_ticket set %v = (failed %v)\n%s\nwant a refusal of the property", set, failed, out)
+		}
+	}
 	e.fails("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"priority": "urgent"}}, "invalid_input")
 	e.fails("update_ticket", map[string]any{"ticket": id, "check": []string{"4"}}, "invalid_input")
 	e.fails("update_ticket", map[string]any{"ticket": id, "check": []string{"nothing like it"}}, "invalid_input")
 	e.fails("update_ticket", map[string]any{"ticket": id}, "invalid_input")
+}
+
+// Every settable field is set in one call, text fields with strings and
+// list fields with lists; a list field also takes one comma-separated
+// string, as it always did, and an empty value clears a field (FH-171, D83).
+func TestUpdateTicketSetTakesListsAndStrings(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t, "DM")
+	id := e.ticket(store.NewTicket{Title: "A"})
+	other := e.ticket(store.NewTicket{Title: "B"})
+	e.workstream("panel")
+	e.workstream("sync")
+	e.startSession(session)
+	out := e.ok("update_ticket", map[string]any{"ticket": id, "set": map[string]any{
+		"title": "Card panel", "type": "bug", "priority": "high", "created": "2026-10-01", "branch": "feature/panel", "pr": "https://github.com/o/r/pull/7", "workstream": "panel",
+		"tags": []string{"ui", "panel"}, "depends-on": []any{other}, "depends-on-workstreams": []string{"sync"}}})
+	contains(t, out, "ok ticket="+id+" changed=branch,created,depends-on,depends-on-workstreams,pr,priority,tags,title,type,workstream")
+	contains(t, e.file(id), "# Card panel", "type: bug", "priority: high", "created: 2026-10-01", "branch: feature/panel", "pr: https://github.com/o/r/pull/7", "workstream: panel", "tags: [ui, panel]", "depends-on: ["+other+"]", "depends-on-workstreams: [sync]")
+	if got := e.members("panel"); !slices.Equal(got, []string{id}) {
+		t.Errorf("panel members = %v", got)
+	}
+
+	contains(t, e.ok("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"tags": "a11y, keyboard ,", "depends-on": ""}}), "changed=depends-on,tags")
+	file := e.file(id)
+	if got := mdfileList(t, file, "tags"); !slices.Equal(got, []string{"a11y", "keyboard"}) {
+		t.Errorf("tags = %v after the comma form", got)
+	}
+	if got := mdfileList(t, file, "depends-on"); len(got) != 0 {
+		t.Errorf("depends-on = %v after an empty string", got)
+	}
+	contains(t, e.ok("update_ticket", map[string]any{"ticket": id, "set": map[string]any{"tags": []string{}, "branch": "", "workstream": ""}}), "changed=branch,tags,workstream")
+	file = e.file(id)
+	if got := mdfileList(t, file, "tags"); len(got) != 0 || e.field(id, "branch") != "" || e.field(id, "workstream") != "" {
+		t.Errorf("after clearing: tags %v, branch %q, workstream %q", got, e.field(id, "branch"), e.field(id, "workstream"))
+	}
+	if got := e.members("panel"); len(got) != 0 {
+		t.Errorf("panel members = %v after leaving", got)
+	}
+	// A value of the wrong type is refused by the schema, before the handler.
+	for _, set := range []map[string]any{{"tags": 7}, {"tags": []any{"ui", 7}}, {"priority": []string{"high"}}} {
+		if out, failed := e.call("update_ticket", map[string]any{"ticket": id, "set": set}); !failed {
+			t.Errorf("update_ticket set %v succeeded:\n%s", set, out)
+		}
+	}
 }
 
 func TestMove(t *testing.T) {

@@ -159,6 +159,74 @@ func TestUpdateTicketDescribesEverySettableField(t *testing.T) {
 	}
 }
 
+// update_ticket's set is typed (FH-171): its schema names every settable
+// field and no other, text fields as strings and list fields as arrays
+// of strings, which also take one comma-separated string (D83).
+func TestUpdateTicketSetTypesEverySettableField(t *testing.T) {
+	t.Parallel()
+
+	tools := listTools(t)
+	i := slices.IndexFunc(tools, func(tool *mcp.Tool) bool { return tool.Name == "update_ticket" })
+	if i < 0 {
+		t.Fatal("update_ticket is not registered")
+	}
+	data, err := json.Marshal(tools[i].InputSchema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type property struct {
+		Type       json.RawMessage `json:"type"`
+		Items      *property       `json:"items"`
+		Properties map[string]property
+		Additional json.RawMessage `json:"additionalProperties"`
+	}
+	var schema struct {
+		Properties struct{ Set property }
+	}
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	set := schema.Properties.Set
+	if len(set.Properties) == 0 {
+		t.Fatalf("set has no typed properties: %s", data)
+	}
+	// A type is one name or a list of them (null is allowed beside any).
+	types := func(p property) []string {
+		var one string
+		if json.Unmarshal(p.Type, &one) == nil {
+			return []string{one}
+		}
+		var many []string
+		if err := json.Unmarshal(p.Type, &many); err != nil {
+			t.Fatalf("type %s: %v", p.Type, err)
+		}
+		return many
+	}
+	for _, field := range settable {
+		p, ok := set.Properties[field]
+		if !ok {
+			t.Errorf("set has no property %s", field)
+			continue
+		}
+		got := types(p)
+		if list, _ := board.EditableField(field); list {
+			if !slices.Contains(got, "array") || !slices.Contains(got, "string") || p.Items == nil || !slices.Equal(types(*p.Items), []string{"string"}) {
+				t.Errorf("%s takes a list of strings or a comma-separated string; schema %s", field, data)
+			}
+		} else if !slices.Contains(got, "string") || slices.Contains(got, "array") {
+			t.Errorf("%s takes a string; schema types %v", field, got)
+		}
+	}
+	for name := range set.Properties {
+		if !slices.Contains(settable, name) {
+			t.Errorf("set has a property %s, which update_ticket cannot set", name)
+		}
+	}
+	if string(set.Additional) != "false" {
+		t.Errorf("set allows other properties: %s", set.Additional)
+	}
+}
+
 // How Claude Code runs the await command is for Claude runs; a Codex
 // session, with hooks or without, is not told about Claude Code (§7.5).
 func TestAskHumanGivesClaudeCodeAdviceOnlyToClaude(t *testing.T) {
