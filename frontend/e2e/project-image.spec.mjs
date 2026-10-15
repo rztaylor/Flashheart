@@ -62,7 +62,7 @@ const toast = (text) => page.getByRole("status").filter({ hasText: text });
 const projectFile = () =>
   readFile(join(sandbox.root, "flashheart", "project.yaml"), "utf8");
 
-// The stored square must fill the header badge without text padding.
+// The stored square must fill either badge without text padding.
 async function expectImageFillsBadge(badge) {
   const image = badgeImage(badge);
   await expect(image).toBeVisible();
@@ -155,6 +155,7 @@ test("the header badge is a button named with the key; a PNG becomes the badge",
     /^\/api\/projects\/flashheart\/image\?v=[0-9a-f]{8}$/,
   );
   await expectImageFillsBadge(badge);
+  await expectImageFillsBadge(railBadge("Flashheart"));
   await expect(badge).toHaveText("");
   await expect(main().locator("[data-project-key]")).toHaveText("FH");
   await expect(main().getByRole("heading", { level: 1 })).toHaveText(
@@ -276,6 +277,67 @@ test("a second project takes an image too; the rail mixes images and keys in bot
     await expectNoAxeViolations(page, `header with image at 390 ${theme}`);
   }
   await open(page, "#/p/flashheart/board", { width: 1440, theme: "light" });
+});
+
+test("transparent images have no coloured backing in the header or sidebar", async () => {
+  await open(page, "#/p/flashheart/board", { width: 1440 });
+  const previous = await badgeImage(headerBadge("FH")).getAttribute("src");
+  await choose(await openMenu("FH"), {
+    name: "transparent.png",
+    mimeType: "image/png",
+    buffer: await picture("image/png", "transparent", 200, 200),
+  });
+  await expect(toast("Project image updated.")).toBeVisible();
+  await expect(headerBadge("FH")).toHaveAttribute("aria-expanded", "false");
+  await expect(badgeImage(headerBadge("FH"))).not.toHaveAttribute(
+    "src",
+    previous,
+  );
+  const alpha = await badgeImage(headerBadge("FH")).evaluate(async (image) => {
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 128;
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0, 128, 128);
+    return context.getImageData(120, 8, 1, 1).data[3];
+  });
+  expect(alpha).toBe(0);
+  for (const theme of ["light", "dark"]) {
+    await open(page, "#/p/flashheart/board", { width: 1440, theme });
+    for (const badge of [headerBadge("FH"), railBadge("Flashheart")]) {
+      await expectImageFillsBadge(badge);
+      await expect(badgeImage(badge).locator("..")).toHaveCSS(
+        "background-color",
+        "rgba(0, 0, 0, 0)",
+      );
+    }
+    await shot(page, `project-image-transparent-1440-${theme}`);
+    await openMenu("FH");
+    await shot(page, `project-image-transparent-menu-1440-${theme}`, {
+      keepFocus: true,
+    });
+    await expectNoAxeViolations(page, `transparent image menu ${theme}`);
+    await page.keyboard.press("Escape");
+    await open(page, "#/p/ngplus/board", { width: 1440, theme });
+    await expectImageFillsBadge(railBadge("Flashheart"));
+    await expect(badgeImage(railBadge("Flashheart")).locator("..")).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)",
+    );
+    await shot(page, `project-image-transparent-inactive-1440-${theme}`);
+    await open(page, "#/p/flashheart/board", {
+      width: 390,
+      height: 844,
+      theme,
+    });
+    await expectImageFillsBadge(headerBadge("FH"));
+    await expect(badgeImage(headerBadge("FH")).locator("..")).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)",
+    );
+    await shot(page, `project-image-transparent-390-${theme}`);
+    await expectNoAxeViolations(page, `transparent image ${theme}`);
+  }
 });
 
 test("removing the image shows the key again and removes the file and the field", async () => {

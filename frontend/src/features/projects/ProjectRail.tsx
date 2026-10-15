@@ -158,12 +158,16 @@ function RailBadge({ active, code, image, onClick, ...shown }: RailBadgeProps) {
     >
       <span className="relative">
         <span
-          className={`relative grid h-8 min-w-9 place-items-center overflow-hidden rounded-control leading-none display-cut ${
-            long ? "px-1 text-xs" : "px-1.5 text-sm"
+          className={`relative grid place-items-center overflow-hidden rounded-control leading-none display-cut ${
+            image
+              ? "size-8"
+              : `h-8 min-w-9 ${long ? "px-1 text-xs" : "px-1.5 text-sm"}`
           } ${
-            active
-              ? "bg-rail-active-mark text-on-rail-active-mark"
-              : "bg-on-rail/8"
+            image
+              ? ""
+              : active
+                ? "bg-rail-active-mark text-on-rail-active-mark"
+                : "bg-on-rail/8"
           } ${
             // Needs repair: dashed and hatched in ink, as on its card.
             shown.repair > 0

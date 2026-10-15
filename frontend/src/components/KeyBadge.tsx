@@ -22,8 +22,10 @@ export function KeyBadge({
   return (
     <span
       aria-hidden="true"
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-control bg-rail-active-mark text-on-rail-active-mark ${
-        image ? sizes[size].image : sizes[size].text
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-control ${
+        image
+          ? sizes[size].image
+          : `${sizes[size].text} bg-rail-active-mark text-on-rail-active-mark`
       }`}
     >
       {image ? (
