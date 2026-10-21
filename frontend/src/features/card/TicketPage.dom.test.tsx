@@ -218,16 +218,16 @@ describe("the ticket page (CARD-7, FH-65)", () => {
     renderPage();
     const evidence = screen.getByRole("region", { name: /^Evidence/ });
     const shots = within(evidence).getAllByRole("button", { name: /^Open / });
-    expect(shots.map((shot) => shot.getAttribute("aria-label"))).toEqual([
-      "Open Light, 1440",
-      "Open Dark, 1440",
-    ]);
+    expect(shots).toHaveLength(2);
+    expect(shots[0]?.textContent).toMatch(/^Open Light, 1440/);
+    expect(shots[1]?.textContent).toMatch(/^Open Dark, 1440/);
     const filesSection = screen.getByRole("region", { name: "Files" });
     expect(
-      within(filesSection)
-        .getAllByRole("button", { name: /^Open / })
-        .map((shot) => shot.getAttribute("aria-label")),
-    ).toEqual(["Open Caption of extra.png"]);
+      within(filesSection).getAllByRole("button", { name: /^Open / }),
+    ).toHaveLength(1);
+    within(filesSection).getByRole("button", {
+      name: /^Open Caption of extra\.png/,
+    });
     expect(
       document.querySelectorAll('img[src="/api/files/light.png"]'),
     ).toHaveLength(1);

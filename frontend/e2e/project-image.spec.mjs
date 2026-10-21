@@ -54,7 +54,7 @@ test.afterAll(async () => {
 const main = () => page.getByRole("main");
 const rail = () => page.getByRole("navigation", { name: "Projects" });
 const railBadge = (name) =>
-  rail().getByRole("button", { name: new RegExp(`^${name} \\(`) });
+  rail().getByRole("button", { name: new RegExp(`: ${name}[ ,]`) });
 const headerBadge = (key) =>
   main().getByRole("button", { name: `Project image: ${key}` });
 const badgeImage = (locator) => locator.locator("img[data-badge-image], img");
@@ -130,7 +130,7 @@ test("the header badge is a button named with the key; a PNG becomes the badge",
   await expect(railBadge("Flashheart")).toHaveText("FH");
   await expect(railBadge("Flashheart")).toHaveAttribute(
     "aria-label",
-    /^Flashheart \(FH, flashheart\): /,
+    /^FH(, [^:]+)?: Flashheart \(flashheart\), /,
   );
 
   const panel = await openMenu("FH");
@@ -165,7 +165,7 @@ test("the header badge is a button named with the key; a PNG becomes the badge",
   await expect(railBadge("Flashheart")).toHaveText("");
   await expect(railBadge("Flashheart")).toHaveAttribute(
     "title",
-    /^Flashheart \(FH, flashheart\): /,
+    /^FH(, [^:]+)?: Flashheart \(flashheart\), /,
   );
   await expect(rail().getByRole("img")).toHaveCount(0);
 

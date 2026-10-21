@@ -373,6 +373,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- Screen readers and voice control now name controls with the words shown
+  on them (WCAG 2.5.3, FH-184): the Overview's pipeline stages (*35
+  Backlog*), the Projects list rows (named by the project, with the
+  counts as their description), the rail's project badges (leading with
+  the key and any Needs you count), the Board's filter chips, the ticket
+  page's Jump to menu (with the section in view) and image attachments
+  (with their caption, file name and kind). Frontend dependencies are
+  updated, including axe-core 4.14, which checks this.
+
 - The Workstreams view and the full ticket page no longer grow a second,
   outer scrollbar that scrolls the whole app into empty space (FH-178).
   Labels hidden for screen readers, such as a blocked workstream's

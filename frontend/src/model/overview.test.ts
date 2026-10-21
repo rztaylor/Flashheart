@@ -660,13 +660,13 @@ describe("projectRows", () => {
     expect(second?.tickets).toBe(2);
   });
 
-  it("names a row with its project and every count, zeros included", () => {
+  it("describes a row with every count, zeros included", () => {
     const [first, second] = projectRows(projects);
-    expect(first?.label).toBe(
-      "Flashheart (flashheart): 50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 28 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
+    expect(first?.summary).toBe(
+      "50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 28 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
     );
-    expect(second?.label).toBe(
-      "NG+ (ng-plus): 2 tickets (1 in backlog, 0 up next, 1 in progress, 0 ready to review, 0 done), 0 blocked, 0 need repair, 0 agents live, 1 agent needs you",
+    expect(second?.summary).toBe(
+      "2 tickets (1 in backlog, 0 up next, 1 in progress, 0 ready to review, 0 done), 0 blocked, 0 need repair, 0 agents live, 1 agent needs you",
     );
   });
 
@@ -691,11 +691,6 @@ describe("projectRows", () => {
       },
     ]);
     expect(row?.live).toBe(0);
-    expect(row?.label).toMatch(/, 0 agents live, 0 agents need you$/);
-  });
-
-  it("leaves the folder name out when it is the display name", () => {
-    const [row] = projectRows([{ ...ng, name: "beta", displayName: "beta" }]);
-    expect(row?.label).toMatch(/^beta: 2 tickets \(/);
+    expect(row?.summary).toMatch(/, 0 agents live, 0 agents need you$/);
   });
 });
