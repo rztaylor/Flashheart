@@ -352,8 +352,9 @@ export interface ProjectRow {
   // working, waiting and quiet, subagents too; needsYou counts the rest.
   live: number;
   needsYou: number;
-  // label is the row's accessible name: the project and every count.
-  label: string;
+  // summary is the row's accessible description: every count in words.
+  // Its name is the key and the project shown (WCAG 2.5.3, FH-184).
+  summary: string;
 }
 
 // stageWords say a column's count in a sentence: "3 in backlog", "2 done".
@@ -393,17 +394,13 @@ export function projectRows(
       0,
     );
     const needsYou = project.runs.needsYou;
-    const title =
-      project.displayName !== project.name
-        ? `${project.displayName} (${project.name})`
-        : project.displayName;
     const columns = stages
       .map((stage) => `${stage.count} ${stageWords[stage.column]}`)
       .join(", ");
     const repair = project.needsRepair;
     const live =
       project.runs.working + project.runs.waiting + project.runs.quiet;
-    const label = `${title}: ${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${live} ${plural(live, "agent", "agents")} live, ${needsYou} ${needsYouPhrase(needsYou, true)}`;
+    const summary = `${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${live} ${plural(live, "agent", "agents")} live, ${needsYou} ${needsYouPhrase(needsYou, true)}`;
     return {
       name: project.name,
       displayName: project.displayName,
@@ -414,7 +411,7 @@ export function projectRows(
       repair: project.needsRepair,
       live,
       needsYou,
-      label,
+      summary,
     };
   });
 }

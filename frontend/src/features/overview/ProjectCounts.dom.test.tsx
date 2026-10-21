@@ -54,27 +54,43 @@ function setup() {
     />,
   );
   const list = screen.getByRole("region", { name: "Projects" });
-  return { list, rows: within(list).getAllByRole("link") };
+  const rows = Array.from(list.querySelectorAll<HTMLElement>("[data-project]"));
+  return { list, rows, links: within(list).getAllByRole("link") };
 }
 
 describe("ProjectCounts (FH-153)", () => {
   it("lists every project in the rail's order, each row leading to it", () => {
-    const { rows } = setup();
+    const { rows, links } = setup();
     expect(rows).toHaveLength(2);
-    expect(rows.map((row) => row.getAttribute("href"))).toEqual([
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "#/p/quill/overview",
       "#/p/flashheart/overview",
     ]);
   });
 
-  it("names each row with the project and its counts", () => {
-    const { rows } = setup();
-    expect(rows[1]?.getAttribute("aria-label")).toBe(
-      "Flashheart (flashheart): 50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 30 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
+  // The link holds only the name it shows, so its name holds the words
+  // shown (WCAG 2.5.3, FH-184); the counts are its description.
+  it("names each row with the project and describes its counts", () => {
+    const { list } = setup();
+    within(list).getByRole("link", {
+      name: "FH Flashheart (flashheart)",
+      description:
+        "50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 30 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
+    });
+    within(list).getByRole("link", {
+      name: /^[A-Z]+ Quill \(quill\)$/,
+      description: /^7 tickets \(/,
+    });
+  });
+
+  it("leaves the folder name out of the name when it is the display name", () => {
+    render(
+      <ProjectCounts
+        projects={[{ ...project("beta", "BE"), displayName: "beta" }]}
+        hrefFor={(name) => `#/p/${name}/overview`}
+      />,
     );
-    expect(rows[0]?.getAttribute("aria-label")).toMatch(
-      /^Quill \(quill\): 7 tickets \(/,
-    );
+    screen.getByRole("link", { name: "BE beta" });
   });
 
   it("shows the key, name and counts, with the column words", () => {
@@ -134,8 +150,8 @@ describe("ProjectCounts (FH-153)", () => {
   });
 
   // A zero count is a faint dash in every cell (the user's review of
-  // FH-153), so the counts that matter stand out; the row's name still
-  // says the number.
+  // FH-153), so the counts that matter stand out; the row's description
+  // still says the number.
   it("shows every zero count as a faint dash", () => {
     const { rows } = setup();
     const quill = rows[0] as HTMLElement;
@@ -146,9 +162,9 @@ describe("ProjectCounts (FH-153)", () => {
     expect(dashes).toHaveLength(5);
     for (const cell of dashes)
       expect(cell.className).toContain("text-ink-faint");
-    // The stacked line stays in words, and the name says the number.
+    // The stacked line stays in words, and the description says the number.
     expect(quill.textContent).toContain("7 tickets · 0 blocked · 0 live");
-    expect(quill.getAttribute("aria-label")).toContain("0 ready to review");
+    screen.getByRole("link", { description: /0 ready to review/ });
   });
 
   it("shows nothing with no projects", () => {

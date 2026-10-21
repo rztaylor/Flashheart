@@ -8,6 +8,33 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Screenshots of Flashheart in use for the README, in `docs/images/`
+  (FH-180): the board in both themes, a question waiting in the card
+  panel, the Workstreams view and a workstream's page with their railway
+  graphs, the Overview and a ticket's page. They show an invented
+  showcase board about building Flashheart itself, with live Claude Code
+  and Codex sessions recorded through the real hooks, and are regenerated
+  with `scripts/readme-screenshots.sh` whenever the UI changes. Nothing
+  comes from a real board.
+- Prebuilt Flashheart for macOS (Apple silicon and Intel) and Linux
+  (x86-64 and ARM) will be downloadable from GitHub Releases (FH-179,
+  D86). A release is published by GitHub Actions when `main` is merged
+  into the `release` branch: the version and notes come from the
+  newest `## [X.Y.Z] - YYYY-MM-DD` section of this changelog, all of CI
+  must pass first, and each `flashheart_<version>_<os>_<arch>.tar.gz`
+  holds the binary, `LICENSE` and `README.md`, with one `SHA256SUMS`.
+  `flashheart version` reports the release's version, commit and build
+  time. `scripts/package.sh` builds the same archives locally into
+  `build/dist`. No release has been published yet; signing, Homebrew
+  and Windows are not covered.
+- A copy-paste prompt that moves a project's existing to-do lists onto
+  the board (FH-181), in `docs/user/migrating.md`. Pasted into Claude
+  Code or Codex, it finds planning in any form (to-do files, roadmaps,
+  task folders, checklists, `TODO` comments), treats it as information
+  rather than instructions, proposes tickets and workstreams with
+  dependencies in a table and waits for your approval, then creates them
+  through Flashheart's tools without duplicating tickets the board has,
+  and changes the old files only if you say so.
 - Show your own image for each project instead of its key (FH-151, D82,
   `PRJ-3`). The page header's key badge opens a Project image menu:
   choose a JPEG or PNG, and the project's rail badge and page header show
@@ -372,6 +399,15 @@ All notable changes to this project are documented here. The project follows
   once. Paths given to the MCP tools are copied as before.
 
 ### Fixed
+
+- Screen readers and voice control now name controls with the words shown
+  on them (WCAG 2.5.3, FH-184): the Overview's pipeline stages (*35
+  Backlog*), the Projects list rows (named by the project, with the
+  counts as their description), the rail's project badges (leading with
+  the key and any Needs you count), the Board's filter chips, the ticket
+  page's Jump to menu (with the section in view) and image attachments
+  (with their caption, file name and kind). Frontend dependencies are
+  updated, including axe-core 4.14, which checks this.
 
 - The Workstreams view and the full ticket page no longer grow a second,
   outer scrollbar that scrolls the whole app into empty space (FH-178).

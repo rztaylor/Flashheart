@@ -2384,3 +2384,59 @@ initialises every package in every mode; `scripts/hook-bench.sh` and a
 17.74 MB both). The gain is the guarantee, not the milliseconds; a
 smaller hook binary would need a second `main`, which NFR-4 does not ask
 for.
+
+## 2026-10-21 — D86: Releases are published by GitHub Actions when the release branch moves
+
+Decision (FH-179; settles release facts' "hosted release workflow"):
+`.github/workflows/release.yml` runs on every push to a `release` branch
+and on nothing else; pull requests and other branches never publish.
+Cutting a release is finalising a `## [X.Y.Z] - YYYY-MM-DD` section of
+`CHANGELOG.md` on `main`, then merging `main` into `release` (the first
+time, creating the branch from `main`). Steps are in
+`docs/dev/ops/release-governance.md`.
+
+- **Version from the changelog.** `scripts/release` (a Go command, like
+  `scripts/hookbench`) prints the newest released section's version and
+  notes. Every level-2 heading must be Unreleased or that exact form; a
+  mistyped one is an error naming its line rather than letting an older
+  version be picked, and the real `CHANGELOG.md` is parsed by a test in
+  `scripts/check.sh`. Plain `X.Y.Z` only (no pre-release suffixes yet);
+  notes over GitHub's 125,000 characters are refused before building.
+  The run fails first when there is no section or tag `vX.Y.Z` or its
+  release exists, so a push that adds no version publishes nothing.
+- **All of CI first.** The workflow calls `ci.yml` (now also
+  `workflow_call`), so `scripts/check.sh` on Linux and macOS and the
+  browser suite gate a release exactly as they gate `main`.
+- **One build runner.** No cgo, so `scripts/package.sh` builds the
+  frontend once and cross-compiles darwin/arm64, darwin/amd64,
+  linux/amd64 and linux/arm64 with `CGO_ENABLED=0`, `-trimpath` and
+  `-s -w`, stamping the version, short commit and UTC build time. Each
+  `flashheart_<version>_<os>_<arch>.tar.gz` holds `flashheart`, `LICENSE`
+  and `README.md` at its top level (owned by 0:0), with one `SHA256SUMS`
+  in `sha256sum` format. The archives are written in Go, not with
+  `tar`, so macOS and Linux produce the same layout. The same script
+  builds them locally into `build/dist`, and a test runs it for the
+  host platform and runs the packaged binary's `version`.
+- **Least privilege.** The workflow is `contents: read`; only the
+  publish job has `contents: write`, and it runs no repository code: it
+  downloads the archives and notes, checks the sums, checks again for
+  the tag and release, then `gh release create vX.Y.Z --target <sha>`
+  makes the tag on the pushed commit and the release in one call. Every
+  action is pinned by commit SHA (`actions/download-artifact` v8.0.2 is
+  new, matching `upload-artifact` v7).
+- **Not marked pre-release**, although there is no compatibility promise
+  before v1.0.0 (release facts), so `releases/latest` and the README's
+  download commands find it.
+
+Options: tag-triggered releases (a pushed `v*` tag builds it; rejected:
+the user chose a branch, and a tag push skips the changelog as the single
+source of the version); GoReleaser (rejected for now: a new third-party
+action and config for four archives the standard library writes); shell
+`tar` and `shasum` (rejected: GNU and BSD tar disagree on ownership and
+extended-attribute flags); build and publish in one job (rejected: the
+write token would sit beside `npm ci` and the build).
+
+Not covered: signing and notarisation (macOS binaries are ad-hoc
+linker-signed; a browser download needs its quarantine attribute
+cleared), a Homebrew tap, Windows, and reproducible archives (the build
+time varies). They stay "decision needed" in the release facts.

@@ -50,8 +50,9 @@ Intended layout (packages are created when they get real content):
   other package reaches the filesystem through `store`. The allowlist, with
   a reason each: `store` (the root, through an `os.Root`); `setup`
   (agents' configuration under the home directory), `gitinfo` (`.git` in
-  repositories), `gitchange` (agent worktrees) and `scripts/hookbench`
-  (developer tool, temporary root), none of them under the root; and three
+  repositories), `gitchange` (agent worktrees), `scripts/hookbench`
+  (developer tool, temporary root) and `scripts/release` (release tooling,
+  the repository and `build/dist`), none of them under the root; and three
   accepted exceptions under the root: `logfile` (the diagnostic logs
   `<root>/.flashheart/serve.log` and `hook-errors.log`, which must record
   store failures), `index` (stats and lists root directories to add
@@ -193,7 +194,9 @@ Singleserve.
   agent-neutral and takes an `Adapter`; `cli` picks the adapter by agent
   name.
 - Developer tools: `scripts/hookbench` (Go command behind
-  `scripts/hook-bench.sh`), not part of the binary.
+  `scripts/hook-bench.sh`) and `scripts/release` (changelog version and
+  notes, release archives; behind `scripts/package.sh` and the release
+  workflow, D86), not part of the binary.
 - One run window (`runs.Lookback`, 48 h of daily event files) for every
   reader: index, MCP server, `await` and hooks. Hooks fold only the
   sessions they ask about (`runs.Keep`, `runs.Latest`) through
