@@ -28,8 +28,8 @@ describe("FilterChip", () => {
   });
 
   it("names an excluded value as hidden and looks different", () => {
-    expect(chip("excluded")).toContain(", hidden");
-    expect(chip("idle")).not.toContain(", hidden");
+    expect(chip("excluded")).toContain("(hidden)");
+    expect(chip("idle")).not.toContain("(hidden)");
     const looks = new Set(
       (["included", "excluded", "idle"] as const).map(
         (state) => chip(state).match(/class="([^"]*)"/)?.[1],

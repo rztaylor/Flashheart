@@ -16,7 +16,10 @@
   happy-dom for files named `*.dom.test.ts(x)`, which use Testing Library
   (`render`, `renderHook`, `user-event`) to press keys, tab, click and
   check `document.activeElement` (Popover, Dialog, Tabs, `useResource`,
-  `useRevision`). `src/test/dom-setup.ts` unmounts after each test.
+  `useRevision`). `src/test/dom-setup.ts` unmounts after each test and
+  fires happy-dom's `selectionchange` as a queued task, as browsers do
+  (happy-dom fires it inside `Selection.collapse`, which re-enters
+  CodeMirror's update from `@codemirror/view` 6.43.14, FH-184).
   A hook test drives time with Vitest's fake timers and a fake fetcher or
   loader whose promises the test settles.
 - Browser: `scripts/e2e.sh` builds the binary and runs Playwright with

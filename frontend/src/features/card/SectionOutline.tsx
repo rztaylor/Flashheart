@@ -134,7 +134,7 @@ export function SectionOutline(props: {
 }
 
 // JumpTo is the outline below 1280px: a menu of the same sections, named
-// with the section in view.
+// with the section in view, as its button shows (WCAG 2.5.3, FH-184).
 export function JumpTo({
   sections,
   current,
@@ -147,10 +147,12 @@ export function JumpTo({
   const here = sections.find((section) => section.id === current);
   return (
     <Popover
-      label="Jump to"
+      label={here ? `Jump to ${here.title}` : "Jump to"}
       button={
         <>
           <span>Jump to</span>
+          {/* A space between the words for tools that read the text
+              (axe joins elements' text as it is); flex drops it. */}{" "}
           {here ? (
             <span className="max-w-48 truncate font-normal text-ink-muted">
               {here.title}
