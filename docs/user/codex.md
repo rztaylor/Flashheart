@@ -15,6 +15,9 @@ asked to claim one with your next prompt (or, with handoff enforcement
 on, when it tries to stop), not with a tool result, since Codex is not
 known to show the model what a tool result's hook says.
 
+To move a project's existing to-do lists onto the board, see
+[Moving an existing to-do list onto the board](migrating.md).
+
 ## Set it up
 
 ```sh

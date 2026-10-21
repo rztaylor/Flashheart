@@ -96,6 +96,10 @@ Ask in plain words: "tackle the two top-priority bugs", "look at FH-42",
   addressed when it is done, and you resolve or reopen each at the next
   review.
 
+To move a project's existing to-do lists, roadmap or `TODO` comments onto
+the board, paste the prompt in [Moving an existing to-do list onto the
+board](migrating.md).
+
 ## Questions
 
 When the model needs a decision it calls `ask_human`. The session shows as

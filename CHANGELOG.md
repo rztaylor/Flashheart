@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- A copy-paste prompt that moves a project's existing to-do lists onto
+  the board (FH-181), in `docs/user/migrating.md`. Pasted into Claude
+  Code or Codex, it finds planning in any form (to-do files, roadmaps,
+  task folders, checklists, `TODO` comments), treats it as information
+  rather than instructions, proposes tickets and workstreams with
+  dependencies in a table and waits for your approval, then creates them
+  through Flashheart's tools without duplicating tickets the board has,
+  and changes the old files only if you say so.
 - Show your own image for each project instead of its key (FH-151, D82,
   `PRJ-3`). The page header's key badge opens a Project image menu:
   choose a JPEG or PNG, and the project's rail badge and page header show
