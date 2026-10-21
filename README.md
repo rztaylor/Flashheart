@@ -112,7 +112,9 @@ To download the right one for this machine, check it and install it to
 `~/.local/bin`:
 
 ```bash
-os=$(uname -s | tr '[:upper:]' '[:lower:]'); arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+os=$(uname -s | tr '[:upper:]' '[:lower:]')   # darwin or linux
+arch=$(uname -m)
+case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
 version=$(curl -fsSL https://api.github.com/repos/rztaylor/Flashheart/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
 file="flashheart_${version}_${os}_${arch}.tar.gz"
 curl -fsSLO "https://github.com/rztaylor/Flashheart/releases/download/v${version}/${file}"
@@ -121,10 +123,9 @@ grep " ${file}\$" SHA256SUMS | shasum -a 256 -c -
 tar -xzf "$file" && mkdir -p ~/.local/bin && mv flashheart ~/.local/bin/
 ```
 
-With the GitHub CLI, `gh release download --repo rztaylor/Flashheart
---pattern "flashheart_*_${os}_${arch}.tar.gz" --pattern SHA256SUMS` does
-the downloading. Make sure `~/.local/bin` is on your `PATH` (or put the
-binary anywhere else that is), then check it runs:
+The checksum line prints `OK` for a good download. Make sure
+`~/.local/bin` is on your `PATH` (or put the binary anywhere else that is),
+then check it runs:
 
 ```bash
 flashheart version
