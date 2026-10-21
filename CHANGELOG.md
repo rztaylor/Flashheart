@@ -382,6 +382,13 @@ All notable changes to this project are documented here. The project follows
   (with their caption, file name and kind). Frontend dependencies are
   updated, including axe-core 4.14, which checks this.
 
+- The Workstreams view and the full ticket page no longer grow a second,
+  outer scrollbar that scrolls the whole app into empty space (FH-178).
+  Labels hidden for screen readers, such as a blocked workstream's
+  "Blocked:", were placed against the page instead of the view that scrolls
+  them, far below the window. Every scrolling view now holds them, and a
+  browser test checks that no view lets the page itself scroll.
+
 - Project images fill square header and sidebar badges without coloured side
   strips, distortion, or accent backgrounds behind transparent pixels
   (FH-151). The header image menu uses a neutral hover and open outline.

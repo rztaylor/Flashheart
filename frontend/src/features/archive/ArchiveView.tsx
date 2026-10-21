@@ -140,7 +140,7 @@ export function ArchiveView({
         </EmptyState>
       ) : null}
       {shown.length > 0 ? (
-        <div className="min-h-0 flex-1 overflow-auto px-4 pt-3 pb-10 md:px-6">
+        <div className="relative min-h-0 flex-1 overflow-auto px-4 pt-3 pb-10 md:px-6">
           <Table
             caption="Archived tickets"
             head={

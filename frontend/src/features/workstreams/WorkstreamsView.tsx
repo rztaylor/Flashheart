@@ -86,8 +86,10 @@ export function WorkstreamsView({
 
 const noSlugs: string[] = [];
 
-// gutter is the view's column, shared with its skeleton.
-const gutter = "flex flex-col gap-10 overflow-y-auto px-4 pt-1 pb-16 md:px-6";
+// gutter is the view's column, shared with its skeleton. Like every view
+// scroller it is relative, so hidden sr-only labels stay inside it (FH-178).
+const gutter =
+  "relative flex flex-col gap-10 overflow-y-auto px-4 pt-1 pb-16 md:px-6";
 
 // WorkstreamsSkeleton holds the view's place while the projects load
 // (ui-layout.md §8): route cards in its column.
