@@ -83,6 +83,8 @@ export function NeedsYouCount({ count }: { count: number }) {
       data-mark="needs-you"
       className={`absolute -top-1.5 -right-2 grid h-4 min-w-4 place-items-center rounded-full px-1 text-2xs leading-none font-semibold tabular-nums ring-2 ring-rail ${attentionClass}`}
     >
+      {/* A space after the badge's key for tools that read the text
+          (axe joins elements' text as it is); grid drops it. */}{" "}
       {count}
     </span>
   );
