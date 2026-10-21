@@ -163,6 +163,11 @@
   picker, and widening past 48rem puts the board's column strip back at its
   first column (`features/board/useStartOnWiden`, FH-155). Healthy
   connection state is visually quiet.
+- The app fits the window and the document never scrolls: each view scrolls
+  in its own column. Every scrolling column is `relative`, so absolutely
+  positioned content inside it, `sr-only` labels included, stays inside it
+  rather than resolving against `<body>` and stretching the document into a
+  second, empty scrollbar (FH-178; `board.spec.mjs` checks every view).
 - Visual direction (D18, D22, 2026-10-06): **Metro Pop** in light (a
   strong raspberry band and accent on a clean white ground, cool light-grey
   column wells, white cards; never blue, never cream) and **Night Service**

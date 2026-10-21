@@ -1354,6 +1354,30 @@ test("every view names its scope in the page header, not the band", async () => 
   ).toHaveText(/All projects/);
 });
 
+// The app fits the window and each view scrolls in its own column: the
+// document never scrolls, which would add a second, outer scrollbar onto
+// empty space. A short window puts content below the fold, such as a
+// blocked workstream's hidden "Blocked:" label (FH-178).
+test("the document never scrolls past the window", async () => {
+  const page = shared;
+  const views = ["board", "overview", "workstreams", "table", "archive"];
+  const pages = [
+    ...views.map((view) => `#/p/flashheart/${view}`),
+    ...views.map((view) => `#/all/${view}`),
+    "#/p/flashheart/board?t=FH-8",
+    "#/ticket/FH-8",
+    "#/workstream/flashheart/board-core",
+  ];
+  for (const hash of pages) {
+    await open(page, hash, { width: 1440, height: 600 });
+    await expect(page.getByRole("main")).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.scrollingElement.scrollHeight - window.innerHeight,
+    );
+    expect(overflow, `${hash} document overflow`).toBeLessThanOrEqual(0);
+  }
+});
+
 for (const theme of ["light", "dark"]) {
   test(`board views are accessible and render cleanly in ${theme}`, async () => {
     const page = shared;
