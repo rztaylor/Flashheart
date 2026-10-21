@@ -44,7 +44,7 @@ export function ProjectRail({
   return (
     <nav
       aria-label="Projects"
-      className="flex h-full flex-col overflow-y-auto bg-rail text-on-rail"
+      className="relative flex h-full flex-col overflow-y-auto bg-rail text-on-rail"
     >
       <ul className="flex flex-col gap-1 px-1 py-2">
         <li>

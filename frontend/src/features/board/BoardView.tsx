@@ -383,7 +383,7 @@ export function BoardView(props: BoardViewProps) {
           // grow with their cards and scroll down together, and the row
           // stretches every well to the tallest, or to the board's height
           // when every column is short (ui-layout.md §2).
-          className="board-grid grid min-h-0 flex-1 snap-x snap-mandatory scroll-pt-16 scroll-px-4 auto-rows-[minmax(max-content,1fr)] grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
+          className="board-grid relative grid min-h-0 flex-1 snap-x snap-mandatory scroll-pt-16 scroll-px-4 auto-rows-[minmax(max-content,1fr)] grid-cols-[repeat(var(--board-columns),minmax(15rem,1fr))] gap-x-3 overflow-auto px-4 pt-1 pb-4 md:scroll-px-6 md:px-6"
           style={{ "--board-columns": columns.length } as CSSProperties}
         >
           {columns.map((column, columnIndex) => (

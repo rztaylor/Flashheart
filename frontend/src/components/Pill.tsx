@@ -107,7 +107,9 @@ export function BlockerPill({
       className={`inline-flex max-w-full items-start gap-1.5 rounded-control px-2 py-1 text-xs font-medium ${stateToneClass.blocked} ${className ?? ""}`}
     >
       <Icon name="blocked" size={12} className="mt-[0.15em]" />
-      <span className={clamp[lines]}>
+      {/* relative holds the absolute sr-only label here; without it the
+          label sits on the body and stretches the document (FH-178). */}
+      <span className={`relative ${clamp[lines]}`}>
         <span className="sr-only">Blocked: </span>
         {children}
       </span>
