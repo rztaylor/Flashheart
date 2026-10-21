@@ -16,40 +16,76 @@ read. When a session dies, runs out of context or is replaced, the next one
 It is a single binary that runs on your machine. The tickets are plain
 markdown files you own; nothing leaves your computer.
 
-![The Flashheart board: a project's tickets across Backlog, Up next, In progress, Ready to review and Done, with agent activity on the cards](docs/images/board.png)
+![The Flashheart board: 44 tickets across Backlog, Up next, In progress, Ready to review and Done, colour-coded by workstream, with one card asking for a decision](docs/images/board.png)
+
+*The board for one project. The rail on the left switches projects; the
+orange badge counts the sessions waiting on you.*
 
 ## Features
 
-- **A board across all your projects.** Every repository gets its own
-  project with a short ticket key (`FH-42`); a rail switches between them.
-  Columns for Backlog, Up next, In progress, Ready to review and Done, a
-  table view, filters and a **Needs you** chip that collects every session
-  waiting on you.
-- **Workstreams with dependency graphs.** Group tickets into workstreams
-  (epics or milestones). Tickets and workstreams declare what they depend
-  on, and the Workstreams view draws the whole plan as a railway map, so
-  you can see what is blocked, what can run in parallel and what is next.
-- **An Overview for the project manager in you.** Decisions, reviews
-  waiting, risks and progress by ticket, with the sessions behind them as
-  evidence, under a pipeline of the board's columns.
-- **Agents report as they work.** Hooks record each session's lifecycle
-  (start, edits, permission prompts, subagents, stop) with no effort from
-  the model. Through the MCP server the agent claims tickets, ticks
-  criteria, checkpoints its progress and files new tickets for follow-up
-  work.
+### One board across all your projects
+
+Every repository gets its own project with a short ticket key (`FH-42`).
+Columns for Backlog, Up next, In progress, Ready to review and Done; a
+table view; filters by type, priority, workstream and state; search; and a
+**Needs you** chip that collects every session waiting on you, in every
+project. Cards show the agent working on them, how long ago it last did
+something, and anything blocking them.
+
+### Workstreams with dependency graphs
+
+Group tickets into workstreams: epics or milestones with a goal. Tickets
+and whole workstreams declare what they depend on, and the Workstreams
+view draws the plan as a railway map, so you can see what is done, what is
+running in parallel, what is blocked and why.
+
+![The Workstreams view: the Agent sessions workstream drawn as a railway line that forks and joins, a completed workstream folded away, and a Downloads workstream held because it waits on two others](docs/images/workstreams.png)
+
+*Stations are tickets; lines are dependencies. "Downloads" waits for two
+other workstreams, so its line is dashed and the reasons are spelled out.*
+
+Each workstream has its own page with its graph, goal, scope and success
+criteria.
+
+![The Editing workstream's page: its nine tickets as a dependency graph above the goal, scope and success criteria](docs/images/workstream.png)
+
+### An Overview of everything that needs you
+
+The Overview is for the project manager in you: the pipeline across every
+project, the decisions agents are waiting on, the work ready for your
+review, what is at risk, and the sessions in progress (Claude Code and
+Codex, with their subagents).
+
+![The All projects Overview: a pipeline of ticket counts, a projects table, a question waiting for a decision, five tickets ready for review, two at risk and four in progress with their sessions](docs/images/overview.png)
+
+### Agents that report, ask and hand off
+
+- **Hooks do the bookkeeping.** Each session's start, edits, permission
+  prompts, subagents and stop are recorded with no effort from the model.
+- **The MCP server does the rest.** The agent finds and claims its ticket,
+  ticks criteria as they pass, files tickets for follow-up work and
+  checkpoints its progress.
 - **Sessions you can lose.** Each checkpoint rewrites the ticket's handoff:
   what is done, what is next, the files that matter and open questions. A
-  new session is given the handoff when it starts and resumes from there.
+  new session is handed it when it starts and carries on, in Claude Code
+  or Codex.
 - **Questions that reach you.** When an agent needs a decision it asks on
-  the board, with its options. The card lights up as Needs you; your
+  the board, with its options. The card lights up as Needs you, and your
   answer wakes the session.
-- **Reviews with evidence.** Agents finish by writing a review guide with
-  captioned screenshots and steps to verify, copied into the ticket. You
-  request changes on the ticket page and the session picks them up; only
-  you move a ticket to Done.
-- **Claude Code and Codex.** One command connects each: the CLI, the IDE
-  extensions and the desktop apps. Work started in one agent can be
-  finished in the other.
+
+![A ticket's panel open beside the board: an agent's question with two one-click answers and a free-text box, above the ticket's handoff](docs/images/question.png)
+
+### Reviews with evidence
+
+Agents finish by writing a review: a summary, captioned screenshots, steps
+to verify and risks, copied into the ticket so they outlive the agent's
+worktree. You request changes on the ticket page and the session picks them
+up; only you move a ticket to Done.
+
+![A ticket page in review: a resolved change request, the handoff, ticked acceptance criteria, the description and the agent's review with a screenshot as evidence](docs/images/ticket.png)
+
+### Yours, and local
+
 - **Files are the truth.** Tickets are markdown with YAML frontmatter, one
   folder per ticket, readable in any editor or Obsidian and usable without
   Flashheart running. Edits made outside the board appear live.
@@ -57,14 +93,12 @@ markdown files you own; nothing leaves your computer.
   requests, no telemetry, no accounts. Hooks never store your prompts,
   commands, or tool inputs and outputs, and text agents write is scrubbed
   of anything that looks like a secret.
+- **Light and dark.** The board follows your system theme, or pick one.
 
-![The Workstreams view: workstreams drawn as a railway map of their dependencies](docs/images/workstreams.png)
+![The same board in the dark theme](docs/images/board-dark.png)
 
-![A workstream page: its tickets and the dependencies between them](docs/images/workstream.png)
-
-![A ticket page: acceptance criteria, the agent's handoff and its review](docs/images/ticket.png)
-
-![The board in the dark theme](docs/images/board-dark.png)
+*All screenshots are of an invented board, generated by
+`scripts/readme-screenshots.sh`.*
 
 ## Easy setup
 

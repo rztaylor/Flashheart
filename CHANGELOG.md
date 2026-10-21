@@ -659,6 +659,12 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- The README is written for someone meeting Flashheart for the first time
+  (FH-182): what it is for, its features in a short illustrated tour of
+  the showcase board (FH-180), and an Easy setup guide that downloads and
+  checks a release archive (FH-179), connects Claude Code and Codex, and
+  links the prompt that moves an existing todo list onto the board
+  (FH-181). Building from source moves to the end.
 - Agents see which ticket fields take a list and which take text
   (FH-171, D83). `update_ticket`'s `set` is a typed object in the tool's
   schema: title, type, priority, created, branch, pr and workstream are
