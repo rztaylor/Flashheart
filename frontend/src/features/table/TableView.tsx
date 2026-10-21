@@ -108,7 +108,7 @@ export function TableView({
   ];
   const now = new Date();
   return (
-    <div className="h-full overflow-auto px-4 pt-1 pb-10 md:px-6">
+    <div className="relative h-full overflow-auto px-4 pt-1 pb-10 md:px-6">
       <Table
         head={columns.map((column) => {
           const active = sort.key === column.key;

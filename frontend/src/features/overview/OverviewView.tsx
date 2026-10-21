@@ -164,7 +164,7 @@ export function OverviewView({
     );
   }
   return (
-    <div ref={sections} className="min-h-0 flex-1 overflow-y-auto">
+    <div ref={sections} className="relative min-h-0 flex-1 overflow-y-auto">
       <div ref={keepFocus} className={`${column} pb-12`}>
         <PipelineHeadline
           stages={pipelineStages(projects, project)}

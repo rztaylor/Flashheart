@@ -40,7 +40,8 @@ export function StateNote({
       {icon ? (
         <Icon name={icon} size={compact ? 12 : 14} className="mt-[0.2em]" />
       ) : null}
-      <span className={compact ? "line-clamp-3" : undefined}>
+      {/* relative holds the absolute sr-only label inside the note (FH-178). */}
+      <span className={`relative ${compact ? "line-clamp-3" : ""}`}>
         <span className="sr-only">{labels[kind]}: </span>
         {children}
       </span>

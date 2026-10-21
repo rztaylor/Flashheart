@@ -70,7 +70,7 @@ export function ProjectsArchiveView({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-auto">
       <div className="flex items-center border-b border-rule px-4 py-2.5 md:px-6">
         <Button variant="quiet" className="ml-auto" onClick={onBack}>
           <Icon name="board" size={14} />

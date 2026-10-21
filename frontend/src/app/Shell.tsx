@@ -287,7 +287,7 @@ export function Shell({
 
           {route.view === "ticket" && route.ticket ? (
             <main
-              className="min-h-0 overflow-y-auto"
+              className="relative min-h-0 overflow-y-auto"
               aria-label={`Ticket ${route.ticket.id}`}
             >
               <EditorModeProvider value={editorMode}>
@@ -322,7 +322,7 @@ export function Shell({
             </main>
           ) : route.view === "workstream" && route.workstream ? (
             <main
-              className="min-h-0 overflow-y-auto"
+              className="relative min-h-0 overflow-y-auto"
               aria-label={`Workstream ${route.workstream.slug}`}
             >
               <EditorModeProvider value={editorMode}>
