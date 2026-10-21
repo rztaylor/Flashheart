@@ -373,6 +373,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- A session that holds one ticket and asks about another no longer puts
+  both cards in Needs you while the band's plate counts one (FH-185,
+  `VIEW-2`, `VIEW-8`). The question needs you on the card of the ticket it
+  is about, which now words its real reason ("Asks for a review") instead
+  of "Question waiting", with any further questions counted; the session's
+  own card shows it as live and waiting for that answer. A question about
+  the session's own ticket, or about no ticket, and a permission prompt
+  stay on the session's card as before. The Needs you notice counts a
+  session whose question is about a ticket no card shows, even when its
+  own ticket is on the board. Each card's reason now comes from the
+  server with its run's (D39).
 - The Workstreams view and the full ticket page no longer grow a second,
   outer scrollbar that scrolls the whole app into empty space (FH-178).
   Labels hidden for screen readers, such as a blocked workstream's

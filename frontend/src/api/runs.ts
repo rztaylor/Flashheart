@@ -71,6 +71,7 @@ export const noReason: NeedsReason = {
   answered: false,
   waitingOn: "",
   agentType: "",
+  mcpOnly: false,
 };
 
 // Live is a card's badge: the linked run that most needs attention.
@@ -208,7 +209,7 @@ export function isRunCounts(value: unknown): value is RunCounts {
   );
 }
 
-function isReason(value: unknown): value is NeedsReason {
+export function isNeedsReason(value: unknown): value is NeedsReason {
   return (
     isRecord(value) &&
     (value.kind === "" ||
@@ -230,7 +231,7 @@ export function isLive(value: unknown): value is Live {
     isString(value.short) &&
     isString(value.agent) &&
     isRunState(value.state) &&
-    isReason(value.reason) &&
+    isNeedsReason(value.reason) &&
     isString(value.lastActivity)
   );
 }
@@ -328,7 +329,7 @@ export function isRun(value: unknown): value is Run {
     isBoolean(value.dirty) &&
     isBoolean(value.noHandoff) &&
     isString(value.permission) &&
-    isReason(value.reason) &&
+    isNeedsReason(value.reason) &&
     isString(value.started) &&
     isString(value.lastActivity) &&
     isString(value.ended) &&

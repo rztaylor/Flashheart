@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { TicketDetail } from "../../api/board";
+import { noReason } from "../../api/runs";
 import { TicketLinksInPlace } from "../../components/TicketLink";
 import { CardPanel, PanelHeader } from "./CardPanel";
 import { ReviewTab } from "./ReviewTab";
@@ -55,6 +56,7 @@ function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
     needsYou: true,
     agentWorking: false,
     openQuestions: 1,
+    reason: noReason,
     body: "# MCP server\n\n## Description\n\nServe the tools.",
     frontmatter: "",
     session: "",

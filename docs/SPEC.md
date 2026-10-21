@@ -243,8 +243,14 @@ Full format: `docs/dev/specs/board-format.md`.
   The Backlog can be hidden from the Board (shown by default; FH-41).
 - `VIEW-2` **Needs you filter**: the band's *Needs you* plate is a toggle.
   Pressed, it shows *All projects* (the Board, or the Table when open) with
-  only tickets that have a run in Needs you or an open question from a live
-  session; pressed again, it returns to the project it was pressed in. It
+  only tickets that need you: a linked run in Needs you whose reason is
+  about the ticket (its permission prompt, or a question about the ticket
+  or about no ticket), or an open question about the ticket from a live
+  session, whoever asked it. A run that asks about another ticket needs
+  you on that ticket's card, which words the question's reason; its own
+  card shows it as live, waiting for the answer, so the cards shown agree
+  with the plate's count of runs (FH-185). Pressed again, it returns to
+  the project it was pressed in. It
   combines with the other filters, carries from project to project, and is
   not remembered. While it is on, runs in Needs you that no card on the
   board shows (no linked ticket, and no open question about a ticket on the
@@ -313,8 +319,11 @@ Full format: `docs/dev/specs/board-format.md`.
 - `VIEW-8` Live run on a card: its state mark on Normal and Detailed cards,
   with the agent (Claude/Codex) and state in its tooltip and the card's
   name; a Detailed card also says the state, agent and time since last
-  activity. A card never shows a plan: a ticket's progress is its ticked
-  criteria and its handoff's next steps (D51).
+  activity. The card's Needs you reason is derived once on the server
+  with the run's (D39): the linked run's own when it is about the ticket,
+  else the oldest open question about the ticket (`VIEW-2`, FH-185). A
+  card never shows a plan: a ticket's progress is its ticked criteria and
+  its handoff's next steps (D51).
 
 ### 6.5 Card detail (`CARD`)
 

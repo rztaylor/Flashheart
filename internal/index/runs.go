@@ -238,10 +238,11 @@ func (s *Snapshot) RunCounts(project string) RunCounts {
 	return counts
 }
 
-// shownOnBoard reports whether a card on the board shows the run: its
-// linked ticket's, or that of a ticket one of its open questions is about.
+// shownOnBoard reports whether a card on the board shows the run needing
+// you: its linked ticket's, when its reason is about that ticket (FH-185),
+// or that of a ticket one of its open questions is about.
 func (s *Snapshot) shownOnBoard(run runs.View) bool {
-	if s.onBoard(run.Link.Ticket) {
+	if run.Reason.About(run.Link.Ticket) && s.onBoard(run.Link.Ticket) {
 		return true
 	}
 	for _, question := range run.Questions {

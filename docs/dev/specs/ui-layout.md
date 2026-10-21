@@ -238,8 +238,10 @@ project name.
    fits the rest); the id and the other markers never drop, and the line
    never wraps or clips the id. A dropped marker stays in the card's name.
 4. Needs you line, when the run or an open question needs the user: the
-   plate and the reason in words (the Runs tab's words, `RUN-3`, or
-   *Question waiting*), on its own line so it is never missed.
+   plate and the reason in words (the Runs tab's words, `RUN-3`, for the
+   run's own blocker or a question about the ticket whoever asked it,
+   with further questions counted, *Asks for a review (+1 more)*; FH-185),
+   on its own line so it is never missed.
 
 **Detailed** (why is it stuck, and how does it resume?): Normal's title,
 needs-repair note and Needs you line, then the words, then the meta line

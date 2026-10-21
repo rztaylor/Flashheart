@@ -434,7 +434,7 @@ test("a question from an agent is answered on the board and delivered with its n
 
   await open(page, "#/p/alpha/board");
   const card = page.getByRole("button", {
-    name: /^Project skeleton, AL-1, needs you: question waiting/,
+    name: /^Project skeleton, AL-1, needs you: needs a decision/,
   });
   await expect(card).toBeVisible();
   await card.click();
@@ -542,7 +542,7 @@ test("a question answered in the session's own chat leaves Needs you", async () 
   });
   await open(page, "#/p/alpha/board");
   const card = page.getByRole("button", {
-    name: /^Project skeleton, AL-1, needs you: question waiting/,
+    name: /^Project skeleton, AL-1, needs you: needs a decision/,
   });
   await expect(card).toBeVisible();
 
@@ -568,6 +568,59 @@ test("a question answered in the session's own chat leaves Needs you", async () 
       section("Needs your decision").getByText("Rename the skeleton package?"),
     ).toHaveCount(0);
   }
+});
+
+test("a question about another ticket needs you on that ticket's card, not the asking session's (FH-185)", async () => {
+  // The claimed session holds FH-25 and asks for a review of FH-24.
+  await callTool(sandbox.root, claimed.cwd, "ask_human", {
+    run: claimed.run,
+    ticket: "FH-24",
+    kind: "review",
+    text: "Is the column width fix right?",
+  });
+  await open(page, "#/p/flashheart/board");
+  // FH-24's card words the question; FH-25's shows its session waiting.
+  const asked = page.getByRole("button", {
+    name: /^Long titles push the column wider than its track, FH-24, .*needs you: asks for a review/,
+  });
+  await expect(asked).toBeVisible();
+  await expect(
+    asked.locator("xpath=..").getByText("Asks for a review"),
+  ).toBeVisible();
+  const held = page.getByRole("button", {
+    name: /^Focus ring invisible on the dark signage band, FH-25, Claude waiting/,
+  });
+  await expect(held).toBeVisible();
+  await expect(held).not.toHaveAccessibleName(/needs you/);
+
+  // The pill counts the two sessions, and the filter shows the two cards
+  // they need you on: never the asking session's own ticket.
+  const pill = page.getByRole("button", { name: "2 need you", exact: true });
+  await pill.click();
+  await expect(page).toHaveURL(/#\/all\/board/);
+  await expect(page.locator("[data-ticket]")).toHaveCount(2);
+  await expect(asked).toBeVisible();
+  await expect(page.locator('[data-ticket="FH-25"]')).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Agents without a ticket" }),
+  ).toHaveCount(0);
+  for (const theme of ["light", "dark"]) {
+    await open(page, "#/all/board", { theme });
+    await shot(page, `board-needs-you-other-ticket-1440-${theme}`);
+  }
+  await open(page, "#/all/board");
+  await pill.click();
+  await expect(pill).toHaveAttribute("aria-pressed", "false");
+
+  // The user replies in the session's chat: nothing needs you about it.
+  expect(
+    promptHook(sandbox.root, claimed.run.slice("claude:".length), claimed.cwd),
+  ).toBe("");
+  await open(page, "#/p/flashheart/board");
+  await expect(asked).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "1 needs you", exact: true }),
+  ).toBeVisible();
 });
 
 test("the Needs you filter points to agents with no ticket (FH-44)", async () => {

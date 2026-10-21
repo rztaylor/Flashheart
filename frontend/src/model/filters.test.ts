@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Card } from "../api/board";
+import { noReason } from "../api/runs";
 import {
   applyFilters,
   chipWorkstreams,
@@ -43,6 +44,7 @@ function card(overrides: Partial<Card>): Card {
     needsYou: false,
     agentWorking: false,
     openQuestions: 0,
+    reason: noReason,
     ...overrides,
   };
 }

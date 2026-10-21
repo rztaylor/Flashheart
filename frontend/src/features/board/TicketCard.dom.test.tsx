@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Card } from "../../api/board";
+import { noReason } from "../../api/runs";
 import { TicketCard } from "./TicketCard";
 
 // A card's markers lie under its one covering button, so a click or a drag
@@ -35,6 +36,7 @@ const card = {
   needsYou: false,
   agentWorking: false,
   openQuestions: 0,
+  reason: noReason,
 } as Card;
 
 function setup() {

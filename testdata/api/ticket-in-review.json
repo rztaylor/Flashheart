@@ -51,6 +51,15 @@
       "searchText": "\n# Board columns\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
       "needsYou": false,
       "agentWorking": false,
+      "reason": {
+        "kind": "",
+        "permission": "",
+        "question": "",
+        "answered": false,
+        "waitingOn": "",
+        "agentType": "",
+        "mcpOnly": false
+      },
       "openQuestions": 0,
       "changeRequests": {
         "open": 0,

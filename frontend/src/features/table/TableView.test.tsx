@@ -36,6 +36,7 @@ function card(overrides: Partial<Card>): Card {
     needsYou: false,
     agentWorking: false,
     openQuestions: 0,
+    reason: noReason,
     ...overrides,
   };
 }
