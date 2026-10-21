@@ -16,6 +16,17 @@ All notable changes to this project are documented here. The project follows
   and Codex sessions recorded through the real hooks, and are regenerated
   with `scripts/readme-screenshots.sh` whenever the UI changes. Nothing
   comes from a real board.
+- Prebuilt Flashheart for macOS (Apple silicon and Intel) and Linux
+  (x86-64 and ARM) will be downloadable from GitHub Releases (FH-179,
+  D86). A release is published by GitHub Actions when `main` is merged
+  into the `release` branch: the version and notes come from the
+  newest `## [X.Y.Z] - YYYY-MM-DD` section of this changelog, all of CI
+  must pass first, and each `flashheart_<version>_<os>_<arch>.tar.gz`
+  holds the binary, `LICENSE` and `README.md`, with one `SHA256SUMS`.
+  `flashheart version` reports the release's version, commit and build
+  time. `scripts/package.sh` builds the same archives locally into
+  `build/dist`. No release has been published yet; signing, Homebrew
+  and Windows are not covered.
 - A copy-paste prompt that moves a project's existing to-do lists onto
   the board (FH-181), in `docs/user/migrating.md`. Pasted into Claude
   Code or Codex, it finds planning in any form (to-do files, roadmaps,
