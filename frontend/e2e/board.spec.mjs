@@ -190,7 +190,8 @@ test("blocked is marked with the no-entry sign in every view (FH-148)", async ()
 // busy makes AL-5 a ticket with every marker (FH-147): blocked already, a
 // working run, change requests, attachments and a review. The
 // board's response is changed in the browser; the server is the real one.
-// busy.needsYou turns the run to waiting on a permission for Bash.
+// busy.needsYou turns the run to waiting on a permission for Bash, which
+// the server gives the card as its own flag and reason too (FH-185).
 async function routeBusyCard(page, busy = { needsYou: false }) {
   await page.route(
     (url) => url.pathname === "/api/projects/alpha/board",
@@ -199,22 +200,25 @@ async function routeBusyCard(page, busy = { needsYou: false }) {
       const json = await response.json();
       for (const card of json.cards) {
         if (card.id !== "AL-5") continue;
+        const reason = {
+          kind: busy.needsYou ? "permission" : "",
+          permission: busy.needsYou ? "Bash" : "",
+          question: "",
+          answered: false,
+          waitingOn: "",
+          agentType: "",
+          mcpOnly: false,
+        };
         card.live = {
           run: "claude:busy0001",
           short: "claude:busy0001",
           agent: "claude",
           state: busy.needsYou ? "needs-you" : "working",
-          reason: {
-            kind: busy.needsYou ? "permission" : "",
-            permission: busy.needsYou ? "Bash" : "",
-            question: "",
-            answered: false,
-            waitingOn: "",
-            agentType: "",
-            mcpOnly: false,
-          },
+          reason,
           lastActivity: new Date().toISOString(),
         };
+        card.needsYou = busy.needsYou;
+        card.reason = reason;
         card.changeRequests = { open: 2, addressed: 0 };
         card.attachments = 3;
         card.hasReview = true;
