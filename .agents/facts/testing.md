@@ -59,6 +59,17 @@
   `scripts/e2e-visual.sh --update-snapshots`, look at the changed PNGs and
   commit them with the change. Diffs of a failure are in
   `.cache/playwright-results` (a CI artifact).
+- README screenshots (FH-180, developer tool, not in CI or
+  `scripts/e2e.sh`): `scripts/readme-screenshots.sh` (`--no-build` reuses
+  `build/flashheart`) runs `frontend/e2e/readme/playwright.config.mjs`,
+  whose spec (`screenshots.shots.mjs`, not a `*.spec.mjs`, so the suite
+  never picks it up) writes the invented showcase board
+  (`showcase-board.mjs`: three projects, every column, six workstreams,
+  fixed dates and file times relative to now, its own assertions in
+  `checkShowcaseBoard`) into a temporary root, records sessions through
+  the real hooks and MCP server (`agent-runs.mjs`), serves it and writes
+  1440 px, scale 2 PNGs to `docs/images/`, then pngquant shrinks them
+  when installed. Look at every image before committing it.
 - CI runs `scripts/check.sh` on ubuntu-latest and macos-latest and
   `scripts/e2e.sh` then `scripts/e2e-visual.sh` on ubuntu-latest for every
   pull request and push to `main`.

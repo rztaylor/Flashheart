@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Screenshots of Flashheart in use for the README, in `docs/images/`
+  (FH-180): the board in both themes, a question waiting in the card
+  panel, the Workstreams view and a workstream's page with their railway
+  graphs, the Overview and a ticket's page. They show an invented
+  showcase board about building Flashheart itself, with live Claude Code
+  and Codex sessions recorded through the real hooks, and are regenerated
+  with `scripts/readme-screenshots.sh` whenever the UI changes. Nothing
+  comes from a real board.
 - Show your own image for each project instead of its key (FH-151, D82,
   `PRJ-3`). The page header's key badge opens a Project image menu:
   choose a JPEG or PNG, and the project's rail badge and page header show
