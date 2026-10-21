@@ -118,7 +118,8 @@ interface RailBadgeProps {
 
 // badgeName is a badge's accessible name and tooltip: the project, with
 // its key and its folder name when that differs, and the counts the wide
-// rail showed.
+// rail showed. It starts with what the badge shows, the key and then the
+// Needs you count, so a voice user can say them (WCAG 2.5.3, FH-184).
 function badgeName({
   title,
   projectKey,
@@ -128,16 +129,23 @@ function badgeName({
   repair,
   runs,
 }: Omit<RailBadgeProps, "active" | "code" | "image" | "onClick">) {
+  const needsYou =
+    runs.needsYou > 0
+      ? `${runs.needsYou} ${needsYouPhrase(runs.needsYou, true)}`
+      : "";
   const parts = [
     plural(total(counts), "ticket", "tickets"),
     `${counts["in-progress"]} in progress`,
   ];
   if (blocked > 0) parts.push(`${blocked} blocked`);
   if (repair > 0) parts.push(plural(repair, "needs repair", "need repair"));
-  if (runs.needsYou > 0)
-    parts.push(`${runs.needsYou} ${needsYouPhrase(runs.needsYou, true)}`);
-  const detail = [projectKey, subtitle].filter(Boolean).join(", ");
-  return `${detail ? `${title} (${detail})` : title}: ${parts.join(", ")}`;
+  const project = subtitle ? `${title} (${subtitle})` : title;
+  if (!projectKey) {
+    if (needsYou) parts.push(needsYou);
+    return `${project}: ${parts.join(", ")}`;
+  }
+  const lead = needsYou ? `${projectKey}, ${needsYou}` : projectKey;
+  return `${lead}: ${project}, ${parts.join(", ")}`;
 }
 
 function RailBadge({ active, code, image, onClick, ...shown }: RailBadgeProps) {

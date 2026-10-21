@@ -24,8 +24,10 @@ describe("AttachmentGrid", () => {
     const html = renderToStaticMarkup(
       <AttachmentGrid attachments={files} onOpen={() => undefined} />,
     );
-    expect(html).toContain('aria-label="Open Board, light"');
-    expect(html).toContain('aria-label="Open b.png"');
+    // A thumbnail is named by the words it shows (WCAG 2.5.3, FH-184).
+    expect(html).not.toContain("aria-label");
+    expect(html).toContain('<span class="sr-only">Open </span>');
+    expect(html).toContain("Board, light");
     expect(html).toContain(
       'href="/api/projects/fh/tickets/FH-1/files/run.log"',
     );
