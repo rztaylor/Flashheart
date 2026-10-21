@@ -1,12 +1,14 @@
 # Validation for every pull request and for main: scripts/check.sh on Linux
 # and macOS (the supported platforms, NFR-2), and the Playwright browser suite
-# and screenshot comparison on Linux. The workflow only reads the repository.
+# and screenshot comparison on Linux. The release workflow (release.yml)
+# calls it before building archives. The workflow only reads the repository.
 name: CI
 
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_call:
 
 permissions:
   contents: read

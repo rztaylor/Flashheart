@@ -45,6 +45,7 @@ var allowed = map[string]string{
 	"internal/gitinfo":   "reads .git metadata in the caller's repositories, never the board root",
 	"internal/gitchange": "stats files in an agent's worktree, never the board root",
 	"scripts/hookbench":  "developer benchmark, not in the binary: seeds and reads a temporary root",
+	"scripts/release":    "release tooling, not in the binary: reads the repository's CHANGELOG.md, LICENSE and README.md and writes archives to build/dist (D86)",
 }
 
 func TestOnlyAllowedPackagesTouchFiles(t *testing.T) {
