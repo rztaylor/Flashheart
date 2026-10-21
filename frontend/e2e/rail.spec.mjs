@@ -50,8 +50,14 @@ test.afterAll(async () => {
 });
 
 const rail = () => page.getByRole("navigation", { name: "Projects" });
+// badge is a project's badge, whose name leads with its key and any Needs
+// you count before the project (FH-184).
 const badge = (name) =>
-  rail().getByRole("button", { name: new RegExp(`^${name}`) });
+  rail().getByRole("button", {
+    name: new RegExp(
+      `(^|: )${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[ ,:]`,
+    ),
+  });
 const railWidth = async () => (await rail().boundingBox()).width;
 
 test("the rail is slim at every width, with a ticket open too", async () => {
@@ -82,9 +88,9 @@ test("badges: All projects, then each project; the current one is filled", async
       buttons.map((button) => button.getAttribute("aria-label")),
     );
   expect(names[0]).toMatch(/^All projects \(\d+ projects\): /);
-  expect(names.slice(1).map((name) => name.split(/[ :]/)[0])).toEqual(
-    expect.arrayContaining(["Flashheart", "Alpha", "NG+", "beta"]),
-  );
+  expect(
+    names.slice(1).map((name) => name.match(/: (.+?)(?: \(|, \d)/)?.[1]),
+  ).toEqual(expect.arrayContaining(["Flashheart", "Alpha", "NG+", "beta"]));
   await expect(badge("Flashheart")).toHaveAttribute("aria-current", "page");
   // No names, counts or route bars as text: only the keys.
   await expect(rail()).not.toContainText("in progress");
@@ -94,7 +100,7 @@ test("badges: All projects, then each project; the current one is filled", async
   const name = await badge("Flashheart").getAttribute("aria-label");
   await expect(badge("Flashheart")).toHaveAttribute("title", name);
   expect(name).toMatch(
-    /^Flashheart \(FH, flashheart\): \d+ tickets, \d+ in progress, \d+ blocked/,
+    /^FH(, [^:]+)?: Flashheart \(flashheart\), \d+ tickets, \d+ in progress, \d+ blocked/,
   );
 
   await badge("Alpha").click();
@@ -109,7 +115,7 @@ test("a badge carries its Needs you count and a repair mark", async () => {
   const alpha = badge("Alpha");
   await expect(alpha).toHaveAttribute(
     "aria-label",
-    /, 1 needs repair, 1 agent needs you$/,
+    /^AL, 1 agent needs you: .*, 1 needs repair$/,
   );
   await expect(alpha.locator("[data-mark=needs-you]")).toHaveText("1");
   await expect(alpha.locator("[data-mark=repair]")).toHaveCount(1);

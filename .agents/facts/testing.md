@@ -16,7 +16,10 @@
   happy-dom for files named `*.dom.test.ts(x)`, which use Testing Library
   (`render`, `renderHook`, `user-event`) to press keys, tab, click and
   check `document.activeElement` (Popover, Dialog, Tabs, `useResource`,
-  `useRevision`). `src/test/dom-setup.ts` unmounts after each test.
+  `useRevision`). `src/test/dom-setup.ts` unmounts after each test and
+  fires happy-dom's `selectionchange` as a queued task, as browsers do
+  (happy-dom fires it inside `Selection.collapse`, which re-enters
+  CodeMirror's update from `@codemirror/view` 6.43.14, FH-184).
   A hook test drives time with Vitest's fake timers and a fake fetcher or
   loader whose promises the test settles.
 - Browser: `scripts/e2e.sh` builds the binary and runs Playwright with
@@ -59,9 +62,30 @@
   `scripts/e2e-visual.sh --update-snapshots`, look at the changed PNGs and
   commit them with the change. Diffs of a failure are in
   `.cache/playwright-results` (a CI artifact).
+- README screenshots (FH-180, developer tool, not in CI or
+  `scripts/e2e.sh`): `scripts/readme-screenshots.sh` (`--no-build` reuses
+  `build/flashheart`) runs `frontend/e2e/readme/playwright.config.mjs`,
+  whose spec (`screenshots.shots.mjs`, not a `*.spec.mjs`, so the suite
+  never picks it up) writes the invented showcase board
+  (`showcase-board.mjs`: three projects, every column, six workstreams,
+  fixed dates and file times relative to now, its own assertions in
+  `checkShowcaseBoard`) into a temporary root, records sessions through
+  the real hooks and MCP server (`agent-runs.mjs`), serves it and writes
+  1440 px, scale 2 PNGs to `docs/images/`, then pngquant shrinks them
+  when installed. Look at every image before committing it.
 - CI runs `scripts/check.sh` on ubuntu-latest and macos-latest and
   `scripts/e2e.sh` then `scripts/e2e-visual.sh` on ubuntu-latest for every
-  pull request and push to `main`.
+  pull request and push to `main`, and as the first stage of the release
+  workflow (`release.yml` calls `ci.yml`, D86).
+- Release tooling (FH-179, D86): `scripts/release`'s table tests cover
+  the changelog's version and notes (a released section, only
+  Unreleased, malformed headings, empty and over-long notes) and parse
+  the real `CHANGELOG.md`; packaging is tested with a fake build (names,
+  entries, modes, owners, `SHA256SUMS`, stale archives replaced) and by
+  running `scripts/package.sh --skip-frontend` for the host platform and
+  the packaged binary's `version`. A workflow change is linted with
+  `actionlint` where it is installed (not part of `scripts/check.sh`) and
+  its triggers and permissions are reviewed by hand.
 - Tests never touch the real board root or real agent configuration: use
   temporary directories, `testdata/boards/` copies, and fixture config files.
 - The API contract (FH-97, D79): `internal/api`'s `TestAPIContract` plays

@@ -92,9 +92,9 @@ const views = [
     path: "/api/projects",
     error: "The board could not be read",
     loaded: (page) =>
-      page
-        .getByRole("navigation", { name: "Projects" })
-        .getByRole("button", { name: /^Flashheart \(FH, flashheart\):/ }),
+      page.getByRole("navigation", { name: "Projects" }).getByRole("button", {
+        name: /^FH(, [^:]+)?: Flashheart \(flashheart\), /,
+      }),
     shots: true,
   },
   {

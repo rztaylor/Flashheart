@@ -12,7 +12,9 @@ export function isImage(attachment: Attachment): boolean {
 // AttachmentGrid is a ticket's files as a two-column grid
 // (ui-layout.md §3): screenshots as thumbnails that open the lightbox at
 // their place among the images, other files as tiles that open the file,
-// each with its caption, file name and kind (REV-1).
+// each with its caption, file name and kind (REV-1). A thumbnail is named
+// "Open" and its caption, file name and kind, the words it shows
+// (WCAG 2.5.3, FH-184).
 export function AttachmentGrid({
   attachments,
   onOpen,
@@ -49,10 +51,10 @@ export function AttachmentGrid({
             {isImage(attachment) ? (
               <button
                 type="button"
-                aria-label={`Open ${name}`}
                 onClick={() => onOpen(images.indexOf(attachment))}
                 className="group block w-full rounded-card text-left"
               >
+                <span className="sr-only">Open </span>
                 <img
                   src={attachment.url}
                   alt=""

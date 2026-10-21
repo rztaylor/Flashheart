@@ -40,11 +40,11 @@ describe("PipelineHeadline", () => {
         (match) => match[1],
       ),
     ).toEqual([
-      "Backlog: 12 tickets",
-      "Up next: 1 ticket",
-      "In progress: 0 tickets",
-      "Ready to review: 4 tickets",
-      "Done: 44 tickets",
+      "12 Backlog",
+      "1 Up next",
+      "0 In progress",
+      "4 Ready to review",
+      "44 Done",
     ]);
     expect(
       [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]),

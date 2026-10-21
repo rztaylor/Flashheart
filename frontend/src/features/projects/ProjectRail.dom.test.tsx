@@ -74,7 +74,7 @@ describe("ProjectRail", () => {
   it("is All projects, then a badge per project in the order given", () => {
     const { badges } = setup();
     expect(
-      badges.map((badge) => badge.textContent?.replace(/\d/g, "")),
+      badges.map((badge) => badge.textContent?.replace(/\d/g, "").trim()),
     ).toEqual(["", "FH", "GAM", "QUI"]);
     expect(badges[0].getAttribute("aria-label")).toMatch(
       /^All projects \(3 projects\)/,
@@ -89,14 +89,16 @@ describe("ProjectRail", () => {
     expect(within(rail).queryByRole("img")).toBeNull();
   });
 
+  // A name starts with what the badge shows, the key and then the Needs
+  // you count, so a voice user can say it (WCAG 2.5.3, FH-184).
   it("names each badge, in its name and tooltip, with the project, its key and its counts", () => {
     const { badges } = setup();
     const flashheart =
-      "Flashheart (FH, flashheart): 50 tickets, 3 in progress, 22 blocked, 2 agents need you";
+      "FH, 2 agents need you: Flashheart (flashheart), 50 tickets, 3 in progress, 22 blocked";
     expect(badges[1].getAttribute("aria-label")).toBe(flashheart);
     expect(badges[1].getAttribute("title")).toBe(flashheart);
     expect(badges[2].getAttribute("aria-label")).toBe(
-      "Gamma (GAM, gamma): 7 tickets, 1 in progress, 1 needs repair",
+      "GAM: Gamma (gamma), 7 tickets, 1 in progress, 1 needs repair",
     );
     expect(badges[0].getAttribute("aria-label")).toBe(
       "All projects (3 projects): 64 tickets, 5 in progress, 22 blocked, 1 needs repair, 2 agents need you",
@@ -106,7 +108,7 @@ describe("ProjectRail", () => {
   it("shows a Needs you count only on badges whose runs need the user", () => {
     const { badges } = setup();
     const count = (badge: HTMLElement) =>
-      badge.querySelector("[data-mark=needs-you]")?.textContent;
+      badge.querySelector("[data-mark=needs-you]")?.textContent?.trim();
     expect(count(badges[0])).toBe("2");
     expect(count(badges[1])).toBe("2");
     expect(count(badges[2])).toBeUndefined();
@@ -169,16 +171,16 @@ describe("ProjectRail", () => {
       "/api/projects/flashheart/image?v=abcd1234",
     );
     expect(image(flashheart as HTMLElement)?.getAttribute("alt")).toBe("");
-    expect(flashheart?.textContent?.replace(/\d/g, "")).toBe("");
+    expect(flashheart?.textContent?.replace(/\d/g, "").trim()).toBe("");
     expect(flashheart?.getAttribute("aria-label")).toMatch(
-      /^Flashheart \(FH, flashheart\): /,
+      /^FH(, [^:]+)?: Flashheart \(flashheart\), /,
     );
-    expect(flashheart?.getAttribute("title")).toMatch(/\(FH, flashheart\)/);
+    expect(flashheart?.getAttribute("title")).toMatch(/^FH\b/);
     // The repair hatch and Needs you count sit over the image.
     expect(gamma?.querySelector("[data-mark=repair]")).not.toBeNull();
-    expect(gamma?.querySelector("[data-mark=needs-you]")?.textContent).toBe(
-      "1",
-    );
+    expect(
+      gamma?.querySelector("[data-mark=needs-you]")?.textContent?.trim(),
+    ).toBe("1");
     expect(image(gamma as HTMLElement)).not.toBeNull();
     // A project without one shows its key as before.
     expect(image(quill as HTMLElement)).toBeNull();

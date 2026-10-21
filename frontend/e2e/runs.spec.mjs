@@ -328,7 +328,7 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
   // switches it off in place.
   await pill.click();
   await page
-    .getByRole("button", { name: /^Alpha/ })
+    .getByRole("button", { name: /(^|: )Alpha\b/ })
     .first()
     .click();
   await expect(page).toHaveURL(/#\/p\/alpha\//);
@@ -777,16 +777,16 @@ test("the Overview's pipeline counts every column of the scope (FH-63)", async (
   const pipeline = page.getByRole("navigation", { name: "Pipeline" });
   const stages = pipeline.getByRole("link");
   await expect(stages).toHaveText([
-    /^\d+Backlog$/,
-    /^\d+Up next$/,
-    /^\d+In progress$/,
-    /^\d+Ready to review$/,
-    /^\d+Done$/,
+    /^\d+ Backlog$/,
+    /^\d+ Up next$/,
+    /^\d+ In progress$/,
+    /^\d+ Ready to review$/,
+    /^\d+ Done$/,
   ]);
   const counts = () =>
     stages.evaluateAll((links) =>
       links.map((link) =>
-        Number(link.getAttribute("aria-label").match(/: (\d+) tickets?$/)[1]),
+        Number(link.getAttribute("aria-label").match(/^(\d+) /)[1]),
       ),
     );
   const before = await counts();
@@ -838,14 +838,14 @@ test("the Overview's pipeline counts every column of the scope (FH-63)", async (
   // One project counts only its own tickets, and leads to its own board.
   await open(page, "#/p/quiet/overview");
   await expect(stages).toHaveText([
-    "0Backlog",
-    "0Up next",
-    "0In progress",
-    "0Ready to review",
-    "0Done",
+    "0 Backlog",
+    "0 Up next",
+    "0 In progress",
+    "0 Ready to review",
+    "0 Done",
   ]);
   await pipeline
-    .getByRole("link", { name: "Ready to review: 0 tickets" })
+    .getByRole("link", { name: "0 Ready to review", exact: true })
     .click();
   await expect(page).toHaveURL(/#\/p\/quiet\/board$/);
 });

@@ -14,7 +14,7 @@ export const IDLE_SESSION = "e2d8f6a4-9b1c-4c3e-b5a7-1f0e9d8c7b6a";
 // ASKING_SESSION waits on a permission in the alpha repository (AL-3).
 export const ASKING_SESSION = "3f2a9c1e-7b44-4d0e-9a51-6c8e2f1d0b7a";
 
-async function repo(home, name, branch, parent = "src") {
+export async function repo(home, name, branch, parent = "src") {
   const dir = join(home, parent, name);
   await mkdir(join(dir, ".git"), { recursive: true });
   await writeFile(join(dir, ".git", "HEAD"), `ref: refs/heads/${branch}\n`);
@@ -23,7 +23,7 @@ async function repo(home, name, branch, parent = "src") {
   return realpath(dir);
 }
 
-function hook(root, event, payload, agent = "claude") {
+export function hook(root, event, payload, agent = "claude") {
   execFileSync(executable, ["hook", agent, event, "--root", root], {
     input: JSON.stringify({ hook_event_name: event, ...payload }),
     env: { ...process.env, PATH: "/nonexistent" },
@@ -60,7 +60,7 @@ export async function seedCodexPair(home, root) {
   return cwd;
 }
 
-function session(root, id, cwd) {
+export function session(root, id, cwd) {
   const send = (event, extra = {}) =>
     hook(root, event, { session_id: id, cwd, ...extra });
   const tool = (name, input = {}, extra = {}) =>
