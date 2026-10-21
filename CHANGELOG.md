@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Screenshots of Flashheart in use for the README, in `docs/images/`
+  (FH-180): the board in both themes, a question waiting in the card
+  panel, the Workstreams view and a workstream's page with their railway
+  graphs, the Overview and a ticket's page. They show an invented
+  showcase board about building Flashheart itself, with live Claude Code
+  and Codex sessions recorded through the real hooks, and are regenerated
+  with `scripts/readme-screenshots.sh` whenever the UI changes. Nothing
+  comes from a real board.
 - Prebuilt Flashheart for macOS (Apple silicon and Intel) and Linux
   (x86-64 and ARM) will be downloadable from GitHub Releases (FH-179,
   D86). A release is published by GitHub Actions when `main` is merged

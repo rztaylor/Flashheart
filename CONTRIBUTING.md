@@ -30,7 +30,13 @@ Requires Go 1.26.6+ and Node.js 22+.
 scripts/check.sh    # frontend lint, unit tests and build; Go format, vet, tests, -race, build
 scripts/e2e.sh      # Playwright lifecycle, accessibility and screenshots (visible UI changes)
 scripts/e2e-visual.sh   # compare the stable screenshots in Docker; --update-snapshots after a visual change
+scripts/readme-screenshots.sh   # regenerate the README images in docs/images (--no-build reuses the binary)
 ```
+
+The README's screenshots show an invented showcase board
+(`frontend/e2e/readme/showcase-board.mjs`), never a real one. After a
+visible UI change, regenerate them, look at every image and commit the ones
+that changed; the script is not part of the checks or the e2e run.
 
 `scripts/build.sh`, `scripts/e2e.sh` and `scripts/e2e-visual.sh` reinstall
 the frontend packages (`npm ci`) when they are missing or no longer match
