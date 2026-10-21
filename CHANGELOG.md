@@ -8,6 +8,17 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Prebuilt Flashheart for macOS (Apple silicon and Intel) and Linux
+  (x86-64 and ARM) will be downloadable from GitHub Releases (FH-179,
+  D86). A release is published by GitHub Actions when `main` is merged
+  into the `release` branch: the version and notes come from the
+  newest `## [X.Y.Z] - YYYY-MM-DD` section of this changelog, all of CI
+  must pass first, and each `flashheart_<version>_<os>_<arch>.tar.gz`
+  holds the binary, `LICENSE` and `README.md`, with one `SHA256SUMS`.
+  `flashheart version` reports the release's version, commit and build
+  time. `scripts/package.sh` builds the same archives locally into
+  `build/dist`. No release has been published yet; signing, Homebrew
+  and Windows are not covered.
 - Show your own image for each project instead of its key (FH-151, D82,
   `PRJ-3`). The page header's key badge opens a Project image menu:
   choose a JPEG or PNG, and the project's rail badge and page header show

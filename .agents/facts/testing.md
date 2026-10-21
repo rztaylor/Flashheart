@@ -61,7 +61,17 @@
   `.cache/playwright-results` (a CI artifact).
 - CI runs `scripts/check.sh` on ubuntu-latest and macos-latest and
   `scripts/e2e.sh` then `scripts/e2e-visual.sh` on ubuntu-latest for every
-  pull request and push to `main`.
+  pull request and push to `main`, and as the first stage of the release
+  workflow (`release.yml` calls `ci.yml`, D86).
+- Release tooling (FH-179, D86): `scripts/release`'s table tests cover
+  the changelog's version and notes (a released section, only
+  Unreleased, malformed headings, empty and over-long notes) and parse
+  the real `CHANGELOG.md`; packaging is tested with a fake build (names,
+  entries, modes, owners, `SHA256SUMS`, stale archives replaced) and by
+  running `scripts/package.sh --skip-frontend` for the host platform and
+  the packaged binary's `version`. A workflow change is linted with
+  `actionlint` where it is installed (not part of `scripts/check.sh`) and
+  its triggers and permissions are reviewed by hand.
 - Tests never touch the real board root or real agent configuration: use
   temporary directories, `testdata/boards/` copies, and fixture config files.
 - The API contract (FH-97, D79): `internal/api`'s `TestAPIContract` plays
