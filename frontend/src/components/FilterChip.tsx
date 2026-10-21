@@ -58,7 +58,9 @@ interface FilterChipProps {
 }
 
 // FilterChip is the one rounded filter chip of the Board's chip row (FH-39),
-// for workstreams and the colour key alike: a bullet and the name.
+// for workstreams and the colour key alike: a bullet and the name. Its
+// accessible name is its words, so it holds the text shown (WCAG 2.5.3,
+// FH-184); a bullet's initials are decorative.
 // Shown-only values take the selection ring; hidden values are dashed and
 // struck through, as suspended service is.
 export function FilterChip({
@@ -72,7 +74,6 @@ export function FilterChip({
     <button
       type="button"
       aria-pressed={state === "included"}
-      aria-label={state === "excluded" ? `${name}, hidden` : name}
       aria-hidden={hidden || undefined}
       tabIndex={hidden ? -1 : undefined}
       title={filterHint(name, state)}
@@ -81,6 +82,7 @@ export function FilterChip({
     >
       {bullet}
       <span className="font-semibold">{name}</span>
+      {state === "excluded" ? <span className="sr-only">(hidden)</span> : null}
     </button>
   );
 }

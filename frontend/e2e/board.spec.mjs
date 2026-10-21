@@ -801,7 +801,9 @@ test("the panel sits beside the board and keeps the card's column in view", asyn
   const rail = page.getByRole("navigation", { name: "Projects" });
   expect((await rail.boundingBox()).width).toBeLessThan(80);
   await expect(
-    rail.getByRole("button", { name: /^Flashheart \(FH, flashheart\):/ }),
+    rail.getByRole("button", {
+      name: /^FH(, [^:]+)?: Flashheart \(flashheart\), /,
+    }),
   ).toBeVisible();
   await expect(async () => {
     const boardBox = await board.boundingBox();
@@ -1118,7 +1120,7 @@ test("chips and filter menus show only or hide values (FH-39)", async () => {
   // Cmd or Ctrl click hides a value; a click restores it.
   const editing = lines.getByRole("button", { name: /^Board editing/ });
   await editing.click({ modifiers: ["ControlOrMeta"] });
-  await expect(editing).toHaveAccessibleName(/, hidden$/);
+  await expect(editing).toHaveAccessibleName(/ \(hidden\)$/);
   await expect(locked).toHaveCount(0);
   await expect(focusRing).toBeVisible();
 
@@ -1172,7 +1174,7 @@ test("chips and filter menus show only or hide values (FH-39)", async () => {
   await menu.getByRole("button", { name: "feature", exact: true }).focus();
   await page.keyboard.press("ControlOrMeta+Enter");
   await expect(
-    types.getByRole("button", { name: "feature, hidden" }),
+    types.getByRole("button", { name: "feature (hidden)" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
 
@@ -1180,7 +1182,9 @@ test("chips and filter menus show only or hide values (FH-39)", async () => {
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(locked).toBeVisible();
   await expect(typeButton).toHaveAccessibleName("Type");
-  await expect(lines.getByRole("button", { name: /, hidden$/ })).toHaveCount(0);
+  await expect(lines.getByRole("button", { name: / \(hidden\)$/ })).toHaveCount(
+    0,
+  );
 
   // The chip row never wraps: chips that do not fit leave the row, colour
   // chips before workstreams.
@@ -1352,6 +1356,30 @@ test("every view names its scope in the page header, not the band", async () => 
   await expect(
     page.getByRole("main").getByRole("heading", { level: 1 }),
   ).toHaveText(/All projects/);
+});
+
+// The app fits the window and each view scrolls in its own column: the
+// document never scrolls, which would add a second, outer scrollbar onto
+// empty space. A short window puts content below the fold, such as a
+// blocked workstream's hidden "Blocked:" label (FH-178).
+test("the document never scrolls past the window", async () => {
+  const page = shared;
+  const views = ["board", "overview", "workstreams", "table", "archive"];
+  const pages = [
+    ...views.map((view) => `#/p/flashheart/${view}`),
+    ...views.map((view) => `#/all/${view}`),
+    "#/p/flashheart/board?t=FH-8",
+    "#/ticket/FH-8",
+    "#/workstream/flashheart/board-core",
+  ];
+  for (const hash of pages) {
+    await open(page, hash, { width: 1440, height: 600 });
+    await expect(page.getByRole("main")).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.scrollingElement.scrollHeight - window.innerHeight,
+    );
+    expect(overflow, `${hash} document overflow`).toBeLessThanOrEqual(0);
+  }
 });
 
 for (const theme of ["light", "dark"]) {

@@ -19,6 +19,14 @@ All notable changes to this project are documented here. The project follows
   time. `scripts/package.sh` builds the same archives locally into
   `build/dist`. No release has been published yet; signing, Homebrew
   and Windows are not covered.
+- A copy-paste prompt that moves a project's existing to-do lists onto
+  the board (FH-181), in `docs/user/migrating.md`. Pasted into Claude
+  Code or Codex, it finds planning in any form (to-do files, roadmaps,
+  task folders, checklists, `TODO` comments), treats it as information
+  rather than instructions, proposes tickets and workstreams with
+  dependencies in a table and waits for your approval, then creates them
+  through Flashheart's tools without duplicating tickets the board has,
+  and changes the old files only if you say so.
 - Show your own image for each project instead of its key (FH-151, D82,
   `PRJ-3`). The page header's key badge opens a Project image menu:
   choose a JPEG or PNG, and the project's rail badge and page header show
@@ -383,6 +391,22 @@ All notable changes to this project are documented here. The project follows
   once. Paths given to the MCP tools are copied as before.
 
 ### Fixed
+
+- Screen readers and voice control now name controls with the words shown
+  on them (WCAG 2.5.3, FH-184): the Overview's pipeline stages (*35
+  Backlog*), the Projects list rows (named by the project, with the
+  counts as their description), the rail's project badges (leading with
+  the key and any Needs you count), the Board's filter chips, the ticket
+  page's Jump to menu (with the section in view) and image attachments
+  (with their caption, file name and kind). Frontend dependencies are
+  updated, including axe-core 4.14, which checks this.
+
+- The Workstreams view and the full ticket page no longer grow a second,
+  outer scrollbar that scrolls the whole app into empty space (FH-178).
+  Labels hidden for screen readers, such as a blocked workstream's
+  "Blocked:", were placed against the page instead of the view that scrolls
+  them, far below the window. Every scrolling view now holds them, and a
+  browser test checks that no view lets the page itself scroll.
 
 - Project images fill square header and sidebar badges without coloured side
   strips, distortion, or accent backgrounds behind transparent pixels

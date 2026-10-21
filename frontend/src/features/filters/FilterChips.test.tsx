@@ -105,7 +105,7 @@ describe("FilterChips", () => {
       ...emptyFilters,
       workstream: { include: [], exclude: ["quiet"] },
     });
-    expect(markup).toMatch(/QUIET(<[^>]*>|[^<])*, hidden/);
+    expect(markup).toMatch(/QUIET(<[^>]*>|[^<])*\(hidden\)/);
   });
 
   it("never wraps the workstream row", () => {

@@ -50,12 +50,26 @@ test.afterAll(async () => {
 
 const list = () => page.getByRole("region", { name: "Projects" });
 const rows = () => list().getByRole("link");
-const row = (name) =>
-  list().getByRole("link", { name: new RegExp(`^${name}`) });
-// labels are each element's accessible name, up to the counts.
-const names = (locator) =>
-  locator.evaluateAll((elements) =>
-    elements.map((element) => element.getAttribute("aria-label").split(":")[0]),
+// row is a project's link, named with its key, the project and its folder
+// name (FH-184); box is its whole row, which shows the counts.
+const linkName = (name) => new RegExp(`^([A-Z0-9]+ )?${name}\\b`);
+const row = (name) => list().getByRole("link", { name: linkName(name) });
+const box = (name) =>
+  list().locator("[data-project]", {
+    has: page.getByRole("link", { name: linkName(name) }),
+  });
+// rowNames are each row link's words: key, project and folder name.
+const rowNames = (locator) =>
+  locator.evaluateAll((links) => links.map((link) => link.textContent));
+// badgeNames are the same words from each badge's name, which leads with
+// the key and any Needs you count, then the project before its counts.
+const badgeNames = (locator) =>
+  locator.evaluateAll((buttons) =>
+    buttons.map((button) =>
+      button
+        .getAttribute("aria-label")
+        .replace(/^([^,:]+)(?:, [^:]*)?: (.*?), \d+ tickets?, .*$/, "$1 $2"),
+    ),
   );
 // fits says the element shows all its content with no sideways scroll.
 const fits = (locator) =>
@@ -65,69 +79,66 @@ test("lists every project in the rail's order, with its counts", async () => {
   await open(page, "#/all/overview");
   await expect(rows().first()).toBeVisible();
   const rail = page.getByRole("navigation", { name: "Projects" });
-  const badges = await names(rail.getByRole("button"));
-  // The rail starts with All projects, and names each project's key
-  // (FH-151), which the list shows as the badge's text instead.
-  const withoutKey = (name) =>
-    name
-      .replace(/ \([A-Z][A-Z0-9]{1,9}, /, " (")
-      .replace(/ \([A-Z][A-Z0-9]{1,9}\)$/, "");
-  expect(await names(rows())).toEqual(badges.slice(1).map(withoutKey));
+  // The rail starts with All projects, then the projects in the list's
+  // order, each named with its key (FH-151, FH-184).
+  const badges = await badgeNames(rail.getByRole("button"));
+  expect(await rowNames(rows())).toEqual(badges.slice(1));
   expect(await rows().count()).toBeGreaterThanOrEqual(4);
 
   const flashheart = row("Flashheart");
-  await expect(flashheart).toHaveAttribute(
-    "aria-label",
-    /^Flashheart \(flashheart\): \d+ tickets \(\d+ in backlog, \d+ up next, \d+ in progress, \d+ ready to review, \d+ done\), \d+ blocked, 0 need repair, 0 agents live, 0 agents need you$/,
+  await expect(flashheart).toHaveAccessibleName("FH Flashheart (flashheart)");
+  await expect(flashheart).toHaveAccessibleDescription(
+    /^\d+ tickets \(\d+ in backlog, \d+ up next, \d+ in progress, \d+ ready to review, \d+ done\), \d+ blocked, 0 need repair, 0 agents live, 0 agents need you$/,
   );
-  await expect(flashheart).toContainText("FH");
+  await expect(box("Flashheart")).toContainText("FH");
   // The column words head the counts once, not in every row.
   const head = list().locator("[data-columns]");
   await expect(head).toBeVisible();
   for (const word of ["Tickets", "In progress", "Blocked", "Live", "Needs you"])
     await expect(head).toContainText(word);
-  await expect(flashheart.getByText("In progress")).toBeHidden();
+  await expect(
+    box("Flashheart").getByText("In progress", { exact: true }),
+  ).toBeHidden();
   // Its counts are the badge's: the same tickets and in progress.
   const badge = await rail
-    .getByRole("button", { name: /^Flashheart/ })
+    .getByRole("button", { name: /: Flashheart / })
     .getAttribute("aria-label");
   const [, tickets, progress] = badge.match(
-    /: (\d+) tickets, (\d+) in progress/,
+    /, (\d+) tickets, (\d+) in progress/,
   );
-  await expect(flashheart).toHaveAttribute(
-    "aria-label",
-    new RegExp(`: ${tickets} tickets \\(.* ${progress} in progress,`),
+  await expect(flashheart).toHaveAccessibleDescription(
+    new RegExp(`^${tickets} tickets \\(.* ${progress} in progress,`),
   );
 });
 
 test("Needs you and needs repair stand out on their project's row", async () => {
   await open(page, "#/all/overview");
-  const alpha = row("Alpha");
-  await expect(alpha).toHaveAttribute(
-    "aria-label",
+  await expect(row("Alpha")).toHaveAccessibleDescription(
     /, 1 needs repair, \d+ agents? live, 1 agent needs you$/,
   );
+  const alpha = box("Alpha");
   await expect(alpha.locator("[data-mark=needs-you]")).toHaveText("1");
   await expect(alpha.locator("[data-mark=repair]")).toHaveText("1");
-  await expect(row("Flashheart").locator("[data-mark]")).toHaveCount(0);
+  await expect(box("Flashheart").locator("[data-mark]")).toHaveCount(0);
 });
 
 test("each row shows its project's live agents, a zero as a faint dash", async () => {
   await open(page, "#/all/overview");
-  const alpha = row("Alpha");
-  const [, live] = (await alpha.getAttribute("aria-label")).match(
-    /, (\d+) agents? live,/,
+  const alpha = box("Alpha");
+  const summary = await row("Alpha").evaluate(
+    (link) =>
+      document.getElementById(link.getAttribute("aria-describedby"))
+        .textContent,
   );
+  const [, live] = summary.match(/, (\d+) agents? live,/);
   // Its working subagents are live; the session waiting on you counts
   // under Needs you instead, and the ended session in neither.
   expect(Number(live)).toBeGreaterThanOrEqual(2);
-  expect(await alpha.getAttribute("aria-label")).toMatch(
-    /, 1 agent needs you$/,
-  );
+  expect(summary).toMatch(/, 1 agent needs you$/);
   const cell = alpha.locator("[data-count=live]");
   await expect(cell).toHaveText(live);
   await expect(cell).not.toHaveClass(/text-ink-faint/);
-  const none = row("Flashheart").locator("[data-count=live]");
+  const none = box("Flashheart").locator("[data-count=live]");
   await expect(none).toHaveText("–");
   await expect(none).toHaveClass(/text-ink-faint/);
   // The column word carries the run-state mark.

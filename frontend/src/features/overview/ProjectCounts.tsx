@@ -106,26 +106,39 @@ export function ProjectCounts({
   );
 }
 
+// ProjectCountsRow is one project's row. Its link holds only the name
+// (with the key and folder name for assistive technology), so its
+// accessible name holds the words it shows (WCAG 2.5.3, FH-184); it
+// stretches over the row so any of it opens the project, and the counts
+// are its description.
 function ProjectCountsRow({ row, href }: { row: ProjectRow; href: string }) {
+  const summary = useId();
   return (
-    <a
-      href={href}
-      aria-label={row.label}
+    <div
       data-project={row.name}
-      className={`grid items-start gap-x-2 gap-y-2.5 px-4 py-3 transition-colors hover:bg-well focus-visible:-outline-offset-2 @min-[50rem]:items-center @min-[50rem]:py-2.5 ${columns}`}
+      className={`relative grid items-start gap-x-2 gap-y-2.5 px-4 py-3 transition-colors hover:bg-well has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-focus @min-[50rem]:items-center @min-[50rem]:py-2.5 ${columns}`}
     >
+      <span id={summary} hidden>
+        {row.summary}
+      </span>
       <span className="col-span-5 flex min-w-0 items-start gap-2.5 @min-[50rem]:col-span-1 @min-[50rem]:items-center">
         <KeyBadge>
           <span className="display-cut">{row.key}</span>
         </KeyBadge>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span
-              className="truncate text-sm leading-7 font-semibold text-ink"
+            <a
+              href={href}
+              aria-describedby={summary}
+              className="truncate text-sm leading-7 font-semibold text-ink outline-none after:absolute after:inset-0"
               title={row.displayName}
             >
+              {row.key ? <span className="sr-only">{row.key} </span> : null}
               {row.displayName}
-            </span>
+              {row.displayName !== row.name ? (
+                <span className="sr-only"> ({row.name})</span>
+              ) : null}
+            </a>
             <StackedMarks row={row} />
           </span>
           <span className="block text-xs text-ink-muted @min-[50rem]:hidden">
@@ -165,7 +178,7 @@ function ProjectCountsRow({ row, href }: { row: ProjectRow; href: string }) {
         value={row.needsYou}
         mark="needs-you"
       />
-    </a>
+    </div>
   );
 }
 
@@ -178,7 +191,7 @@ const marks = {
 } as const;
 
 // Count is one count in a table cell. A zero is a faint dash, so the counts
-// that matter stand out (the row's name still says the number).
+// that matter stand out (the row's description still says the number).
 function Count({
   value,
   mark,

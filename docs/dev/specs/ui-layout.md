@@ -69,11 +69,14 @@ badge's shape, with the repair band and Needs you count still on top; the
 image fills a 32px square with no badge background, including when selected,
 so transparent pixels show the tile beneath. The image is decorative (an
 empty alt), since the name carries the key. Its
-tooltip and accessible name are the project's name, its key (with its
-folder name when that differs) and its counts: *Flashheart (FH,
-flashheart): 50 tickets, 3 in progress, 22 blocked, 1 needs repair, 2
-agents need you*, the blocked, repair and Needs you counts only when not
-zero; All projects names its project count and sums them. Project names,
+tooltip and accessible name start with what the badge shows, so a voice
+user can say it (WCAG 2.5.3, FH-184): the key, then the Needs you count,
+then the project's name (with its folder name when that differs) and its
+other counts: *FH, 2 agents need you: Flashheart (flashheart), 50
+tickets, 3 in progress, 22 blocked, 1 needs repair*, the blocked, repair
+and Needs you counts only when not zero; All projects names its project
+count and sums them (*All projects (3 projects): 64 tickets, …, 2 agents
+need you*). Project names,
 route bars and the other counts are not shown as text; the All projects
 Overview's Projects list (§5) shows them side by side. The rail has no
 footer: the theme, board root and version are in the band's Settings menu.
@@ -715,23 +718,26 @@ interlocking chevron cards, pointing left to right, one per board column in
 order (Backlog, Up next, In progress, Ready to review, Done, the last
 without Rejected tickets), each a large
 tabular count over the column's word with its status icon, in the State
-role (§7). Each card leads to the Board for the scope. The row stays one row
+role (§7). Each card leads to the Board for the scope, named as it reads,
+count then word (*35 Backlog*, FH-184). The row stays one row
 at every width; below 40rem the icons go and the words wrap.
 
 In the All projects scope only, the **Projects** list follows the pipeline
 (FH-153, `PRJ-6`): a section card (the board icon on a card disc, the
 title, the project count) listing every project in the rail's order, most
-recently active first. Each row is one link to that project's Overview,
-named with the project and every count (*Alpha (alpha): 7 tickets (3 in
-backlog, 1 up next, 1 in progress, 1 ready to review, 1 done), 3 blocked,
-1 needs repair, 2 agents live, 1 agent needs you*). Once the card is at
+recently active first. Each row leads to that project's Overview: its
+link is the project's name, stretched over the row, named with the key,
+the name and the folder name when that differs (*AL Alpha (alpha)*, so the
+name holds the words it shows, FH-184) and described with every count
+(*7 tickets (3 in backlog, 1 up next, 1 in progress, 1 ready to review,
+1 done), 3 blocked, 1 needs repair, 2 agents live, 1 agent needs you*). Once the card is at
 least 50rem wide (its own width, so a ticket panel beside the Overview
 narrows it too) the rows are a table under one line of column words:
 Project (key badge and name), Tickets, the five board columns (each word
 after its status icon in its state ink), Blocked (after the no-entry sign
 in the blocked ink), Needs repair, Live (after the Working run-state mark,
 still) and Needs you, the counts centred in tabular numerals, a zero a
-faint en dash (the row's name says the number).
+faint en dash (the row's description says the number).
 Live (FH-162) counts the project's running agents that do not need you,
 subagents included: working, waiting and quiet; an agent that needs you
 counts under Needs you instead, never in both. Tickets counts every ticket; the columns
