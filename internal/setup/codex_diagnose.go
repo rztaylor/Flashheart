@@ -16,8 +16,9 @@ import (
 var codexRemedy = "run flashheart setup " + Codex{}.Name()
 
 // Diagnose checks Codex's configuration for Flashheart without changing
-// anything (SET-4): the MCP server, the hooks of §5.3 and the protocol
-// text, each against what Install would write for o. Without a Codex
+// anything (SET-4): the MCP server, the hooks of §5.3, the skill and the
+// section of the global AGENTS.md, each against what Install would write
+// for o. Without a Codex
 // home there is nothing to check.
 func (Codex) Diagnose(o Options) []health.Finding {
 	if _, err := os.Stat(o.codexHome()); errors.Is(err, fs.ErrNotExist) {
@@ -30,7 +31,7 @@ func (Codex) Diagnose(o Options) []health.Finding {
 	}
 	findings := o.diagnoseCodexServer(config, configErr)
 	findings = append(findings, o.diagnoseCodexHooks(entries, configErr)...)
-	return append(findings, o.diagnoseCodexAgents()...)
+	return append(findings, o.diagnoseSkill(o.codexSkillDir(), codexRemedy), o.diagnoseSection(o.codexAgentsPath(), Codex{}.Name(), codexRemedy))
 }
 
 func (o Options) diagnoseCodexServer(config []byte, configErr error) []health.Finding {
@@ -146,23 +147,4 @@ func (o Options) codexHookTrust(hooks *value, saved map[string]string) (trusted,
 		}
 	}
 	return trusted, untrusted, changed
-}
-
-func (o Options) diagnoseCodexAgents() []health.Finding {
-	where := o.display(o.codexAgentsPath())
-	data, err := readFile(o.codexAgentsPath())
-	var start, end int
-	found := false
-	if err == nil {
-		start, end, found, err = findSection(data)
-	}
-	switch {
-	case err != nil:
-		return []health.Finding{{Level: health.Problem, Text: fmt.Sprintf("Protocol text: cannot read %s: %v; fix it, then %s", where, err, codexRemedy)}}
-	case !found:
-		return []health.Finding{{Level: health.Problem, Text: fmt.Sprintf("Protocol text: not in %s; %s", where, codexRemedy)}}
-	case strings.TrimSuffix(string(data[start:end]), "\n") != strings.TrimSuffix(agentsSection(), "\n"):
-		return []health.Finding{{Level: health.Warning, Text: fmt.Sprintf("Protocol text: out of date in %s; %s", where, codexRemedy)}}
-	}
-	return []health.Finding{{Level: health.OK, Text: "Protocol text: up to date in " + where}}
 }

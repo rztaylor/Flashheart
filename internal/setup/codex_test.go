@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/rztaylor/flashheart/internal/hooks/codex"
-	"github.com/rztaylor/flashheart/internal/protocol"
 )
 
 // codexMachine is a temporary home whose Codex home (~/.codex) starts as a
@@ -186,6 +185,8 @@ func TestCodexInstallShowsADiffAndChangesNothing(t *testing.T) {
 			"Create ~/.codex/config.toml:",
 			"Create ~/.codex/hooks.json:",
 			"Create ~/.codex/AGENTS.md:",
+			"Create ~/.agents/skills/flashheart/SKILL.md:",
+			"Create ~/.agents/skills/flashheart/references/finishing.md:",
 		}},
 		{"user", []string{
 			"Change ~/.codex/config.toml:\n--- ~/.codex/config.toml\n+++ ~/.codex/config.toml\n@@ ",
@@ -208,15 +209,15 @@ func TestCodexInstallShowsADiffAndChangesNothing(t *testing.T) {
 				`+command = "/opt/Flash Heart/bin/flashheart"`,
 				`+args = ["mcp"]`,
 				`"command": "`+quotedBinary+` hook codex SessionStart",`,
-				"+"+agentsBegin,
-				"+# Flashheart board",
+				"+"+sectionBegin("codex"),
+				"+## Flashheart",
 				"/hooks",
 			)
 			if test.fixture == "stale" {
 				// The table, its args and the section's first lines are
 				// there already.
 				want = slices.DeleteFunc(want, func(part string) bool {
-					return slices.Contains([]string{"+[mcp_servers.flashheart]", `+args = ["mcp"]`, "+" + agentsBegin, "+# Flashheart board"}, part)
+					return slices.Contains([]string{"+[mcp_servers.flashheart]", `+args = ["mcp"]`, "+" + sectionBegin("codex")}, part)
 				})
 			}
 			for _, part := range want {
@@ -253,6 +254,7 @@ func TestCodexInstallAddsFlashheartAndKeepsTheUsersEntries(t *testing.T) {
 	out := m.apply(true)
 	for _, part := range []string{
 		"Wrote ~/.codex/config.toml", "Wrote ~/.codex/hooks.json", "Wrote ~/.codex/AGENTS.md",
+		"Wrote ~/.agents/skills/flashheart/SKILL.md", "Wrote ~/.agents/skills/flashheart/references/writing.md",
 		"Backups are in ~/.codex/flashheart-backup/20261012T120001Z-",
 		"/hooks", "Start a new Codex session to pick up the changes.",
 	} {
@@ -293,7 +295,8 @@ func TestCodexInstallAddsFlashheartAndKeepsTheUsersEntries(t *testing.T) {
 	}
 
 	agents := m.read("AGENTS.md")
-	if want := string(m.original["AGENTS.md"]) + "\n" + agentsBegin + "\n" + protocol.Body() + agentsEnd + "\n"; agents != want {
+	checkSkillFolder(t, m.options.codexSkillDir())
+	if want := string(m.original["AGENTS.md"]) + "\n" + section("codex"); agents != want {
 		t.Fatalf("AGENTS.md:\n%s", unifiedDiff("AGENTS.md", []byte(want), []byte(agents)))
 	}
 
@@ -339,9 +342,9 @@ func TestCodexInstallReplacesAStaleSetup(t *testing.T) {
 		t.Fatalf("the earlier PreToolUse hook remains:\n%s", m.read("hooks.json"))
 	}
 	agents := m.read("AGENTS.md")
-	if strings.Contains(agents, "An older version") || strings.Count(agents, agentsBegin) != 1 ||
-		!strings.HasPrefix(agents, "# My global rules\n\n- Answer in British English.\n\n"+agentsBegin+"\n# Flashheart board\n") ||
-		!strings.HasSuffix(agents, agentsEnd+"\n\n## More of my rules\n\n- Keep commits small.\n") {
+	if strings.Contains(agents, "An older version") || strings.Count(agents, sectionBegin("codex")) != 1 ||
+		!strings.HasPrefix(agents, "# My global rules\n\n- Answer in British English.\n\n"+sectionBegin("codex")+"\n## Flashheart\n") ||
+		!strings.HasSuffix(agents, sectionEnd+"\n\n## More of my rules\n\n- Keep commits small.\n") {
 		t.Fatalf("AGENTS.md:\n%s", agents)
 	}
 	if again := m.plan(true); !again.Empty() {
@@ -355,7 +358,7 @@ func TestCodexUninstallPutsBackTheUsersFiles(t *testing.T) {
 	m := newCodexMachine(t, "user")
 	m.apply(true)
 	out := render(m.plan(false))
-	for _, part := range []string{"Change ~/.codex/config.toml:", "-[mcp_servers.flashheart]", "Change ~/.codex/hooks.json:", "Change ~/.codex/AGENTS.md:", "-" + agentsBegin} {
+	for _, part := range []string{"Change ~/.codex/config.toml:", "-[mcp_servers.flashheart]", "Change ~/.codex/hooks.json:", "Change ~/.codex/AGENTS.md:", "-" + sectionBegin("codex"), "Delete ~/.agents/skills/flashheart/SKILL.md."} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("uninstall plan missing %q:\n%s", part, out)
 		}
@@ -423,9 +426,10 @@ func TestCodexInstallOnAFreshCodexHomeAndBack(t *testing.T) {
 	if want := "[mcp_servers.flashheart]\ncommand = \"/opt/Flash Heart/bin/flashheart\"\nargs = [\"mcp\"]\n"; m.read("config.toml") != want {
 		t.Fatalf("config.toml = %q", m.read("config.toml"))
 	}
-	if want := agentsBegin + "\n" + protocol.Body() + agentsEnd + "\n"; m.read("AGENTS.md") != want {
-		t.Fatal("AGENTS.md is not just the protocol section")
+	if m.read("AGENTS.md") != section("codex") {
+		t.Fatal("AGENTS.md is not just the Flashheart section")
 	}
+	checkSkillFolder(t, m.options.codexSkillDir())
 	if len(m.codexHooks()) != len(codexEvents) {
 		t.Fatalf("hooks = %v", m.codexHooks())
 	}
@@ -434,6 +438,9 @@ func TestCodexInstallOnAFreshCodexHomeAndBack(t *testing.T) {
 		if m.exists(name) {
 			t.Errorf("%s did not exist before setup but remains:\n%s", name, m.read(name))
 		}
+	}
+	if _, err := os.Stat(m.options.codexSkillDir()); !os.IsNotExist(err) {
+		t.Errorf("the skill folder remains after uninstall: %v", err)
 	}
 }
 
@@ -500,8 +507,8 @@ func TestCodexSetupRefusesFilesItCannotEditSafely(t *testing.T) {
 		{"unterminated array", "config.toml", "notify = [\"a\",\n", "config.toml"},
 		{"hooks not an object", "hooks.json", `{"hooks": []}`, "hooks"},
 		{"hooks.json not JSON", "hooks.json", "{ nope", "hooks.json"},
-		{"begin without end", "AGENTS.md", "# Mine\n\n" + agentsBegin + "\nold\n", "AGENTS.md"},
-		{"two sections", "AGENTS.md", agentsBegin + "\n" + agentsEnd + "\n" + agentsBegin + "\n" + agentsEnd + "\n", "AGENTS.md"},
+		{"begin without end", "AGENTS.md", "# Mine\n\n" + sectionBegin("codex") + "\nold\n", "AGENTS.md"},
+		{"two sections", "AGENTS.md", sectionBegin("codex") + "\n" + sectionEnd + "\n" + sectionBegin("codex") + "\n" + sectionEnd + "\n", "AGENTS.md"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -593,5 +600,78 @@ func TestCodexIgnoredEventsAreIgnoredByTheAdapter(t *testing.T) {
 		if checked == 0 {
 			t.Errorf("no recorded %s payloads", event)
 		}
+	}
+}
+
+// A Flashheart skill copied by hand into ~/.agents/skills (it has
+// Flashheart's frontmatter) is setup's to replace and to remove.
+func TestCodexInstallTakesOverAHandCopiedSkill(t *testing.T) {
+	t.Parallel()
+
+	m := newCodexMachine(t, "user")
+	skill := filepath.Join(m.options.codexSkillDir(), "SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(skill), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(skill, []byte(staleSkill), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out := render(m.plan(true)); !strings.Contains(out, "Change ~/.agents/skills/flashheart/SKILL.md:") || !strings.Contains(out, "-Old text, hand-edited.") {
+		t.Fatalf("plan:\n%s", out)
+	}
+	m.apply(true)
+	checkSkillFolder(t, m.options.codexSkillDir())
+	m.apply(false)
+	if _, err := os.Stat(m.options.codexSkillDir()); !os.IsNotExist(err) {
+		t.Fatalf("the skill folder remains after uninstall: %v", err)
+	}
+}
+
+// A dotfiles manager may link AGENTS.md and the whole ~/.agents/skills
+// folder: setup edits their targets and the links stay links.
+func TestCodexSetupWritesThroughLinks(t *testing.T) {
+	t.Parallel()
+
+	m := newCodexMachine(t, "user")
+	dotfiles := filepath.Join(m.home, "dotfiles", "AGENTS.md")
+	repo := filepath.Join(m.home, "src", "skills")
+	for _, dir := range []string{filepath.Dir(dotfiles), repo, filepath.Join(m.home, ".agents")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(dotfiles, m.original["AGENTS.md"], 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(m.path("AGENTS.md")); err != nil {
+		t.Fatal(err)
+	}
+	for link, target := range map[string]string{m.path("AGENTS.md"): dotfiles, filepath.Join(m.home, ".agents", "skills"): repo} {
+		if err := os.Symlink(target, link); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out := m.apply(true)
+	if !strings.Contains(out, filepath.Join("dotfiles", "AGENTS.md")+"\n") {
+		t.Fatalf("output:\n%s", out)
+	}
+	if got, _ := os.ReadFile(dotfiles); string(got) != string(m.original["AGENTS.md"])+"\n"+section("codex") {
+		t.Fatalf("the link's target:\n%s", got)
+	}
+	checkSkillFolder(t, filepath.Join(repo, "flashheart"))
+	if again := m.plan(true); !again.Empty() {
+		t.Fatalf("a second install is not empty:\n%s", render(again))
+	}
+	m.apply(false)
+	if got, _ := os.ReadFile(dotfiles); string(got) != string(m.original["AGENTS.md"]) {
+		t.Fatalf("the link's target after uninstall:\n%s", got)
+	}
+	for _, link := range []string{m.path("AGENTS.md"), filepath.Join(m.home, ".agents", "skills")} {
+		if info, err := os.Lstat(link); err != nil || info.Mode()&os.ModeSymlink == 0 {
+			t.Fatalf("%s is no longer a link: %v", link, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(repo, "flashheart")); !os.IsNotExist(err) {
+		t.Fatalf("the skill remains in the linked folder: %v", err)
 	}
 }

@@ -38,11 +38,19 @@ you pass `--yes`. It shows, as a diff:
 - the MCP server it registers for every project, by running
   `claude mcp add-json --scope user flashheart …` (when no `claude` command
   is found it prints the command for you to run);
-- the Flashheart skill it installs as `~/.claude/skills/flashheart/SKILL.md`.
-  After that Flashheart keeps it current itself: when you upgrade the
-  binary, the next session start rewrites the skill to match. It is
-  Flashheart's own file, so edits to it are overwritten; put your own agent
-  rules in your own skill or `CLAUDE.md`.
+- the Flashheart skill it installs in `~/.claude/skills/flashheart/`: a
+  short guide, `SKILL.md`, and the pages it points to in `references/`
+  (writing tickets, finishing, questions, workstreams), which the model
+  reads when it reaches that task. After that Flashheart keeps it current
+  itself: when you upgrade the binary, the next session start rewrites the
+  skill to match. It is Flashheart's own, so edits to it are overwritten;
+  put your own agent rules in your own skill or `CLAUDE.md`;
+- a short section it adds to your global `~/.claude/CLAUDE.md`, which
+  Claude Code reads in every session, saying that Flashheart tracks your
+  work and to use the skill. It sits between `<!-- BEGIN FLASHHEART … -->`
+  and `<!-- END FLASHHEART -->`; text outside the markers is yours, and a
+  `CLAUDE.md` that links into your dotfiles is edited where it points.
+  The session start keeps that section current too, but never adds it.
 
 Before writing, setup copies everything it changes into
 `~/.claude/flashheart-backup/<time>/`. Commands use the absolute path of the
@@ -61,7 +69,9 @@ flashheart setup claude --uninstall   # shows what would change, then asks
 
 If `settings.json` has not changed since setup wrote it, uninstalling puts
 back the file exactly as it was; otherwise it removes only Flashheart's
-hooks. It also removes the skill and unregisters the MCP server. If an
+hooks. It also removes the skill and the marked section of `CLAUDE.md`
+(and `CLAUDE.md` itself if setup created it and nothing else is left),
+and unregisters the MCP server. If an
 earlier version of setup moved a `kanban-tracker` skill into its backup,
 uninstalling puts that back too.
 
@@ -182,8 +192,9 @@ Problems are logged to `<root>/.flashheart/hook-errors.log`. MCP tool errors
 come back to the model with a fix, such as passing its `run` when two
 sessions work in the same worktree.
 
-`flashheart doctor` checks the board root, the hooks, the MCP server and
-the skill against what `setup claude` writes, and the last day's hook
+`flashheart doctor` checks the board root, the hooks, the MCP server, each
+file of the skill and the section of `CLAUDE.md` against what
+`setup claude` writes, and the last day's hook
 errors. It changes nothing; each line is ok, a warning or a problem with
 its fix, and it exits 1 only for a problem. Run it in a project's
 directory: a `flashheart` MCP server you registered yourself at local or

@@ -8,6 +8,24 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- The flashheart skill is a short guide with detailed pages (FH-189,
+  D89). The guide says what Flashheart is for, the rules, the session
+  loop and which page to read before each kind of task; pages on writing
+  tickets and handoffs, finishing and the review, questions and comments,
+  and workstreams are read when needed, so new guidance no longer means
+  cutting other lines, and the wording shortened for FH-187 is back. Codex
+  now gets the same skill, in `~/.agents/skills/flashheart` (a Flashheart
+  skill copied there by hand is taken over), instead of the whole text in
+  its global `AGENTS.md`. Both agents' global instructions file
+  (`~/.claude/CLAUDE.md`, Codex's `AGENTS.md`) gets a short marked section
+  saying Flashheart tracks the work and to use the skill; setup adds it,
+  through a dotfiles symlink if there is one, the session start keeps it
+  current and uninstall removes it, leaving your text untouched. `doctor`
+  reports each missing or out-of-date skill file and section. Existing
+  installs update at their next session start; run `flashheart setup
+  claude` once to add the `CLAUDE.md` section (protocol version
+  unchanged).
+
 - Agents write handoffs a person can follow (FH-187). The handoff is the
   first thing you read on a ticket, but agents wrote it as notes to the
   next agent: paragraphs of type names, signatures and rules. The

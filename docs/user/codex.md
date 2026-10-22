@@ -4,11 +4,12 @@ Flashheart works with Codex as it does with Claude Code (see
 [Claude Code](claude-code.md) for tickets, questions and what gets
 recorded): **hooks** record what every session does, and **the `flashheart`
 MCP server** lets the model claim tickets, record handoffs, ask you
-questions and write reviews. Instead of a skill, Codex gets the same
-protocol text in its global `AGENTS.md`.
+questions and write reviews. Codex gets the same Flashheart skill, in
+`~/.agents/skills`, and a short pointer to it in its global `AGENTS.md`.
 
 Works in the Codex CLI, the IDE extension and the ChatGPT app, which share
-`~/.codex`. Checked against Codex 0.160.0 (2026-10-12).
+`~/.codex`. Checked against Codex 0.160.0 (2026-10-12); the skill folder
+against Codex 0.162 (2026-10-22).
 
 One difference: a Codex session that changes files without a ticket is
 asked to claim one with your next prompt (or, with handoff enforcement
@@ -40,17 +41,31 @@ as a diff:
   each running `<path to flashheart> hook codex <Event>`. Your other hooks
   are kept, and a Flashheart hook an earlier version registered that is no
   longer needed (`PreToolUse`) is removed;
-- the Flashheart protocol text it adds to your global `AGENTS.md`, between
-  `<!-- BEGIN FLASHHEART … -->` and `<!-- END FLASHHEART -->`. Text outside
-  the markers is yours; text inside is replaced by the next setup.
+- the Flashheart skill it installs in `~/.agents/skills/flashheart/`, where
+  Codex finds your own skills: a short guide, `SKILL.md`, and the pages it
+  points to in `references/`, which the model reads when it reaches that
+  task. A Flashheart skill you copied there by hand is replaced. When
+  `~/.agents/skills` is a link into your own repository, the skill is
+  written there, so you may want to ignore `flashheart/` in it. If
+  `~/.claude/skills` links to the same folder, Claude Code and Codex share
+  the skill, and uninstalling one leaves it for the other;
+- a short section it adds to your global `AGENTS.md`, which Codex reads in
+  every session, saying that Flashheart tracks your work and to use the
+  skill. It sits between `<!-- BEGIN FLASHHEART … -->` and
+  `<!-- END FLASHHEART -->`; text outside the markers is yours, text inside
+  is replaced by the next setup, and an `AGENTS.md` that links into your
+  dotfiles is edited where it points.
 
 After you upgrade Flashheart, the next Codex session in a git repository
-brings that marked text up to date by itself, once you have trusted the
-hooks (below): its session-start hook rewrites only the text
-between the markers, and tells the session it did so it reads it again.
-It never adds the text to an `AGENTS.md` without it (so an uninstall
-stays uninstalled), and leaves a file whose markers are broken alone for
-`flashheart doctor` to report.
+brings the skill and that section up to date by itself, once you have
+trusted the hooks (below): its session-start hook rewrites only the
+skill's files and the text between the markers, and tells the session it
+did so it reads them again. It never adds the section to an `AGENTS.md`
+without it (so an uninstall stays uninstalled), and leaves a file whose
+markers are broken alone for `flashheart doctor` to report. Setups from
+before the skill had the whole protocol text in that section: the first
+session start after the upgrade installs the skill, then shrinks the
+section to its pointer.
 
 Before writing, setup copies everything it changes into
 `~/.codex/flashheart-backup/<time>/`. Commands use the absolute path of the
@@ -80,17 +95,18 @@ To undo it:
 flashheart setup codex --uninstall   # shows what would change, then asks
 ```
 
-Uninstalling removes only Flashheart's table, hooks and marked text, and
-deletes a file setup created that would be left empty.
+Uninstalling removes only Flashheart's table, hooks, skill and marked
+text, and deletes a file setup created that would be left empty.
 
 ## When something goes wrong
 
-`flashheart doctor` has a Codex section: the MCP server, the hooks and the
-protocol text against what `setup codex` writes. A missing entry or a
-binary that no longer exists is a problem; another binary, a hook an
-earlier version registered that setup no longer writes, out-of-date
-protocol text (after an upgrade, until the next Codex session refreshes
-it or you run `setup codex` again),
+`flashheart doctor` has a Codex section: the MCP server, the hooks, each
+file of the skill and the section of `AGENTS.md` against what
+`setup codex` writes. A missing entry, a missing skill or a binary that no
+longer exists is a problem; another binary, a hook an earlier version
+registered that setup no longer writes, a missing section, an out-of-date
+skill or section (after an upgrade, until the next Codex session
+refreshes them or you run `setup codex` again),
 hooks turned off with `[features] hooks = false`, or hooks never
 trusted with `/hooks`, are warnings. Doctor cannot tell whether trust is
 still current after a hook changed, so trust them again when setup changed

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/rztaylor/flashheart/internal/protocol"
 )
 
 // codexEvents are the Codex hook events Flashheart registers
@@ -28,8 +31,9 @@ const trustNote = "Codex runs these hooks only once you trust them: start codex,
 
 // Codex is Codex (the CLI, the IDE extension and the ChatGPT app) as a
 // setup Agent: the flashheart MCP server in config.toml, the hooks of
-// §5.3 in hooks.json, and the protocol text in the global AGENTS.md, all
-// in $CODEX_HOME (~/.codex).
+// §5.3 in hooks.json, and the section of the global AGENTS.md that points
+// at the skill, all in $CODEX_HOME (~/.codex), and the protocol skill in
+// ~/.agents/skills, where Codex reads the user's skills.
 type Codex struct{}
 
 // Name returns "codex".
@@ -73,7 +77,8 @@ func (o Options) unreadable(path string, err error) error {
 }
 
 // Install plans Codex's configuration for Flashheart (SET-1, SET-2): the
-// MCP server, every hook of §5.3 and the protocol text.
+// MCP server, every hook of §5.3, the protocol skill and the section of
+// the global AGENTS.md.
 func (Codex) Install(o Options) (*Plan, error) {
 	p := newPlan(o.codexTarget(), false)
 	config, err := readFile(o.codexConfigPath())
@@ -97,21 +102,17 @@ func (Codex) Install(o Options) (*Plan, error) {
 		p.notes = append(p.notes, trustNote)
 	}
 
-	agents, err := readFile(o.codexAgentsPath())
-	if err != nil {
+	if err := p.planSkill(o.codexSkillDir()); err != nil {
 		return nil, err
 	}
-	if after, err = installedAgents(agents); err != nil {
-		return nil, o.unreadable(o.codexAgentsPath(), err)
-	}
-	if !bytes.Equal(after, agents) {
-		p.files = append(p.files, change{path: o.codexAgentsPath(), backup: "AGENTS.md", before: agents, after: after})
+	if err := p.planSection(o.codexAgentsPath(), Codex{}.Name(), o.codexBackupsPath(), false); err != nil {
+		return nil, err
 	}
 	return p, nil
 }
 
-// Uninstall plans the reverse of Install: only Flashheart's table, hooks
-// and section go. hooks.json is restored byte for byte when nothing
+// Uninstall plans the reverse of Install: only Flashheart's table, hooks,
+// skill and section go. hooks.json is restored byte for byte when nothing
 // changed since setup wrote it; a file setup created is deleted when
 // nothing else is left in it.
 func (Codex) Uninstall(o Options) (*Plan, error) {
@@ -137,15 +138,11 @@ func (Codex) Uninstall(o Options) (*Plan, error) {
 		p.files = append(p.files, change{path: hooksPath, backup: "hooks.json", before: data, after: after})
 	}
 
-	agents, err := readFile(o.codexAgentsPath())
-	if err != nil {
+	if err := p.planSharedSkillRemoval(o.codexSkillDir(), backups, Claude{}.Title(), o.claudeConfigured()); err != nil {
 		return nil, err
 	}
-	if after, err = uninstalledAgents(agents); err != nil {
-		return nil, o.unreadable(o.codexAgentsPath(), err)
-	}
-	if agents != nil && !bytes.Equal(after, agents) {
-		p.files = append(p.files, change{path: o.codexAgentsPath(), backup: "AGENTS.md", before: agents, after: emptiedFile(backups, "AGENTS.md", after)})
+	if err := p.planSection(o.codexAgentsPath(), Codex{}.Name(), backups, true); err != nil {
+		return nil, err
 	}
 	return p, nil
 }
@@ -163,4 +160,40 @@ func emptiedFile(backups, name string, after []byte) []byte {
 		return []byte{}
 	}
 	return after
+}
+
+var _ ProtocolRefresher = Codex{}
+
+// RefreshProtocol keeps what setup installed for Codex current at session
+// start (agent-protocol §5.4, D53, D89): the skill folder, and the marked
+// section of the global AGENTS.md when it has one. A section is setup's
+// mark, so beside one the skill is written even when it is missing: an
+// install from before the skill folder had the whole protocol in its
+// section, and shrinking that to a pointer without the skill would lose
+// it. The skill is written first, so a failure leaves the old section. It
+// returns a line for each that it rewrote, for the session's context. The
+// Codex session-start hook calls it; nothing else does.
+func (Codex) RefreshProtocol(o Options) (string, error) {
+	path, err := linkTarget(o.codexAgentsPath())
+	if err != nil {
+		return "", err
+	}
+	data, err := readFile(path)
+	if err != nil {
+		return "", err
+	}
+	_, _, sectioned, _ := findSection(data)
+	var notes []string
+	updated, err := refreshSkill(o.codexSkillDir(), sectioned)
+	if updated {
+		notes = append(notes, protocol.SkillUpdatedNote)
+	}
+	if err != nil {
+		return strings.Join(notes, "\n"), err
+	}
+	note, _, err := refreshSection(o.codexAgentsPath(), Codex{}.Name())
+	if note != "" {
+		notes = append(notes, note)
+	}
+	return strings.Join(notes, "\n"), err
 }

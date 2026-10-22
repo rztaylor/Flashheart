@@ -54,7 +54,7 @@ func TestDiagnoseAHealthySetup(t *testing.T) {
 	if len(problems)+len(warnings) != 0 {
 		t.Fatalf("problems %q, warnings %q", problems, warnings)
 	}
-	if want := []string{"Hooks: all 14 installed", "MCP server: registered", "Skill: up to date"}; strings.Join(ok, "|") != strings.Join(want, "|") {
+	if want := []string{"Hooks: all 14 installed", "MCP server: registered", "Skill: up to date in ~/.claude/skills/flashheart", "Global CLAUDE.md: Flashheart section up to date in ~/.claude/CLAUDE.md"}; strings.Join(ok, "|") != strings.Join(want, "|") {
 		t.Fatalf("ok = %q", ok)
 	}
 }
@@ -138,10 +138,10 @@ func TestDiagnoseAnUnconfiguredMachine(t *testing.T) {
 	if len(problems) != 3 {
 		t.Fatalf("problems = %q", problems)
 	}
-	if !strings.Contains(problems[0], "none installed") || !strings.Contains(problems[1], "not registered") || !strings.Contains(problems[2], "not installed") {
+	if !strings.Contains(problems[0], "none installed") || !strings.Contains(problems[1], "not registered") || !strings.HasPrefix(problems[2], "Skill: not installed in ~/.claude/skills/flashheart") {
 		t.Fatalf("problems = %q", problems)
 	}
-	if len(warnings) != 0 {
+	if len(warnings) != 1 || !strings.HasPrefix(warnings[0], "Global CLAUDE.md: no Flashheart section in ~/.claude/CLAUDE.md") || !strings.Contains(warnings[0], "flashheart setup claude") {
 		t.Fatalf("warnings = %q", warnings)
 	}
 }
@@ -152,7 +152,16 @@ func TestDiagnoseAnOutdatedSkillAndUnreadableSettings(t *testing.T) {
 	m := installed(t)
 	m.write(".claude/skills/flashheart/SKILL.md", "---\nname: flashheart\n---\nold text\n")
 	_, warnings, _ := diagnose(t, m.options)
-	if len(warnings) != 1 || !strings.Contains(warnings[0], "out of date") {
+	if len(warnings) != 1 || !strings.HasPrefix(warnings[0], "Skill: out of date in ~/.claude/skills/flashheart (SKILL.md)") {
+		t.Fatalf("warnings = %q", warnings)
+	}
+	if err := os.Remove(filepath.Join(m.home, ".claude", "skills", "flashheart", "references", "writing.md")); err != nil {
+		t.Fatal(err)
+	}
+	m.write(".claude/CLAUDE.md", sectionBegin("claude")+"\nOld pointer.\n"+sectionEnd+"\n")
+	_, warnings, _ = diagnose(t, m.options)
+	if len(warnings) != 2 || !strings.HasPrefix(warnings[0], "Skill: out of date in ~/.claude/skills/flashheart (SKILL.md, references/writing.md)") ||
+		!strings.HasPrefix(warnings[1], "Global CLAUDE.md: Flashheart section out of date in ~/.claude/CLAUDE.md") {
 		t.Fatalf("warnings = %q", warnings)
 	}
 

@@ -486,7 +486,7 @@ has no use for (FH-123).
 
 | Hook event | Flashheart action |
 |---|---|
-| `SessionStart` | `run.start`; refreshes an out-of-date Flashheart section of the global `AGENTS.md` (§5.4); recovery note as `additionalContext` (a developer message), opened by a line when the section was refreshed |
+| `SessionStart` | `run.start`; refreshes the out-of-date Flashheart skill and section of the global `AGENTS.md` (§5.4); recovery note as `additionalContext` (a developer message), opened by a line for each it refreshed |
 | `UserPromptSubmit` | `turn.start`, `origin` `user` (§3): every recorded `UserPromptSubmit` was a prompt the user typed, so the prompt is not read; what waits in the session's inbox (§4) as `additionalContext`, then a due claim reminder (§9, `HOOK-8`) |
 | `PreToolUse` (not registered) | nothing: Flashheart's tool calls are attributed by the session each call names in `_meta` (below, §7.1), so `run` is not stamped (stamping needs `permissionDecision: "allow"`, which would skip the user's approval of Flashheart's tools) |
 | `PostToolUse` | a tool use counted into `activity` (§3): `Bash` is a shell command, and an `apply_patch` edits every file its `Add File`, `Update File`, `Delete File` and `Move to` headers name (a relative path is from `cwd`); `update_plan`, where Codex offers it, is an ordinary tool use (D51) |
@@ -543,8 +543,16 @@ Claude Code (`~/.claude/settings.json`, merged, with backup):
 server is registered by running
 `claude mcp add-json --scope user flashheart '{"type":"stdio","command":"/usr/local/bin/flashheart","args":["mcp"]}'`,
 because Claude Code owns `~/.claude.json`; without a `claude` command setup
-prints it for the user. The protocol skill goes to
-`~/.claude/skills/flashheart/SKILL.md`. Setup shows the diff and asks
+prints it for the user. The protocol skill (§12) goes to
+`~/.claude/skills/flashheart/`: `SKILL.md` and its pages in `references/`.
+The short always-read section (§12) goes into the global
+`~/.claude/CLAUDE.md` between
+`<!-- BEGIN FLASHHEART: written by flashheart setup claude; edits here are replaced -->`
+and `<!-- END FLASHHEART -->`, appended after a blank line when it is not
+there yet, as Codex's is in `AGENTS.md` below: text outside the markers is
+the user's, a symlinked file is edited at its target, and `--uninstall`
+removes the section with the blank line setup put before it, deleting the
+file when setup created it and nothing is left. Setup shows the diff and asks
 before applying it (`--yes` skips the question; SET-1). It backs up what
 it changes in `~/.claude/flashheart-backup/<UTC time>/`; `--uninstall`
 restores the backed-up `settings.json` byte for byte when nothing changed
@@ -554,12 +562,18 @@ skill an earlier setup moved into a backup (D55).
 The protocol skill is Flashheart's own code, not user configuration, so it
 is kept current without setup: at every `SessionStart` (startup, resume,
 clear, compact) inside a git repository (outside one a hook does nothing,
-§2) the hook compares the installed `SKILL.md` with the
-binary's skill and, when they differ, rewrites it atomically and opens the
+§2) the hook compares each file of the installed skill with the
+binary's and rewrites, atomically, every one that differs or is missing
+(an install from before the skill had pages gains them), then opens the
 returned context with one line saying the skill was updated. It only
-updates a `SKILL.md` that exists and has Flashheart's frontmatter
+updates a skill whose `SKILL.md` exists and has Flashheart's frontmatter
 (`name: flashheart` and `flashheart-protocol:` in its metadata); a missing
-skill is never created, so `--uninstall` sticks. Edits to it are
+skill is never created, so `--uninstall` sticks. It leaves files in the
+folder that the skill does not name. The same hook keeps the marked
+section of `~/.claude/CLAUDE.md` current, as Codex's keeps its section of
+`AGENTS.md` (below, with its own line in the context), and never adds
+one: an install from before the section gets it from `setup claude`,
+which `doctor` says. Edits to it are
 overwritten, as setup overwrites them; customisations belong in the user's
 own skills or `CLAUDE.md`. Only the hook, which runs the binary setup
 registered, writes it; the MCP server and other commands never do. A
@@ -590,8 +604,13 @@ args = ["mcp"]
 (`hooks.json`, abbreviated; every event in §5.3 but `PreToolUse` is
 registered the same way, merged with the user's hooks as for Claude Code.
 Setup removes a Flashheart hook on an event it no longer registers, such as
-the `PreToolUse` hook earlier versions wrote, and `doctor` warns about one.) The protocol text (§12)
-goes into the global `AGENTS.md` between
+the `PreToolUse` hook earlier versions wrote, and `doctor` warns about one.) The protocol skill
+(§12) goes to `~/.agents/skills/flashheart/`, where Codex reads the
+user's skills (checked against Codex 0.162, 2026-10-22: its model-visible
+prompt lists skills from that folder, following a symlinked `skills`
+folder), the same files as Claude Code's; a Flashheart skill copied there
+by hand (Flashheart's frontmatter) is setup's to replace and remove. The
+always-read section (§12) goes into the global `AGENTS.md` between
 `<!-- BEGIN FLASHHEART: written by flashheart setup codex; edits here are replaced -->`
 and `<!-- END FLASHHEART -->`, appended after a blank line when it is not
 there yet; text outside the markers is the user's. Codex writes
@@ -605,8 +624,14 @@ what it changes in `$CODEX_HOME/flashheart-backup/<UTC time>/` and
 refuses a file that changed since the plan (Codex may have saved trust in
 between). `--uninstall` removes the table and its sub-tables,
 setup's hooks (restoring the backed-up `hooks.json` byte for byte when
-nothing changed since) and the marked section, each with the blank line
-setup put before it, and deletes a file setup created that is left empty.
+nothing changed since), the skill and the marked section, each with the
+blank line setup put before it, and deletes a file setup created that is
+left empty. A symlinked `AGENTS.md` or `~/.agents/skills` is written at
+its target. When `~/.claude/skills` and `~/.agents/skills` are one folder
+(both linked to the user's own), the two agents share the skill: either
+setup writes the same files, and uninstalling one agent leaves the skill,
+with a note, while the other is still set up (its hooks, server or
+section are there); the last uninstall removes it.
 
 Codex runs a hook that is not managed only once the user trusts it with
 `/hooks` in the CLI, by its hash (§5.3), so setup ends by saying so, and a
@@ -641,17 +666,24 @@ hook has no trust or trust with another hash (a moved binary, another
 `--root`); it says so as a whole when no Flashheart hook is trusted, and
 warns when `[features] hooks = false`.
 
-The protocol text in `AGENTS.md` is kept current as Claude Code's skill
-is (D53): at every Codex `SessionStart` inside a git repository the hook
-reads `$CODEX_HOME/AGENTS.md` (`CODEX_HOME` from the hook's environment,
-default `~/.codex`) and, when it holds exactly one marked section that
-differs from the binary's text (ignoring a missing final newline),
-rewrites that section, begin and end marker lines included, atomically
-and through a symlink to its target, keeping the file's permissions.
+The skill and the section in `AGENTS.md` are kept current as Claude
+Code's are (D53, D89): at every Codex `SessionStart` inside a git
+repository the hook refreshes `~/.agents/skills/flashheart/` as Claude
+Code's hook refreshes its skill, then reads `$CODEX_HOME/AGENTS.md`
+(`CODEX_HOME` from the hook's environment, default `~/.codex`) and, when
+it holds exactly one marked section that differs from the binary's text
+(ignoring a missing final newline), rewrites that section, begin and end
+marker lines included, atomically and through a symlink to its target,
+keeping the file's permissions. One case writes a skill that is not
+there: a marked section shows setup was run, and setups before D89 put
+the whole protocol in it with no skill, so beside a section the hook
+writes a missing skill first, then shrinks the section to its pointer;
+the skill is written before the section, so a failure leaves the old
+section whole.
 Every byte outside the markers stays as it was. The returned context then
-opens with one line naming the file and saying the section was updated,
-so the session reads it again: Codex may have read `AGENTS.md` before the
-hook ran. A file without a section is never given one, so `--uninstall`
+opens with a line saying the skill was updated and one naming the file and
+saying the section was updated, for whichever was written, so the session
+reads them again: Codex may have read `AGENTS.md` before the hook ran. A file without a section is never given one, so `--uninstall`
 sticks; a missing file stays missing; and a file whose markers do not pair
 (a begin without an end, an end without a begin, two sections) is left
 untouched for `setup codex` and `doctor` to report. A failure is logged to
@@ -1165,11 +1197,33 @@ reminded themselves (their edits count toward their session's).
 
 ## 12. Protocol skill and instructions
 
-`SET-2` installs one text, rendered for each agent: Claude Code's skill, kept
-current by the session-start hook, and the same text between markers in
-Codex's global `AGENTS.md`, which Codex's session-start hook keeps current
-when the section is there, `setup codex` also refreshes, and `doctor`
-checks (§5.4). It covers, briefly:
+`SET-2` installs one skill for every agent (D89): a folder holding
+`SKILL.md`, a short guide every session reads when it uses the skill, and
+reference pages it names in a "Read before you…" table, read only before
+the task each covers:
+
+- `SKILL.md`: what Flashheart is for, the rules that are never broken,
+  and the session loop (starting, finding and claiming work, working,
+  finishing in brief);
+- `references/writing.md`: titles, descriptions, Context, handoffs,
+  criteria and ticket conventions;
+- `references/finishing.md`: evidence, the review template, moving to
+  review;
+- `references/questions.md`: `ask_human`, `flashheart await`, replies in
+  chat, comments and change requests;
+- `references/workstreams.md`: workstreams, dependencies, and rewriting a
+  ticket when its scope changes.
+
+Each file has a size budget in `protocol_test.go`, the guide's the
+tightest; the test also checks that every rule below is in the guide or a
+page and that the guide names each page. Claude Code reads the skill from
+`~/.claude/skills/flashheart/`, Codex from `~/.agents/skills/flashheart/`.
+A short always-read section between markers in each agent's global
+instructions file (`~/.claude/CLAUDE.md`, Codex's `AGENTS.md`), which the
+agent reads in every session, says that Flashheart tracks the work and to
+use the `flashheart` skill, so the skill is not overlooked. The
+session-start hooks keep both current, `setup` writes them, and `doctor`
+checks them (§5.4). Together the skill covers, briefly:
 
 - at start: read the recovery note; if none, call `board_context`, which
   names your project and its ticket key;
@@ -1498,6 +1552,18 @@ under 8 KiB, a few other lines were shortened, saying the same, and two
 clauses that repeat what a tool or the board shows were dropped). Nothing is
 refused that was accepted, no input, event or handoff changes shape, and
 an older agent writes the same handoff, so the version stays 2.
+
+Additive change within version 2 (D89, FH-189, 2026-10-22): the skill
+becomes a folder, a short guide and reference pages (§12), installed for
+Codex too, in `~/.agents/skills`; the global `CLAUDE.md` and `AGENTS.md`
+get a short section pointing at it, which in `AGENTS.md` replaces the
+whole protocol text. The rules are the same, worded as before FH-187 had
+to shorten them, and the MCP tools, events and hook registrations do not
+change. The session-start hooks bring an earlier install across without
+setup (Codex's writes the skill beside its old section, then shrinks the
+section; Claude Code's adds the pages beside `SKILL.md`), so nothing
+needs re-running and the version stays 2; only the new `CLAUDE.md`
+section waits for `setup claude`, which `doctor` reports.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

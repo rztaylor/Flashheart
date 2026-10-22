@@ -759,22 +759,32 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   terminal to ask in without `--yes`, only shows them. `--uninstall` does
   the same for the reverse, and for Claude also puts back a kanban-tracker
   skill an earlier setup moved into its backup (D55).
-- `SET-2` For Claude, setup installs the **Flashheart protocol skill**
-  (`~/.claude/skills/flashheart/SKILL.md`): tickets are created, read and moved through Flashheart, never by
-  writing board files directly. For Codex it
-  adds the same protocol text to the user's global `AGENTS.md` between
-  Flashheart markers. The installed Claude skill and the marked Codex
-  section are kept current by each agent's session-start hook, which
-  rewrites them when they differ from the binary's, Codex's section alone
-  with the user's text around it untouched (agent-protocol §5.4, D53);
-  neither is ever created there.
+- `SET-2` Setup installs the **Flashheart protocol skill** for every
+  agent, the same folder for each (D89): `SKILL.md`, a short guide (what
+  Flashheart is for, the rules, the session loop, and which page to read
+  before each kind of task), and reference pages in `references/` for
+  writing tickets and handoffs, finishing and the review, questions and
+  comments, and workstreams. Claude Code reads it from
+  `~/.claude/skills/flashheart/`, Codex from `~/.agents/skills/flashheart/`.
+  It says tickets are created, read and moved through Flashheart, never by
+  writing board files directly. Setup also adds a short section between
+  Flashheart markers to each agent's global instructions file (Claude
+  Code's `~/.claude/CLAUDE.md`, Codex's `AGENTS.md`), read in every
+  session, saying that Flashheart tracks the work and to use the skill;
+  text outside the markers is the user's, and a symlinked file is edited
+  at its target. Each agent's session-start hook keeps the installed skill
+  and section current, rewriting what differs from the binary's with the
+  user's text around the section untouched (agent-protocol §5.4, D53);
+  neither is ever created there, except that Codex's hook writes the skill
+  beside a section from before the skill existed.
 - `SET-3` Configuration uses the absolute path of the running binary and
   passes `--root` only when it differs from the default.
 - `SET-4` `flashheart doctor` checks the root, permissions, the installed hook
   and MCP configuration for each agent, and recent hook errors. It changes
   nothing, reports each check as ok, warning or problem with the fix (a
-  missing hook, a configured binary that no longer exists, an out-of-date
-  skill or Codex protocol text, Codex hooks turned off, never trusted or
+  missing hook, a configured binary that no longer exists, a missing or
+  out-of-date skill file or Flashheart section of the global `CLAUDE.md` or
+  `AGENTS.md`, Codex hooks turned off, never trusted or
   trusted for an earlier command (naming the events),
   hook errors of the last day), and exits 1 when it finds a problem.
   An MCP server registered at local or project scope instead of setup's

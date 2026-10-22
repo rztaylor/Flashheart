@@ -91,10 +91,10 @@ type Options struct {
 	Stdout  io.Writer
 	Now     func() time.Time
 	Adapter Adapter
-	// RefreshProtocol keeps the agent's installed protocol text (Claude
-	// Code's skill, Codex's section of AGENTS.md) current at session start
-	// and returns the note that opens the context when it rewrote it
-	// (agent-protocol §5.4); nil for agents without one.
+	// RefreshProtocol keeps the agent's installed protocol text (its skill
+	// and the section of its global CLAUDE.md or AGENTS.md) current at
+	// session start and returns the notes that open the context when it
+	// rewrote them (agent-protocol §5.4); nil for agents without one.
 	RefreshProtocol func() (string, error)
 	// ChangeTimeout is how long after the invocation began the worktree
 	// check at a session's turn end and end may run; zero means

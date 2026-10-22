@@ -115,9 +115,12 @@ func TestSkillAndSpecNameExactlyTheRegisteredTools(t *testing.T) {
 		}
 	}
 
-	skill := protocol.Skill()
+	var skill strings.Builder
+	for _, file := range protocol.SkillFiles() {
+		skill.WriteString(file.Text)
+	}
 	named := map[string]bool{}
-	for _, m := range regexp.MustCompile("`([a-z][a-z_]*)[` ]").FindAllStringSubmatch(skill, -1) {
+	for _, m := range regexp.MustCompile("`([a-z][a-z_]*)[` ]").FindAllStringSubmatch(skill.String(), -1) {
 		named[m[1]] = true
 	}
 	for name := range registered {
@@ -276,7 +279,7 @@ func TestUpdateTicketTakesAddressedChangeRequests(t *testing.T) {
 	if !strings.Contains(row, "`addressed?`") {
 		t.Errorf("agent-protocol §7.2's update_ticket row does not list addressed?: %q", row)
 	}
-	if !strings.Contains(protocol.Skill(), "`addressed`") {
+	if !strings.Contains(page(t, "references/questions.md"), "`addressed`") {
 		t.Error("the skill does not say how to mark a change request addressed")
 	}
 }
@@ -361,4 +364,16 @@ func TestToolListStaysWithinItsBudget(t *testing.T) {
 	if got := strings.ReplaceAll(recorded[1], ",", ""); got != strconv.Itoa(toolListBudget) {
 		t.Errorf("agent-protocol §7.2 records a budget of %s bytes; toolListBudget is %d", recorded[1], toolListBudget)
 	}
+}
+
+// page is a page of the protocol skill.
+func page(t *testing.T, path string) string {
+	t.Helper()
+	for _, file := range protocol.SkillFiles() {
+		if file.Path == path {
+			return file.Text
+		}
+	}
+	t.Fatalf("the skill has no page %s", path)
+	return ""
 }

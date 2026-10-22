@@ -100,7 +100,9 @@ Intended layout (packages are created when they get real content):
   API sends typed and the frontend only words; it reads `events`' envelope
   types and no files.
 - `internal/protocol`: `PROTOCOL_VERSION`, recovery note and protocol text
-  rendering shared by hooks, MCP and setup.
+  rendering shared by hooks, MCP and setup. The skill is markdown embedded
+  from `internal/protocol/skill/`: a short guide (`SKILL.md`) and reference
+  pages, each with a size budget in `protocol_test.go` (D89).
 - `internal/logfile`: also owns `hook-errors.log` (HOOK-1).
 - `internal/hooks`: agent-neutral hook handling and outputs, including
   throttling tool results into activity records (agent-protocol §3);
@@ -119,9 +121,10 @@ Intended layout (packages are created when they get real content):
   optional `ProtocolRefresher`), implemented per agent (`claude.go`;
   `codex.go`, which edits Codex's `config.toml` as text through its own
   statement scanner, `toml.go`, with no TOML library; refreshing the
-  installed protocol text, Claude Code's skill or Codex's marked section of
-  `AGENTS.md`, is called by the session-start hook through `cli`; `hooks`
-  never imports `setup`).
+  installed protocol text, each agent's skill folder and the marked section
+  of its global `CLAUDE.md` or `AGENTS.md` (`skill.go`, `section.go`), is
+  called by the session-start hook through `cli`; `hooks` never imports
+  `setup`).
 - `internal/health`: a check's `Finding` and `Level`, shared by setup's
   diagnoses and doctor.
 - `internal/doctor`: `flashheart doctor` (SET-4): root checks, a section per

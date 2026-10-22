@@ -181,11 +181,13 @@ func commands() []command {
 			summary: "show or apply an agent's configuration for Flashheart",
 			usage:   "setup claude|codex [--uninstall] [--yes | --dry-run] [--root DIR]",
 			detail: "Show the changes that connect an agent to Flashheart. claude: its hooks\n" +
-				"in ~/.claude/settings.json, the flashheart MCP server and the Flashheart\n" +
-				"skill; backups go to ~/.claude/flashheart-backup/. codex: the MCP\n" +
-				"server in config.toml, its hooks in hooks.json and the protocol text in\n" +
-				"AGENTS.md, all in $CODEX_HOME (default ~/.codex), with backups in its\n" +
-				"flashheart-backup/; then trust the hooks with /hooks in codex. Setup\n" +
+				"in ~/.claude/settings.json, the flashheart MCP server, the flashheart\n" +
+				"skill in ~/.claude/skills and a short Flashheart section in\n" +
+				"~/.claude/CLAUDE.md; backups go to ~/.claude/flashheart-backup/. codex:\n" +
+				"the MCP server in config.toml, its hooks in hooks.json and a short\n" +
+				"Flashheart section in AGENTS.md, all in $CODEX_HOME (default ~/.codex),\n" +
+				"with backups in its flashheart-backup/, and the flashheart skill in\n" +
+				"~/.agents/skills; then trust the hooks with /hooks in codex. Setup\n" +
 				"shows the changes as a diff, then asks before it writes; without a\n" +
 				"terminal to ask in it only shows them unless you pass --yes. --uninstall\n" +
 				"does the same for the reverse, and puts back a kanban-tracker skill an\n" +
@@ -196,10 +198,10 @@ func commands() []command {
 			name:    "doctor",
 			summary: "check the board root and agent configuration",
 			usage:   "doctor [--root DIR]",
-			detail: "Check the board root and its permissions, each agent's hooks, MCP server\n" +
-				"and protocol text (Claude Code's skill, Codex's AGENTS.md) against what\n" +
-				"setup writes, and the hook errors of the last day. Changes nothing; exits\n" +
-				"1 when it finds a problem.",
+			detail: "Check the board root and its permissions, each agent's hooks, MCP server,\n" +
+				"flashheart skill and Flashheart section of its global CLAUDE.md or\n" +
+				"AGENTS.md against what setup writes, and the hook errors of the last day.\n" +
+				"Changes nothing; exits 1 when it finds a problem.",
 			run: runDoctor,
 		},
 		{name: "version", summary: "print version information", usage: "version", detail: "Print the Flashheart version, commit and agent protocol version.", run: runVersion},
@@ -485,9 +487,9 @@ func runHook(_ context.Context, env *environment, flags *flag.FlagSet, globals *
 }
 
 // protocolRefresher keeps the agent's installed protocol text current at
-// session start (agent-protocol §5.4), for agents that have it: Claude
-// Code's skill in the home directory, Codex's section of AGENTS.md in
-// $CODEX_HOME.
+// session start (agent-protocol §5.4), for agents that have it: each
+// agent's flashheart skill and the Flashheart section of its global
+// CLAUDE.md or AGENTS.md (Codex's in $CODEX_HOME).
 func protocolRefresher(a setup.Agent, deps Dependencies) func() (string, error) {
 	refresher, ok := a.(setup.ProtocolRefresher)
 	if !ok || deps.HomeDir == nil {

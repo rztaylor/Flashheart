@@ -10,8 +10,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/rztaylor/flashheart/internal/protocol"
 )
 
 var fixture = filepath.Join("..", "..", "testdata", "setup", "claude", "settings.json")
@@ -149,13 +147,16 @@ func TestInstallShowsADiffAndWritesNothing(t *testing.T) {
 		`+        "matcher": "mcp__flashheart__.*",`,
 		"Create ~/.claude/skills/flashheart/SKILL.md:",
 		"+name: flashheart",
+		"Create ~/.claude/skills/flashheart/references/writing.md:",
+		"Create ~/.claude/CLAUDE.md:",
+		"+" + sectionBegin("claude"),
 		`Run: claude mcp add-json --scope user flashheart '{"args":["mcp"],"command":"/opt/Flash Heart/bin/flashheart","type":"stdio"}'`,
 	} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("plan missing %q:\n%s", part, out)
 		}
 	}
-	if !bytes.Equal(m.read(".claude/settings.json"), m.original) || m.exists(".claude/skills/flashheart") || len(m.ran) > 0 {
+	if !bytes.Equal(m.read(".claude/settings.json"), m.original) || m.exists(".claude/skills/flashheart") || m.exists(".claude/CLAUDE.md") || len(m.ran) > 0 {
 		t.Fatal("rendering the plan changed something")
 	}
 }
@@ -204,8 +205,9 @@ func TestInstallWritesKeepsTheUsersSettingsAndIsIdempotent(t *testing.T) {
 	if !strings.Contains(string(data), `"command": "afplay /System/Library/Sounds/Glass.aiff"`) || !strings.Contains(string(data), `"timeout": 5`) {
 		t.Fatalf("settings:\n%s", data)
 	}
-	if string(m.read(".claude/skills/flashheart/SKILL.md")) != protocol.Skill() {
-		t.Fatal("skill not installed")
+	checkSkillFolder(t, m.options.claudeSkillDir())
+	if got := string(m.read(".claude/CLAUDE.md")); got != section("claude") {
+		t.Fatalf("CLAUDE.md = %q", got)
 	}
 	if again := m.plan(true); !again.Empty() {
 		t.Fatalf("second install is not empty:\n%s", render(again))
@@ -218,7 +220,7 @@ func TestUninstallRestoresTheOriginalByteForByte(t *testing.T) {
 	m := newMachine(t)
 	m.apply(true)
 	out := render(m.plan(false))
-	for _, part := range []string{"Change ~/.claude/settings.json:", "Delete ~/.claude/skills/flashheart/SKILL.md.", "Run: claude mcp remove --scope user flashheart"} {
+	for _, part := range []string{"Change ~/.claude/settings.json:", "Delete ~/.claude/skills/flashheart/SKILL.md.", "Delete ~/.claude/skills/flashheart/references/questions.md.", "Delete ~/.claude/CLAUDE.md.", "Run: claude mcp remove --scope user flashheart"} {
 		if !strings.Contains(out, part) {
 			t.Fatalf("uninstall plan missing %q:\n%s", part, out)
 		}
@@ -227,8 +229,8 @@ func TestUninstallRestoresTheOriginalByteForByte(t *testing.T) {
 	if got := m.read(".claude/settings.json"); !bytes.Equal(got, m.original) {
 		t.Fatalf("settings after uninstall:\n%s", unifiedDiff("settings.json", m.original, got))
 	}
-	if m.exists(".claude/skills/flashheart") {
-		t.Fatal("skill not removed")
+	if m.exists(".claude/skills/flashheart") || m.exists(".claude/CLAUDE.md") {
+		t.Fatal("skill or CLAUDE.md not removed")
 	}
 	if last := m.ran[len(m.ran)-1]; !slices.Equal(last, []string{"mcp", "remove", "--scope", "user", "flashheart"}) {
 		t.Fatalf("commands = %v", m.ran)
@@ -532,5 +534,66 @@ func TestAnotherScopesServerIsLeftAlone(t *testing.T) {
 	plan := m.plan(true)
 	if len(plan.commands) != 1 || plan.commands[0][1] != "add-json" {
 		t.Fatalf("commands = %v", plan.commands)
+	}
+}
+
+// The global CLAUDE.md gains the marked section after the user's own text,
+// and loses only it again; a dotfiles link stays a link, edited at its
+// target (FH-189).
+func TestInstallAddsTheCLAUDEmdSectionAndKeepsTheUsersText(t *testing.T) {
+	t.Parallel()
+
+	mine := "# My rules\n\n- Be brief.\n"
+	for _, linked := range []bool{false, true} {
+		m := newMachine(t)
+		claudeMD := filepath.Join(m.home, ".claude", "CLAUDE.md")
+		target := claudeMD
+		if linked {
+			target = filepath.Join(m.home, "dotfiles", "CLAUDE.md")
+			m.write("dotfiles/CLAUDE.md", mine)
+			if err := os.Symlink(target, claudeMD); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			m.write(".claude/CLAUDE.md", mine)
+		}
+		out := m.apply(true)
+		if !strings.Contains(out, filepath.Base(filepath.Dir(target))+"/CLAUDE.md\n") {
+			t.Fatalf("linked %v: output:\n%s", linked, out)
+		}
+		if got, _ := os.ReadFile(target); string(got) != mine+"\n"+section("claude") {
+			t.Fatalf("linked %v: CLAUDE.md:\n%s", linked, got)
+		}
+		if again := m.plan(true); !again.Empty() {
+			t.Fatalf("linked %v: second install is not empty:\n%s", linked, render(again))
+		}
+		m.apply(false)
+		if got, _ := os.ReadFile(target); string(got) != mine {
+			t.Fatalf("linked %v: CLAUDE.md after uninstall = %q", linked, got)
+		}
+		if info, err := os.Lstat(claudeMD); err != nil || (info.Mode()&os.ModeSymlink != 0) != linked {
+			t.Fatalf("linked %v: CLAUDE.md is no longer what it was: %v", linked, err)
+		}
+	}
+}
+
+// Setup brings an install from before the skill had pages up to date and
+// uninstall leaves no folder behind.
+func TestInstallCompletesAnOlderSkillAndUninstallRemovesTheFolder(t *testing.T) {
+	t.Parallel()
+
+	m := newMachine(t)
+	m.write(".claude/skills/flashheart/SKILL.md", staleSkill)
+	out := render(m.plan(true))
+	for _, part := range []string{"Change ~/.claude/skills/flashheart/SKILL.md:", "Create ~/.claude/skills/flashheart/references/workstreams.md:"} {
+		if !strings.Contains(out, part) {
+			t.Fatalf("plan missing %q:\n%s", part, out)
+		}
+	}
+	m.apply(true)
+	checkSkillFolder(t, m.options.claudeSkillDir())
+	m.apply(false)
+	if m.exists(".claude/skills/flashheart") {
+		t.Fatal("the skill folder remains after uninstall")
 	}
 }

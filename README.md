@@ -174,7 +174,8 @@ flashheart setup codex
 ```
 
 This adds the MCP server to `~/.codex/config.toml`, its hooks to
-`hooks.json` and the protocol text to your global `AGENTS.md`. Codex runs
+`hooks.json`, the Flashheart skill to `~/.agents/skills` and a short
+pointer to it in your global `AGENTS.md`. Codex runs
 hooks only once you trust them: run `codex`, type `/hooks`, trust each
 Flashheart hook, then start a new thread. Details:
 [`docs/user/codex.md`](docs/user/codex.md).

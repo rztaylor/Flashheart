@@ -1,7 +1,6 @@
 package setup
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,19 +9,19 @@ import (
 	"strings"
 
 	"github.com/rztaylor/flashheart/internal/health"
-	"github.com/rztaylor/flashheart/internal/protocol"
 )
 
 // fix is the remedy doctor findings name.
 var fix = "run flashheart setup " + Claude{}.Name()
 
 // Diagnose checks Claude Code's configuration for Flashheart without
-// changing anything (SET-4): the hooks of §5.2, the MCP server and the
-// skill, each against what Install would write for o.
+// changing anything (SET-4): the hooks of §5.2, the MCP server, the skill
+// and the section of the global CLAUDE.md, each against what Install
+// would write for o.
 func (Claude) Diagnose(o Options) []health.Finding {
 	findings := o.diagnoseHooks()
 	findings = append(findings, o.diagnoseServer()...)
-	return append(findings, o.diagnoseSkill()...)
+	return append(findings, o.diagnoseSkill(o.claudeSkillDir(), fix), o.diagnoseSection(o.claudeMDPath(), Claude{}.Name(), fix))
 }
 
 func (o Options) diagnoseHooks() []health.Finding {
@@ -159,21 +158,4 @@ func (o Options) diagnoseServer() []health.Finding {
 		return []health.Finding{{Level: health.Warning, Text: fmt.Sprintf("MCP server: runs with %q, not %q; %s", strings.Join(server.args, " "), strings.Join(o.serverArgs(), " "), fix)}}
 	}
 	return []health.Finding{{Level: health.OK, Text: "MCP server: registered"}}
-}
-
-func (o Options) diagnoseSkill() []health.Finding {
-	var findings []health.Finding
-	skill, err := readFile(o.skillPath())
-	switch {
-	case err != nil:
-		findings = append(findings, health.Finding{Level: health.Problem, Text: fmt.Sprintf("Skill: cannot read it: %v", err)})
-	case skill == nil:
-		findings = append(findings, health.Finding{Level: health.Problem, Text: "Skill: not installed; " + fix})
-	case !bytes.Equal(skill, []byte(protocol.Skill())):
-		findings = append(findings, health.Finding{Level: health.Warning, Text: "Skill: out of date; " + fix})
-	}
-	if len(findings) == 0 {
-		findings = append(findings, health.Finding{Level: health.OK, Text: "Skill: up to date"})
-	}
-	return findings
 }

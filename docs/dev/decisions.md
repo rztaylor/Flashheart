@@ -2468,3 +2468,49 @@ checkpoint. To fit the line in the skill's 8 KiB budget, other lines were
 shortened, saying the same, and two clauses that repeat what a tool or
 the board shows were dropped (that moving to review warns without
 evidence, and that the board links a ticket's pull request).
+
+## 2026-10-22 — D89: The skill is a short guide with reference pages, installed for both agents
+
+The protocol skill was one file covering every moment of a session, held
+to 8 KiB by a test since the first rendered skill (2026-10-06), a budget
+with no recorded reason beyond keeping the text small. It had reached it:
+D87's handoff line fitted only by shortening other lines. Agents read the
+start of a skill most closely, so the essentials competed with detail
+needed at one moment (the review template), and Codex loaded the whole
+text from its global `AGENTS.md` in every session.
+
+The skill is now a folder (FH-189, agent-protocol §12): `SKILL.md`, a
+short guide with what Flashheart is for, the rules that are never broken,
+the session loop and a "Read before you…" table, and four reference pages
+read before the task each covers: writing tickets and handoffs, finishing
+and the review, questions and comments, and workstreams. Each file has
+its own budget (the guide 6 KiB, writing 4 KiB, the others 3 KiB), and
+the wording D87 shortened comes back. Claude Code and Codex install the
+same folder: Codex reads user skills from `~/.agents/skills` (checked in
+Codex 0.162's model-visible prompt), so it gets the skill rather than the
+text in `AGENTS.md`. A short marked section in each agent's global
+instructions file (`~/.claude/CLAUDE.md`, Codex's `AGENTS.md`), read in
+every session, says Flashheart tracks the work and to use the skill, so a
+session does not overlook it; in `AGENTS.md` it replaces the whole text.
+The section reuses the AGENTS.md markers and symlink handling (D53).
+
+Options: keep one file and raise the budget (the essentials still compete
+with detail, and Codex still loads everything); pages without the
+always-read section (a skill is chosen by its description, which a
+session may not match at the start); the section alone, with the full text
+in it as before (every session loads all of it). The user chose the
+folder plus the section.
+
+Upgrades need no setup run, so the protocol version stays 2: the rules,
+tools, events and hooks are unchanged, and the session-start refresh
+brings an install across. Claude Code's adds the pages beside a
+Flashheart `SKILL.md`. Codex's, beside a marked section from before this
+change, writes the missing skill first and then shrinks the section,
+which is the one time a refresh creates what was not there: the section
+shows setup was run, and shrinking it without the skill would lose the
+protocol. Claude Code's refresh never adds the `CLAUDE.md` section, which
+is the user's file; `doctor` warns until `setup claude` adds it. A missing
+section is a warning, not a problem, for both agents, since the skill
+works without it. Where `~/.claude/skills` and `~/.agents/skills` link to
+one folder (as on the user's machine), the agents share the skill, so
+uninstalling one leaves it while the other is set up.

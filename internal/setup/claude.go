@@ -90,7 +90,8 @@ func splitProgram(command string) (program, rest string, ok bool) {
 
 // Claude is Claude Code as a setup Agent: the hooks of §5.2 in
 // ~/.claude/settings.json, the MCP server registered through the claude
-// CLI, and the protocol skill under ~/.claude/skills.
+// CLI, the protocol skill under ~/.claude/skills, and the marked section
+// of the global ~/.claude/CLAUDE.md that points at it.
 type Claude struct{}
 
 var _ ProtocolRefresher = Claude{}
@@ -106,11 +107,9 @@ func (o Options) claudeTarget() target {
 	return target{title: Claude{}.Title(), command: Claude{}.Name(), backups: o.backupsPath(), options: o}
 }
 
-func (o Options) claudeDir() string    { return filepath.Join(o.Home, ".claude") }
-func (o Options) settingsPath() string { return filepath.Join(o.claudeDir(), "settings.json") }
-func (o Options) skillPath() string {
-	return filepath.Join(o.claudeDir(), "skills", protocol.SkillName, "SKILL.md")
-}
+func (o Options) claudeDir() string      { return filepath.Join(o.Home, ".claude") }
+func (o Options) settingsPath() string   { return filepath.Join(o.claudeDir(), "settings.json") }
+func (o Options) claudeMDPath() string   { return filepath.Join(o.claudeDir(), "CLAUDE.md") }
 func (o Options) retiredPath() string    { return filepath.Join(o.claudeDir(), "skills", retiredSkill) }
 func (o Options) backupsPath() string    { return filepath.Join(o.claudeDir(), backupDir) }
 func (o Options) claudeJSONPath() string { return filepath.Join(o.Home, ".claude.json") }
@@ -136,9 +135,6 @@ func (o Options) serverArgs() []string {
 	}
 	return args
 }
-
-// skillBackup is the skill's name inside a backup folder.
-var skillBackup = filepath.Join("skills", protocol.SkillName, "SKILL.md")
 
 // readUserSettings reads settings.json and checks the hooks setup edits.
 func (o Options) readUserSettings() (string, []byte, *value, error) {
@@ -392,7 +388,8 @@ func (o Options) registeredInFile() registration {
 }
 
 // Install plans Claude Code's configuration for Flashheart (SET-1, SET-2):
-// every hook of §5.2, the MCP server and the protocol skill.
+// every hook of §5.2, the MCP server, the protocol skill and the section
+// of the global CLAUDE.md.
 func (Claude) Install(o Options) (*Plan, error) {
 	p := newPlan(o.claudeTarget(), false)
 	settings, data, tree, err := o.readUserSettings()
@@ -402,12 +399,11 @@ func (Claude) Install(o Options) (*Plan, error) {
 	if after := o.installedSettings(data, tree); !bytes.Equal(after, data) {
 		p.files = append(p.files, change{path: settings, backup: "settings.json", before: data, after: after})
 	}
-	skill, err := readFile(o.skillPath())
-	if err != nil {
+	if err := p.planSkill(o.claudeSkillDir()); err != nil {
 		return nil, err
 	}
-	if want := []byte(protocol.Skill()); !bytes.Equal(skill, want) {
-		p.files = append(p.files, change{path: o.skillPath(), backup: skillBackup, before: skill, after: want})
+	if err := p.planSection(o.claudeMDPath(), Claude{}.Name(), o.backupsPath(), false); err != nil {
+		return nil, err
 	}
 	config, _ := json.Marshal(map[string]any{"type": "stdio", "command": o.Binary, "args": o.serverArgs()})
 	server := o.registered()
@@ -427,7 +423,9 @@ func (Claude) Install(o Options) (*Plan, error) {
 
 // Uninstall plans the reverse of Install. When settings.json is just as
 // setup left it, the backup taken then is restored byte for byte;
-// otherwise only setup's own hooks are removed.
+// otherwise only setup's own hooks are removed. Only the marked section of
+// CLAUDE.md goes, and the file too when setup created it and nothing else
+// is left.
 func (Claude) Uninstall(o Options) (*Plan, error) {
 	p := newPlan(o.claudeTarget(), true)
 	settings, data, tree, err := o.readUserSettings()
@@ -439,16 +437,11 @@ func (Claude) Uninstall(o Options) (*Plan, error) {
 		p.files = append(p.files, change{path: settings, backup: "settings.json", before: data, after: after})
 	}
 	// Only setup's own skill goes; one the user had before is put back.
-	if skill, err := readFile(o.skillPath()); err != nil {
+	if err := p.planSharedSkillRemoval(o.claudeSkillDir(), o.backupsPath(), Codex{}.Title(), o.codexConfigured()); err != nil {
 		return nil, err
-	} else if skill != nil && bytes.Contains(skill, []byte("flashheart-protocol:")) {
-		var theirs []byte
-		if saved := latestBackup(o.backupsPath(), skillBackup); saved != "" {
-			if data, err := os.ReadFile(saved); err == nil && !bytes.Contains(data, []byte("flashheart-protocol:")) {
-				theirs = data
-			}
-		}
-		p.files = append(p.files, change{path: o.skillPath(), backup: skillBackup, before: skill, after: theirs, removeDir: true})
+	}
+	if err := p.planSection(o.claudeMDPath(), Claude{}.Name(), o.backupsPath(), true); err != nil {
+		return nil, err
 	}
 	// A kanban-tracker skill an earlier setup moved aside goes back (D55).
 	if _, err := os.Stat(o.retiredPath()); errors.Is(err, fs.ErrNotExist) {

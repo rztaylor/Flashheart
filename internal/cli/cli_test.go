@@ -910,7 +910,7 @@ func TestSetupCodexShowsThenWritesThenUninstalls(t *testing.T) {
 		t.Fatal("setup wrote ~/.codex although CODEX_HOME is set")
 	}
 	_, stdout, _ = h.run("doctor", "--root", root)
-	for _, want := range []string{"\nCodex\n  ok       MCP server: configured", "  ok       Protocol text: up to date"} {
+	for _, want := range []string{"\nCodex\n  ok       MCP server: configured", "  ok       Skill: up to date in ~/.agents/skills/flashheart", "  ok       Global AGENTS.md: Flashheart section up to date"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("doctor lacks %q:\n%s", want, stdout)
 		}
@@ -922,6 +922,9 @@ func TestSetupCodexShowsThenWritesThenUninstalls(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(codexHome, name)); err == nil {
 			t.Errorf("%s remains after uninstall", name)
 		}
+	}
+	if _, err := os.Stat(filepath.Join(h.home, ".agents", "skills", "flashheart")); err == nil {
+		t.Error("the skill remains after uninstall")
 	}
 }
 
@@ -945,8 +948,10 @@ func TestClaudeSessionStartRefreshesTheInstalledSkill(t *testing.T) {
 	if code != 0 || stderr != "" || !strings.Contains(stdout, "flashheart skill was updated") {
 		t.Fatalf("hook = %d, %q, %q", code, stdout, stderr)
 	}
-	if got, _ := os.ReadFile(skill); string(got) != protocol.Skill() {
-		t.Fatalf("skill not refreshed:\n%s", got)
+	for _, file := range protocol.SkillFiles() {
+		if got, _ := os.ReadFile(filepath.Join(filepath.Dir(skill), file.Path)); string(got) != file.Text {
+			t.Fatalf("%s not refreshed:\n%s", file.Path, got)
+		}
 	}
 }
 
@@ -983,11 +988,13 @@ func TestCodexSessionStartRefreshesTheProtocolText(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &out); err != nil {
 		t.Fatalf("output %q: %v", stdout, err)
 	}
-	if want := protocol.AgentsUpdatedNote(agents) + "\n"; !strings.HasPrefix(out.HookSpecificOutput.AdditionalContext, want) {
+	// The section held the whole protocol before the skill folder (D89):
+	// the skill is installed beside it, then the section shrinks.
+	if want := protocol.SkillUpdatedNote + "\n" + protocol.SectionUpdatedNote(agents) + "\n"; !strings.HasPrefix(out.HookSpecificOutput.AdditionalContext, want) {
 		t.Fatalf("context = %q, want it to open with %q", out.HookSpecificOutput.AdditionalContext, want)
 	}
 	got, _ := os.ReadFile(agents)
-	if !strings.Contains(string(got), protocol.Body()) || strings.Contains(string(got), "An older version of the protocol text.") {
+	if !strings.Contains(string(got), protocol.AlwaysRead()) || strings.Contains(string(got), "An older version of the protocol text.") {
 		t.Fatalf("section not refreshed:\n%s", got)
 	}
 	for _, mine := range []string{"# My global rules\n\n- Answer in British English.\n\n<!-- BEGIN FLASHHEART", "<!-- END FLASHHEART -->\n\n## More of my rules\n\n- Keep commits small.\n"} {
@@ -998,9 +1005,14 @@ func TestCodexSessionStartRefreshesTheProtocolText(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(h.home, ".codex")); err == nil {
 		t.Fatal("the hook wrote ~/.codex although CODEX_HOME is set")
 	}
+	for _, file := range protocol.SkillFiles() {
+		if got, _ := os.ReadFile(filepath.Join(h.home, ".agents", "skills", "flashheart", file.Path)); string(got) != file.Text {
+			t.Fatalf("the skill's %s was not installed in ~/.agents/skills", file.Path)
+		}
+	}
 
-	// The next session start finds it current and says nothing about it.
-	if _, stdout, _ = h.run("hook", "codex", "SessionStart", "--root", root); strings.Contains(stdout, "AGENTS.md was updated") {
+	// The next session start finds both current and says nothing about them.
+	if _, stdout, _ = h.run("hook", "codex", "SessionStart", "--root", root); strings.Contains(stdout, "was updated") {
 		t.Fatalf("a current section was reported updated: %q", stdout)
 	}
 }

@@ -71,7 +71,7 @@ func TestDiagnoseCodexHealthy(t *testing.T) {
 		if len(problems)+len(warnings) != 0 {
 			t.Fatalf("%q: problems %q, warnings %q", fixture, problems, warnings)
 		}
-		want := []string{"MCP server: configured", "Hooks: all 11 installed", "Protocol text: up to date"}
+		want := []string{"MCP server: configured", "Hooks: all 11 installed", "Skill: up to date in ~/.agents/skills/flashheart", "Global AGENTS.md: Flashheart section up to date"}
 		if len(ok) != len(want) {
 			t.Fatalf("%q: ok = %q", fixture, ok)
 		}
@@ -89,13 +89,17 @@ func TestDiagnoseCodexUnconfigured(t *testing.T) {
 	m := newCodexMachine(t, "user")
 	m.options.Binary = binary(t, m.home, "bin/flashheart")
 	problems, warnings, _ := diagnoseCodex(t, m.options)
-	if len(problems) != 3 || len(warnings) != 0 {
+	if len(problems) != 3 || len(warnings) != 1 {
 		t.Fatalf("problems %q, warnings %q", problems, warnings)
 	}
-	for index, want := range []string{"MCP server: not in ~/.codex/config.toml", "Hooks: none installed", "Protocol text: not in ~/.codex/AGENTS.md"} {
+	for index, want := range []string{"MCP server: not in ~/.codex/config.toml", "Hooks: none installed", "Skill: not installed in ~/.agents/skills/flashheart"} {
 		if !strings.HasPrefix(problems[index], want) || !strings.Contains(problems[index], codexFix) {
 			t.Errorf("problem %d = %q, want %q with the fix", index, problems[index], want)
 		}
+	}
+	// Without the section the skill still works, but may be overlooked.
+	if !strings.HasPrefix(warnings[0], "Global AGENTS.md: no Flashheart section in ~/.codex/AGENTS.md") || !strings.Contains(warnings[0], codexFix) {
+		t.Errorf("warning = %q", warnings[0])
 	}
 }
 
@@ -126,6 +130,7 @@ func TestDiagnoseCodexStaleSetup(t *testing.T) {
 		"MCP server: runs " + old + ", which does not exist",
 		"Hooks: missing for UserPromptSubmit, PermissionRequest",
 		"Hooks: run " + old + ", which does not exist",
+		"Skill: not installed",
 	} {
 		if !containsPrefix(problems, want) {
 			t.Errorf("no problem %q in %q", want, problems)
@@ -137,7 +142,7 @@ func TestDiagnoseCodexStaleSetup(t *testing.T) {
 		}
 	}
 	if len(warnings) != 2 || !strings.HasPrefix(warnings[0], "Hooks: also installed for PreToolUse, which setup no longer registers") ||
-		!strings.HasPrefix(warnings[1], "Protocol text: out of date") || !strings.Contains(warnings[0], codexFix) || !strings.Contains(warnings[1], codexFix) {
+		!strings.HasPrefix(warnings[1], "Global AGENTS.md: Flashheart section out of date") || !strings.Contains(warnings[0], codexFix) || !strings.Contains(warnings[1], codexFix) {
 		t.Fatalf("warnings = %q", warnings)
 	}
 
@@ -163,9 +168,9 @@ func TestDiagnoseCodexServerArgumentsAndBrokenFiles(t *testing.T) {
 
 	m.write("config.toml", "model = \"unterminated\n")
 	m.write("hooks.json", "{ nope")
-	m.write("AGENTS.md", agentsBegin+"\nno end\n")
+	m.write("AGENTS.md", sectionBegin("codex")+"\nno end\n")
 	problems, _, _ := diagnoseCodex(t, m.options)
-	if len(problems) != 3 || !strings.HasPrefix(problems[0], "MCP server: cannot read") || !strings.HasPrefix(problems[1], "Hooks: cannot read") || !strings.HasPrefix(problems[2], "Protocol text: cannot read") {
+	if len(problems) != 3 || !strings.HasPrefix(problems[0], "MCP server: cannot read") || !strings.HasPrefix(problems[1], "Hooks: cannot read") || !strings.HasPrefix(problems[2], "Global AGENTS.md: cannot read") {
 		t.Fatalf("problems = %q", problems)
 	}
 }
@@ -308,4 +313,22 @@ func containsPrefix(list []string, prefix string) bool {
 		}
 	}
 	return false
+}
+
+// Each skill file is checked: a page missing or edited is named.
+func TestDiagnoseCodexAnOutOfDateSkill(t *testing.T) {
+	t.Parallel()
+
+	m := installedCodex(t, "user")
+	dir := m.options.codexSkillDir()
+	if err := os.Remove(filepath.Join(dir, "references", "questions.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(staleSkill), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	problems, warnings, _ := diagnoseCodex(t, m.options)
+	if len(problems) != 0 || len(warnings) != 1 || !strings.HasPrefix(warnings[0], "Skill: out of date in ~/.agents/skills/flashheart (SKILL.md, references/questions.md)") || !strings.Contains(warnings[0], codexFix) {
+		t.Fatalf("problems %q, warnings %q", problems, warnings)
+	}
 }
