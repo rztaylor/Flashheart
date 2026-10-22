@@ -31,6 +31,7 @@ scripts/check.sh    # frontend lint, unit tests and build; Go format, vet, tests
 scripts/e2e.sh      # Playwright lifecycle, accessibility and screenshots (visible UI changes)
 scripts/e2e-visual.sh   # compare the stable screenshots in Docker; --update-snapshots after a visual change
 scripts/readme-screenshots.sh   # regenerate the README images in docs/images (--no-build reuses the binary)
+scripts/readme-diagram.sh       # render the README's How it works diagram from docs/images/src/how-it-works.svg
 ```
 
 The README's screenshots show an invented showcase board

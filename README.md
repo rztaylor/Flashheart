@@ -6,12 +6,13 @@
 the agents keep up to date themselves.**
 
 You run Claude Code and Codex sessions across several repositories, often
-in parallel and often unattended. Flashheart shows all of them on one board:
-which agents are working, which have gone quiet, and which are waiting for
-you. Agents find their work on the board, tick off acceptance criteria,
-leave handoffs, ask you questions and write reviews, on the same tickets you
-read. When a session dies, runs out of context or is replaced, the next one
-(in either agent) is told where the work stood and carries on.
+in parallel and often unattended. Flashheart puts all of that work on one
+board: which tickets agents are working on, what is ready for your review
+and which sessions are waiting for you. Agents find their work on the
+board, tick off acceptance criteria, leave handoffs, ask you questions and
+write reviews, on the same tickets you read. When a session dies, runs out
+of context or is replaced, the next one (in either agent) picks up the
+ticket's handoff and carries on.
 
 It is a single binary that runs on your machine. The tickets are plain
 markdown files you own; nothing leaves your computer.
@@ -21,16 +22,40 @@ markdown files you own; nothing leaves your computer.
 *The board for one project. The rail on the left switches projects; the
 orange badge counts the sessions waiting on you.*
 
+## Set up in three steps
+
+1. **Install** the binary for macOS or Linux from the
+   [Releases page](https://github.com/rztaylor/Flashheart/releases/latest)
+   and put it on your `PATH` ([script](#1-install)).
+2. **Connect your agents**, either or both:
+
+   ```bash
+   flashheart setup claude
+   ```
+
+   ```bash
+   flashheart setup codex
+   ```
+
+3. **Open the board**, then ask an agent in any git repository to
+   *"tackle the two top-priority bugs"*:
+
+   ```bash
+   flashheart
+   ```
+
+Each step is covered in detail [below](#setup-in-detail).
+
 ## Features
 
 ### One board across all your projects
 
 Every repository gets its own project with a short ticket key (`FH-42`).
 Columns for Backlog, Up next, In progress, Ready to review and Done; a
-table view; filters by type, priority, workstream and state; search; and a
-**Needs you** chip that collects every session waiting on you, in every
-project. Cards show the agent working on them, how long ago it last did
-something, and anything blocking them.
+table view; filters by type, priority, workstream, age and state; search;
+and a **Needs you** chip that shows the tickets waiting on you, across
+every project. Cards show whether an agent is on them and what it is
+doing, when they last changed and what blocks them.
 
 ### Workstreams with dependency graphs
 
@@ -53,8 +78,9 @@ criteria.
 
 The Overview is for the project manager in you: the pipeline across every
 project, the decisions agents are waiting on, the work ready for your
-review, what is at risk, and the sessions in progress (Claude Code and
-Codex, with their subagents).
+review, what is at risk (a session gone quiet, work no session is
+holding) and the sessions in progress, Claude Code and Codex, with their
+subagents.
 
 ![The All projects Overview: a pipeline of ticket counts, a projects table, a question waiting for a decision, five tickets ready for review, two at risk and four in progress with their sessions](docs/images/overview.png)
 
@@ -66,12 +92,13 @@ Codex, with their subagents).
   ticks criteria as they pass, files tickets for follow-up work and
   checkpoints its progress.
 - **Sessions you can lose.** Each checkpoint rewrites the ticket's handoff:
-  what is done, what is next, the files that matter and open questions. A
-  new session is handed it when it starts and carries on, in Claude Code
-  or Codex.
+  what is done, what is next, the files that matter and open questions.
+  The next session, in Claude Code or Codex, is pointed at it when it
+  starts and carries on from it.
 - **Questions that reach you.** When an agent needs a decision it asks on
-  the board, with its options. The card lights up as Needs you, and your
-  answer wakes the session.
+  the board, with its options, and the card lights up as Needs you. Your
+  answer goes straight back to a session that is waiting for it, or
+  arrives with its next prompt.
 
 ![A ticket's panel open beside the board: an agent's question with two one-click answers and a free-text box, above the ticket's handoff](docs/images/question.png)
 
@@ -79,8 +106,8 @@ Codex, with their subagents).
 
 Agents finish by writing a review: a summary, captioned screenshots, steps
 to verify and risks, copied into the ticket so they outlive the agent's
-worktree. You request changes on the ticket page and the session picks them
-up; only you move a ticket to Done.
+worktree. You request changes on the ticket page and the agent picks them
+up on its next turn; only you move a ticket to Done.
 
 ![A ticket page in review: a resolved change request, the handoff, ticked acceptance criteria, the description and the agent's review with a screenshot as evidence](docs/images/ticket.png)
 
@@ -100,16 +127,17 @@ up; only you move a ticket to Done.
 *All screenshots are of an invented board, generated by
 `scripts/readme-screenshots.sh`.*
 
-## Easy setup
+## Setup in detail
 
-### 1. Download Flashheart
+Flashheart runs on macOS (Apple silicon and Intel) and Linux (x86-64 and
+ARM).
 
-Prebuilt binaries for macOS (Apple silicon and Intel) and Linux (x86-64
-and ARM) are on the
-[Releases page](https://github.com/rztaylor/Flashheart/releases/latest),
-named `flashheart_<version>_<os>_<arch>.tar.gz`, with a `SHA256SUMS` file.
-To download the right one for this machine, check it and install it to
-`~/.local/bin`:
+### 1. Install
+
+Each [release](https://github.com/rztaylor/Flashheart/releases/latest)
+has a `flashheart_<version>_<os>_<arch>.tar.gz` per platform and a
+`SHA256SUMS` file. This downloads the right one, checks it and installs it
+to `~/.local/bin`:
 
 ```bash
 os=$(uname -s | tr '[:upper:]' '[:lower:]')   # darwin or linux
@@ -123,114 +151,86 @@ grep " ${file}\$" SHA256SUMS | shasum -a 256 -c -
 tar -xzf "$file" && mkdir -p ~/.local/bin && mv flashheart ~/.local/bin/
 ```
 
-The checksum line prints `OK` for a good download. Make sure
-`~/.local/bin` is on your `PATH` (or put the binary anywhere else that is),
-then check it runs:
+The checksum line prints `OK`. With `~/.local/bin` on your `PATH`,
+`flashheart version` prints the version.
 
-```bash
-flashheart version
-```
-
-On macOS, a binary downloaded **through a browser** is quarantined and
-refused by Gatekeeper, because releases are not yet signed. Clear the flag
-once:
+On macOS, if you downloaded the archive with a browser instead, clear
+Gatekeeper's quarantine flag once:
 
 ```bash
 xattr -d com.apple.quarantine ~/.local/bin/flashheart
 ```
 
-Then open the board:
-
-```bash
-flashheart
-```
-
-It opens a private tab in your browser and gives you the terminal back. The
-server stops when you choose **Quit** in the board or close its last tab.
-Tickets live in `~/reports/Kanban` unless you pass `--root` or set
-`FLASHHEART_ROOT`.
-
 ### 2. Connect your agents
 
-Each `setup` command shows its changes as a diff, asks before writing and
-backs up every file it changes. Run it again after moving the binary.
+`setup` shows its changes as a diff, asks before writing and backs up
+every file it writes. Run it again if you move the binary.
 
 **Claude Code** (CLI, IDE extensions and the desktop app's Code tab):
-
-```bash
-flashheart setup claude
-```
-
-This adds Flashheart's hooks to `~/.claude/settings.json`, registers the
-`flashheart` MCP server for every project and installs the Flashheart
-skill, which tells the model when to claim, checkpoint, ask and finish.
-Start a new session afterwards. Details:
-[`docs/user/claude-code.md`](docs/user/claude-code.md).
+`flashheart setup claude` adds the hooks to `~/.claude/settings.json`,
+registers the `flashheart` MCP server for every project (through the
+`claude` CLI) and installs the Flashheart skill, which tells the model
+when to claim, checkpoint, ask and finish. Start a new session afterwards.
+More in [`docs/user/claude-code.md`](docs/user/claude-code.md).
 
 **Codex** (CLI, IDE extension and the ChatGPT app):
-
-```bash
-flashheart setup codex
-```
-
-This adds the MCP server to `~/.codex/config.toml`, its hooks to
-`hooks.json` and the protocol text to your global `AGENTS.md`. Codex runs
-hooks only once you trust them: run `codex`, type `/hooks`, trust each
-Flashheart hook, then start a new thread. Details:
+`flashheart setup codex` adds the MCP server to `~/.codex/config.toml`,
+the hooks to `hooks.json` and the protocol to your global `AGENTS.md`.
+Codex runs hooks only once you trust them: run `codex`, type `/hooks`,
+trust each Flashheart hook, then start a new thread. More in
 [`docs/user/codex.md`](docs/user/codex.md).
 
-Check the result at any time; it changes nothing:
+`flashheart doctor` checks the result and changes nothing.
+`flashheart setup claude --uninstall` (or `codex`) removes Flashheart's
+entries and nothing else.
 
-```bash
-flashheart doctor
-```
+### 3. Open the board
 
-To undo either, run `flashheart setup claude --uninstall` or
-`flashheart setup codex --uninstall`; Flashheart removes only its own
-entries.
+`flashheart` opens the board in your browser and gives you the terminal
+back. It stops when you choose **Quit** or close its last tab. Tickets
+live in `~/reports/Kanban`; pass `--root` or set `FLASHHEART_ROOT` to
+keep them elsewhere.
 
-Then just ask in plain words, in any git repository: *"tackle the two
+Then ask in plain words, in any git repository: *"tackle the two
 top-priority bugs"*, *"look at FH-42"*, *"pick up where the last session
-left off"*.
+left off"*. A repository's project appears on the board the first time an
+agent works in it.
 
-### 3. Bring your existing todo list
+### Bring your existing todo list
 
 Already tracking work in a `TODO.md`, a roadmap, a tasks folder or
 comments in code? [`docs/user/migrating.md`](docs/user/migrating.md) has
-a prompt to paste into Claude Code or Codex. The agent finds whatever
-planning your repository has, whatever its format, proposes tickets,
-workstreams and dependencies, and creates them on the board only once you
-approve. It leaves your old files alone unless you ask.
+a prompt to paste into Claude Code or Codex. The agent finds your
+planning, whatever its format, proposes tickets, workstreams and
+dependencies, and creates them on the board once you approve. Your old
+files stay as they are unless you ask.
 
 ## How it works
 
-```text
-Claude Code / Codex ──hooks──▶ flashheart hook …   ─┐  append events,
-        └──────────MCP──────▶ flashheart mcp     ─┤  update tickets
-Obsidian / your editor ─────────────────────────────┤
-                                                      ▼
-                                  ~/reports/Kanban/<project>/  (markdown + event log)
-                                                      ▲
-Browser ◀── loopback, authenticated ──▶ flashheart serve (watches the files)
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/how-it-works-dark.png">
+  <img src="docs/images/how-it-works-light.png" width="1040" alt="Claude Code and Codex reach Flashheart through hooks (flashheart hook, which records events) and MCP (flashheart mcp, which updates tickets). Both write the board files in ~/reports/Kanban, which Obsidian or any editor can also edit directly. flashheart serve watches and writes the same files and serves the board to your browser over an authenticated loopback connection. Everything runs on your computer.">
+</picture>
 
 - **Files are the truth.** One folder per ticket
   (`tickets/FH-42-<slug>/`), its column in frontmatter. See
   [`docs/dev/specs/board-format.md`](docs/dev/specs/board-format.md).
 - **Hooks do the bookkeeping;** the model only reports what only it knows.
   Hooks are fast, quiet and fail open: Flashheart failing never breaks an
-  agent session. See
+  agent session. The one exception is opt-in: a project can have
+  Flashheart ask a session once to checkpoint before it stops. See
   [`docs/dev/specs/agent-protocol.md`](docs/dev/specs/agent-protocol.md).
 - **Observe, don't host.** Flashheart coordinates the agents you already
   run in their own apps; it does not run, proxy or supervise them.
 
-## Status
+## Upgrades
 
-Early development, before 1.0: no compatibility promise yet. The board,
-workstreams, Overview, agent runs, questions and reviews, and setup for
-Claude Code and Codex all work and are used daily to build Flashheart
-itself. Not yet: Windows, signed macOS binaries and a Homebrew tap. See the
-[roadmap](docs/dev/roadmap.md) and [changelog](CHANGELOG.md).
+Flashheart is built with Flashheart: its own board runs every day of its
+development, so upgrades keep your boards working. Every release reads the
+boards earlier releases wrote. If the way agents talk to Flashheart
+changes, the agent protocol's version goes up and the release notes tell
+you to run `setup` again. See the [changelog](CHANGELOG.md) for what each
+release changed and the [roadmap](docs/dev/roadmap.md) for what is next.
 
 ## Building from source
 
@@ -243,6 +243,7 @@ scripts/package.sh                  # release archives into build/dist (docs/dev
 scripts/check.sh                    # lint, unit tests, builds, vet, race tests
 scripts/e2e.sh                      # Playwright lifecycle, axe and screenshots
 scripts/e2e-visual.sh               # screenshot comparison in Docker (--update-snapshots)
+scripts/readme-diagram.sh           # render the How it works diagram from docs/images/src
 ```
 
 The scripts reinstall the frontend packages when `frontend/package-lock.json`

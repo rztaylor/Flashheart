@@ -716,6 +716,18 @@ All notable changes to this project are documented here. The project follows
 
 ### Changed
 
+- Boards stay compatible across releases, before v1.0.0 as after (D88,
+  FH-188): every release reads the boards earlier releases wrote without
+  a manual step, and a release that cannot is blocked. Commands, the HTTP
+  API and the UI may still change before v1.0.0.
+- The README says only what Flashheart does today (FH-188): the board
+  shows which sessions wait for you (the Overview lists those gone
+  quiet), answers reach a session that is waiting or arrive with its next
+  prompt, and the opt-in handoff enforcement is named. It opens with
+  setup in three steps, keeps the full instructions further down, says
+  where Flashheart runs and how upgrades keep boards working, and draws
+  How it works as an image for GitHub's light and dark themes, rendered
+  from `docs/images/src/how-it-works.svg` by `scripts/readme-diagram.sh`.
 - The README is written for someone meeting Flashheart for the first time
   (FH-182): what it is for, its features in a short illustrated tour of
   the showcase board (FH-180), and an Easy setup guide that downloads and

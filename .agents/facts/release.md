@@ -1,7 +1,9 @@
 # Release facts
 
-- Maturity: pre-release, no compatibility promise before v1.0.0. The agent
-  protocol has its own `PROTOCOL_VERSION`.
+- Maturity: before v1.0.0, but boards are kept compatible (D88): every
+  release reads the boards earlier releases wrote, without a manual step.
+  The agent protocol has its own `PROTOCOL_VERSION`; a change that is not
+  additive bumps it and the release notes say to re-run `setup`.
 - Licence: MIT; text in `LICENSE`.
 - Versioning: Semantic Versioning; tags `vMAJOR.MINOR.PATCH`.
 - Changelog: `CHANGELOG.md`; governance: `docs/dev/ops/release-governance.md`.
