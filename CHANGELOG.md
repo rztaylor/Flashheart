@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- A ticket's history keeps the questions agents asked about it and what
+  became of them (FH-190, D89): the question and its choices when it is
+  asked, then the answer and who gave it on the board, or that it was
+  answered in the session's own chat, or that the session ended with it
+  still open. They show in the ticket's Activity under All and History
+  after the run that asked has left the two-day run window, once each.
+  Older questions, and outcomes that happened while Flashheart's board
+  was not running for two days, are not recovered.
 - Agents write handoffs a person can follow (FH-187). The handoff is the
   first thing you read on a ticket, but agents wrote it as notes to the
   next agent: paragraphs of type names, signatures and rules. The

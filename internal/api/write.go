@@ -25,6 +25,7 @@ import (
 type Writer interface {
 	ReadTicket(project, id string) ([]byte, string, error)
 	UpdateTicket(project, id string, pre store.Precondition, edit store.Edit) (string, error)
+	UpdateTicketNoting(project, id string, pre store.Precondition, edit store.Edit, noted ...board.Change) (string, error)
 	EditTicket(project, id string, pre store.Precondition, changes board.FieldChanges, edit store.Edit) (string, error)
 	UpdateReview(project, id string, pre store.Precondition, edit store.Edit) (string, error)
 	PlaceTicket(project, id string, pre store.Precondition, after string, edit store.Edit) (string, bool, error)

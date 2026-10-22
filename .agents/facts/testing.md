@@ -160,6 +160,16 @@
   note and skeleton, with screenshots named `state-error-*`,
   `state-stale-*` and `state-loading-*`.
 - Run-state and blocking logic are table tests with a fake clock.
+- Questions in a ticket's history (FH-190): the bullets, their text
+  lines, limits and a hostile answer kept inside its entry in `board`
+  (`questionhistory_test.go`); once per question and outcome, dating and
+  the board answer's one write in `store`; `ask_human`'s entry in
+  `mcpserver`; the outcomes serve records from a fold in
+  `questionhistory`; the merge with the run window and the History
+  filter in `model/activity.test.ts`; in the browser,
+  `question-history.spec.mjs` answers on the board and in the chat,
+  shifts the log three days back with serve stopped and reads the
+  questions back from History.
 - An agent's rewrite (FH-69, D75): which sections, criteria operations
   and what a rewrite replaced are table tests in `board`
   (`rewrite_test.go`, with a corpus check that criteria edits leave the

@@ -55,9 +55,10 @@ type HistoryJSON struct {
 }
 
 // ChangeJSON is one thing a write changed (board.Change): what is created,
-// moved, edited, ticked, unticked, archived, restored, or a comment's
-// state: change-requested, addressed, resolved or reopened, or deleted
-// comments.
+// moved, edited, ticked, unticked, archived, restored, a comment's
+// state: change-requested, addressed, resolved or reopened, deleted
+// comments, or a question asked, answered, answered-in-session or
+// session-ended.
 type ChangeJSON struct {
 	What     string   `json:"what"`
 	From     string   `json:"from"`
@@ -68,6 +69,20 @@ type ChangeJSON struct {
 	// Comments are the ids of the comments whose state changed (FH-126),
 	// or that were deleted (FH-140).
 	Comments []string `json:"comments"`
+	// Question is the question an asked, answered, answered-in-session
+	// or session-ended change is about, with its text (FH-190).
+	Question *QuestionChangeJSON `json:"question,omitempty"`
+}
+
+// QuestionChangeJSON is a question in the ticket's history (FH-190): its
+// id, and as far as the change records them its kind, text, options and
+// the answer given on the board.
+type QuestionChangeJSON struct {
+	ID      string   `json:"id"`
+	Kind    string   `json:"kind"`
+	Text    string   `json:"text"`
+	Options []string `json:"options"`
+	Answer  string   `json:"answer"`
 }
 
 // CommentRequest is POST /api/tickets/{id}/comments. SendTo, when set,
@@ -313,10 +328,15 @@ func activityJSON(activity board.Activity, snapshot *index.Snapshot) ([]CommentJ
 	for _, entry := range activity.History {
 		changes := make([]ChangeJSON, 0, len(entry.Changes))
 		for _, change := range entry.Changes {
-			changes = append(changes, ChangeJSON{
+			item := ChangeJSON{
 				What: change.What, From: change.From, To: change.To,
 				Fields: nonNil(change.Fields), Criteria: nonNil(change.Criteria), Steps: nonNil(change.Steps), Comments: nonNil(change.Comments),
-			})
+			}
+			if board.IsQuestionChange(change.What) {
+				q := change.Question
+				item.Question = &QuestionChangeJSON{ID: q.ID, Kind: q.Kind, Text: q.Text, Options: nonNil(q.Options), Answer: q.Answer}
+			}
+			changes = append(changes, item)
 		}
 		history = append(history, HistoryJSON{
 			ID: entry.ID, Time: entry.Time.UTC().Format(time.RFC3339), By: entry.By, ByShort: shortAuthor(entry.By), ByPerson: board.ByPerson(entry.By), Changes: changes,

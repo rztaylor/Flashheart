@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/rztaylor/flashheart/internal/board"
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/protocol"
 	"github.com/rztaylor/flashheart/internal/scrub"
@@ -39,13 +40,13 @@ func (srv *server) askHuman(c *call, input AskHumanInput) (string, error) {
 			options = append(options, option)
 		}
 	}
-	ticketID := ""
+	ticketID, ticketProject := "", ""
 	if strings.TrimSpace(input.Ticket) != "" {
-		_, ticket, err := c.target(input.Ticket)
+		in, ticket, err := c.target(input.Ticket)
 		if err != nil {
 			return "", err
 		}
-		ticketID = ticket.ID
+		ticketID, ticketProject = ticket.ID, in.Name
 	}
 	project := c.project
 	if project == "" {
@@ -63,6 +64,15 @@ func (srv *server) askHuman(c *call, input AskHumanInput) (string, error) {
 	if err := c.record(project, events.Event{Kind: events.QuestionAsked, Data: events.QuestionData{ID: id, Ticket: ticketID, Kind: kind, Text: text, Options: options}}); err != nil {
 		return "", err
 	}
+	// The ticket keeps the question in its history (FH-190). The question
+	// is asked once it is in the log, so a failure here is only reported.
+	kept := ""
+	if ticketID != "" {
+		change := board.Change{What: board.ChangeAsked, Question: board.QuestionRecord{ID: id, Kind: kind, Text: text, Options: options}}
+		if _, err := c.files().RecordQuestion(ticketProject, ticketID, c.now, change); err != nil {
+			kept = fmt.Sprintf("The question could not be added to %s's history: %v.\n", ticketID, err)
+		}
+	}
 	// The await command wakes an agent that can run background commands
 	// as soon as the answer is given (agent-protocol §7.5).
 	command := protocol.AwaitCommand(srv.options.Binary, srv.options.Root, project, id)
@@ -78,7 +88,7 @@ func (srv *server) askHuman(c *call, input AskHumanInput) (string, error) {
 		how = " (Claude Code: Bash with run_in_background)"
 	}
 	return fmt.Sprintf("Asked the human (%s). Your session shows as Needs you on the board; %s. Carry on with other work if you can.\n"+
-		"To get the answer as soon as it is given, run this as a background command that wakes you when it exits%s:\n%s\nok question=%s\n", kind, arrives, how, command, id), nil
+		"%sTo get the answer as soon as it is given, run this as a background command that wakes you when it exits%s:\n%s\nok question=%s\n", kind, arrives, kept, how, command, id), nil
 }
 
 func questionID() string {

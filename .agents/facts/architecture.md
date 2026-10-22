@@ -137,6 +137,10 @@ Intended layout (packages are created when they get real content):
   tools. Copies only from the project's repository, not git-ignored
   (SEC-6); the one place serve runs a git subprocess (`check-ignore`).
   Hooks run git only through `gitchange`.
+- `internal/questionhistory`: serve's recording of what became of
+  agents' questions about tickets in their history (FH-190, D89): after
+  each snapshot, once per question and outcome, through
+  `store.RecordQuestion`.
 - `internal/index`: in-memory, revisioned index of the root for `serve`;
   fsnotify watching. Board and runs are fingerprinted apart: event appends
   refold runs over the board already read (no `ReadBoard`), and while

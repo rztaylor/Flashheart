@@ -74,6 +74,9 @@ type tx struct {
 	before  []staged
 	noted   map[string][]board.Change
 	folders []string
+	// at, when set, dates the history instead of the clock: a question's
+	// outcome recorded after it happened (FH-190).
+	at time.Time
 }
 
 type staged struct {
@@ -291,7 +294,11 @@ func (t *tx) appendHistory(folder string, changes []board.Change) error {
 		return err
 	}
 	ticket, _, _ := board.ParseFolder(path.Base(folder))
-	next := board.AppendHistory(data, ticket, board.History{ID: id, Time: t.s.now(), By: t.s.author, Changes: changes})
+	at := t.at
+	if at.IsZero() {
+		at = t.s.now()
+	}
+	next := board.AppendHistory(data, ticket, board.History{ID: id, Time: at, By: t.s.author, Changes: changes})
 	if len(next) > MaxFileBytes {
 		return nil
 	}

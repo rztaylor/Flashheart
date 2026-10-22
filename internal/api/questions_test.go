@@ -37,7 +37,7 @@ func questionsAPI(t *testing.T) (http.Handler, string, *events.Log) {
 		Info:   Info{Root: root, Theme: "system"},
 		Board:  index.New(files, index.Options{Now: clock, Events: log, Runs: runs.DefaultSettings()}),
 		Files:  files,
-		Writer: files,
+		Writer: files.As("Robert"),
 		Events: log,
 		// Who answers: the configured name, else the account (FH-8).
 		AnsweredBy: "Robert",
@@ -83,6 +83,19 @@ func TestAnsweringAQuestionRecordsAndQueuesIt(t *testing.T) {
 	ticket, _ := os.ReadFile(filepath.Join(root, "alpha", "tickets", "AL-1-project-skeleton", "AL-1-project-skeleton.md"))
 	if !strings.Contains(string(ticket), `- 2026-10-05 · Question from claude:3f2a9c1e — "Keep the old skeleton?" Answer (Robert): "No".`) {
 		t.Fatalf("ticket notes:\n%s", ticket)
+	}
+	// The ticket's history keeps the answer with its question, by the
+	// person, from the same write as the note (FH-190).
+	history := ticketDetail(t, handler, "AL-1").History
+	if len(history) == 0 {
+		t.Fatal("no history")
+	}
+	answered := history[len(history)-1]
+	if answered.By != "Robert" || len(answered.Changes) != 1 || answered.Changes[0].What != "answered" {
+		t.Fatalf("history = %+v", answered)
+	}
+	if q := answered.Changes[0].Question; q == nil || q.ID != "q-1" || q.Text != "Keep the old skeleton?" || q.Answer != "No" {
+		t.Fatalf("question = %+v", q)
 	}
 	waiting, err := log.Take("alpha", events.Mailbox{Session: sampleSession})
 	if err != nil || len(waiting) != 1 || waiting[0].Type != events.EntryAnswer || waiting[0].Text != "No" || waiting[0].Run != sampleSession || waiting[0].Question != "Keep the old skeleton?" {

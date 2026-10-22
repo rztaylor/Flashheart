@@ -200,8 +200,13 @@ Full format: `docs/dev/specs/board-format.md`.
   ticket write by the board or an agent (create, move, field and raw
   edits, ticked criteria and review steps, archive, restore, comment
   states, a deleted comment) appends one history entry in the same
-  locked write: who, what changed and when, never the ticket's text. A
-  ticket without the file has no activity.
+  locked write: who, what changed and when, never the ticket's text. The
+  one exception is an agent's question about the ticket (`RUN-8`, FH-190,
+  D89): its history keeps the question and its options when it is asked,
+  and, once each, what became of it: answered on the board (the answer
+  and who gave it, in the same write as its note), answered in the
+  session's own chat, or still open when its session ended, so a decision
+  outlasts the run window. A ticket without the file has no activity.
 
 ### 6.3 Ticket ids (`KEY`)
 
@@ -370,8 +375,10 @@ Full format: `docs/dev/specs/board-format.md`.
   `REV-7`); then **Activity**, a
   timeline, oldest first, of people's comments, agents' notes, the
   ticket's history (`STO-8`; moves the runs recorded fill in only before
-  the history begins), agents' questions with their answers, and handoff
-  updates, filtered **All**, **Comments** or **History** (the outline's
+  the history begins), agents' questions with what became of them (kept
+  in the history, FH-190, and shown once), and handoff
+  updates, filtered **All**, **Comments** or **History** (the history's
+  changes and the questions; the outline's
   count follows the filter), ending with a comment box: a person posts a
   comment with **Comment** or Ctrl or Cmd and Enter (never an empty one;
   a failed post keeps the text with the reason beside it), optionally

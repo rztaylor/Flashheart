@@ -438,7 +438,8 @@ changed. It sits beside the ticket so a comment never contends with an
 agent rewriting `## Handoff`, and history outlives the event log's
 retention: it lasts as long as the ticket, archived with it and removed
 only by its permanent delete. Agents' notes stay in the ticket's
-`## Notes`; handoffs and questions are read from the ticket and the log.
+`## Notes`; handoffs are read from the ticket and the log, and agents'
+questions about the ticket are kept in its history (FH-190, below).
 
 A ticket without the file has no activity; existing tickets need no
 migration. The file is created by its first entry:
@@ -523,7 +524,7 @@ been appended. A comment that is `delivered`, or whose `state` is
 first). The write's history names the comment by id, never its text.
 
 **History** entries list what one write changed, one bullet each, and
-never the ticket's text:
+never the ticket's text, except a question's (below):
 
 | Bullet | Meaning |
 |---|---|
@@ -536,14 +537,64 @@ never the ticket's text:
 | `- addressed: <comments>` | change requests an agent marked addressed |
 | `- resolved: <comments>`, `- reopened: <comments>` | change requests the person resolved, or asked for again after they were addressed or resolved |
 | `- deleted: <comments>` | comments the person deleted (FH-140), as `comment <id>` |
+| `- asked: question <id>` | an agent asked a question about the ticket (`ask_human`, FH-190); by the asking run, when it asked |
+| `- answered: question <id>` | a person answered it on the board; by the person, when |
+| `- answered-in-session: question <id>` | the user answered it in the session's own chat instead; by the asking run, at the prompt that answered it |
+| `- session-ended: question <id>` | its session ended with it still open; by the asking run, when Flashheart saw it (it can still be answered on the board while the run is in the run window) |
 
 A bullet of another form is kept and not shown. History is worked out
 from the write itself, comparing the ticket (and, for a review step, its
 `review.md`; for a comment's state, this file's comments) before and
 after, so every write path is described alike (D58).
 `updated` and `rank` are not history, and neither are `## Notes` and
-`## Handoff`: a reorder within a column, a note, a checkpoint or an answer
-records none. A write that changes nothing records nothing.
+`## Handoff`: a reorder within a column, a note or a checkpoint records
+none. A write that changes nothing records nothing.
+
+**Questions** are the one history that keeps text (FH-190, D89): the
+decision a person made is what a later reader needs. The question's
+`<id>` is its question id (agent-protocol §7); its text follows the
+bullet on lines indented by two spaces, one `key: value` each, so none of
+it can start a heading, an entry or a code fence. Unlike other history,
+a question's changes are stated by the write that records them, not
+worked out from the files:
+
+```markdown
+### 2026-10-22T13:00:00Z · history · claude:5b0c7e2a-1f3d-4c8e-9a61-2d7f0e4b9c13 · 1a2b3c4d
+
+- asked: question q-ABCDEFGHIJKLMNOP
+  kind: decision
+  question: Use the known objectives?
+  option: Yes
+  option: No
+
+### 2026-10-22T13:04:10Z · history · Robert · 5e6f7a8b
+
+- answered: question q-ABCDEFGHIJKLMNOP
+  kind: decision
+  question: Use the known objectives?
+  option: Yes
+  option: No
+  answer: Yes, and add a test
+  answer: for the empty case.
+```
+
+`kind` is the question's kind; `question` its text, one line of at most
+1,000 characters; `option` each choice offered, at most 10 of at most 200
+characters; `answer` one line of the board's answer each (at most 1,000
+characters in all, without blank lines at its ends). The outcome entries
+repeat the question so each reads alone. Text passes the secret scrubber
+(SEC-3) and is shown as plain text. Each change is written once per
+question, whoever writes it: `ask_human` writes `asked`, the board's
+answer writes `answered` in the same write as its `## Notes` bullet, and
+`serve` writes the outcomes no write makes (`answered-in-session`,
+`session-ended`) from the runs in its run window, filling in an `asked`
+or `answered` a failed write or an older binary left out; such an entry
+is dated when it happened, not when it was written, so the file is not
+always in time order. An entry with no ticket change beside it is
+appended under the project lock as the file is then. An outcome the run window no longer shows when
+`serve` next runs is not recorded; the board then says no answer was
+recorded. The board reads a question from its history and from the run
+window and shows it once.
 
 **Writes.** Every write is under the project lock and atomic (STO-3) and
 never touches the ticket file. A history entry is staged in the same

@@ -151,7 +151,12 @@ const contract: Record<string, { guard: Guard; optional?: string[] }> = {
   answered: { guard: isSaved },
   ticket: {
     guard: isTicketResponse,
-    optional: [...cardOptional, ...runOptional],
+    // Only a question's history carries it (FH-190).
+    optional: [
+      ...cardOptional,
+      ...runOptional,
+      "ticket.history[].changes[].question",
+    ],
   },
   "ticket-edited": {
     guard: isTicketResponse,

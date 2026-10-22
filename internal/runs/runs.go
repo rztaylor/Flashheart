@@ -184,6 +184,8 @@ type Question struct {
 	// before answering on the board: the answer went into the session's own
 	// chat, so the question is delivered and no longer waits (§4).
 	AnsweredInSession bool `json:"answeredInSession,omitempty"`
+	// AnsweredInSessionAt is when: the prompt that answered it.
+	AnsweredInSessionAt time.Time `json:"answeredInSessionAt,omitzero"`
 	// SessionEnded is set in a View when the session the question waits on
 	// has ended (the asking run's, or for a subagent its session's, §4): the
 	// question can still be answered, and the answer waits for the session
@@ -545,7 +547,7 @@ func (s *Set) answerInSession(r *Run, at time.Time) {
 			if q.Delivered || q.Answered() {
 				continue
 			}
-			q.Delivered, q.AnsweredInSession = true, true
+			q.Delivered, q.AnsweredInSession, q.AnsweredInSessionAt = true, true, at
 			run.Timeline = append(run.Timeline, Entry{Time: at, Kind: QuestionAnsweredInSession, Ticket: q.Ticket, Detail: q.Kind})
 		}
 	}

@@ -10,6 +10,7 @@ import {
   type ActivityFilter,
   andList,
   type CommentEntry,
+  type QuestionEntry,
 } from "../../model/activity";
 import { commentInFile } from "../../model/comments";
 import type { LinkContext } from "../../model/markdown";
@@ -71,6 +72,18 @@ const nodeIcon: Record<ActivityEntry["kind"], IconName> = {
   handoff: "next",
   comment: "comment",
   history: "history",
+};
+
+// Where a question not answered on the board stands; one its history
+// keeps (FH-190) may be past its run, ended or with no outcome recorded.
+const questionStateWords: Record<
+  Exclude<QuestionEntry["state"], "answered">,
+  string
+> = {
+  open: "Waiting for your answer, above.",
+  "in-session": "Answered in the session's own chat.",
+  ended: "Not answered before its session ended.",
+  unanswered: "No answer was recorded.",
 };
 
 const emptyWords: Record<ActivityFilter, string> = {
@@ -378,10 +391,8 @@ function Body({
                 </span>{" "}
                 answered: <LinkedText text={entry.answer} keys={keys} />
               </>
-            ) : entry.state === "in-session" ? (
-              "Answered in the session's own chat."
             ) : (
-              "Waiting for your answer, above."
+              questionStateWords[entry.state]
             )}
           </Reply>
         </>
