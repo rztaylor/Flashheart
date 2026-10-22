@@ -4,7 +4,9 @@ import { RunStateMark } from "../components/RunState";
 import { needsYouPhrase } from "../model/runs";
 
 interface NeedsYouPillProps {
-  // count is the runs that need you, across every project (SPEC §7).
+  // count is what the filter shows across every project: the tickets that
+  // need you, each once, and the runs in Needs you no card shows (SPEC §7,
+  // FH-186).
   count: number;
   // on shows only the tickets that need you (VIEW-2, FH-44).
   on: boolean;
@@ -31,8 +33,7 @@ export function NeedsYouPill({ count, on, onToggle }: NeedsYouPillProps) {
     >
       <RunStateMark state="needs-you" size={plateMark.band} />
       {count}
-      <span className="hidden sm:inline">{` ${needsYouPhrase(count)}`}</span>
-      <span className="sm:hidden">{` ${needsYouPhrase(count, true)}`}</span>
+      {` ${needsYouPhrase(count)}`}
       {/* The ring alone marks it pressed on a phone, where the band is full. */}
       {on ? <Icon name="close" size={12} className="max-sm:hidden" /> : null}
     </button>

@@ -623,7 +623,7 @@ describe("projectRows", () => {
     rejected: 0,
     blocked: 0,
     needsRepair: 0,
-    runs: { needsYou: 1, working: 0, waiting: 0, quiet: 0 },
+    runs: { needsYouShown: 1, working: 0, waiting: 0, quiet: 0 },
   };
   const projects = [
     {
@@ -634,7 +634,7 @@ describe("projectRows", () => {
       rejected: 2,
       blocked: 22,
       needsRepair: 1,
-      runs: { needsYou: 2, working: 2, waiting: 1, quiet: 0 },
+      runs: { needsYouShown: 2, working: 2, waiting: 1, quiet: 0 },
     },
     ng,
   ];
@@ -664,20 +664,21 @@ describe("projectRows", () => {
   it("describes a row with every count, zeros included", () => {
     const [first, second] = projectRows(projects);
     expect(first?.summary).toBe(
-      "50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 28 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
+      "50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 28 done), 22 blocked, 1 needs repair, 3 agents live, 2 need you",
     );
     expect(second?.summary).toBe(
-      "2 tickets (1 in backlog, 0 up next, 1 in progress, 0 ready to review, 0 done), 0 blocked, 0 need repair, 0 agents live, 1 agent needs you",
+      "2 tickets (1 in backlog, 0 up next, 1 in progress, 0 ready to review, 0 done), 0 blocked, 0 need repair, 0 agents live, 1 needs you",
     );
   });
 
   // Live counts the project's agents that do not need you (FH-162):
-  // working, waiting and quiet, subagents too; Needs you counts the rest.
+  // working, waiting and quiet, subagents too. Needs you counts what the
+  // Needs you filter shows, as the rail's badge does (FH-186).
   it("leaves agents that need you out of Live", () => {
     const [row] = projectRows([
       {
         ...ng,
-        runs: { needsYou: 2, working: 1, waiting: 1, quiet: 1 },
+        runs: { needsYouShown: 2, working: 1, waiting: 1, quiet: 1 },
       },
     ]);
     expect(row?.live).toBe(3);
@@ -688,10 +689,10 @@ describe("projectRows", () => {
     const [row] = projectRows([
       {
         ...ng,
-        runs: { needsYou: 0, working: 0, waiting: 0, quiet: 0 },
+        runs: { needsYouShown: 0, working: 0, waiting: 0, quiet: 0 },
       },
     ]);
     expect(row?.live).toBe(0);
-    expect(row?.summary).toMatch(/, 0 agents live, 0 agents need you$/);
+    expect(row?.summary).toMatch(/, 0 agents live, 0 need you$/);
   });
 });

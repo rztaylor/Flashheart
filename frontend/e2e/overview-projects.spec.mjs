@@ -88,7 +88,7 @@ test("lists every project in the rail's order, with its counts", async () => {
   const flashheart = row("Flashheart");
   await expect(flashheart).toHaveAccessibleName("FH Flashheart (flashheart)");
   await expect(flashheart).toHaveAccessibleDescription(
-    /^\d+ tickets \(\d+ in backlog, \d+ up next, \d+ in progress, \d+ ready to review, \d+ done\), \d+ blocked, 0 need repair, 0 agents live, 0 agents need you$/,
+    /^\d+ tickets \(\d+ in backlog, \d+ up next, \d+ in progress, \d+ ready to review, \d+ done\), \d+ blocked, 0 need repair, 0 agents live, 0 need you$/,
   );
   await expect(box("Flashheart")).toContainText("FH");
   // The column words head the counts once, not in every row.

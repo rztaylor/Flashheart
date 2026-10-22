@@ -6,7 +6,9 @@
 // its runs by ticket, id and parent once, so per-card lookups never scan
 // every run (D38), and knows each ticket's live claimants (Claimants) and
 // the first of them (Holder), the one rule for who receives a change
-// request or a comment (FH-126, FH-127).
+// request or a comment (FH-126, FH-127). CardLive is the one rule for what
+// a ticket's card shows of its live sessions and whether it needs you,
+// which the board's cards and the Needs you counts both follow (FH-186).
 //
 // The board and the runs are fingerprinted apart: Rebuild reads both,
 // RefreshRuns folds new events over the board already read (FH-96), and

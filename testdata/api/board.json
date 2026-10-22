@@ -50,7 +50,8 @@
         "quiet": 0,
         "ended": 1,
         "live": 1,
-        "needsYouUnticketed": 0
+        "needsYouUnticketed": 0,
+        "needsYouShown": 1
       }
     },
     "cards": [

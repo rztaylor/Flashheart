@@ -252,7 +252,8 @@ func TestNewEventsFoldIncrementally(t *testing.T) {
 }
 
 // Runs that need you with no ticket on the board are counted apart: the
-// board's Needs you filter cannot show them (FH-44).
+// board's Needs you filter cannot show them (FH-44). What the filter shows
+// counts each card once: s1 and s3 both need you on AL-3 (FH-186).
 func TestRunCountsNeedsYouWithoutATicket(t *testing.T) {
 	t.Parallel()
 
@@ -285,8 +286,8 @@ func TestRunCountsNeedsYouWithoutATicket(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, project := range []string{"", "alpha"} {
-		if counts := snapshot.RunCounts(project); counts.NeedsYou != 3 || counts.NeedsYouUnticketed != 1 {
-			t.Errorf("RunCounts(%q) = %+v, want 3 needing you, 1 of them without a ticket", project, counts)
+		if counts := snapshot.RunCounts(project); counts.NeedsYou != 3 || counts.NeedsYouUnticketed != 1 || counts.NeedsYouShown != 2 {
+			t.Errorf("RunCounts(%q) = %+v, want 3 needing you, 1 of them without a ticket, 2 shown", project, counts)
 		}
 	}
 }

@@ -18,7 +18,7 @@ export const STATE_LABEL: Record<RunState, string> = {
   ended: "Ended",
 };
 
-// needsYouPhrase words how many runs need you, after their count: "needs
+// needsYouPhrase words how many need you, after their count: "needs
 // you" or "need you", and with agents "agent needs you" or "agents need
 // you" (the one attention plate's words, ui-layout.md §7).
 export function needsYouPhrase(count: number, agents = false): string {
