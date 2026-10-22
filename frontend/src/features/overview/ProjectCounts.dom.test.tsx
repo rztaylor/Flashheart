@@ -42,7 +42,14 @@ const projects = [
     },
     blocked: 22,
     needsRepair: 1,
-    runs: { ...noRuns, working: 2, quiet: 1, needsYou: 2, live: 5 },
+    runs: {
+      ...noRuns,
+      working: 2,
+      quiet: 1,
+      needsYou: 2,
+      live: 5,
+      needsYouShown: 2,
+    },
   }),
 ];
 
@@ -75,7 +82,7 @@ describe("ProjectCounts (FH-153)", () => {
     within(list).getByRole("link", {
       name: "FH Flashheart (flashheart)",
       description:
-        "50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 30 done), 22 blocked, 1 needs repair, 3 agents live, 2 agents need you",
+        "50 tickets (10 in backlog, 4 up next, 3 in progress, 3 ready to review, 30 done), 22 blocked, 1 needs repair, 3 agents live, 2 need you",
     });
     within(list).getByRole("link", {
       name: /^[A-Z]+ Quill \(quill\)$/,

@@ -204,9 +204,17 @@ func signature(views []runs.View) string {
 // board shows: neither their linked ticket nor a ticket one of their open
 // questions is about is on it (none, or archived or gone). The board's
 // Needs you filter cannot show them (FH-44).
+//
+// NeedsYouShown counts what the Needs you filter shows, for the band's
+// pill and the project rail's badge (FH-186): the tickets on the board
+// whose card needs you (CardLive), each once however many questions or
+// runs it has, plus NeedsYouUnticketed, which the filter's notice names.
+// One session asking about four tickets is four; a run in Needs you is
+// counted by the cards that show it, so it is never counted twice.
 type RunCounts struct {
 	Working, NeedsYou, Waiting, Quiet, Ended, Live int
 	NeedsYouUnticketed                             int
+	NeedsYouShown                                  int
 }
 
 // RunCounts counts a project's runs, or every run when project is "".
@@ -235,7 +243,36 @@ func (s *Snapshot) RunCounts(project string) RunCounts {
 			counts.Live++
 		}
 	}
+	counts.NeedsYouShown = s.ticketsNeedingYou(project) + counts.NeedsYouUnticketed
 	return counts
+}
+
+// ticketsNeedingYou counts the tickets on a project's board, or every
+// board when project is "", whose card needs you. Only a ticket with an
+// open question or a linked run in Needs you can, so only those are asked.
+func (s *Snapshot) ticketsNeedingYou(project string) int {
+	candidates := map[string]bool{}
+	for ticket := range s.runIndex.questions {
+		candidates[ticket] = true
+	}
+	for _, run := range s.Runs {
+		if run.State == runs.NeedsYou && run.Link.Ticket != "" {
+			candidates[run.Link.Ticket] = true
+		}
+	}
+	count := 0
+	for ticket := range candidates {
+		if !s.onBoard(ticket) {
+			continue
+		}
+		if owner, _, _ := s.FindTicket(ticket); project != "" && owner.Name != project {
+			continue
+		}
+		if s.CardLive(ticket).NeedsYou() {
+			count++
+		}
+	}
+	return count
 }
 
 // shownOnBoard reports whether a card on the board shows the run needing
@@ -369,6 +406,57 @@ func (s *Snapshot) TicketRun(id string) (runs.View, bool) {
 		}
 	}
 	return best, found
+}
+
+// CardLive is what a ticket's card shows of its live sessions (VIEW-2,
+// VIEW-8): the one rule for whether the card needs you, which the board's
+// cards word and RunCounts counts (FH-186).
+type CardLive struct {
+	// Reason is why the card needs you, zero when it does not: its linked
+	// run's reason when that is about the ticket (runs.Reason.About,
+	// FH-185), else the oldest open question about the ticket from a live
+	// session, whoever asked it.
+	Reason runs.Reason
+	// OpenQuestions counts the open questions about the ticket from live
+	// sessions.
+	OpenQuestions int
+	// Run is the ticket's live session run (TicketRun), when Linked. State
+	// is its state as the card shows it: a run that needs you on another
+	// ticket's card only waits here. RunReason is its reason when it needs
+	// you on this card.
+	Run       runs.View
+	Linked    bool
+	State     runs.State
+	RunReason runs.Reason
+}
+
+// NeedsYou reports whether the card needs you.
+func (c CardLive) NeedsYou() bool { return c.Reason.Kind != "" }
+
+// CardLive returns what a ticket's card shows of its live sessions.
+func (s *Snapshot) CardLive(id string) CardLive {
+	var card CardLive
+	for _, question := range s.runIndex.questions[id] {
+		if question.SessionEnded {
+			continue
+		}
+		card.OpenQuestions++
+		if _, asker, ok := s.Question(question.ID); ok && card.Reason.Kind == "" {
+			card.Reason = runs.QuestionReason(question, asker)
+		}
+	}
+	if run, ok := s.TicketRun(id); ok {
+		card.Run, card.Linked, card.State = run, true, run.State
+		switch {
+		case run.State != runs.NeedsYou:
+		case run.Reason.About(id):
+			card.Reason, card.RunReason = run.Reason, run.Reason
+		default:
+			// It needs you on another ticket's card; here it waits.
+			card.State = runs.Waiting
+		}
+	}
+	return card
 }
 
 // TicketRuns returns every run linked to a ticket, most recent first.

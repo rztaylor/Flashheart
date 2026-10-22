@@ -115,7 +115,7 @@ test("a badge carries its Needs you count and a repair mark", async () => {
   const alpha = badge("Alpha");
   await expect(alpha).toHaveAttribute(
     "aria-label",
-    /^AL, 1 agent needs you: .*, 1 needs repair$/,
+    /^AL, 1 needs you: .*, 1 needs repair$/,
   );
   await expect(alpha.locator("[data-mark=needs-you]")).toHaveText("1");
   await expect(alpha.locator("[data-mark=repair]")).toHaveCount(1);

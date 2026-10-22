@@ -36,7 +36,8 @@
           "quiet": 0,
           "ended": 0,
           "live": 0,
-          "needsYouUnticketed": 0
+          "needsYouUnticketed": 0,
+          "needsYouShown": 0
         }
       },
       {
@@ -85,7 +86,8 @@
           "quiet": 0,
           "ended": 1,
           "live": 1,
-          "needsYouUnticketed": 0
+          "needsYouUnticketed": 0,
+          "needsYouShown": 1
         }
       },
       {
@@ -115,7 +117,8 @@
           "quiet": 0,
           "ended": 0,
           "live": 0,
-          "needsYouUnticketed": 0
+          "needsYouUnticketed": 0,
+          "needsYouShown": 0
         }
       }
     ],
@@ -126,7 +129,8 @@
       "quiet": 0,
       "ended": 1,
       "live": 1,
-      "needsYouUnticketed": 0
+      "needsYouUnticketed": 0,
+      "needsYouShown": 1
     },
     "archivedProjects": 0
   }

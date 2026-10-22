@@ -38,7 +38,8 @@ export function Band({
   lifecycle: SingleserveLifecycle;
   view: View;
   onView(view: BandView): void;
-  // needsYou counts the runs that need the user, across every project.
+  // needsYou counts what the Needs you filter shows across every project:
+  // the tickets that need the user and the runs no card shows (FH-186).
   needsYou: number;
   needsYouOn: boolean;
   onNeedsYou(): void;

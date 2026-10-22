@@ -130,8 +130,8 @@ function badgeName({
   runs,
 }: Omit<RailBadgeProps, "active" | "code" | "image" | "onClick">) {
   const needsYou =
-    runs.needsYou > 0
-      ? `${runs.needsYou} ${needsYouPhrase(runs.needsYou, true)}`
+    runs.needsYouShown > 0
+      ? `${runs.needsYouShown} ${needsYouPhrase(runs.needsYouShown)}`
       : "";
   const parts = [
     plural(total(counts), "ticket", "tickets"),
@@ -201,8 +201,8 @@ function RailBadge({ active, code, image, onClick, ...shown }: RailBadgeProps) {
             />
           ) : null}
         </span>
-        {shown.runs.needsYou > 0 ? (
-          <NeedsYouCount count={shown.runs.needsYou} />
+        {shown.runs.needsYouShown > 0 ? (
+          <NeedsYouCount count={shown.runs.needsYouShown} />
         ) : null}
       </span>
     </button>

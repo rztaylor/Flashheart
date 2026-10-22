@@ -34,10 +34,13 @@ type RunCountsJSON struct {
 	// NeedsYouUnticketed are the runs in Needs you with no ticket on the
 	// board (FH-44).
 	NeedsYouUnticketed int `json:"needsYouUnticketed"`
+	// NeedsYouShown is what the Needs you filter shows, the count on the
+	// band's pill and the project rail's badge (FH-186).
+	NeedsYouShown int `json:"needsYouShown"`
 }
 
 func countsJSON(c index.RunCounts) RunCountsJSON {
-	return RunCountsJSON{Working: c.Working, NeedsYou: c.NeedsYou, Waiting: c.Waiting, Quiet: c.Quiet, Ended: c.Ended, Live: c.Live, NeedsYouUnticketed: c.NeedsYouUnticketed}
+	return RunCountsJSON{Working: c.Working, NeedsYou: c.NeedsYou, Waiting: c.Waiting, Quiet: c.Quiet, Ended: c.Ended, Live: c.Live, NeedsYouUnticketed: c.NeedsYouUnticketed, NeedsYouShown: c.NeedsYouShown}
 }
 
 // LiveJSON is a card's live badge (VIEW-8): the linked run that most needs
@@ -304,44 +307,23 @@ func (b boardAPI) run(w http.ResponseWriter, r *http.Request) {
 }
 
 // liveBadge fills a card's live run, reason and virtual-column flags
-// (VIEW-2, VIEW-8), looking the ticket's runs up in the snapshot's run
-// index. The card needs you for its linked run's reason only when that is
-// about the ticket (runs.Reason.About, FH-185): a run that asks about
-// another ticket needs you on that ticket's card, and here it only waits
-// for the answer, so the cards the Needs you filter shows agree with the
-// pill's count of runs.
+// (VIEW-2, VIEW-8) from the snapshot's one rule for a card's live sessions
+// (index.CardLive), which the Needs you counts follow too (FH-186). A run
+// that asks about another ticket needs you on that ticket's card, and here
+// it only waits for the answer (FH-185).
 func liveBadge(snapshot *index.Snapshot, card *Card) {
-	// An open question about the ticket needs you whoever asked it, while
-	// the asking session is live (VIEW-2); the oldest is the card's reason
-	// unless its own run's comes first.
-	var reason runs.Reason
-	for _, question := range snapshot.Questions(card.ID) {
-		if question.SessionEnded {
-			continue
-		}
-		card.OpenQuestions++
-		if _, asker, ok := snapshot.Question(question.ID); ok && reason.Kind == "" {
-			reason = runs.QuestionReason(question, asker)
-		}
-	}
-	if v, ok := snapshot.TicketRun(card.ID); ok {
-		state, live := v.State, runs.Reason{}
-		switch {
-		case state != runs.NeedsYou:
-		case v.Reason.About(card.ID):
-			reason, live = v.Reason, v.Reason
-		default:
-			// It needs you on another ticket's card; here it waits.
-			state = runs.Waiting
-		}
+	live := snapshot.CardLive(card.ID)
+	card.OpenQuestions = live.OpenQuestions
+	if live.Linked {
+		v := live.Run
 		card.Live = &LiveJSON{
-			Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(state),
-			Reason: reasonJSON(live), LastActivity: timestamp(v.LastActivity),
+			Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(live.State),
+			Reason: reasonJSON(live.RunReason), LastActivity: timestamp(v.LastActivity),
 		}
-		card.AgentWorking = state == runs.Working || state == runs.Quiet
+		card.AgentWorking = live.State == runs.Working || live.State == runs.Quiet
 	}
-	card.Reason = reasonJSON(reason)
-	card.NeedsYou = reason.Kind != ""
+	card.Reason = reasonJSON(live.Reason)
+	card.NeedsYou = live.NeedsYou()
 }
 
 // ticketRuns lists a ticket's runs with timelines for its Runs tab, with

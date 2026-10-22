@@ -31,6 +31,10 @@ export interface RunCounts {
   // needsYouUnticketed are the runs in Needs you with no ticket on the
   // board, which the Needs you filter cannot show (FH-44).
   needsYouUnticketed: number;
+  // needsYouShown is what the Needs you filter shows: the tickets whose
+  // card needs you, each once, plus needsYouUnticketed. The band's pill and
+  // the rail's badges show it (FH-186).
+  needsYouShown: number;
 }
 
 export const noRuns: RunCounts = {
@@ -41,6 +45,7 @@ export const noRuns: RunCounts = {
   ended: 0,
   live: 0,
   needsYouUnticketed: 0,
+  needsYouShown: 0,
 };
 
 // NeedsReason is why a run in Needs you needs you, derived once on the
@@ -205,7 +210,8 @@ export function isRunCounts(value: unknown): value is RunCounts {
     isNumber(value.quiet) &&
     isNumber(value.ended) &&
     isNumber(value.live) &&
-    isNumber(value.needsYouUnticketed)
+    isNumber(value.needsYouUnticketed) &&
+    isNumber(value.needsYouShown)
   );
 }
 

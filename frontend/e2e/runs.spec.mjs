@@ -301,8 +301,9 @@ test("cards carry live runs and the band's Needs you pill filters to them (FH-44
   }
   for (const theme of ["light", "dark"]) {
     await open(page, "#/all/board", { width: 390, height: 844, theme });
+    // A phone says the same words: the count is not agents (FH-186).
     await expect(
-      page.getByRole("button", { name: "1 agent needs you", exact: true }),
+      page.getByRole("button", { name: "1 needs you", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     await shot(page, `board-needs-you-390-${theme}`);
   }
