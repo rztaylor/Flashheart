@@ -263,7 +263,7 @@ export function Shell({
             onView={chooseView}
             // Needs you is visible from every view and project (SPEC §7).
             needsYou={
-              projects.status === "ready" ? projects.data.runs.needsYou : 0
+              projects.status === "ready" ? projects.data.runs.needsYouShown : 0
             }
             needsYouOn={filters.needsYou}
             onNeedsYou={toggleNeedsYou}

@@ -183,7 +183,9 @@ export function OverviewView({
           onReview={onReview}
           onAnswer={onAnswer}
           onCreateTicket={onCreateTicket}
-          nobodyNeedsYou={projects.every((item) => item.runs.needsYou === 0)}
+          nobodyNeedsYou={projects.every(
+            (item) => item.runs.needsYouShown === 0,
+          )}
           noLiveRuns={resource.data.runs.every((run) => run.state === "ended")}
         />
       </div>

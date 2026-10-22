@@ -31,8 +31,10 @@ One shell for Overview, Workstreams, Table and Board, in both themes.
 **Band** (3.5rem tall, left to right): the bolt and the *Flashheart*
 wordmark in sentence case; the view tabs Overview, Workstreams, Table, Board,
 each an icon and a label, the current one marked; then, right-aligned, the
-Needs you plate while any run anywhere needs the user (disc mark, count and
-"need(s) you"). It is the Needs you filter (`VIEW-2`, FH-44), a toggle:
+Needs you plate while anything anywhere needs the user (disc mark, count and
+"need(s) you"). Its count is what the filter shows (FH-186): the tickets
+that need the user, each once, plus the runs in Needs you that no card
+shows. It is the Needs you filter (`VIEW-2`, FH-44), a toggle:
 pressed, it takes an inset ring in the on-attention ink and a close mark
 (the ring alone on a phone) and shows All projects' Board (the Table when
 that is open) with only tickets that need the user; pressed again, it
@@ -60,7 +62,8 @@ toggle; FH-150): a slim column of key badges, *All projects* (the board
 icon), a divider, then one badge per project, most recently active first.
 The current scope's tile is raised and its badge filled. A badge shows only
 what needs the user: its Needs you count on the badge's top-right corner in
-the attention colour while any of its runs need the user, and the repair
+the attention colour while anything in it needs the user (the count the
+Needs you filter shows for the project, FH-186), and the repair
 mark (a dashed ink outline and a hatched top band, as a needs-repair card
 has) while a ticket needs repair. Keys of up to three letters fit at the
 badge's size; longer keys take a smaller cut. A project with an image of
@@ -72,11 +75,11 @@ empty alt), since the name carries the key. Its
 tooltip and accessible name start with what the badge shows, so a voice
 user can say it (WCAG 2.5.3, FH-184): the key, then the Needs you count,
 then the project's name (with its folder name when that differs) and its
-other counts: *FH, 2 agents need you: Flashheart (flashheart), 50
+other counts: *FH, 2 need you: Flashheart (flashheart), 50
 tickets, 3 in progress, 22 blocked, 1 needs repair*, the blocked, repair
 and Needs you counts only when not zero; All projects names its project
-count and sums them (*All projects (3 projects): 64 tickets, …, 2 agents
-need you*). Project names,
+count and sums them (*All projects (3 projects): 64 tickets, …, 2 need
+you*). Project names,
 route bars and the other counts are not shown as text; the All projects
 Overview's Projects list (§5) shows them side by side. The rail has no
 footer: the theme, board root and version are in the band's Settings menu.
@@ -738,7 +741,7 @@ link is the project's name, stretched over the row, named with the key,
 the name and the folder name when that differs (*AL Alpha (alpha)*, so the
 name holds the words it shows, FH-184) and described with every count
 (*7 tickets (3 in backlog, 1 up next, 1 in progress, 1 ready to review,
-1 done), 3 blocked, 1 needs repair, 2 agents live, 1 agent needs you*). Once the card is at
+1 done), 3 blocked, 1 needs repair, 2 agents live, 1 needs you*). Once the card is at
 least 50rem wide (its own width, so a ticket panel beside the Overview
 narrows it too) the rows are a table under one line of column words:
 Project (key badge and name), Tickets, the five board columns (each word
@@ -748,7 +751,8 @@ still) and Needs you, the counts centred in tabular numerals, a zero a
 faint en dash (the row's description says the number).
 Live (FH-162) counts the project's running agents that do not need you,
 subagents included: working, waiting and quiet; an agent that needs you
-counts under Needs you instead, never in both. Tickets counts every ticket; the columns
+counts under Needs you instead, never in both. Needs you counts what the
+Needs you filter shows for the project, as its rail badge does (FH-186). Tickets counts every ticket; the columns
 count as the pipeline does, so Done leaves out rejected tickets and the
 columns of every row add up to the pipeline. A needs-repair count other
 than zero is ringed in dashed ink; a Needs you count other than zero sits

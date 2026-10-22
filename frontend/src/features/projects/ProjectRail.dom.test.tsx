@@ -41,7 +41,9 @@ const projects = [
       done: 30,
     },
     blocked: 22,
-    runs: { ...noRuns, needsYou: 2 },
+    // One session asking about four tickets: the badge counts the four
+    // cards the Needs you filter shows (FH-186).
+    runs: { ...noRuns, needsYou: 1, needsYouShown: 4 },
   }),
   project("gamma", "GAM", { needsRepair: 1 }),
   project("quill", "QUI"),
@@ -52,7 +54,7 @@ function setup(scope: Scope = { kind: "all" }) {
   render(
     <ProjectRail
       projects={projects}
-      runs={{ ...noRuns, needsYou: 2 }}
+      runs={{ ...noRuns, needsYou: 1, needsYouShown: 4 }}
       scope={scope}
       onSelect={onSelect}
     />,
@@ -94,23 +96,24 @@ describe("ProjectRail", () => {
   it("names each badge, in its name and tooltip, with the project, its key and its counts", () => {
     const { badges } = setup();
     const flashheart =
-      "FH, 2 agents need you: Flashheart (flashheart), 50 tickets, 3 in progress, 22 blocked";
+      "FH, 4 need you: Flashheart (flashheart), 50 tickets, 3 in progress, 22 blocked";
     expect(badges[1].getAttribute("aria-label")).toBe(flashheart);
     expect(badges[1].getAttribute("title")).toBe(flashheart);
     expect(badges[2].getAttribute("aria-label")).toBe(
       "GAM: Gamma (gamma), 7 tickets, 1 in progress, 1 needs repair",
     );
     expect(badges[0].getAttribute("aria-label")).toBe(
-      "All projects (3 projects): 64 tickets, 5 in progress, 22 blocked, 1 needs repair, 2 agents need you",
+      "All projects (3 projects): 64 tickets, 5 in progress, 22 blocked, 1 needs repair, 4 need you",
     );
   });
 
-  it("shows a Needs you count only on badges whose runs need the user", () => {
+  // The count is what the Needs you filter shows (FH-186), not the runs.
+  it("shows a Needs you count only on badges with something that needs the user", () => {
     const { badges } = setup();
     const count = (badge: HTMLElement) =>
       badge.querySelector("[data-mark=needs-you]")?.textContent?.trim();
-    expect(count(badges[0])).toBe("2");
-    expect(count(badges[1])).toBe("2");
+    expect(count(badges[0])).toBe("4");
+    expect(count(badges[1])).toBe("4");
     expect(count(badges[2])).toBeUndefined();
     expect(count(badges[3])).toBeUndefined();
   });
@@ -154,7 +157,7 @@ describe("ProjectRail", () => {
           project("gamma", "GAM", {
             needsRepair: 1,
             image: "/api/projects/gamma/image?v=0f0f0f0f",
-            runs: { ...noRuns, needsYou: 1 },
+            runs: { ...noRuns, needsYou: 1, needsYouShown: 1 },
           }),
           project("quill", "QUI"),
         ]}

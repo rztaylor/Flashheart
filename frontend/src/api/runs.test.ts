@@ -12,6 +12,7 @@ const counts = {
   ended: 2,
   live: 2,
   needsYouUnticketed: 0,
+  needsYouShown: 1,
 };
 const live = {
   run: "claude:s",

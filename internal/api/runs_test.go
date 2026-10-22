@@ -435,8 +435,7 @@ func TestCardsSummariseTheirSessions(t *testing.T) {
 
 // A session that holds one ticket and asks about another needs you on the
 // card of the ticket it asks about, which words the question's reason; its
-// own card shows it as live, waiting for that answer, so the cards in the
-// Needs you filter agree with the pill's count of runs (FH-185). A
+// own card shows it as live, waiting for that answer (FH-185). A
 // question about its own ticket, or about no ticket, keeps it on its own
 // card as before.
 func TestAQuestionAboutAnotherTicketNeedsYouOnThatCard(t *testing.T) {
@@ -517,5 +516,79 @@ func TestAQuestionAboutAnotherTicketNeedsYouOnThatCard(t *testing.T) {
 		if board.Project.Runs.NeedsYou != 1 || board.Project.Runs.NeedsYouUnticketed != 1 {
 			t.Fatalf("runs = %+v", board.Project.Runs)
 		}
+	})
+}
+
+// The band's pill and each project's rail badge count what the Needs you
+// filter shows (FH-186): every ticket on the board that needs you, once
+// however many questions it has, plus each run in Needs you that no card
+// shows. One session that asks about three tickets needs you three times,
+// as the Overview's Needs your decision lists three questions; seen on
+// Froodbase, where one session's four questions made the pill say 1.
+func TestTheNeedsYouCountIsWhatTheFilterShows(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC)
+	asked := func(id, ticket string) string {
+		return `{"v":1,"ts":"2026-10-04T13:28:00.000Z","run":"` + sampleSession + `","agent":"claude","kind":"question.asked","project":"alpha","data":{"id":"` + id + `","ticket":"` + ticket + `","kind":"question","text":"Which?"}}`
+	}
+	// The sample session's permission prompt is answered by a tool call.
+	resolved := `{"v":1,"ts":"2026-10-04T13:27:00.000Z","run":"` + sampleSession + `","agent":"claude","kind":"tool.used","project":"alpha","data":{"tool":"Bash","ok":true}}`
+	questions := []string{asked("q1", "AL-4"), asked("q2", "AL-5"), asked("q3", "AL-6"), asked("q4", "AL-4")}
+	// claude:s2, on main, links to no ticket and waits on a permission
+	// prompt: no card shows it, so the filter's notice names it.
+	unticketed := []string{
+		`{"v":1,"ts":"2026-10-04T13:20:00.000Z","run":"claude:s2","agent":"claude","kind":"run.start","project":"alpha","data":{"kind":"session","branch":"main","worktree":"/Users/example/src/alpha"}}`,
+		`{"v":1,"ts":"2026-10-04T13:21:00.000Z","run":"claude:s2","agent":"claude","kind":"permission.requested","project":"alpha","data":{"tool":"Bash"}}`,
+	}
+	needing := func(cards []Card) []string {
+		var ids []string
+		for _, card := range cards {
+			if card.NeedsYou {
+				ids = append(ids, card.ID)
+			}
+		}
+		slices.Sort(ids)
+		return ids
+	}
+	check := func(t *testing.T, handler http.Handler, wantCards []string, want int) {
+		t.Helper()
+		var board BoardResponse
+		getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+		if got := needing(board.Cards); !slices.Equal(got, wantCards) {
+			t.Fatalf("cards needing you = %v, want %v", got, wantCards)
+		}
+		if board.Project.Runs.NeedsYouShown != want {
+			t.Errorf("board runs = %+v, want %d shown", board.Project.Runs, want)
+		}
+		var projects ProjectsResponse
+		getJSON(t, handler, "/api/projects", http.StatusOK, &projects)
+		if projects.Runs.NeedsYouShown != want {
+			t.Errorf("pill: runs = %+v, want %d shown", projects.Runs, want)
+		}
+		for _, project := range projects.Projects {
+			if project.Name == "alpha" && project.Runs.NeedsYouShown != want {
+				t.Errorf("rail badge: alpha runs = %+v, want %d shown", project.Runs, want)
+			}
+		}
+	}
+
+	t.Run("questions about three tickets", func(t *testing.T) {
+		t.Parallel()
+		// AL-4's two questions are one card; AL-3, the session's own, only
+		// waits for the answers.
+		check(t, runsAPI(t, now, append([]string{resolved}, questions...)...), []string{"AL-4", "AL-5", "AL-6"}, 3)
+	})
+
+	t.Run("and a permission prompt on its own card", func(t *testing.T) {
+		t.Parallel()
+		// The prompt needs you on AL-3, the session's card: once, not once
+		// for the run and again for the card.
+		check(t, runsAPI(t, now, questions...), []string{"AL-3", "AL-4", "AL-5", "AL-6"}, 4)
+	})
+
+	t.Run("and a run no card shows", func(t *testing.T) {
+		t.Parallel()
+		check(t, runsAPI(t, now, append(append([]string{resolved}, questions...), unticketed...)...), []string{"AL-4", "AL-5", "AL-6"}, 4)
 	})
 }

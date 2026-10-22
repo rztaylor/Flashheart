@@ -17,7 +17,10 @@ describe("NeedsYouPill", () => {
     const markup = render(2, false);
     expect(markup).toContain('aria-pressed="false"');
     expect(markup).toContain("Show only tickets that need you");
-    expect(markup).toMatch(/2(<!-- -->)?<span[^>]*> need you/);
+    expect(markup).toMatch(/2(<!-- -->)? need you/);
+    // It counts tickets and runs, not agents, so its words name neither
+    // (FH-186).
+    expect(markup).not.toContain("agent");
   });
 
   it("stays while on, so the filter can be switched off", () => {

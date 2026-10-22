@@ -83,7 +83,8 @@ type ProjectsResponse struct {
 	Root        string           `json:"root"`
 	RootMissing bool             `json:"rootMissing"`
 	Projects    []ProjectSummary `json:"projects"`
-	// Runs counts every project's runs, for the band's Needs you badge.
+	// Runs counts every project's runs; NeedsYouShown is the band's Needs
+	// you plate.
 	Runs RunCountsJSON `json:"runs"`
 	// ArchivedProjects counts the projects under <root>/.archive/ (PRJ-5).
 	ArchivedProjects int `json:"archivedProjects"`

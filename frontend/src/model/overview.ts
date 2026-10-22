@@ -349,7 +349,9 @@ export interface ProjectRow {
   blocked: number;
   repair: number;
   // live counts the project's agents that do not need you (FH-162):
-  // working, waiting and quiet, subagents too; needsYou counts the rest.
+  // working, waiting and quiet, subagents too. needsYou counts what the
+  // Needs you filter shows, as the rail's badge does (FH-186): the tickets
+  // that need you and the runs in Needs you no card shows.
   live: number;
   needsYou: number;
   // summary is the row's accessible description: every count in words.
@@ -383,7 +385,7 @@ export function projectRows(
   > & {
     runs: Pick<
       ProjectSummary["runs"],
-      "needsYou" | "working" | "waiting" | "quiet"
+      "needsYouShown" | "working" | "waiting" | "quiet"
     >;
   })[],
 ): ProjectRow[] {
@@ -393,14 +395,14 @@ export function projectRows(
       (sum, { id }) => sum + (project.counts[id] ?? 0),
       0,
     );
-    const needsYou = project.runs.needsYou;
+    const needsYou = project.runs.needsYouShown;
     const columns = stages
       .map((stage) => `${stage.count} ${stageWords[stage.column]}`)
       .join(", ");
     const repair = project.needsRepair;
     const live =
       project.runs.working + project.runs.waiting + project.runs.quiet;
-    const summary = `${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${live} ${plural(live, "agent", "agents")} live, ${needsYou} ${needsYouPhrase(needsYou, true)}`;
+    const summary = `${tickets} ${plural(tickets, "ticket", "tickets")} (${columns}), ${project.blocked} blocked, ${repair} ${plural(repair, "needs repair", "need repair")}, ${live} ${plural(live, "agent", "agents")} live, ${needsYou} ${needsYouPhrase(needsYou)}`;
     return {
       name: project.name,
       displayName: project.displayName,

@@ -418,6 +418,14 @@ All notable changes to this project are documented here. The project follows
 
 ### Fixed
 
+- The band's Needs you plate and each project's rail badge now count what
+  the Needs you filter shows, not the sessions that need you (FH-186,
+  `VIEW-2`, `PRJ-6`). One session with questions about four tickets made
+  the plate say "1 needs you" over four Needs you cards; it now says 4. A
+  ticket counts once however many questions it has, and a session in
+  Needs you that no card shows still counts, as the filter's notice names
+  it. The Overview's Projects list counts the same way, and the plate,
+  badges and list say "need you" rather than "agents need you".
 - A session that holds one ticket and asks about another no longer puts
   both cards in Needs you while the band's plate counts one (FH-185,
   `VIEW-2`, `VIEW-8`). The question needs you on the card of the ticket it

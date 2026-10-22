@@ -147,7 +147,8 @@ watches the root and keeps an in-memory index; the UI is optional.
   Agents have no archive or delete tool.
 - `PRJ-6` The UI lists projects with counts per column, active runs and a
   **Needs you** count, sorted by most recent activity; **All projects** shows
-  every project's tickets and runs together.
+  every project's tickets and runs together. A project's Needs you count is
+  what the Needs you filter shows for it (`VIEW-2`, FH-186).
 
 ### 6.2 Storage (`STO`)
 
@@ -253,8 +254,13 @@ Full format: `docs/dev/specs/board-format.md`.
   or about no ticket), or an open question about the ticket from a live
   session, whoever asked it. A run that asks about another ticket needs
   you on that ticket's card, which words the question's reason; its own
-  card shows it as live, waiting for the answer, so the cards shown agree
-  with the plate's count of runs (FH-185). Pressed again, it returns to
+  card shows it as live, waiting for the answer (FH-185). The plate's
+  count, and each project's on its rail badge and in the Overview's
+  Projects list, is what the filter shows (FH-186): the tickets on the
+  board that need you, each once however many questions or runs it has,
+  plus the runs in Needs you that no card shows, which the filter's notice
+  names. One session asking about four tickets counts four; a run in Needs
+  you on the card that shows it counts once. Pressed again, it returns to
   the project it was pressed in. It
   combines with the other filters, carries from project to project, and is
   not remembered. While it is on, runs in Needs you that no card on the
@@ -949,7 +955,8 @@ layout and content of every view, in every theme, follow
 Pop in light and Night Service, in black and neutral charcoal, in dark
 (D18), which replaced the Transit Line Map of D14.
 
-- **Shell**: left rail of projects (with Needs you badges) and **All
+- **Shell**: left rail of projects (with Needs you badges counting what the
+  Needs you filter shows, `VIEW-2`) and **All
   projects**; top bar with view switcher (Overview · Workstreams · Table ·
   Board), search, filters, density, virtual-column toggles; quiet backend
   status, a Settings gear (theme, board root, version) and Quit.
@@ -960,7 +967,8 @@ Pop in light and Night Service, in black and neutral charcoal, in dark
   Ready for your review, At risk, In progress, then collapsed Work with no
   ticket and Up next (`VIEW-3`).
 - **Needs you** is visible from every view and project (badge in the rail and
-  top bar); the top bar's plate filters the Board to it (`VIEW-2`).
+  top bar); the top bar's plate filters the Board to it, and its count is
+  the tickets that filter shows plus the runs no card shows (`VIEW-2`).
 - Narrow widths keep a single column with a column picker; the board is not
   a phone-first product.
 
