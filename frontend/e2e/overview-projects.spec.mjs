@@ -114,7 +114,7 @@ test("lists every project in the rail's order, with its counts", async () => {
 test("Needs you and needs repair stand out on their project's row", async () => {
   await open(page, "#/all/overview");
   await expect(row("Alpha")).toHaveAccessibleDescription(
-    /, 1 needs repair, \d+ agents? live, 1 agent needs you$/,
+    /, 1 needs repair, \d+ agents? live, 1 needs you$/,
   );
   const alpha = box("Alpha");
   await expect(alpha.locator("[data-mark=needs-you]")).toHaveText("1");
@@ -134,7 +134,7 @@ test("each row shows its project's live agents, a zero as a faint dash", async (
   // Its working subagents are live; the session waiting on you counts
   // under Needs you instead, and the ended session in neither.
   expect(Number(live)).toBeGreaterThanOrEqual(2);
-  expect(summary).toMatch(/, 1 agent needs you$/);
+  expect(summary).toMatch(/, 1 needs you$/);
   const cell = alpha.locator("[data-count=live]");
   await expect(cell).toHaveText(live);
   await expect(cell).not.toHaveClass(/text-ink-faint/);
