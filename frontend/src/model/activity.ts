@@ -3,16 +3,18 @@
 // their answers, and its handoff updates, as one timeline, oldest first.
 // Everything comes from what the ticket API returns: comments and history
 // are its activity file (STO-8, D47), kept for the ticket's life; the notes
-// are the ticket's ## Notes bullets (board.NoteLine); the questions are its
-// open questions and those its linked runs asked about it; and the handoff
-// updates are those runs' checkpoints on it plus the current handoff's
-// _Updated_ line. Runs cover the server's run window (48 hours), so an
-// older question or checkpoint survives only as its note or as the current
-// handoff (D46); agents' moves from the runs fill in only before the
+// are the ticket's ## Notes bullets (board.NoteLine); the questions are
+// those its history keeps (FH-190) with its open questions and those its
+// linked runs asked about it, once each; and the handoff updates are those
+// runs' checkpoints on it plus the current handoff's _Updated_ line. Runs
+// cover the server's run window (48 hours), so an older checkpoint
+// survives only as the current handoff (D46), and an older question as its
+// history or its note; agents' moves from the runs fill in only before the
 // activity file's history begins, so no move shows twice.
 import {
   type Comment,
   type CommentDelivery,
+  type History,
   type HistoryChange,
   STATUSES,
   type TicketDetail,
@@ -46,10 +48,19 @@ export interface QuestionEntry extends Dated {
   answer: string;
   answeredBy: string;
   answeredAt: string;
-  // state: open (waiting, shown above as well), answered on the board, or
-  // answered in the session's own chat.
-  state: "open" | "answered" | "in-session";
+  // state: open (waiting, shown above as well), answered on the board,
+  // answered in the session's own chat, or, from the ticket's history
+  // alone (FH-190), left open when its session ended, or with no outcome
+  // recorded.
+  state: QuestionState;
 }
+
+export type QuestionState =
+  | "open"
+  | "answered"
+  | "in-session"
+  | "ended"
+  | "unanswered";
 
 export interface HandoffEntry extends Dated {
   kind: "handoff";
@@ -122,8 +133,11 @@ export function filterActivity(
 ): ActivityEntry[] {
   if (filter === "comments")
     return entries.filter((entry) => entry.kind === "comment");
+  // A question is part of the ticket's history (FH-190).
   if (filter === "history")
-    return entries.filter((entry) => entry.kind === "history");
+    return entries.filter(
+      (entry) => entry.kind === "history" || entry.kind === "question",
+    );
   return entries;
 }
 
@@ -335,6 +349,79 @@ function questionEntry(question: Question): QuestionEntry {
   };
 }
 
+// The history's question changes (FH-190, board-format §Activity).
+const questionChanges = new Set([
+  "asked",
+  "answered",
+  "answered-in-session",
+  "session-ended",
+]);
+const isQuestionChange = (change: HistoryChange) =>
+  questionChanges.has(change.what) && change.question !== undefined;
+
+// questionsKept are the questions the ticket's history keeps, by id, each
+// with what became of it: asked (by the asking run, when), then answered
+// on the board (by the person, when), in the session's chat, or left open
+// when its session ended.
+function questionsKept(history: History[]): Map<string, QuestionEntry> {
+  const kept = new Map<string, QuestionEntry>();
+  for (const entry of history) {
+    for (const change of entry.changes) {
+      const q = change.question;
+      if (!q || !isQuestionChange(change)) continue;
+      let question = kept.get(q.id);
+      if (!question) {
+        question = {
+          kind: "question",
+          key: `question:${q.id}`,
+          day: localDay(entry.time),
+          time: entry.time,
+          by: entry.byPerson ? "" : entry.byShort,
+          question: q.text,
+          answer: "",
+          answeredBy: "",
+          answeredAt: "",
+          state: "unanswered",
+        };
+        kept.set(q.id, question);
+      }
+      if (change.what === "asked") {
+        question.day = localDay(entry.time);
+        question.time = entry.time;
+        question.by = entry.byShort;
+        question.question = q.text || question.question;
+        if (q.kind) question.questionKind = q.kind as QuestionKind;
+      } else if (!question.question) question.question = q.text;
+      if (change.what === "answered") {
+        question.state = "answered";
+        question.answer = q.answer;
+        question.answeredBy = entry.byShort;
+        question.answeredAt = entry.time;
+      } else if (
+        change.what === "answered-in-session" &&
+        question.state !== "answered"
+      )
+        question.state = "in-session";
+      else if (
+        change.what === "session-ended" &&
+        question.state === "unanswered"
+      )
+        question.state = "ended";
+    }
+  }
+  return kept;
+}
+
+// How much a question's state says, so of a question both the history and
+// the run window have, the one that knows more is shown.
+const stateRank: Record<QuestionState, number> = {
+  unanswered: 0,
+  ended: 1,
+  open: 2,
+  "in-session": 3,
+  answered: 4,
+};
+
 // handoffsOf lists the checkpoints the ticket's runs made on it, and the
 // current handoff, whose next steps go with the checkpoint that wrote it
 // (the same run, the same minute).
@@ -406,17 +493,22 @@ function commentEntry(comment: Comment): CommentEntry {
 // file, or older than it, still shows what the run window holds, and a
 // write the file records shows once.
 function historyOf(detail: ActivityInput): HistoryEntry[] {
-  const durable = detail.history.map(
-    (entry): HistoryEntry => ({
-      kind: "history",
-      key: `history:${entry.id}`,
-      day: localDay(entry.time),
-      time: entry.time,
-      by: entry.byShort,
-      byPerson: entry.byPerson,
-      words: historyWords(entry.changes),
-    }),
-  );
+  // A question's changes show as the question (questionsKept).
+  const durable = detail.history.flatMap((entry): HistoryEntry[] => {
+    const changes = entry.changes.filter((change) => !isQuestionChange(change));
+    if (changes.length === 0) return [];
+    return [
+      {
+        kind: "history",
+        key: `history:${entry.id}`,
+        day: localDay(entry.time),
+        time: entry.time,
+        by: entry.byShort,
+        byPerson: entry.byPerson,
+        words: historyWords(changes),
+      },
+    ];
+  });
   const begins = Math.min(
     ...detail.history.map((entry) => Date.parse(entry.time) || Infinity),
   );
@@ -470,7 +562,21 @@ export function activityOf(detail: ActivityInput): ActivityEntry[] {
     if (question.ticket === detail.id && !questions.has(question.id))
       questions.set(question.id, question);
   }
-  const asked = [...questions.values()].map(questionEntry);
+  // A question the history keeps and the run window shows is shown once,
+  // as whichever knows more of what became of it.
+  const kept = questionsKept(detail.history);
+  const asked = [...questions.values()].map((question) => {
+    const live = questionEntry(question);
+    const durable = kept.get(question.id);
+    kept.delete(question.id);
+    if (!durable || stateRank[live.state] >= stateRank[durable.state])
+      return {
+        ...live,
+        questionKind: live.questionKind ?? durable?.questionKind,
+      };
+    return durable;
+  });
+  asked.push(...kept.values());
   // A question answered on the board is also in the notes; the run's copy
   // has the times, so its note is left out.
   const notes = notesOf(detail.body).filter(

@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- A ticket's history keeps the questions agents asked about it and what
+  became of them (FH-190, D88): the question and its choices when it is
+  asked, then the answer and who gave it on the board, or that it was
+  answered in the session's own chat, or that the session ended with it
+  still open. They show in the ticket's Activity under All and History
+  after the run that asked has left the two-day run window, once each.
+  Older questions, and outcomes that happened while Flashheart's board
+  was not running for two days, are not recovered.
+
 - Screenshots of Flashheart in use for the README, in `docs/images/`
   (FH-180): the board in both themes, a question waiting in the card
   panel, the Workstreams view and a workstream's page with their railway

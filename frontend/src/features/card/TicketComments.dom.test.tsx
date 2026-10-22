@@ -562,18 +562,21 @@ describe("filtering Activity", () => {
     await user.click(
       within(activity()).getByRole("radio", { name: "History" }),
     );
-    expect(items().map((text) => /created|moved/.test(text))).toEqual([
+    // The answered question in the notes is history too (FH-190).
+    expect(items().map((text) => /created|moved|asked you/.test(text))).toEqual(
+      [true, true, true],
+    );
+    expect(items().some((text) => text.includes("Drop the line strip?"))).toBe(
       true,
-      true,
-    ]);
-    expect(outlineActivity().textContent).toContain("2");
+    );
+    expect(outlineActivity().textContent).toContain("3");
     await user.click(within(activity()).getByRole("radio", { name: "All" }));
     expect(items()).toHaveLength(7);
   });
 
   it("says when a filter has nothing to show", async () => {
     const user = userEvent.setup();
-    renderPage();
+    renderPage(detail({ body: "# Outline the page\n\n## Notes\n\nNone.\n" }));
     await user.click(
       within(activity()).getByRole("radio", { name: "History" }),
     );

@@ -844,7 +844,7 @@ still works, attributed to `unknown`.
 | `update_workstream` | `workstream` (slug), `project?` (a name or key; default the caller's), `set?` (`title`, `goal`, `priority`, `tags`, `depends-on-workstreams`), `add_tickets?` (ids of that project's tickets, appended in order), `remove_tickets?` (ids of its tickets), `rename_to?` (a new slug, FH-158) | one write under the project lock and the workstream file's hash precondition: the fields (the title as its H1, the goal as `## Goal`; a title change keeps the slug and file name), then membership (§7.4): added tickets leave any other workstream, removed ones belong to none; then the rename (§7.4): the file moves to `workstreams/<rename_to>.md` and every ticket and workstream naming the old slug names the new one; any other field (the slug, `status`, `tickets`), an unknown workstream, ticket or dependency, a removed ticket that is not a member, a dependency that leads back to the workstream (`invalid_input` naming the cycle, `a → b → a`), a new title another of the project's workstreams has (`invalid_input`, §7.4), or a `rename_to` that is not a valid slug or that a file in `workstreams/` already has (`invalid_input`) refuses the whole call and writes nothing | the slug (the new one after a rename), the fields changed, tickets added and removed, and after a rename the old slug and the tickets rewritten; `ok workstream=<slug> changed=…` (`slug` first when renamed) |
 | `write_review` | `ticket`, `markdown` | create/replace `review.md`; local file paths in links and images are copied into `files/` and rewritten (`REV-5`) | path, copied files, warnings |
 | `attach` | `ticket`, `path`, `caption`, `kind` | copy into `files/` (`REV-1`, `REV-2`) | stored name and markdown snippet for the review |
-| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call", and that a reply in the chat does not reach the board, so the user answers there too); the `flashheart await` command for it (§7.5), with how Claude Code runs it only when the run is Claude's |
+| `ask_human` | `ticket?`, `kind`, `text`, `options?` | `question.asked`; run → Needs you; with a `ticket`, an `asked` history entry in its `activity.md` holding the question and its options (FH-190) | question id; "the answer will arrive in a later prompt" (for a run the server started: "with the result of your next flashheart tool call", and that a reply in the chat does not reach the board, so the user answers there too); the `flashheart await` command for it (§7.5), with how Claude Code runs it only when the run is Claude's |
 
 **Comments are the user's words (D47, FH-125).** People comment on a
 ticket on the board (board-format §Activity); agents never write
@@ -1473,6 +1473,14 @@ answering `invalid_input`. Values the board refuses (an unknown priority,
 a ticket that does not exist) still answer `invalid_input` with a fix.
 The skill does not describe the input's shape, so it is unchanged, and
 the version stays 2.
+
+Additive change within version 2 (D88, FH-190, 2026-10-22): a question
+about a ticket is kept in the ticket's history (board-format §Activity):
+`ask_human` appends an `asked` entry, the board's answer an `answered`
+one, and `serve` records an answer in the session's chat or a session
+that ended with it open. When the entry cannot be written, `ask_human`
+still asks and its result carries one line saying so. No tool input,
+event or skill text changes, so the version stays 2.
 
 Additive changes within version 1: `create_workstream`, workstream
 membership kept in step by the ticket tools (§7.4), and `board_context`

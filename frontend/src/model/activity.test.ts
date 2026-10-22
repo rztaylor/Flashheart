@@ -399,6 +399,156 @@ describe("activityOf", () => {
   });
 });
 
+describe("questions kept in the ticket's history (FH-190)", () => {
+  const asked = (id = "q1", text = "Ship it?") =>
+    history({
+      id: `h-asked-${id}`,
+      time: "2026-10-12T12:00:00Z",
+      by: "claude:aaaa1111-2222",
+      byShort: "claude:aaaa1111",
+      byPerson: false,
+      changes: [
+        change({
+          what: "asked",
+          question: { id, kind: "decision", text, options: [], answer: "" },
+        }),
+      ],
+    });
+  const outcome = (
+    what: string,
+    overrides: Partial<History> = {},
+    answer = "",
+  ) =>
+    history({
+      id: `h-${what}`,
+      time: "2026-10-12T12:05:00Z",
+      by: "claude:aaaa1111-2222",
+      byShort: "claude:aaaa1111",
+      byPerson: false,
+      changes: [
+        change({
+          what,
+          question: {
+            id: "q1",
+            kind: "",
+            text: "Ship it?",
+            options: [],
+            answer,
+          },
+        }),
+      ],
+      ...overrides,
+    });
+
+  it("shows a question and its board answer from the history once its run has left the window", () => {
+    const entries = activityOf(
+      input({
+        body: notes(
+          '- 2026-10-12 · Question from claude:aaaa1111 — "Ship it?" Answer (Robert): "Yes".',
+        ),
+        history: [
+          asked(),
+          outcome(
+            "answered",
+            { by: "Robert", byShort: "Robert", byPerson: true },
+            "Yes",
+          ),
+        ],
+      }),
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      kind: "question",
+      key: "question:q1",
+      by: "claude:aaaa1111",
+      time: "2026-10-12T12:00:00Z",
+      questionKind: "decision",
+      question: "Ship it?",
+      answer: "Yes",
+      answeredBy: "Robert",
+      answeredAt: "2026-10-12T12:05:00Z",
+      state: "answered",
+    });
+  });
+
+  it("says what became of a question its history records", () => {
+    const state = (list: History[]) =>
+      activityOf(input({ history: list })).map((entry) =>
+        entry.kind === "question" ? entry.state : entry.kind,
+      );
+    expect(state([asked(), outcome("answered-in-session")])).toEqual([
+      "in-session",
+    ]);
+    expect(state([asked(), outcome("session-ended")])).toEqual(["ended"]);
+    expect(state([asked()])).toEqual(["unanswered"]);
+    // An outcome whose asked entry is missing still shows the question.
+    expect(state([outcome("answered-in-session")])).toEqual(["in-session"]);
+  });
+
+  it("shows a question in both the history and the run window once, as the run has it now", () => {
+    const entries = activityOf(
+      input({
+        history: [asked(), outcome("session-ended")],
+        questions: [question({ sessionEnded: true })],
+        runs: [run({ questions: [question({ sessionEnded: true })] })],
+      }),
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ key: "question:q1", state: "open" });
+
+    const answered = activityOf(
+      input({
+        history: [asked()],
+        runs: [
+          run({
+            questions: [
+              question({
+                answer: "No",
+                answeredBy: "Robert",
+                answeredAt: "2026-10-12T12:09:00Z",
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(answered).toHaveLength(1);
+    expect(answered[0]).toMatchObject({ state: "answered", answer: "No" });
+  });
+
+  it("lists questions under History, with the other changes of the ticket", () => {
+    const entries = activityOf(
+      input({
+        comments: [comment({ id: "c1", time: "2026-10-12T12:10:00Z" })],
+        history: [
+          history({
+            id: "h0",
+            time: "2026-10-12T08:00:00Z",
+            changes: [change({ what: "created", to: "backlog" })],
+          }),
+          asked(),
+        ],
+        runs: [
+          run({
+            questions: [
+              question({
+                id: "q2",
+                text: "Other?",
+                asked: "2026-10-12T12:20:00Z",
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(filterActivity(entries, "history").map((e) => e.key)).toEqual([
+      "history:h0",
+      "question:q1",
+      "question:q2",
+    ]);
+  });
+});
+
 describe("historyWords", () => {
   it("words each change of a write in plain terms, never the ticket's text", () => {
     expect(
@@ -476,6 +626,13 @@ describe("filterActivity", () => {
     expect(kinds("all")).toEqual(["note", "history", "comment"]);
     expect(kinds("comments")).toEqual(["comment"]);
     expect(kinds("history")).toEqual(["history"]);
+    // A question is part of the ticket's history too (FH-190).
+    const asked = activityOf(
+      input({ runs: [run({ questions: [question()] })] }),
+    );
+    expect(filterActivity(asked, "history").map((entry) => entry.kind)).toEqual(
+      ["question"],
+    );
   });
 });
 

@@ -7,7 +7,8 @@
 // expiring old files at startup and daily (event files and session inboxes
 // after event_retention_days, STO-5; hook activity state after stale_hours,
 // FH-82) and then moving inboxes left in the old answers/ location into
-// inbox/ (D54), browser opening
+// inbox/ (D54), starting the watcher, the reference copier (references)
+// and the question recorder (questionhistory, FH-190), browser opening
 // with a manual-URL report, and graceful drain. It prints --debug lifecycle
 // summaries and diagnostics such as a failed expiry (serve.log in the
 // background); CLI parsing and

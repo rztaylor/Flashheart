@@ -292,7 +292,8 @@ export interface Comment {
 // (change-requested, addressed, resolved, reopened; FH-126); from and to
 // are statuses, fields the names edited, criteria and steps 1-based
 // numbers, comments the ids of the comments whose state changed or that
-// were deleted (FH-140).
+// were deleted (FH-140). A question change (asked, answered,
+// answered-in-session, session-ended; FH-190) carries its question.
 export interface HistoryChange {
   what: string;
   from: string;
@@ -301,10 +302,22 @@ export interface HistoryChange {
   criteria: number[];
   steps: number[];
   comments?: string[];
+  question?: QuestionChange;
+}
+
+// QuestionChange is an agent's question in the ticket's history (FH-190),
+// with its text: the one history that keeps it. kind, options and answer
+// are "" or empty where the change does not record them.
+export interface QuestionChange {
+  id: string;
+  kind: string;
+  text: string;
+  options: string[];
+  answer: string;
 }
 
 // History is one write that changed the ticket: who, when and what, never
-// the ticket's text (board-format §Activity).
+// the ticket's text except a question's (board-format §Activity).
 export interface History {
   id: string;
   time: string;
@@ -544,7 +557,16 @@ const isHistoryChange = (value: unknown): value is HistoryChange =>
   isStringArray(value.fields) &&
   isNumberArray(value.criteria) &&
   isNumberArray(value.steps) &&
-  isStringArray(value.comments);
+  isStringArray(value.comments) &&
+  isOptional(isQuestionChange)(value.question);
+
+const isQuestionChange = (value: unknown): value is QuestionChange =>
+  isRecord(value) &&
+  isString(value.id) &&
+  isString(value.kind) &&
+  isString(value.text) &&
+  isStringArray(value.options) &&
+  isString(value.answer);
 
 const isHistory = (value: unknown): value is History =>
   isRecord(value) &&

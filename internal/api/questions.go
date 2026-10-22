@@ -62,7 +62,8 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 	}
 	// The session's inbox carries the answer to the run (HOOK-5, D54) and
 	// the log records it; the ticket keeps it for whoever reads the ticket
-	// later (STO-6).
+	// later (STO-6), as a note for agents and, in the same write, in its
+	// history with the question (FH-190).
 	// Queueing first means a failure leaves the question unanswered, so it
 	// can be answered again; an answer queued twice is delivered once.
 	err = b.events.Queue(run.Project, events.Entry{Type: events.EntryAnswer, ID: question.ID, Run: run.ID, Ticket: question.Ticket, Question: question.Text, Text: answer, By: answeredBy, Time: now})
@@ -78,10 +79,11 @@ func (b boardAPI) answer(w http.ResponseWriter, r *http.Request) {
 	if question.Ticket != "" {
 		if project, ticket, found := snapshot.FindTicket(question.Ticket); found {
 			note := board.NoteLine(now, "", fmt.Sprintf("Question from %s — %q Answer (%s): %q.", protocol.ShortRun(run.ID), question.Text, answeredBy, answer))
-			if _, err := b.write.UpdateTicket(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
+			answered := board.Change{What: board.ChangeAnswered, Question: board.QuestionRecord{ID: question.ID, Kind: question.Kind, Text: question.Text, Options: question.Options, Answer: answer}}
+			if _, err := b.write.UpdateTicketNoting(project.Name, ticket.ID, store.Merge, func(data []byte) ([]byte, error) {
 				return mdfile.AppendToSection(data, board.SectionNotes, note)
-			}); err != nil {
-				warnings = append(warnings, "The answer was sent, but it could not be added to "+ticket.ID+"'s notes: "+err.Error())
+			}, answered); err != nil {
+				warnings = append(warnings, "The answer was sent, but it could not be added to "+ticket.ID+"'s notes and history: "+err.Error())
 			}
 		}
 	}

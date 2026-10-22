@@ -221,6 +221,10 @@ func TestAPromptAnswersTheSessionsOpenQuestionsInTheSession(t *testing.T) {
 		if !q.AnsweredInSession || q.Open() || q.Answered() {
 			t.Fatalf("question %s = %+v, want answered in the session and closed", q.ID, q)
 		}
+		// When, for the ticket's history (FH-190).
+		if !q.AnsweredInSessionAt.Equal(at(5)) {
+			t.Errorf("question %s answered in the session at %v, want %v", q.ID, q.AnsweredInSessionAt, at(5))
+		}
 	}
 	if q3.AnsweredInSession || !q3.Open() {
 		t.Fatalf("another session's question = %+v, want open", q3)

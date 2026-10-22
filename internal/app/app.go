@@ -16,6 +16,7 @@ import (
 	"github.com/rztaylor/flashheart/internal/events"
 	"github.com/rztaylor/flashheart/internal/index"
 	"github.com/rztaylor/flashheart/internal/protocol"
+	"github.com/rztaylor/flashheart/internal/questionhistory"
 	"github.com/rztaylor/flashheart/internal/references"
 	"github.com/rztaylor/flashheart/internal/runs"
 	"github.com/rztaylor/flashheart/internal/store"
@@ -85,7 +86,8 @@ func Run(ctx context.Context, options Options) error {
 		return fmt.Errorf("start local server: %w", err)
 	}
 	// External edits become new revisions within a second (STO-7). The
-	// watcher, pruner and reference copier use the store and stderr, so Run
+	// watcher, pruner, reference copier and question recorder use the store
+	// and stderr, so Run
 	// waits for them to finish before it closes the store and returns
 	// (FH-37).
 	watchCtx, stopWatching := context.WithCancel(context.Background())
@@ -101,6 +103,9 @@ func Run(ctx context.Context, options Options) error {
 		background.Go(func() {
 			references.New(runtime.files, options.Root, settings.Attachments.MaxBytes, stderr).Run(watchCtx, runtime.board)
 		})
+		// What became of agents' questions goes into their tickets'
+		// history (FH-190).
+		background.Go(func() { questionhistory.New(runtime.files, stderr).Run(watchCtx, runtime.board) })
 	}
 	go func() {
 		select {

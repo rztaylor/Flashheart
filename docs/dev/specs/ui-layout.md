@@ -431,7 +431,8 @@ at most 94rem.
   attachment grid, followed by the file drop of the Attachments tab where
   the ticket can be edited (then Files shows even with no files). Then **Activity** (h2), with its filter beside the
   heading, a segmented control *Show in Activity*: **All**, **Comments**
-  (people's comments) or **History** (the ticket's history); a muted line
+  (people's comments) or **History** (the ticket's history, its questions
+  included, FH-190); a muted line
   under the heading says what it lists. A timeline on one rule, oldest
   first by day (a note carries only its day, so a day's notes come before
   its timed entries), of people's comments (author, time, *edited* once
@@ -455,16 +456,21 @@ at most 94rem.
   "moved it from Up next to In progress", "edited the description and the
   priority", "ticked criterion 2", and time; never the ticket's text),
   agents' questions (asker, time, the question and, in a tinted reply box,
-  the answer and who gave it, *Answered in the session's own chat*, or
-  *Waiting for your answer, above* while it is open) and handoff updates
+  the answer and who gave it, *Answered in the session's own chat*,
+  *Waiting for your answer, above* while it is open, and, from the
+  ticket's history once its run has left the run window, *Not answered
+  before its session ended.* or *No answer was recorded.*; each question
+  once, though its history, its run and its note may all have it) and
+  handoff updates
   (run, time, and the next steps of the current handoff). A comment's
   node is on the selection surface, as a person's answer is; history's on
   the well. A filter with nothing to show says so (*No comments yet.*,
-  *No history yet.*). Comments and history come from the ticket's
-  `activity.md` and last as long as the ticket; notes, the user's answers
-  on the board and the current handoff are kept in the ticket; earlier
-  questions and checkpoints, and agents' moves from before the history
-  begins, show while the runs that made them are within the run window.
+  *No history yet.*). Comments, history and the questions agents asked
+  about the ticket (FH-190) come from the ticket's `activity.md` and last
+  as long as the ticket; notes, the user's answers on the board and the
+  current handoff are kept in the ticket; earlier checkpoints, and
+  agents' moves from before the history begins, show while the runs that
+  made them are within the run window.
   Where the page can save, the timeline ends with the **comment box**: a
   comment node, then a text area *Add a comment*, then **Tell a session
   now** (FH-127), a checkbox with a muted line beside it: *Also hands it

@@ -77,7 +77,8 @@ type Comment struct {
 }
 
 // History is one write that changed the ticket: who, when and what, never
-// the ticket's text.
+// the ticket's text; only a question change carries its question and
+// answer (FH-190).
 type History struct {
 	ID      string
 	Time    time.Time
@@ -107,8 +108,9 @@ const (
 // Change is one thing a write changed: created (To: the status it starts
 // in), moved (From, To), edited (Fields: frontmatter keys, title, section
 // names), ticked or unticked (Criteria, Steps: 1-based numbers of
-// acceptance criteria and review steps), archived or restored, or a
-// comment state change or deletion (Comments: the comments' ids).
+// acceptance criteria and review steps), archived or restored, a
+// comment state change or deletion (Comments: the comments' ids), or a
+// question asked, answered or left (Question, questionhistory.go).
 type Change struct {
 	What     string
 	From, To string
@@ -116,6 +118,8 @@ type Change struct {
 	Criteria []int
 	Steps    []int
 	Comments []string
+	// Question is the question a question change is about (FH-190).
+	Question QuestionRecord
 }
 
 // Activity is a parsed activity file. Unknown counts entries this version
@@ -316,7 +320,12 @@ func trimBlank(lines []string) []string {
 // left out (and kept in the file).
 func parseChanges(lines []string) []Change {
 	var changes []Change
+	question := false
 	for _, line := range lines {
+		if question && addQuestionLine(&changes[len(changes)-1], line) {
+			continue
+		}
+		question = false
 		match := changeLine.FindStringSubmatch(strings.TrimSpace(line))
 		if match == nil {
 			continue
@@ -352,6 +361,12 @@ func parseChanges(lines []string) []Change {
 					change.Comments = append(change.Comments, id)
 				}
 			}
+		case ChangeAsked, ChangeAnswered, ChangeAnsweredInSession, ChangeSessionEnded:
+			var ok bool
+			if change, ok = parseQuestionChange(change, argument); !ok {
+				continue
+			}
+			question = true
 		default:
 			continue
 		}
@@ -419,6 +434,10 @@ func AppendComment(data []byte, ticket string, c Comment) []byte {
 func AppendHistory(data []byte, ticket string, h History) []byte {
 	lines := []string{heading(h.Time, EntryHistory, h.By, h.ID), ""}
 	for _, change := range h.Changes {
+		if IsQuestionChange(change.What) {
+			lines = append(lines, questionLines(change.What, change.Question)...)
+			continue
+		}
 		lines = append(lines, change.line())
 	}
 	return appendEntry(data, ticket, lines)

@@ -2440,3 +2440,43 @@ Not covered: signing and notarisation (macOS binaries are ad-hoc
 linker-signed; a browser download needs its quarantine attribute
 cleared), a Homebrew tap, Windows, and reproducible archives (the build
 time varies). They stay "decision needed" in the release facts.
+
+## 2026-10-22 — D88: A ticket's history keeps the questions agents asked about it, and serve records what became of them
+
+Decision (FH-190; amends D47 and STO-8's "never the ticket's text"): an
+agent's question about a ticket, and what became of it, are history
+entries in the ticket's `activity.md` (board-format §Activity), so a
+decision a person made outlasts the run window and the event log.
+
+- **Text in history, on purpose.** Other history names what changed and
+  never copies the ticket's text; a question keeps its text, options and
+  board answer, because the decision is what a later reader needs. The
+  text sits on two-space-indented `key: value` lines after its bullet, so
+  it cannot start a heading, an entry or a fence (FH-4), and it is
+  bounded as the event log bounds it (1,000, 10 × 200, 1,000 characters)
+  and scrubbed (SEC-3). The `## Notes` bullet a board answer writes
+  stays, for agents reading the ticket.
+- **Who writes what.** `ask_human` writes `asked` (as the run); the
+  board's answer writes `answered` in the same locked write as its note
+  (as the person). The other outcomes, `answered-in-session` and
+  `session-ended`, are not ticket writes: they are what the run fold
+  concludes. Serve records them (`internal/questionhistory`) after each
+  snapshot, as the asking run, dated when they happened, and fills in an
+  `asked` or `answered` a failed write or an older binary left out. Every
+  change is written at most once per question (`store.RecordQuestion`
+  checks the file under the project lock), so serve, a second serve and
+  the writers above never duplicate one.
+- **Hooks stay as they were.** The prompt hook still reads no log and
+  checks one file (HOOK-1): recording an in-chat answer there would need
+  the session's questions on every user prompt.
+
+Options: record outcomes in the prompt and session-end hooks (rejected:
+a log read per user prompt, or the question list kept in hook state that
+the MCP server would then have to write); a new entry kind `question`
+(rejected: the History filter and its readers already take history, and
+an older binary skips the unknown bullets); write only `asked` and
+`answered` and show the rest from the run window (rejected: an answer in
+the chat, the common case, would leave nothing once the run is gone).
+
+Not covered: an outcome that leaves the run window before serve next
+runs is not recorded; the board then says no answer was recorded.
