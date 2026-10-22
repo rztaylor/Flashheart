@@ -201,7 +201,7 @@ Full format: `docs/dev/specs/board-format.md`.
   states, a deleted comment) appends one history entry in the same
   locked write: who, what changed and when, never the ticket's text. The
   one exception is an agent's question about the ticket (`RUN-8`, FH-190,
-  D88): its history keeps the question and its options when it is asked,
+  D89): its history keeps the question and its options when it is asked,
   and, once each, what became of it: answered on the board (the answer
   and who gave it, in the same write as its note), answered in the
   session's own chat, or still open when its session ended, so a decision

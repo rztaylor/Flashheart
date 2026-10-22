@@ -73,6 +73,11 @@
   the real hooks and MCP server (`agent-runs.mjs`), serves it and writes
   1440 px, scale 2 PNGs to `docs/images/`, then pngquant shrinks them
   when installed. Look at every image before committing it.
+- README diagram (FH-188, developer tool): `scripts/readme-diagram.sh`
+  runs `frontend/e2e/readme/diagram.mjs`, which renders
+  `docs/images/src/how-it-works.svg` in Chromium at scale 2, once per
+  `prefers-color-scheme`, into `docs/images/how-it-works-{light,dark}.png`
+  (transparent; the README picks one with `<picture>`).
 - CI runs `scripts/check.sh` on ubuntu-latest and macos-latest and
   `scripts/e2e.sh` then `scripts/e2e-visual.sh` on ubuntu-latest for every
   pull request and push to `main`, and as the first stage of the release

@@ -138,7 +138,7 @@ Intended layout (packages are created when they get real content):
   (SEC-6); the one place serve runs a git subprocess (`check-ignore`).
   Hooks run git only through `gitchange`.
 - `internal/questionhistory`: serve's recording of what became of
-  agents' questions about tickets in their history (FH-190, D88): after
+  agents' questions about tickets in their history (FH-190, D89): after
   each snapshot, once per question and outcome, through
   `store.RecordQuestion`.
 - `internal/index`: in-memory, revisioned index of the root for `serve`;

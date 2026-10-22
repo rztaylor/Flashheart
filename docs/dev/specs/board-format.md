@@ -550,7 +550,7 @@ after, so every write path is described alike (D58).
 `## Handoff`: a reorder within a column, a note or a checkpoint records
 none. A write that changes nothing records nothing.
 
-**Questions** are the one history that keeps text (FH-190, D88): the
+**Questions** are the one history that keeps text (FH-190, D89): the
 decision a person made is what a later reader needs. The question's
 `<id>` is its question id (agent-protocol §7); its text follows the
 bullet on lines indented by two spaces, one `key: value` each, so none of

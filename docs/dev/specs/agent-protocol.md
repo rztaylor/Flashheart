@@ -1499,7 +1499,7 @@ clauses that repeat what a tool or the board shows were dropped). Nothing is
 refused that was accepted, no input, event or handoff changes shape, and
 an older agent writes the same handoff, so the version stays 2.
 
-Additive change within version 2 (D88, FH-190, 2026-10-22): a question
+Additive change within version 2 (D89, FH-190, 2026-10-22): a question
 about a ticket is kept in the ticket's history (board-format §Activity):
 `ask_human` appends an `asked` entry, the board's answer an `answered`
 one, and `serve` records an answer in the session's chat or a session
