@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The project follows
 
 ### Added
 
+- Agents write handoffs a person can follow (FH-187). The handoff is the
+  first thing you read on a ticket, but agents wrote it as notes to the
+  next agent: paragraphs of type names, signatures and rules. The
+  flashheart skill and the `checkpoint` tool now ask for each done and
+  next item as a sentence or two in plain words saying what and why, with
+  exact rules and names from the code in the ticket's Context, where the
+  next session still reads them. An item that reads like code or runs
+  past 280 characters is saved with a warning naming it and saying how to
+  rewrite it (protocol version unchanged).
+
 - Screenshots of Flashheart in use for the README, in `docs/images/`
   (FH-180): the board in both themes, a question waiting in the card
   panel, the Workstreams view and a workstream's page with their railway

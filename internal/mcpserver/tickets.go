@@ -400,18 +400,31 @@ const glanceTitle = 80
 
 // codeLike matches a word of a title that is a name from the code rather
 // than words a person uses: a path or file name, snake_case, a call,
-// package.Name, lowerCamel (but not iPhone or macOS) or UpperCamel of
-// three or more humps (but not GitHub or JavaScript).
-var codeLike = regexp.MustCompile("`|/.*\\.[A-Za-z]+$|^[a-z][\\w-]+\\.[a-z]{1,4}$|[A-Za-z0-9]_[A-Za-z0-9]|\\(\\)|^[a-z]+\\.[A-Z]|^[a-z]{2,}[A-Z][a-z]|^(?:[A-Z][a-z0-9]+){3,}")
+// package.Name or Type.Method, lowerCamel (but not iPhone or macOS) or
+// UpperCamel of three or more humps (but not GitHub or JavaScript).
+var codeLike = regexp.MustCompile("`|/.*\\.[A-Za-z]+$|^[a-z][\\w-]+\\.[a-z]{1,4}$|[A-Za-z0-9]_[A-Za-z0-9]|\\(\\)|^[a-z]+\\.[A-Z]|^[A-Z]\\w*\\.[A-Z][a-z]|^[a-z]{2,}[A-Z][a-z]|^(?:[A-Z][a-z0-9]+){3,}")
+
+// codeWords lists the words of text that are names from the code, in order.
+func codeWords(text string) []string {
+	var words []string
+	for _, word := range strings.Fields(text) {
+		word = strings.TrimLeft(strings.Trim(word, `"',;:!?.“”‘’`), "([")
+		if strings.Count(word, ")") > strings.Count(word, "(") {
+			word = strings.TrimRight(word, ")]")
+		}
+		if codeLike.MatchString(word) {
+			words = append(words, word)
+		}
+	}
+	return words
+}
 
 // titleAdvice says how to improve a title that reads like code or runs
 // long (FH-113); the title is saved either way. "" when it reads well.
 func titleAdvice(title string) string {
 	title = strings.Join(strings.Fields(title), " ")
-	for _, word := range strings.Fields(title) {
-		if word = strings.Trim(word, `"',;:!?.“”‘’`); codeLike.MatchString(word) {
-			return fmt.Sprintf("The title reads like code (%q): name what a person would notice or gain, and keep names from the code for the description or Context.", word)
-		}
+	if words := codeWords(title); len(words) > 0 {
+		return fmt.Sprintf("The title reads like code (%q): name what a person would notice or gain, and keep names from the code for the description or Context.", words[0])
 	}
 	if length := utf8.RuneCountInString(title); length > glanceTitle {
 		return fmt.Sprintf("The title is %d characters: keep it to %d or fewer so it reads at a glance on a card.", length, glanceTitle)

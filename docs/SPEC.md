@@ -723,7 +723,9 @@ Tool contracts: `docs/dev/specs/agent-protocol.md` §7.
   text is kept in the ticket's files and noted (FH-69, D75). The
   ticket tools ask agents to write titles and descriptions for a person,
   with implementation detail under Context, and warn about a title that
-  reads like code (agent-protocol §7.2). `get_ticket` and `claim` end
+  reads like code (agent-protocol §7.2); `checkpoint` asks for a handoff
+  the person reviewing the ticket can read, and warns about an item that
+  reads like code or runs long (FH-187, D87). `get_ticket` and `claim` end
   with the ticket's comments (STO-8), framed as the user's words apart
   from ticket text, the newest kept within each tool's budget.
 - `MCP-3` Tool outputs are compact text designed for model context;
