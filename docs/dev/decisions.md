@@ -2468,3 +2468,27 @@ checkpoint. To fit the line in the skill's 8 KiB budget, other lines were
 shortened, saying the same, and two clauses that repeat what a tool or
 the board shows were dropped (that moving to review warns without
 evidence, and that the board links a ticket's pull request).
+
+## 2026-10-22 — D88: Boards stay compatible before v1.0.0
+
+Decision (FH-188; supersedes "no compatibility promise before v1.0.0" in
+release facts, D55 and D86): every release reads the boards earlier
+releases wrote, without a manual step. Flashheart's own board, and the
+boards of everyone building with it, are the record of their work; a
+release that strands them is not one we would ship, so the policy now
+says what practice already is.
+
+- **Board format.** A change to the files keeps old boards readable, or
+  the new release converts them itself on first start. It is a release
+  blocker otherwise (`docs/dev/ops/release-governance.md`).
+- **Agent protocol.** Unchanged (agent-protocol §14): additive changes
+  keep `PROTOCOL_VERSION`; anything else bumps it and the release notes
+  say to re-run `setup`.
+- **Not a 1.0 promise.** Commands, flags, the HTTP API and the UI can
+  still change between minor versions; SemVer's v1.0.0 is kept for when
+  those settle too.
+
+Options considered: keep "no compatibility promise" until v1.0.0 (honest
+about the code, but contradicts how the project is run and discourages
+the people it is for); promise full SemVer stability now (more than the
+CLI and API are ready for).

@@ -1,8 +1,9 @@
 # Release governance
 
-Flashheart is pre-release with no compatibility promise before v1.0.0.
-Versions follow Semantic Versioning; tags are `vMAJOR.MINOR.PATCH`. The agent
-protocol is versioned separately (`PROTOCOL_VERSION`,
+Flashheart is before v1.0.0, but its boards are kept compatible (D88):
+every release reads the boards earlier releases wrote, without a manual
+step. Versions follow Semantic Versioning; tags are `vMAJOR.MINOR.PATCH`.
+The agent protocol is versioned separately (`PROTOCOL_VERSION`,
 `docs/dev/specs/agent-protocol.md` §14).
 
 ## Release blockers
@@ -18,6 +19,8 @@ protocol is versioned separately (`PROTOCOL_VERSION`,
 - `setup` changes agent configuration without showing the diff and getting
   a yes (the prompt or `--yes`), or `--uninstall` leaves Flashheart entries
   behind or removes the user's own.
+- The release cannot read, without a manual step, a board an earlier
+  release wrote (D88).
 - A protocol change that is not additive ships without a `PROTOCOL_VERSION`
   bump and release-note instructions to re-run `setup`.
 - Release notes overstate planned or unverified behaviour, or omit the agent
