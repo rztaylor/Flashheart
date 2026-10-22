@@ -54,7 +54,7 @@ instructions.
 ## Starting
 
 - If the session began with a ` + "`[Flashheart]`" + ` recovery note, read it: it
-  names your run, your project, this worktree's ticket and its handoff. Pass its ` + "`run`" + ` to the tools if they ask for one.
+  names your run, project, worktree's ticket and handoff; pass its ` + "`run`" + ` to tools that ask for one.
 - Otherwise call ` + "`board_context`" + `. It names your project and its key, your
   ticket if you have one, answers waiting for you, and what is up next.
 - If your project has no key yet, choose 2–5 capital letters a person would
@@ -68,10 +68,10 @@ instructions.
 
 - Refer to tickets by id. "Look at FH-42" means ` + "`get_ticket FH-42`" + `.
 - For work asked in plain words ("tackle the three top-priority bugs"), use
-  ` + "`list_tickets`" + ` (here ` + "`type=bug`" + `, ` + "`limit=3`" + `); it lists your project's
+  ` + "`list_tickets`" + ` (` + "`type=bug`" + `, ` + "`limit=3`" + `); it lists your project's
   open tickets, highest priority first.
-- ` + "`claim`" + ` a ticket before working on it. Claiming moves it to In progress
-  and records your branch. You hold one ticket at a time; claiming another
+- ` + "`claim`" + ` a ticket before working on it: it moves to In progress and
+  records your branch. You hold one ticket at a time; claiming another
   releases the first. If someone else holds it, do not force it unless the
   user says the other session is gone; then pass ` + "`force`" + ` and a ` + "`reason`" + `.
   ` + "`release`" + ` a ticket you stop working on without finishing it
@@ -84,8 +84,8 @@ instructions.
   A change requested in review has an id: make it, then pass the id in
   ` + "`update_ticket`" + `'s ` + "`addressed`" + `.
 - New work gets a ticket first: ` + "`create_ticket`" + `, then claim it. Do not
-  start untracked work, and do not start a ticket you just created for
-  follow-up work unless the user asks. File another repository's
+  start untracked work, or a ticket you created for follow-up work unless
+  the user asks. File another repository's
   follow-up there, naming it in ` + "`project`" + `. If you edit files holding no
   ticket, the hooks ask you once to claim or create one.
 
@@ -93,19 +93,18 @@ instructions.
 
 - A ticket's criteria and handoff are its plan.
 - ` + "`checkpoint`" + ` at milestones, before long operations or a compaction,
-  and always before you stop after editing files: what is done, what is
-  next, the files that matter, and open questions. The next session
+  and always before you stop after editing files. The next session
   resumes from it.
 - ` + "`update_ticket`" + ` ticks criteria as they pass, edits fields and appends
   notes. When the scope changes, rewrite the ticket instead of noting it:
   ` + "`sections`" + ` replaces sections; ` + "`criteria`" + ` adds, rewords, removes or
   moves criteria, keeping ticks. Handoff and Notes are never rewritten.
 - When you open a pull request, set its ` + "`pr`" + ` to its URL with
-  ` + "`update_ticket`" + `, so the board links to it.
-- ` + "`attach`" + ` copies a screenshot or log into a ticket and gives the
-  markdown to link it from the review.
+  ` + "`update_ticket`" + `.
+- ` + "`attach`" + ` copies a screenshot or log into a ticket and returns
+  markdown linking it for the review.
 - When you need a human decision, ` + "`ask_human`" + ` (with options for
-  clear choices). The board shows the user; the answer arrives in a
+  clear choices), shown on the board. The answer arrives in a
   later prompt or, without Flashheart's hooks, with your next flashheart
   tool result. Carry on with other work if you can. If the user
   replies in this chat instead, that reply is the answer: with hooks, the
@@ -113,11 +112,10 @@ instructions.
   it on the board too.
 - ` + "`ask_human`" + ` also returns a ` + "`flashheart await`" + ` command. If you can run
   a background command that wakes you when it exits (in Claude Code, Bash
-  with ` + "`run_in_background`" + `), run it: the answer then reaches you as soon
-  as it is given. If the user answers in
+  with ` + "`run_in_background`" + `), run it: the answer then wakes you. If the user answers in
   the chat first, the command exits and says so.
 - If your turn ends with a question for the user, ask it with
-  ` + "`ask_human`" + ` as well, even at the end of a status summary. A question
+  ` + "`ask_human`" + ` too, even at the end of a status summary. A question
   asked only in chat leaves your run in Waiting, not Needs you, and the
   user may miss it.
 
@@ -125,16 +123,15 @@ instructions.
 
 1. Tick the criteria that pass (` + "`update_ticket`" + `).
 2. Show the evidence. A change with a visible effect (UI, rendered output,
-   an image, terminal output someone would otherwise reproduce) needs
-   screenshots saved as files, one for every state the change touched
-   (each theme, narrow widths, empty and error states), each with a caption,
+   images, terminal output) needs screenshots saved as files, one for
+   every state the change touched (each theme, narrow widths, empty and error states), each with a caption,
    linked in the review's Evidence section by absolute path; Flashheart
    copies them into the ticket. Screenshots that only reached your context
    do not count. With nothing visible, say so instead:
-   "No visible change: <why>". Moving to review warns when neither is there.
+   "No visible change: <why>".
 3. ` + "`write_review`" + ` using the template below.
 4. ` + "`checkpoint`" + `, then ` + "`move`" + ` the ticket to ` + "`review`" + `. Never move a ticket to
-   ` + "`done`" + `; the human does that after verifying.
+   ` + "`done`" + `; the human does that once verified.
 
 ## Writing tickets
 
@@ -147,8 +144,12 @@ who has not read the code.
   write: "Card and Runs tab can disagree about why a session needs you".
 - The description, in plain words: the problem as someone experiences it,
   why it matters (who it affects, what it costs), and the proposed change.
-- Implementation detail (files, functions, design notes) goes in
-  ` + "`context`" + `.
+- The handoff is what the person reviewing the ticket reads first: each
+  done and next item is a sentence or two saying what and why. Instead
+  of: "Call Scope.Validate in contribute()"; write: "Refuse a malformed
+  scope when a fact is added".
+- Implementation detail (files, functions, design notes, exact rules)
+  goes in ` + "`context`" + `, which the next session reads.
 
 ## Ticket conventions
 

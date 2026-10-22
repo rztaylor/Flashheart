@@ -2441,6 +2441,34 @@ linker-signed; a browser download needs its quarantine attribute
 cleared), a Homebrew tap, Windows, and reproducible archives (the build
 time varies). They stay "decision needed" in the release facts.
 
+## 2026-10-22 — D87: Handoffs are written for the person reviewing the ticket
+
+D40 made titles and descriptions readable, but the handoff kept being
+written as a note from one agent to the next: next steps arrived as
+paragraphs of type names, SQL and regular expressions (Froodbase's FRB-14),
+and it is the first thing a person sees on a ticket's page. Each done and
+next item is now a sentence or two in plain words saying what and why,
+and an open question is one a person can answer; exact rules and names
+from the code go in `## Context` (FH-187, agent-protocol §7.2).
+
+Nothing is lost for the next session by moving the detail: `claim` already
+cut each handoff item to 300 characters, so long items never reached it
+whole, while `get_ticket` shows Context in full.
+
+As in D40, the advice sits in the skill (with an example), in the
+`checkpoint` description and field hints, and in a `warning:` per item
+that has three or more code-like words (the title test) or runs past 280
+characters, a sentence or two. Options: the skill only (missed when it is
+not loaded); refuse such items (a heuristic must not block a checkpoint,
+which agents make before stopping, and tools fail open); a second,
+plain-language summary field beside the technical items (two texts to
+keep in step, and the technical one would still be what the board shows
+or hides); warn (chosen). Existing handoffs change at their next
+checkpoint. To fit the line in the skill's 8 KiB budget, other lines were
+shortened, saying the same, and two clauses that repeat what a tool or
+the board shows were dropped (that moving to review warns without
+evidence, and that the board links a ticket's pull request).
+
 ## 2026-10-22 — D88: A ticket's history keeps the questions agents asked about it, and serve records what became of them
 
 Decision (FH-190; amends D47 and STO-8's "never the ticket's text"): an

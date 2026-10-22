@@ -835,7 +835,7 @@ still works, attributed to `unknown`.
 | `get_ticket` | `ticket` (id) | none | ticket markdown, column, blocked reasons, review, files list; then the ticket's comments (below), within 8 KiB |
 | `claim` | `ticket`, `force?`, `reason?` | §6 | ticket summary and handoff, unticked criteria, then the ticket's comments (below), within 3 KiB |
 | `release` | `ticket`, `reason?` | §6 | ok |
-| `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok |
+| `checkpoint` | `ticket`, `done[]`, `next[]`, `files[]`, `open_questions[]`, `note?` | rewrites `## Handoff`; clears dirty | ok; a `warning:` line for each handoff item that reads like code or runs long (below) |
 | `update_ticket` | `ticket`, `set?` (a typed object, FH-171: `title`, `type`, `priority`, `created`, `branch`, `pr` (the pull request URL) and `workstream` take a string, an empty one clearing the field; `tags`, `depends-on` and `depends-on-workstreams` take a list of strings, or one comma-separated string, which is split and trimmed (D83), an empty list or string clearing the field; `status` and any other key are refused by the schema, before the tool), `check?` (criteria text or index), `append_notes?`, `addressed?` (ids of the user's change requests on the ticket that the agent has made, FH-126), `sections?` (heading → new text, FH-69), `criteria?` (operations `{op, item?, text?, position?}`, FH-69) | frontmatter/body edit with hash precondition; `addressed` marks each change request addressed in the ticket's `activity.md` in the same write (one history entry), refusing a plain comment or a resolved request (`invalid_input`; one already addressed is no change) or an unknown id (`not_found`); setting `workstream` also moves the ticket between workstreams' `tickets:` lists (§7.4); `sections` and `criteria` rewrite the ticket's text (below) | changed fields, and `kept=files/…` when a rewrite kept replaced text; a title advice warning (below) when it sets the title |
 | `move` | `ticket`, `to` (status) | `status` edit; `review` checks the review file, the criteria and the ticket's open change requests, naming each with its id and the start of its text, and returns warnings (never refuses, `EDIT-3`, `REV-6`); `done` and `rejected` are refused (humans move tickets to Done or reject them); a blocked ticket is started with `claim` and `force` | new column, warnings |
 | `set_project_key` | `key` (2–5 uppercase letters or digits, starting with a letter), `project?` | records `key` in `project.yaml` under the root lock; only while the project has no tickets (`KEY-5`) | the key; errors `key_taken` (with the keys in use), `key_fixed` (the project already has tickets), `invalid_input` |
@@ -904,11 +904,24 @@ who has not read the code; implementation detail is welcome below, in
 `## Context`. `create_ticket` and `update_ticket` say so in their
 descriptions and `create_ticket`'s field hints, and the skill explains it
 with an example (§12). A title that reads like code (a word in backticks,
-a path or file name, snake_case, a call `()`, `package.Name`, lowerCamel,
+a path or file name, snake_case, a call `()`, `package.Name` or
+`Type.Method`, lowerCamel,
 or UpperCamel of three or more humps; not `iPhone`, `macOS` or `GitHub`)
 or is over 80 characters is saved anyway, and the result carries one
 `warning:` line saying how to improve it. The browser's create and edit
 forms do not judge titles.
+
+**Handoffs for a person (FH-187, D87).** The handoff is what the person
+reviewing a ticket reads first, so its items are written for them too:
+each done or next item is a sentence or two in plain words saying what and
+why, and an open question is one a person can answer; exact rules and
+names from the code go in `## Context`, where `get_ticket` shows the next
+session (`claim` already cuts each handoff item to 300 characters). The
+`checkpoint` description and its `done`, `next` and `open_questions` hints
+say so, and the skill gives an example (§12). An item with three or more
+words that read like code (the same test as a title's) or over 280
+characters is saved anyway, and the result carries a `warning:` line per
+such item, naming it (`Next item 2`) and saying how to rewrite it.
 
 Errors are `{code, message, fix}`, rendered as `error <code>: <message>`
 and a `fix:` line, with codes such as `not_found`, `conflict`, `claimed`,
@@ -1207,7 +1220,10 @@ checks (§5.4). It covers, briefly:
 - writing tickets for a person (§7.2): a title says what a person would
   notice or gain, without names from the code; the description gives the
   problem, why it matters and the proposed change in plain words; detail
-  goes in `context`; one before/after example;
+  goes in `context`; the handoff is what the person reviewing the ticket
+  reads first, each done and next item a sentence or two saying what and
+  why, exact rules and names from the code in Context (FH-187); one
+  before/after example each for a title and a handoff item;
 - ticket conventions: types, TDD sections (Test Plan or Reproduction),
   workstreams as epics (a ticket waits only for the tickets its
   `depends_on` names, one or several, and for workstream dependencies);
@@ -1473,6 +1489,15 @@ answering `invalid_input`. Values the board refuses (an unknown priority,
 a ticket that does not exist) still answer `invalid_input` with a fix.
 The skill does not describe the input's shape, so it is unchanged, and
 the version stays 2.
+
+Additive change within version 2 (D87, FH-187, 2026-10-22): handoffs are
+written for a person (§7.2). `checkpoint`'s description and field hints
+gain wording, its result a `warning:` line per handoff item that reads
+like code or runs long, and the skill a line with an example (to stay
+under 8 KiB, a few other lines were shortened, saying the same, and two
+clauses that repeat what a tool or the board shows were dropped). Nothing is
+refused that was accepted, no input, event or handoff changes shape, and
+an older agent writes the same handoff, so the version stays 2.
 
 Additive change within version 2 (D88, FH-190, 2026-10-22): a question
 about a ticket is kept in the ticket's history (board-format §Activity):
