@@ -17,9 +17,12 @@ type Reason struct {
 	// not say which).
 	Permission string `json:"permission"`
 	// Question is the open question's kind; Answered means the human
-	// answered it on the board and the answer waits for delivery.
+	// answered it on the board and the answer waits for delivery. Ticket
+	// is the ticket the question is about ("" when it is about none): its
+	// card is where the human acts on it (About, FH-185).
 	Question string `json:"question"`
 	Answered bool   `json:"answered"`
+	Ticket   string `json:"-"`
 	// WaitingOn is the subagent whose prompt or question it is, and
 	// AgentType that subagent's type ("" when unknown); both are empty
 	// when the blocker is the run's own.
@@ -29,6 +32,37 @@ type Reason struct {
 	// (Run.MCPOnly): the answer waits for its next Flashheart tool call,
 	// not a prompt.
 	MCPOnly bool `json:"mcpOnly"`
+}
+
+// About reports whether the reason needs you on a ticket's card (FH-185):
+// a permission prompt is answered in the session, so it is its own card's;
+// a question is answered on the card of the ticket it is about, and one
+// about no ticket on the session's card. No reason is about any card.
+func (r Reason) About(ticket string) bool {
+	return r.Kind != "" && (r.Ticket == "" || r.Ticket == ticket)
+}
+
+// QuestionReason is the reason an open question gives the run it waits on
+// (reason): a subagent's names the subagent, a session's own carries
+// MCPOnly with Answered. asker is the view of the run that asked it. A
+// card of the ticket a question is about words it as the run's Runs tab
+// would, when the run is linked elsewhere (FH-185).
+func QuestionReason(q Question, asker View) Reason {
+	if asker.Parent != "" {
+		return questionReason(q, asker.ID, asker.AgentType, false)
+	}
+	return questionReason(q, "", "", asker.MCPOnly)
+}
+
+// questionReason builds a question's reason; waitingOn and agentType name
+// the subagent that asked it, empty for the run's own, and mcpOnly is the
+// run's, kept only with Answered.
+func questionReason(q Question, waitingOn, agentType string, mcpOnly bool) Reason {
+	reason := Reason{Kind: ReasonQuestion, Question: q.Kind, Ticket: q.Ticket, Answered: q.Answered(), WaitingOn: waitingOn, AgentType: agentType}
+	if reason.Answered && waitingOn == "" {
+		reason.MCPOnly = mcpOnly
+	}
+	return reason
 }
 
 // reason derives why r needs you, first match wins: its own permission
@@ -44,7 +78,7 @@ func (s *Set) reason(r *Run) Reason {
 		return Reason{Kind: ReasonPermission, Permission: r.Permission}
 	}
 	if q, ok := r.firstOpen(false); ok {
-		return Reason{Kind: ReasonQuestion, Question: q.Kind}
+		return questionReason(q, "", "", false)
 	}
 	for _, child := range children {
 		if !child.ended && child.Permission != "" {
@@ -55,15 +89,15 @@ func (s *Set) reason(r *Run) Reason {
 	// its answer goes to the session (agent-protocol §4).
 	for _, child := range children {
 		if q, ok := child.firstOpen(false); ok {
-			return Reason{Kind: ReasonQuestion, Question: q.Kind, WaitingOn: child.ID, AgentType: child.AgentType}
+			return questionReason(q, child.ID, child.AgentType, false)
 		}
 	}
 	if q, ok := r.firstOpen(true); ok {
-		return Reason{Kind: ReasonQuestion, Question: q.Kind, Answered: true, MCPOnly: r.MCPOnly()}
+		return questionReason(q, "", "", r.MCPOnly())
 	}
 	for _, child := range children {
 		if q, ok := child.firstOpen(true); ok {
-			return Reason{Kind: ReasonQuestion, Question: q.Kind, Answered: true, WaitingOn: child.ID, AgentType: child.AgentType}
+			return questionReason(q, child.ID, child.AgentType, false)
 		}
 	}
 	return Reason{}

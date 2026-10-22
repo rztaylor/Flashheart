@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isCard } from "./board";
 import { isPreferences } from "./preferences";
-import { isLive, isRun, isRunCounts } from "./runs";
+import { isLive, isRun, isRunCounts, noReason } from "./runs";
 
 const counts = {
   working: 1,
@@ -159,6 +159,7 @@ describe("run validators", () => {
       needsYou: true,
       agentWorking: false,
       openQuestions: 0,
+      reason: noReason,
     };
     expect(isCard({ ...card, live })).toBe(true);
     expect(isCard({ ...card, live: { ...live, state: "busy" } })).toBe(false);
@@ -196,6 +197,7 @@ describe("run validators", () => {
       needsYou: false,
       agentWorking: true,
       openQuestions: 0,
+      reason: noReason,
     };
     const sessions = {
       run: "claude:s",

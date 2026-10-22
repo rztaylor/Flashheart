@@ -39,6 +39,7 @@ function card(overrides: Partial<Card> = {}): Card {
     needsYou: false,
     agentWorking: false,
     openQuestions: 0,
+    reason: noReason,
     ...overrides,
   };
 }
@@ -62,6 +63,14 @@ const needsYou: Live = {
   ...live,
   state: "needs-you",
   reason: { ...noReason, kind: "permission", permission: "Bash" },
+};
+
+// prompted is a card whose run waits on a permission prompt: the server
+// sets the card's flag and reason with the run's (FH-185).
+const prompted: Partial<Card> = {
+  live: needsYou,
+  needsYou: true,
+  reason: needsYou.reason,
 };
 
 function render(
@@ -261,7 +270,7 @@ describe("a Compact card", () => {
         {
           blocked: true,
           blockedBy: [blocker],
-          live: needsYou,
+          ...prompted,
           changeRequests: { open: 1, addressed: 0 },
         },
         "compact",
@@ -283,7 +292,7 @@ describe("a Compact card", () => {
 
   it("marks a waiting question as needing the user", () => {
     const marks = part(
-      render({ openQuestions: 1 }, "compact"),
+      render({ needsYou: true, openQuestions: 1 }, "compact"),
       'data-part="marks"',
     );
     expect(marks).toContain('data-mark="needs-you"');
@@ -344,12 +353,43 @@ describe("a Normal card", () => {
   });
 
   it("shows a run that needs the user with its reason on its own line", () => {
-    const line = part(render({ live: needsYou }), 'data-row="needs-you"');
+    const line = part(render(prompted), 'data-row="needs-you"');
     expect(line).toContain("Needs you");
     expect(line).toContain("Bash");
-    const question = part(render({ openQuestions: 2 }), 'data-row="needs-you"');
+    const question = part(
+      render({ needsYou: true, openQuestions: 2 }),
+      'data-row="needs-you"',
+    );
     expect(question).toContain("2 questions waiting");
     expect(render({ live })).not.toContain('data-row="needs-you"');
+  });
+
+  // The card's reason is the server's (FH-185, D39): the words of a
+  // question about the ticket, whoever asked it, with the further questions
+  // counted; a card whose run waits on another ticket's question says
+  // nothing, as the Needs you filter leaves it out.
+  it("words a question about the ticket as its reason", () => {
+    const review = {
+      ...noReason,
+      kind: "question" as const,
+      question: "review" as const,
+    };
+    const asked = render({ needsYou: true, openQuestions: 1, reason: review });
+    expect(part(asked, 'data-row="needs-you"')).toContain("Asks for a review");
+    expect(asked).not.toContain("Question waiting");
+    expect(name(asked)).toContain("needs you: asks for a review");
+    const more = render({ needsYou: true, openQuestions: 3, reason: review });
+    expect(part(more, 'data-row="needs-you"')).toContain(
+      "Asks for a review (+2 more)",
+    );
+    const prompt = render({ ...prompted, openQuestions: 1 });
+    expect(part(prompt, 'data-row="needs-you"')).toContain(
+      "Permission for Bash (+1 more)",
+    );
+    const elsewhere = render({ live: { ...live, state: "waiting" } });
+    expect(elsewhere).not.toContain('data-row="needs-you"');
+    expect(elsewhere).not.toContain('data-mark="needs-you"');
+    expect(name(elsewhere)).toContain("Claude waiting");
   });
 
   it("leaves the words to Detailed, in tooltips and the name meanwhile", () => {
@@ -380,7 +420,7 @@ describe("a Normal card", () => {
 
 describe("a Detailed card", () => {
   const markup = render(
-    { blocked: true, blockedBy: [blocker, blocker], live: needsYou },
+    { blocked: true, blockedBy: [blocker, blocker], ...prompted },
     "detailed",
     undefined,
     "Flashheart",
@@ -423,7 +463,7 @@ describe("a Detailed card", () => {
       'data-row="workstream"',
       'data-row="meta"',
     ]);
-    const normal = render({ live: needsYou }, "normal");
+    const normal = render(prompted, "normal");
     expect(normal.match(/data-row="[\w-]+"/g)).toEqual([
       'data-row="meta"',
       'data-row="needs-you"',

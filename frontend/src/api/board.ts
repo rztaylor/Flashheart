@@ -11,12 +11,14 @@ import {
 } from "./client";
 import {
   isLive,
+  isNeedsReason,
   isQuestion,
   isRun,
   isRunCounts,
   isRunState,
   isTicketSessions,
   type Live,
+  type NeedsReason,
   type Question,
   type Run,
   type RunCounts,
@@ -108,6 +110,10 @@ export interface Card {
   live?: Live;
   needsYou: boolean;
   agentWorking: boolean;
+  // reason is why the card needs you (FH-185, D39): its linked run's
+  // reason when that is about the ticket, else the oldest open question
+  // about it from a live session; kind is "" when it does not.
+  reason: NeedsReason;
   // openQuestions counts open questions about the ticket (CARD-6).
   openQuestions: number;
   // changeRequests counts its change requests still open (waiting for an
@@ -407,6 +413,7 @@ export function isCard(value: unknown): value is Card {
     isOptional(isLive)(value.live) &&
     isBoolean(value.needsYou) &&
     isBoolean(value.agentWorking) &&
+    isNeedsReason(value.reason) &&
     isNumber(value.openQuestions) &&
     isChangeRequests(value.changeRequests) &&
     isOptional(isTicketSessions)(value.sessions)

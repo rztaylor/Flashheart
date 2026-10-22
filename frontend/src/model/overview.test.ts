@@ -48,6 +48,7 @@ function card(patch: Partial<Card>): Card {
     needsYou: false,
     agentWorking: false,
     openQuestions: 0,
+    reason: noReason,
     ...patch,
   };
 }

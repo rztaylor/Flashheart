@@ -101,6 +101,15 @@
         "searchText": "\n# Long titles overflow the column\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n\n## Reproduction\n\nA 200-character title widens the column.\n",
         "needsYou": false,
         "agentWorking": false,
+        "reason": {
+          "kind": "",
+          "permission": "",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
         "openQuestions": 0,
         "changeRequests": {
           "open": 0,
@@ -163,6 +172,15 @@
         "searchText": "\n# Offline mode\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
         "needsYou": false,
         "agentWorking": false,
+        "reason": {
+          "kind": "",
+          "permission": "",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
         "openQuestions": 0,
         "changeRequests": {
           "open": 0,
@@ -203,6 +221,15 @@
         "searchText": "\n# Broken frontmatter\n\nThis ticket's YAML does not parse; it must show as needs repair.\n",
         "needsYou": false,
         "agentWorking": false,
+        "reason": {
+          "kind": "",
+          "permission": "",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
         "openQuestions": 0,
         "changeRequests": {
           "open": 0,
@@ -256,6 +283,15 @@
         "searchText": "\n# Drag and drop\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
         "needsYou": false,
         "agentWorking": false,
+        "reason": {
+          "kind": "",
+          "permission": "",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
         "openQuestions": 0,
         "changeRequests": {
           "open": 0,
@@ -313,6 +349,15 @@
         },
         "needsYou": true,
         "agentWorking": false,
+        "reason": {
+          "kind": "permission",
+          "permission": "Bash",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
         "openQuestions": 1,
         "changeRequests": {
           "open": 0,
@@ -370,6 +415,15 @@
         "searchText": "\n# Board columns\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
         "needsYou": false,
         "agentWorking": false,
+        "reason": {
+          "kind": "",
+          "permission": "",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
         "openQuestions": 0,
         "changeRequests": {
           "open": 0,
@@ -411,6 +465,15 @@
         "searchText": "\n# Project skeleton\n\n## Description\n\nFixture ticket.\n\n## Acceptance Criteria\n\n- [x] First criterion\n- [ ] Second criterion\n\n## Context\n\nCreated for tests.\n\n## Notes\n\nNone.\n",
         "needsYou": false,
         "agentWorking": false,
+        "reason": {
+          "kind": "",
+          "permission": "",
+          "question": "",
+          "answered": false,
+          "waitingOn": "",
+          "agentType": "",
+          "mcpOnly": false
+        },
         "openQuestions": 0,
         "changeRequests": {
           "open": 0,

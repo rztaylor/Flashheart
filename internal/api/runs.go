@@ -303,27 +303,45 @@ func (b boardAPI) run(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, RunResponse{Revision: snapshot.Revision, Run: runJSON(snapshot, v, true)})
 }
 
-// liveBadge fills a card's live run and virtual-column flags (VIEW-2,
-// VIEW-8), looking the ticket's runs up in the snapshot's run index.
+// liveBadge fills a card's live run, reason and virtual-column flags
+// (VIEW-2, VIEW-8), looking the ticket's runs up in the snapshot's run
+// index. The card needs you for its linked run's reason only when that is
+// about the ticket (runs.Reason.About, FH-185): a run that asks about
+// another ticket needs you on that ticket's card, and here it only waits
+// for the answer, so the cards the Needs you filter shows agree with the
+// pill's count of runs.
 func liveBadge(snapshot *index.Snapshot, card *Card) {
 	// An open question about the ticket needs you whoever asked it, while
-	// the asking session is live (VIEW-2).
+	// the asking session is live (VIEW-2); the oldest is the card's reason
+	// unless its own run's comes first.
+	var reason runs.Reason
 	for _, question := range snapshot.Questions(card.ID) {
-		if !question.SessionEnded {
-			card.OpenQuestions++
+		if question.SessionEnded {
+			continue
+		}
+		card.OpenQuestions++
+		if _, asker, ok := snapshot.Question(question.ID); ok && reason.Kind == "" {
+			reason = runs.QuestionReason(question, asker)
 		}
 	}
-	card.NeedsYou = card.OpenQuestions > 0
-	v, ok := snapshot.TicketRun(card.ID)
-	if !ok {
-		return
+	if v, ok := snapshot.TicketRun(card.ID); ok {
+		state, live := v.State, runs.Reason{}
+		switch {
+		case state != runs.NeedsYou:
+		case v.Reason.About(card.ID):
+			reason, live = v.Reason, v.Reason
+		default:
+			// It needs you on another ticket's card; here it waits.
+			state = runs.Waiting
+		}
+		card.Live = &LiveJSON{
+			Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(state),
+			Reason: reasonJSON(live), LastActivity: timestamp(v.LastActivity),
+		}
+		card.AgentWorking = state == runs.Working || state == runs.Quiet
 	}
-	card.Live = &LiveJSON{
-		Run: v.ID, Short: protocol.ShortRun(v.ID), Agent: v.Agent, State: string(v.State),
-		Reason: reasonJSON(v.Reason), LastActivity: timestamp(v.LastActivity),
-	}
-	card.NeedsYou = card.NeedsYou || v.State == runs.NeedsYou
-	card.AgentWorking = v.State == runs.Working || v.State == runs.Quiet
+	card.Reason = reasonJSON(reason)
+	card.NeedsYou = reason.Kind != ""
 }
 
 // ticketRuns lists a ticket's runs with timelines for its Runs tab, with

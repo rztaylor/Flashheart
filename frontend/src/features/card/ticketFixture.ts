@@ -3,6 +3,7 @@
 // support only; nothing in the app imports it.
 import type { Review, TicketDetail } from "../../api/board";
 import type { Run } from "../../api/runs";
+import { noReason } from "../../api/runs";
 
 const reviewMarkdown = [
   "# Review: Outline the page",
@@ -103,6 +104,7 @@ export function detail(overrides: Partial<TicketDetail> = {}): TicketDetail {
     needsYou: false,
     agentWorking: false,
     openQuestions: 0,
+    reason: noReason,
     body,
     frontmatter: "",
     session: "",

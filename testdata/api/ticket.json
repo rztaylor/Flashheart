@@ -55,6 +55,15 @@
       },
       "needsYou": true,
       "agentWorking": false,
+      "reason": {
+        "kind": "permission",
+        "permission": "Bash",
+        "question": "",
+        "answered": false,
+        "waitingOn": "",
+        "agentType": "",
+        "mcpOnly": false
+      },
       "openQuestions": 1,
       "changeRequests": {
         "open": 0,

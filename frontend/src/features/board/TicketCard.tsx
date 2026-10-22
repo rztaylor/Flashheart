@@ -434,13 +434,19 @@ function cardMarks(card: Card, now: Date) {
   };
 }
 
-// needsWords says why the card needs the user: its run's reason, or the
-// questions about it waiting when its run is not waiting on the user
+// needsWords says why the card needs the user, as the server derived it
+// (FH-185, D39): its reason in words (its run's own, or a question about
+// the ticket whoever asked it), with the further questions waiting counted
 // (CARD-6); "" when nothing needs the user.
 function needsWords(card: Card): string {
-  if (card.live?.state === "needs-you")
-    return needsReason(card.live.reason) || "Needs you";
-  return card.openQuestions > 0 ? questionsWaiting(card.openQuestions) : "";
+  if (!card.needsYou) return "";
+  const words = needsReason(card.reason);
+  if (!words)
+    return card.openQuestions > 0
+      ? questionsWaiting(card.openQuestions)
+      : "Needs you";
+  const more = card.openQuestions - (card.reason.kind === "question" ? 1 : 0);
+  return more > 0 ? `${words} (+${more} more)` : words;
 }
 
 function blockedWords(card: Card): string {
@@ -469,9 +475,11 @@ export function cardName(
   }: { workstreamTitle?: string; showProject?: string },
 ): string {
   const rejected = card.column === "done" && card.rejected === true;
-  const questions =
-    card.openQuestions > 0 && card.live?.state !== "needs-you"
-      ? `needs you: ${questionsWaiting(card.openQuestions).toLowerCase()}`
+  // The run's own reason is in its live label; the rest is said here.
+  const words = needsWords(card);
+  const needs =
+    words && card.live?.state !== "needs-you"
+      ? `needs you: ${words.charAt(0).toLowerCase()}${words.slice(1)}`
       : "";
   const priority = priorityLabel(card.priority);
   const age = runningTime(card.modified, now);
@@ -482,7 +490,7 @@ export function cardName(
     card.blocked ? blockedWords(card).replace(/^Blocked/, "blocked") : "",
     card.needsRepair.length > 0 ? "needs repair" : "",
     card.live ? liveLabel(card.live) : "",
-    questions,
+    needs,
     requestWords(card.changeRequests),
     card.type,
     priority ? `${priority.toLowerCase()} priority` : "",

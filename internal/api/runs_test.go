@@ -432,3 +432,90 @@ func TestCardsSummariseTheirSessions(t *testing.T) {
 		t.Fatalf("stale AL-3 sessions = %+v", got)
 	}
 }
+
+// A session that holds one ticket and asks about another needs you on the
+// card of the ticket it asks about, which words the question's reason; its
+// own card shows it as live, waiting for that answer, so the cards in the
+// Needs you filter agree with the pill's count of runs (FH-185). A
+// question about its own ticket, or about no ticket, keeps it on its own
+// card as before.
+func TestAQuestionAboutAnotherTicketNeedsYouOnThatCard(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 4, 13, 30, 0, 0, time.UTC)
+	asked := func(ticket string) string {
+		return `{"v":1,"ts":"2026-10-04T13:28:00.000Z","run":"` + sampleSession + `","agent":"claude","kind":"question.asked","project":"alpha","data":{"id":"q1","ticket":"` + ticket + `","kind":"review","text":"Is the card panel right?"}}`
+	}
+	// The sample session's permission prompt is answered by a tool call.
+	resolved := `{"v":1,"ts":"2026-10-04T13:27:00.000Z","run":"` + sampleSession + `","agent":"claude","kind":"tool.used","project":"alpha","data":{"tool":"Bash","ok":true}}`
+	review := reasonJSON(runs.Reason{Kind: runs.ReasonQuestion, Question: "review"})
+
+	t.Run("about another ticket", func(t *testing.T) {
+		t.Parallel()
+		handler := runsAPI(t, now, resolved, asked("AL-4"))
+		var board BoardResponse
+		getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+		if board.Project.Runs.NeedsYou != 1 || board.Project.Runs.NeedsYouUnticketed != 0 {
+			t.Fatalf("runs = %+v", board.Project.Runs)
+		}
+		about := cardByID(t, board.Cards, "AL-4")
+		if !about.NeedsYou || about.OpenQuestions != 1 || about.Reason != review || about.Live != nil {
+			t.Fatalf("AL-4 = needsYou %v questions %d reason %+v live %+v", about.NeedsYou, about.OpenQuestions, about.Reason, about.Live)
+		}
+		held := cardByID(t, board.Cards, "AL-3")
+		if held.NeedsYou || held.OpenQuestions != 0 || held.Reason.Kind != "" || held.Live == nil || held.Live.State != "waiting" || held.Live.Reason.Kind != "" || held.AgentWorking {
+			t.Fatalf("AL-3 = needsYou %v questions %d reason %+v live %+v", held.NeedsYou, held.OpenQuestions, held.Reason, held.Live)
+		}
+		// The run itself is in Needs you with the question as its reason,
+		// as the Runs tab and the Overview show it.
+		var response RunsResponse
+		getJSON(t, handler, "/api/runs", http.StatusOK, &response)
+		for _, run := range response.Runs {
+			if run.ID == sampleSession && (run.State != "needs-you" || run.Reason != review || run.Ticket != "AL-3") {
+				t.Fatalf("run = %+v", run)
+			}
+		}
+	})
+
+	t.Run("about its own ticket", func(t *testing.T) {
+		t.Parallel()
+		handler := runsAPI(t, now, resolved, asked("AL-3"))
+		var board BoardResponse
+		getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+		held := cardByID(t, board.Cards, "AL-3")
+		if !held.NeedsYou || held.OpenQuestions != 1 || held.Reason != review || held.Live == nil || held.Live.State != "needs-you" || held.Live.Reason != review {
+			t.Fatalf("AL-3 = needsYou %v questions %d reason %+v live %+v", held.NeedsYou, held.OpenQuestions, held.Reason, held.Live)
+		}
+		if other := cardByID(t, board.Cards, "AL-4"); other.NeedsYou || other.Reason.Kind != "" {
+			t.Fatalf("AL-4 = needsYou %v reason %+v", other.NeedsYou, other.Reason)
+		}
+	})
+
+	t.Run("about no ticket", func(t *testing.T) {
+		t.Parallel()
+		handler := runsAPI(t, now, resolved, asked(""))
+		var board BoardResponse
+		getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+		held := cardByID(t, board.Cards, "AL-3")
+		if !held.NeedsYou || held.OpenQuestions != 0 || held.Reason != review || held.Live == nil || held.Live.State != "needs-you" {
+			t.Fatalf("AL-3 = needsYou %v questions %d reason %+v live %+v", held.NeedsYou, held.OpenQuestions, held.Reason, held.Live)
+		}
+		if board.Project.Runs.NeedsYouUnticketed != 0 {
+			t.Fatalf("runs = %+v", board.Project.Runs)
+		}
+	})
+
+	t.Run("about a ticket not on the board", func(t *testing.T) {
+		t.Parallel()
+		handler := runsAPI(t, now, resolved, asked("AL-99"))
+		var board BoardResponse
+		getJSON(t, handler, "/api/projects/alpha/board", http.StatusOK, &board)
+		// No card can show it: the Needs you notice names it (FH-157).
+		if held := cardByID(t, board.Cards, "AL-3"); held.NeedsYou || held.Live == nil || held.Live.State != "waiting" {
+			t.Fatalf("AL-3 = needsYou %v live %+v", held.NeedsYou, held.Live)
+		}
+		if board.Project.Runs.NeedsYou != 1 || board.Project.Runs.NeedsYouUnticketed != 1 {
+			t.Fatalf("runs = %+v", board.Project.Runs)
+		}
+	})
+}

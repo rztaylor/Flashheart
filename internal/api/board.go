@@ -148,6 +148,10 @@ type Card struct {
 	Live         *LiveJSON `json:"live,omitempty"`
 	NeedsYou     bool      `json:"needsYou"`
 	AgentWorking bool      `json:"agentWorking"`
+	// Reason is why the card needs you (FH-185, D39): its linked run's
+	// reason when that is about the ticket, else the oldest open question
+	// about it from a live session; Kind is "" when it does not.
+	Reason NeedsReasonJSON `json:"reason"`
 	// OpenQuestions counts open questions about the ticket (CARD-6).
 	OpenQuestions int `json:"openQuestions"`
 	// ChangeRequests counts the ticket's change requests still open or
