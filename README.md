@@ -2,17 +2,17 @@
 
 > *"Woof!"*
 
-**One local kanban board for every project you build with AI agents, that
-the agents keep up to date themselves.**
+**One local kanban board for every project you build with AI agents,
+that the agents work from and report to.**
 
 You run Claude Code and Codex sessions across several repositories, often
 in parallel and often unattended. Flashheart puts all of that work on one
 board: which tickets agents are working on, what is ready for your review
 and which sessions are waiting for you. Agents find their work on the
-board, tick off acceptance criteria, leave handoffs, ask you questions and
-write reviews, on the same tickets you read. When a session dies, runs out
-of context or is replaced, the next one (in either agent) picks up the
-ticket's handoff and carries on.
+board, tick off acceptance criteria, ask you questions and write reviews,
+on the same tickets you read. They are asked to record a handoff on the
+ticket at milestones and before they stop, and a new session on the same
+work, in either agent, starts from the last one recorded.
 
 It is a single binary that runs on your machine. The tickets are plain
 markdown files you own; nothing leaves your computer.
@@ -22,12 +22,12 @@ markdown files you own; nothing leaves your computer.
 *The board for one project. The rail on the left switches projects; the
 orange badge counts the sessions waiting on you.*
 
-## Set up in three steps
+## Set up in four steps
 
 1. **Install** the binary for macOS or Linux from the
    [Releases page](https://github.com/rztaylor/Flashheart/releases/latest)
    and put it on your `PATH` ([script](#1-install)).
-2. **Connect your agents**, either or both:
+2. **Connect your agents**, either or both, then start a new session:
 
    ```bash
    flashheart setup claude
@@ -37,8 +37,13 @@ orange badge counts the sessions waiting on you.*
    flashheart setup codex
    ```
 
-3. **Open the board**, then ask an agent in any git repository to
-   *"tackle the two top-priority bugs"*:
+3. **Put your work on the board.** In a new Claude Code or Codex session
+   at the root of your repository, ask: *"Create a Flashheart board for
+   this project and move my existing todos, roadmaps and plans onto it."*
+   For a careful move that shows you every ticket before creating it,
+   paste [the migration prompt](docs/user/migrating.md) instead.
+4. **Open the board** and start working from it, for example by asking
+   an agent to *"tackle the two top-priority bugs"*:
 
    ```bash
    flashheart
@@ -59,20 +64,12 @@ doing, when they last changed and what blocks them.
 
 ### Workstreams with dependency graphs
 
-Group tickets into workstreams: epics or milestones with a goal. Tickets
-and whole workstreams declare what they depend on, and the Workstreams
-view draws the plan as a railway map, so you can see what is done, what is
-running in parallel, what is blocked and why.
-
-![The Workstreams view: the Agent sessions workstream drawn as a railway line that forks and joins, a completed workstream folded away, and a Downloads workstream held because it waits on two others](docs/images/workstreams.png)
-
-*Stations are tickets; lines are dependencies. "Downloads" waits for two
-other workstreams, so its line is dashed and the reasons are spelled out.*
-
-Each workstream has its own page with its graph, goal, scope and success
-criteria.
-
-![The Editing workstream's page: its nine tickets as a dependency graph above the goal, scope and success criteria](docs/images/workstream.png)
+Group tickets into workstreams: epics or milestones with a goal. You can
+ask Claude Code or Codex to do the grouping for you. Tickets and whole
+workstreams declare what they depend on, and the Workstreams view draws
+each workstream's tickets as a dependency graph, so you can see what is
+done, what can run in parallel, what is blocked and why. Each workstream
+has its own page with its graph, goal, scope and success criteria.
 
 ### An Overview of everything that needs you
 
@@ -82,8 +79,6 @@ review, what is at risk (a session gone quiet, work no session is
 holding) and the sessions in progress, Claude Code and Codex, with their
 subagents.
 
-![The All projects Overview: a pipeline of ticket counts, a projects table, a question waiting for a decision, five tickets ready for review, two at risk and four in progress with their sessions](docs/images/overview.png)
-
 ### Agents that report, ask and hand off
 
 - **Hooks do the bookkeeping.** Each session's start, edits, permission
@@ -91,16 +86,20 @@ subagents.
 - **The MCP server does the rest.** The agent finds and claims its ticket,
   ticks criteria as they pass, files tickets for follow-up work and
   checkpoints its progress.
-- **Sessions you can lose.** Each checkpoint rewrites the ticket's handoff:
-  what is done, what is next, the files that matter and open questions.
-  The next session, in Claude Code or Codex, is pointed at it when it
-  starts and carries on from it.
+- **Handoffs to start from.** Each checkpoint rewrites the ticket's
+  handoff: what is done, what is next, the files that matter and open
+  questions. The Flashheart skill asks agents to checkpoint at milestones
+  and before they stop, but they do not always do it; turn on handoff
+  enforcement for a project and a session that changed files is stopped
+  once and asked to checkpoint first. The next session on the ticket's
+  branch, in Claude Code or Codex, is given the last handoff when it
+  starts or claims the ticket. A session that crashes or is killed
+  records nothing more, so the next one is told how many edits came after
+  that handoff and has to work out the rest from the code.
 - **Questions that reach you.** When an agent needs a decision it asks on
   the board, with its options, and the card lights up as Needs you. Your
   answer goes straight back to a session that is waiting for it, or
   arrives with its next prompt.
-
-![A ticket's panel open beside the board: an agent's question with two one-click answers and a free-text box, above the ticket's handoff](docs/images/question.png)
 
 ### Reviews with evidence
 
@@ -184,26 +183,43 @@ trust each Flashheart hook, then start a new thread. More in
 `flashheart setup claude --uninstall` (or `codex`) removes Flashheart's
 entries and nothing else.
 
-### 3. Open the board
+### 3. Put your work on the board
 
-`flashheart` opens the board in your browser and gives you the terminal
-back. It stops when you choose **Quit** or close its last tab. Tickets
-live in `~/reports/Kanban`; pass `--root` or set `FLASHHEART_ROOT` to
-keep them elsewhere.
-
-Then ask in plain words, in any git repository: *"tackle the two
-top-priority bugs"*, *"look at FH-42"*, *"pick up where the last session
-left off"*. A repository's project appears on the board the first time an
-agent works in it.
-
-### Bring your existing todo list
+An empty board gives agents nothing to pick up, so start by moving your
+plans onto it. Open a new session, after `setup`, at the root of the
+repository: Flashheart files the tickets under that repository's project,
+which it creates the first time an agent works there. The agent picks
+the project's short ticket key, such as `FH`, before its first ticket;
+tell it the one you want.
 
 Already tracking work in a `TODO.md`, a roadmap, a tasks folder or
-comments in code? [`docs/user/migrating.md`](docs/user/migrating.md) has
-a prompt to paste into Claude Code or Codex. The agent finds your
-planning, whatever its format, proposes tickets, workstreams and
-dependencies, and creates them on the board once you approve. Your old
-files stay as they are unless you ask.
+comments in code? Ask in your own words, *"Create a Flashheart board for
+this project and move my existing todos, roadmaps and plans onto it"*, or
+paste the prompt in [`docs/user/migrating.md`](docs/user/migrating.md).
+With the prompt, the agent finds your planning, whatever its format,
+proposes tickets, workstreams and dependencies in a table, and creates
+them only once you approve. Your old files stay as they are unless you
+ask.
+
+Starting from nothing? Describe what you want to build and ask the agent
+to plan it as Flashheart tickets, grouped into workstreams. Either way,
+look the tickets over on the board (step 4) and move the ones to start
+first to Up next.
+
+### 4. Open the board and work from it
+
+`flashheart` opens the board in your browser and gives you the terminal
+back. It stops when you choose **Quit** or close its last tab. Agents
+update the board files whether or not it is open, so it is there when you
+want to look. Tickets live in `~/reports/Kanban`; pass `--root` or set
+`FLASHHEART_ROOT` to keep them elsewhere.
+
+Then ask in plain words, in any session in that repository: *"tackle the
+two top-priority bugs"*, *"look at FH-42"*, *"pick up where the last
+session left off"*. The agent claims the ticket, works on it, and leaves
+a review for you in Ready to review. Agents mostly keep their tickets
+current on their own, but not always: if a ticket looks stale, ask the
+session to checkpoint it.
 
 ## How it works
 
