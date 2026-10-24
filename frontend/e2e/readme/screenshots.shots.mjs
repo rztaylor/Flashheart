@@ -193,15 +193,10 @@ async function capture(
 
 const heading = (page) => page.locator("h1").first();
 
-// under ends an image margin pixels below what locate finds; above ends it
-// margin pixels above.
+// under ends an image margin pixels below what locate finds.
 const under = (locate, margin) => async (page) => {
   const box = await locate(page).boundingBox();
   return Math.ceil(box.y + box.height + margin);
-};
-const above = (locate, margin) => async (page) => {
-  const box = await locate(page).boundingBox();
-  return Math.floor(box.y - margin);
 };
 
 // The question on the Overview, taken first: it is FH-10's review evidence,
@@ -264,48 +259,6 @@ test("the board, dark", async () => {
   await capture("board-dark", "#/p/flashheart/board", backlog, {
     height: 960,
     theme: "dark",
-  });
-});
-
-test("a question waiting in the card panel", async () => {
-  await capture(
-    "question",
-    "#/p/flashheart/board?t=FH-19",
-    (page) =>
-      page
-        .getByRole("complementary", { name: "Ticket FH-19" })
-        .getByRole("region", { name: "Needs a decision" }),
-    { height: 960 },
-  );
-});
-
-// The Workstreams view down to its third line: a running line's graph, a
-// finished one folded away and one waiting for two others.
-test("the workstreams", async () => {
-  await capture("workstreams", "#/p/flashheart/workstreams", heading, {
-    height: 2000,
-    end: under((page) => page.locator("article").nth(2), 12),
-  });
-});
-
-test("a workstream's page", async () => {
-  await capture("workstream", "#/workstream/flashheart/editing", heading, {
-    height: 1500,
-    end: under((page) => page.getByText(/^The files stay the source/), 48),
-  });
-});
-
-test("the Overview of every project", async () => {
-  // Down to the sessions In progress, above Work with no ticket.
-  await capture("overview", "#/all/overview", heading, {
-    height: 2400,
-    end: above(
-      (page) =>
-        page
-          .getByRole("heading", { name: "Work with no ticket" })
-          .locator("xpath=ancestor::section[1]"),
-      4,
-    ),
   });
 });
 

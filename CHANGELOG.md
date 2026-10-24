@@ -27,9 +27,7 @@ All notable changes to this project are documented here. The project follows
   rewrite it (protocol version unchanged).
 
 - Screenshots of Flashheart in use for the README, in `docs/images/`
-  (FH-180): the board in both themes, a question waiting in the card
-  panel, the Workstreams view and a workstream's page with their railway
-  graphs, the Overview and a ticket's page. They show an invented
+  (FH-180): the board in both themes and a ticket's page. They show an invented
   showcase board about building Flashheart itself, with live Claude Code
   and Codex sessions recorded through the real hooks, and are regenerated
   with `scripts/readme-screenshots.sh` whenever the UI changes. Nothing
@@ -736,6 +734,15 @@ All notable changes to this project are documented here. The project follows
   FH-188): every release reads the boards earlier releases wrote without
   a manual step, and a release that cannot is blocked. Commands, the HTTP
   API and the UI may still change before v1.0.0.
+- The README's setup has four steps (FH-188): after installing and
+  connecting your agents, you ask an agent to move your existing todos,
+  roadmaps and plans onto the board, then open it and work from it. It
+  says plainly that a handoff exists only where an agent checkpointed, so
+  a session that crashes leaves its last one, and that you can ask an
+  agent to group tickets into workstreams. Three screenshots and their
+  captures are gone (the Workstreams view, a workstream's page and the
+  Overview, and the board with a question in its panel); their
+  descriptions stay.
 - The README says only what Flashheart does today (FH-188): the board
   shows which sessions wait for you (the Overview lists those gone
   quiet), answers reach a session that is waiting or arrive with its next
